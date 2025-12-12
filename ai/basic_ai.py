@@ -19,6 +19,8 @@ class BasicAI:
     
     def __init__(self, llm_brain=None):
         self.llm_brain = llm_brain
+        # Track each hero's personal patrol zone (assigned on first idle)
+        self.hero_zones = {}  # hero.name -> (center_x, center_y)
         
     def update(self, dt: float, heroes: list, game_state: dict):
         """Update AI for all heroes."""
@@ -26,6 +28,37 @@ class BasicAI:
             if not hero.is_alive:
                 continue
             self.update_hero(hero, dt, game_state)
+    
+    def assign_patrol_zone(self, hero, game_state: dict):
+        """Assign a unique patrol zone to a hero based on their index."""
+        if hero.name in self.hero_zones:
+            return self.hero_zones[hero.name]
+        
+        # Get castle position as reference
+        castle = game_state.get("castle")
+        if castle:
+            base_x, base_y = castle.center_x, castle.center_y
+        else:
+            from config import MAP_WIDTH, MAP_HEIGHT
+            base_x = (MAP_WIDTH // 2) * TILE_SIZE
+            base_y = (MAP_HEIGHT // 2) * TILE_SIZE
+        
+        # Assign zones in a circle around the castle
+        heroes = [h for h in game_state.get("heroes", []) if h.is_alive]
+        try:
+            idx = heroes.index(hero)
+        except ValueError:
+            idx = len(self.hero_zones)
+        
+        num_heroes = max(len(heroes), 1)
+        angle = (2 * math.pi * idx) / num_heroes + random.uniform(-0.3, 0.3)
+        radius = TILE_SIZE * random.uniform(4, 8)
+        
+        zone_x = base_x + math.cos(angle) * radius
+        zone_y = base_y + math.sin(angle) * radius
+        
+        self.hero_zones[hero.name] = (zone_x, zone_y)
+        return (zone_x, zone_y)
     
     def update_hero(self, hero, dt: float, game_state: dict):
         """Update AI for a single hero."""
@@ -105,10 +138,6 @@ class BasicAI:
                     if dist < TILE_SIZE * 6:
                         return True
         
-        # 3. Idle with no goal
-        if hero.state == HeroState.IDLE and not hero.target_position:
-            return True
-        
         return False
     
     def request_llm_decision(self, hero, game_state: dict):
@@ -116,8 +145,6 @@ class BasicAI:
         import pygame
         
         if self.llm_brain:
-            # Use centralized context builder so LLMBrain + prompt templates always
-            # get the full expected schema (includes `situation`, distances, etc.).
             context = ContextBuilder.build_hero_context(hero, game_state)
             self.llm_brain.request_decision(hero.name, context)
             hero.pending_llm_decision = True
@@ -141,11 +168,10 @@ class BasicAI:
         elif action == "explore":
             self.explore(hero, game_state)
         elif action == "accept_bounty":
-            # Find and pursue bounty target
             pass
     
     def handle_idle(self, hero, game_state: dict):
-        """Handle idle state - find something to do."""
+        """Handle idle state - heroes patrol their assigned zone."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
         
@@ -153,36 +179,53 @@ class BasicAI:
         if hero.hp >= hero.max_hp:
             marketplace = self.find_marketplace_with_potions(buildings)
             if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
-                # Go shopping
                 hero.target_position = (marketplace.center_x, marketplace.center_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "marketplace": marketplace}
                 return
 
-        # IMPORTANT: Avoid map-wide convergence.
-        # Only engage enemies within a local aggro radius unless defending castle/home (handled earlier).
-        local_aggro_tiles = 6
-        candidates = self.find_enemies_within_tiles(hero, enemies, local_aggro_tiles)
-
-        # If we have local enemies, sometimes engage, but try not to dogpile.
-        if candidates and random.random() < 0.65:
-            target = self.pick_enemy_avoiding_dogpile(hero, candidates, game_state.get("heroes", []))
-            if target:
-                hero.target = target
-                hero.set_target_position(target.x, target.y)
-                return
-
-        # Idle behavior roulette: wander, guard, patrol castle, explore
-        roll = random.random()
-        castle = game_state.get("castle")
-        if roll < 0.35:
-            self.wander(hero, game_state)
-        elif roll < 0.60 and hero.home_building:
-            self.guard_home(hero, hero.home_building)
-        elif roll < 0.80 and castle:
-            self.patrol_castle(hero, castle)
+        # Get this hero's patrol zone
+        zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
+        
+        # Only engage enemies that are INSIDE the hero's zone (3 tile radius)
+        zone_radius = TILE_SIZE * 3
+        enemies_in_zone = []
+        for enemy in enemies:
+            if not enemy.is_alive:
+                continue
+            # Check if enemy is in THIS hero's zone
+            dist_to_zone = math.sqrt((enemy.x - zone_x)**2 + (enemy.y - zone_y)**2)
+            if dist_to_zone <= zone_radius:
+                dist_to_hero = hero.distance_to(enemy.x, enemy.y)
+                enemies_in_zone.append((enemy, dist_to_hero))
+        
+        # If there are enemies in our zone, engage the closest one
+        if enemies_in_zone:
+            enemies_in_zone.sort(key=lambda x: x[1])
+            target_enemy = enemies_in_zone[0][0]
+            hero.target = target_enemy
+            hero.set_target_position(target_enemy.x, target_enemy.y)
+            hero.state = HeroState.MOVING
+            return
+        
+        # No enemies in zone - patrol within our zone
+        dist_to_zone = hero.distance_to(zone_x, zone_y)
+        
+        if dist_to_zone > TILE_SIZE * 4:
+            # Too far from zone, return to it
+            hero.target_position = (zone_x, zone_y)
+            hero.state = HeroState.MOVING
+            hero.target = {"type": "patrol"}
         else:
-            self.explore(hero, game_state)
+            # Wander within zone
+            if random.random() < 0.02:  # 2% chance per frame
+                angle = random.uniform(0, 2 * math.pi)
+                wander_dist = TILE_SIZE * random.uniform(1, 3)
+                target_x = zone_x + math.cos(angle) * wander_dist
+                target_y = zone_y + math.sin(angle) * wander_dist
+                hero.target_position = (target_x, target_y)
+                hero.state = HeroState.MOVING
+                hero.target = {"type": "patrol"}
     
     def find_marketplace_with_potions(self, buildings: list):
         """Find a marketplace that can sell potions."""
@@ -191,82 +234,6 @@ class BasicAI:
                 if hasattr(building, 'potions_researched') and building.potions_researched:
                     return building
         return None
-
-    def find_closest_enemy(self, hero, enemies: list):
-        best = (None, float('inf'))
-        for enemy in enemies:
-            if not enemy.is_alive:
-                continue
-            dist = hero.distance_to(enemy.x, enemy.y)
-            if dist < best[1]:
-                best = (enemy, dist)
-        return best
-
-    def find_enemies_within_tiles(self, hero, enemies: list, tiles: int) -> list:
-        """Return list of (enemy, distance) for enemies within N tiles."""
-        max_dist = TILE_SIZE * tiles
-        found = []
-        for enemy in enemies:
-            if not enemy.is_alive:
-                continue
-            dist = hero.distance_to(enemy.x, enemy.y)
-            if dist <= max_dist:
-                found.append((enemy, dist))
-        found.sort(key=lambda t: t[1])
-        return found
-
-    def pick_enemy_avoiding_dogpile(self, hero, candidates: list, heroes: list):
-        """
-        Pick an enemy to engage, penalizing enemies already targeted by other heroes.
-        This helps reduce clumping/dogpiling behavior.
-        """
-        # Count how many heroes are currently targeting each enemy
-        target_counts = {}
-        for h in heroes:
-            if not getattr(h, "is_alive", False):
-                continue
-            if h is hero:
-                continue
-            if getattr(h, "target", None) is None:
-                continue
-            if hasattr(h.target, "is_alive") and hasattr(h.target, "enemy_type"):
-                target_counts[h.target] = target_counts.get(h.target, 0) + 1
-
-        best_enemy = None
-        best_score = float("inf")
-        for enemy, dist in candidates:
-            # Strong penalty per additional hero already focused on this target
-            count = target_counts.get(enemy, 0)
-            score = dist + (count * TILE_SIZE * 4)
-            if score < best_score:
-                best_score = score
-                best_enemy = enemy
-        return best_enemy
-
-    def wander(self, hero, game_state: dict):
-        """Send hero to a nearby random location."""
-        from config import MAP_WIDTH, MAP_HEIGHT
-        target_x = random.randint(2, MAP_WIDTH - 3) * TILE_SIZE + TILE_SIZE // 2
-        target_y = random.randint(2, MAP_HEIGHT - 3) * TILE_SIZE + TILE_SIZE // 2
-        hero.target_position = (target_x, target_y)
-        hero.state = HeroState.MOVING
-
-    def guard_home(self, hero, building):
-        """Position hero near their home to guard it."""
-        offset = TILE_SIZE * random.uniform(1.5, 3.0)
-        hero.target_position = (building.center_x + offset, building.center_y)
-        hero.state = HeroState.MOVING
-        hero.target = {"type": "guard_home", "building": building}
-
-    def patrol_castle(self, hero, castle):
-        """Position hero around the castle to spread out defenders."""
-        angle = random.uniform(0, 2 * math.pi)
-        radius = TILE_SIZE * random.uniform(3.0, 6.0)
-        target_x = castle.center_x + math.cos(angle) * radius
-        target_y = castle.center_y + math.sin(angle) * radius
-        hero.target_position = (target_x, target_y)
-        hero.state = HeroState.MOVING
-        hero.target = {"type": "patrol_castle"}
     
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
@@ -278,7 +245,6 @@ class BasicAI:
             if dist < TILE_SIZE // 2:
                 # Check if we were going home
                 if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
-                    # Arrived home - transfer taxes and start resting
                     hero.transfer_taxes_to_home()
                     hero.start_resting()
                     hero.target = None
@@ -287,7 +253,6 @@ class BasicAI:
                 
                 # Check if we were going shopping
                 if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
-                    # Arrived at marketplace - start shopping
                     marketplace = hero.target.get("marketplace")
                     if marketplace:
                         self.do_shopping(hero, marketplace, game_state)
@@ -300,20 +265,19 @@ class BasicAI:
                 hero.state = HeroState.IDLE
                 return
         
-        # Check for enemies in attack range while moving (but not if going home or shopping)
+        # Only auto-engage if we're moving toward an enemy target (not patrolling/shopping/etc)
         if hero.target and isinstance(hero.target, dict):
             target_type = hero.target.get("type")
-            if target_type in ["going_home", "shopping"]:
-                # Don't fight when trying to get home to rest or go shopping
+            # Don't interrupt these activities
+            if target_type in ["going_home", "shopping", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
                 return
         
-        for enemy in enemies:
-            if enemy.is_alive:
-                dist = hero.distance_to(enemy.x, enemy.y)
-                if dist <= hero.attack_range:
-                    hero.target = enemy
-                    hero.state = HeroState.FIGHTING
-                    return
+        # If we have an enemy target, check if we're in range to fight
+        if hero.target and hasattr(hero.target, 'is_alive') and hero.target.is_alive:
+            dist = hero.distance_to(hero.target.x, hero.target.y)
+            if dist <= hero.attack_range:
+                hero.state = HeroState.FIGHTING
+                return
     
     def handle_fighting(self, hero, game_state: dict):
         """Handle fighting state."""
@@ -340,7 +304,6 @@ class BasicAI:
         """Handle retreating state - flee to safety."""
         buildings = game_state.get("buildings", [])
         
-        # Find nearest safe building (castle or marketplace)
         nearest_safe = None
         nearest_dist = float('inf')
         
@@ -353,9 +316,7 @@ class BasicAI:
         
         if nearest_safe:
             if nearest_dist < TILE_SIZE * 2:
-                # Reached safety
                 hero.state = HeroState.IDLE
-                # Use potion if available and hurt
                 if hero.health_percent < 0.7 and hero.potions > 0:
                     hero.use_potion()
             else:
@@ -365,7 +326,6 @@ class BasicAI:
         """Handle shopping state - buy items at marketplace."""
         buildings = game_state.get("buildings", [])
         
-        # Find marketplace
         marketplace = None
         for building in buildings:
             if building.building_type == "marketplace":
@@ -384,11 +344,9 @@ class BasicAI:
     def do_shopping(self, hero, marketplace, game_state: dict):
         """Actually perform shopping at a marketplace."""
         economy = game_state.get("economy")
-        
-        # Get available items
         items = marketplace.get_available_items()
         
-        # Priority 1: Buy a potion if we have none and can afford it
+        # Priority 1: Buy a potion if we have none
         if hero.potions == 0 and hero.gold >= 20:
             for item in items:
                 if item["type"] == "potion":
@@ -397,18 +355,16 @@ class BasicAI:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
         
-        # Priority 2: If gold >= 50 and potions < max, maybe buy more potions
-        # For now, warriors are practical - buy up to 2 potions total if they can afford it
+        # Priority 2: Buy extra potions if rich
         if hero.gold >= 50 and hero.potions < 2:
             for item in items:
                 if item["type"] == "potion" and hero.gold >= item["price"]:
                     if hero.buy_item(item):
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
-                        # Only buy one extra per shopping trip
                         break
         
-        # Priority 3: Weapon upgrade if can afford
+        # Priority 3: Weapon upgrade
         for item in items:
             if item["type"] == "weapon" and hero.gold >= item["price"]:
                 current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
@@ -418,7 +374,7 @@ class BasicAI:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
         
-        # Priority 4: Armor upgrade if can afford
+        # Priority 4: Armor upgrade
         for item in items:
             if item["type"] == "armor" and hero.gold >= item["price"]:
                 current_defense = hero.armor.get("defense", 0) if hero.armor else 0
@@ -433,7 +389,6 @@ class BasicAI:
         hero.state = HeroState.RETREATING
         buildings = game_state.get("buildings", [])
         
-        # Find nearest safe building
         for building in buildings:
             if building.building_type in ["castle", "marketplace"]:
                 hero.target_position = (building.center_x, building.center_y)
@@ -447,18 +402,16 @@ class BasicAI:
             if building.building_type == "marketplace":
                 hero.target_position = (building.center_x, building.center_y)
                 hero.state = HeroState.MOVING
-                # Store desired item for when we arrive
                 hero.target = {"type": "shopping", "item": item_name}
                 break
     
     def explore(self, hero, game_state: dict):
-        """Send hero to explore a random location."""
-        from config import MAP_WIDTH, MAP_HEIGHT
-        
-        # Pick a random walkable location
-        target_x = random.randint(2, MAP_WIDTH - 3) * TILE_SIZE + TILE_SIZE // 2
-        target_y = random.randint(2, MAP_HEIGHT - 3) * TILE_SIZE + TILE_SIZE // 2
-        
+        """Send hero to explore within their zone."""
+        zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
+        angle = random.uniform(0, 2 * math.pi)
+        wander_dist = TILE_SIZE * random.uniform(2, 5)
+        target_x = zone_x + math.cos(angle) * wander_dist
+        target_y = zone_y + math.sin(angle) * wander_dist
         hero.set_target_position(target_x, target_y)
     
     def send_home_to_rest(self, hero, game_state: dict):
@@ -470,24 +423,19 @@ class BasicAI:
     
     def handle_resting(self, hero, dt: float, game_state: dict):
         """Handle hero resting at home."""
-        # Check if building is damaged - hero will pop out automatically in update_resting
         if hero.home_building and hero.home_building.is_damaged:
             hero.pop_out_of_building()
             return
         
-        # Check if still at home
         if hero.home_building:
             dist = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
             if dist > TILE_SIZE * 2:
-                # Left home somehow, stop resting
                 hero.finish_resting()
                 return
         
-        # Update resting (heals 1 HP every 2 seconds)
         still_resting = hero.update_resting(dt)
         
         if not still_resting:
-            # Done resting, become idle
             hero.state = HeroState.IDLE
     
     def defend_home_building(self, hero, game_state: dict):
@@ -499,31 +447,26 @@ class BasicAI:
         
         building = hero.home_building
         
-        # Find enemies near the building
         nearest_enemy = None
         nearest_dist = float('inf')
         
         for enemy in enemies:
             if enemy.is_alive:
-                # Check if enemy is near the building or targeting it
                 dist_to_building = enemy.distance_to(building.center_x, building.center_y)
-                if dist_to_building < TILE_SIZE * 5:  # Within 5 tiles of building
+                if dist_to_building < TILE_SIZE * 5:
                     dist_to_hero = hero.distance_to(enemy.x, enemy.y)
                     if dist_to_hero < nearest_dist:
                         nearest_dist = dist_to_hero
                         nearest_enemy = enemy
         
         if nearest_enemy:
-            # Attack the enemy threatening our home
             if nearest_dist <= hero.attack_range:
                 hero.target = nearest_enemy
                 hero.state = HeroState.FIGHTING
             else:
-                # Move towards the enemy
                 hero.target = nearest_enemy
                 hero.set_target_position(nearest_enemy.x, nearest_enemy.y)
         else:
-            # No enemies nearby, stay near building
             dist_to_home = hero.distance_to(building.center_x, building.center_y)
             if dist_to_home > TILE_SIZE * 2:
                 hero.set_target_position(building.center_x + TILE_SIZE, building.center_y)
@@ -534,7 +477,6 @@ class BasicAI:
         """Send hero to defend the castle when it's damaged."""
         enemies = game_state.get("enemies", [])
 
-        # Find any enemies near the castle
         target_enemy = None
         target_dist = float("inf")
         for enemy in enemies:
@@ -555,7 +497,6 @@ class BasicAI:
             hero.state = HeroState.MOVING
             return
 
-        # No enemy yet - move to castle buffer zone
         dist_to_castle = hero.distance_to(castle.center_x, castle.center_y)
         if dist_to_castle > TILE_SIZE * 3:
             hero.target = {"type": "defend_castle"}
@@ -563,4 +504,3 @@ class BasicAI:
             hero.state = HeroState.MOVING
         else:
             hero.state = HeroState.IDLE
-

@@ -369,6 +369,13 @@ class Hero:
             "nearby_enemies": [],
             "available_bounties": game_state.get("bounties", []),
             "shop_items": [],
+            "situation": {
+                "in_combat": False,
+                "low_health": self.health_percent < 0.5,
+                "critical_health": self.health_percent < 0.25,
+                "has_potions": self.potions > 0,
+                "near_safety": False,
+            },
         }
         
         # Add nearby enemies
