@@ -7,6 +7,7 @@ import random
 from game.entities.hero import HeroState
 from game.systems.pathfinding import find_path, grid_to_world_path
 from config import TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN
+from ai.context_builder import ContextBuilder
 
 
 class BasicAI:
@@ -115,7 +116,9 @@ class BasicAI:
         import pygame
         
         if self.llm_brain:
-            context = hero.get_context_for_llm(game_state)
+            # Use centralized context builder so LLMBrain + prompt templates always
+            # get the full expected schema (includes `situation`, distances, etc.).
+            context = ContextBuilder.build_hero_context(hero, game_state)
             self.llm_brain.request_decision(hero.name, context)
             hero.pending_llm_decision = True
             hero.last_llm_decision_time = pygame.time.get_ticks()
@@ -155,23 +158,29 @@ class BasicAI:
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "marketplace": marketplace}
                 return
-        
-        # Look for nearby enemies to fight
-        nearest_enemy = self.find_closest_enemy(hero, enemies)
-        if nearest_enemy and nearest_enemy[1] < TILE_SIZE * 8:
-            hero.target = nearest_enemy[0]
-            hero.set_target_position(nearest_enemy[0].x, nearest_enemy[0].y)
-            return
 
-        # Idle behavior roulette: wander, guard, seek enemies, or explore
+        # IMPORTANT: Avoid map-wide convergence.
+        # Only engage enemies within a local aggro radius unless defending castle/home (handled earlier).
+        local_aggro_tiles = 6
+        candidates = self.find_enemies_within_tiles(hero, enemies, local_aggro_tiles)
+
+        # If we have local enemies, sometimes engage, but try not to dogpile.
+        if candidates and random.random() < 0.65:
+            target = self.pick_enemy_avoiding_dogpile(hero, candidates, game_state.get("heroes", []))
+            if target:
+                hero.target = target
+                hero.set_target_position(target.x, target.y)
+                return
+
+        # Idle behavior roulette: wander, guard, patrol castle, explore
         roll = random.random()
-        if roll < 0.3:
+        castle = game_state.get("castle")
+        if roll < 0.35:
             self.wander(hero, game_state)
-        elif roll < 0.55 and hero.home_building:
+        elif roll < 0.60 and hero.home_building:
             self.guard_home(hero, hero.home_building)
-        elif roll < 0.75 and nearest_enemy:
-            hero.target = nearest_enemy[0]
-            hero.set_target_position(nearest_enemy[0].x, nearest_enemy[0].y)
+        elif roll < 0.80 and castle:
+            self.patrol_castle(hero, castle)
         else:
             self.explore(hero, game_state)
     
@@ -193,6 +202,47 @@ class BasicAI:
                 best = (enemy, dist)
         return best
 
+    def find_enemies_within_tiles(self, hero, enemies: list, tiles: int) -> list:
+        """Return list of (enemy, distance) for enemies within N tiles."""
+        max_dist = TILE_SIZE * tiles
+        found = []
+        for enemy in enemies:
+            if not enemy.is_alive:
+                continue
+            dist = hero.distance_to(enemy.x, enemy.y)
+            if dist <= max_dist:
+                found.append((enemy, dist))
+        found.sort(key=lambda t: t[1])
+        return found
+
+    def pick_enemy_avoiding_dogpile(self, hero, candidates: list, heroes: list):
+        """
+        Pick an enemy to engage, penalizing enemies already targeted by other heroes.
+        This helps reduce clumping/dogpiling behavior.
+        """
+        # Count how many heroes are currently targeting each enemy
+        target_counts = {}
+        for h in heroes:
+            if not getattr(h, "is_alive", False):
+                continue
+            if h is hero:
+                continue
+            if getattr(h, "target", None) is None:
+                continue
+            if hasattr(h.target, "is_alive") and hasattr(h.target, "enemy_type"):
+                target_counts[h.target] = target_counts.get(h.target, 0) + 1
+
+        best_enemy = None
+        best_score = float("inf")
+        for enemy, dist in candidates:
+            # Strong penalty per additional hero already focused on this target
+            count = target_counts.get(enemy, 0)
+            score = dist + (count * TILE_SIZE * 4)
+            if score < best_score:
+                best_score = score
+                best_enemy = enemy
+        return best_enemy
+
     def wander(self, hero, game_state: dict):
         """Send hero to a nearby random location."""
         from config import MAP_WIDTH, MAP_HEIGHT
@@ -207,6 +257,16 @@ class BasicAI:
         hero.target_position = (building.center_x + offset, building.center_y)
         hero.state = HeroState.MOVING
         hero.target = {"type": "guard_home", "building": building}
+
+    def patrol_castle(self, hero, castle):
+        """Position hero around the castle to spread out defenders."""
+        angle = random.uniform(0, 2 * math.pi)
+        radius = TILE_SIZE * random.uniform(3.0, 6.0)
+        target_x = castle.center_x + math.cos(angle) * radius
+        target_y = castle.center_y + math.sin(angle) * radius
+        hero.target_position = (target_x, target_y)
+        hero.state = HeroState.MOVING
+        hero.target = {"type": "patrol_castle"}
     
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
