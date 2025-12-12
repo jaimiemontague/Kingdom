@@ -157,24 +157,22 @@ class BasicAI:
                 return
         
         # Look for nearby enemies to fight
-        nearest_enemy = None
-        nearest_dist = float('inf')
-        
-        for enemy in enemies:
-            if enemy.is_alive:
-                dist = hero.distance_to(enemy.x, enemy.y)
-                if dist < nearest_dist:
-                    nearest_dist = dist
-                    nearest_enemy = enemy
-        
-        if nearest_enemy and nearest_dist < TILE_SIZE * 8:
-            # Move towards enemy
-            hero.target = nearest_enemy
-            hero.set_target_position(nearest_enemy.x, nearest_enemy.y)
+        nearest_enemy = self.find_closest_enemy(hero, enemies)
+        if nearest_enemy and nearest_enemy[1] < TILE_SIZE * 8:
+            hero.target = nearest_enemy[0]
+            hero.set_target_position(nearest_enemy[0].x, nearest_enemy[0].y)
             return
-        
-        # If no enemies, explore randomly
-        if random.random() < 0.01:  # 1% chance per frame to start exploring
+
+        # Idle behavior roulette: wander, guard, seek enemies, or explore
+        roll = random.random()
+        if roll < 0.3:
+            self.wander(hero, game_state)
+        elif roll < 0.55 and hero.home_building:
+            self.guard_home(hero, hero.home_building)
+        elif roll < 0.75 and nearest_enemy:
+            hero.target = nearest_enemy[0]
+            hero.set_target_position(nearest_enemy[0].x, nearest_enemy[0].y)
+        else:
             self.explore(hero, game_state)
     
     def find_marketplace_with_potions(self, buildings: list):
@@ -184,6 +182,31 @@ class BasicAI:
                 if hasattr(building, 'potions_researched') and building.potions_researched:
                     return building
         return None
+
+    def find_closest_enemy(self, hero, enemies: list):
+        best = (None, float('inf'))
+        for enemy in enemies:
+            if not enemy.is_alive:
+                continue
+            dist = hero.distance_to(enemy.x, enemy.y)
+            if dist < best[1]:
+                best = (enemy, dist)
+        return best
+
+    def wander(self, hero, game_state: dict):
+        """Send hero to a nearby random location."""
+        from config import MAP_WIDTH, MAP_HEIGHT
+        target_x = random.randint(2, MAP_WIDTH - 3) * TILE_SIZE + TILE_SIZE // 2
+        target_y = random.randint(2, MAP_HEIGHT - 3) * TILE_SIZE + TILE_SIZE // 2
+        hero.target_position = (target_x, target_y)
+        hero.state = HeroState.MOVING
+
+    def guard_home(self, hero, building):
+        """Position hero near their home to guard it."""
+        offset = TILE_SIZE * random.uniform(1.5, 3.0)
+        hero.target_position = (building.center_x + offset, building.center_y)
+        hero.state = HeroState.MOVING
+        hero.target = {"type": "guard_home", "building": building}
     
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
