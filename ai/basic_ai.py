@@ -9,6 +9,22 @@ from game.systems.pathfinding import find_path, grid_to_world_path
 from config import TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN
 from ai.context_builder import ContextBuilder
 
+# Debug logging (set to True to see AI decision logs)
+DEBUG_AI = False
+
+_last_log = {}
+def debug_log(msg, throttle_key=None):
+    if not DEBUG_AI:
+        return
+    # Throttle repeated messages
+    if throttle_key:
+        import time
+        now = time.time()
+        if throttle_key in _last_log and now - _last_log[throttle_key] < 1.0:
+            return
+        _last_log[throttle_key] = now
+    print(f"[AI] {msg}")
+
 
 class BasicAI:
     """
@@ -51,13 +67,14 @@ class BasicAI:
             idx = len(self.hero_zones)
         
         num_heroes = max(len(heroes), 1)
-        angle = (2 * math.pi * idx) / num_heroes + random.uniform(-0.3, 0.3)
-        radius = TILE_SIZE * random.uniform(4, 8)
+        angle = (2 * math.pi * idx) / num_heroes + random.uniform(-0.2, 0.2)
+        radius = TILE_SIZE * random.uniform(6, 10)  # Spread zones further out
         
         zone_x = base_x + math.cos(angle) * radius
         zone_y = base_y + math.sin(angle) * radius
         
         self.hero_zones[hero.name] = (zone_x, zone_y)
+        debug_log(f"{hero.name} assigned zone at ({zone_x:.0f}, {zone_y:.0f}), angle={math.degrees(angle):.0f}deg")
         return (zone_x, zone_y)
     
     def update_hero(self, hero, dt: float, game_state: dict):
@@ -175,10 +192,13 @@ class BasicAI:
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
         
+        debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_idle")
+        
         # Check if hero wants to go shopping (full health, has gold, needs potions)
         if hero.hp >= hero.max_hp:
             marketplace = self.find_marketplace_with_potions(buildings)
             if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
+                debug_log(f"{hero.name} -> going shopping")
                 hero.target_position = (marketplace.center_x, marketplace.center_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "marketplace": marketplace}
@@ -187,22 +207,34 @@ class BasicAI:
         # Get this hero's patrol zone
         zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
         
-        # Only engage enemies that are INSIDE the hero's zone (3 tile radius)
-        zone_radius = TILE_SIZE * 3
-        enemies_in_zone = []
+        debug_log(f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_zone")
+        
+        # Engage enemies in two cases:
+        # 1. Enemy is in our patrol zone (5 tile radius from zone center)
+        # 2. Enemy is personally close to us (4 tile radius from hero)
+        zone_radius = TILE_SIZE * 5  # 160 pixels
+        personal_radius = TILE_SIZE * 4  # 128 pixels
+        
+        enemies_to_consider = []
         for enemy in enemies:
             if not enemy.is_alive:
                 continue
-            # Check if enemy is in THIS hero's zone
+            
             dist_to_zone = math.sqrt((enemy.x - zone_x)**2 + (enemy.y - zone_y)**2)
-            if dist_to_zone <= zone_radius:
-                dist_to_hero = hero.distance_to(enemy.x, enemy.y)
-                enemies_in_zone.append((enemy, dist_to_hero))
+            dist_to_hero = hero.distance_to(enemy.x, enemy.y)
+            
+            # Check if enemy is in our zone OR personally close
+            in_zone = dist_to_zone <= zone_radius
+            personally_close = dist_to_hero <= personal_radius
+            
+            if in_zone or personally_close:
+                enemies_to_consider.append((enemy, dist_to_hero))
         
-        # If there are enemies in our zone, engage the closest one
-        if enemies_in_zone:
-            enemies_in_zone.sort(key=lambda x: x[1])
-            target_enemy = enemies_in_zone[0][0]
+        # If there are enemies to fight, engage the closest one
+        if enemies_to_consider:
+            enemies_to_consider.sort(key=lambda x: x[1])
+            target_enemy = enemies_to_consider[0][0]
+            debug_log(f"{hero.name} -> engaging enemy at ({target_enemy.x:.0f}, {target_enemy.y:.0f})")
             hero.target = target_enemy
             hero.set_target_position(target_enemy.x, target_enemy.y)
             hero.state = HeroState.MOVING
@@ -210,9 +242,11 @@ class BasicAI:
         
         # No enemies in zone - patrol within our zone
         dist_to_zone = hero.distance_to(zone_x, zone_y)
+        debug_log(f"{hero.name} dist_to_zone={dist_to_zone:.0f}")
         
         if dist_to_zone > TILE_SIZE * 4:
             # Too far from zone, return to it
+            debug_log(f"{hero.name} -> returning to zone")
             hero.target_position = (zone_x, zone_y)
             hero.state = HeroState.MOVING
             hero.target = {"type": "patrol"}
@@ -223,6 +257,7 @@ class BasicAI:
                 wander_dist = TILE_SIZE * random.uniform(1, 3)
                 target_x = zone_x + math.cos(angle) * wander_dist
                 target_y = zone_y + math.sin(angle) * wander_dist
+                debug_log(f"{hero.name} -> wandering to ({target_x:.0f}, {target_y:.0f})")
                 hero.target_position = (target_x, target_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "patrol"}
