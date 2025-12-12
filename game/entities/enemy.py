@@ -83,26 +83,41 @@ class Enemy:
                 self.y += (dy / dist) * move_dist
     
     def find_target(self, heroes: list, buildings: list):
-        """Find the nearest valid target (hero or castle)."""
+        """Find the nearest valid target (hero or building with heroes inside)."""
         best_target = None
         best_dist = float('inf')
         
-        # Check heroes
+        # Check heroes that are NOT resting (inside buildings)
         for hero in heroes:
-            if hero.is_alive:
+            if hero.is_alive and hero.state.name != "RESTING":
                 dist = self.distance_to(hero.x, hero.y)
                 if dist < best_dist:
                     best_dist = dist
                     best_target = hero
         
-        # Check castle (prioritize if closer or no heroes)
+        # Check buildings - prioritize ones with resting heroes inside
         for building in buildings:
-            if building.building_type == "castle" and building.hp > 0:
-                dist = self.distance_to(building.center_x, building.center_y)
-                # Slight preference for castle
-                if dist < best_dist * 0.8:
-                    best_dist = dist
-                    best_target = building
+            if building.hp <= 0:
+                continue
+            
+            dist = self.distance_to(building.center_x, building.center_y)
+            
+            # Check if building has heroes resting inside
+            has_heroes_inside = False
+            for hero in heroes:
+                if (hero.is_alive and hero.state.name == "RESTING" and 
+                    hero.home_building == building):
+                    has_heroes_inside = True
+                    break
+            
+            # Prioritize buildings with heroes inside
+            if has_heroes_inside and dist < best_dist:
+                best_dist = dist
+                best_target = building
+            # Castle is always a valid fallback target
+            elif building.building_type == "castle" and dist < best_dist * 0.8:
+                best_dist = dist
+                best_target = building
         
         self.target = best_target
         return best_target
@@ -188,7 +203,7 @@ class Goblin(Enemy):
         super().__init__(x, y, "goblin")
         self.hp = GOBLIN_HP
         self.max_hp = GOBLIN_HP
-        self.attack_power = GOBLIN_ATTACK * 4  # 4x damage as requested
+        self.attack_power = GOBLIN_ATTACK * 2  # 2x damage (scaled back from 4x)
         self.speed = GOBLIN_SPEED
         self.xp_reward = 25
         self.gold_reward = 10  # Fixed 10 gold per goblin

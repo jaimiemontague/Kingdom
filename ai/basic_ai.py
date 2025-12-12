@@ -36,10 +36,17 @@ class BasicAI:
             self.handle_resting(hero, dt, game_state)
             return
         
-        # Check if hero should go home to rest (priority check)
-        if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():
-            self.send_home_to_rest(hero, game_state)
+        # Priority: Defend home building if it's damaged
+        if hero.home_building and hero.home_building.is_damaged:
+            self.defend_home_building(hero, game_state)
             return
+        
+        # Check if hero should go home to rest (priority check)
+        # But only if building is not damaged
+        if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():
+            if hero.can_rest_at_home():
+                self.send_home_to_rest(hero, game_state)
+                return
         
         # Check if we need an LLM decision
         if self.should_consult_llm(hero, game_state):
@@ -374,6 +381,11 @@ class BasicAI:
     
     def handle_resting(self, hero, dt: float, game_state: dict):
         """Handle hero resting at home."""
+        # Check if building is damaged - hero will pop out automatically in update_resting
+        if hero.home_building and hero.home_building.is_damaged:
+            hero.pop_out_of_building()
+            return
+        
         # Check if still at home
         if hero.home_building:
             dist = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
@@ -388,4 +400,44 @@ class BasicAI:
         if not still_resting:
             # Done resting, become idle
             hero.state = HeroState.IDLE
+    
+    def defend_home_building(self, hero, game_state: dict):
+        """Hero defends their damaged home building."""
+        enemies = game_state.get("enemies", [])
+        
+        if not hero.home_building:
+            return
+        
+        building = hero.home_building
+        
+        # Find enemies near the building
+        nearest_enemy = None
+        nearest_dist = float('inf')
+        
+        for enemy in enemies:
+            if enemy.is_alive:
+                # Check if enemy is near the building or targeting it
+                dist_to_building = enemy.distance_to(building.center_x, building.center_y)
+                if dist_to_building < TILE_SIZE * 5:  # Within 5 tiles of building
+                    dist_to_hero = hero.distance_to(enemy.x, enemy.y)
+                    if dist_to_hero < nearest_dist:
+                        nearest_dist = dist_to_hero
+                        nearest_enemy = enemy
+        
+        if nearest_enemy:
+            # Attack the enemy threatening our home
+            if nearest_dist <= hero.attack_range:
+                hero.target = nearest_enemy
+                hero.state = HeroState.FIGHTING
+            else:
+                # Move towards the enemy
+                hero.target = nearest_enemy
+                hero.set_target_position(nearest_enemy.x, nearest_enemy.y)
+        else:
+            # No enemies nearby, stay near building
+            dist_to_home = hero.distance_to(building.center_x, building.center_y)
+            if dist_to_home > TILE_SIZE * 2:
+                hero.set_target_position(building.center_x + TILE_SIZE, building.center_y)
+            else:
+                hero.state = HeroState.IDLE
 

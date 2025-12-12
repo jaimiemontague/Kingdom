@@ -57,10 +57,20 @@ class Building:
         return (self.grid_x <= grid_x < self.grid_x + self.size[0] and
                 self.grid_y <= grid_y < self.grid_y + self.size[1])
     
-    def take_damage(self, amount: int):
-        """Take damage from an attack."""
+    def take_damage(self, amount: int) -> bool:
+        """Take damage from an attack. Returns True if destroyed."""
         self.hp = max(0, self.hp - amount)
         return self.hp <= 0
+    
+    @property
+    def is_damaged(self) -> bool:
+        """Check if building has taken any damage."""
+        return self.hp < self.max_hp
+    
+    @property
+    def is_fully_repaired(self) -> bool:
+        """Check if building is at full health."""
+        return self.hp >= self.max_hp
     
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         """Render the building."""

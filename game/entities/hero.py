@@ -7,7 +7,7 @@ import math
 from enum import Enum, auto
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
-    HERO_SPEED, HERO_HIRE_COST, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
+    HERO_SPEED, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
 )
 
 
@@ -155,13 +155,24 @@ class Hero:
     
     def start_resting(self):
         """Start resting at home."""
+        # Can't rest if building is damaged
+        if self.home_building and self.home_building.is_damaged:
+            self.state = HeroState.IDLE
+            return False
+        
         self.state = HeroState.RESTING
         self.hp_healed_this_rest = 0
         self.last_heal_time = 0
+        return True
     
     def update_resting(self, dt: float) -> bool:
         """Update resting state. Returns True if still resting."""
         if self.state != HeroState.RESTING:
+            return False
+        
+        # Check if building is damaged - must pop out and defend!
+        if self.home_building and self.home_building.is_damaged:
+            self.pop_out_of_building()
             return False
         
         self.last_heal_time += dt
@@ -179,6 +190,23 @@ class Hero:
             return False
         
         return True
+    
+    def pop_out_of_building(self):
+        """Hero pops out of building (when building takes damage)."""
+        self.state = HeroState.IDLE
+        self.hp_healed_this_rest = 0
+        # Stay near the building to defend it
+        if self.home_building:
+            # Position slightly outside the building
+            self.x = self.home_building.center_x + TILE_SIZE
+            self.y = self.home_building.center_y
+    
+    def can_rest_at_home(self) -> bool:
+        """Check if hero can rest at their home building."""
+        if not self.home_building:
+            return False
+        # Cannot rest in damaged buildings
+        return not self.home_building.is_damaged
     
     def finish_resting(self):
         """Finish resting and leave home."""
