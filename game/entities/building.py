@@ -185,8 +185,8 @@ class Marketplace(Building):
     
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, "marketplace")
+        self.potions_researched = False  # Must research before heroes can buy potions
         self.items = [
-            {"name": "Health Potion", "type": "potion", "price": 30, "effect": 50},
             {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
             {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
             {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
@@ -195,7 +195,15 @@ class Marketplace(Building):
         
     def get_available_items(self) -> list:
         """Get list of items available for purchase."""
-        return self.items.copy()
+        items = self.items.copy()
+        # Add potions if researched
+        if self.potions_researched:
+            items.insert(0, {"name": "Healing Potion", "type": "potion", "price": 20, "effect": 50})
+        return items
+    
+    def can_sell_potions(self) -> bool:
+        """Check if marketplace can sell potions."""
+        return self.potions_researched
     
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         super().render(surface, camera_offset)

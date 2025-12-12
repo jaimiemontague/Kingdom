@@ -64,6 +64,7 @@ class Hero:
         self.weapon = None  # {"name": str, "attack": int}
         self.armor = None   # {"name": str, "defense": int}
         self.potions = 0
+        self.max_potions = 5  # Can carry up to 5 potions
         self.potion_heal_amount = 50
         
         # AI State
@@ -219,21 +220,58 @@ class Hero:
         self.xp_to_level = int(self.xp_to_level * 1.5)
     
     def buy_item(self, item: dict) -> bool:
-        """Attempt to buy an item. Returns True if successful."""
+        """Attempt to buy an item using spendable (non-taxed) gold. Returns True if successful."""
         if self.gold < item["price"]:
             return False
         
         self.gold -= item["price"]
         
         if item["type"] == "potion":
-            self.potions += 1
-            self.potion_heal_amount = item.get("effect", 50)
+            if self.potions < self.max_potions:
+                self.potions += 1
+                self.potion_heal_amount = item.get("effect", 50)
+            else:
+                # Refund if at max potions
+                self.gold += item["price"]
+                return False
         elif item["type"] == "weapon":
             self.weapon = {"name": item["name"], "attack": item["attack"]}
         elif item["type"] == "armor":
             self.armor = {"name": item["name"], "defense": item["defense"]}
         
         return True
+    
+    def wants_to_shop(self, marketplace_has_potions: bool) -> bool:
+        """Check if hero wants to go shopping."""
+        # Only shop when at full health and idle
+        if self.hp < self.max_hp:
+            return False
+        
+        # Need at least 30 gold to feel the need to shop
+        if self.gold < 30:
+            return False
+        
+        # If no potions and gold >= 30, want to buy one potion
+        if self.potions == 0 and marketplace_has_potions:
+            return True
+        
+        # If gold >= 50, might want to buy more potions (LLM decides)
+        if self.gold >= 50 and self.potions < self.max_potions and marketplace_has_potions:
+            return True
+        
+        return False
+    
+    def get_shopping_context(self) -> dict:
+        """Get context for LLM shopping decisions."""
+        return {
+            "spendable_gold": self.gold,
+            "taxed_gold": self.taxed_gold,
+            "current_potions": self.potions,
+            "max_potions": self.max_potions,
+            "potion_price": 20,
+            "hero_class": self.hero_class,
+            "personality": self.personality,
+        }
     
     def set_target_position(self, x: float, y: float):
         """Set a position to move towards."""

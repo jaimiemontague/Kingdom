@@ -9,7 +9,7 @@ from config import (
 from game.world import World
 from game.entities import Castle, WarriorGuild, Marketplace, Hero, Goblin, TaxCollector
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
-from game.ui import HUD, BuildingMenu, DebugPanel
+from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 
 
 class GameEngine:
@@ -47,6 +47,10 @@ class GameEngine:
         self.hud = HUD(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.building_menu = BuildingMenu()
         self.debug_panel = DebugPanel(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.building_panel = BuildingPanel(WINDOW_WIDTH, WINDOW_HEIGHT)
+        
+        # Selection
+        self.selected_building = None
         
         # Bounty system
         self.bounty_system = BountySystem()
@@ -146,14 +150,29 @@ class GameEngine:
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
         if event.button == 1:  # Left click
+            # Check if clicking on building panel first
+            if self.building_panel.visible:
+                if self.building_panel.handle_click(event.pos, self.economy, self.get_game_state()):
+                    return
+            
             if self.building_menu.selected_building:
                 # Try to place building
                 pos = self.building_menu.get_placement()
                 if pos:
                     self.place_building(pos[0], pos[1])
             else:
-                # Try to select a hero
-                self.try_select_hero(event.pos)
+                # Try to select a hero first
+                if self.try_select_hero(event.pos):
+                    self.building_panel.deselect()
+                    self.selected_building = None
+                # Then try to select a building
+                elif self.try_select_building(event.pos):
+                    self.selected_hero = None
+                else:
+                    # Clicked on empty space
+                    self.selected_hero = None
+                    self.building_panel.deselect()
+                    self.selected_building = None
                 
         elif event.button == 3:  # Right click
             if self.selected_hero:
@@ -171,19 +190,35 @@ class GameEngine:
                 self.buildings,
                 (self.camera_x, self.camera_y)
             )
+        
+        # Update building panel hover state
+        self.building_panel.update_hover(event.pos)
     
-    def try_select_hero(self, screen_pos: tuple):
-        """Try to select a hero at the given screen position."""
+    def try_select_hero(self, screen_pos: tuple) -> bool:
+        """Try to select a hero at the given screen position. Returns True if selected."""
         world_x = screen_pos[0] + self.camera_x
         world_y = screen_pos[1] + self.camera_y
         
         for hero in self.heroes:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
                 self.selected_hero = hero
-                return
+                return True
         
-        # Click on empty space deselects
-        self.selected_hero = None
+        return False
+    
+    def try_select_building(self, screen_pos: tuple) -> bool:
+        """Try to select a building at the given screen position. Returns True if selected."""
+        world_x = screen_pos[0] + self.camera_x
+        world_y = screen_pos[1] + self.camera_y
+        
+        for building in self.buildings:
+            rect = building.get_rect()
+            if rect.collidepoint(world_x, world_y):
+                self.selected_building = building
+                self.building_panel.select_building(building, self.heroes)
+                return True
+        
+        return False
     
     def try_hire_hero(self):
         """Try to hire a hero from a warrior guild."""
@@ -383,6 +418,9 @@ class GameEngine:
         
         # Render debug panel
         self.debug_panel.render(self.screen, self.get_game_state())
+        
+        # Render building panel
+        self.building_panel.render(self.screen, self.heroes, self.economy)
         
         # Pause overlay
         if self.paused:

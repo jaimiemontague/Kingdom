@@ -188,7 +188,7 @@ class Goblin(Enemy):
         super().__init__(x, y, "goblin")
         self.hp = GOBLIN_HP
         self.max_hp = GOBLIN_HP
-        self.attack_power = GOBLIN_ATTACK
+        self.attack_power = GOBLIN_ATTACK * 4  # 4x damage as requested
         self.speed = GOBLIN_SPEED
         self.xp_reward = 25
         self.gold_reward = 10  # Fixed 10 gold per goblin

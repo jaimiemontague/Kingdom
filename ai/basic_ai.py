@@ -133,6 +133,16 @@ class BasicAI:
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
         
+        # Check if hero wants to go shopping (full health, has gold, needs potions)
+        if hero.hp >= hero.max_hp:
+            marketplace = self.find_marketplace_with_potions(buildings)
+            if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
+                # Go shopping
+                hero.target_position = (marketplace.center_x, marketplace.center_y)
+                hero.state = HeroState.MOVING
+                hero.target = {"type": "shopping", "marketplace": marketplace}
+                return
+        
         # Look for nearby enemies to fight
         nearest_enemy = None
         nearest_dist = float('inf')
@@ -154,6 +164,14 @@ class BasicAI:
         if random.random() < 0.01:  # 1% chance per frame to start exploring
             self.explore(hero, game_state)
     
+    def find_marketplace_with_potions(self, buildings: list):
+        """Find a marketplace that can sell potions."""
+        for building in buildings:
+            if building.building_type == "marketplace":
+                if hasattr(building, 'potions_researched') and building.potions_researched:
+                    return building
+        return None
+    
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
         enemies = game_state.get("enemies", [])
@@ -171,14 +189,27 @@ class BasicAI:
                     hero.target_position = None
                     return
                 
+                # Check if we were going shopping
+                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
+                    # Arrived at marketplace - start shopping
+                    marketplace = hero.target.get("marketplace")
+                    if marketplace:
+                        self.do_shopping(hero, marketplace, game_state)
+                    hero.target = None
+                    hero.target_position = None
+                    hero.state = HeroState.IDLE
+                    return
+                
                 hero.target_position = None
                 hero.state = HeroState.IDLE
                 return
         
-        # Check for enemies in attack range while moving (but not if going home to rest)
-        if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
-            # Don't fight when trying to get home to rest
-            return
+        # Check for enemies in attack range while moving (but not if going home or shopping)
+        if hero.target and isinstance(hero.target, dict):
+            target_type = hero.target.get("type")
+            if target_type in ["going_home", "shopping"]:
+                # Don't fight when trying to get home to rest or go shopping
+                return
         
         for enemy in enemies:
             if enemy.is_alive:
@@ -251,32 +282,55 @@ class BasicAI:
             hero.state = HeroState.IDLE
             return
         
-        # Buy items (simple priority: potions if hurt, then weapons, then armor)
+        self.do_shopping(hero, marketplace, game_state)
+        hero.state = HeroState.IDLE
+    
+    def do_shopping(self, hero, marketplace, game_state: dict):
+        """Actually perform shopping at a marketplace."""
+        economy = game_state.get("economy")
+        
+        # Get available items
         items = marketplace.get_available_items()
         
-        for item in items:
-            if hero.gold < item["price"]:
-                continue
-            
-            # Priority: potions if hurt
-            if item["type"] == "potion" and hero.health_percent < 0.8:
-                if hero.buy_item(item):
-                    economy = game_state.get("economy")
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
-                    break
-            
-            # Priority: weapon upgrade
-            if item["type"] == "weapon":
-                current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
-                if item["attack"] > current_attack:
+        # Priority 1: Buy a potion if we have none and can afford it
+        if hero.potions == 0 and hero.gold >= 20:
+            for item in items:
+                if item["type"] == "potion":
                     if hero.buy_item(item):
-                        economy = game_state.get("economy")
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
         
-        hero.state = HeroState.IDLE
+        # Priority 2: If gold >= 50 and potions < max, maybe buy more potions
+        # For now, warriors are practical - buy up to 2 potions total if they can afford it
+        if hero.gold >= 50 and hero.potions < 2:
+            for item in items:
+                if item["type"] == "potion" and hero.gold >= item["price"]:
+                    if hero.buy_item(item):
+                        if economy:
+                            economy.hero_purchase(hero.name, item["name"], item["price"])
+                        # Only buy one extra per shopping trip
+                        break
+        
+        # Priority 3: Weapon upgrade if can afford
+        for item in items:
+            if item["type"] == "weapon" and hero.gold >= item["price"]:
+                current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
+                if item["attack"] > current_attack:
+                    if hero.buy_item(item):
+                        if economy:
+                            economy.hero_purchase(hero.name, item["name"], item["price"])
+                        break
+        
+        # Priority 4: Armor upgrade if can afford
+        for item in items:
+            if item["type"] == "armor" and hero.gold >= item["price"]:
+                current_defense = hero.armor.get("defense", 0) if hero.armor else 0
+                if item["defense"] > current_defense:
+                    if hero.buy_item(item):
+                        if economy:
+                            economy.hero_purchase(hero.name, item["name"], item["price"])
+                        break
     
     def start_retreat(self, hero, game_state: dict):
         """Start retreating to safety."""
