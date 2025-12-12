@@ -209,36 +209,31 @@ class BasicAI:
         
         debug_log(f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_zone")
         
-        # Engage enemies in two cases:
-        # 1. Enemy is in our patrol zone (5 tile radius from zone center)
-        # 2. Enemy is personally close to us (4 tile radius from hero)
-        zone_radius = TILE_SIZE * 5  # 160 pixels
-        personal_radius = TILE_SIZE * 4  # 128 pixels
+        # Heroes only know about enemies within 5 tiles of themselves (no map-wide awareness)
+        awareness_radius = TILE_SIZE * 5  # 160 pixels - hero can only "see" this far
         
-        enemies_to_consider = []
+        enemies_nearby = []
         for enemy in enemies:
             if not enemy.is_alive:
                 continue
             
-            dist_to_zone = math.sqrt((enemy.x - zone_x)**2 + (enemy.y - zone_y)**2)
             dist_to_hero = hero.distance_to(enemy.x, enemy.y)
             
-            # Check if enemy is in our zone OR personally close
-            in_zone = dist_to_zone <= zone_radius
-            personally_close = dist_to_hero <= personal_radius
-            
-            if in_zone or personally_close:
-                enemies_to_consider.append((enemy, dist_to_hero))
+            # Hero can only see enemies within their awareness radius
+            if dist_to_hero <= awareness_radius:
+                enemies_nearby.append((enemy, dist_to_hero))
         
-        # If there are enemies to fight, engage the closest one
-        if enemies_to_consider:
-            enemies_to_consider.sort(key=lambda x: x[1])
-            target_enemy = enemies_to_consider[0][0]
-            debug_log(f"{hero.name} -> engaging enemy at ({target_enemy.x:.0f}, {target_enemy.y:.0f})")
+        # If there are enemies nearby, engage the closest one
+        if enemies_nearby:
+            enemies_nearby.sort(key=lambda x: x[1])
+            target_enemy, target_dist = enemies_nearby[0]
+            debug_log(f"{hero.name} -> sees enemy {target_dist:.0f}px away, engaging!")
             hero.target = target_enemy
             hero.set_target_position(target_enemy.x, target_enemy.y)
             hero.state = HeroState.MOVING
             return
+        
+        debug_log(f"{hero.name} -> no enemies within {awareness_radius}px", throttle_key=f"{hero.name}_no_enemy")
         
         # No enemies in zone - patrol within our zone
         dist_to_zone = hero.distance_to(zone_x, zone_y)
@@ -305,6 +300,19 @@ class BasicAI:
             target_type = hero.target.get("type")
             # Don't interrupt these activities
             if target_type in ["going_home", "shopping", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
+                return
+        
+        # If chasing an enemy, check if we've gone too far from our zone (8 tiles max)
+        if hero.target and hasattr(hero.target, 'is_alive'):
+            zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
+            dist_to_zone = math.sqrt((hero.x - zone_x)**2 + (hero.y - zone_y)**2)
+            max_chase_dist = TILE_SIZE * 8
+            
+            if dist_to_zone > max_chase_dist:
+                debug_log(f"{hero.name} -> too far from zone ({dist_to_zone:.0f}px), giving up chase")
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
                 return
         
         # If we have an enemy target, check if we're in range to fight
