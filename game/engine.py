@@ -370,6 +370,7 @@ class GameEngine:
     
     def get_game_state(self) -> dict:
         """Get current game state for AI and UI."""
+        castle = next((b for b in self.buildings if b.building_type == "castle"), None)
         return {
             "gold": self.economy.player_gold,
             "heroes": self.heroes,
@@ -378,6 +379,7 @@ class GameEngine:
             "bounties": self.bounty_system.get_unclaimed_bounties(),
             "wave": self.spawner.wave_number,
             "selected_hero": self.selected_hero,
+            "castle": castle,
             "economy": self.economy,
         }
     

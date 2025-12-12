@@ -35,12 +35,18 @@ class BasicAI:
         if hero.state == HeroState.RESTING:
             self.handle_resting(hero, dt, game_state)
             return
-        
+
+        # Priority: Defend castle if it's under attack (unless already fighting)
+        castle = game_state.get("castle")
+        if castle and castle.is_damaged and hero.state != HeroState.FIGHTING:
+            self.defend_castle(hero, game_state, castle)
+            return
+
         # Priority: Defend home building if it's damaged
-        if hero.home_building and hero.home_building.is_damaged:
+        if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
             self.defend_home_building(hero, game_state)
             return
-        
+
         # Check if hero should go home to rest (priority check)
         # But only if building is not damaged
         if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():
@@ -440,4 +446,38 @@ class BasicAI:
                 hero.set_target_position(building.center_x + TILE_SIZE, building.center_y)
             else:
                 hero.state = HeroState.IDLE
+
+    def defend_castle(self, hero, game_state: dict, castle):
+        """Send hero to defend the castle when it's damaged."""
+        enemies = game_state.get("enemies", [])
+
+        # Find any enemies near the castle
+        target_enemy = None
+        target_dist = float("inf")
+        for enemy in enemies:
+            if enemy.is_alive:
+                dist_to_castle = enemy.distance_to(castle.center_x, castle.center_y)
+                if dist_to_castle < target_dist:
+                    target_dist = dist_to_castle
+                    target_enemy = enemy
+
+        if target_enemy:
+            dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
+            if dist_to_hero <= hero.attack_range:
+                hero.target = target_enemy
+                hero.state = HeroState.FIGHTING
+                return
+            hero.target = target_enemy
+            hero.set_target_position(target_enemy.x, target_enemy.y)
+            hero.state = HeroState.MOVING
+            return
+
+        # No enemy yet - move to castle buffer zone
+        dist_to_castle = hero.distance_to(castle.center_x, castle.center_y)
+        if dist_to_castle > TILE_SIZE * 3:
+            hero.target = {"type": "defend_castle"}
+            hero.set_target_position(castle.center_x + TILE_SIZE, castle.center_y)
+            hero.state = HeroState.MOVING
+        else:
+            hero.state = HeroState.IDLE
 
