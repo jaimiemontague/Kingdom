@@ -23,10 +23,10 @@ class LLMBrain:
         self.provider_name = provider_name or LLM_PROVIDER
         self.provider = self._create_provider()
         
-        # Request queue: (hero_name, context)
+        # Request queue: (hero_key, context) where hero_key is a stable identifier (int/str)
         self.request_queue = queue.Queue()
         
-        # Response storage: hero_name -> decision
+        # Response storage: hero_key -> decision
         self.responses = {}
         self.response_lock = threading.Lock()
         
@@ -99,7 +99,7 @@ class LLMBrain:
             except Exception as e:
                 print(f"LLM worker error: {e}")
     
-    def _process_request(self, hero_name: str, context: dict) -> dict:
+    def _process_request(self, hero_key, context: dict) -> dict:
         """Process a single LLM request."""
         try:
             # Build the prompt
@@ -123,7 +123,7 @@ class LLMBrain:
                 return get_fallback_decision(context)
                 
         except Exception as e:
-            print(f"LLM request failed for {hero_name}: {e}")
+            print(f"LLM request failed for {hero_key}: {e}")
             return get_fallback_decision(context)
     
     def _parse_response(self, response_text: str) -> Optional[dict]:
@@ -153,17 +153,17 @@ class LLMBrain:
         except json.JSONDecodeError:
             return None
     
-    def request_decision(self, hero_name: str, context: dict):
+    def request_decision(self, hero_key, context: dict):
         """Queue a decision request for a hero."""
-        self.request_queue.put((hero_name, context))
+        self.request_queue.put((hero_key, context))
     
-    def get_decision(self, hero_name: str) -> Optional[dict]:
+    def get_decision(self, hero_key) -> Optional[dict]:
         """Get a decision for a hero if one is ready."""
         with self.response_lock:
-            return self.responses.pop(hero_name, None)
+            return self.responses.pop(hero_key, None)
     
-    def has_pending_decision(self, hero_name: str) -> bool:
+    def has_pending_decision(self, hero_key) -> bool:
         """Check if a decision is pending for a hero."""
         with self.response_lock:
-            return hero_name in self.responses
+            return hero_key in self.responses
 

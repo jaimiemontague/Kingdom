@@ -12,6 +12,7 @@ class ContextBuilder:
         """Build full context for a hero's decision."""
         context = {
             "hero": {
+                "id": getattr(hero, "hero_id", None),
                 "name": hero.name,
                 "class": hero.hero_class,
                 "level": hero.level,
@@ -64,6 +65,7 @@ class ContextBuilder:
                 dist = hero.distance_to(other_hero.x, other_hero.y)
                 if dist < TILE_SIZE * 10:
                     context["nearby_allies"].append({
+                        "id": getattr(other_hero, "hero_id", None),
                         "name": other_hero.name,
                         "class": other_hero.hero_class,
                         "health_percent": round(other_hero.health_percent * 100),

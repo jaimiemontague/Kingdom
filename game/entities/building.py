@@ -20,6 +20,7 @@ class Building:
         self.cost = BUILDING_COSTS.get(building_type, 100)
         self.hp = 200
         self.max_hp = 200
+        self.last_damage_time_ms = None  # pygame ticks when last damaged (for "under attack" behavior)
         
     @property
     def world_x(self) -> float:
@@ -60,12 +61,20 @@ class Building:
     def take_damage(self, amount: int) -> bool:
         """Take damage from an attack. Returns True if destroyed."""
         self.hp = max(0, self.hp - amount)
+        self.last_damage_time_ms = pygame.time.get_ticks()
         return self.hp <= 0
     
     @property
     def is_damaged(self) -> bool:
         """Check if building has taken any damage."""
         return self.hp < self.max_hp
+
+    @property
+    def is_under_attack(self) -> bool:
+        """True if the building was damaged recently (prevents permanent 'defend forever')."""
+        if self.last_damage_time_ms is None:
+            return False
+        return (pygame.time.get_ticks() - self.last_damage_time_ms) < 3000
     
     @property
     def is_fully_repaired(self) -> bool:

@@ -4,6 +4,7 @@ Hero entity with stats, inventory, and AI state machine.
 import pygame
 import random
 import math
+import itertools
 from enum import Enum, auto
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
@@ -27,11 +28,15 @@ HERO_NAMES = [
     "Cedric", "Kira", "Magnus", "Freya", "Aldric", "Seraphina", "Dante", "Nova"
 ]
 
+# Stable numeric IDs for heroes (names can collide).
+HERO_ID_COUNTER = itertools.count(1)
+
 
 class Hero:
     """A hero unit controlled by basic AI + LLM decisions."""
     
     def __init__(self, x: float, y: float, hero_class: str = "warrior"):
+        self.hero_id = next(HERO_ID_COUNTER)
         self.x = x
         self.y = y
         self.hero_class = hero_class
@@ -92,6 +97,11 @@ class Hero:
         # Visual
         self.size = 20
         self.color = COLOR_BLUE
+
+    @property
+    def debug_id(self) -> str:
+        """Stable identifier suitable for logs/UI."""
+        return f"{self.name}#{self.hero_id}"
         
     @property
     def attack(self) -> int:
@@ -155,8 +165,8 @@ class Hero:
     
     def start_resting(self):
         """Start resting at home."""
-        # Can't rest if building is damaged
-        if self.home_building and self.home_building.is_damaged:
+        # Can't rest if building is currently under attack
+        if self.home_building and getattr(self.home_building, "is_under_attack", False):
             self.state = HeroState.IDLE
             return False
         
@@ -170,8 +180,8 @@ class Hero:
         if self.state != HeroState.RESTING:
             return False
         
-        # Check if building is damaged - must pop out and defend!
-        if self.home_building and self.home_building.is_damaged:
+        # Check if building is under attack - must pop out and defend!
+        if self.home_building and getattr(self.home_building, "is_under_attack", False):
             self.pop_out_of_building()
             return False
         
@@ -205,8 +215,8 @@ class Hero:
         """Check if hero can rest at their home building."""
         if not self.home_building:
             return False
-        # Cannot rest in damaged buildings
-        return not self.home_building.is_damaged
+        # Cannot rest while the building is currently under attack
+        return not getattr(self.home_building, "is_under_attack", False)
     
     def finish_resting(self):
         """Finish resting and leave home."""
@@ -269,8 +279,8 @@ class Hero:
         
         return True
     
-    def wants_to_shop(self, marketplace_has_potions: bool) -> bool:
-        """Check if hero wants to go shopping."""
+    def wants_to_shop(self, marketplace_items: list) -> bool:
+        """Check if hero wants to go shopping based on available items."""
         # Only shop when at full health and idle
         if self.hp < self.max_hp:
             return False
@@ -279,13 +289,26 @@ class Hero:
         if self.gold < 30:
             return False
         
-        # If no potions and gold >= 30, want to buy one potion
-        if self.potions == 0 and marketplace_has_potions:
-            return True
-        
-        # If gold >= 50, might want to buy more potions (LLM decides)
-        if self.gold >= 50 and self.potions < self.max_potions and marketplace_has_potions:
-            return True
+        # Potions (if available)
+        has_potion_for_sale = any(item.get("type") == "potion" for item in marketplace_items)
+        if has_potion_for_sale:
+            # If no potions, strongly desire to buy one.
+            if self.potions == 0 and any(item.get("type") == "potion" and self.gold >= item.get("price", 999999) for item in marketplace_items):
+                return True
+            # If rich, might want to stock up.
+            if self.gold >= 50 and self.potions < self.max_potions:
+                return True
+
+        # Weapon/armor upgrades
+        current_attack = self.weapon.get("attack", 0) if self.weapon else 0
+        current_defense = self.armor.get("defense", 0) if self.armor else 0
+        for item in marketplace_items:
+            if item.get("price", 999999) > self.gold:
+                continue
+            if item.get("type") == "weapon" and item.get("attack", 0) > current_attack:
+                return True
+            if item.get("type") == "armor" and item.get("defense", 0) > current_defense:
+                return True
         
         return False
     
