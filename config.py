@@ -10,7 +10,8 @@ load_dotenv()
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS = 60
-GAME_TITLE = "Kingdom Sim"
+PROTOTYPE_VERSION = "1.0.0"
+GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
 
 # Tile settings
 TILE_SIZE = 32

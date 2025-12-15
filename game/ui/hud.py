@@ -186,6 +186,11 @@ class HUD:
         tax_text = self.font_small.render(f"Taxed: {hero.taxed_gold}", True, (200, 150, 50))
         surface.blit(tax_text, (panel_x + 10, y))
         y += 20
+
+        # Potions
+        potions_text = self.font_small.render(f"Potions: {getattr(hero, 'potions', 0)}", True, COLOR_GREEN)
+        surface.blit(potions_text, (panel_x + 10, y))
+        y += 20
         
         # Equipment
         weapon = hero.weapon["name"] if hero.weapon else "Fists"

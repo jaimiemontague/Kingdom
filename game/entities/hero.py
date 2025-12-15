@@ -187,8 +187,8 @@ class Hero:
         
         self.last_heal_time += dt
         
-        # Heal 1 HP every 2 seconds
-        if self.last_heal_time >= 2.0:
+        # Heal 1 HP every 1 second (2x faster resting in guild)
+        if self.last_heal_time >= 1.0:
             self.last_heal_time = 0
             if self.hp < self.max_hp:
                 self.hp += 1

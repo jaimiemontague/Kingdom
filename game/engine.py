@@ -7,7 +7,7 @@ from config import (
     MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK
 )
 from game.world import World
-from game.entities import Castle, WarriorGuild, Marketplace, Hero, Goblin, TaxCollector
+from game.entities import Castle, WarriorGuild, Marketplace, Hero, Goblin, TaxCollector, Peasant
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 
@@ -37,6 +37,8 @@ class GameEngine:
         self.heroes = []
         self.enemies = []
         self.bounties = []
+        self.peasants = []
+        self.peasant_spawn_timer = 0.0
         
         # Systems
         self.combat_system = CombatSystem()
@@ -74,6 +76,11 @@ class GameEngine:
         center_y = MAP_HEIGHT // 2 - 1
         
         castle = Castle(center_x, center_y)
+        # Starting castle is fully built and targetable.
+        if hasattr(castle, "is_constructed"):
+            castle.is_constructed = True
+        if hasattr(castle, "construction_started"):
+            castle.construction_started = True
         self.buildings.append(castle)
         
         # Create tax collector at castle
@@ -232,6 +239,11 @@ class GameEngine:
         if not guild:
             self.hud.add_message("Build a Warrior Guild first!", (255, 100, 100))
             return
+
+        # Guild must be constructed before it can be used.
+        if hasattr(guild, "is_constructed") and not guild.is_constructed:
+            self.hud.add_message("Warrior Guild is under construction!", (255, 100, 100))
+            return
         
         if not self.economy.can_afford_hero():
             self.hud.add_message("Not enough gold to hire!", (255, 100, 100))
@@ -267,10 +279,14 @@ class GameEngine:
             building = Marketplace(grid_x, grid_y)
         else:
             return
+
+        # Newly placed buildings start unconstructed (1 HP, non-targetable) until a peasant begins building.
+        if hasattr(building, "mark_unconstructed"):
+            building.mark_unconstructed()
         
         self.buildings.append(building)
         self.building_menu.cancel_selection()
-        self.hud.add_message(f"{building_type.replace('_', ' ').title()} built!", (100, 255, 100))
+        self.hud.add_message(f"{building_type.replace('_', ' ').title()} placed (needs building)", (100, 255, 100))
     
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
@@ -303,10 +319,22 @@ class GameEngine:
         # Update heroes
         for hero in self.heroes:
             hero.update(dt, game_state)
+
+        # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
+        castle = game_state.get("castle")
+        self.peasant_spawn_timer += dt
+        alive_peasants = [p for p in self.peasants if p.is_alive]
+        if castle and len(alive_peasants) < 2 and self.peasant_spawn_timer >= 5.0:
+            self.peasant_spawn_timer = 0.0
+            self.peasants.append(Peasant(castle.center_x, castle.center_y))
+
+        # Update peasants
+        for peasant in self.peasants:
+            peasant.update(dt, game_state)
         
         # Update enemies
         for enemy in self.enemies:
-            enemy.update(dt, self.heroes, self.buildings)
+            enemy.update(dt, self.heroes, self.peasants, self.buildings)
         
         # Spawn new enemies
         new_enemies = self.spawner.update(dt)
@@ -374,6 +402,7 @@ class GameEngine:
         return {
             "gold": self.economy.player_gold,
             "heroes": self.heroes,
+            "peasants": self.peasants,
             "enemies": self.enemies,
             "buildings": self.buildings,
             "bounties": self.bounty_system.get_unclaimed_bounties(),
@@ -404,6 +433,10 @@ class GameEngine:
         # Render heroes
         for hero in self.heroes:
             hero.render(self.screen, camera_offset)
+
+        # Render peasants
+        for peasant in self.peasants:
+            peasant.render(self.screen, camera_offset)
         
         # Render tax collector
         if self.tax_collector:

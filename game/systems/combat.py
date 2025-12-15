@@ -38,6 +38,11 @@ class CombatSystem:
                     closest_enemy = enemy
             
             if closest_enemy:
+                # If the enemy is currently targeting a building, being attacked should make it retarget the attacker.
+                # This prevents enemies from mindlessly chewing on buildings while a hero hits them.
+                if getattr(closest_enemy, "target", None) is not None and hasattr(closest_enemy.target, "building_type"):
+                    closest_enemy.target = hero
+
                 # Register this hero as an attacker for gold distribution
                 if hasattr(closest_enemy, 'register_attacker'):
                     closest_enemy.register_attacker(hero)

@@ -2,6 +2,10 @@
 
 A Majesty-inspired fantasy kingdom simulation game where heroes are controlled by AI powered by Large Language Models (LLMs).
 
+## Prototype Version
+
+This repository is currently stamped as **Prototype v1.0.0** (see `config.py`).
+
 ## Overview
 
 In this game, you play as a ruler who builds a kingdom and hires heroes to defend it. Unlike traditional RTS games, you don't directly control the heroes - instead, they make their own decisions based on their AI personalities. The twist? Important decisions (when to retreat, what to buy, which bounties to pursue) are made by calling LLM APIs like OpenAI, Claude, Gemini, or Grok.
@@ -14,6 +18,7 @@ In this game, you play as a ruler who builds a kingdom and hires heroes to defen
 - **Hero Personalities**: Each hero has a unique personality affecting decisions
 - **Economic System**: Build, hire, and tax your way to kingdom prosperity
 - **Wave-Based Combat**: Defend against goblin invasions
+- **Peasants + Construction**: Newly placed buildings start at 1 HP and must be built; peasants also repair and prioritize castle repairs
 
 ## Requirements
 
@@ -58,6 +63,9 @@ python main.py --provider grok
 
 # Run without LLM (basic AI only)
 python main.py --no-llm
+
+# (Dev) Headless observer runner
+python tools/observe_sync.py --seconds 20 --heroes 10 --seed 3 --log-every 120 --realtime
 ```
 
 ## Controls

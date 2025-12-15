@@ -21,6 +21,13 @@ class Building:
         self.hp = 200
         self.max_hp = 200
         self.last_damage_time_ms = None  # pygame ticks when last damaged (for "under attack" behavior)
+        self.placed_time_ms = pygame.time.get_ticks()
+
+        # Construction state (used for newly placed buildings).
+        # Default: existing/starting buildings are fully constructed and targetable.
+        self.is_constructed = True
+        self.construction_started = True
+        self._work_accum = 0.0  # fractional HP accumulator for build/repair work
         
     @property
     def world_x(self) -> float:
@@ -63,6 +70,52 @@ class Building:
         self.hp = max(0, self.hp - amount)
         self.last_damage_time_ms = pygame.time.get_ticks()
         return self.hp <= 0
+
+    @property
+    def is_targetable(self) -> bool:
+        """Whether enemies can attack this building."""
+        if self.hp <= 0:
+            return False
+        if self.building_type == "castle":
+            return True
+        return bool(self.construction_started)
+
+    def mark_unconstructed(self):
+        """Set this building to its just-placed construction state."""
+        self.is_constructed = False
+        self.construction_started = False
+        self.hp = 1
+        self._work_accum = 0.0
+
+    def start_construction(self):
+        """Called when a peasant starts building; becomes targetable immediately."""
+        self.construction_started = True
+
+    def apply_work(self, dt: float, percent_per_sec: float = 0.01) -> bool:
+        """
+        Apply build/repair work while a peasant is adjacent.
+
+        Increases HP by (percent_per_sec * max_hp) per second until full.
+        Returns True if building is now fully repaired/constructed.
+        """
+        if self.hp >= self.max_hp:
+            self.hp = self.max_hp
+            self.is_constructed = True
+            return True
+
+        # Accumulate fractional work and apply integer HP increases.
+        self._work_accum += self.max_hp * percent_per_sec * dt
+        add = int(self._work_accum)
+        if add > 0:
+            self._work_accum -= add
+            self.hp = min(self.max_hp, self.hp + add)
+
+        if self.hp >= self.max_hp:
+            self.hp = self.max_hp
+            self.is_constructed = True
+            return True
+
+        return False
     
     @property
     def is_damaged(self) -> bool:

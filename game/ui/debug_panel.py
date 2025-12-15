@@ -134,6 +134,7 @@ class DebugPanel:
             details = [
                 f"State: {selected.state.name}",
                 f"Personality: {selected.personality}",
+                f"Potions: {getattr(selected, 'potions', 0)}",
                 f"Last LLM: {selected.last_llm_action.get('action', 'None') if selected.last_llm_action else 'None'}",
             ]
             

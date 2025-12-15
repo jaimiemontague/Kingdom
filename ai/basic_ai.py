@@ -303,6 +303,9 @@ class BasicAI:
         """Find a marketplace (potions optional)."""
         for building in buildings:
             if building.building_type == "marketplace":
+                # Marketplaces under construction are not usable.
+                if hasattr(building, "is_constructed") and not building.is_constructed:
+                    continue
                 return building
         return None
     
@@ -413,6 +416,9 @@ class BasicAI:
         marketplace = None
         for building in buildings:
             if building.building_type == "marketplace":
+                # Marketplaces under construction are not usable.
+                if hasattr(building, "is_constructed") and not building.is_constructed:
+                    continue
                 dist = hero.distance_to(building.center_x, building.center_y)
                 if dist < TILE_SIZE * 2:
                     marketplace = building

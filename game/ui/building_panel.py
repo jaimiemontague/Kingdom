@@ -95,6 +95,9 @@ class BuildingPanel:
         # Check research button for marketplace
         if self.research_button_rect and self.selected_building.building_type == "marketplace":
             if self.research_button_rect.collidepoint(mouse_pos):
+                # Cannot research while under construction
+                if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
+                    return True
                 # Try to research potions
                 if not self.selected_building.potions_researched:
                     if economy.player_gold >= 100:
@@ -208,6 +211,17 @@ class BuildingPanel:
     
     def render_marketplace(self, surface: pygame.Surface, building, heroes: list, y: int, economy) -> int:
         """Render marketplace details."""
+        if hasattr(building, "is_constructed") and not building.is_constructed:
+            uc = self.font_normal.render("Status: UNDER CONSTRUCTION", True, (200, 200, 100))
+            surface.blit(uc, (10, y))
+            y += 25
+            note = self.font_small.render("Peasants must finish building it first.", True, (180, 180, 180))
+            surface.blit(note, (10, y))
+            y += 25
+            # Disable research while unconstructed
+            self.research_button_rect = None
+            return y
+
         # Research status
         if hasattr(building, 'potions_researched') and building.potions_researched:
             research_text = self.font_normal.render("Healing Potions: RESEARCHED", True, COLOR_GREEN)
@@ -332,10 +346,10 @@ class BuildingPanel:
         hp_text = self.font_small.render(f"{hero.hp}/{hero.max_hp}", True, (150, 150, 150))
         surface.blit(hp_text, (hp_bar_x + hp_bar_width + 5, y + 7))
         
-        # Potions indicator
-        if hero.potions > 0:
-            pot_text = self.font_small.render(f"🧪{hero.potions}", True, (100, 200, 100))
-            surface.blit(pot_text, (200, y + 7))
+        # Potions (always show count; emoji can render inconsistently on some systems)
+        pot_color = (100, 200, 100) if hero.potions > 0 else (130, 130, 130)
+        pot_text = self.font_small.render(f"Potions: {hero.potions}", True, pot_color)
+        surface.blit(pot_text, (180, y + 7))
         
         return y + 28
     

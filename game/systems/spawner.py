@@ -13,9 +13,13 @@ class EnemySpawner:
     def __init__(self, world):
         self.world = world
         self.spawn_timer = 0
-        self.spawn_interval = GOBLIN_SPAWN_INTERVAL
+        # Make waves less continuous: fewer spawns, bigger batches.
+        self.extra_spawn_delay_ms = 8000  # additional gap between waves
+        self.spawn_interval = GOBLIN_SPAWN_INTERVAL * 2 + self.extra_spawn_delay_ms
+        self.elapsed_ms = 0
+        self.initial_no_spawn_ms = 5000  # First wave comes 25 seconds sooner than the original 30s
         self.wave_number = 1
-        self.enemies_per_wave = 2
+        self.enemies_per_wave = 2 * 2
         self.total_spawned = 0
         self.enabled = True
         
@@ -48,6 +52,11 @@ class EnemySpawner:
         """
         if not self.enabled:
             return []
+
+        # Warmup period: prevent early spawns for a bit.
+        self.elapsed_ms += dt * 1000
+        if self.elapsed_ms < self.initial_no_spawn_ms:
+            return []
         
         self.spawn_timer += dt * 1000
         new_enemies = []
@@ -65,9 +74,10 @@ class EnemySpawner:
             # Increase difficulty every few waves
             if self.total_spawned % 10 == 0:
                 self.wave_number += 1
-                self.enemies_per_wave = min(5, 2 + self.wave_number // 2)
-                # Slightly decrease spawn interval
-                self.spawn_interval = max(2000, self.spawn_interval - 200)
+                # Maintain 2x sizing and 2x pacing as difficulty ramps.
+                self.enemies_per_wave = min(10, (2 + self.wave_number // 2) * 2)
+                # Slightly decrease spawn interval (still 2x baseline)
+                self.spawn_interval = max(4000 + self.extra_spawn_delay_ms, self.spawn_interval - 400)
         
         return new_enemies
     
@@ -78,8 +88,9 @@ class EnemySpawner:
     def reset(self):
         """Reset the spawner."""
         self.spawn_timer = 0
+        self.elapsed_ms = 0
         self.wave_number = 1
-        self.enemies_per_wave = 2
+        self.enemies_per_wave = 2 * 2
         self.total_spawned = 0
-        self.spawn_interval = GOBLIN_SPAWN_INTERVAL
+        self.spawn_interval = GOBLIN_SPAWN_INTERVAL * 2 + self.extra_spawn_delay_ms
 
