@@ -30,9 +30,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
 from game.world import World  # noqa: E402
-from game.entities import Castle, WarriorGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
+from game.entities import Castle, WarriorGuild, RangerGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
+from game.systems.bounty import Bounty  # noqa: E402
 from ai.basic_ai import BasicAI  # noqa: E402
 from ai.llm_brain import LLMBrain  # noqa: E402
 
@@ -80,10 +81,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=20.0)
     ap.add_argument("--heroes", type=int, default=8)
+    ap.add_argument("--rangers", type=int, default=0, help="number of ranger heroes to spawn (in addition to --heroes)")
     ap.add_argument("--seed", type=int, default=3)
     ap.add_argument("--log-every", type=int, default=60, help="log every N ticks (60 ~= 1s at 60fps)")
     ap.add_argument("--start-gold", type=int, default=120, help="starting spendable gold per hero")
     ap.add_argument("--potions", action="store_true", help="start with potions researched at the marketplace")
+    ap.add_argument("--bounty", action="store_true", help="add one explore bounty to observe class-weighted pursuit")
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
     ap.add_argument("--realtime", action="store_true", help="run the sim in (approx) real time so pygame ticks/cooldowns advance")
     ap.add_argument("--llm", action="store_true", help="enable LLM brain (mock provider) to observe decisions")
@@ -102,10 +105,11 @@ def main() -> int:
     cy = MAP_HEIGHT // 2 - 1
     castle = Castle(cx, cy)
     guild = WarriorGuild(cx - 6, cy + 4)
+    ranger_guild = RangerGuild(cx - 6, cy + 8)
     market = Marketplace(cx + 6, cy + 4)
     market.potions_researched = bool(args.potions)
 
-    buildings = [castle, guild, market]
+    buildings = [castle, guild, ranger_guild, market]
 
     # Simulate one newly placed (unconstructed) building to exercise peasant behavior.
     new_building = Marketplace(cx + 10, cy - 2)
@@ -118,6 +122,12 @@ def main() -> int:
     for _ in range(args.heroes):
         h = Hero(guild.center_x + TILE_SIZE, guild.center_y)
         h.home_building = guild
+        h.gold = args.start_gold
+        heroes.append(h)
+
+    for _ in range(args.rangers):
+        h = Hero(ranger_guild.center_x + TILE_SIZE, ranger_guild.center_y, hero_class="ranger")
+        h.home_building = ranger_guild
         h.gold = args.start_gold
         heroes.append(h)
 
@@ -143,6 +153,13 @@ def main() -> int:
 
     # One peasant to build/repair in the observer
     peasants = [Peasant(castle.center_x, castle.center_y)]
+
+    bounties = []
+    if args.bounty:
+        # Place a bounty far enough that warriors usually ignore it, but rangers consider it.
+        bx = min((MAP_WIDTH - 2) * TILE_SIZE, castle.center_x + TILE_SIZE * 12)
+        by = castle.center_y
+        bounties = [Bounty(bx, by, reward=60, bounty_type="explore")]
 
     economy = EconomySystem()
     combat = CombatSystem()
@@ -170,7 +187,7 @@ def main() -> int:
             "peasants": peasants,
             "enemies": enemies,
             "buildings": buildings,
-            "bounties": [],
+            "bounties": bounties,
             "castle": castle,
             "economy": economy,
         }
@@ -201,8 +218,9 @@ def main() -> int:
             print(f"[t={t:04d}] avg_pairwise_dist={apd:.1f}  alive={len([h for h in heroes if h.is_alive])}  {pot_state}  {castle_state}  new_building[{nb_state}]")
             for h in heroes[: min(8, len(heroes))]:
                 hid = getattr(h, "debug_id", h.name)
+                hcls = getattr(h, "hero_class", "?")
                 print(
-                    f"  - {hid:<12} state={h.state.name:<10} gold={h.gold:<4} pots={getattr(h,'potions',0):<2} pos=({h.x:6.1f},{h.y:6.1f}) tgt={hero_target_label(h)}"
+                    f"  - {hid:<12} cls={hcls:<7} state={h.state.name:<10} gold={h.gold:<4} pots={getattr(h,'potions',0):<2} pos=({h.x:6.1f},{h.y:6.1f}) tgt={hero_target_label(h)}"
                 )
             for p in peasants:
                 print(f"  - Peasant      state={getattr(p,'state',None).name if getattr(p,'state',None) else '?':<10} hp={p.hp}/{p.max_hp} inside_castle={getattr(p,'is_inside_castle',False)} pos=({p.x:6.1f},{p.y:6.1f})")

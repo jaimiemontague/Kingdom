@@ -46,6 +46,7 @@ class Hero:
         self.level = 1
         self.xp = 0
         self.xp_to_level = 100
+        # Base stats start from config defaults, then class-tune below.
         self.hp = HERO_BASE_HP
         self.max_hp = HERO_BASE_HP
         self.base_attack = HERO_BASE_ATTACK
@@ -97,6 +98,17 @@ class Hero:
         # Visual
         self.size = 20
         self.color = COLOR_BLUE
+
+        # Class tuning (Majesty-style class differentiation).
+        if self.hero_class == "ranger":
+            # Faster, lower HP/defense, longer range.
+            self.max_hp = 80
+            self.hp = self.max_hp
+            self.base_attack = 8
+            self.base_defense = 3
+            self.speed = 2.6
+            self.attack_range = TILE_SIZE * 4.0
+            self.color = (46, 139, 87)  # Sea green
 
     @property
     def debug_id(self) -> str:
@@ -273,7 +285,12 @@ class Hero:
                 self.gold += item["price"]
                 return False
         elif item["type"] == "weapon":
-            self.weapon = {"name": item["name"], "attack": item["attack"]}
+            self.weapon = {
+                "name": item["name"],
+                "attack": item["attack"],
+                # Optional weapon metadata for class preferences.
+                "style": item.get("style", "melee"),
+            }
         elif item["type"] == "armor":
             self.armor = {"name": item["name"], "defense": item["defense"]}
         

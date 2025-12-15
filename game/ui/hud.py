@@ -95,7 +95,8 @@ class HUD:
         # Instructions
         instructions = [
             "1: Warrior Guild ($150)",
-            "2: Marketplace ($100)", 
+            "2: Marketplace ($100)",
+            "3: Ranger Guild ($175)",
             "H: Hire Hero ($50)",
             "B: Place Bounty ($50)",
             "F1: Debug Panel"

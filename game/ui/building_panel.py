@@ -138,7 +138,7 @@ class BuildingPanel:
         y += 10
         
         # Building-specific info
-        if building.building_type == "warrior_guild":
+        if building.building_type in ["warrior_guild", "ranger_guild"]:
             y = self.render_warrior_guild(panel_surf, building, heroes, y)
         elif building.building_type == "marketplace":
             y = self.render_marketplace(panel_surf, building, heroes, y, economy)

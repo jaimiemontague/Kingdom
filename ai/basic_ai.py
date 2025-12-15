@@ -123,6 +123,13 @@ class BasicAI:
         """Update AI for a single hero."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
+        bounties = game_state.get("bounties", [])
+
+        # If we were pursuing a bounty that got claimed, clear it.
+        if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
+            b = hero.target.get("bounty")
+            if b is None or getattr(b, "claimed", False) or b not in bounties:
+                hero.target = None
         
         # Handle resting state first (doesn't need LLM)
         if hero.state == HeroState.RESTING:
@@ -233,8 +240,50 @@ class BasicAI:
         """Handle idle state - heroes patrol their assigned zone."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
+        bounties = game_state.get("bounties", [])
         
         debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.hero_id}_idle")
+
+        # Majesty-like: heroes can choose to pursue reward flags, class-weighted.
+        # Rangers are more willing to travel for explore bounties.
+        best_bounty = None
+        best_score = 0.0
+        for bounty in bounties:
+            if getattr(bounty, "claimed", False):
+                continue
+            if getattr(bounty, "bounty_type", "") != "explore":
+                continue
+
+            dx = getattr(bounty, "x", 0.0) - hero.x
+            dy = getattr(bounty, "y", 0.0) - hero.y
+            dist = math.sqrt(dx * dx + dy * dy)
+            dist_tiles = dist / TILE_SIZE if TILE_SIZE else dist
+
+            reward = float(getattr(bounty, "reward", 0))
+            # Score: reward per distance, with a small bias for being closer.
+            score = reward / (1.0 + dist_tiles)
+
+            # Class bias: rangers explore more.
+            if getattr(hero, "hero_class", "") == "ranger":
+                score *= 1.8
+
+            # Avoid sending heroes across the entire map for tiny rewards.
+            max_dist_tiles = 14 if getattr(hero, "hero_class", "") == "ranger" else 8
+            if dist_tiles > max_dist_tiles:
+                continue
+
+            if score > best_score:
+                best_score = score
+                best_bounty = bounty
+
+        # Only pursue if it's meaningfully attractive.
+        min_score = 4.0 if getattr(hero, "hero_class", "") == "ranger" else 6.0
+        if best_bounty and best_score >= min_score:
+            debug_log(f"{hero.name} -> pursuing explore bounty ${getattr(best_bounty, 'reward', 0)} (score={best_score:.1f})")
+            hero.target_position = self._offset_approach(hero, best_bounty.x, best_bounty.y, radius_tiles=0.5)
+            hero.state = HeroState.MOVING
+            hero.target = {"type": "bounty", "bounty": best_bounty}
+            return
         
         # Check if hero wants to go shopping (full health, has gold, wants upgrades or potions)
         if hero.hp >= hero.max_hp:
@@ -362,6 +411,26 @@ class BasicAI:
         # If we have an enemy target, check if we're in range to fight
         if hero.target and hasattr(hero.target, 'is_alive') and hero.target.is_alive:
             dist = hero.distance_to(hero.target.x, hero.target.y)
+            # Ranger spacing: try to avoid face-tanking by maintaining a minimum distance.
+            if getattr(hero, "hero_class", "") == "ranger":
+                preferred_min = TILE_SIZE * 2.5
+                if dist < preferred_min:
+                    # Step away from the enemy.
+                    dx = hero.x - hero.target.x
+                    dy = hero.y - hero.target.y
+                    d = math.sqrt(dx * dx + dy * dy) or 1.0
+                    step = TILE_SIZE * 2.0
+                    tx = hero.x + (dx / d) * step
+                    ty = hero.y + (dy / d) * step
+
+                    # Clamp to map bounds.
+                    max_x = MAP_WIDTH * TILE_SIZE
+                    max_y = MAP_HEIGHT * TILE_SIZE
+                    tx = max(0, min(max_x, tx))
+                    ty = max(0, min(max_y, ty))
+                    hero.target_position = (tx, ty)
+                    return
+
             if dist <= hero.attack_range:
                 hero.state = HeroState.FIGHTING
                 return
@@ -379,6 +448,24 @@ class BasicAI:
             
             # Check if target in range
             dist = hero.distance_to(hero.target.x, hero.target.y)
+            # Ranger spacing: if too close, back off instead of sticking in melee.
+            if getattr(hero, "hero_class", "") == "ranger":
+                preferred_min = TILE_SIZE * 2.5
+                if dist < preferred_min:
+                    dx = hero.x - hero.target.x
+                    dy = hero.y - hero.target.y
+                    d = math.sqrt(dx * dx + dy * dy) or 1.0
+                    step = TILE_SIZE * 2.0
+                    tx = hero.x + (dx / d) * step
+                    ty = hero.y + (dy / d) * step
+                    max_x = MAP_WIDTH * TILE_SIZE
+                    max_y = MAP_HEIGHT * TILE_SIZE
+                    tx = max(0, min(max_x, tx))
+                    ty = max(0, min(max_y, ty))
+                    hero.target_position = (tx, ty)
+                    hero.state = HeroState.MOVING
+                    return
+
             if dist > hero.attack_range:
                 # Move towards target
                 hero.target_position = (hero.target.x, hero.target.y)
@@ -457,6 +544,9 @@ class BasicAI:
         # Priority 3: Weapon upgrade
         for item in items:
             if item["type"] == "weapon" and hero.gold >= item["price"]:
+                # Class preference: rangers prefer ranged weapons.
+                if getattr(hero, "hero_class", "") == "ranger" and item.get("style", "melee") != "ranged":
+                    continue
                 current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
                 if item["attack"] > current_attack:
                     if hero.buy_item(item):

@@ -252,6 +252,58 @@ class WarriorGuild(Building):
             surface.blit(gold_text, gold_rect)
 
 
+class RangerGuild(Building):
+    """Building that allows hiring ranger heroes."""
+
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(grid_x, grid_y, "ranger_guild")
+        self.heroes_hired = 0
+        self.stored_tax_gold = 0  # Gold collected from heroes' taxes
+
+    def can_hire(self) -> bool:
+        """Check if we can hire another hero."""
+        return True  # No limit for now
+
+    def hire_hero(self):
+        """Track that a hero was hired here."""
+        self.heroes_hired += 1
+
+    def add_tax_gold(self, amount: int):
+        """Add gold from hero taxes."""
+        self.stored_tax_gold += amount
+
+    def collect_taxes(self) -> int:
+        """Collect all stored tax gold. Returns the amount collected."""
+        amount = self.stored_tax_gold
+        self.stored_tax_gold = 0
+        return amount
+
+    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
+        super().render(surface, camera_offset)
+
+        cam_x, cam_y = camera_offset
+        screen_x = self.world_x - cam_x
+        screen_y = self.world_y - cam_y
+
+        font = pygame.font.Font(None, 16)
+        text = font.render("RANGERS", True, COLOR_WHITE)
+        text_rect = text.get_rect(center=(
+            screen_x + self.width // 2,
+            screen_y + self.height // 2
+        ))
+        surface.blit(text, text_rect)
+
+        # Show stored tax gold
+        if self.stored_tax_gold > 0:
+            gold_font = pygame.font.Font(None, 14)
+            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+            gold_rect = gold_text.get_rect(center=(
+                screen_x + self.width // 2,
+                screen_y + self.height + 8
+            ))
+            surface.blit(gold_text, gold_rect)
+
+
 class Marketplace(Building):
     """Building where heroes can buy items."""
     
@@ -259,7 +311,9 @@ class Marketplace(Building):
         super().__init__(grid_x, grid_y, "marketplace")
         self.potions_researched = False  # Must research before heroes can buy potions
         self.items = [
+            {"name": "Short Bow", "type": "weapon", "style": "ranged", "price": 70, "attack": 4},
             {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
+            {"name": "Long Bow", "type": "weapon", "style": "ranged", "price": 140, "attack": 8},
             {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
             {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
             {"name": "Chain Mail", "type": "armor", "price": 120, "defense": 7},

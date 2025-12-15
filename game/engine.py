@@ -7,7 +7,7 @@ from config import (
     MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK
 )
 from game.world import World
-from game.entities import Castle, WarriorGuild, Marketplace, Hero, Goblin, TaxCollector, Peasant
+from game.entities import Castle, WarriorGuild, RangerGuild, Marketplace, Hero, Goblin, TaxCollector, Peasant
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 
@@ -131,6 +131,13 @@ class GameEngine:
                 self.building_menu.select_building("marketplace")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
+
+        elif event.key == pygame.K_3:
+            # Select ranger guild for placement
+            if self.economy.can_afford_building("ranger_guild"):
+                self.building_menu.select_building("ranger_guild")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
                 
         elif event.key == pygame.K_h:
             # Hire a hero
@@ -182,11 +189,8 @@ class GameEngine:
                     self.selected_building = None
                 
         elif event.button == 3:  # Right click
-            if self.selected_hero:
-                # Command hero to move
-                world_x = event.pos[0] + self.camera_x
-                world_y = event.pos[1] + self.camera_y
-                self.selected_hero.set_target_position(world_x, world_y)
+            # Indirect-control game: no direct hero commands.
+            pass
     
     def handle_mousemove(self, event):
         """Handle mouse movement."""
@@ -228,21 +232,16 @@ class GameEngine:
         return False
     
     def try_hire_hero(self):
-        """Try to hire a hero from a warrior guild."""
-        # Find a warrior guild
-        guild = None
-        for building in self.buildings:
-            if building.building_type == "warrior_guild":
-                guild = building
-                break
-        
-        if not guild:
-            self.hud.add_message("Build a Warrior Guild first!", (255, 100, 100))
+        """Try to hire a hero from the selected guild building."""
+        guild = self.selected_building
+
+        if not guild or not hasattr(guild, "building_type") or guild.building_type not in ["warrior_guild", "ranger_guild"]:
+            self.hud.add_message("Select a constructed guild (Warrior/Ranger) to hire from!", (255, 100, 100))
             return
 
         # Guild must be constructed before it can be used.
         if hasattr(guild, "is_constructed") and not guild.is_constructed:
-            self.hud.add_message("Warrior Guild is under construction!", (255, 100, 100))
+            self.hud.add_message("Guild is under construction!", (255, 100, 100))
             return
         
         if not self.economy.can_afford_hero():
@@ -254,15 +253,17 @@ class GameEngine:
         guild.hire_hero()
         
         # Spawn hero near guild
+        hero_class = "warrior" if guild.building_type == "warrior_guild" else "ranger"
         hero = Hero(
             guild.center_x + TILE_SIZE,
-            guild.center_y
+            guild.center_y,
+            hero_class=hero_class
         )
         # Set the hero's home building to this guild
         hero.home_building = guild
         
         self.heroes.append(hero)
-        self.hud.add_message(f"{hero.name} the Warrior joins your kingdom!", (100, 255, 100))
+        self.hud.add_message(f"{hero.name} the {hero_class.title()} joins your kingdom!", (100, 255, 100))
     
     def place_building(self, grid_x: int, grid_y: int):
         """Place the selected building."""
@@ -275,6 +276,8 @@ class GameEngine:
         # Create the building
         if building_type == "warrior_guild":
             building = WarriorGuild(grid_x, grid_y)
+        elif building_type == "ranger_guild":
+            building = RangerGuild(grid_x, grid_y)
         elif building_type == "marketplace":
             building = Marketplace(grid_x, grid_y)
         else:

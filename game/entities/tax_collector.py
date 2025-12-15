@@ -71,11 +71,15 @@ class TaxCollector:
             if self.time_since_last_collection >= self.collection_interval:
                 self.time_since_last_collection = 0
                 
-                # Find all warrior guilds with gold
-                self.guilds_to_visit = [
-                    b for b in buildings 
-                    if b.building_type == "warrior_guild" and b.stored_tax_gold > 0
-                ]
+                # Find all guild-like buildings with stored tax gold.
+                # (We treat anything with collect_taxes + stored_tax_gold as a guild.)
+                self.guilds_to_visit = []
+                for b in buildings:
+                    if not hasattr(b, "collect_taxes"):
+                        continue
+                    if getattr(b, "stored_tax_gold", 0) <= 0:
+                        continue
+                    self.guilds_to_visit.append(b)
                 
                 if self.guilds_to_visit:
                     self.target_guild = self.guilds_to_visit.pop(0)
