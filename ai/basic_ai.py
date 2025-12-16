@@ -312,6 +312,30 @@ class BasicAI:
                 hero.target = {"type": "shopping", "marketplace": marketplace}
                 return
 
+            # Blacksmith upgrades (separate from marketplace items)
+            blacksmith = self.find_blacksmith(buildings)
+            if blacksmith and self._should_try_shopping_now(hero):
+                weapon_cost = getattr(hero, "get_weapon_upgrade_cost", lambda: 999999)()
+                armor_cost = getattr(hero, "get_armor_upgrade_cost", lambda: 999999)()
+                wants_weapon = getattr(hero, "can_upgrade_weapon", lambda: False)() and hero.gold >= weapon_cost
+                wants_armor = getattr(hero, "can_upgrade_armor", lambda: False)() and hero.gold >= armor_cost
+                if wants_weapon or wants_armor:
+                    debug_log(f"{hero.name} -> going to blacksmith")
+                    hero.target_position = self._offset_approach(hero, blacksmith.center_x, blacksmith.center_y, radius_tiles=1.5)
+                    hero.state = HeroState.MOVING
+                    hero.target = {"type": "blacksmith", "blacksmith": blacksmith}
+                    return
+
+            # Fairgrounds tournament attraction: drift toward fairgrounds as a tournament approaches.
+            fair = self.find_fairgrounds(buildings)
+            if fair and getattr(fair, "is_constructed", True):
+                time_to = max(0.0, getattr(fair, "tournament_interval", 60.0) - getattr(fair, "tournament_timer", 0.0))
+                if time_to <= 10.0 and random.random() < 0.25:
+                    hero.target_position = self._offset_approach(hero, fair.center_x, fair.center_y, radius_tiles=2.0)
+                    hero.state = HeroState.MOVING
+                    hero.target = {"type": "fairgrounds", "fairgrounds": fair}
+                    return
+
         # Get this hero's patrol zone
         zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
         
@@ -374,6 +398,23 @@ class BasicAI:
                     continue
                 return building
         return None
+
+    def find_blacksmith(self, buildings: list):
+        """Find a constructed blacksmith."""
+        for building in buildings:
+            if building.building_type == "blacksmith":
+                if hasattr(building, "is_constructed") and not building.is_constructed:
+                    continue
+                return building
+        return None
+
+    def find_fairgrounds(self, buildings: list):
+        for building in buildings:
+            if building.building_type == "fairgrounds":
+                if hasattr(building, "is_constructed") and not building.is_constructed:
+                    continue
+                return building
+        return None
     
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
@@ -384,9 +425,17 @@ class BasicAI:
             dist = hero.distance_to(hero.target_position[0], hero.target_position[1])
             if dist < TILE_SIZE // 2:
                 # Check if we were going home
-                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
-                    hero.transfer_taxes_to_home()
-                    hero.start_resting()
+                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") in ["going_home", "going_rest"]:
+                    # If we're at home, deposit taxes; if resting at an inn, taxes still deposit periodically anyway.
+                    if hero.target.get("type") == "going_home":
+                        hero.transfer_taxes_to_home()
+                        hero.start_resting()
+                    else:
+                        rb = hero.target.get("building")
+                        if rb is not None:
+                            hero.start_resting_at(rb)
+                        else:
+                            hero.start_resting()
                     hero.target = None
                     hero.target_position = None
                     return
@@ -400,6 +449,16 @@ class BasicAI:
                     hero.target_position = None
                     hero.state = HeroState.IDLE
                     return
+
+                # Check if we were going to blacksmith
+                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "blacksmith":
+                    smith = hero.target.get("blacksmith")
+                    if smith:
+                        self.do_blacksmith(hero, smith, game_state)
+                    hero.target = None
+                    hero.target_position = None
+                    hero.state = HeroState.IDLE
+                    return
                 
                 hero.target_position = None
                 hero.state = HeroState.IDLE
@@ -409,7 +468,7 @@ class BasicAI:
         if hero.target and isinstance(hero.target, dict):
             target_type = hero.target.get("type")
             # Don't interrupt these activities
-            if target_type in ["going_home", "shopping", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
+            if target_type in ["going_home", "going_rest", "shopping", "blacksmith", "fairgrounds", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
                 return
         
         # If chasing an enemy, check if we've gone too far from our zone (8 tiles max)
@@ -546,6 +605,45 @@ class BasicAI:
         
         self.do_shopping(hero, marketplace, game_state)
         hero.state = HeroState.IDLE
+
+    def do_blacksmith(self, hero, blacksmith, game_state: dict):
+        """Perform a blacksmith upgrade purchase."""
+        economy = game_state.get("economy")
+
+        # Must be close enough
+        if hero.distance_to(blacksmith.center_x, blacksmith.center_y) > TILE_SIZE * 2:
+            return
+
+        # Prefer upgrading weapon first for most classes; tanks like armor.
+        hcls = getattr(hero, "hero_class", "")
+        prefer_armor = hcls in ["monk", "dwarf"]
+
+        if prefer_armor:
+            if getattr(hero, "buy_armor_upgrade", lambda: False)():
+                if hasattr(blacksmith, "upgrades_sold"):
+                    blacksmith.upgrades_sold += 1
+                if economy:
+                    economy.hero_purchase(hero.name, "Armor Upgrade", getattr(hero, "get_armor_upgrade_cost", lambda: 0)())
+                return
+            if getattr(hero, "buy_weapon_upgrade", lambda: False)():
+                if hasattr(blacksmith, "upgrades_sold"):
+                    blacksmith.upgrades_sold += 1
+                if economy:
+                    economy.hero_purchase(hero.name, "Weapon Upgrade", getattr(hero, "get_weapon_upgrade_cost", lambda: 0)())
+                return
+        else:
+            if getattr(hero, "buy_weapon_upgrade", lambda: False)():
+                if hasattr(blacksmith, "upgrades_sold"):
+                    blacksmith.upgrades_sold += 1
+                if economy:
+                    economy.hero_purchase(hero.name, "Weapon Upgrade", getattr(hero, "get_weapon_upgrade_cost", lambda: 0)())
+                return
+            if getattr(hero, "buy_armor_upgrade", lambda: False)():
+                if hasattr(blacksmith, "upgrades_sold"):
+                    blacksmith.upgrades_sold += 1
+                if economy:
+                    economy.hero_purchase(hero.name, "Armor Upgrade", getattr(hero, "get_armor_upgrade_cost", lambda: 0)())
+                return
     
     def do_shopping(self, hero, marketplace, game_state: dict):
         """Actually perform shopping at a marketplace."""
@@ -640,19 +738,36 @@ class BasicAI:
     
     def send_home_to_rest(self, hero, game_state: dict):
         """Send hero home to rest and heal."""
-        if hero.home_building:
-            hero.target_position = (hero.home_building.center_x, hero.home_building.center_y)
+        buildings = game_state.get("buildings", [])
+
+        # Prefer a constructed inn for faster recovery if one exists.
+        inn = None
+        best_dist = float("inf")
+        for b in buildings:
+            if getattr(b, "building_type", "") != "inn":
+                continue
+            if getattr(b, "is_constructed", True) is False:
+                continue
+            d = hero.distance_to(b.center_x, b.center_y)
+            if d < best_dist:
+                best_dist = d
+                inn = b
+
+        rest_building = inn or hero.home_building
+        if rest_building:
+            hero.target_position = (rest_building.center_x, rest_building.center_y)
             hero.state = HeroState.MOVING
-            hero.target = {"type": "going_home"}
+            hero.target = {"type": "going_rest", "building": rest_building}
     
     def handle_resting(self, hero, dt: float, game_state: dict):
         """Handle hero resting at home."""
-        if hero.home_building and getattr(hero.home_building, "is_under_attack", False):
+        b = getattr(hero, "rest_building", None) or hero.home_building
+        if b and getattr(b, "is_under_attack", False):
             hero.pop_out_of_building()
             return
         
-        if hero.home_building:
-            dist = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
+        if b:
+            dist = hero.distance_to(b.center_x, b.center_y)
             if dist > TILE_SIZE * 2:
                 hero.finish_resting()
                 return

@@ -59,6 +59,13 @@ class Hero:
         
         # Home building reference (set when hired)
         self.home_building = None
+
+        # Optional resting building (e.g., Inn). If set, RESTING happens "inside" this building.
+        # Home building is still used for tax deposits and as default rest location.
+        self.rest_building = None
+
+        # Temporary buffs (applied by buildings like Royal Gardens)
+        self._buffs = {}  # name -> {"expires_ms": int, "attack": int, "defense": int}
         
         # Tax transfer timing - transfer taxes periodically even if not resting
         self.last_tax_transfer_time = 0  # pygame ticks
@@ -73,6 +80,10 @@ class Hero:
         # Inventory
         self.weapon = None  # {"name": str, "attack": int}
         self.armor = None   # {"name": str, "defense": int}
+        # Blacksmith upgrades (flat bonuses; stack with equipment)
+        self.weapon_upgrade_level = 0
+        self.armor_upgrade_level = 0
+        self.max_upgrade_level = 3
         self.potions = 0
         self.max_potions = 5  # Can carry up to 5 potions
         self.potion_heal_amount = 50
@@ -140,6 +151,96 @@ class Hero:
             self.max_mana = 100
             self.mana = self.max_mana
             self._special_cooldown_ms = 0
+        elif self.hero_class == "healer":
+            # Support: sturdy enough, low damage, prefers staying back.
+            self.max_hp = 85
+            self.hp = self.max_hp
+            self.base_attack = 5
+            self.base_defense = 4
+            self.speed = 2.3
+            self.attack_range = TILE_SIZE * 3.5
+            self.color = (255, 192, 203)  # Pink
+        elif self.hero_class == "monk":
+            # Defensive melee: tanky, moderate damage.
+            self.max_hp = 120
+            self.hp = self.max_hp
+            self.base_attack = 8
+            self.base_defense = 6
+            self.speed = 2.2
+            self.attack_range = TILE_SIZE * 1.6
+            self.color = (255, 255, 224)  # Light yellow
+        elif self.hero_class == "cultist":
+            # Nature caster-ish: mid HP, mid range.
+            self.max_hp = 90
+            self.hp = self.max_hp
+            self.base_attack = 7
+            self.base_defense = 3
+            self.speed = 2.4
+            self.attack_range = TILE_SIZE * 4.0
+            self.color = (50, 205, 50)  # Lime green
+        elif self.hero_class == "priestess":
+            # Death caster-ish: fragile, longer range.
+            self.max_hp = 75
+            self.hp = self.max_hp
+            self.base_attack = 8
+            self.base_defense = 2
+            self.speed = 2.2
+            self.attack_range = TILE_SIZE * 4.5
+            self.color = (75, 0, 130)  # Indigo
+        elif self.hero_class == "barbarian":
+            # Berserker: high HP and high damage, low defense.
+            self.max_hp = 140
+            self.hp = self.max_hp
+            self.base_attack = 12
+            self.base_defense = 2
+            self.speed = 2.4
+            self.attack_range = TILE_SIZE * 1.6
+            self.color = (139, 0, 0)  # Dark red
+        elif self.hero_class == "solarii":
+            # Sun warrior: mid HP, good damage, mid range.
+            self.max_hp = 100
+            self.hp = self.max_hp
+            self.base_attack = 10
+            self.base_defense = 4
+            self.speed = 2.4
+            self.attack_range = TILE_SIZE * 3.0
+            self.color = (255, 165, 0)  # Orange
+        elif self.hero_class == "adept":
+            # Wind adept: fast, lowish HP, longer range.
+            self.max_hp = 80
+            self.hp = self.max_hp
+            self.base_attack = 7
+            self.base_defense = 2
+            self.speed = 3.2
+            self.attack_range = TILE_SIZE * 4.5
+            self.color = (176, 196, 222)  # Light steel blue
+        elif self.hero_class == "gnome":
+            # Worker-ish hero: weaker combat, quick mover.
+            self.max_hp = 70
+            self.hp = self.max_hp
+            self.base_attack = 6
+            self.base_defense = 3
+            self.speed = 2.8
+            self.attack_range = TILE_SIZE * 1.6
+            self.color = (128, 128, 0)  # Olive
+        elif self.hero_class == "elf":
+            # Archer: like ranger but slightly different tuning.
+            self.max_hp = 75
+            self.hp = self.max_hp
+            self.base_attack = 9
+            self.base_defense = 2
+            self.speed = 2.7
+            self.attack_range = TILE_SIZE * 4.5
+            self.color = (34, 139, 34)  # Forest green
+        elif self.hero_class == "dwarf":
+            # Tank: slow, high defense.
+            self.max_hp = 130
+            self.hp = self.max_hp
+            self.base_attack = 9
+            self.base_defense = 7
+            self.speed = 1.9
+            self.attack_range = TILE_SIZE * 1.6
+            self.color = (101, 67, 33)  # Brown
 
     @property
     def debug_id(self) -> str:
@@ -153,6 +254,16 @@ class Hero:
             "ranger": "R",
             "rogue": "T",  # T for Thief
             "wizard": "Z",  # Z for wizard (W taken by warrior)
+            "healer": "H",
+            "monk": "M",
+            "cultist": "C",
+            "priestess": "P",
+            "barbarian": "B",
+            "solarii": "S",
+            "adept": "A",
+            "gnome": "G",
+            "elf": "E",
+            "dwarf": "D",
         }
         return symbols.get(self.hero_class, "?")
         
@@ -160,13 +271,73 @@ class Hero:
     def attack(self) -> int:
         """Total attack including weapon bonus."""
         weapon_bonus = self.weapon.get("attack", 0) if self.weapon else 0
-        return self.base_attack + weapon_bonus + (self.level - 1) * 2
+        smith_bonus = self.weapon_upgrade_level * 2
+        buff_bonus = self.get_buff_attack_bonus()
+        return self.base_attack + weapon_bonus + smith_bonus + buff_bonus + (self.level - 1) * 2
     
     @property
     def defense(self) -> int:
         """Total defense including armor bonus."""
         armor_bonus = self.armor.get("defense", 0) if self.armor else 0
-        return self.base_defense + armor_bonus + (self.level - 1)
+        smith_bonus = self.armor_upgrade_level * 2
+        buff_bonus = self.get_buff_defense_bonus()
+        return self.base_defense + armor_bonus + smith_bonus + buff_bonus + (self.level - 1)
+
+    def _purge_expired_buffs(self):
+        now = pygame.time.get_ticks()
+        expired = [k for k, v in self._buffs.items() if v.get("expires_ms", 0) <= now]
+        for k in expired:
+            self._buffs.pop(k, None)
+
+    def apply_buff(self, name: str, duration_sec: float, attack_bonus: int = 0, defense_bonus: int = 0):
+        """Apply/refresh a temporary buff."""
+        now = pygame.time.get_ticks()
+        expires = now + int(max(0.0, duration_sec) * 1000)
+        self._buffs[name] = {"expires_ms": expires, "attack": int(attack_bonus), "defense": int(defense_bonus)}
+
+    def has_buff(self, name: str) -> bool:
+        self._purge_expired_buffs()
+        return name in self._buffs
+
+    def get_buff_attack_bonus(self) -> int:
+        self._purge_expired_buffs()
+        return sum(v.get("attack", 0) for v in self._buffs.values())
+
+    def get_buff_defense_bonus(self) -> int:
+        self._purge_expired_buffs()
+        return sum(v.get("defense", 0) for v in self._buffs.values())
+
+    def can_upgrade_weapon(self) -> bool:
+        return self.weapon_upgrade_level < self.max_upgrade_level
+
+    def can_upgrade_armor(self) -> bool:
+        return self.armor_upgrade_level < self.max_upgrade_level
+
+    def get_weapon_upgrade_cost(self) -> int:
+        return 60 + self.weapon_upgrade_level * 50
+
+    def get_armor_upgrade_cost(self) -> int:
+        return 60 + self.armor_upgrade_level * 50
+
+    def buy_weapon_upgrade(self) -> bool:
+        if not self.can_upgrade_weapon():
+            return False
+        cost = self.get_weapon_upgrade_cost()
+        if self.gold < cost:
+            return False
+        self.gold -= cost
+        self.weapon_upgrade_level += 1
+        return True
+
+    def buy_armor_upgrade(self) -> bool:
+        if not self.can_upgrade_armor():
+            return False
+        cost = self.get_armor_upgrade_cost()
+        if self.gold < cost:
+            return False
+        self.gold -= cost
+        self.armor_upgrade_level += 1
+        return True
     
     @property
     def is_alive(self) -> bool:
@@ -218,8 +389,9 @@ class Hero:
     
     def start_resting(self):
         """Start resting at home."""
-        # Can't rest if building is currently under attack
-        if self.home_building and getattr(self.home_building, "is_under_attack", False):
+        # Can't rest if the rest building is currently under attack
+        b = self.rest_building or self.home_building
+        if b and getattr(b, "is_under_attack", False):
             self.state = HeroState.IDLE
             return False
         
@@ -227,6 +399,11 @@ class Hero:
         self.hp_healed_this_rest = 0
         self.last_heal_time = 0
         return True
+
+    def start_resting_at(self, building) -> bool:
+        """Start resting at a specific building (e.g. inn)."""
+        self.rest_building = building
+        return self.start_resting()
     
     def update_resting(self, dt: float) -> bool:
         """Update resting state. Returns True if still resting."""
@@ -234,14 +411,22 @@ class Hero:
             return False
         
         # Check if building is under attack - must pop out and defend!
-        if self.home_building and getattr(self.home_building, "is_under_attack", False):
+        b = self.rest_building or self.home_building
+        if b and getattr(b, "is_under_attack", False):
             self.pop_out_of_building()
             return False
         
         self.last_heal_time += dt
         
-        # Heal 1 HP every 1 second (2x faster resting in guild)
-        if self.last_heal_time >= 1.0:
+        # Heal tick rate can vary by building (Inn faster).
+        heal_interval = 1.0
+        if b and getattr(b, "building_type", "") == "inn":
+            # Inn rest rate is defined as "percent per sec" on the building; convert to seconds per 1 HP.
+            # If missing/invalid, default to faster than guild.
+            rate = float(getattr(b, "rest_recovery_rate", 0.02) or 0.02)
+            # 1 HP per interval => interval = 1 / (rate * max_hp)
+            heal_interval = max(0.2, 1.0 / max(0.001, rate * max(1, self.max_hp)))
+        if self.last_heal_time >= heal_interval:
             self.last_heal_time = 0
             if self.hp < self.max_hp:
                 self.hp += 1
@@ -259,10 +444,12 @@ class Hero:
         self.state = HeroState.IDLE
         self.hp_healed_this_rest = 0
         # Stay near the building to defend it
-        if self.home_building:
+        b = self.rest_building or self.home_building
+        if b:
             # Position slightly outside the building
-            self.x = self.home_building.center_x + TILE_SIZE
-            self.y = self.home_building.center_y
+            self.x = b.center_x + TILE_SIZE
+            self.y = b.center_y
+        self.rest_building = None
     
     def can_rest_at_home(self) -> bool:
         """Check if hero can rest at their home building."""
@@ -270,6 +457,15 @@ class Hero:
             return False
         # Cannot rest while the building is currently under attack
         return not getattr(self.home_building, "is_under_attack", False)
+
+    def can_rest_at(self, building) -> bool:
+        if not building:
+            return False
+        if getattr(building, "hp", 0) <= 0:
+            return False
+        if getattr(building, "building_type", "") == "inn" and getattr(building, "is_constructed", True) is False:
+            return False
+        return not getattr(building, "is_under_attack", False)
     
     def finish_resting(self):
         """Finish resting and leave home."""
@@ -277,6 +473,7 @@ class Hero:
         self.hp_when_left_home = self.hp
         self.damage_since_left_home = 0
         self.hp_healed_this_rest = 0
+        self.rest_building = None
     
     def transfer_taxes_to_home(self):
         """Transfer taxed gold to home building."""
@@ -596,4 +793,10 @@ class Hero:
             rest_text = font.render("Zzz", True, (150, 200, 255))
             rest_rect = rest_text.get_rect(center=(screen_x + 15, screen_y - self.size // 2 - 15))
             surface.blit(rest_text, rest_rect)
+
+        # Show buff indicator (royal gardens etc)
+        if self.has_buff("royal_gardens"):
+            buff_text = font.render("+", True, (120, 255, 120))
+            buff_rect = buff_text.get_rect(center=(screen_x - 15, screen_y - self.size // 2 - 15))
+            surface.blit(buff_text, buff_rect)
 

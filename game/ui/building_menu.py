@@ -4,6 +4,7 @@ Building placement menu and preview.
 import pygame
 from config import (
     TILE_SIZE, BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS,
+    BUILDING_CONSTRAINTS, BUILDING_PREREQUISITES,
     COLOR_WHITE, COLOR_RED, COLOR_GREEN
 )
 
@@ -41,10 +42,14 @@ class BuildingMenu:
         
         # Check if placement is valid
         size = BUILDING_SIZES.get(self.selected_building, (1, 1))
-        self.preview_valid = self.can_place(grid_x, grid_y, size, world, buildings)
+        self.preview_valid = self.can_place(grid_x, grid_y, size, world, buildings, self.selected_building)
         
-    def can_place(self, grid_x: int, grid_y: int, size: tuple, world, buildings: list) -> bool:
+    def can_place(self, grid_x: int, grid_y: int, size: tuple, world, buildings: list, building_type: str = None) -> bool:
         """Check if a building can be placed at the given position."""
+        building_type = building_type or self.selected_building
+        if not building_type:
+            return False
+            
         # Check world bounds and terrain
         if not world.is_buildable(grid_x, grid_y, size[0], size[1]):
             return False
@@ -55,6 +60,24 @@ class BuildingMenu:
                 for dy in range(size[1]):
                     if building.occupies_tile(grid_x + dx, grid_y + dy):
                         return False
+        
+        # Check constraints (mutually exclusive buildings)
+        if building_type in BUILDING_CONSTRAINTS:
+            for excluded_type in BUILDING_CONSTRAINTS[building_type]:
+                for building in buildings:
+                    if building.building_type == excluded_type:
+                        return False
+        
+        # Check prerequisites (required buildings)
+        if building_type in BUILDING_PREREQUISITES:
+            required_types = BUILDING_PREREQUISITES[building_type]
+            has_prerequisite = False
+            for building in buildings:
+                if building.building_type in required_types and building.is_constructed:
+                    has_prerequisite = True
+                    break
+            if not has_prerequisite:
+                return False
         
         return True
     

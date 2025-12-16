@@ -29,6 +29,14 @@ class BuildingPanel:
         self.research_button_rect = None
         self.research_button_hovered = False
         
+        # Button for upgrade (palace)
+        self.upgrade_button_rect = None
+        self.upgrade_button_hovered = False
+
+        # Library research buttons: name -> rect
+        self.library_research_buttons = {}
+        self.library_research_hovered = None
+        
         # Hero portrait colors (simple colored circles as placeholders)
         self.portrait_colors = [
             (70, 130, 180),   # Steel blue
@@ -105,12 +113,53 @@ class BuildingPanel:
                         self.selected_building.potions_researched = True
                         return True
         
+        # Check upgrade button for palace
+        if hasattr(self, "upgrade_button_rect") and self.upgrade_button_rect and self.selected_building.building_type == "palace":
+            if self.upgrade_button_rect.collidepoint(mouse_pos):
+                if self.selected_building.can_upgrade():
+                    if self.selected_building.upgrade(economy):
+                        return True
+
+        # Check library research buttons
+        if self.selected_building.building_type == "library" and self.library_research_buttons:
+            for name, rect in list(self.library_research_buttons.items()):
+                if rect and rect.collidepoint(mouse_pos):
+                    # Cannot research while under construction
+                    if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
+                        return True
+                    # Attempt research
+                    if self.selected_building.research(name, economy):
+                        # Apply simple unlock effects (no temple spells)
+                        buildings = game_state.get("buildings", [])
+                        heroes = game_state.get("heroes", [])
+                        if name == "Advanced Healing":
+                            for h in heroes:
+                                if getattr(h, "is_alive", False):
+                                    h.potion_heal_amount = getattr(h, "potion_heal_amount", 50) + 20
+                        elif name == "Fire Magic":
+                            for b in buildings:
+                                if getattr(b, "building_type", "") == "wizard_tower":
+                                    b.spell_damage = getattr(b, "spell_damage", 25) + 10
+                        elif name == "Defensive Spells":
+                            for b in buildings:
+                                if getattr(b, "building_type", "") == "ballista_tower":
+                                    b.attack_damage = getattr(b, "attack_damage", 15) + 3
+                                if getattr(b, "building_type", "") == "wizard_tower":
+                                    b.spell_interval = max(1.0, getattr(b, "spell_interval", 5.0) - 1.0)
+                        return True
+        
         return True  # Click was in panel
     
     def update_hover(self, mouse_pos: tuple):
         """Update hover state for buttons."""
         if self.research_button_rect:
             self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
+        # Library buttons hover
+        self.library_research_hovered = None
+        for name, rect in self.library_research_buttons.items():
+            if rect and rect.collidepoint(mouse_pos):
+                self.library_research_hovered = name
+                break
     
     def render(self, surface: pygame.Surface, heroes: list, economy):
         """Render the building panel."""
@@ -138,12 +187,35 @@ class BuildingPanel:
         y += 10
         
         # Building-specific info
-        if building.building_type in ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"]:
+        if building.building_type in ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild",
+                                      "temple_agrela", "temple_dauros", "temple_fervus", "temple_krypta",
+                                      "temple_krolm", "temple_helia", "temple_lunord",
+                                      "gnome_hovel", "elven_bungalow", "dwarven_settlement"]:
             y = self.render_warrior_guild(panel_surf, building, heroes, y)
         elif building.building_type == "marketplace":
             y = self.render_marketplace(panel_surf, building, heroes, y, economy)
         elif building.building_type == "castle":
             y = self.render_castle(panel_surf, building, heroes, y)
+        elif building.building_type == "palace":
+            y = self.render_palace(panel_surf, building, heroes, y, economy)
+        elif building.building_type == "blacksmith":
+            y = self.render_blacksmith(panel_surf, building, y)
+        elif building.building_type == "inn":
+            y = self.render_inn(panel_surf, building, heroes, y)
+        elif building.building_type == "trading_post":
+            y = self.render_trading_post(panel_surf, building, y)
+        elif building.building_type == "guardhouse":
+            y = self.render_guardhouse(panel_surf, building, y)
+        elif building.building_type == "ballista_tower":
+            y = self.render_ballista_tower(panel_surf, building, y)
+        elif building.building_type == "wizard_tower":
+            y = self.render_wizard_tower(panel_surf, building, y)
+        elif building.building_type == "fairgrounds":
+            y = self.render_fairgrounds(panel_surf, building, y)
+        elif building.building_type == "library":
+            y = self.render_library(panel_surf, building, y, economy)
+        elif building.building_type == "royal_gardens":
+            y = self.render_royal_gardens(panel_surf, building, heroes, y)
         
         surface.blit(panel_surf, (self.panel_x, self.panel_y))
     
@@ -364,4 +436,238 @@ class BuildingPanel:
             "SHOPPING": (218, 165, 32),
         }
         return status_colors.get(status.upper(), (150, 150, 150))
+    
+    def render_blacksmith(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render blacksmith details."""
+        upgrades_text = self.font_normal.render(f"Upgrades Sold: {building.upgrades_sold}", True, COLOR_WHITE)
+        surface.blit(upgrades_text, (10, y))
+        y += 25
+        
+        info_text = self.font_small.render("Heroes can upgrade equipment here", True, (180, 180, 180))
+        surface.blit(info_text, (10, y))
+        y += 20
+        return y
+    
+    def render_inn(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:
+        """Render inn details."""
+        resting_count = len([h for h in heroes if h.is_alive and h.home_building == building])
+        resting_text = self.font_normal.render(f"Heroes Resting: {resting_count}", True, COLOR_WHITE)
+        surface.blit(resting_text, (10, y))
+        y += 25
+        
+        info_text = self.font_small.render("Faster HP recovery than guilds", True, (180, 180, 180))
+        surface.blit(info_text, (10, y))
+        y += 20
+        return y
+    
+    def render_trading_post(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render trading post details."""
+        income_text = self.font_normal.render(f"Total Income: ${building.total_income_generated}", True, COLOR_GOLD)
+        surface.blit(income_text, (10, y))
+        y += 25
+        
+        info_text = self.font_small.render(f"Generates ${building.income_amount} every {building.income_interval:.0f}s", True, (180, 180, 180))
+        surface.blit(info_text, (10, y))
+        y += 20
+        return y
+    
+    def render_guardhouse(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render guardhouse details."""
+        guards_text = self.font_normal.render(f"Guards Spawned: {building.guards_spawned}", True, COLOR_WHITE)
+        surface.blit(guards_text, (10, y))
+        y += 25
+        
+        max_text = self.font_small.render(f"Max Guards: {building.max_guards}", True, (180, 180, 180))
+        surface.blit(max_text, (10, y))
+        y += 20
+        return y
+    
+    def render_ballista_tower(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render ballista tower details."""
+        range_text = self.font_normal.render(f"Range: {building.attack_range}px", True, COLOR_WHITE)
+        surface.blit(range_text, (10, y))
+        y += 25
+        
+        damage_text = self.font_small.render(f"Damage: {building.attack_damage}", True, (180, 180, 180))
+        surface.blit(damage_text, (10, y))
+        y += 20
+        
+        if building.target:
+            target_text = self.font_small.render("Targeting enemy", True, COLOR_RED)
+            surface.blit(target_text, (10, y))
+            y += 20
+        return y
+    
+    def render_wizard_tower(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render wizard tower details."""
+        range_text = self.font_normal.render(f"Spell Range: {building.spell_range}px", True, COLOR_WHITE)
+        surface.blit(range_text, (10, y))
+        y += 25
+        
+        damage_text = self.font_small.render(f"Spell Damage: {building.spell_damage}", True, (180, 180, 180))
+        surface.blit(damage_text, (10, y))
+        y += 20
+        
+        cooldown_text = self.font_small.render(f"Cooldown: {building.spell_interval:.1f}s", True, (180, 180, 180))
+        surface.blit(cooldown_text, (10, y))
+        y += 20
+        return y
+    
+    def render_fairgrounds(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render fairgrounds details."""
+        tournaments_text = self.font_normal.render(f"Tournaments: {building.total_tournaments}", True, COLOR_WHITE)
+        surface.blit(tournaments_text, (10, y))
+        y += 25
+        
+        income_text = self.font_small.render(f"Income per tournament: ${building.tournament_income}", True, COLOR_GOLD)
+        surface.blit(income_text, (10, y))
+        y += 20
+        
+        info_text = self.font_small.render("Heroes nearby gain XP during tournaments", True, (180, 180, 180))
+        surface.blit(info_text, (10, y))
+        y += 20
+        return y
+    
+    def render_library(self, surface: pygame.Surface, building, y: int, economy) -> int:
+        """Render library details."""
+        # Reset buttons each frame
+        self.library_research_buttons = {}
+
+        researched_text = self.font_normal.render(f"Researched: {len(building.researched_items)}", True, COLOR_WHITE)
+        surface.blit(researched_text, (10, y))
+        y += 25
+        
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+        
+        research_title = self.font_normal.render("Available Research:", True, COLOR_WHITE)
+        surface.blit(research_title, (10, y))
+        y += 22
+        
+        for item in building.available_research:
+            name = item["name"]
+            cost = item["cost"]
+            if item["researched"]:
+                item_text = self.font_small.render(f"✓ {name}", True, COLOR_GREEN)
+                surface.blit(item_text, (15, y))
+                y += 16
+                continue
+
+            # Item row
+            item_text = self.font_small.render(f"• {name} (${cost})", True, (180, 180, 180))
+            surface.blit(item_text, (15, y))
+            y += 18
+
+            # Research button
+            button_width = 200
+            button_height = 24
+            button_x = 10
+            button_y = y
+            can_afford = economy.player_gold >= cost
+            button_color = (60, 120, 60) if can_afford else (80, 80, 80)
+            if self.library_research_hovered == name and can_afford:
+                button_color = (80, 150, 80)
+
+            pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
+            pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
+
+            btn_text = "Research" if can_afford else "Need more gold"
+            btn_render = self.font_small.render(btn_text, True, COLOR_WHITE)
+            btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+            surface.blit(btn_render, btn_rect)
+
+            # Store rect for click detection (screen coords)
+            self.library_research_buttons[name] = pygame.Rect(
+                self.panel_x + button_x,
+                self.panel_y + button_y,
+                button_width,
+                button_height
+            )
+
+            y += 30
+        return y
+    
+    def render_royal_gardens(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:
+        """Render royal gardens details."""
+        buffed_heroes = building.get_heroes_in_range(heroes)
+        buffed_text = self.font_normal.render(f"Heroes Buffed: {len(buffed_heroes)}", True, COLOR_WHITE)
+        surface.blit(buffed_text, (10, y))
+        y += 25
+        
+        buff_text = self.font_small.render(f"Attack Bonus: +{building.buff_attack_bonus}", True, COLOR_GREEN)
+        surface.blit(buff_text, (10, y))
+        y += 18
+        
+        defense_text = self.font_small.render(f"Defense Bonus: +{building.buff_defense_bonus}", True, COLOR_GREEN)
+        surface.blit(defense_text, (10, y))
+        y += 18
+        
+        range_text = self.font_small.render(f"Buff Range: {building.buff_range}px", True, (180, 180, 180))
+        surface.blit(range_text, (10, y))
+        y += 20
+        return y
+    
+    def render_palace(self, surface: pygame.Surface, building, heroes: list, y: int, economy) -> int:
+        """Render palace details with upgrade option."""
+        # Level
+        level_text = self.font_normal.render(f"Level: {building.level}/{building.max_level}", True, COLOR_WHITE)
+        surface.blit(level_text, (10, y))
+        y += 25
+        
+        # HP
+        hp_text = self.font_normal.render(f"HP: {building.hp}/{building.max_hp}", True, COLOR_WHITE)
+        surface.blit(hp_text, (10, y))
+        y += 25
+        
+        # HP bar
+        bar_width = self.panel_width - 20
+        bar_height = 12
+        pygame.draw.rect(surface, (60, 60, 60), (10, y, bar_width, bar_height))
+        hp_pct = building.hp / building.max_hp
+        hp_color = COLOR_GREEN if hp_pct > 0.5 else COLOR_RED
+        pygame.draw.rect(surface, hp_color, (10, y, bar_width * hp_pct, bar_height))
+        y += 20
+        
+        # Capacity info
+        capacity_text = self.font_small.render(
+            f"Peasants: {building.max_peasants} | Tax Collectors: {building.max_tax_collectors} | Guards: {building.max_palace_guards}",
+            True, (180, 180, 180)
+        )
+        surface.blit(capacity_text, (10, y))
+        y += 20
+        
+        # Upgrade button
+        if building.can_upgrade():
+            pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+            y += 10
+            
+            upgrade_cost = building.get_upgrade_cost()
+            button_width = 200
+            button_height = 30
+            button_x = 10
+            button_y = y
+            
+            can_afford = economy.player_gold >= upgrade_cost
+            button_color = (60, 120, 60) if can_afford else (80, 80, 80)
+            
+            pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
+            pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
+            
+            btn_text = f"Upgrade to Level {building.level + 1} (${upgrade_cost})" if can_afford else f"Upgrade (Need ${upgrade_cost})"
+            btn_render = self.font_small.render(btn_text, True, COLOR_WHITE)
+            btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+            surface.blit(btn_render, btn_rect)
+            
+            # Store button rect for click detection
+            self.upgrade_button_rect = pygame.Rect(
+                self.panel_x + button_x,
+                self.panel_y + button_y,
+                button_width,
+                button_height
+            )
+            y += 40
+        else:
+            self.upgrade_button_rect = None
+        
+        return y
 

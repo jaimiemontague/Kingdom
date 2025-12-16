@@ -82,8 +82,8 @@ class Enemy:
                 self.x += (dx / dist) * move_dist
                 self.y += (dy / dist) * move_dist
     
-    def find_target(self, heroes: list, peasants: list, buildings: list):
-        """Find the nearest valid target (peasant, hero, or targetable building)."""
+    def find_target(self, heroes: list, peasants: list, buildings: list, guards: list = None):
+        """Find the nearest valid target (peasant, hero, guard, or targetable building)."""
         best_target = None
         best_dist = float('inf')
 
@@ -102,6 +102,14 @@ class Enemy:
                 if dist < best_dist:
                     best_dist = dist
                     best_target = hero
+
+        # Check guards (always targetable)
+        for guard in guards or []:
+            if getattr(guard, "is_alive", False):
+                dist = self.distance_to(guard.x, guard.y)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_target = guard
         
         # Check buildings - prioritize ones with resting heroes inside
         for building in buildings:
@@ -132,7 +140,7 @@ class Enemy:
         self.target = best_target
         return best_target
     
-    def update(self, dt: float, heroes: list, peasants: list, buildings: list):
+    def update(self, dt: float, heroes: list, peasants: list, buildings: list, guards: list = None):
         """Update enemy state and behavior."""
         if not self.is_alive:
             return
@@ -143,7 +151,7 @@ class Enemy:
         
         # Find target if we don't have one
         if self.target is None or (hasattr(self.target, 'is_alive') and not self.target.is_alive):
-            self.find_target(heroes, peasants, buildings)
+            self.find_target(heroes, peasants, buildings, guards=guards)
         
         if self.target is None:
             self.state = EnemyState.IDLE

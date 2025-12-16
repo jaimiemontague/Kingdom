@@ -40,6 +40,32 @@ BUILDING_COSTS = {
     "rogue_guild": 160,
     "wizard_guild": 220,
     "marketplace": 100,
+    # Phase 1: Economic Buildings
+    "blacksmith": 200,
+    "inn": 150,
+    "trading_post": 250,
+    # Phase 2: Temples
+    "temple_agrela": 400,
+    "temple_dauros": 400,
+    "temple_fervus": 400,
+    "temple_krypta": 400,
+    "temple_krolm": 400,
+    "temple_helia": 400,
+    "temple_lunord": 400,
+    # Phase 3: Non-Human Dwellings
+    "gnome_hovel": 300,
+    "elven_bungalow": 350,
+    "dwarven_settlement": 300,
+    # Phase 4: Defensive Structures
+    "guardhouse": 200,
+    "ballista_tower": 300,
+    "wizard_tower": 500,
+    # Phase 5: Special Buildings
+    "fairgrounds": 400,
+    "library": 350,
+    "royal_gardens": 250,
+    # Phase 6: Palace
+    "palace": 0,
 }
 
 BUILDING_SIZES = {
@@ -49,6 +75,32 @@ BUILDING_SIZES = {
     "rogue_guild": (2, 2),
     "wizard_guild": (2, 2),
     "marketplace": (2, 2),
+    # Phase 1: Economic Buildings
+    "blacksmith": (2, 2),
+    "inn": (2, 2),
+    "trading_post": (2, 2),
+    # Phase 2: Temples
+    "temple_agrela": (3, 3),
+    "temple_dauros": (3, 3),
+    "temple_fervus": (3, 3),
+    "temple_krypta": (3, 3),
+    "temple_krolm": (3, 3),
+    "temple_helia": (3, 3),
+    "temple_lunord": (3, 3),
+    # Phase 3: Non-Human Dwellings
+    "gnome_hovel": (2, 2),
+    "elven_bungalow": (2, 2),
+    "dwarven_settlement": (2, 2),
+    # Phase 4: Defensive Structures
+    "guardhouse": (2, 2),
+    "ballista_tower": (1, 1),
+    "wizard_tower": (2, 2),
+    # Phase 5: Special Buildings
+    "fairgrounds": (3, 3),
+    "library": (2, 2),
+    "royal_gardens": (2, 2),
+    # Phase 6: Palace
+    "palace": (3, 3),
 }
 
 BUILDING_COLORS = {
@@ -58,6 +110,44 @@ BUILDING_COLORS = {
     "rogue_guild": (75, 0, 130),
     "wizard_guild": (147, 112, 219),
     "marketplace": (218, 165, 32),
+    # Phase 1: Economic Buildings
+    "blacksmith": (105, 105, 105),  # Dark gray
+    "inn": (160, 82, 45),  # Sienna
+    "trading_post": (255, 140, 0),  # Dark orange
+    # Phase 2: Temples
+    "temple_agrela": (255, 192, 203),  # Pink (healing)
+    "temple_dauros": (255, 255, 224),  # Light yellow (monks)
+    "temple_fervus": (50, 205, 50),  # Lime green (nature)
+    "temple_krypta": (75, 0, 130),  # Indigo (death)
+    "temple_krolm": (139, 0, 0),  # Dark red (rage)
+    "temple_helia": (255, 165, 0),  # Orange (sun)
+    "temple_lunord": (176, 196, 222),  # Light steel blue (wind)
+    # Phase 3: Non-Human Dwellings
+    "gnome_hovel": (128, 128, 0),  # Olive
+    "elven_bungalow": (34, 139, 34),  # Forest green
+    "dwarven_settlement": (101, 67, 33),  # Brown
+    # Phase 4: Defensive Structures
+    "guardhouse": (128, 128, 128),  # Gray
+    "ballista_tower": (64, 64, 64),  # Dark gray
+    "wizard_tower": (138, 43, 226),  # Blue violet
+    # Phase 5: Special Buildings
+    "fairgrounds": (255, 20, 147),  # Deep pink
+    "library": (25, 25, 112),  # Midnight blue
+    "royal_gardens": (124, 252, 0),  # Lawn green
+    # Phase 6: Palace
+    "palace": (184, 134, 11),  # Dark goldenrod
+}
+
+# Building constraints (mutually exclusive buildings)
+BUILDING_CONSTRAINTS = {
+    "gnome_hovel": ["elven_bungalow", "dwarven_settlement"],
+    "elven_bungalow": ["gnome_hovel", "dwarven_settlement"],
+    "dwarven_settlement": ["gnome_hovel", "elven_bungalow"],
+}
+
+# Building prerequisites (required buildings)
+BUILDING_PREREQUISITES = {
+    "ballista_tower": ["dwarven_settlement"],
 }
 
 # Hero settings
@@ -74,7 +164,7 @@ GOBLIN_SPEED = 1.5
 GOBLIN_SPAWN_INTERVAL = 5000  # milliseconds
 
 # Economy settings
-STARTING_GOLD = 500
+STARTING_GOLD = 50000
 TAX_RATE = 0.20
 
 # LLM settings

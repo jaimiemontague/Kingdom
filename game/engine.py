@@ -8,8 +8,13 @@ from config import (
 )
 from game.world import World
 from game.entities import (
-    Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild,
-    Marketplace, Hero, Goblin, TaxCollector, Peasant
+    Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
+    Blacksmith, Inn, TradingPost,
+    TempleAgrela, TempleDauros, TempleFervus, TempleKrypta, TempleKrolm, TempleHelia, TempleLunord,
+    GnomeHovel, ElvenBungalow, DwarvenSettlement,
+    Guardhouse, BallistaTower, WizardTower,
+    Fairgrounds, Library, RoyalGardens,
+    Palace, Hero, Goblin, TaxCollector, Peasant, Guard
 )
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
@@ -41,6 +46,7 @@ class GameEngine:
         self.enemies = []
         self.bounties = []
         self.peasants = []
+        self.guards = []
         self.peasant_spawn_timer = 0.0
         
         # Systems
@@ -155,6 +161,83 @@ class GameEngine:
                 self.building_menu.select_building("wizard_guild")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
+        # Phase 1: Economic Buildings
+        elif event.key == pygame.K_6:
+            if self.economy.can_afford_building("blacksmith"):
+                self.building_menu.select_building("blacksmith")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_7:
+            if self.economy.can_afford_building("inn"):
+                self.building_menu.select_building("inn")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_8:
+            if self.economy.can_afford_building("trading_post"):
+                self.building_menu.select_building("trading_post")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        # Phase 2: Temples (using letters)
+        elif event.key == pygame.K_t:
+            # Cycle through temples or use T for first temple
+            if self.economy.can_afford_building("temple_agrela"):
+                self.building_menu.select_building("temple_agrela")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        # Phase 3: Non-Human Dwellings
+        elif event.key == pygame.K_g:
+            if self.economy.can_afford_building("gnome_hovel"):
+                self.building_menu.select_building("gnome_hovel")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_e:
+            if self.economy.can_afford_building("elven_bungalow"):
+                self.building_menu.select_building("elven_bungalow")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_d:
+            if self.economy.can_afford_building("dwarven_settlement"):
+                self.building_menu.select_building("dwarven_settlement")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        # Phase 4: Defensive Structures
+        elif event.key == pygame.K_u:
+            if self.economy.can_afford_building("guardhouse"):
+                self.building_menu.select_building("guardhouse")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_y:
+            # Y for ballista tower (B is used for bounties)
+            if self.economy.can_afford_building("ballista_tower"):
+                self.building_menu.select_building("ballista_tower")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_l:
+            if self.economy.can_afford_building("library"):
+                self.building_menu.select_building("library")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_w:
+            if self.economy.can_afford_building("wizard_tower"):
+                self.building_menu.select_building("wizard_tower")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        # Phase 5: Special Buildings
+        elif event.key == pygame.K_f:
+            if self.economy.can_afford_building("fairgrounds"):
+                self.building_menu.select_building("fairgrounds")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_i:
+            if self.economy.can_afford_building("library"):
+                self.building_menu.select_building("library")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+        elif event.key == pygame.K_r:
+            if self.economy.can_afford_building("royal_gardens"):
+                self.building_menu.select_building("royal_gardens")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
                 
         elif event.key == pygame.K_h:
             # Hire a hero
@@ -252,9 +335,8 @@ class GameEngine:
         """Try to hire a hero from the selected guild building."""
         guild = self.selected_building
 
-        allowed = ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"]
-        if not guild or not hasattr(guild, "building_type") or guild.building_type not in allowed:
-            self.hud.add_message("Select a constructed guild (Warrior/Ranger/Rogue/Wizard) to hire from!", (255, 100, 100))
+        if not guild or not hasattr(guild, "building_type") or not hasattr(guild, "hire_hero"):
+            self.hud.add_message("Select a constructed recruitment building to hire from!", (255, 100, 100))
             return
 
         # Guild must be constructed before it can be used.
@@ -276,6 +358,18 @@ class GameEngine:
             "ranger_guild": "ranger",
             "rogue_guild": "rogue",
             "wizard_guild": "wizard",
+            # Temples
+            "temple_agrela": "healer",
+            "temple_dauros": "monk",
+            "temple_fervus": "cultist",
+            "temple_krypta": "priestess",
+            "temple_krolm": "barbarian",
+            "temple_helia": "solarii",
+            "temple_lunord": "adept",
+            # Non-human dwellings
+            "gnome_hovel": "gnome",
+            "elven_bungalow": "elf",
+            "dwarven_settlement": "dwarf",
         }
         hero_class = class_by_guild.get(guild.building_type, "warrior")
         hero = Hero(
@@ -298,6 +392,7 @@ class GameEngine:
             return
         
         # Create the building
+        building = None
         if building_type == "warrior_guild":
             building = WarriorGuild(grid_x, grid_y)
         elif building_type == "ranger_guild":
@@ -308,7 +403,54 @@ class GameEngine:
             building = WizardGuild(grid_x, grid_y)
         elif building_type == "marketplace":
             building = Marketplace(grid_x, grid_y)
-        else:
+        # Phase 1: Economic Buildings
+        elif building_type == "blacksmith":
+            building = Blacksmith(grid_x, grid_y)
+        elif building_type == "inn":
+            building = Inn(grid_x, grid_y)
+        elif building_type == "trading_post":
+            building = TradingPost(grid_x, grid_y)
+        # Phase 2: Temples
+        elif building_type == "temple_agrela":
+            building = TempleAgrela(grid_x, grid_y)
+        elif building_type == "temple_dauros":
+            building = TempleDauros(grid_x, grid_y)
+        elif building_type == "temple_fervus":
+            building = TempleFervus(grid_x, grid_y)
+        elif building_type == "temple_krypta":
+            building = TempleKrypta(grid_x, grid_y)
+        elif building_type == "temple_krolm":
+            building = TempleKrolm(grid_x, grid_y)
+        elif building_type == "temple_helia":
+            building = TempleHelia(grid_x, grid_y)
+        elif building_type == "temple_lunord":
+            building = TempleLunord(grid_x, grid_y)
+        # Phase 3: Non-Human Dwellings
+        elif building_type == "gnome_hovel":
+            building = GnomeHovel(grid_x, grid_y)
+        elif building_type == "elven_bungalow":
+            building = ElvenBungalow(grid_x, grid_y)
+        elif building_type == "dwarven_settlement":
+            building = DwarvenSettlement(grid_x, grid_y)
+        # Phase 4: Defensive Structures
+        elif building_type == "guardhouse":
+            building = Guardhouse(grid_x, grid_y)
+        elif building_type == "ballista_tower":
+            building = BallistaTower(grid_x, grid_y)
+        elif building_type == "wizard_tower":
+            building = WizardTower(grid_x, grid_y)
+        # Phase 5: Special Buildings
+        elif building_type == "fairgrounds":
+            building = Fairgrounds(grid_x, grid_y)
+        elif building_type == "library":
+            building = Library(grid_x, grid_y)
+        elif building_type == "royal_gardens":
+            building = RoyalGardens(grid_x, grid_y)
+        # Phase 6: Palace
+        elif building_type == "palace":
+            building = Palace(grid_x, grid_y)
+        
+        if building is None:
             return
 
         # Newly placed buildings start unconstructed (1 HP, non-targetable) until a peasant begins building.
@@ -365,7 +507,11 @@ class GameEngine:
         
         # Update enemies
         for enemy in self.enemies:
-            enemy.update(dt, self.heroes, self.peasants, self.buildings)
+            enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards)
+
+        # Update guards
+        for guard in self.guards:
+            guard.update(dt, self.enemies)
         
         # Spawn new enemies
         new_enemies = self.spawner.update(dt)
@@ -389,6 +535,9 @@ class GameEngine:
         
         # Clean up dead enemies
         self.enemies = [e for e in self.enemies if e.is_alive]
+
+        # Clean up dead guards
+        self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
         
         # Process bounties
         claimed = self.bounty_system.check_claims(self.heroes)
@@ -402,6 +551,60 @@ class GameEngine:
         # Update tax collector
         if self.tax_collector:
             self.tax_collector.update(dt, self.buildings, self.economy)
+        
+        # Update buildings that need periodic updates
+        # Reset economy multipliers each tick based on constructed buildings.
+        self.economy.commerce_tax_multiplier = 1.0
+        has_elves = any(
+            getattr(b, "building_type", "") == "elven_bungalow" and getattr(b, "is_constructed", True)
+            for b in self.buildings
+        )
+        if has_elves:
+            self.economy.commerce_tax_multiplier = 1.2
+
+        for building in self.buildings:
+            if building.building_type == "trading_post" and hasattr(building, "update"):
+                building.update(dt, self.economy)
+            elif building.building_type == "ballista_tower" and hasattr(building, "update"):
+                building.update(dt, self.enemies)
+            elif building.building_type == "wizard_tower" and hasattr(building, "update"):
+                building.update(dt, self.enemies)
+            elif building.building_type == "fairgrounds" and hasattr(building, "update"):
+                fired = building.update(dt, self.economy, self.heroes)
+                if fired:
+                    self.hud.add_message("Tournament held at the Fairgrounds!", (255, 215, 0))
+            elif building.building_type == "guardhouse" and hasattr(building, "update"):
+                # Guard spawning handled here so guards become real entities.
+                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building])
+                if should_spawn:
+                    # Spawn a guard near the guardhouse.
+                    g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
+                    self.guards.append(g)
+                    if hasattr(building, "guards_spawned"):
+                        building.guards_spawned += 1
+
+            # Palace guards (if palace building exists)
+            elif building.building_type == "palace":
+                max_guards = getattr(building, "max_palace_guards", 0)
+                if max_guards > 0 and getattr(building, "is_constructed", True):
+                    current = len([g for g in self.guards if g.home_building == building])
+                    if current < max_guards:
+                        g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
+                        self.guards.append(g)
+
+        # Apply Royal Gardens buffs (temporary, refreshed while in range)
+        for building in self.buildings:
+            if getattr(building, "building_type", "") != "royal_gardens":
+                continue
+            if getattr(building, "is_constructed", True) is False:
+                continue
+            for hero in building.get_heroes_in_range(self.heroes):
+                hero.apply_buff(
+                    "royal_gardens",
+                    duration_sec=getattr(building, "buff_duration", 30.0),
+                    attack_bonus=getattr(building, "buff_attack_bonus", 0),
+                    defense_bonus=getattr(building, "buff_defense_bonus", 0),
+                )
         
         # Update HUD
         self.hud.update()
@@ -434,6 +637,7 @@ class GameEngine:
             "gold": self.economy.player_gold,
             "heroes": self.heroes,
             "peasants": self.peasants,
+            "guards": self.guards,
             "enemies": self.enemies,
             "buildings": self.buildings,
             "bounties": self.bounty_system.get_unclaimed_bounties(),
@@ -464,6 +668,10 @@ class GameEngine:
         # Render heroes
         for hero in self.heroes:
             hero.render(self.screen, camera_offset)
+
+        # Render guards
+        for guard in self.guards:
+            guard.render(self.screen, camera_offset)
 
         # Render peasants
         for peasant in self.peasants:

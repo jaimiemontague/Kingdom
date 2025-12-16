@@ -12,6 +12,8 @@ class EconomySystem:
         self.total_tax_collected = 0
         self.total_spent_by_heroes = 0
         self.transaction_log = []
+        # Effects from buildings/research
+        self.commerce_tax_multiplier = 1.0  # Elven bungalow boosts commerce
         
     def can_afford_building(self, building_type: str) -> bool:
         """Check if player can afford a building."""
@@ -49,7 +51,7 @@ class EconomySystem:
     def hero_purchase(self, hero_name: str, item_name: str, price: int):
         """Process a hero purchasing an item (applies tax)."""
         self.total_spent_by_heroes += price
-        tax = int(price * TAX_RATE)
+        tax = int(price * TAX_RATE * self.commerce_tax_multiplier)
         self.player_gold += tax
         self.total_tax_collected += tax
         
