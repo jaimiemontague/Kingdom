@@ -37,6 +37,8 @@ BUILDING_COSTS = {
     "castle": 0,  # Free, placed at start
     "warrior_guild": 150,
     "ranger_guild": 175,
+    "rogue_guild": 160,
+    "wizard_guild": 220,
     "marketplace": 100,
 }
 
@@ -44,6 +46,8 @@ BUILDING_SIZES = {
     "castle": (3, 3),
     "warrior_guild": (2, 2),
     "ranger_guild": (2, 2),
+    "rogue_guild": (2, 2),
+    "wizard_guild": (2, 2),
     "marketplace": (2, 2),
 }
 
@@ -51,6 +55,8 @@ BUILDING_COLORS = {
     "castle": (139, 69, 19),
     "warrior_guild": (178, 34, 34),
     "ranger_guild": (46, 139, 87),
+    "rogue_guild": (75, 0, 130),
+    "wizard_guild": (147, 112, 219),
     "marketplace": (218, 165, 32),
 }
 

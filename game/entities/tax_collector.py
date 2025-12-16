@@ -141,6 +141,12 @@ class TaxCollector:
         pygame.draw.polygon(surface, self.color, points)
         pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
         
+        # Draw tax collector symbol ($)
+        font = pygame.font.Font(None, 16)
+        symbol_text = font.render("$", True, COLOR_WHITE)
+        symbol_rect = symbol_text.get_rect(center=(int(screen_x), int(screen_y)))
+        surface.blit(symbol_text, symbol_rect)
+        
         # Show carried gold
         if self.carried_gold > 0:
             font = pygame.font.Font(None, 14)

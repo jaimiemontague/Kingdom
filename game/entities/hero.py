@@ -60,6 +60,10 @@ class Hero:
         # Home building reference (set when hired)
         self.home_building = None
         
+        # Tax transfer timing - transfer taxes periodically even if not resting
+        self.last_tax_transfer_time = 0  # pygame ticks
+        self.tax_transfer_interval = 30000  # 30 seconds in milliseconds
+        
         # Healing/rest tracking
         self.hp_when_left_home = self.max_hp  # Track HP when leaving home
         self.hp_healed_this_rest = 0  # Track how much healed during current rest
@@ -83,6 +87,11 @@ class Hero:
         self.attack_cooldown = 0
         self.attack_cooldown_max = 1000  # ms between attacks
         self.attack_range = TILE_SIZE * 1.5
+
+        # Class special ability state (used by some classes).
+        self._special_cooldown_ms = 0
+        self.mana = 0
+        self.max_mana = 0
         
         # LLM decision tracking
         self.last_llm_decision_time = 0
@@ -109,11 +118,43 @@ class Hero:
             self.speed = 2.6
             self.attack_range = TILE_SIZE * 4.0
             self.color = (46, 139, 87)  # Sea green
+        elif self.hero_class == "rogue":
+            # Fast, fragile-ish, reward-driven.
+            self.max_hp = 75
+            self.hp = self.max_hp
+            self.base_attack = 9
+            self.base_defense = 2
+            self.speed = 3.0
+            self.attack_range = TILE_SIZE * 1.6
+            self.color = (75, 0, 130)  # Indigo
+            self._special_cooldown_ms = 0
+        elif self.hero_class == "wizard":
+            # Glass cannon at range; simple mana + spell cooldown for bonus damage.
+            self.max_hp = 65
+            self.hp = self.max_hp
+            self.base_attack = 7
+            self.base_defense = 1
+            self.speed = 2.1
+            self.attack_range = TILE_SIZE * 5.0
+            self.color = (147, 112, 219)  # Medium purple
+            self.max_mana = 100
+            self.mana = self.max_mana
+            self._special_cooldown_ms = 0
 
     @property
     def debug_id(self) -> str:
         """Stable identifier suitable for logs/UI."""
         return f"{self.name}#{self.hero_id}"
+    
+    def _get_class_symbol(self) -> str:
+        """Get a simple symbol/letter for this hero class."""
+        symbols = {
+            "warrior": "W",
+            "ranger": "R",
+            "rogue": "T",  # T for Thief
+            "wizard": "Z",  # Z for wizard (W taken by warrior)
+        }
+        return symbols.get(self.hero_class, "?")
         
     @property
     def attack(self) -> int:
@@ -242,6 +283,8 @@ class Hero:
         if self.home_building and self.taxed_gold > 0:
             self.home_building.add_tax_gold(self.taxed_gold)
             self.taxed_gold = 0
+            import pygame
+            self.last_tax_transfer_time = pygame.time.get_ticks()
     
     def heal(self, amount: int):
         """Heal the hero."""
@@ -374,6 +417,26 @@ class Hero:
         # Update attack cooldown
         if self.attack_cooldown > 0:
             self.attack_cooldown -= dt * 1000
+
+        # Update class special cooldown
+        if self._special_cooldown_ms > 0:
+            self._special_cooldown_ms -= dt * 1000
+
+        # Wizard mana regen (simple, always-on).
+        if self.hero_class == "wizard" and self.max_mana > 0:
+            self.mana = min(self.max_mana, self.mana + (12.0 * dt))
+        
+        # Periodic tax transfer: if hero has taxed gold and is near home building, transfer it
+        # This ensures taxes get deposited even if hero doesn't need to rest
+        import pygame
+        current_time = pygame.time.get_ticks()
+        if (self.taxed_gold > 0 and self.home_building and 
+            current_time - self.last_tax_transfer_time >= self.tax_transfer_interval):
+            # Check if near home building (within 3 tiles)
+            dist_to_home = self.distance_to(self.home_building.center_x, self.home_building.center_y)
+            if dist_to_home < TILE_SIZE * 3:
+                self.transfer_taxes_to_home()
+                self.last_tax_transfer_time = current_time
         
         # State machine behavior handled by basic_ai module
         # This just handles movement if we have a target
@@ -384,6 +447,30 @@ class Hero:
             if self.distance_to(self.target_position[0], self.target_position[1]) < 5:
                 self.target_position = None
                 self.state = HeroState.IDLE
+
+    def compute_attack_damage(self, target=None) -> int:
+        """
+        Return the damage this hero deals on a basic attack.
+        Some classes add simple specials (prototype-friendly).
+        """
+        dmg = self.attack
+
+        # Rogue: occasional backstab bonus against healthier targets.
+        if self.hero_class == "rogue":
+            if self._special_cooldown_ms <= 0 and target is not None and hasattr(target, "hp") and hasattr(target, "max_hp"):
+                hp_pct = (target.hp / target.max_hp) if target.max_hp else 0.0
+                if hp_pct >= 0.7 and random.random() < 0.25:
+                    self._special_cooldown_ms = 2000
+                    dmg += 6 + (self.level // 2)
+
+        # Wizard: periodic spellburst if mana available.
+        if self.hero_class == "wizard":
+            if self._special_cooldown_ms <= 0 and self.mana >= 25:
+                self.mana -= 25
+                self._special_cooldown_ms = 2500
+                dmg += 10 + (self.level * 2)
+
+        return int(dmg)
     
     def get_context_for_llm(self, game_state: dict) -> dict:
         """Build context dictionary for LLM decision making."""
@@ -465,6 +552,14 @@ class Hero:
             self.size // 2,
             2
         )
+        
+        # Draw class symbol/letter
+        font = pygame.font.Font(None, 18)
+        class_symbol = self._get_class_symbol()
+        symbol_color = COLOR_WHITE if self.color[0] + self.color[1] + self.color[2] < 400 else (0, 0, 0)
+        symbol_text = font.render(class_symbol, True, symbol_color)
+        symbol_rect = symbol_text.get_rect(center=(int(screen_x), int(screen_y)))
+        surface.blit(symbol_text, symbol_rect)
         
         # Draw health bar
         bar_width = self.size + 10

@@ -304,6 +304,100 @@ class RangerGuild(Building):
             surface.blit(gold_text, gold_rect)
 
 
+class RogueGuild(Building):
+    """Building that allows hiring rogue heroes."""
+
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(grid_x, grid_y, "rogue_guild")
+        self.heroes_hired = 0
+        self.stored_tax_gold = 0  # Gold collected from heroes' taxes
+
+    def can_hire(self) -> bool:
+        return True
+
+    def hire_hero(self):
+        self.heroes_hired += 1
+
+    def add_tax_gold(self, amount: int):
+        self.stored_tax_gold += amount
+
+    def collect_taxes(self) -> int:
+        amount = self.stored_tax_gold
+        self.stored_tax_gold = 0
+        return amount
+
+    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
+        super().render(surface, camera_offset)
+
+        cam_x, cam_y = camera_offset
+        screen_x = self.world_x - cam_x
+        screen_y = self.world_y - cam_y
+
+        font = pygame.font.Font(None, 16)
+        text = font.render("ROGUES", True, COLOR_WHITE)
+        text_rect = text.get_rect(center=(
+            screen_x + self.width // 2,
+            screen_y + self.height // 2
+        ))
+        surface.blit(text, text_rect)
+
+        if self.stored_tax_gold > 0:
+            gold_font = pygame.font.Font(None, 14)
+            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+            gold_rect = gold_text.get_rect(center=(
+                screen_x + self.width // 2,
+                screen_y + self.height + 8
+            ))
+            surface.blit(gold_text, gold_rect)
+
+
+class WizardGuild(Building):
+    """Building that allows hiring wizard heroes."""
+
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(grid_x, grid_y, "wizard_guild")
+        self.heroes_hired = 0
+        self.stored_tax_gold = 0  # Gold collected from heroes' taxes
+
+    def can_hire(self) -> bool:
+        return True
+
+    def hire_hero(self):
+        self.heroes_hired += 1
+
+    def add_tax_gold(self, amount: int):
+        self.stored_tax_gold += amount
+
+    def collect_taxes(self) -> int:
+        amount = self.stored_tax_gold
+        self.stored_tax_gold = 0
+        return amount
+
+    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
+        super().render(surface, camera_offset)
+
+        cam_x, cam_y = camera_offset
+        screen_x = self.world_x - cam_x
+        screen_y = self.world_y - cam_y
+
+        font = pygame.font.Font(None, 16)
+        text = font.render("WIZARDS", True, COLOR_WHITE)
+        text_rect = text.get_rect(center=(
+            screen_x + self.width // 2,
+            screen_y + self.height // 2
+        ))
+        surface.blit(text, text_rect)
+
+        if self.stored_tax_gold > 0:
+            gold_font = pygame.font.Font(None, 14)
+            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+            gold_rect = gold_text.get_rect(center=(
+                screen_x + self.width // 2,
+                screen_y + self.height + 8
+            ))
+            surface.blit(gold_text, gold_rect)
+
+
 class Marketplace(Building):
     """Building where heroes can buy items."""
     
@@ -311,10 +405,14 @@ class Marketplace(Building):
         super().__init__(grid_x, grid_y, "marketplace")
         self.potions_researched = False  # Must research before heroes can buy potions
         self.items = [
+            {"name": "Dagger", "type": "weapon", "style": "melee", "price": 60, "attack": 4},
             {"name": "Short Bow", "type": "weapon", "style": "ranged", "price": 70, "attack": 4},
+            {"name": "Apprentice Staff", "type": "weapon", "style": "magic", "price": 90, "attack": 6},
             {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
             {"name": "Long Bow", "type": "weapon", "style": "ranged", "price": 140, "attack": 8},
+            {"name": "Poison Dagger", "type": "weapon", "style": "melee", "price": 120, "attack": 7},
             {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
+            {"name": "Wizard Staff", "type": "weapon", "style": "magic", "price": 180, "attack": 12},
             {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
             {"name": "Chain Mail", "type": "armor", "price": 120, "defense": 7},
         ]

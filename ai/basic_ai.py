@@ -245,9 +245,31 @@ class BasicAI:
         debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.hero_id}_idle")
 
         # Majesty-like: heroes can choose to pursue reward flags, class-weighted.
-        # Rangers are more willing to travel for explore bounties.
         best_bounty = None
         best_score = 0.0
+
+        hero_class = getattr(hero, "hero_class", "")
+        bounty_bias = {
+            "rogue": 2.2,   # very reward-driven
+            "ranger": 1.8,  # exploratory
+            "wizard": 1.2,  # somewhat interested, but cautious
+            "warrior": 1.0,
+        }.get(hero_class, 1.0)
+
+        max_dist_tiles = {
+            "rogue": 10,
+            "ranger": 14,
+            "wizard": 9,
+            "warrior": 8,
+        }.get(hero_class, 8)
+
+        min_score = {
+            "rogue": 4.0,
+            "ranger": 4.0,
+            "wizard": 5.5,
+            "warrior": 6.0,
+        }.get(hero_class, 6.0)
+
         for bounty in bounties:
             if getattr(bounty, "claimed", False):
                 continue
@@ -262,13 +284,9 @@ class BasicAI:
             reward = float(getattr(bounty, "reward", 0))
             # Score: reward per distance, with a small bias for being closer.
             score = reward / (1.0 + dist_tiles)
-
-            # Class bias: rangers explore more.
-            if getattr(hero, "hero_class", "") == "ranger":
-                score *= 1.8
+            score *= bounty_bias
 
             # Avoid sending heroes across the entire map for tiny rewards.
-            max_dist_tiles = 14 if getattr(hero, "hero_class", "") == "ranger" else 8
             if dist_tiles > max_dist_tiles:
                 continue
 
@@ -277,7 +295,6 @@ class BasicAI:
                 best_bounty = bounty
 
         # Only pursue if it's meaningfully attractive.
-        min_score = 4.0 if getattr(hero, "hero_class", "") == "ranger" else 6.0
         if best_bounty and best_score >= min_score:
             debug_log(f"{hero.name} -> pursuing explore bounty ${getattr(best_bounty, 'reward', 0)} (score={best_score:.1f})")
             hero.target_position = self._offset_approach(hero, best_bounty.x, best_bounty.y, radius_tiles=0.5)
@@ -411,15 +428,21 @@ class BasicAI:
         # If we have an enemy target, check if we're in range to fight
         if hero.target and hasattr(hero.target, 'is_alive') and hero.target.is_alive:
             dist = hero.distance_to(hero.target.x, hero.target.y)
-            # Ranger spacing: try to avoid face-tanking by maintaining a minimum distance.
-            if getattr(hero, "hero_class", "") == "ranger":
-                preferred_min = TILE_SIZE * 2.5
+            hcls = getattr(hero, "hero_class", "")
+            if hcls in ["ranger", "wizard", "rogue"]:
+                preferred_min = TILE_SIZE * (3.0 if hcls == "wizard" else 2.5 if hcls == "ranger" else 2.0)
+
+                # Rogue/wizard are more likely to disengage when hurt.
+                if hcls in ["rogue", "wizard"] and hero.health_percent < (0.7 if hcls == "rogue" else 0.8):
+                    self.start_retreat(hero, game_state)
+                    return
+
                 if dist < preferred_min:
                     # Step away from the enemy.
                     dx = hero.x - hero.target.x
                     dy = hero.y - hero.target.y
                     d = math.sqrt(dx * dx + dy * dy) or 1.0
-                    step = TILE_SIZE * 2.0
+                    step = TILE_SIZE * (2.5 if hcls == "wizard" else 2.0)
                     tx = hero.x + (dx / d) * step
                     ty = hero.y + (dy / d) * step
 
@@ -448,14 +471,20 @@ class BasicAI:
             
             # Check if target in range
             dist = hero.distance_to(hero.target.x, hero.target.y)
-            # Ranger spacing: if too close, back off instead of sticking in melee.
-            if getattr(hero, "hero_class", "") == "ranger":
-                preferred_min = TILE_SIZE * 2.5
+            hcls = getattr(hero, "hero_class", "")
+            if hcls in ["ranger", "wizard", "rogue"]:
+                preferred_min = TILE_SIZE * (3.0 if hcls == "wizard" else 2.5 if hcls == "ranger" else 2.0)
+
+                # Rogue/wizard are more likely to retreat at low HP.
+                if hcls in ["rogue", "wizard"] and hero.health_percent < (0.6 if hcls == "rogue" else 0.75):
+                    self.start_retreat(hero, game_state)
+                    return
+
                 if dist < preferred_min:
                     dx = hero.x - hero.target.x
                     dy = hero.y - hero.target.y
                     d = math.sqrt(dx * dx + dy * dy) or 1.0
-                    step = TILE_SIZE * 2.0
+                    step = TILE_SIZE * (2.5 if hcls == "wizard" else 2.0)
                     tx = hero.x + (dx / d) * step
                     ty = hero.y + (dy / d) * step
                     max_x = MAP_WIDTH * TILE_SIZE
@@ -541,18 +570,33 @@ class BasicAI:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
         
-        # Priority 3: Weapon upgrade
-        for item in items:
-            if item["type"] == "weapon" and hero.gold >= item["price"]:
-                # Class preference: rangers prefer ranged weapons.
-                if getattr(hero, "hero_class", "") == "ranger" and item.get("style", "melee") != "ranged":
+        # Priority 3: Weapon upgrade (class-preferred style first, then any).
+        preferred_style = {
+            "ranger": "ranged",
+            "rogue": "melee",
+            "wizard": "magic",
+        }.get(getattr(hero, "hero_class", ""), None)
+
+        def try_buy_weapon(only_style: str | None) -> bool:
+            current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
+            for item in items:
+                if item.get("type") != "weapon":
                     continue
-                current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
-                if item["attack"] > current_attack:
-                    if hero.buy_item(item):
-                        if economy:
-                            economy.hero_purchase(hero.name, item["name"], item["price"])
-                        break
+                if hero.gold < item.get("price", 999999):
+                    continue
+                if only_style is not None and item.get("style", "melee") != only_style:
+                    continue
+                if item.get("attack", 0) <= current_attack:
+                    continue
+                if hero.buy_item(item):
+                    if economy:
+                        economy.hero_purchase(hero.name, item["name"], item["price"])
+                    return True
+            return False
+
+        if preferred_style is not None:
+            _ = try_buy_weapon(preferred_style)
+        _ = try_buy_weapon(None)
         
         # Priority 4: Armor upgrade
         for item in items:

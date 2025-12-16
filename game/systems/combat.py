@@ -48,14 +48,20 @@ class CombatSystem:
                     closest_enemy.register_attacker(hero)
                 
                 # Attack!
-                killed = closest_enemy.take_damage(hero.attack)
+                damage = hero.attack
+                if hasattr(hero, "compute_attack_damage"):
+                    try:
+                        damage = hero.compute_attack_damage(closest_enemy)
+                    except TypeError:
+                        damage = hero.compute_attack_damage()
+                killed = closest_enemy.take_damage(damage)
                 hero.attack_cooldown = hero.attack_cooldown_max
                 
                 events.append({
                     "type": "hero_attack",
                     "attacker": hero.name,
                     "target": closest_enemy.enemy_type,
-                    "damage": hero.attack,
+                    "damage": damage,
                 })
                 
                 if killed:

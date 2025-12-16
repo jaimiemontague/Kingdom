@@ -7,7 +7,10 @@ from config import (
     MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK
 )
 from game.world import World
-from game.entities import Castle, WarriorGuild, RangerGuild, Marketplace, Hero, Goblin, TaxCollector, Peasant
+from game.entities import (
+    Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild,
+    Marketplace, Hero, Goblin, TaxCollector, Peasant
+)
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 
@@ -138,6 +141,20 @@ class GameEngine:
                 self.building_menu.select_building("ranger_guild")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
+
+        elif event.key == pygame.K_4:
+            # Select rogue guild for placement
+            if self.economy.can_afford_building("rogue_guild"):
+                self.building_menu.select_building("rogue_guild")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
+
+        elif event.key == pygame.K_5:
+            # Select wizard guild for placement
+            if self.economy.can_afford_building("wizard_guild"):
+                self.building_menu.select_building("wizard_guild")
+            else:
+                self.hud.add_message("Not enough gold!", (255, 100, 100))
                 
         elif event.key == pygame.K_h:
             # Hire a hero
@@ -235,8 +252,9 @@ class GameEngine:
         """Try to hire a hero from the selected guild building."""
         guild = self.selected_building
 
-        if not guild or not hasattr(guild, "building_type") or guild.building_type not in ["warrior_guild", "ranger_guild"]:
-            self.hud.add_message("Select a constructed guild (Warrior/Ranger) to hire from!", (255, 100, 100))
+        allowed = ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"]
+        if not guild or not hasattr(guild, "building_type") or guild.building_type not in allowed:
+            self.hud.add_message("Select a constructed guild (Warrior/Ranger/Rogue/Wizard) to hire from!", (255, 100, 100))
             return
 
         # Guild must be constructed before it can be used.
@@ -253,7 +271,13 @@ class GameEngine:
         guild.hire_hero()
         
         # Spawn hero near guild
-        hero_class = "warrior" if guild.building_type == "warrior_guild" else "ranger"
+        class_by_guild = {
+            "warrior_guild": "warrior",
+            "ranger_guild": "ranger",
+            "rogue_guild": "rogue",
+            "wizard_guild": "wizard",
+        }
+        hero_class = class_by_guild.get(guild.building_type, "warrior")
         hero = Hero(
             guild.center_x + TILE_SIZE,
             guild.center_y,
@@ -278,6 +302,10 @@ class GameEngine:
             building = WarriorGuild(grid_x, grid_y)
         elif building_type == "ranger_guild":
             building = RangerGuild(grid_x, grid_y)
+        elif building_type == "rogue_guild":
+            building = RogueGuild(grid_x, grid_y)
+        elif building_type == "wizard_guild":
+            building = WizardGuild(grid_x, grid_y)
         elif building_type == "marketplace":
             building = Marketplace(grid_x, grid_y)
         else:

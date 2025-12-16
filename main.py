@@ -73,6 +73,8 @@ def main():
     print("  1         - Build Warrior Guild ($150)")
     print("  2         - Build Marketplace ($100)")
     print("  3         - Build Ranger Guild ($175)")
+    print("  4         - Build Rogue Guild ($160)")
+    print("  5         - Build Wizard Guild ($220)")
     print("  H         - Hire Hero ($50)")
     print("  Click     - Select hero")
     print("  P         - Use potion (selected hero)")

@@ -97,6 +97,8 @@ class HUD:
             "1: Warrior Guild ($150)",
             "2: Marketplace ($100)",
             "3: Ranger Guild ($175)",
+            "4: Rogue Guild ($160)",
+            "5: Wizard Guild ($220)",
             "H: Hire Hero ($50)",
             "B: Place Bounty ($50)",
             "F1: Debug Panel"

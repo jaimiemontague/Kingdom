@@ -30,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
 from game.world import World  # noqa: E402
-from game.entities import Castle, WarriorGuild, RangerGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
+from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
 from game.systems.bounty import Bounty  # noqa: E402
@@ -82,6 +82,8 @@ def main() -> int:
     ap.add_argument("--seconds", type=float, default=20.0)
     ap.add_argument("--heroes", type=int, default=8)
     ap.add_argument("--rangers", type=int, default=0, help="number of ranger heroes to spawn (in addition to --heroes)")
+    ap.add_argument("--rogues", type=int, default=0, help="number of rogue heroes to spawn")
+    ap.add_argument("--wizards", type=int, default=0, help="number of wizard heroes to spawn")
     ap.add_argument("--seed", type=int, default=3)
     ap.add_argument("--log-every", type=int, default=60, help="log every N ticks (60 ~= 1s at 60fps)")
     ap.add_argument("--start-gold", type=int, default=120, help="starting spendable gold per hero")
@@ -106,10 +108,12 @@ def main() -> int:
     castle = Castle(cx, cy)
     guild = WarriorGuild(cx - 6, cy + 4)
     ranger_guild = RangerGuild(cx - 6, cy + 8)
+    rogue_guild = RogueGuild(cx - 10, cy + 4)
+    wizard_guild = WizardGuild(cx - 10, cy + 8)
     market = Marketplace(cx + 6, cy + 4)
     market.potions_researched = bool(args.potions)
 
-    buildings = [castle, guild, ranger_guild, market]
+    buildings = [castle, guild, ranger_guild, rogue_guild, wizard_guild, market]
 
     # Simulate one newly placed (unconstructed) building to exercise peasant behavior.
     new_building = Marketplace(cx + 10, cy - 2)
@@ -128,6 +132,18 @@ def main() -> int:
     for _ in range(args.rangers):
         h = Hero(ranger_guild.center_x + TILE_SIZE, ranger_guild.center_y, hero_class="ranger")
         h.home_building = ranger_guild
+        h.gold = args.start_gold
+        heroes.append(h)
+
+    for _ in range(args.rogues):
+        h = Hero(rogue_guild.center_x + TILE_SIZE, rogue_guild.center_y, hero_class="rogue")
+        h.home_building = rogue_guild
+        h.gold = args.start_gold
+        heroes.append(h)
+
+    for _ in range(args.wizards):
+        h = Hero(wizard_guild.center_x + TILE_SIZE, wizard_guild.center_y, hero_class="wizard")
+        h.home_building = wizard_guild
         h.gold = args.start_gold
         heroes.append(h)
 

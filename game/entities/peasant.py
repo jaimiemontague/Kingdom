@@ -187,6 +187,12 @@ class Peasant:
 
         pygame.draw.circle(surface, self.color, (int(sx), int(sy)), self.size // 2)
         pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), self.size // 2, 1)
+        
+        # Draw peasant symbol (P for Peasant)
+        font = pygame.font.Font(None, 14)
+        symbol_text = font.render("P", True, COLOR_WHITE)
+        symbol_rect = symbol_text.get_rect(center=(int(sx), int(sy)))
+        surface.blit(symbol_text, symbol_rect)
 
         # Health bar
         bar_w = self.size + 8
