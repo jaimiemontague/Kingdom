@@ -105,15 +105,17 @@ class HUD:
             "T: Temple Agrela ($400)",
             "G: Gnome Hovel ($300)",
             "E: Elven Bungalow ($350)",
-            "D: Dwarven Settlement ($300)",
+            "V: Dwarven Settlement ($300)",
             "U: Guardhouse ($200)",
             "Y: Ballista Tower ($300)",
-            "W: Wizard Tower ($500)",
+            "O: Wizard Tower ($500)",
             "F: Fairgrounds ($400)",
             "I: Library ($350)",
             "R: Royal Gardens ($250)",
             "H: Hire Hero ($50)",
             "B: Place Bounty ($50)",
+            "WASD: Scroll camera",
+            "+/- or Wheel: Zoom",
             "F1: Debug Panel"
         ]
         for i, instr in enumerate(instructions):

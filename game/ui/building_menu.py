@@ -7,6 +7,7 @@ from config import (
     BUILDING_CONSTRAINTS, BUILDING_PREREQUISITES,
     COLOR_WHITE, COLOR_RED, COLOR_GREEN
 )
+from game.graphics.font_cache import get_font
 
 
 class BuildingMenu:
@@ -25,14 +26,15 @@ class BuildingMenu:
         """Cancel building selection."""
         self.selected_building = None
         
-    def update_preview(self, mouse_pos: tuple, world, buildings: list, camera_offset: tuple):
+    def update_preview(self, mouse_pos: tuple, world, buildings: list, camera_offset: tuple, zoom: float = 1.0):
         """Update the preview position based on mouse."""
         if not self.selected_building:
             return
         
         cam_x, cam_y = camera_offset
-        world_x = mouse_pos[0] + cam_x
-        world_y = mouse_pos[1] + cam_y
+        zoom = float(zoom) if zoom else 1.0
+        world_x = (mouse_pos[0] / zoom) + cam_x
+        world_y = (mouse_pos[1] / zoom) + cam_y
         
         # Snap to grid
         grid_x = int(world_x // TILE_SIZE)
@@ -121,7 +123,7 @@ class BuildingMenu:
         
         # Draw cost
         cost = BUILDING_COSTS.get(self.selected_building, 0)
-        font = pygame.font.Font(None, 20)
+        font = get_font(20)
         cost_text = font.render(f"${cost}", True, COLOR_WHITE)
         surface.blit(cost_text, (screen_x + 5, screen_y + height + 5))
 

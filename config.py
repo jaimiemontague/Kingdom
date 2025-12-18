@@ -10,13 +10,22 @@ load_dotenv()
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS = 60
-PROTOTYPE_VERSION = "1.0.0"
+PROTOTYPE_VERSION = "1.1.0"
 GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
 
 # Tile settings
 TILE_SIZE = 32
-MAP_WIDTH = 40  # tiles
-MAP_HEIGHT = 22  # tiles
+# Release tuning: smaller map for better performance / faster gameplay loop.
+# 25% smaller than 200x200 -> 150x150.
+MAP_WIDTH = 150  # tiles
+MAP_HEIGHT = 150  # tiles
+
+# Camera / view settings
+CAMERA_SPEED_PX_PER_SEC = 900  # world pixels per second (WASD + edge scroll)
+CAMERA_EDGE_MARGIN_PX = 40
+ZOOM_MIN = 0.5
+ZOOM_MAX = 2.5
+ZOOM_STEP = 1.15
 
 # Colors
 COLOR_GRASS = (34, 139, 34)
@@ -163,8 +172,29 @@ GOBLIN_ATTACK = 5
 GOBLIN_SPEED = 1.5
 GOBLIN_SPAWN_INTERVAL = 5000  # milliseconds
 
+# Safety cap: reduce overall monster density for release stability.
+# (~2/3 reduction from 60 -> 20)
+MAX_ALIVE_ENEMIES = 20
+
+# Additional enemy types (lairs)
+WOLF_HP = 22
+WOLF_ATTACK = 4
+WOLF_SPEED = 2.3
+
+SKELETON_HP = 55
+SKELETON_ATTACK = 7
+SKELETON_SPEED = 1.1
+
+# Lair settings (release tuning)
+# (~2/3 reduction from 6 -> 2)
+LAIR_INITIAL_COUNT = 2
+LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = 18
+LAIR_STASH_GROWTH_PER_SPAWN = 6
+ROGUE_LAIR_GOLD_THRESHOLD = 100
+LAIR_BOUNTY_COST = 75
+
 # Economy settings
-STARTING_GOLD = 50000
+STARTING_GOLD = 500
 TAX_RATE = 0.20
 
 # LLM settings

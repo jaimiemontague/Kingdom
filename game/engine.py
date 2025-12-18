@@ -4,7 +4,10 @@ Main game engine - handles the game loop, input, and coordination.
 import pygame
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, GAME_TITLE, TILE_SIZE,
-    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK
+    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
+    CAMERA_SPEED_PX_PER_SEC, CAMERA_EDGE_MARGIN_PX,
+    ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
+    MAX_ALIVE_ENEMIES
 )
 from game.world import World
 from game.entities import (
@@ -16,8 +19,10 @@ from game.entities import (
     Fairgrounds, Library, RoyalGardens,
     Palace, Hero, Goblin, TaxCollector, Peasant, Guard
 )
-from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
+from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
+from game.graphics.font_cache import get_font
+from game.systems import perf_stats
 
 
 class GameEngine:
@@ -32,6 +37,13 @@ class GameEngine:
         self.clock = pygame.time.Clock()
         self.running = True
         self.paused = False
+
+        # Perf overlay
+        self.show_perf = True
+        self._perf_last_ms = 0
+        self._perf_pf_calls = 0
+        self._perf_pf_failures = 0
+        self._perf_pf_total_ms = 0.0
         
         # Initialize game world
         self.world = World()
@@ -39,6 +51,14 @@ class GameEngine:
         # Camera
         self.camera_x = 0
         self.camera_y = 0
+        self.zoom = 1.0
+
+        # Render surfaces (avoid per-frame allocations).
+        self._view_surface = None
+        self._view_surface_size = (0, 0)
+        self._scaled_surface = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self._pause_overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self._pause_overlay.fill((0, 0, 0, 128))
         
         # Game objects
         self.buildings = []
@@ -53,6 +73,7 @@ class GameEngine:
         self.combat_system = CombatSystem()
         self.economy = EconomySystem()
         self.spawner = EnemySpawner(self.world)
+        self.lair_system = LairSystem(self.world)
         
         # UI
         self.hud = HUD(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -103,6 +124,10 @@ class GameEngine:
         # Center camera on castle
         self.camera_x = castle.center_x - WINDOW_WIDTH // 2
         self.camera_y = castle.center_y - WINDOW_HEIGHT // 2
+
+        # Spawn initial monster lairs (hostile world-structures).
+        self.lair_system.spawn_initial_lairs(self.buildings, castle)
+        self.clamp_camera()
         
     def handle_events(self):
         """Process input events."""
@@ -118,6 +143,14 @@ class GameEngine:
                 
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mousemove(event)
+
+            # Pygame 2 mouse wheel event
+            elif hasattr(pygame, "MOUSEWHEEL") and event.type == pygame.MOUSEWHEEL:
+                # event.y: +1 scroll up, -1 scroll down
+                if event.y > 0:
+                    self.zoom_by(ZOOM_STEP)
+                elif event.y < 0:
+                    self.zoom_by(1.0 / ZOOM_STEP)
     
     def handle_keydown(self, event):
         """Handle keyboard input."""
@@ -195,7 +228,7 @@ class GameEngine:
                 self.building_menu.select_building("elven_bungalow")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
-        elif event.key == pygame.K_d:
+        elif event.key == pygame.K_v:
             if self.economy.can_afford_building("dwarven_settlement"):
                 self.building_menu.select_building("dwarven_settlement")
             else:
@@ -217,7 +250,7 @@ class GameEngine:
                 self.building_menu.select_building("library")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
-        elif event.key == pygame.K_w:
+        elif event.key == pygame.K_o:
             if self.economy.can_afford_building("wizard_tower"):
                 self.building_menu.select_building("wizard_tower")
             else:
@@ -250,6 +283,9 @@ class GameEngine:
         elif event.key == pygame.K_F1:
             # Toggle debug panel
             self.debug_panel.toggle()
+        elif event.key == pygame.K_F2:
+            # Toggle perf overlay
+            self.show_perf = not self.show_perf
         
         elif event.key == pygame.K_b:
             # Place a bounty at mouse position
@@ -260,9 +296,23 @@ class GameEngine:
             if self.selected_hero and self.selected_hero.is_alive:
                 if self.selected_hero.use_potion():
                     self.hud.add_message(f"{self.selected_hero.name} used a potion!", (100, 255, 100))
+
+        # Zoom controls (+/- and keypad)
+        elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+            self.zoom_by(ZOOM_STEP)
+        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+            self.zoom_by(1.0 / ZOOM_STEP)
     
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
+        # Mouse wheel zoom (older pygame uses buttons 4/5)
+        if event.button == 4:
+            self.zoom_by(ZOOM_STEP)
+            return
+        if event.button == 5:
+            self.zoom_by(1.0 / ZOOM_STEP)
+            return
+
         if event.button == 1:  # Left click
             # Check if clicking on building panel first
             if self.building_panel.visible:
@@ -299,7 +349,8 @@ class GameEngine:
                 event.pos, 
                 self.world, 
                 self.buildings,
-                (self.camera_x, self.camera_y)
+                (self.camera_x, self.camera_y),
+                zoom=self.zoom
             )
         
         # Update building panel hover state
@@ -307,8 +358,7 @@ class GameEngine:
     
     def try_select_hero(self, screen_pos: tuple) -> bool:
         """Try to select a hero at the given screen position. Returns True if selected."""
-        world_x = screen_pos[0] + self.camera_x
-        world_y = screen_pos[1] + self.camera_y
+        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
         
         for hero in self.heroes:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
@@ -319,8 +369,7 @@ class GameEngine:
     
     def try_select_building(self, screen_pos: tuple) -> bool:
         """Try to select a building at the given screen position. Returns True if selected."""
-        world_x = screen_pos[0] + self.camera_x
-        world_y = screen_pos[1] + self.camera_y
+        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
         
         for building in self.buildings:
             rect = building.get_rect()
@@ -335,8 +384,9 @@ class GameEngine:
         """Try to hire a hero from the selected guild building."""
         guild = self.selected_building
 
-        if not guild or not hasattr(guild, "building_type") or not hasattr(guild, "hire_hero"):
-            self.hud.add_message("Select a constructed recruitment building to hire from!", (255, 100, 100))
+        allowed = ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"]
+        if not guild or not hasattr(guild, "building_type") or guild.building_type not in allowed:
+            self.hud.add_message("Select a constructed guild (Warrior/Ranger/Rogue/Wizard) to hire from!", (255, 100, 100))
             return
 
         # Guild must be constructed before it can be used.
@@ -358,18 +408,6 @@ class GameEngine:
             "ranger_guild": "ranger",
             "rogue_guild": "rogue",
             "wizard_guild": "wizard",
-            # Temples
-            "temple_agrela": "healer",
-            "temple_dauros": "monk",
-            "temple_fervus": "cultist",
-            "temple_krypta": "priestess",
-            "temple_krolm": "barbarian",
-            "temple_helia": "solarii",
-            "temple_lunord": "adept",
-            # Non-human dwellings
-            "gnome_hovel": "gnome",
-            "elven_bungalow": "elf",
-            "dwarven_settlement": "dwarf",
         }
         hero_class = class_by_guild.get(guild.building_type, "warrior")
         hero = Hero(
@@ -464,8 +502,7 @@ class GameEngine:
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
         mouse_pos = pygame.mouse.get_pos()
-        world_x = mouse_pos[0] + self.camera_x
-        world_y = mouse_pos[1] + self.camera_y
+        world_x, world_y = self.screen_to_world(mouse_pos[0], mouse_pos[1])
         
         # Default bounty reward
         reward = 50
@@ -479,6 +516,8 @@ class GameEngine:
     
     def update(self, dt: float):
         """Update game state."""
+        # Allow camera movement even while paused.
+        self.update_camera(dt)
         if self.paused:
             return
         
@@ -507,15 +546,27 @@ class GameEngine:
         
         # Update enemies
         for enemy in self.enemies:
-            enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards)
+            enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards, world=self.world)
 
         # Update guards
         for guard in self.guards:
-            guard.update(dt, self.enemies)
+            guard.update(dt, self.enemies, world=self.world, buildings=self.buildings)
         
-        # Spawn new enemies
-        new_enemies = self.spawner.update(dt)
-        self.enemies.extend(new_enemies)
+        # Spawn new enemies (with a safety cap to prevent runaway slowdown if enemies accumulate)
+        alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
+        remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
+        if remaining_slots > 0:
+            new_enemies = self.spawner.update(dt)
+            if new_enemies:
+                self.enemies.extend(new_enemies[:remaining_slots])
+
+            # Spawn enemies from lairs (in addition to wave spawns)
+            alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
+            remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
+            if remaining_slots > 0:
+                lair_enemies = self.lair_system.update(dt, self.buildings)
+                if lair_enemies:
+                    self.enemies.extend(lair_enemies[:remaining_slots])
         
         # Process combat
         events = self.combat_system.process_combat(
@@ -532,6 +583,19 @@ class GameEngine:
             elif event["type"] == "castle_destroyed":
                 self.hud.add_message("GAME OVER - Castle Destroyed!", (255, 0, 0))
                 self.paused = True
+            elif event["type"] == "lair_cleared":
+                lair_name = event.get("lair_type", "lair").replace("_", " ").title()
+                gold = event.get("gold", 0)
+                hero_name = event.get("hero", "A hero")
+                self.hud.add_message(
+                    f"{hero_name} cleared {lair_name}! (+{gold}g)",
+                    (255, 215, 0),
+                )
+                lair_obj = event.get("lair_obj")
+                if lair_obj in self.buildings:
+                    self.buildings.remove(lair_obj)
+                if lair_obj in getattr(self.lair_system, "lairs", []):
+                    self.lair_system.lairs.remove(lair_obj)
         
         # Clean up dead enemies
         self.enemies = [e for e in self.enemies if e.is_alive]
@@ -550,18 +614,9 @@ class GameEngine:
         
         # Update tax collector
         if self.tax_collector:
-            self.tax_collector.update(dt, self.buildings, self.economy)
+            self.tax_collector.update(dt, self.buildings, self.economy, world=self.world)
         
         # Update buildings that need periodic updates
-        # Reset economy multipliers each tick based on constructed buildings.
-        self.economy.commerce_tax_multiplier = 1.0
-        has_elves = any(
-            getattr(b, "building_type", "") == "elven_bungalow" and getattr(b, "is_constructed", True)
-            for b in self.buildings
-        )
-        if has_elves:
-            self.economy.commerce_tax_multiplier = 1.2
-
         for building in self.buildings:
             if building.building_type == "trading_post" and hasattr(building, "update"):
                 building.update(dt, self.economy)
@@ -570,9 +625,7 @@ class GameEngine:
             elif building.building_type == "wizard_tower" and hasattr(building, "update"):
                 building.update(dt, self.enemies)
             elif building.building_type == "fairgrounds" and hasattr(building, "update"):
-                fired = building.update(dt, self.economy, self.heroes)
-                if fired:
-                    self.hud.add_message("Tournament held at the Fairgrounds!", (255, 215, 0))
+                building.update(dt, self.economy, self.heroes)
             elif building.building_type == "guardhouse" and hasattr(building, "update"):
                 # Guard spawning handled here so guards become real entities.
                 should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building])
@@ -591,44 +644,88 @@ class GameEngine:
                     if current < max_guards:
                         g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
                         self.guards.append(g)
-
-        # Apply Royal Gardens buffs (temporary, refreshed while in range)
-        for building in self.buildings:
-            if getattr(building, "building_type", "") != "royal_gardens":
-                continue
-            if getattr(building, "is_constructed", True) is False:
-                continue
-            for hero in building.get_heroes_in_range(self.heroes):
-                hero.apply_buff(
-                    "royal_gardens",
-                    duration_sec=getattr(building, "buff_duration", 30.0),
-                    attack_bonus=getattr(building, "buff_attack_bonus", 0),
-                    defense_bonus=getattr(building, "buff_defense_bonus", 0),
-                )
         
         # Update HUD
         self.hud.update()
         
-        # Update camera (edge scrolling)
-        self.update_camera()
+        # Camera already updated at top of update()
     
-    def update_camera(self):
-        """Update camera position based on mouse position."""
+    def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
+        """Convert screen-space pixels to world-space pixels, accounting for zoom."""
+        z = self.zoom if self.zoom else 1.0
+        return self.camera_x + (screen_x / z), self.camera_y + (screen_y / z)
+
+    def clamp_camera(self):
+        """Clamp camera to world bounds given current zoom."""
+        view_w = max(1, int(WINDOW_WIDTH / (self.zoom if self.zoom else 1.0)))
+        view_h = max(1, int(WINDOW_HEIGHT / (self.zoom if self.zoom else 1.0)))
+        world_w = MAP_WIDTH * TILE_SIZE
+        world_h = MAP_HEIGHT * TILE_SIZE
+
+        max_x = max(0, world_w - view_w)
+        max_y = max(0, world_h - view_h)
+
+        self.camera_x = max(0, min(max_x, self.camera_x))
+        self.camera_y = max(0, min(max_y, self.camera_y))
+
+    def set_zoom(self, new_zoom: float):
+        """Set zoom with clamping."""
+        self.zoom = max(ZOOM_MIN, min(ZOOM_MAX, float(new_zoom)))
+        self.clamp_camera()
+
+    def zoom_by(self, factor: float):
+        """Zoom in/out around the mouse cursor."""
+        if factor is None:
+            return
+        factor = float(factor)
+        if factor <= 0:
+            return
+
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        scroll_speed = 10
-        edge_margin = 50
-        
-        if mouse_x < edge_margin:
-            self.camera_x = max(0, self.camera_x - scroll_speed)
-        elif mouse_x > WINDOW_WIDTH - edge_margin:
-            max_x = MAP_WIDTH * TILE_SIZE - WINDOW_WIDTH
-            self.camera_x = min(max_x, self.camera_x + scroll_speed)
-        
-        if mouse_y < edge_margin:
-            self.camera_y = max(0, self.camera_y - scroll_speed)
-        elif mouse_y > WINDOW_HEIGHT - edge_margin:
-            max_y = MAP_HEIGHT * TILE_SIZE - WINDOW_HEIGHT
-            self.camera_y = min(max_y, self.camera_y + scroll_speed)
+        before_x, before_y = self.screen_to_world(mouse_x, mouse_y)
+
+        self.set_zoom(self.zoom * factor)
+
+        # Keep the same world point under the cursor after zooming.
+        after_zoom = self.zoom if self.zoom else 1.0
+        self.camera_x = before_x - (mouse_x / after_zoom)
+        self.camera_y = before_y - (mouse_y / after_zoom)
+        self.clamp_camera()
+
+    def update_camera(self, dt: float):
+        """Update camera position based on WASD + mouse edge scrolling."""
+        keys = pygame.key.get_pressed()
+        speed = float(CAMERA_SPEED_PX_PER_SEC) * float(dt)
+
+        dx = 0.0
+        dy = 0.0
+
+        # WASD pan (world-space pixels)
+        if keys[pygame.K_a]:
+            dx -= speed
+        if keys[pygame.K_d]:
+            dx += speed
+        if keys[pygame.K_w]:
+            dy -= speed
+        if keys[pygame.K_s]:
+            dy += speed
+
+        # Mouse edge scroll (still in world-space pixels)
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        if mouse_x < CAMERA_EDGE_MARGIN_PX:
+            dx -= speed
+        elif mouse_x > WINDOW_WIDTH - CAMERA_EDGE_MARGIN_PX:
+            dx += speed
+
+        if mouse_y < CAMERA_EDGE_MARGIN_PX:
+            dy -= speed
+        elif mouse_y > WINDOW_HEIGHT - CAMERA_EDGE_MARGIN_PX:
+            dy += speed
+
+        if dx or dy:
+            self.camera_x += dx
+            self.camera_y += dy
+            self.clamp_camera()
     
     def get_game_state(self) -> dict:
         """Get current game state for AI and UI."""
@@ -641,51 +738,71 @@ class GameEngine:
             "enemies": self.enemies,
             "buildings": self.buildings,
             "bounties": self.bounty_system.get_unclaimed_bounties(),
+            "bounty_system": self.bounty_system,
             "wave": self.spawner.wave_number,
             "selected_hero": self.selected_hero,
             "castle": castle,
             "economy": self.economy,
+            "world": self.world,
         }
     
     def render(self):
         """Render the game."""
         # Clear screen
         self.screen.fill(COLOR_BLACK)
-        
+
         camera_offset = (self.camera_x, self.camera_y)
-        
+
+        # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
+        if abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:
+            view_surface = self.screen
+        else:
+            # Render world + entities to a zoomed "camera view" surface, then scale to window.
+            view_w = max(1, int(WINDOW_WIDTH / (self.zoom if self.zoom else 1.0)))
+            view_h = max(1, int(WINDOW_HEIGHT / (self.zoom if self.zoom else 1.0)))
+            if self._view_surface is None or self._view_surface_size != (view_w, view_h):
+                self._view_surface = pygame.Surface((view_w, view_h))
+                self._view_surface_size = (view_w, view_h)
+            view_surface = self._view_surface
+            view_surface.fill(COLOR_BLACK)
+
         # Render world
-        self.world.render(self.screen, camera_offset)
-        
+        self.world.render(view_surface, camera_offset)
+
         # Render buildings
         for building in self.buildings:
-            building.render(self.screen, camera_offset)
-        
+            building.render(view_surface, camera_offset)
+
         # Render enemies
         for enemy in self.enemies:
-            enemy.render(self.screen, camera_offset)
-        
+            enemy.render(view_surface, camera_offset)
+
         # Render heroes
         for hero in self.heroes:
-            hero.render(self.screen, camera_offset)
+            hero.render(view_surface, camera_offset)
 
         # Render guards
         for guard in self.guards:
-            guard.render(self.screen, camera_offset)
+            guard.render(view_surface, camera_offset)
 
         # Render peasants
         for peasant in self.peasants:
-            peasant.render(self.screen, camera_offset)
-        
+            peasant.render(view_surface, camera_offset)
+
         # Render tax collector
         if self.tax_collector:
-            self.tax_collector.render(self.screen, camera_offset)
-        
+            self.tax_collector.render(view_surface, camera_offset)
+
         # Render bounties
-        self.bounty_system.render(self.screen, camera_offset)
-        
+        self.bounty_system.render(view_surface, camera_offset)
+
         # Render building preview
-        self.building_menu.render(self.screen, camera_offset)
+        self.building_menu.render(view_surface, camera_offset)
+
+        # Scale the world to the actual window (reusing a destination surface)
+        if view_surface is not self.screen:
+            pygame.transform.smoothscale(view_surface, (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)
+            self.screen.blit(self._scaled_surface, (0, 0))
         
         # Render HUD
         self.hud.render(self.screen, self.get_game_state())
@@ -695,12 +812,14 @@ class GameEngine:
         
         # Render building panel
         self.building_panel.render(self.screen, self.heroes, self.economy)
+
+        # Perf overlay (helps diagnose lag spikes)
+        if self.show_perf:
+            self.render_perf_overlay(self.screen)
         
         # Pause overlay
         if self.paused:
-            overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 128))
-            self.screen.blit(overlay, (0, 0))
+            self.screen.blit(self._pause_overlay, (0, 0))
             
             font = pygame.font.Font(None, 72)
             text = font.render("PAUSED", True, (255, 255, 255))
@@ -708,6 +827,50 @@ class GameEngine:
             self.screen.blit(text, text_rect)
         
         pygame.display.flip()
+
+    def render_perf_overlay(self, surface: pygame.Surface):
+        now_ms = pygame.time.get_ticks()
+        if self._perf_last_ms == 0:
+            self._perf_last_ms = now_ms
+
+        # Update snapshot ~1x/sec
+        if now_ms - self._perf_last_ms >= 1000:
+            self._perf_last_ms = now_ms
+            self._perf_pf_calls = perf_stats.pathfinding.calls
+            self._perf_pf_failures = perf_stats.pathfinding.failures
+            self._perf_pf_total_ms = perf_stats.pathfinding.total_ms
+            perf_stats.reset_pathfinding()
+
+        fps = self.clock.get_fps()
+        enemies_alive = len([e for e in self.enemies if getattr(e, "is_alive", False)])
+
+        lines = [
+            f"FPS: {fps:0.1f}",
+            f"Enemies alive: {enemies_alive}  (cap={MAX_ALIVE_ENEMIES})",
+            f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}",
+            f"PF ms/s: {self._perf_pf_total_ms:0.1f}",
+        ]
+
+        font = get_font(16)
+        x, y = 10, 10
+        pad = 6
+        # Background panel
+        w = 0
+        h = 0
+        rendered = []
+        for line in lines:
+            s = font.render(line, True, (255, 255, 255))
+            rendered.append(s)
+            w = max(w, s.get_width())
+            h += s.get_height()
+
+        panel = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 140))
+        yy = pad
+        for s in rendered:
+            panel.blit(s, (pad, yy))
+            yy += s.get_height()
+        surface.blit(panel, (x, y))
     
     def run(self):
         """Main game loop."""

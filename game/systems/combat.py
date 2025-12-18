@@ -56,6 +56,14 @@ class CombatSystem:
                         damage = hero.compute_attack_damage()
                 killed = closest_enemy.take_damage(damage)
                 hero.attack_cooldown = hero.attack_cooldown_max
+
+                # Allow hero to trigger visuals/audio (animations, etc.)
+                if hasattr(hero, "on_attack_landed"):
+                    try:
+                        hero.on_attack_landed(closest_enemy, damage, killed)
+                    except TypeError:
+                        # Backwards-compatible signature
+                        hero.on_attack_landed()
                 
                 events.append({
                     "type": "hero_attack",

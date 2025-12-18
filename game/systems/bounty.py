@@ -3,6 +3,7 @@ Bounty system for incentivizing hero behavior.
 """
 import pygame
 from config import TILE_SIZE, COLOR_GOLD, COLOR_WHITE
+from game.graphics.font_cache import get_font
 
 
 class Bounty:
@@ -68,7 +69,7 @@ class Bounty:
         pygame.draw.polygon(surface, flag_color, flag_points)
         
         # Draw reward amount
-        font = pygame.font.Font(None, 16)
+        font = get_font(16)
         text = font.render(f"${self.reward}", True, COLOR_WHITE)
         text_rect = text.get_rect(center=(screen_x + 10, screen_y - 35))
         surface.blit(text, text_rect)

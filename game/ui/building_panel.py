@@ -32,10 +32,6 @@ class BuildingPanel:
         # Button for upgrade (palace)
         self.upgrade_button_rect = None
         self.upgrade_button_hovered = False
-
-        # Library research buttons: name -> rect
-        self.library_research_buttons = {}
-        self.library_research_hovered = None
         
         # Hero portrait colors (simple colored circles as placeholders)
         self.portrait_colors = [
@@ -119,34 +115,6 @@ class BuildingPanel:
                 if self.selected_building.can_upgrade():
                     if self.selected_building.upgrade(economy):
                         return True
-
-        # Check library research buttons
-        if self.selected_building.building_type == "library" and self.library_research_buttons:
-            for name, rect in list(self.library_research_buttons.items()):
-                if rect and rect.collidepoint(mouse_pos):
-                    # Cannot research while under construction
-                    if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
-                        return True
-                    # Attempt research
-                    if self.selected_building.research(name, economy):
-                        # Apply simple unlock effects (no temple spells)
-                        buildings = game_state.get("buildings", [])
-                        heroes = game_state.get("heroes", [])
-                        if name == "Advanced Healing":
-                            for h in heroes:
-                                if getattr(h, "is_alive", False):
-                                    h.potion_heal_amount = getattr(h, "potion_heal_amount", 50) + 20
-                        elif name == "Fire Magic":
-                            for b in buildings:
-                                if getattr(b, "building_type", "") == "wizard_tower":
-                                    b.spell_damage = getattr(b, "spell_damage", 25) + 10
-                        elif name == "Defensive Spells":
-                            for b in buildings:
-                                if getattr(b, "building_type", "") == "ballista_tower":
-                                    b.attack_damage = getattr(b, "attack_damage", 15) + 3
-                                if getattr(b, "building_type", "") == "wizard_tower":
-                                    b.spell_interval = max(1.0, getattr(b, "spell_interval", 5.0) - 1.0)
-                        return True
         
         return True  # Click was in panel
     
@@ -154,12 +122,6 @@ class BuildingPanel:
         """Update hover state for buttons."""
         if self.research_button_rect:
             self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
-        # Library buttons hover
-        self.library_research_hovered = None
-        for name, rect in self.library_research_buttons.items():
-            if rect and rect.collidepoint(mouse_pos):
-                self.library_research_hovered = name
-                break
     
     def render(self, surface: pygame.Surface, heroes: list, economy):
         """Render the building panel."""
@@ -530,9 +492,6 @@ class BuildingPanel:
     
     def render_library(self, surface: pygame.Surface, building, y: int, economy) -> int:
         """Render library details."""
-        # Reset buttons each frame
-        self.library_research_buttons = {}
-
         researched_text = self.font_normal.render(f"Researched: {len(building.researched_items)}", True, COLOR_WHITE)
         surface.blit(researched_text, (10, y))
         y += 25
@@ -545,46 +504,12 @@ class BuildingPanel:
         y += 22
         
         for item in building.available_research:
-            name = item["name"]
-            cost = item["cost"]
             if item["researched"]:
-                item_text = self.font_small.render(f"✓ {name}", True, COLOR_GREEN)
-                surface.blit(item_text, (15, y))
-                y += 16
-                continue
-
-            # Item row
-            item_text = self.font_small.render(f"• {name} (${cost})", True, (180, 180, 180))
+                item_text = self.font_small.render(f"✓ {item['name']}", True, COLOR_GREEN)
+            else:
+                item_text = self.font_small.render(f"• {item['name']} (${item['cost']})", True, (180, 180, 180))
             surface.blit(item_text, (15, y))
-            y += 18
-
-            # Research button
-            button_width = 200
-            button_height = 24
-            button_x = 10
-            button_y = y
-            can_afford = economy.player_gold >= cost
-            button_color = (60, 120, 60) if can_afford else (80, 80, 80)
-            if self.library_research_hovered == name and can_afford:
-                button_color = (80, 150, 80)
-
-            pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
-            pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
-
-            btn_text = "Research" if can_afford else "Need more gold"
-            btn_render = self.font_small.render(btn_text, True, COLOR_WHITE)
-            btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
-            surface.blit(btn_render, btn_rect)
-
-            # Store rect for click detection (screen coords)
-            self.library_research_buttons[name] = pygame.Rect(
-                self.panel_x + button_x,
-                self.panel_y + button_y,
-                button_width,
-                button_height
-            )
-
-            y += 30
+            y += 16
         return y
     
     def render_royal_gardens(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:

@@ -6,14 +6,9 @@ import math
 import random
 from game.entities.hero import HeroState
 from game.systems.pathfinding import find_path, grid_to_world_path
-from config import (
-    TILE_SIZE,
-    HEALTH_THRESHOLD_FOR_DECISION,
-    LLM_DECISION_COOLDOWN,
-    MAP_WIDTH,
-    MAP_HEIGHT,
-)
+from config import TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN
 from ai.context_builder import ContextBuilder
+from game.systems.navigation import best_adjacent_tile
 
 # Debug logging (set to True to see AI decision logs)
 DEBUG_AI = False
@@ -42,43 +37,7 @@ class BasicAI:
     def __init__(self, llm_brain=None):
         self.llm_brain = llm_brain
         # Track each hero's personal patrol zone (assigned on first idle)
-        self.hero_zones = {}  # hero.hero_id -> (center_x, center_y)
-        # Stagger shopping checks so heroes don't all march in sync.
-        self._next_shop_check_ms = {}  # hero.hero_id -> tick ms
-
-    def _offset_approach(self, hero, x: float, y: float, radius_tiles: float = 1.0) -> tuple[float, float]:
-        """Return a stable per-hero offset around a target point to reduce clumping."""
-        golden_angle = 2.399963229728653
-        angle = (hero.hero_id * golden_angle) % (2 * math.pi)
-        radius = TILE_SIZE * radius_tiles
-        tx = x + math.cos(angle) * radius
-        ty = y + math.sin(angle) * radius
-
-        # Clamp to map bounds (keep inside world)
-        max_x = MAP_WIDTH * TILE_SIZE
-        max_y = MAP_HEIGHT * TILE_SIZE
-        tx = max(0, min(max_x, tx))
-        ty = max(0, min(max_y, ty))
-        return (tx, ty)
-
-    def _should_try_shopping_now(self, hero) -> bool:
-        """Stagger shopping decisions per hero to avoid synchronized behavior."""
-        import pygame
-
-        now = pygame.time.get_ticks()
-        hero_key = hero.hero_id
-
-        if hero_key not in self._next_shop_check_ms:
-            # Deterministic per-hero initial delay (0..2500ms)
-            self._next_shop_check_ms[hero_key] = now + ((hero_key * 997) % 2500)
-            return False
-
-        if now < self._next_shop_check_ms[hero_key]:
-            return False
-
-        # After a check, push the next window out (3..8s) deterministically per hero.
-        self._next_shop_check_ms[hero_key] = now + 3000 + ((hero_key * 731) % 5000)
-        return True
+        self.hero_zones = {}  # hero.name -> (center_x, center_y)
         
     def update(self, dt: float, heroes: list, game_state: dict):
         """Update AI for all heroes."""
@@ -89,8 +48,8 @@ class BasicAI:
     
     def assign_patrol_zone(self, hero, game_state: dict):
         """Assign a unique patrol zone to a hero based on their index."""
-        if hero.hero_id in self.hero_zones:
-            return self.hero_zones[hero.hero_id]
+        if hero.name in self.hero_zones:
+            return self.hero_zones[hero.name]
         
         # Get castle position as reference
         castle = game_state.get("castle")
@@ -115,7 +74,7 @@ class BasicAI:
         zone_x = base_x + math.cos(angle) * radius
         zone_y = base_y + math.sin(angle) * radius
         
-        self.hero_zones[hero.hero_id] = (zone_x, zone_y)
+        self.hero_zones[hero.name] = (zone_x, zone_y)
         debug_log(f"{hero.name} assigned zone at ({zone_x:.0f}, {zone_y:.0f}), angle={math.degrees(angle):.0f}deg")
         return (zone_x, zone_y)
     
@@ -123,13 +82,6 @@ class BasicAI:
         """Update AI for a single hero."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
-        bounties = game_state.get("bounties", [])
-
-        # If we were pursuing a bounty that got claimed, clear it.
-        if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
-            b = hero.target.get("bounty")
-            if b is None or getattr(b, "claimed", False) or b not in bounties:
-                hero.target = None
         
         # Handle resting state first (doesn't need LLM)
         if hero.state == HeroState.RESTING:
@@ -138,12 +90,12 @@ class BasicAI:
 
         # Priority: Defend castle if it's under attack (unless already fighting)
         castle = game_state.get("castle")
-        if castle and getattr(castle, "is_under_attack", False) and hero.state != HeroState.FIGHTING:
+        if castle and castle.is_damaged and hero.state != HeroState.FIGHTING:
             self.defend_castle(hero, game_state, castle)
             return
 
-        # Priority: Defend home building if it's under attack
-        if hero.home_building and getattr(hero.home_building, "is_under_attack", False) and hero.state != HeroState.FIGHTING:
+        # Priority: Defend home building if it's damaged
+        if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
             self.defend_home_building(hero, game_state)
             return
 
@@ -160,7 +112,7 @@ class BasicAI:
         
         # Handle LLM decision response
         if hero.pending_llm_decision and self.llm_brain:
-            decision = self.llm_brain.get_decision(hero.hero_id)
+            decision = self.llm_brain.get_decision(hero.name)
             if decision:
                 self.apply_llm_decision(hero, decision, game_state)
                 hero.pending_llm_decision = False
@@ -212,7 +164,7 @@ class BasicAI:
         
         if self.llm_brain:
             context = ContextBuilder.build_hero_context(hero, game_state)
-            self.llm_brain.request_decision(hero.hero_id, context)
+            self.llm_brain.request_decision(hero.name, context)
             hero.pending_llm_decision = True
             hero.last_llm_decision_time = pygame.time.get_ticks()
     
@@ -240,106 +192,31 @@ class BasicAI:
         """Handle idle state - heroes patrol their assigned zone."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
-        bounties = game_state.get("bounties", [])
         
-        debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.hero_id}_idle")
-
-        # Majesty-like: heroes can choose to pursue reward flags, class-weighted.
-        best_bounty = None
-        best_score = 0.0
-
-        hero_class = getattr(hero, "hero_class", "")
-        bounty_bias = {
-            "rogue": 2.2,   # very reward-driven
-            "ranger": 1.8,  # exploratory
-            "wizard": 1.2,  # somewhat interested, but cautious
-            "warrior": 1.0,
-        }.get(hero_class, 1.0)
-
-        max_dist_tiles = {
-            "rogue": 10,
-            "ranger": 14,
-            "wizard": 9,
-            "warrior": 8,
-        }.get(hero_class, 8)
-
-        min_score = {
-            "rogue": 4.0,
-            "ranger": 4.0,
-            "wizard": 5.5,
-            "warrior": 6.0,
-        }.get(hero_class, 6.0)
-
-        for bounty in bounties:
-            if getattr(bounty, "claimed", False):
-                continue
-            if getattr(bounty, "bounty_type", "") != "explore":
-                continue
-
-            dx = getattr(bounty, "x", 0.0) - hero.x
-            dy = getattr(bounty, "y", 0.0) - hero.y
-            dist = math.sqrt(dx * dx + dy * dy)
-            dist_tiles = dist / TILE_SIZE if TILE_SIZE else dist
-
-            reward = float(getattr(bounty, "reward", 0))
-            # Score: reward per distance, with a small bias for being closer.
-            score = reward / (1.0 + dist_tiles)
-            score *= bounty_bias
-
-            # Avoid sending heroes across the entire map for tiny rewards.
-            if dist_tiles > max_dist_tiles:
-                continue
-
-            if score > best_score:
-                best_score = score
-                best_bounty = bounty
-
-        # Only pursue if it's meaningfully attractive.
-        if best_bounty and best_score >= min_score:
-            debug_log(f"{hero.name} -> pursuing explore bounty ${getattr(best_bounty, 'reward', 0)} (score={best_score:.1f})")
-            hero.target_position = self._offset_approach(hero, best_bounty.x, best_bounty.y, radius_tiles=0.5)
-            hero.state = HeroState.MOVING
-            hero.target = {"type": "bounty", "bounty": best_bounty}
-            return
+        debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_idle")
         
-        # Check if hero wants to go shopping (full health, has gold, wants upgrades or potions)
+        # Check if hero wants to go shopping (full health, has gold, needs potions)
         if hero.hp >= hero.max_hp:
-            marketplace = self.find_marketplace(buildings)
-            if marketplace and self._should_try_shopping_now(hero) and hero.wants_to_shop(marketplace.get_available_items()):
+            marketplace = self.find_marketplace_with_potions(buildings)
+            if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
                 debug_log(f"{hero.name} -> going shopping")
-                hero.target_position = self._offset_approach(hero, marketplace.center_x, marketplace.center_y, radius_tiles=1.5)
+                world = game_state.get("world")
+                if world:
+                    adj = best_adjacent_tile(world, buildings, marketplace, hero.x, hero.y)
+                    if adj:
+                        hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                    else:
+                        hero.target_position = (marketplace.center_x, marketplace.center_y)
+                else:
+                    hero.target_position = (marketplace.center_x, marketplace.center_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "marketplace": marketplace}
                 return
 
-            # Blacksmith upgrades (separate from marketplace items)
-            blacksmith = self.find_blacksmith(buildings)
-            if blacksmith and self._should_try_shopping_now(hero):
-                weapon_cost = getattr(hero, "get_weapon_upgrade_cost", lambda: 999999)()
-                armor_cost = getattr(hero, "get_armor_upgrade_cost", lambda: 999999)()
-                wants_weapon = getattr(hero, "can_upgrade_weapon", lambda: False)() and hero.gold >= weapon_cost
-                wants_armor = getattr(hero, "can_upgrade_armor", lambda: False)() and hero.gold >= armor_cost
-                if wants_weapon or wants_armor:
-                    debug_log(f"{hero.name} -> going to blacksmith")
-                    hero.target_position = self._offset_approach(hero, blacksmith.center_x, blacksmith.center_y, radius_tiles=1.5)
-                    hero.state = HeroState.MOVING
-                    hero.target = {"type": "blacksmith", "blacksmith": blacksmith}
-                    return
-
-            # Fairgrounds tournament attraction: drift toward fairgrounds as a tournament approaches.
-            fair = self.find_fairgrounds(buildings)
-            if fair and getattr(fair, "is_constructed", True):
-                time_to = max(0.0, getattr(fair, "tournament_interval", 60.0) - getattr(fair, "tournament_timer", 0.0))
-                if time_to <= 10.0 and random.random() < 0.25:
-                    hero.target_position = self._offset_approach(hero, fair.center_x, fair.center_y, radius_tiles=2.0)
-                    hero.state = HeroState.MOVING
-                    hero.target = {"type": "fairgrounds", "fairgrounds": fair}
-                    return
-
         # Get this hero's patrol zone
         zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
         
-        debug_log(f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.hero_id}_zone")
+        debug_log(f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_zone")
         
         # Heroes only know about enemies within 5 tiles of themselves (no map-wide awareness)
         awareness_radius = TILE_SIZE * 5  # 160 pixels - hero can only "see" this far
@@ -361,11 +238,11 @@ class BasicAI:
             target_enemy, target_dist = enemies_nearby[0]
             debug_log(f"{hero.name} -> sees enemy {target_dist:.0f}px away, engaging!")
             hero.target = target_enemy
-            hero.set_target_position(*self._offset_approach(hero, target_enemy.x, target_enemy.y, radius_tiles=0.5))
+            hero.set_target_position(target_enemy.x, target_enemy.y)
             hero.state = HeroState.MOVING
             return
         
-        debug_log(f"{hero.name} -> no enemies within {awareness_radius}px", throttle_key=f"{hero.hero_id}_no_enemy")
+        debug_log(f"{hero.name} -> no enemies within {awareness_radius}px", throttle_key=f"{hero.name}_no_enemy")
         
         # No enemies in zone - patrol within our zone
         dist_to_zone = hero.distance_to(zone_x, zone_y)
@@ -389,31 +266,12 @@ class BasicAI:
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "patrol"}
     
-    def find_marketplace(self, buildings: list):
-        """Find a marketplace (potions optional)."""
+    def find_marketplace_with_potions(self, buildings: list):
+        """Find a marketplace that can sell potions."""
         for building in buildings:
             if building.building_type == "marketplace":
-                # Marketplaces under construction are not usable.
-                if hasattr(building, "is_constructed") and not building.is_constructed:
-                    continue
-                return building
-        return None
-
-    def find_blacksmith(self, buildings: list):
-        """Find a constructed blacksmith."""
-        for building in buildings:
-            if building.building_type == "blacksmith":
-                if hasattr(building, "is_constructed") and not building.is_constructed:
-                    continue
-                return building
-        return None
-
-    def find_fairgrounds(self, buildings: list):
-        for building in buildings:
-            if building.building_type == "fairgrounds":
-                if hasattr(building, "is_constructed") and not building.is_constructed:
-                    continue
-                return building
+                if hasattr(building, 'potions_researched') and building.potions_researched:
+                    return building
         return None
     
     def handle_moving(self, hero, game_state: dict):
@@ -425,17 +283,9 @@ class BasicAI:
             dist = hero.distance_to(hero.target_position[0], hero.target_position[1])
             if dist < TILE_SIZE // 2:
                 # Check if we were going home
-                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") in ["going_home", "going_rest"]:
-                    # If we're at home, deposit taxes; if resting at an inn, taxes still deposit periodically anyway.
-                    if hero.target.get("type") == "going_home":
-                        hero.transfer_taxes_to_home()
-                        hero.start_resting()
-                    else:
-                        rb = hero.target.get("building")
-                        if rb is not None:
-                            hero.start_resting_at(rb)
-                        else:
-                            hero.start_resting()
+                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
+                    hero.transfer_taxes_to_home()
+                    hero.start_resting()
                     hero.target = None
                     hero.target_position = None
                     return
@@ -444,17 +294,9 @@ class BasicAI:
                 if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
                     marketplace = hero.target.get("marketplace")
                     if marketplace:
+                        # Briefly "enter" the building (Majesty-style) for clarity.
+                        hero.enter_building_briefly(marketplace, duration_sec=0.5)
                         self.do_shopping(hero, marketplace, game_state)
-                    hero.target = None
-                    hero.target_position = None
-                    hero.state = HeroState.IDLE
-                    return
-
-                # Check if we were going to blacksmith
-                if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "blacksmith":
-                    smith = hero.target.get("blacksmith")
-                    if smith:
-                        self.do_blacksmith(hero, smith, game_state)
                     hero.target = None
                     hero.target_position = None
                     hero.state = HeroState.IDLE
@@ -468,7 +310,7 @@ class BasicAI:
         if hero.target and isinstance(hero.target, dict):
             target_type = hero.target.get("type")
             # Don't interrupt these activities
-            if target_type in ["going_home", "going_rest", "shopping", "blacksmith", "fairgrounds", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
+            if target_type in ["going_home", "shopping", "patrol", "guard_home", "patrol_castle", "defend_castle"]:
                 return
         
         # If chasing an enemy, check if we've gone too far from our zone (8 tiles max)
@@ -487,32 +329,6 @@ class BasicAI:
         # If we have an enemy target, check if we're in range to fight
         if hero.target and hasattr(hero.target, 'is_alive') and hero.target.is_alive:
             dist = hero.distance_to(hero.target.x, hero.target.y)
-            hcls = getattr(hero, "hero_class", "")
-            if hcls in ["ranger", "wizard", "rogue"]:
-                preferred_min = TILE_SIZE * (3.0 if hcls == "wizard" else 2.5 if hcls == "ranger" else 2.0)
-
-                # Rogue/wizard are more likely to disengage when hurt.
-                if hcls in ["rogue", "wizard"] and hero.health_percent < (0.7 if hcls == "rogue" else 0.8):
-                    self.start_retreat(hero, game_state)
-                    return
-
-                if dist < preferred_min:
-                    # Step away from the enemy.
-                    dx = hero.x - hero.target.x
-                    dy = hero.y - hero.target.y
-                    d = math.sqrt(dx * dx + dy * dy) or 1.0
-                    step = TILE_SIZE * (2.5 if hcls == "wizard" else 2.0)
-                    tx = hero.x + (dx / d) * step
-                    ty = hero.y + (dy / d) * step
-
-                    # Clamp to map bounds.
-                    max_x = MAP_WIDTH * TILE_SIZE
-                    max_y = MAP_HEIGHT * TILE_SIZE
-                    tx = max(0, min(max_x, tx))
-                    ty = max(0, min(max_y, ty))
-                    hero.target_position = (tx, ty)
-                    return
-
             if dist <= hero.attack_range:
                 hero.state = HeroState.FIGHTING
                 return
@@ -530,30 +346,6 @@ class BasicAI:
             
             # Check if target in range
             dist = hero.distance_to(hero.target.x, hero.target.y)
-            hcls = getattr(hero, "hero_class", "")
-            if hcls in ["ranger", "wizard", "rogue"]:
-                preferred_min = TILE_SIZE * (3.0 if hcls == "wizard" else 2.5 if hcls == "ranger" else 2.0)
-
-                # Rogue/wizard are more likely to retreat at low HP.
-                if hcls in ["rogue", "wizard"] and hero.health_percent < (0.6 if hcls == "rogue" else 0.75):
-                    self.start_retreat(hero, game_state)
-                    return
-
-                if dist < preferred_min:
-                    dx = hero.x - hero.target.x
-                    dy = hero.y - hero.target.y
-                    d = math.sqrt(dx * dx + dy * dy) or 1.0
-                    step = TILE_SIZE * (2.5 if hcls == "wizard" else 2.0)
-                    tx = hero.x + (dx / d) * step
-                    ty = hero.y + (dy / d) * step
-                    max_x = MAP_WIDTH * TILE_SIZE
-                    max_y = MAP_HEIGHT * TILE_SIZE
-                    tx = max(0, min(max_x, tx))
-                    ty = max(0, min(max_y, ty))
-                    hero.target_position = (tx, ty)
-                    hero.state = HeroState.MOVING
-                    return
-
             if dist > hero.attack_range:
                 # Move towards target
                 hero.target_position = (hero.target.x, hero.target.y)
@@ -582,7 +374,7 @@ class BasicAI:
                 if hero.health_percent < 0.7 and hero.potions > 0:
                     hero.use_potion()
             else:
-                hero.target_position = self._offset_approach(hero, nearest_safe.center_x, nearest_safe.center_y, radius_tiles=1.0)
+                hero.target_position = (nearest_safe.center_x, nearest_safe.center_y)
     
     def handle_shopping(self, hero, game_state: dict):
         """Handle shopping state - buy items at marketplace."""
@@ -591,9 +383,6 @@ class BasicAI:
         marketplace = None
         for building in buildings:
             if building.building_type == "marketplace":
-                # Marketplaces under construction are not usable.
-                if hasattr(building, "is_constructed") and not building.is_constructed:
-                    continue
                 dist = hero.distance_to(building.center_x, building.center_y)
                 if dist < TILE_SIZE * 2:
                     marketplace = building
@@ -605,45 +394,6 @@ class BasicAI:
         
         self.do_shopping(hero, marketplace, game_state)
         hero.state = HeroState.IDLE
-
-    def do_blacksmith(self, hero, blacksmith, game_state: dict):
-        """Perform a blacksmith upgrade purchase."""
-        economy = game_state.get("economy")
-
-        # Must be close enough
-        if hero.distance_to(blacksmith.center_x, blacksmith.center_y) > TILE_SIZE * 2:
-            return
-
-        # Prefer upgrading weapon first for most classes; tanks like armor.
-        hcls = getattr(hero, "hero_class", "")
-        prefer_armor = hcls in ["monk", "dwarf"]
-
-        if prefer_armor:
-            if getattr(hero, "buy_armor_upgrade", lambda: False)():
-                if hasattr(blacksmith, "upgrades_sold"):
-                    blacksmith.upgrades_sold += 1
-                if economy:
-                    economy.hero_purchase(hero.name, "Armor Upgrade", getattr(hero, "get_armor_upgrade_cost", lambda: 0)())
-                return
-            if getattr(hero, "buy_weapon_upgrade", lambda: False)():
-                if hasattr(blacksmith, "upgrades_sold"):
-                    blacksmith.upgrades_sold += 1
-                if economy:
-                    economy.hero_purchase(hero.name, "Weapon Upgrade", getattr(hero, "get_weapon_upgrade_cost", lambda: 0)())
-                return
-        else:
-            if getattr(hero, "buy_weapon_upgrade", lambda: False)():
-                if hasattr(blacksmith, "upgrades_sold"):
-                    blacksmith.upgrades_sold += 1
-                if economy:
-                    economy.hero_purchase(hero.name, "Weapon Upgrade", getattr(hero, "get_weapon_upgrade_cost", lambda: 0)())
-                return
-            if getattr(hero, "buy_armor_upgrade", lambda: False)():
-                if hasattr(blacksmith, "upgrades_sold"):
-                    blacksmith.upgrades_sold += 1
-                if economy:
-                    economy.hero_purchase(hero.name, "Armor Upgrade", getattr(hero, "get_armor_upgrade_cost", lambda: 0)())
-                return
     
     def do_shopping(self, hero, marketplace, game_state: dict):
         """Actually perform shopping at a marketplace."""
@@ -668,33 +418,15 @@ class BasicAI:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
         
-        # Priority 3: Weapon upgrade (class-preferred style first, then any).
-        preferred_style = {
-            "ranger": "ranged",
-            "rogue": "melee",
-            "wizard": "magic",
-        }.get(getattr(hero, "hero_class", ""), None)
-
-        def try_buy_weapon(only_style: str | None) -> bool:
-            current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
-            for item in items:
-                if item.get("type") != "weapon":
-                    continue
-                if hero.gold < item.get("price", 999999):
-                    continue
-                if only_style is not None and item.get("style", "melee") != only_style:
-                    continue
-                if item.get("attack", 0) <= current_attack:
-                    continue
-                if hero.buy_item(item):
-                    if economy:
-                        economy.hero_purchase(hero.name, item["name"], item["price"])
-                    return True
-            return False
-
-        if preferred_style is not None:
-            _ = try_buy_weapon(preferred_style)
-        _ = try_buy_weapon(None)
+        # Priority 3: Weapon upgrade
+        for item in items:
+            if item["type"] == "weapon" and hero.gold >= item["price"]:
+                current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
+                if item["attack"] > current_attack:
+                    if hero.buy_item(item):
+                        if economy:
+                            economy.hero_purchase(hero.name, item["name"], item["price"])
+                        break
         
         # Priority 4: Armor upgrade
         for item in items:
@@ -713,16 +445,24 @@ class BasicAI:
         
         for building in buildings:
             if building.building_type in ["castle", "marketplace"]:
-                hero.target_position = self._offset_approach(hero, building.center_x, building.center_y, radius_tiles=1.0)
+                hero.target_position = (building.center_x, building.center_y)
                 break
     
     def go_shopping(self, hero, item_name: str, game_state: dict):
         """Send hero to marketplace to buy an item."""
         buildings = game_state.get("buildings", [])
+        world = game_state.get("world")
         
         for building in buildings:
             if building.building_type == "marketplace":
-                hero.target_position = self._offset_approach(hero, building.center_x, building.center_y, radius_tiles=1.5)
+                if world:
+                    adj = best_adjacent_tile(world, buildings, building, hero.x, hero.y)
+                    if adj:
+                        hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                    else:
+                        hero.target_position = (building.center_x, building.center_y)
+                else:
+                    hero.target_position = (building.center_x, building.center_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "item": item_name}
                 break
@@ -738,36 +478,28 @@ class BasicAI:
     
     def send_home_to_rest(self, hero, game_state: dict):
         """Send hero home to rest and heal."""
-        buildings = game_state.get("buildings", [])
-
-        # Prefer a constructed inn for faster recovery if one exists.
-        inn = None
-        best_dist = float("inf")
-        for b in buildings:
-            if getattr(b, "building_type", "") != "inn":
-                continue
-            if getattr(b, "is_constructed", True) is False:
-                continue
-            d = hero.distance_to(b.center_x, b.center_y)
-            if d < best_dist:
-                best_dist = d
-                inn = b
-
-        rest_building = inn or hero.home_building
-        if rest_building:
-            hero.target_position = (rest_building.center_x, rest_building.center_y)
+        if hero.home_building:
+            buildings = game_state.get("buildings", [])
+            world = game_state.get("world")
+            if world:
+                adj = best_adjacent_tile(world, buildings, hero.home_building, hero.x, hero.y)
+                if adj:
+                    hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                else:
+                    hero.target_position = (hero.home_building.center_x, hero.home_building.center_y)
+            else:
+                hero.target_position = (hero.home_building.center_x, hero.home_building.center_y)
             hero.state = HeroState.MOVING
-            hero.target = {"type": "going_rest", "building": rest_building}
+            hero.target = {"type": "going_home"}
     
     def handle_resting(self, hero, dt: float, game_state: dict):
         """Handle hero resting at home."""
-        b = getattr(hero, "rest_building", None) or hero.home_building
-        if b and getattr(b, "is_under_attack", False):
+        if hero.home_building and hero.home_building.is_damaged:
             hero.pop_out_of_building()
             return
         
-        if b:
-            dist = hero.distance_to(b.center_x, b.center_y)
+        if hero.home_building:
+            dist = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
             if dist > TILE_SIZE * 2:
                 hero.finish_resting()
                 return
@@ -804,7 +536,7 @@ class BasicAI:
                 hero.state = HeroState.FIGHTING
             else:
                 hero.target = nearest_enemy
-                hero.set_target_position(*self._offset_approach(hero, nearest_enemy.x, nearest_enemy.y, radius_tiles=0.5))
+                hero.set_target_position(nearest_enemy.x, nearest_enemy.y)
         else:
             dist_to_home = hero.distance_to(building.center_x, building.center_y)
             if dist_to_home > TILE_SIZE * 2:
@@ -821,8 +553,7 @@ class BasicAI:
         for enemy in enemies:
             if enemy.is_alive:
                 dist_to_castle = enemy.distance_to(castle.center_x, castle.center_y)
-                # Only respond to threats actually near the castle (avoid map-wide aggro).
-                if dist_to_castle <= TILE_SIZE * 10 and dist_to_castle < target_dist:
+                if dist_to_castle < target_dist:
                     target_dist = dist_to_castle
                     target_enemy = enemy
 
@@ -833,14 +564,14 @@ class BasicAI:
                 hero.state = HeroState.FIGHTING
                 return
             hero.target = target_enemy
-            hero.set_target_position(*self._offset_approach(hero, target_enemy.x, target_enemy.y, radius_tiles=0.5))
+            hero.set_target_position(target_enemy.x, target_enemy.y)
             hero.state = HeroState.MOVING
             return
 
         dist_to_castle = hero.distance_to(castle.center_x, castle.center_y)
         if dist_to_castle > TILE_SIZE * 3:
             hero.target = {"type": "defend_castle"}
-            hero.set_target_position(*self._offset_approach(hero, castle.center_x, castle.center_y, radius_tiles=2.0))
+            hero.set_target_position(castle.center_x + TILE_SIZE, castle.center_y)
             hero.state = HeroState.MOVING
         else:
             hero.state = HeroState.IDLE

@@ -7,6 +7,8 @@ import random
 from enum import Enum, auto
 from config import (
     TILE_SIZE, GOBLIN_HP, GOBLIN_ATTACK, GOBLIN_SPEED,
+    WOLF_HP, WOLF_ATTACK, WOLF_SPEED,
+    SKELETON_HP, SKELETON_ATTACK, SKELETON_SPEED,
     COLOR_RED, COLOR_WHITE, COLOR_GREEN
 )
 
@@ -37,6 +39,13 @@ class Enemy:
         # AI State
         self.state = EnemyState.IDLE
         self.target = None
+
+        # Navigation helpers: cache an "approach point" for building targets.
+        # Without caching, the chosen adjacent tile can fluctuate every frame as the enemy moves,
+        # which forces frequent A* replans and causes severe slowdown once enemies spawn.
+        self._approach_target = None
+        self._approach_pos = None  # (x, y) world-space
+        self._next_replan_ms = 0  # backoff timer for pathfinding (prevents A* spam on no-path)
         
         # Combat
         self.attack_cooldown = 0
@@ -140,7 +149,7 @@ class Enemy:
         self.target = best_target
         return best_target
     
-    def update(self, dt: float, heroes: list, peasants: list, buildings: list, guards: list = None):
+    def update(self, dt: float, heroes: list, peasants: list, buildings: list, guards: list = None, world=None):
         """Update enemy state and behavior."""
         if not self.is_alive:
             return
@@ -156,12 +165,34 @@ class Enemy:
         if self.target is None:
             self.state = EnemyState.IDLE
             return
+
+        now_ms = pygame.time.get_ticks()
         
         # Get target position
         if hasattr(self.target, 'x'):
+            # Moving targets: don't use cached building approach.
+            self._approach_target = None
+            self._approach_pos = None
             target_x, target_y = self.target.x, self.target.y
         else:
-            target_x, target_y = self.target.center_x, self.target.center_y
+            # For buildings, approach an adjacent tile instead of walking through the footprint.
+            # Cache the chosen approach point per target to avoid per-frame A* thrash.
+            if self._approach_target is not self.target or not self._approach_pos:
+                if world is not None:
+                    from game.systems.navigation import best_adjacent_tile
+                    adj = best_adjacent_tile(world, buildings, self.target, self.x, self.y)
+                    if adj:
+                        self._approach_pos = (
+                            adj[0] * TILE_SIZE + TILE_SIZE / 2,
+                            adj[1] * TILE_SIZE + TILE_SIZE / 2,
+                        )
+                    else:
+                        self._approach_pos = (self.target.center_x, self.target.center_y)
+                else:
+                    self._approach_pos = (self.target.center_x, self.target.center_y)
+                self._approach_target = self.target
+
+            target_x, target_y = self._approach_pos
         
         dist = self.distance_to(target_x, target_y)
         
@@ -174,7 +205,39 @@ class Enemy:
         else:
             # Move towards target
             self.state = EnemyState.MOVING
-            self.move_towards(target_x, target_y, dt)
+            if world is not None:
+                # Avoid long-distance A*: it is expensive on large maps and not needed until near the goal.
+                # Far away, just steer straight towards the goal (we only truly need pathing to avoid
+                # building footprints when we are close to them).
+                if dist > TILE_SIZE * 12:
+                    self.move_towards(target_x, target_y, dt)
+                    return
+
+                # Path around buildings/blocked tiles.
+                from game.systems.navigation import compute_path_worldpoints, follow_path
+                if not hasattr(self, "path"):
+                    self.path = []
+                    self._path_goal = None
+                goal_key = (int(target_x), int(target_y))
+
+                want_replan = (not self.path) or (getattr(self, "_path_goal", None) != goal_key)
+                if want_replan and now_ms >= int(getattr(self, "_next_replan_ms", 0) or 0):
+                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
+                    self._path_goal = goal_key
+                    # If no path exists, avoid recomputing every frame.
+                    if not self.path:
+                        self._next_replan_ms = now_ms + 800
+                    else:
+                        # Throttle replans a bit even on success.
+                        self._next_replan_ms = now_ms + 150
+
+                if self.path:
+                    follow_path(self, dt)
+                else:
+                    # Fallback: still move roughly toward the goal so enemies don't freeze.
+                    self.move_towards(target_x, target_y, dt)
+            else:
+                self.move_towards(target_x, target_y, dt)
     
     def do_attack(self):
         """Perform an attack on the current target."""
@@ -233,4 +296,32 @@ class Goblin(Enemy):
     def register_attacker(self, hero):
         """Register a hero as having attacked this goblin."""
         self.attackers.add(hero.name)
+
+
+class Wolf(Enemy):
+    """Fast, low-HP enemy usually spawned from Wolf Dens."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "wolf")
+        self.hp = WOLF_HP
+        self.max_hp = WOLF_HP
+        self.attack_power = WOLF_ATTACK
+        self.speed = WOLF_SPEED
+        self.xp_reward = 20
+        self.gold_reward = 6
+        self.color = (160, 160, 160)
+
+
+class Skeleton(Enemy):
+    """Tougher slow enemy usually spawned from Skeleton Crypts."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "skeleton")
+        self.hp = SKELETON_HP
+        self.max_hp = SKELETON_HP
+        self.attack_power = SKELETON_ATTACK
+        self.speed = SKELETON_SPEED
+        self.xp_reward = 35
+        self.gold_reward = 14
+        self.color = (220, 220, 240)
 

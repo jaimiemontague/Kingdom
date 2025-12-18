@@ -11,8 +11,9 @@ from .building import (
     Palace
 )
 from .hero import Hero, HeroState
-from .enemy import Enemy, Goblin
+from .enemy import Enemy, Goblin, Wolf, Skeleton
 from .guard import Guard, GuardState
 from .peasant import Peasant, PeasantState
 from .tax_collector import TaxCollector, CollectorState
+from .lair import MonsterLair, GoblinCamp, WolfDen, SkeletonCrypt
 

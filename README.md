@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.0.0** (see `config.py`).
+This repository is currently stamped as **Prototype v1.1.0** (see `config.py`).
 
 ## Overview
 
@@ -144,6 +144,30 @@ kingdom/
 ```
 
 ## Customization
+
+### Hero Animations (Sprites)
+
+Heroes now use an animation system that will automatically load sprite frames if they exist, and otherwise falls back to simple procedural placeholder animations (idle/walk/attack/hurt/inside-building bubble).
+
+To add real art, drop PNG frames into this folder structure:
+
+```text
+assets/
+  sprites/
+    heroes/
+      warrior/
+        idle/   frame_000.png ...
+        walk/   frame_000.png ...
+        attack/ frame_000.png ...
+        hurt/   frame_000.png ...
+        inside/ frame_000.png ...
+      ranger/...
+      rogue/...
+      wizard/...
+```
+
+- Frames are loaded in **filename-sorted** order.
+- Each frame is automatically scaled to **32x32**.
 
 ### Adding New Hero Classes
 

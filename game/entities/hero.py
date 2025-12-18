@@ -4,8 +4,9 @@ Hero entity with stats, inventory, and AI state machine.
 import pygame
 import random
 import math
-import itertools
 from enum import Enum, auto
+from game.graphics.hero_sprites import HeroSpriteLibrary
+from game.graphics.font_cache import get_font
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
@@ -28,15 +29,11 @@ HERO_NAMES = [
     "Cedric", "Kira", "Magnus", "Freya", "Aldric", "Seraphina", "Dante", "Nova"
 ]
 
-# Stable numeric IDs for heroes (names can collide).
-HERO_ID_COUNTER = itertools.count(1)
-
 
 class Hero:
     """A hero unit controlled by basic AI + LLM decisions."""
     
     def __init__(self, x: float, y: float, hero_class: str = "warrior"):
-        self.hero_id = next(HERO_ID_COUNTER)
         self.x = x
         self.y = y
         self.hero_class = hero_class
@@ -46,7 +43,6 @@ class Hero:
         self.level = 1
         self.xp = 0
         self.xp_to_level = 100
-        # Base stats start from config defaults, then class-tune below.
         self.hp = HERO_BASE_HP
         self.max_hp = HERO_BASE_HP
         self.base_attack = HERO_BASE_ATTACK
@@ -59,17 +55,6 @@ class Hero:
         
         # Home building reference (set when hired)
         self.home_building = None
-
-        # Optional resting building (e.g., Inn). If set, RESTING happens "inside" this building.
-        # Home building is still used for tax deposits and as default rest location.
-        self.rest_building = None
-
-        # Temporary buffs (applied by buildings like Royal Gardens)
-        self._buffs = {}  # name -> {"expires_ms": int, "attack": int, "defense": int}
-        
-        # Tax transfer timing - transfer taxes periodically even if not resting
-        self.last_tax_transfer_time = 0  # pygame ticks
-        self.tax_transfer_interval = 30000  # 30 seconds in milliseconds
         
         # Healing/rest tracking
         self.hp_when_left_home = self.max_hp  # Track HP when leaving home
@@ -80,10 +65,6 @@ class Hero:
         # Inventory
         self.weapon = None  # {"name": str, "attack": int}
         self.armor = None   # {"name": str, "defense": int}
-        # Blacksmith upgrades (flat bonuses; stack with equipment)
-        self.weapon_upgrade_level = 0
-        self.armor_upgrade_level = 0
-        self.max_upgrade_level = 3
         self.potions = 0
         self.max_potions = 5  # Can carry up to 5 potions
         self.potion_heal_amount = 50
@@ -93,16 +74,12 @@ class Hero:
         self.target = None  # Could be position tuple, enemy, or building
         self.target_position = None
         self.path = []
+        self._path_goal = None  # (goal_x, goal_y) we last planned towards
         
         # Combat
         self.attack_cooldown = 0
         self.attack_cooldown_max = 1000  # ms between attacks
         self.attack_range = TILE_SIZE * 1.5
-
-        # Class special ability state (used by some classes).
-        self._special_cooldown_ms = 0
-        self.mana = 0
-        self.max_mana = 0
         
         # LLM decision tracking
         self.last_llm_decision_time = 0
@@ -118,226 +95,31 @@ class Hero:
         # Visual
         self.size = 20
         self.color = COLOR_BLUE
+        self.facing = 1  # 1=right, -1=left (used for mirroring sprites)
+        self._last_pos = (float(self.x), float(self.y))
 
-        # Class tuning (Majesty-style class differentiation).
-        if self.hero_class == "ranger":
-            # Faster, lower HP/defense, longer range.
-            self.max_hp = 80
-            self.hp = self.max_hp
-            self.base_attack = 8
-            self.base_defense = 3
-            self.speed = 2.6
-            self.attack_range = TILE_SIZE * 4.0
-            self.color = (46, 139, 87)  # Sea green
-        elif self.hero_class == "rogue":
-            # Fast, fragile-ish, reward-driven.
-            self.max_hp = 75
-            self.hp = self.max_hp
-            self.base_attack = 9
-            self.base_defense = 2
-            self.speed = 3.0
-            self.attack_range = TILE_SIZE * 1.6
-            self.color = (75, 0, 130)  # Indigo
-            self._special_cooldown_ms = 0
-        elif self.hero_class == "wizard":
-            # Glass cannon at range; simple mana + spell cooldown for bonus damage.
-            self.max_hp = 65
-            self.hp = self.max_hp
-            self.base_attack = 7
-            self.base_defense = 1
-            self.speed = 2.1
-            self.attack_range = TILE_SIZE * 5.0
-            self.color = (147, 112, 219)  # Medium purple
-            self.max_mana = 100
-            self.mana = self.max_mana
-            self._special_cooldown_ms = 0
-        elif self.hero_class == "healer":
-            # Support: sturdy enough, low damage, prefers staying back.
-            self.max_hp = 85
-            self.hp = self.max_hp
-            self.base_attack = 5
-            self.base_defense = 4
-            self.speed = 2.3
-            self.attack_range = TILE_SIZE * 3.5
-            self.color = (255, 192, 203)  # Pink
-        elif self.hero_class == "monk":
-            # Defensive melee: tanky, moderate damage.
-            self.max_hp = 120
-            self.hp = self.max_hp
-            self.base_attack = 8
-            self.base_defense = 6
-            self.speed = 2.2
-            self.attack_range = TILE_SIZE * 1.6
-            self.color = (255, 255, 224)  # Light yellow
-        elif self.hero_class == "cultist":
-            # Nature caster-ish: mid HP, mid range.
-            self.max_hp = 90
-            self.hp = self.max_hp
-            self.base_attack = 7
-            self.base_defense = 3
-            self.speed = 2.4
-            self.attack_range = TILE_SIZE * 4.0
-            self.color = (50, 205, 50)  # Lime green
-        elif self.hero_class == "priestess":
-            # Death caster-ish: fragile, longer range.
-            self.max_hp = 75
-            self.hp = self.max_hp
-            self.base_attack = 8
-            self.base_defense = 2
-            self.speed = 2.2
-            self.attack_range = TILE_SIZE * 4.5
-            self.color = (75, 0, 130)  # Indigo
-        elif self.hero_class == "barbarian":
-            # Berserker: high HP and high damage, low defense.
-            self.max_hp = 140
-            self.hp = self.max_hp
-            self.base_attack = 12
-            self.base_defense = 2
-            self.speed = 2.4
-            self.attack_range = TILE_SIZE * 1.6
-            self.color = (139, 0, 0)  # Dark red
-        elif self.hero_class == "solarii":
-            # Sun warrior: mid HP, good damage, mid range.
-            self.max_hp = 100
-            self.hp = self.max_hp
-            self.base_attack = 10
-            self.base_defense = 4
-            self.speed = 2.4
-            self.attack_range = TILE_SIZE * 3.0
-            self.color = (255, 165, 0)  # Orange
-        elif self.hero_class == "adept":
-            # Wind adept: fast, lowish HP, longer range.
-            self.max_hp = 80
-            self.hp = self.max_hp
-            self.base_attack = 7
-            self.base_defense = 2
-            self.speed = 3.2
-            self.attack_range = TILE_SIZE * 4.5
-            self.color = (176, 196, 222)  # Light steel blue
-        elif self.hero_class == "gnome":
-            # Worker-ish hero: weaker combat, quick mover.
-            self.max_hp = 70
-            self.hp = self.max_hp
-            self.base_attack = 6
-            self.base_defense = 3
-            self.speed = 2.8
-            self.attack_range = TILE_SIZE * 1.6
-            self.color = (128, 128, 0)  # Olive
-        elif self.hero_class == "elf":
-            # Archer: like ranger but slightly different tuning.
-            self.max_hp = 75
-            self.hp = self.max_hp
-            self.base_attack = 9
-            self.base_defense = 2
-            self.speed = 2.7
-            self.attack_range = TILE_SIZE * 4.5
-            self.color = (34, 139, 34)  # Forest green
-        elif self.hero_class == "dwarf":
-            # Tank: slow, high defense.
-            self.max_hp = 130
-            self.hp = self.max_hp
-            self.base_attack = 9
-            self.base_defense = 7
-            self.speed = 1.9
-            self.attack_range = TILE_SIZE * 1.6
-            self.color = (101, 67, 33)  # Brown
+        # Animation
+        # Uses real sprite frames if present in assets; otherwise procedural placeholder frames.
+        self._anim = HeroSpriteLibrary.create_player(self.hero_class, size=32)
+        self._anim_base = "idle"
+        self._anim_lock_one_shot = None  # e.g. "attack" or "hurt"
 
-    @property
-    def debug_id(self) -> str:
-        """Stable identifier suitable for logs/UI."""
-        return f"{self.name}#{self.hero_id}"
-    
-    def _get_class_symbol(self) -> str:
-        """Get a simple symbol/letter for this hero class."""
-        symbols = {
-            "warrior": "W",
-            "ranger": "R",
-            "rogue": "T",  # T for Thief
-            "wizard": "Z",  # Z for wizard (W taken by warrior)
-            "healer": "H",
-            "monk": "M",
-            "cultist": "C",
-            "priestess": "P",
-            "barbarian": "B",
-            "solarii": "S",
-            "adept": "A",
-            "gnome": "G",
-            "elf": "E",
-            "dwarf": "D",
-        }
-        return symbols.get(self.hero_class, "?")
+        # Building interaction
+        self.is_inside_building = False
+        self.inside_building = None
+        self.inside_timer = 0.0  # for short non-rest "enter" moments (e.g. shopping)
         
     @property
     def attack(self) -> int:
         """Total attack including weapon bonus."""
         weapon_bonus = self.weapon.get("attack", 0) if self.weapon else 0
-        smith_bonus = self.weapon_upgrade_level * 2
-        buff_bonus = self.get_buff_attack_bonus()
-        return self.base_attack + weapon_bonus + smith_bonus + buff_bonus + (self.level - 1) * 2
+        return self.base_attack + weapon_bonus + (self.level - 1) * 2
     
     @property
     def defense(self) -> int:
         """Total defense including armor bonus."""
         armor_bonus = self.armor.get("defense", 0) if self.armor else 0
-        smith_bonus = self.armor_upgrade_level * 2
-        buff_bonus = self.get_buff_defense_bonus()
-        return self.base_defense + armor_bonus + smith_bonus + buff_bonus + (self.level - 1)
-
-    def _purge_expired_buffs(self):
-        now = pygame.time.get_ticks()
-        expired = [k for k, v in self._buffs.items() if v.get("expires_ms", 0) <= now]
-        for k in expired:
-            self._buffs.pop(k, None)
-
-    def apply_buff(self, name: str, duration_sec: float, attack_bonus: int = 0, defense_bonus: int = 0):
-        """Apply/refresh a temporary buff."""
-        now = pygame.time.get_ticks()
-        expires = now + int(max(0.0, duration_sec) * 1000)
-        self._buffs[name] = {"expires_ms": expires, "attack": int(attack_bonus), "defense": int(defense_bonus)}
-
-    def has_buff(self, name: str) -> bool:
-        self._purge_expired_buffs()
-        return name in self._buffs
-
-    def get_buff_attack_bonus(self) -> int:
-        self._purge_expired_buffs()
-        return sum(v.get("attack", 0) for v in self._buffs.values())
-
-    def get_buff_defense_bonus(self) -> int:
-        self._purge_expired_buffs()
-        return sum(v.get("defense", 0) for v in self._buffs.values())
-
-    def can_upgrade_weapon(self) -> bool:
-        return self.weapon_upgrade_level < self.max_upgrade_level
-
-    def can_upgrade_armor(self) -> bool:
-        return self.armor_upgrade_level < self.max_upgrade_level
-
-    def get_weapon_upgrade_cost(self) -> int:
-        return 60 + self.weapon_upgrade_level * 50
-
-    def get_armor_upgrade_cost(self) -> int:
-        return 60 + self.armor_upgrade_level * 50
-
-    def buy_weapon_upgrade(self) -> bool:
-        if not self.can_upgrade_weapon():
-            return False
-        cost = self.get_weapon_upgrade_cost()
-        if self.gold < cost:
-            return False
-        self.gold -= cost
-        self.weapon_upgrade_level += 1
-        return True
-
-    def buy_armor_upgrade(self) -> bool:
-        if not self.can_upgrade_armor():
-            return False
-        cost = self.get_armor_upgrade_cost()
-        if self.gold < cost:
-            return False
-        self.gold -= cost
-        self.armor_upgrade_level += 1
-        return True
+        return self.base_defense + armor_bonus + (self.level - 1)
     
     @property
     def is_alive(self) -> bool:
@@ -352,6 +134,9 @@ class Hero:
         actual_damage = max(1, amount - self.defense)
         self.hp = max(0, self.hp - actual_damage)
         self.damage_since_left_home += actual_damage
+        # Hurt "one-shot" animation (if still alive)
+        if self.hp > 0:
+            self._play_one_shot("hurt")
         if self.hp <= 0:
             self.state = HeroState.DEAD
             return True
@@ -389,44 +174,38 @@ class Hero:
     
     def start_resting(self):
         """Start resting at home."""
-        # Can't rest if the rest building is currently under attack
-        b = self.rest_building or self.home_building
-        if b and getattr(b, "is_under_attack", False):
+        # Can't rest if building is damaged
+        if self.home_building and self.home_building.is_damaged:
             self.state = HeroState.IDLE
             return False
         
+        # Enter the home building (Majesty-style: hero disappears inside).
+        if self.home_building:
+            self.is_inside_building = True
+            self.inside_building = self.home_building
+            self.inside_timer = 0.0
+            self.x = self.home_building.center_x
+            self.y = self.home_building.center_y
+
         self.state = HeroState.RESTING
         self.hp_healed_this_rest = 0
         self.last_heal_time = 0
         return True
-
-    def start_resting_at(self, building) -> bool:
-        """Start resting at a specific building (e.g. inn)."""
-        self.rest_building = building
-        return self.start_resting()
     
     def update_resting(self, dt: float) -> bool:
         """Update resting state. Returns True if still resting."""
         if self.state != HeroState.RESTING:
             return False
         
-        # Check if building is under attack - must pop out and defend!
-        b = self.rest_building or self.home_building
-        if b and getattr(b, "is_under_attack", False):
+        # Check if building is damaged - must pop out and defend!
+        if self.home_building and self.home_building.is_damaged:
             self.pop_out_of_building()
             return False
         
         self.last_heal_time += dt
         
-        # Heal tick rate can vary by building (Inn faster).
-        heal_interval = 1.0
-        if b and getattr(b, "building_type", "") == "inn":
-            # Inn rest rate is defined as "percent per sec" on the building; convert to seconds per 1 HP.
-            # If missing/invalid, default to faster than guild.
-            rate = float(getattr(b, "rest_recovery_rate", 0.02) or 0.02)
-            # 1 HP per interval => interval = 1 / (rate * max_hp)
-            heal_interval = max(0.2, 1.0 / max(0.001, rate * max(1, self.max_hp)))
-        if self.last_heal_time >= heal_interval:
+        # Heal 1 HP every 2 seconds
+        if self.last_heal_time >= 2.0:
             self.last_heal_time = 0
             if self.hp < self.max_hp:
                 self.hp += 1
@@ -443,29 +222,21 @@ class Hero:
         """Hero pops out of building (when building takes damage)."""
         self.state = HeroState.IDLE
         self.hp_healed_this_rest = 0
+        self.is_inside_building = False
+        self.inside_timer = 0.0
+        self.inside_building = None
         # Stay near the building to defend it
-        b = self.rest_building or self.home_building
-        if b:
+        if self.home_building:
             # Position slightly outside the building
-            self.x = b.center_x + TILE_SIZE
-            self.y = b.center_y
-        self.rest_building = None
+            self.x = self.home_building.center_x + TILE_SIZE
+            self.y = self.home_building.center_y
     
     def can_rest_at_home(self) -> bool:
         """Check if hero can rest at their home building."""
         if not self.home_building:
             return False
-        # Cannot rest while the building is currently under attack
-        return not getattr(self.home_building, "is_under_attack", False)
-
-    def can_rest_at(self, building) -> bool:
-        if not building:
-            return False
-        if getattr(building, "hp", 0) <= 0:
-            return False
-        if getattr(building, "building_type", "") == "inn" and getattr(building, "is_constructed", True) is False:
-            return False
-        return not getattr(building, "is_under_attack", False)
+        # Cannot rest in damaged buildings
+        return not self.home_building.is_damaged
     
     def finish_resting(self):
         """Finish resting and leave home."""
@@ -473,15 +244,25 @@ class Hero:
         self.hp_when_left_home = self.hp
         self.damage_since_left_home = 0
         self.hp_healed_this_rest = 0
-        self.rest_building = None
+        # Exit building after resting.
+        if self.is_inside_building:
+            self.pop_out_of_building()
+
+    def enter_building_briefly(self, building, duration_sec: float = 0.6):
+        """Enter a building briefly (e.g. shopping) then auto-exit after duration."""
+        if not building:
+            return
+        self.is_inside_building = True
+        self.inside_building = building
+        self.inside_timer = max(0.0, float(duration_sec))
+        self.x = building.center_x
+        self.y = building.center_y
     
     def transfer_taxes_to_home(self):
         """Transfer taxed gold to home building."""
         if self.home_building and self.taxed_gold > 0:
             self.home_building.add_tax_gold(self.taxed_gold)
             self.taxed_gold = 0
-            import pygame
-            self.last_tax_transfer_time = pygame.time.get_ticks()
     
     def heal(self, amount: int):
         """Heal the hero."""
@@ -525,19 +306,14 @@ class Hero:
                 self.gold += item["price"]
                 return False
         elif item["type"] == "weapon":
-            self.weapon = {
-                "name": item["name"],
-                "attack": item["attack"],
-                # Optional weapon metadata for class preferences.
-                "style": item.get("style", "melee"),
-            }
+            self.weapon = {"name": item["name"], "attack": item["attack"]}
         elif item["type"] == "armor":
             self.armor = {"name": item["name"], "defense": item["defense"]}
         
         return True
     
-    def wants_to_shop(self, marketplace_items: list) -> bool:
-        """Check if hero wants to go shopping based on available items."""
+    def wants_to_shop(self, marketplace_has_potions: bool) -> bool:
+        """Check if hero wants to go shopping."""
         # Only shop when at full health and idle
         if self.hp < self.max_hp:
             return False
@@ -546,26 +322,13 @@ class Hero:
         if self.gold < 30:
             return False
         
-        # Potions (if available)
-        has_potion_for_sale = any(item.get("type") == "potion" for item in marketplace_items)
-        if has_potion_for_sale:
-            # If no potions, strongly desire to buy one.
-            if self.potions == 0 and any(item.get("type") == "potion" and self.gold >= item.get("price", 999999) for item in marketplace_items):
-                return True
-            # If rich, might want to stock up.
-            if self.gold >= 50 and self.potions < self.max_potions:
-                return True
-
-        # Weapon/armor upgrades
-        current_attack = self.weapon.get("attack", 0) if self.weapon else 0
-        current_defense = self.armor.get("defense", 0) if self.armor else 0
-        for item in marketplace_items:
-            if item.get("price", 999999) > self.gold:
-                continue
-            if item.get("type") == "weapon" and item.get("attack", 0) > current_attack:
-                return True
-            if item.get("type") == "armor" and item.get("defense", 0) > current_defense:
-                return True
+        # If no potions and gold >= 30, want to buy one potion
+        if self.potions == 0 and marketplace_has_potions:
+            return True
+        
+        # If gold >= 50, might want to buy more potions (LLM decides)
+        if self.gold >= 50 and self.potions < self.max_potions and marketplace_has_potions:
+            return True
         
         return False
     
@@ -610,64 +373,91 @@ class Hero:
         """Update hero state and behavior."""
         if not self.is_alive:
             return
+
+        prev_x, prev_y = self.x, self.y
+
+        # Handle brief "inside building" timer (shopping etc.)
+        if self.is_inside_building and self.state != HeroState.RESTING and self.inside_timer > 0:
+            self.inside_timer = max(0.0, self.inside_timer - dt)
+            if self.inside_timer <= 0 and self.inside_building is not None:
+                # Pop out near the building we entered.
+                b = self.inside_building
+                self.is_inside_building = False
+                self.inside_building = None
+                self.x = b.center_x + TILE_SIZE
+                self.y = b.center_y
         
         # Update attack cooldown
         if self.attack_cooldown > 0:
             self.attack_cooldown -= dt * 1000
-
-        # Update class special cooldown
-        if self._special_cooldown_ms > 0:
-            self._special_cooldown_ms -= dt * 1000
-
-        # Wizard mana regen (simple, always-on).
-        if self.hero_class == "wizard" and self.max_mana > 0:
-            self.mana = min(self.max_mana, self.mana + (12.0 * dt))
         
-        # Periodic tax transfer: if hero has taxed gold and is near home building, transfer it
-        # This ensures taxes get deposited even if hero doesn't need to rest
-        import pygame
-        current_time = pygame.time.get_ticks()
-        if (self.taxed_gold > 0 and self.home_building and 
-            current_time - self.last_tax_transfer_time >= self.tax_transfer_interval):
-            # Check if near home building (within 3 tiles)
-            dist_to_home = self.distance_to(self.home_building.center_x, self.home_building.center_y)
-            if dist_to_home < TILE_SIZE * 3:
-                self.transfer_taxes_to_home()
-                self.last_tax_transfer_time = current_time
-        
-        # State machine behavior handled by basic_ai module
-        # This just handles movement if we have a target
-        if self.state == HeroState.MOVING and self.target_position:
-            self.move_towards(self.target_position[0], self.target_position[1], dt)
-            
-            # Check if reached destination
-            if self.distance_to(self.target_position[0], self.target_position[1]) < 5:
-                self.target_position = None
-                self.state = HeroState.IDLE
+        # State machine transitions are handled by `ai/basic_ai.py`.
+        # This method only performs movement (now with pathfinding around buildings).
+        # Note: RETREATING still moves towards a target_position, so treat it like MOVING here.
+        if self.state in (HeroState.MOVING, HeroState.RETREATING) and self.target_position and not self.is_inside_building:
+            world = game_state.get("world")
+            buildings = game_state.get("buildings", [])
+            if world:
+                from game.systems.navigation import compute_path_worldpoints, follow_path, best_adjacent_tile
 
-    def compute_attack_damage(self, target=None) -> int:
-        """
-        Return the damage this hero deals on a basic attack.
-        Some classes add simple specials (prototype-friendly).
-        """
-        dmg = self.attack
+                goal_x, goal_y = self.target_position
 
-        # Rogue: occasional backstab bonus against healthier targets.
-        if self.hero_class == "rogue":
-            if self._special_cooldown_ms <= 0 and target is not None and hasattr(target, "hp") and hasattr(target, "max_hp"):
-                hp_pct = (target.hp / target.max_hp) if target.max_hp else 0.0
-                if hp_pct >= 0.7 and random.random() < 0.25:
-                    self._special_cooldown_ms = 2000
-                    dmg += 6 + (self.level // 2)
+                # Replan if needed
+                goal_key = (int(goal_x), int(goal_y))
+                if (not self.path) or (self._path_goal != goal_key):
+                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, goal_x, goal_y)
+                    self._path_goal = goal_key
 
-        # Wizard: periodic spellburst if mana available.
-        if self.hero_class == "wizard":
-            if self._special_cooldown_ms <= 0 and self.mana >= 25:
-                self.mana -= 25
-                self._special_cooldown_ms = 2500
-                dmg += 10 + (self.level * 2)
+                follow_path(self, dt)
+            else:
+                self.move_towards(self.target_position[0], self.target_position[1], dt)
 
-        return int(dmg)
+        # Update facing (based on motion)
+        dx = self.x - prev_x
+        if abs(dx) > 0.01:
+            self.facing = 1 if dx >= 0 else -1
+
+        # Animation base state selection (one-shots can override)
+        if self.is_inside_building:
+            self._anim_base = "inside"
+        elif self.state in (HeroState.MOVING, HeroState.RETREATING):
+            self._anim_base = "walk"
+        else:
+            self._anim_base = "idle"
+
+        self._update_animation(dt)
+
+        self._last_pos = (float(self.x), float(self.y))
+
+    def _play_one_shot(self, name: str):
+        """Play a non-looping clip and prevent base animation from overriding until it finishes."""
+        if not hasattr(self, "_anim") or self._anim is None:
+            return
+        self._anim_lock_one_shot = name
+        self._anim.play(name, restart=True)
+
+    def _update_animation(self, dt: float):
+        if not hasattr(self, "_anim") or self._anim is None:
+            return
+
+        # If a one-shot is active, keep it until finished.
+        if self._anim_lock_one_shot:
+            if self._anim.current != self._anim_lock_one_shot:
+                self._anim.play(self._anim_lock_one_shot, restart=True)
+            self._anim.update(dt)
+            if self._anim.finished:
+                self._anim_lock_one_shot = None
+                self._anim.play(self._anim_base, restart=True)
+            return
+
+        # Otherwise follow the base state
+        self._anim.play(self._anim_base, restart=False)
+        self._anim.update(dt)
+
+    def on_attack_landed(self, target, damage: int, killed: bool):
+        """Called by CombatSystem when this hero lands an attack."""
+        # For now, just play an attack one-shot.
+        self._play_one_shot("attack")
     
     def get_context_for_llm(self, game_state: dict) -> dict:
         """Build context dictionary for LLM decision making."""
@@ -732,31 +522,29 @@ class Hero:
         cam_x, cam_y = camera_offset
         screen_x = self.x - cam_x
         screen_y = self.y - cam_y
-        
-        # Draw hero body
-        pygame.draw.circle(
-            surface,
-            self.color,
-            (int(screen_x), int(screen_y)),
-            self.size // 2
-        )
-        
-        # Draw border
-        pygame.draw.circle(
-            surface,
-            COLOR_WHITE,
-            (int(screen_x), int(screen_y)),
-            self.size // 2,
-            2
-        )
-        
-        # Draw class symbol/letter
-        font = pygame.font.Font(None, 18)
-        class_symbol = self._get_class_symbol()
-        symbol_color = COLOR_WHITE if self.color[0] + self.color[1] + self.color[2] < 400 else (0, 0, 0)
-        symbol_text = font.render(class_symbol, True, symbol_color)
-        symbol_rect = symbol_text.get_rect(center=(int(screen_x), int(screen_y)))
-        surface.blit(symbol_text, symbol_rect)
+
+        # If inside a building, render a small animated "bubble" at the building location.
+        if self.is_inside_building and self.inside_building is not None:
+            bx = getattr(self.inside_building, "center_x", self.x) - cam_x
+            by = getattr(self.inside_building, "center_y", self.y) - cam_y
+            bubble = self._anim.frame() if self._anim is not None else None
+            if bubble is not None:
+                # Small and subtle
+                bubble_small = pygame.transform.smoothscale(bubble, (16, 16))
+                surface.blit(bubble_small, (int(bx - 8), int(by - 28)))
+            return
+
+        # Draw animated sprite frame (procedural placeholder until real assets exist)
+        if hasattr(self, "_anim") and self._anim is not None:
+            frame = self._anim.frame()
+            if self.facing < 0:
+                frame = pygame.transform.flip(frame, True, False)
+            fw, fh = frame.get_width(), frame.get_height()
+            surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
+        else:
+            # Fallback: old circle render
+            pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), self.size // 2)
+            pygame.draw.circle(surface, COLOR_WHITE, (int(screen_x), int(screen_y)), self.size // 2, 2)
         
         # Draw health bar
         bar_width = self.size + 10
@@ -776,7 +564,7 @@ class Hero:
         )
         
         # Draw name
-        font = pygame.font.Font(None, 16)
+        font = get_font(16)
         name_text = font.render(self.name, True, COLOR_WHITE)
         name_rect = name_text.get_rect(center=(screen_x, screen_y + self.size // 2 + 10))
         surface.blit(name_text, name_rect)
@@ -793,10 +581,4 @@ class Hero:
             rest_text = font.render("Zzz", True, (150, 200, 255))
             rest_rect = rest_text.get_rect(center=(screen_x + 15, screen_y - self.size // 2 - 15))
             surface.blit(rest_text, rest_rect)
-
-        # Show buff indicator (royal gardens etc)
-        if self.has_buff("royal_gardens"):
-            buff_text = font.render("+", True, (120, 255, 120))
-            buff_rect = buff_text.get_rect(center=(screen_x - 15, screen_y - self.size // 2 - 15))
-            surface.blit(buff_text, buff_rect)
 

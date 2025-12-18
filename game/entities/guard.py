@@ -6,6 +6,7 @@ import math
 import pygame
 from enum import Enum, auto
 from config import TILE_SIZE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
+from game.graphics.font_cache import get_font, render_text_cached
 
 
 class GuardState(Enum):
@@ -96,7 +97,7 @@ class Guard:
         self.target = best
         return best
 
-    def update(self, dt: float, enemies: list):
+    def update(self, dt: float, enemies: list, world=None, buildings: list = None):
         if not self.is_alive:
             return
 
@@ -136,7 +137,18 @@ class Guard:
         else:
             self.state = GuardState.MOVING
             self.target_position = (self.target.x, self.target.y)
-            self.move_towards(self.target_position[0], self.target_position[1], dt)
+            if world is not None:
+                from game.systems.navigation import compute_path_worldpoints, follow_path
+                if not hasattr(self, "path"):
+                    self.path = []
+                    self._path_goal = None
+                goal_key = (int(self.target_position[0]), int(self.target_position[1]))
+                if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
+                    self.path = compute_path_worldpoints(world, buildings or [], self.x, self.y, self.target_position[0], self.target_position[1])
+                    self._path_goal = goal_key
+                follow_path(self, dt)
+            else:
+                self.move_towards(self.target_position[0], self.target_position[1], dt)
 
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         if not self.is_alive:
@@ -150,8 +162,8 @@ class Guard:
         pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), self.size // 2, 1)
 
         # Symbol
-        font = pygame.font.Font(None, 14)
-        symbol_text = font.render("G", True, COLOR_WHITE)
+        _ = get_font(14)
+        symbol_text = render_text_cached(14, "G", COLOR_WHITE)
         symbol_rect = symbol_text.get_rect(center=(int(sx), int(sy)))
         surface.blit(symbol_text, symbol_rect)
 

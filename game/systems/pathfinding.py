@@ -33,7 +33,14 @@ def get_neighbors(pos: tuple, world) -> list:
     return neighbors
 
 
-def find_path(world, start: tuple, goal: tuple, buildings: list = None) -> list:
+def find_path(
+    world,
+    start: tuple,
+    goal: tuple,
+    buildings: list = None,
+    *,
+    max_expansions: int = 8000,
+) -> list:
     """
     Find a path from start to goal using A*.
     
@@ -82,9 +89,14 @@ def find_path(world, start: tuple, goal: tuple, buildings: list = None) -> list:
     f_score = {start: heuristic(start, goal)}
     open_set_hash = {start}
     
+    expansions = 0
     while open_set:
         current = heapq.heappop(open_set)[1]
         open_set_hash.discard(current)
+        expansions += 1
+        if max_expansions is not None and expansions >= int(max_expansions):
+            # Safety valve: avoid pathological searches on large maps (prevents multi-hundred-ms A*).
+            return []
         
         if current == goal:
             # Reconstruct path

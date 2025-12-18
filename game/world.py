@@ -41,7 +41,9 @@ class World:
         # Add some water (a pond/lake)
         lake_x = random.randint(self.width // 4, self.width * 3 // 4)
         lake_y = random.randint(self.height // 4, self.height * 3 // 4)
-        lake_radius = random.randint(2, 4)
+        # Scale lake size with map size so large maps don't look empty.
+        base = max(3, min(self.width, self.height) // 25)
+        lake_radius = random.randint(base, base + 4)
         
         for y in range(self.height):
             for x in range(self.width):
@@ -50,7 +52,7 @@ class World:
                 if dist < lake_radius:
                     self.tiles[y][x] = TileType.WATER
                 # Add scattered trees
-                elif random.random() < 0.08:
+                elif random.random() < 0.06:
                     self.tiles[y][x] = TileType.TREE
         
         # Create paths from edges to center

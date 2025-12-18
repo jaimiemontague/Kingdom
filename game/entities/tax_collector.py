@@ -5,6 +5,7 @@ import pygame
 import math
 from enum import Enum, auto
 from config import TILE_SIZE, COLOR_WHITE
+from game.graphics.font_cache import get_font, render_text_cached
 
 
 class CollectorState(Enum):
@@ -61,7 +62,7 @@ class TaxCollector:
         self.y += (dy / dist) * move_dist
         return False
     
-    def update(self, dt: float, buildings: list, economy):
+    def update(self, dt: float, buildings: list, economy, world=None):
         """Update tax collector behavior."""
         
         if self.state == CollectorState.WAITING:
@@ -87,11 +88,25 @@ class TaxCollector:
         
         elif self.state == CollectorState.MOVING_TO_GUILD:
             if self.target_guild:
-                reached = self.move_towards(
-                    self.target_guild.center_x,
-                    self.target_guild.center_y,
-                    dt
-                )
+                tx, ty = self.target_guild.center_x, self.target_guild.center_y
+                reached = False
+                if world is not None:
+                    from game.systems.navigation import best_adjacent_tile, compute_path_worldpoints, follow_path
+                    adj = best_adjacent_tile(world, buildings, self.target_guild, self.x, self.y)
+                    if adj:
+                        tx = adj[0] * TILE_SIZE + TILE_SIZE / 2
+                        ty = adj[1] * TILE_SIZE + TILE_SIZE / 2
+                    if not hasattr(self, "path"):
+                        self.path = []
+                        self._path_goal = None
+                    goal_key = (int(tx), int(ty))
+                    if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
+                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
+                        self._path_goal = goal_key
+                    follow_path(self, dt)
+                    reached = self.distance_to(tx, ty) < 5
+                else:
+                    reached = self.move_towards(tx, ty, dt)
                 if reached:
                     self.state = CollectorState.COLLECTING
                     self.collection_timer = 0
@@ -116,7 +131,25 @@ class TaxCollector:
                     self.state = CollectorState.RETURNING
         
         elif self.state == CollectorState.RETURNING:
-            reached = self.move_towards(self.home_x, self.home_y, dt)
+            tx, ty = self.home_x, self.home_y
+            reached = False
+            if world is not None:
+                from game.systems.navigation import best_adjacent_tile, compute_path_worldpoints, follow_path
+                adj = best_adjacent_tile(world, buildings, self.castle, self.x, self.y)
+                if adj:
+                    tx = adj[0] * TILE_SIZE + TILE_SIZE / 2
+                    ty = adj[1] * TILE_SIZE + TILE_SIZE / 2
+                if not hasattr(self, "path"):
+                    self.path = []
+                    self._path_goal = None
+                goal_key = (int(tx), int(ty))
+                if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
+                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
+                    self._path_goal = goal_key
+                follow_path(self, dt)
+                reached = self.distance_to(tx, ty) < 5
+            else:
+                reached = self.move_towards(tx, ty, dt)
             if reached:
                 # Deposit gold to player
                 if self.carried_gold > 0:
@@ -142,21 +175,21 @@ class TaxCollector:
         pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
         
         # Draw tax collector symbol ($)
-        font = pygame.font.Font(None, 16)
-        symbol_text = font.render("$", True, COLOR_WHITE)
+        _ = get_font(16)
+        symbol_text = render_text_cached(16, "$", COLOR_WHITE)
         symbol_rect = symbol_text.get_rect(center=(int(screen_x), int(screen_y)))
         surface.blit(symbol_text, symbol_rect)
         
         # Show carried gold
         if self.carried_gold > 0:
-            font = pygame.font.Font(None, 14)
+            font = get_font(14)
             gold_text = font.render(f"${self.carried_gold}", True, (255, 215, 0))
             gold_rect = gold_text.get_rect(center=(screen_x, screen_y - self.size))
             surface.blit(gold_text, gold_rect)
         
         # Show state indicator
         if self.state != CollectorState.WAITING:
-            font = pygame.font.Font(None, 12)
+            font = get_font(12)
             state_text = "Collecting..." if self.state == CollectorState.COLLECTING else ""
             if state_text:
                 text = font.render(state_text, True, COLOR_WHITE)
