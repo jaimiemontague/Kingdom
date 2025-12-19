@@ -92,6 +92,12 @@ class GameEngine:
         
         # AI controller (will be set from main.py)
         self.ai_controller = None
+
+        # Optional VFX system (set by future graphics work). Expected interface:
+        # - update(dt: float) -> None
+        # - render(surface: pygame.Surface, camera_offset: tuple[int,int]) -> None
+        # - emit_from_events(events: list[dict]) -> None
+        self.vfx_system = None
         
         # Tax collector (created after castle is placed)
         self.tax_collector = None
@@ -572,6 +578,14 @@ class GameEngine:
         events = self.combat_system.process_combat(
             self.heroes, self.enemies, self.buildings
         )
+
+        # Feed combat events into optional VFX system (non-blocking, best-effort).
+        if self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
+            try:
+                self.vfx_system.emit_from_events(events)
+            except Exception:
+                # VFX should never crash the simulation.
+                pass
         
         # Handle combat events
         for event in events:
@@ -647,6 +661,13 @@ class GameEngine:
         
         # Update HUD
         self.hud.update()
+
+        # Update VFX (after simulation state is updated).
+        if self.vfx_system is not None and hasattr(self.vfx_system, "update"):
+            try:
+                self.vfx_system.update(dt)
+            except Exception:
+                pass
         
         # Camera already updated at top of update()
     
@@ -751,7 +772,8 @@ class GameEngine:
         # Clear screen
         self.screen.fill(COLOR_BLACK)
 
-        camera_offset = (self.camera_x, self.camera_y)
+        # Pixel art: quantize camera to integer pixels to reduce shimmer.
+        camera_offset = (int(self.camera_x), int(self.camera_y))
 
         # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
         if abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:
@@ -799,9 +821,17 @@ class GameEngine:
         # Render building preview
         self.building_menu.render(view_surface, camera_offset)
 
+        # Render VFX overlay (world-space) if present.
+        if self.vfx_system is not None and hasattr(self.vfx_system, "render"):
+            try:
+                self.vfx_system.render(view_surface, camera_offset)
+            except Exception:
+                pass
+
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:
-            pygame.transform.smoothscale(view_surface, (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)
+            # Pixel art: nearest-neighbor scaling (no blur).
+            pygame.transform.scale(view_surface, (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)
             self.screen.blit(self._scaled_surface, (0, 0))
         
         # Render HUD
