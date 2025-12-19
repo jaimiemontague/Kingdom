@@ -7,6 +7,7 @@ from config import (
     TILE_SIZE, MAP_WIDTH, MAP_HEIGHT,
     COLOR_GRASS, COLOR_WATER, COLOR_PATH, COLOR_TREE
 )
+from game.graphics.tile_sprites import TileSpriteLibrary
 
 
 class TileType:
@@ -116,27 +117,16 @@ class World:
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 tile_type = self.tiles[y][x]
-                color = TILE_COLORS.get(tile_type, COLOR_GRASS)
-                
-                screen_x = x * TILE_SIZE - cam_x
-                screen_y = y * TILE_SIZE - cam_y
-                
-                pygame.draw.rect(
-                    surface,
-                    color,
-                    (screen_x, screen_y, TILE_SIZE, TILE_SIZE)
-                )
-                
-                # Draw grid lines (subtle) - ensure color values don't go negative
-                grid_color = (
-                    max(0, color[0] - 15),
-                    max(0, color[1] - 15),
-                    max(0, color[2] - 15)
-                )
-                pygame.draw.rect(
-                    surface,
-                    grid_color,
-                    (screen_x, screen_y, TILE_SIZE, TILE_SIZE),
-                    1
-                )
+
+                screen_x = int(x * TILE_SIZE - cam_x)
+                screen_y = int(y * TILE_SIZE - cam_y)
+
+                # Pixel-art sprites (procedural fallback) for tiles.
+                tile_img = TileSpriteLibrary.get(tile_type, x, y, size=TILE_SIZE)
+                if tile_img is not None:
+                    surface.blit(tile_img, (screen_x, screen_y))
+                else:
+                    # Safety fallback (shouldn't normally happen)
+                    color = TILE_COLORS.get(tile_type, COLOR_GRASS)
+                    pygame.draw.rect(surface, color, (screen_x, screen_y, TILE_SIZE, TILE_SIZE))
 
