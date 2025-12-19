@@ -96,3 +96,6 @@ def load_png_frames(folder: str | Path, scale_to: Optional[tuple[int, int]] = No
     return frames
 
 
+
+
+
