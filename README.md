@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.1.0** (see `config.py`).
+This repository is currently stamped as **Prototype v1.2.0** (see `config.py`).
 
 ## Overview
 

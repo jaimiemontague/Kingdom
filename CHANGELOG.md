@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.2.0
+
+- Pixel-art render pipeline improvements: nearest-neighbor scaling + reduced camera shimmer.
+- Procedural pixel sprites for tiles, enemies, and buildings (with fallbacks when no assets exist).
+- Combat VFX particles for hits/kills to improve readability.
+- Fog-of-war visibility system and overlay rendering.
+- Added neutral building system (auto-spawned map structures) and supporting systems.
+
 ## Prototype v1.1.0
 
 - Heroes have unique stable IDs (prevents synchronized/clumped behavior from name collisions).
