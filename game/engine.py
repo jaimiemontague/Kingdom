@@ -9,6 +9,7 @@ from config import (
     ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
     MAX_ALIVE_ENEMIES
 )
+from game.graphics.vfx import VFXSystem
 from game.world import World
 from game.entities import (
     Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
@@ -93,11 +94,12 @@ class GameEngine:
         # AI controller (will be set from main.py)
         self.ai_controller = None
 
-        # Optional VFX system (set by future graphics work). Expected interface:
+        # VFX system (lightweight particles for hits/kills).
+        # Expected interface:
         # - update(dt: float) -> None
         # - render(surface: pygame.Surface, camera_offset: tuple[int,int]) -> None
         # - emit_from_events(events: list[dict]) -> None
-        self.vfx_system = None
+        self.vfx_system = VFXSystem()
         
         # Tax collector (created after castle is placed)
         self.tax_collector = None
