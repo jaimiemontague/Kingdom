@@ -70,6 +70,8 @@ class CombatSystem:
                     "attacker": hero.name,
                     "target": closest_enemy.enemy_type,
                     "damage": damage,
+                    "x": closest_enemy.x,
+                    "y": closest_enemy.y,
                 })
                 
                 if killed:
@@ -94,6 +96,8 @@ class CombatSystem:
                             "gold": closest_enemy.gold_reward,
                             "xp": closest_enemy.xp_reward,
                             "gold_split": len(gold_recipients),
+                            "x": closest_enemy.x,
+                            "y": closest_enemy.y,
                         })
                     
                     # XP goes to the killer only
