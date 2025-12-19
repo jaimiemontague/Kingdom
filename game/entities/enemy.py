@@ -11,6 +11,7 @@ from config import (
     SKELETON_HP, SKELETON_ATTACK, SKELETON_SPEED,
     COLOR_RED, COLOR_WHITE, COLOR_GREEN
 )
+from game.graphics.enemy_sprites import EnemySpriteLibrary
 
 
 class EnemyState(Enum):
@@ -55,6 +56,13 @@ class Enemy:
         # Visual
         self.size = 18
         self.color = COLOR_RED
+
+        # Animation / facing (pixel-art sprites; falls back procedurally if no assets exist)
+        self.facing = 1  # 1=right, -1=left
+        self._last_pos = (float(self.x), float(self.y))
+        self._anim = EnemySpriteLibrary.create_player(self.enemy_type, size=32)
+        self._anim_base = "idle"
+        self._anim_lock_one_shot = None  # "attack" / "hurt" / "dead"
         
     @property
     def is_alive(self) -> bool:
@@ -69,8 +77,32 @@ class Enemy:
         self.hp = max(0, self.hp - amount)
         if self.hp <= 0:
             self.state = EnemyState.DEAD
+            self._play_one_shot("dead")
             return True
+        self._play_one_shot("hurt")
         return False
+
+    def _play_one_shot(self, name: str):
+        if not hasattr(self, "_anim") or self._anim is None:
+            return
+        self._anim_lock_one_shot = name
+        self._anim.play(name, restart=True)
+
+    def _update_animation(self, dt: float):
+        if not hasattr(self, "_anim") or self._anim is None:
+            return
+
+        if self._anim_lock_one_shot:
+            if self._anim.current != self._anim_lock_one_shot:
+                self._anim.play(self._anim_lock_one_shot, restart=True)
+            self._anim.update(dt)
+            if self._anim.finished:
+                self._anim_lock_one_shot = None
+                self._anim.play(self._anim_base, restart=True)
+            return
+
+        self._anim.play(self._anim_base, restart=False)
+        self._anim.update(dt)
     
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""
@@ -153,6 +185,8 @@ class Enemy:
         """Update enemy state and behavior."""
         if not self.is_alive:
             return
+
+        prev_x, prev_y = self.x, self.y
         
         # Update attack cooldown
         if self.attack_cooldown > 0:
@@ -238,10 +272,25 @@ class Enemy:
                     self.move_towards(target_x, target_y, dt)
             else:
                 self.move_towards(target_x, target_y, dt)
+
+        # Facing (based on motion)
+        dx = self.x - prev_x
+        if abs(dx) > 0.01:
+            self.facing = 1 if dx >= 0 else -1
+
+        # Base animation selection (one-shots can override)
+        if self.state == EnemyState.MOVING:
+            self._anim_base = "walk"
+        else:
+            self._anim_base = "idle"
+        self._update_animation(dt)
+
+        self._last_pos = (float(self.x), float(self.y))
     
     def do_attack(self):
         """Perform an attack on the current target."""
         if self.target and hasattr(self.target, 'take_damage'):
+            self._play_one_shot("attack")
             self.target.take_damage(self.attack_power)
     
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
@@ -252,15 +301,23 @@ class Enemy:
         cam_x, cam_y = camera_offset
         screen_x = self.x - cam_x
         screen_y = self.y - cam_y
-        
-        # Draw enemy body (triangle for goblins)
-        points = [
-            (screen_x, screen_y - self.size // 2),
-            (screen_x - self.size // 2, screen_y + self.size // 2),
-            (screen_x + self.size // 2, screen_y + self.size // 2),
-        ]
-        pygame.draw.polygon(surface, self.color, points)
-        pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
+
+        # Sprite render (procedural fallback until art exists)
+        if hasattr(self, "_anim") and self._anim is not None:
+            frame = self._anim.frame()
+            if self.facing < 0:
+                frame = pygame.transform.flip(frame, True, False)
+            fw, fh = frame.get_width(), frame.get_height()
+            surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
+        else:
+            # Fallback: old polygon render
+            points = [
+                (screen_x, screen_y - self.size // 2),
+                (screen_x - self.size // 2, screen_y + self.size // 2),
+                (screen_x + self.size // 2, screen_y + self.size // 2),
+            ]
+            pygame.draw.polygon(surface, self.color, points)
+            pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
         
         # Draw health bar
         bar_width = self.size + 6
