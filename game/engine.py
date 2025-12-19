@@ -10,7 +10,8 @@ from config import (
     MAX_ALIVE_ENEMIES
 )
 from game.graphics.vfx import VFXSystem
-from game.world import World
+from game.world import World, Visibility
+ 
 from game.entities import (
     Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
     Blacksmith, Inn, TradingPost,
@@ -20,7 +21,8 @@ from game.entities import (
     Fairgrounds, Library, RoyalGardens,
     Palace, Hero, Goblin, TaxCollector, Peasant, Guard
 )
-from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem
+from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem, NeutralBuildingSystem
+from game.systems.buffs import BuffSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 from game.graphics.font_cache import get_font
 from game.systems import perf_stats
@@ -53,6 +55,7 @@ class GameEngine:
         self.camera_x = 0
         self.camera_y = 0
         self.zoom = 1.0
+        self.default_zoom = 1.0
 
         # Render surfaces (avoid per-frame allocations).
         self._view_surface = None
@@ -75,6 +78,8 @@ class GameEngine:
         self.economy = EconomySystem()
         self.spawner = EnemySpawner(self.world)
         self.lair_system = LairSystem(self.world)
+        self.neutral_building_system = NeutralBuildingSystem(self.world)
+        self.buff_system = BuffSystem()
         
         # UI
         self.hud = HUD(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -106,6 +111,24 @@ class GameEngine:
         
         # Initialize starting buildings
         self.setup_initial_state()
+
+    def _update_fog_of_war(self):
+        """Update fog-of-war visibility around the castle and living heroes."""
+        # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.
+        CASTLE_VISION_TILES = 10
+        HERO_VISION_TILES = 7
+
+        castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
+        revealers = []
+        if castle is not None:
+            revealers.append((castle.center_x, castle.center_y, CASTLE_VISION_TILES))
+
+        for hero in self.heroes:
+            if getattr(hero, "is_alive", True):
+                revealers.append((hero.x, hero.y, HERO_VISION_TILES))
+
+        if revealers:
+            self.world.update_visibility(revealers)
         
     def setup_initial_state(self):
         """Set up the initial game state."""
@@ -130,12 +153,14 @@ class GameEngine:
                 self.world.set_tile(center_x + dx, center_y + dy, 2)  # PATH
         
         # Center camera on castle
-        self.camera_x = castle.center_x - WINDOW_WIDTH // 2
-        self.camera_y = castle.center_y - WINDOW_HEIGHT // 2
+        self.center_on_castle(reset_zoom=True, castle=castle)
 
         # Spawn initial monster lairs (hostile world-structures).
         self.lair_system.spawn_initial_lairs(self.buildings, castle)
         self.clamp_camera()
+
+        # Initialize fog-of-war reveal around the starting castle.
+        self._update_fog_of_war()
         
     def handle_events(self):
         """Process input events."""
@@ -285,8 +310,8 @@ class GameEngine:
             self.try_hire_hero()
             
         elif event.key == pygame.K_SPACE:
-            # Toggle pause
-            self.paused = not self.paused
+            # Center view on castle and reset to starting zoom
+            self.center_on_castle(reset_zoom=True)
         
         elif event.key == pygame.K_F1:
             # Toggle debug panel
@@ -540,6 +565,12 @@ class GameEngine:
         for hero in self.heroes:
             hero.update(dt, game_state)
 
+        # Fog-of-war reveal (castle + heroes).
+        self._update_fog_of_war()
+
+        # Apply/refresh buffs (auras) once per tick so ATK/DEF stays dynamic and stable.
+        self.buff_system.update(self.heroes, self.buildings)
+
         # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
         castle = game_state.get("castle")
         self.peasant_spawn_timer += dt
@@ -627,6 +658,9 @@ class GameEngine:
                 (255, 215, 0)
             )
         self.bounty_system.cleanup()
+
+        # Neutral buildings: auto-spawn + passive tax
+        self.neutral_building_system.update(dt, self.buildings, self.heroes, castle)
         
         # Update tax collector
         if self.tax_collector:
@@ -690,6 +724,23 @@ class GameEngine:
 
         self.camera_x = max(0, min(max_x, self.camera_x))
         self.camera_y = max(0, min(max_y, self.camera_y))
+
+    def center_on_castle(self, reset_zoom: bool = True, castle=None):
+        """Center camera on the castle; optionally reset zoom to the starting zoom."""
+        if reset_zoom:
+            self.zoom = float(getattr(self, "default_zoom", 1.0))
+
+        if castle is None:
+            castle = next(
+                (b for b in self.buildings if getattr(b, "building_type", None) == "castle" and getattr(b, "hp", 0) > 0),
+                None,
+            )
+        if not castle:
+            return
+
+        self.camera_x = castle.center_x - WINDOW_WIDTH // 2
+        self.camera_y = castle.center_y - WINDOW_HEIGHT // 2
+        self.clamp_camera()
 
     def set_zoom(self, new_zoom: float):
         """Set zoom with clamping."""
@@ -799,6 +850,14 @@ class GameEngine:
 
         # Render enemies
         for enemy in self.enemies:
+            # Fog-of-war: enemies should only be visible when currently in vision (VISIBLE),
+            # not in explored-but-dim (SEEN) tiles.
+            gx, gy = self.world.world_to_grid(getattr(enemy, "x", 0.0), getattr(enemy, "y", 0.0))
+            if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
+                if self.world.visibility[gy][gx] != Visibility.VISIBLE:
+                    continue
+            else:
+                continue
             enemy.render(view_surface, camera_offset)
 
         # Render heroes
@@ -829,6 +888,11 @@ class GameEngine:
                 self.vfx_system.render(view_surface, camera_offset)
             except Exception:
                 pass
+
+        # Fog-of-war overlay (covers world + entities/markers in unrevealed areas)
+        # Draw AFTER world/entities/VFX so hidden areas remain hidden.
+        if hasattr(self.world, "render_fog"):
+            self.world.render_fog(view_surface, camera_offset)
 
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:

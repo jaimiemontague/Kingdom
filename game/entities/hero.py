@@ -7,6 +7,7 @@ import math
 from enum import Enum, auto
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.font_cache import get_font
+from game.systems.buffs import Buff
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
@@ -52,6 +53,9 @@ class Hero:
         # Resources
         self.gold = 0  # Spendable gold
         self.taxed_gold = 0  # Gold reserved for taxes (25% of earnings)
+
+        # Buffs / auras (temporary stat modifiers)
+        self.buffs = []  # list[Buff]
         
         # Home building reference (set when hired)
         self.home_building = None
@@ -112,14 +116,59 @@ class Hero:
     @property
     def attack(self) -> int:
         """Total attack including weapon bonus."""
+        now_ms = pygame.time.get_ticks()
         weapon_bonus = self.weapon.get("attack", 0) if self.weapon else 0
-        return self.base_attack + weapon_bonus + (self.level - 1) * 2
+        buff_bonus = 0
+        for b in getattr(self, "buffs", []):
+            if getattr(b, "expires_at_ms", 0) > now_ms:
+                buff_bonus += int(getattr(b, "atk_delta", 0))
+        return self.base_attack + weapon_bonus + buff_bonus + (self.level - 1) * 2
     
     @property
     def defense(self) -> int:
         """Total defense including armor bonus."""
+        now_ms = pygame.time.get_ticks()
         armor_bonus = self.armor.get("defense", 0) if self.armor else 0
-        return self.base_defense + armor_bonus + (self.level - 1)
+        buff_bonus = 0
+        for b in getattr(self, "buffs", []):
+            if getattr(b, "expires_at_ms", 0) > now_ms:
+                buff_bonus += int(getattr(b, "def_delta", 0))
+        return self.base_defense + armor_bonus + buff_bonus + (self.level - 1)
+
+    def apply_or_refresh_buff(
+        self,
+        name: str,
+        atk_delta: int = 0,
+        def_delta: int = 0,
+        duration_s: float = 1.0,
+        now_ms: int | None = None,
+    ):
+        """Apply a buff by name, or refresh its duration if already present (prevents stacking drift)."""
+        if now_ms is None:
+            now_ms = pygame.time.get_ticks()
+        expires_at_ms = int(now_ms + max(0.0, float(duration_s)) * 1000.0)
+
+        # Refresh existing buff if present.
+        for b in self.buffs:
+            if getattr(b, "name", None) == name:
+                b.atk_delta = int(atk_delta)
+                b.def_delta = int(def_delta)
+                b.expires_at_ms = expires_at_ms
+                return
+
+        self.buffs.append(
+            Buff(
+                name=str(name),
+                atk_delta=int(atk_delta),
+                def_delta=int(def_delta),
+                expires_at_ms=expires_at_ms,
+            )
+        )
+
+    def remove_expired_buffs(self, now_ms: int | None = None):
+        if now_ms is None:
+            now_ms = pygame.time.get_ticks()
+        self.buffs = [b for b in self.buffs if not b.is_expired(now_ms)]
     
     @property
     def is_alive(self) -> bool:

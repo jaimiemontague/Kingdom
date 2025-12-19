@@ -102,6 +102,63 @@ class CombatSystem:
                     
                     # XP goes to the killer only
                     hero.add_xp(closest_enemy.xp_reward)
+
+        # Heroes attacking lairs (only if explicitly targeting one)
+        for hero in heroes:
+            if not getattr(hero, "is_alive", False):
+                continue
+            if getattr(hero, "attack_cooldown", 0) > 0:
+                continue
+
+            lair = getattr(hero, "target", None)
+            if not getattr(lair, "is_lair", False):
+                continue
+            if getattr(lair, "hp", 0) <= 0:
+                continue
+
+            # Use center distance with a small slack for footprint.
+            dist = hero.distance_to(lair.center_x, lair.center_y)
+            if dist > (hero.attack_range + TILE_SIZE):
+                continue
+
+            damage = hero.attack
+            if hasattr(hero, "compute_attack_damage"):
+                try:
+                    damage = hero.compute_attack_damage(lair)
+                except TypeError:
+                    damage = hero.compute_attack_damage()
+
+            # Record attacker if supported.
+            killed = False
+            if hasattr(lair, "take_damage"):
+                try:
+                    killed = lair.take_damage(damage, attacker=hero)
+                except TypeError:
+                    killed = lair.take_damage(damage)
+
+            hero.attack_cooldown = hero.attack_cooldown_max
+
+            events.append({
+                "type": "hero_attack_lair",
+                "attacker": hero.name,
+                "target": getattr(lair, "building_type", "lair"),
+                "damage": damage,
+            })
+
+            if killed and not getattr(lair, "_cleared_emitted", False):
+                setattr(lair, "_cleared_emitted", True)
+                summary = {}
+                if hasattr(lair, "on_cleared"):
+                    summary = lair.on_cleared(hero)
+
+                events.append({
+                    "type": "lair_cleared",
+                    "hero": hero.name,
+                    "lair_type": getattr(lair, "building_type", "lair"),
+                    "gold": summary.get("gold", 0),
+                    "threat_level": summary.get("threat_level", 1),
+                    "lair_obj": lair,
+                })
         
         # Enemies attacking (handled in enemy update, but we track deaths here)
         for enemy in enemies:

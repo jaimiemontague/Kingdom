@@ -28,6 +28,10 @@ class BuildingPanel:
         # Button for research (marketplace)
         self.research_button_rect = None
         self.research_button_hovered = False
+
+        # Buttons for library research
+        self.library_research_rects = {}
+        self.library_research_hovered = None
         
         # Button for upgrade (palace)
         self.upgrade_button_rect = None
@@ -115,6 +119,16 @@ class BuildingPanel:
                 if self.selected_building.can_upgrade():
                     if self.selected_building.upgrade(economy):
                         return True
+
+        # Check library research buttons
+        if self.selected_building.building_type == "library" and self.library_research_rects:
+            for research_name, rect in self.library_research_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    # Cannot research while under construction
+                    if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
+                        return True
+                    self.selected_building.research(research_name, economy, game_state)
+                    return True
         
         return True  # Click was in panel
     
@@ -122,6 +136,13 @@ class BuildingPanel:
         """Update hover state for buttons."""
         if self.research_button_rect:
             self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
+
+        self.library_research_hovered = None
+        if self.visible and self.selected_building and self.selected_building.building_type == "library":
+            for research_name, rect in self.library_research_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    self.library_research_hovered = research_name
+                    break
     
     def render(self, surface: pygame.Surface, heroes: list, economy):
         """Render the building panel."""
@@ -129,6 +150,9 @@ class BuildingPanel:
             return
         
         building = self.selected_building
+
+        # Reset per-frame clickable regions to avoid stale rects
+        self.library_research_rects = {}
         
         # Panel background
         panel_surf = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
@@ -178,8 +202,33 @@ class BuildingPanel:
             y = self.render_library(panel_surf, building, y, economy)
         elif building.building_type == "royal_gardens":
             y = self.render_royal_gardens(panel_surf, building, heroes, y)
+        else:
+            y = self.render_generic_building(panel_surf, building, y)
         
         surface.blit(panel_surf, (self.panel_x, self.panel_y))
+
+    def render_generic_building(self, surface: pygame.Surface, building, y: int) -> int:
+        """Fallback renderer for buildings without a dedicated panel."""
+        hp_text = self.font_normal.render(f"HP: {int(getattr(building, 'hp', 0))}/{int(getattr(building, 'max_hp', 0))}", True, COLOR_WHITE)
+        surface.blit(hp_text, (10, y))
+        y += 22
+
+        if hasattr(building, "stored_tax_gold"):
+            tax_text = self.font_normal.render(f"Taxable Gold: ${int(getattr(building, 'stored_tax_gold', 0))}", True, COLOR_GOLD)
+            surface.blit(tax_text, (10, y))
+            y += 22
+
+        if getattr(building, "is_neutral", False):
+            tag = self.font_small.render("Neutral building (auto-spawned)", True, (160, 160, 160))
+            surface.blit(tag, (10, y))
+            y += 18
+
+        if getattr(building, "is_under_attack", False):
+            warn = self.font_small.render("Status: UNDER ATTACK", True, COLOR_RED)
+            surface.blit(warn, (10, y))
+            y += 18
+
+        return y
     
     def render_warrior_guild(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:
         """Render warrior guild details."""
@@ -263,7 +312,8 @@ class BuildingPanel:
             y += 25
             
             # Show potion price
-            price_text = self.font_small.render("Heroes can buy potions for $20 each", True, (180, 180, 180))
+            potion_price = getattr(building, "potion_price", 20)
+            price_text = self.font_small.render(f"Heroes can buy potions for ${potion_price} each", True, (180, 180, 180))
             surface.blit(price_text, (10, y))
             y += 20
         else:
@@ -318,7 +368,8 @@ class BuildingPanel:
         
         # Show potions if researched
         if hasattr(building, 'potions_researched') and building.potions_researched:
-            potion_text = self.font_small.render("• Healing Potion - $20", True, COLOR_GREEN)
+            potion_price = getattr(building, "potion_price", 20)
+            potion_text = self.font_small.render(f"• Healing Potion - ${potion_price}", True, COLOR_GREEN)
             surface.blit(potion_text, (15, y))
             y += 16
         
@@ -492,6 +543,15 @@ class BuildingPanel:
     
     def render_library(self, surface: pygame.Surface, building, y: int, economy) -> int:
         """Render library details."""
+        if hasattr(building, "is_constructed") and not building.is_constructed:
+            uc = self.font_normal.render("Status: UNDER CONSTRUCTION", True, (200, 200, 100))
+            surface.blit(uc, (10, y))
+            y += 25
+            note = self.font_small.render("Peasants must finish building it first.", True, (180, 180, 180))
+            surface.blit(note, (10, y))
+            y += 25
+            return y
+
         researched_text = self.font_normal.render(f"Researched: {len(building.researched_items)}", True, COLOR_WHITE)
         surface.blit(researched_text, (10, y))
         y += 25
@@ -504,12 +564,43 @@ class BuildingPanel:
         y += 22
         
         for item in building.available_research:
+            name = item["name"]
+            cost = item["cost"]
+
             if item["researched"]:
-                item_text = self.font_small.render(f"✓ {item['name']}", True, COLOR_GREEN)
-            else:
-                item_text = self.font_small.render(f"• {item['name']} (${item['cost']})", True, (180, 180, 180))
-            surface.blit(item_text, (15, y))
-            y += 16
+                item_text = self.font_small.render(f"✓ {name}", True, COLOR_GREEN)
+                surface.blit(item_text, (15, y))
+                y += 18
+                continue
+
+            # Clickable research row
+            button_x = 10
+            button_y = y
+            button_width = self.panel_width - 20
+            button_height = 24
+
+            can_afford = economy.player_gold >= cost
+            button_color = (60, 120, 60) if can_afford else (80, 80, 80)
+            if self.library_research_hovered == name and can_afford:
+                button_color = (80, 150, 80)
+
+            pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
+            pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
+
+            btn_text = f"Research: {name} (${cost})" if can_afford else f"Research: {name} (Need ${cost})"
+            btn_render = self.font_small.render(btn_text, True, COLOR_WHITE)
+            btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+            surface.blit(btn_render, btn_rect)
+
+            # Store clickable rect in screen coordinates
+            self.library_research_rects[name] = pygame.Rect(
+                self.panel_x + button_x,
+                self.panel_y + button_y,
+                button_width,
+                button_height
+            )
+
+            y += button_height + 8
         return y
     
     def render_royal_gardens(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:

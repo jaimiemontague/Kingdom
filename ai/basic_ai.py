@@ -38,6 +38,12 @@ class BasicAI:
         self.llm_brain = llm_brain
         # Track each hero's personal patrol zone (assigned on first idle)
         self.hero_zones = {}  # hero.name -> (center_x, center_y)
+
+        # Bounty pursuit tuning (prototype-friendly constants)
+        self.bounty_assign_ttl_ms = 15000
+        self.bounty_pick_cooldown_ms = 2500
+        self.bounty_max_pursue_ms = 35000
+        self.bounty_claim_radius_px = TILE_SIZE * 2
         
     def update(self, dt: float, heroes: list, game_state: dict):
         """Update AI for all heroes."""
@@ -98,6 +104,11 @@ class BasicAI:
         if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:
             self.defend_home_building(hero, game_state)
             return
+
+        # Priority: Defend nearby neutral buildings (houses/farms/food stands) if under attack.
+        if hero.state != HeroState.FIGHTING:
+            if self.defend_neutral_building_if_visible(hero, game_state):
+                return
 
         # Check if hero should go home to rest (priority check)
         # But only if building is not damaged
@@ -194,6 +205,15 @@ class BasicAI:
         buildings = game_state.get("buildings", [])
         
         debug_log(f"{hero.name} is IDLE at ({hero.x:.0f}, {hero.y:.0f})", throttle_key=f"{hero.name}_idle")
+
+        # If we were pursuing a bounty but ended up idle, clear it (avoid dangling targets).
+        if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
+            hero.target = None
+            hero.target_position = None
+
+        # Majesty-style indirect control: bounties should be a primary lever.
+        if self.maybe_take_bounty(hero, game_state):
+            return
         
         # Check if hero wants to go shopping (full health, has gold, needs potions)
         if hero.hp >= hero.max_hp:
@@ -277,6 +297,50 @@ class BasicAI:
     def handle_moving(self, hero, game_state: dict):
         """Handle moving state."""
         enemies = game_state.get("enemies", [])
+        buildings = game_state.get("buildings", [])
+
+        # Bounty pursuit: claim/abandon logic while walking.
+        if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "bounty":
+            bounty = self._resolve_bounty_from_target(hero.target, game_state.get("bounties", []))
+            if bounty is None:
+                # Bounty vanished (claimed/cleaned up)
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
+            # Abandon invalid or already-claimed bounties
+            if getattr(bounty, "claimed", False) or (hasattr(bounty, "is_valid") and not bounty.is_valid(buildings)):
+                if hasattr(bounty, "unassign") and getattr(bounty, "assigned_to", None) == hero.name:
+                    bounty.unassign()
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
+            # Timeout to avoid permanent lock
+            import pygame
+            now_ms = pygame.time.get_ticks()
+            started_ms = int(hero.target.get("started_ms", now_ms))
+            if now_ms - started_ms > self.bounty_max_pursue_ms:
+                if hasattr(bounty, "unassign") and getattr(bounty, "assigned_to", None) == hero.name:
+                    bounty.unassign()
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
+            # Claim if we're close enough (works both in-game and in headless observer)
+            goal_x, goal_y = (float(getattr(bounty, "x", hero.x)), float(getattr(bounty, "y", hero.y)))
+            if hasattr(bounty, "get_goal_position"):
+                goal_x, goal_y = bounty.get_goal_position(buildings)
+            if hero.distance_to(goal_x, goal_y) <= float(self.bounty_claim_radius_px):
+                if hasattr(bounty, "claim"):
+                    bounty.claim(hero)
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
         
         # Check if reached destination
         if hero.target_position:
@@ -475,6 +539,152 @@ class BasicAI:
         target_x = zone_x + math.cos(angle) * wander_dist
         target_y = zone_y + math.sin(angle) * wander_dist
         hero.set_target_position(target_x, target_y)
+
+    # -----------------------
+    # Bounty pursuit behavior
+    # -----------------------
+
+    def _resolve_bounty_from_target(self, target_dict: dict, bounties: list):
+        """Find the bounty referenced by hero.target dict."""
+        bid = target_dict.get("bounty_id")
+        if bid is None:
+            # Fallback: stored direct reference (best-effort)
+            ref = target_dict.get("bounty_ref")
+            if ref in bounties:
+                return ref
+            return None
+        for b in bounties:
+            if getattr(b, "bounty_id", None) == bid:
+                return b
+        return None
+
+    def maybe_take_bounty(self, hero, game_state: dict) -> bool:
+        """Pick and start pursuing a bounty if it makes sense. Returns True if a bounty was started."""
+        bounties = game_state.get("bounties", [])
+        if not bounties:
+            return False
+
+        # Avoid changing targets too often
+        import pygame
+        now_ms = pygame.time.get_ticks()
+        last_pick = int(getattr(hero, "_last_bounty_pick_ms", 0))
+        if now_ms - last_pick < self.bounty_pick_cooldown_ms:
+            return False
+
+        # Don't pursue bounties when hurt; survival + resting logic already handles healing.
+        if hero.health_percent < 0.65:
+            return False
+
+        buildings = game_state.get("buildings", [])
+        enemies = game_state.get("enemies", [])
+
+        best = None
+        best_score = -1e9
+        for b in bounties:
+            # Only consider bounties that are available (avoid dogpiling).
+            if hasattr(b, "is_available_for") and not b.is_available_for(hero.name, now_ms, self.bounty_assign_ttl_ms):
+                continue
+            if hasattr(b, "is_valid") and not b.is_valid(buildings):
+                continue
+
+            score = self.score_bounty(hero, b, buildings, enemies)
+            if score > best_score:
+                best_score = score
+                best = b
+
+        # Require some minimum attractiveness so heroes don't constantly wander to tiny bounties
+        if best is None or best_score < 0.5:
+            hero._last_bounty_pick_ms = now_ms
+            return False
+
+        self.start_bounty_pursuit(hero, best, game_state)
+        hero._last_bounty_pick_ms = now_ms
+        return True
+
+    def score_bounty(self, hero, bounty, buildings: list, enemies: list) -> float:
+        """Heuristic bounty scoring: reward vs distance vs risk, with class biases + noise."""
+        try:
+            goal_x, goal_y = bounty.get_goal_position(buildings) if hasattr(bounty, "get_goal_position") else (bounty.x, bounty.y)
+            dist_tiles = max(0.1, float(hero.distance_to(goal_x, goal_y)) / float(TILE_SIZE))
+        except Exception:
+            dist_tiles = 10.0
+
+        reward = float(getattr(bounty, "reward", 0))
+        risk = float(bounty.estimate_risk(enemies)) if hasattr(bounty, "estimate_risk") else 0.0
+
+        # Class bias tuning (prototype)
+        cls = getattr(hero, "hero_class", "warrior")
+        reward_w = 1.0
+        dist_w = 1.0
+        risk_w = 1.0
+        type_bonus = 0.0
+
+        if cls == "rogue":
+            reward_w = 1.45
+            dist_w = 0.85
+            risk_w = 1.05
+        elif cls == "wizard":
+            reward_w = 1.15
+            dist_w = 1.05
+            risk_w = 1.15
+        elif cls == "ranger":
+            reward_w = 1.05
+            dist_w = 0.95
+            risk_w = 1.0
+        else:  # warrior and others
+            reward_w = 1.0
+            dist_w = 1.0
+            risk_w = 1.0
+
+        btype = getattr(bounty, "bounty_type", "explore")
+        if cls == "rogue" and btype == "explore":
+            type_bonus += 1.0
+        if cls == "wizard" and btype == "defend_building":
+            type_bonus += 0.4
+
+        # Reward grows sublinearly; distance is a smooth penalty; risk subtracts.
+        base = (reward_w * math.sqrt(max(0.0, reward)) + type_bonus) / (1.0 + dist_w * (dist_tiles ** 1.1))
+        base -= risk_w * 0.35 * risk
+
+        # Add a small per-hero randomness to reduce synchronized picks.
+        base += random.uniform(-0.15, 0.15)
+        return base
+
+    def start_bounty_pursuit(self, hero, bounty, game_state: dict):
+        """Set hero to pursue the bounty."""
+        buildings = game_state.get("buildings", [])
+        world = game_state.get("world")
+
+        # Assign the bounty so others generally avoid it for a short while.
+        if hasattr(bounty, "assign"):
+            bounty.assign(hero.name)
+
+        goal_x, goal_y = (float(getattr(bounty, "x", hero.x)), float(getattr(bounty, "y", hero.y)))
+        if hasattr(bounty, "get_goal_position"):
+            goal_x, goal_y = bounty.get_goal_position(buildings)
+
+        # If the bounty targets a building, go to an adjacent tile so heroes don't try to stand inside it.
+        target_building = None
+        if getattr(bounty, "bounty_type", "") in ("attack_lair", "defend_building"):
+            target_building = getattr(bounty, "target", None)
+
+        if world and target_building is not None:
+            adj = best_adjacent_tile(world, buildings, target_building, hero.x, hero.y)
+            if adj:
+                goal_x = adj[0] * TILE_SIZE + TILE_SIZE / 2
+                goal_y = adj[1] * TILE_SIZE + TILE_SIZE / 2
+
+        hero.target_position = (goal_x, goal_y)
+        import pygame
+        hero.target = {
+            "type": "bounty",
+            "bounty_id": getattr(bounty, "bounty_id", None),
+            "bounty_type": getattr(bounty, "bounty_type", "explore"),
+            # Keep a direct reference as fallback for headless tests
+            "bounty_ref": bounty,
+            "started_ms": pygame.time.get_ticks(),
+        }
+        hero.state = HeroState.MOVING
     
     def send_home_to_rest(self, hero, game_state: dict):
         """Send hero home to rest and heal."""
@@ -543,6 +753,79 @@ class BasicAI:
                 hero.set_target_position(building.center_x + TILE_SIZE, building.center_y)
             else:
                 hero.state = HeroState.IDLE
+
+    def defend_neutral_building_if_visible(self, hero, game_state: dict) -> bool:
+        """
+        If a neutral building is under attack within the hero's "visible" radius,
+        the hero may choose to defend it depending on class.
+        """
+        buildings = game_state.get("buildings", [])
+        enemies = game_state.get("enemies", [])
+
+        # Don't interrupt explicit activities like shopping/going_home.
+        if hero.target and isinstance(hero.target, dict):
+            if hero.target.get("type") in ["going_home", "shopping"]:
+                return False
+
+        visibility_radius = TILE_SIZE * 6
+        # Class-based willingness to respond
+        cls = getattr(hero, "hero_class", "warrior")
+        willingness = {
+            "warrior": 1.0,
+            "ranger": 0.85,
+            "wizard": 0.75,
+            "rogue": 0.55,
+        }.get(cls, 0.8)
+
+        # Find closest attacked neutral building within visibility.
+        candidate = None
+        candidate_dist = float("inf")
+        for b in buildings:
+            if not getattr(b, "is_neutral", False):
+                continue
+            if getattr(b, "hp", 0) <= 0:
+                continue
+            if not getattr(b, "is_under_attack", False):
+                continue
+            dist = hero.distance_to(b.center_x, b.center_y)
+            if dist <= visibility_radius and dist < candidate_dist:
+                candidate = b
+                candidate_dist = dist
+
+        if not candidate:
+            return False
+
+        # Stochastic willingness (keeps behavior varied and class-flavored).
+        if random.random() > float(willingness):
+            return False
+
+        # Find nearest enemy near that building.
+        target_enemy = None
+        target_dist = float("inf")
+        for e in enemies:
+            if not getattr(e, "is_alive", False):
+                continue
+            d = e.distance_to(candidate.center_x, candidate.center_y)
+            if d < TILE_SIZE * 6 and d < target_dist:
+                target_enemy = e
+                target_dist = d
+
+        if target_enemy:
+            dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
+            if dist_to_hero <= hero.attack_range:
+                hero.target = target_enemy
+                hero.state = HeroState.FIGHTING
+                return True
+            hero.target = target_enemy
+            hero.set_target_position(target_enemy.x, target_enemy.y)
+            hero.state = HeroState.MOVING
+            return True
+
+        # If we can't find an enemy, move to the building to "investigate/defend".
+        hero.target = {"type": "defend_neutral", "building": candidate}
+        hero.set_target_position(candidate.center_x + TILE_SIZE, candidate.center_y)
+        hero.state = HeroState.MOVING
+        return True
 
     def defend_castle(self, hero, game_state: dict, castle):
         """Send hero to defend the castle when it's damaged."""

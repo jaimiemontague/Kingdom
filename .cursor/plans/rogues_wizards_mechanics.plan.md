@@ -78,6 +78,3 @@
 - `game/entities/building.py`
 - `game/entities/__init__.py`
 - `game/entities/hero.py`
-- `ai/basic_ai.py`
-- `game/systems/combat.py`
-- `tools/observe_sync.py`

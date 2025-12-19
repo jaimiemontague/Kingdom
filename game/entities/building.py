@@ -10,6 +10,29 @@ from game.graphics.font_cache import get_font
 from game.graphics.building_sprites import BuildingSpriteLibrary
 
 
+#
+# Kingdom-wide research unlocks
+# -----------------------------
+# NOTE: This is intentionally lightweight (in-process) state. Libraries mirror this so
+# research behaves like a global tech tree and can't be purchased repeatedly across
+# multiple libraries in a single run.
+#
+RESEARCH_UNLOCKS = {
+    "Advanced Healing": False,
+    "Fire Magic": False,
+    "Defensive Spells": False,
+}
+
+
+def is_research_unlocked(name: str) -> bool:
+    return bool(RESEARCH_UNLOCKS.get(name, False))
+
+
+def unlock_research(name: str) -> None:
+    if name in RESEARCH_UNLOCKS:
+        RESEARCH_UNLOCKS[name] = True
+
+
 class Building:
     """Base class for all buildings."""
     
@@ -412,6 +435,13 @@ class Marketplace(Building):
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, "marketplace")
         self.potions_researched = False  # Must research before heroes can buy potions
+        self.potion_price = 20
+
+        # Research synergy: if Advanced Healing is unlocked, marketplaces can sell potions
+        # immediately and at a reduced price.
+        if is_research_unlocked("Advanced Healing"):
+            self.potions_researched = True
+            self.potion_price = 15
         self.items = [
             {"name": "Dagger", "type": "weapon", "style": "melee", "price": 60, "attack": 4},
             {"name": "Short Bow", "type": "weapon", "style": "ranged", "price": 70, "attack": 4},
@@ -430,7 +460,7 @@ class Marketplace(Building):
         items = self.items.copy()
         # Add potions if researched
         if self.potions_researched:
-            items.insert(0, {"name": "Healing Potion", "type": "potion", "price": 20, "effect": 50})
+            items.insert(0, {"name": "Healing Potion", "type": "potion", "price": self.potion_price, "effect": 50})
         return items
     
     def can_sell_potions(self) -> bool:
@@ -974,6 +1004,10 @@ class BallistaTower(Building):
         self.attack_cooldown = 0.0
         self.attack_interval = 2.0  # Attack every 2 seconds
         self.target = None
+
+        # Research synergy: defensive spells extend tower range.
+        if is_research_unlocked("Defensive Spells"):
+            self.attack_range += 50
         
     def update(self, dt: float, enemies: list):
         """Update tower attacks."""
@@ -1040,6 +1074,13 @@ class WizardTower(Building):
         self.spell_cooldown = 0.0
         self.spell_interval = 5.0  # Cast spell every 5 seconds
         self.spell_damage = 25
+
+        # Research synergy: apply any unlocked research to new towers.
+        if is_research_unlocked("Fire Magic"):
+            self.spell_damage += 5
+            self.spell_interval = max(1.0, self.spell_interval * 0.9)
+        if is_research_unlocked("Defensive Spells"):
+            self.spell_range += 50
         
     def update(self, dt: float, enemies: list):
         """Update spell casting."""
@@ -1134,28 +1175,73 @@ class Library(Building):
         super().__init__(grid_x, grid_y, "library")
         self.researched_items = []
         self.available_research = [
-            {"name": "Advanced Healing", "cost": 200, "researched": False},
-            {"name": "Fire Magic", "cost": 250, "researched": False},
-            {"name": "Defensive Spells", "cost": 300, "researched": False},
+            {"name": "Advanced Healing", "cost": 200, "researched": is_research_unlocked("Advanced Healing")},
+            {"name": "Fire Magic", "cost": 250, "researched": is_research_unlocked("Fire Magic")},
+            {"name": "Defensive Spells", "cost": 300, "researched": is_research_unlocked("Defensive Spells")},
         ]
+
+        # Mirror global unlocks into this instance for display/UX.
+        for item in self.available_research:
+            if item["researched"]:
+                self.researched_items.append(item["name"])
         
     def can_research(self, research_name: str) -> bool:
         """Check if a research can be performed."""
+        if is_research_unlocked(research_name):
+            return False
         for item in self.available_research:
             if item["name"] == research_name and not item["researched"]:
                 return True
         return False
         
-    def research(self, research_name: str, economy) -> bool:
+    def research(self, research_name: str, economy, game_state: dict | None = None) -> bool:
         """Perform research if affordable."""
+        if hasattr(self, "is_constructed") and not self.is_constructed:
+            return False
+        if is_research_unlocked(research_name):
+            return False
         for item in self.available_research:
             if item["name"] == research_name and not item["researched"]:
                 if economy.player_gold >= item["cost"]:
                     economy.player_gold -= item["cost"]
                     item["researched"] = True
                     self.researched_items.append(research_name)
+                    unlock_research(research_name)
+                    if game_state is not None:
+                        self._apply_research_effect(research_name, game_state)
                     return True
         return False
+
+    def _apply_research_effect(self, research_name: str, game_state: dict) -> None:
+        """Apply gameplay effects for a completed research unlock."""
+        buildings = game_state.get("buildings", []) if isinstance(game_state, dict) else []
+
+        if research_name == "Advanced Healing":
+            # Immediate, visible effect: all marketplaces can sell potions and potions are cheaper.
+            for b in buildings:
+                if getattr(b, "building_type", None) != "marketplace":
+                    continue
+                b.potions_researched = True
+                if hasattr(b, "potion_price"):
+                    b.potion_price = min(getattr(b, "potion_price", 20), 15)
+                else:
+                    b.potion_price = 15
+
+        elif research_name == "Fire Magic":
+            for b in buildings:
+                if getattr(b, "building_type", None) != "wizard_tower":
+                    continue
+                # Avoid stacking by relying on the research being one-time.
+                b.spell_damage = getattr(b, "spell_damage", 25) + 5
+                b.spell_interval = max(1.0, getattr(b, "spell_interval", 5.0) * 0.9)
+
+        elif research_name == "Defensive Spells":
+            for b in buildings:
+                bt = getattr(b, "building_type", None)
+                if bt == "wizard_tower":
+                    b.spell_range = getattr(b, "spell_range", 250) + 50
+                elif bt == "ballista_tower":
+                    b.attack_range = getattr(b, "attack_range", 200) + 50
         
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         super().render(surface, camera_offset)
@@ -1179,7 +1265,8 @@ class RoyalGardens(Building):
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, "royal_gardens")
         self.buff_range = 150  # pixels
-        self.buff_duration = 30.0  # seconds
+        # Aura-style: should drop shortly after leaving range (refreshed while in range).
+        self.buff_duration = 1.25  # seconds
         self.buff_attack_bonus = 5
         self.buff_defense_bonus = 3
         
