@@ -28,6 +28,7 @@ from game.graphics.font_cache import get_font
 from game.systems import perf_stats
 
 
+
 class GameEngine:
     """Main game engine class."""
     
