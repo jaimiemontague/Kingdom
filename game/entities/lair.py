@@ -15,7 +15,7 @@ from config import (
     LAIR_STASH_GROWTH_PER_SPAWN,
 )
 from game.entities.building import Building
-from game.entities.enemy import Goblin, Wolf, Skeleton
+from game.entities.enemy import Goblin, Wolf, Skeleton, Spider, Bandit
 from game.graphics.font_cache import get_font
 
 
@@ -87,6 +87,8 @@ class MonsterLair(Building):
         self.spawn_timer = 0.0
         self.threat_level = int(threat_level)
         self.stash_gold = int(stash_gold)
+        self._cleared_emitted = False
+        self.last_attacker = None
 
         # Lairs are always "constructed" and block movement.
         self.is_constructed = True
@@ -134,6 +136,15 @@ class MonsterLair(Building):
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
         """Override in subclasses."""
         return []
+
+    def take_damage(self, amount: int, attacker=None) -> bool:
+        """
+        Take damage. Optionally record an attacker so clearing rewards can be attributed.
+        Returns True if destroyed.
+        """
+        if attacker is not None:
+            self.last_attacker = attacker
+        return super().take_damage(amount)
 
     def on_cleared(self, hero) -> dict:
         """Award stash to the hero who cleared it. Returns a summary dict."""
@@ -220,5 +231,43 @@ class SkeletonCrypt(MonsterLair):
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
         # Slower, tougher spawns.
         return [Skeleton(world_x, world_y)]
+
+
+class SpiderNest(MonsterLair):
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(
+            grid_x,
+            grid_y,
+            "spider_nest",
+            spawn_interval_sec=5.5,
+            stash_gold=50,
+            threat_level=1,
+        )
+        self.size = (2, 2)
+        self.color = (20, 20, 20)
+
+    def spawn_enemies(self, world_x: float, world_y: float) -> list:
+        # Frequent swarms; low individual threat.
+        n = 2 if random.random() < 0.65 else 3
+        return [Spider(world_x, world_y) for _ in range(n)]
+
+
+class BanditCamp(MonsterLair):
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(
+            grid_x,
+            grid_y,
+            "bandit_camp",
+            spawn_interval_sec=8.5,
+            stash_gold=90,
+            threat_level=2,
+        )
+        self.size = (3, 3)
+        self.color = (110, 70, 40)
+
+    def spawn_enemies(self, world_x: float, world_y: float) -> list:
+        # Slower, tougher spawns.
+        n = 1 if random.random() < 0.8 else 2
+        return [Bandit(world_x, world_y) for _ in range(n)]
 
 

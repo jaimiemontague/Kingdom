@@ -75,6 +75,10 @@ BUILDING_COSTS = {
     "royal_gardens": 250,
     # Phase 6: Palace
     "palace": 0,
+    # Neutral auto-spawn buildings (not player-placeable)
+    "house": 0,
+    "farm": 0,
+    "food_stand": 0,
 }
 
 BUILDING_SIZES = {
@@ -110,6 +114,10 @@ BUILDING_SIZES = {
     "royal_gardens": (2, 2),
     # Phase 6: Palace
     "palace": (3, 3),
+    # Neutral auto-spawn buildings
+    "house": (1, 1),
+    "farm": (2, 2),
+    "food_stand": (1, 1),
 }
 
 BUILDING_COLORS = {
@@ -145,6 +153,10 @@ BUILDING_COLORS = {
     "royal_gardens": (124, 252, 0),  # Lawn green
     # Phase 6: Palace
     "palace": (184, 134, 11),  # Dark goldenrod
+    # Neutral auto-spawn buildings
+    "house": (120, 100, 80),  # warm brown
+    "farm": (200, 170, 90),  # wheat
+    "food_stand": (210, 120, 60),  # orange/brown
 }
 
 # Building constraints (mutually exclusive buildings)
@@ -194,7 +206,7 @@ ROGUE_LAIR_GOLD_THRESHOLD = 100
 LAIR_BOUNTY_COST = 75
 
 # Economy settings
-STARTING_GOLD = 500
+STARTING_GOLD = 10_000
 TAX_RATE = 0.20
 
 # LLM settings

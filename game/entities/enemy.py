@@ -177,6 +177,12 @@ class Enemy:
             elif building.building_type == "castle" and dist < best_dist * 0.8:
                 best_dist = dist
                 best_target = building
+            # Neutral buildings (houses/farms/food stands) can be attacked if they are meaningfully closer
+            # than any currently chosen target. This makes civilian infrastructure a "soft target" without
+            # overriding the normal preference for heroes/peasants/guards.
+            elif getattr(building, "is_neutral", False) and dist < best_dist * 0.9:
+                best_dist = dist
+                best_target = building
         
         self.target = best_target
         return best_target
@@ -381,4 +387,40 @@ class Skeleton(Enemy):
         self.xp_reward = 35
         self.gold_reward = 14
         self.color = (220, 220, 240)
+
+
+class Spider(Enemy):
+    """Fast, low-HP swarm enemy usually spawned from Spider Nests."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "spider")
+        self.hp = 18
+        self.max_hp = 18
+        self.attack_power = 4
+        self.speed = 2.6
+        self.xp_reward = 18
+        self.gold_reward = 5
+        self.color = (30, 30, 30)
+        self.attackers = set()
+
+    def register_attacker(self, hero):
+        self.attackers.add(hero.name)
+
+
+class Bandit(Enemy):
+    """Mid-tier humanoid enemy usually spawned from Bandit Camps."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "bandit")
+        self.hp = 42
+        self.max_hp = 42
+        self.attack_power = 9
+        self.speed = 1.7
+        self.xp_reward = 32
+        self.gold_reward = 12
+        self.color = (120, 80, 50)
+        self.attackers = set()
+
+    def register_attacker(self, hero):
+        self.attackers.add(hero.name)
 

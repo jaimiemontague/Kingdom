@@ -2,10 +2,69 @@
 Builds context dictionaries for LLM decision making.
 """
 from config import TILE_SIZE
+import pygame
 
 
 class ContextBuilder:
     """Builds structured context for LLM prompts."""
+
+    @staticmethod
+    def _summarize_bounties(hero, game_state: dict, limit: int = 5) -> list[dict]:
+        """Create a JSON-friendly bounty list with distance/risk/validity for LLM use."""
+        bounties = game_state.get("bounties", []) or []
+        buildings = game_state.get("buildings", []) or []
+        enemies = game_state.get("enemies", []) or []
+        now_ms = pygame.time.get_ticks()
+
+        out = []
+        for b in bounties:
+            try:
+                if hasattr(b, "get_goal_position"):
+                    gx, gy = b.get_goal_position(buildings)
+                else:
+                    gx, gy = float(getattr(b, "x", 0.0)), float(getattr(b, "y", 0.0))
+                dist_px = float(hero.distance_to(gx, gy))
+            except Exception:
+                gx, gy = 0.0, 0.0
+                dist_px = 0.0
+
+            risk = 0.0
+            if hasattr(b, "estimate_risk"):
+                try:
+                    risk = float(b.estimate_risk(enemies))
+                except Exception:
+                    risk = 0.0
+
+            valid = True
+            if hasattr(b, "is_valid"):
+                try:
+                    valid = bool(b.is_valid(buildings))
+                except Exception:
+                    valid = True
+
+            assigned_active = False
+            if hasattr(b, "is_assigned_active"):
+                try:
+                    assigned_active = bool(b.is_assigned_active(now_ms, ttl_ms=15000))
+                except Exception:
+                    assigned_active = False
+
+            out.append(
+                {
+                    "id": getattr(b, "bounty_id", None),
+                    "type": getattr(b, "bounty_type", "explore"),
+                    "reward": int(getattr(b, "reward", 0)),
+                    "distance_tiles": round(dist_px / TILE_SIZE, 1) if TILE_SIZE else 0.0,
+                    "risk": round(risk, 2),
+                    "valid": valid,
+                    "assigned_to": getattr(b, "assigned_to", None),
+                    "assigned_active": assigned_active,
+                }
+            )
+
+        # Valid first, then higher value adjusted by distance
+        out.sort(key=lambda s: (not s["valid"], s["distance_tiles"], -s["reward"]))
+        return out[: max(0, int(limit))]
     
     @staticmethod
     def build_hero_context(hero, game_state: dict) -> dict:
@@ -36,7 +95,9 @@ class ContextBuilder:
             "current_state": hero.state.name,
             "nearby_enemies": [],
             "nearby_allies": [],
+            # Keep raw objects for in-engine use/debug, but also provide a JSON-friendly summary for the LLM.
             "available_bounties": game_state.get("bounties", []),
+            "bounty_options": ContextBuilder._summarize_bounties(hero, game_state, limit=5),
             "shop_items": [],
             "distances": {},
         }
@@ -142,6 +203,19 @@ Current State: {context['current_state']}
             for item in context["shop_items"]:
                 afford = "✓" if item["can_afford"] else "✗"
                 summary += f"  [{afford}] {item['name']} ({item['type']}) - {item['price']}g\n"
+
+        # Bounties (Majesty-style control lever)
+        if context.get("bounty_options"):
+            summary += "\nAvailable Bounties:\n"
+            for b in context["bounty_options"][:5]:
+                valid = "✓" if b.get("valid", True) else "✗"
+                assigned = ""
+                if b.get("assigned_to") and b.get("assigned_active"):
+                    assigned = f" (assigned to {b['assigned_to']})"
+                summary += (
+                    f"  [{valid}] {b.get('type','explore')} reward=${b.get('reward',0)} "
+                    f"dist={b.get('distance_tiles','?')} tiles risk={b.get('risk',0)}{assigned}\n"
+                )
         
         summary += f"\nDistances: Castle {context['distances'].get('castle', '?')} tiles, "
         summary += f"Market {context['distances'].get('marketplace', '?')} tiles\n"

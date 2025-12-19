@@ -16,4 +16,5 @@ from .guard import Guard, GuardState
 from .peasant import Peasant, PeasantState
 from .tax_collector import TaxCollector, CollectorState
 from .lair import MonsterLair, GoblinCamp, WolfDen, SkeletonCrypt
+from .neutral_buildings import NeutralBuilding, House, Farm, FoodStand
 

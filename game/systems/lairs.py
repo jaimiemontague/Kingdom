@@ -13,7 +13,7 @@ from config import (
     LAIR_INITIAL_COUNT,
     LAIR_MIN_DISTANCE_FROM_CASTLE_TILES,
 )
-from game.entities.lair import GoblinCamp, WolfDen, SkeletonCrypt, MonsterLair
+from game.entities.lair import GoblinCamp, WolfDen, SkeletonCrypt, SpiderNest, BanditCamp, MonsterLair
 
 
 @dataclass
@@ -26,6 +26,8 @@ DEFAULT_LAIR_SPECS: list[LairSpawnSpec] = [
     LairSpawnSpec(GoblinCamp, 5),
     LairSpawnSpec(WolfDen, 4),
     LairSpawnSpec(SkeletonCrypt, 2),
+    LairSpawnSpec(SpiderNest, 4),
+    LairSpawnSpec(BanditCamp, 2),
 ]
 
 
@@ -66,9 +68,16 @@ class LairSystem:
         tries = 0
         max_tries = LAIR_INITIAL_COUNT * 250
 
+        # Try to ensure early variety: prefer unique lair types until we've placed at least
+        # `min(LAIR_INITIAL_COUNT, len(DEFAULT_LAIR_SPECS))` distinct lairs (if placement allows).
+        want_unique = min(int(LAIR_INITIAL_COUNT), len(DEFAULT_LAIR_SPECS))
+        used: set[type[MonsterLair]] = set()
+
         while len(created) < LAIR_INITIAL_COUNT and tries < max_tries:
             tries += 1
             lair_cls = self._pick_lair_type()
+            if len(used) < want_unique and lair_cls in used:
+                continue
 
             # Create a temp at (0,0) to read size, then discard if invalid
             tmp = lair_cls(0, 0)
@@ -88,6 +97,7 @@ class LairSystem:
             self.lairs.append(lair)
             buildings.append(lair)
             created.append(lair)
+            used.add(lair_cls)
 
         return created
 

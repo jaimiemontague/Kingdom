@@ -114,6 +114,8 @@ class HUD:
             "R: Royal Gardens ($250)",
             "H: Hire Hero ($50)",
             "B: Place Bounty ($50)",
+            "Space: Center on Castle",
+            "Esc: Pause",
             "WASD: Scroll camera",
             "+/- or Wheel: Zoom",
             "F1: Debug Panel"
