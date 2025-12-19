@@ -7,6 +7,7 @@ from config import (
     COLOR_WHITE, COLOR_BLACK
 )
 from game.graphics.font_cache import get_font
+from game.graphics.building_sprites import BuildingSpriteLibrary
 
 
 class Building:
@@ -140,21 +141,27 @@ class Building:
         cam_x, cam_y = camera_offset
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
-        
-        # Draw building
-        pygame.draw.rect(
-            surface,
-            self.color,
-            (screen_x, screen_y, self.width, self.height)
+
+        # Choose a visual state for sprites.
+        if getattr(self, "is_constructed", True) is False:
+            sprite_state = "construction"
+        elif self.hp < self.max_hp:
+            sprite_state = "damaged"
+        else:
+            sprite_state = "built"
+
+        sprite = BuildingSpriteLibrary.get(
+            self.building_type,
+            sprite_state,
+            size_px=(int(self.width), int(self.height)),
         )
-        
-        # Draw border
-        pygame.draw.rect(
-            surface,
-            COLOR_BLACK,
-            (screen_x, screen_y, self.width, self.height),
-            2
-        )
+
+        if sprite is not None:
+            surface.blit(sprite, (int(screen_x), int(screen_y)))
+        else:
+            # Fallback to legacy rect rendering
+            pygame.draw.rect(surface, self.color, (screen_x, screen_y, self.width, self.height))
+            pygame.draw.rect(surface, COLOR_BLACK, (screen_x, screen_y, self.width, self.height), 2)
         
         # Draw health bar if damaged
         if self.hp < self.max_hp:
