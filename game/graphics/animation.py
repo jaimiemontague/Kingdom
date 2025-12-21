@@ -91,7 +91,8 @@ def load_png_frames(folder: str | Path, scale_to: Optional[tuple[int, int]] = No
     for f in files:
         img = pygame.image.load(str(f)).convert_alpha()
         if scale_to is not None:
-            img = pygame.transform.smoothscale(img, scale_to)
+            # Pixel art should remain crisp; avoid filtered scaling.
+            img = pygame.transform.scale(img, scale_to)
         frames.append(img)
     return frames
 

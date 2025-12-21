@@ -10,6 +10,12 @@ This repository is currently stamped as **Prototype v1.2.0** (see `config.py`).
 
 In this game, you play as a ruler who builds a kingdom and hires heroes to defend it. Unlike traditional RTS games, you don't directly control the heroes - instead, they make their own decisions based on their AI personalities. The twist? Important decisions (when to retreat, what to buy, which bounties to pursue) are made by calling LLM APIs like OpenAI, Claude, Gemini, or Grok.
 
+## Design Docs (Vision / Scope)
+
+- `docs/vision_pillars.md` — game pillars + “does this ship?” rubric
+- `docs/early_access_scope.md` — proposed Early Access must-haves and explicit cuts
+- `docs/feature_specs/next_slice_specs.md` — small, acceptance-criteria-driven specs for the next milestone slice
+
 ## Features
 
 - **Indirect Control**: Place buildings and bounties, but heroes decide their own actions
@@ -66,6 +72,9 @@ python main.py --no-llm
 
 # (Dev) Headless observer runner
 python tools/observe_sync.py --seconds 20 --heroes 10 --seed 3 --log-every 120 --realtime
+
+# (QA) Headless smoke profiles (recommended before commits/releases)
+python tools/qa_smoke.py --quick
 ```
 
 ## Controls
@@ -141,6 +150,17 @@ kingdom/
 │   ├── prompt_templates.py
 │   └── providers/       # OpenAI, Claude, Gemini, Grok
 └── assets/              # Sprites and maps (placeholder)
+```
+
+## QA / Regression Checks
+
+- **Bug template**: `BUG_REPORT_TEMPLATE.md`
+- **Test plan**: `QA_TEST_PLAN.md`
+- **Release checklist**: `RELEASE_QA_CHECKLIST.md`
+- **Automated smoke**:
+
+```bash
+python tools/qa_smoke.py --quick
 ```
 
 ## Customization

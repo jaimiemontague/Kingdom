@@ -8,6 +8,7 @@ from config import (
 )
 from game.graphics.font_cache import get_font
 from game.graphics.building_sprites import BuildingSpriteLibrary
+from game.sim.timebase import now_ms as sim_now_ms
 
 
 #
@@ -46,7 +47,7 @@ class Building:
         self.hp = 200
         self.max_hp = 200
         self.last_damage_time_ms = None  # pygame ticks when last damaged (for "under attack" behavior)
-        self.placed_time_ms = pygame.time.get_ticks()
+        self.placed_time_ms = sim_now_ms()
 
         # Construction state (used for newly placed buildings).
         # Default: existing/starting buildings are fully constructed and targetable.
@@ -69,6 +70,16 @@ class Building:
     @property
     def center_y(self) -> float:
         return self.world_y + (self.size[1] * TILE_SIZE) / 2
+
+    # Compatibility: many systems treat "targets" as having x/y coordinates.
+    # For buildings, use the center point.
+    @property
+    def x(self) -> float:
+        return self.center_x
+
+    @property
+    def y(self) -> float:
+        return self.center_y
     
     @property
     def width(self) -> int:
@@ -93,7 +104,7 @@ class Building:
     def take_damage(self, amount: int) -> bool:
         """Take damage from an attack. Returns True if destroyed."""
         self.hp = max(0, self.hp - amount)
-        self.last_damage_time_ms = pygame.time.get_ticks()
+        self.last_damage_time_ms = sim_now_ms()
         return self.hp <= 0
 
     @property
@@ -152,7 +163,7 @@ class Building:
         """True if the building was damaged recently (prevents permanent 'defend forever')."""
         if self.last_damage_time_ms is None:
             return False
-        return (pygame.time.get_ticks() - self.last_damage_time_ms) < 3000
+        return (sim_now_ms() - self.last_damage_time_ms) < 3000
     
     @property
     def is_fully_repaired(self) -> bool:

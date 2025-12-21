@@ -2,6 +2,7 @@
 Builds context dictionaries for LLM decision making.
 """
 from config import TILE_SIZE
+from game.sim.timebase import now_ms as sim_now_ms
 import pygame
 
 
@@ -14,7 +15,7 @@ class ContextBuilder:
         bounties = game_state.get("bounties", []) or []
         buildings = game_state.get("buildings", []) or []
         enemies = game_state.get("enemies", []) or []
-        now_ms = pygame.time.get_ticks()
+        now_ms = sim_now_ms()
 
         out = []
         for b in bounties:
@@ -237,4 +238,37 @@ Current State: {context['current_state']}
             summary += f"\nStatus: {', '.join(flags)}"
         
         return summary.strip()
+
+    @staticmethod
+    def build_inputs_summary(context: dict) -> str:
+        """
+        Build a compact, stable one-liner summarizing the inputs that led to a decision.
+
+        This is intended for UI/debug logs (not for the LLM prompt).
+        """
+        hero = context.get("hero", {}) or {}
+        inv = context.get("inventory", {}) or {}
+        sit = context.get("situation", {}) or {}
+
+        enemies = context.get("nearby_enemies", []) or []
+        nearest_enemy = enemies[0] if enemies else None
+
+        hp_pct = hero.get("health_percent", "?")
+        gold = hero.get("gold", "?")
+        potions = inv.get("potions", "?")
+        in_combat = bool(sit.get("in_combat", False))
+        can_shop = bool(sit.get("can_shop", False))
+        outnumbered = bool(sit.get("outnumbered", False))
+
+        nearest = ""
+        if nearest_enemy:
+            et = nearest_enemy.get("type", "?")
+            d = nearest_enemy.get("distance_tiles", "?")
+            nearest = f" nearest_enemy={et}@{d}t"
+
+        return (
+            f"hp={hp_pct}% gold={gold} potions={potions} "
+            f"in_combat={int(in_combat)} outnumbered={int(outnumbered)} can_shop={int(can_shop)}"
+            f"{nearest}"
+        )
 

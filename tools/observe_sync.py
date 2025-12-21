@@ -29,11 +29,13 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
+from game.sim.timebase import set_sim_now_ms  # noqa: E402
 from game.world import World  # noqa: E402
 from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
-from game.systems.bounty import Bounty  # noqa: E402
+from game.systems.bounty import BountySystem  # noqa: E402
+from game.sim.timebase import set_sim_now_ms  # noqa: E402
 from ai.basic_ai import BasicAI  # noqa: E402
 from ai.llm_brain import LLMBrain  # noqa: E402
 
@@ -77,6 +79,40 @@ def hero_potions_summary(heroes) -> str:
     return f"potions_total={total} max={mx}"
 
 
+def bounties_summary(bounty_system) -> str:
+    try:
+        total = len(getattr(bounty_system, "bounties", []))
+        unclaimed = len(bounty_system.get_unclaimed_bounties())
+        total_claimed = int(getattr(bounty_system, "total_claimed", 0))
+        total_spent = int(getattr(bounty_system, "total_spent", 0))
+        return f"bounties_unclaimed={unclaimed}/{total} claimed={total_claimed} spent={total_spent}"
+    except Exception:
+        return "bounties=?"
+
+
+def place_intent_bounty_scenario(*, bounty_system, castle, seed: int) -> None:
+    """
+    Deterministic mini-scenario intended to exercise bounty placement + response/claim quickly.
+
+    - One close explore bounty (reachable/claimable quickly)
+    - One farther explore bounty (gives an additional incentive target)
+    """
+    rnd = random.Random(int(seed) + 101)
+
+    base_x = float(getattr(castle, "center_x", 0.0))
+    base_y = float(getattr(castle, "center_y", 0.0))
+
+    # Close: ~5 tiles away.
+    bx1 = base_x + float(TILE_SIZE) * 5.0
+    by1 = base_y + float(TILE_SIZE) * 1.0
+    bounty_system.place_bounty(bx1, by1, reward=60, bounty_type="explore")
+
+    # Far: ~14 tiles away, slight randomization within a tile to avoid exact overlaps.
+    bx2 = base_x + float(TILE_SIZE) * 14.0 + float(rnd.randint(-8, 8))
+    by2 = base_y - float(TILE_SIZE) * 6.0 + float(rnd.randint(-8, 8))
+    bounty_system.place_bounty(bx2, by2, reward=90, bounty_type="explore")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=20.0)
@@ -89,9 +125,18 @@ def main() -> int:
     ap.add_argument("--start-gold", type=int, default=120, help="starting spendable gold per hero")
     ap.add_argument("--potions", action="store_true", help="start with potions researched at the marketplace")
     ap.add_argument("--bounty", action="store_true", help="add one explore bounty to observe class-weighted pursuit")
+    ap.add_argument(
+        "--scenario",
+        type=str,
+        default="default",
+        choices=["default", "intent_bounty"],
+        help="deterministic test setup presets (default: default)",
+    )
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
     ap.add_argument("--realtime", action="store_true", help="run the sim in (approx) real time so pygame ticks/cooldowns advance")
     ap.add_argument("--llm", action="store_true", help="enable LLM brain (mock provider) to observe decisions")
+    ap.add_argument("--qa", action="store_true", help="enable QA assertions (nonzero exit on failure)")
+    ap.add_argument("--qa-warmup-ticks", type=int, default=240, help="wait N ticks before starting QA assertions")
     args = ap.parse_args()
 
     random.seed(args.seed)
@@ -99,6 +144,8 @@ def main() -> int:
     pygame.init()
     pygame.display.init()
     pygame.display.set_mode((1, 1))
+    # Drive sim-time deterministically (avoid dependence on wall-clock ticks).
+    set_sim_now_ms(0)
 
     world = World()
 
@@ -170,12 +217,23 @@ def main() -> int:
     # One peasant to build/repair in the observer
     peasants = [Peasant(castle.center_x, castle.center_y)]
 
-    bounties = []
+    bounty_system = BountySystem()
     if args.bounty:
-        # Place a bounty far enough that warriors usually ignore it, but rangers consider it.
-        bx = min((MAP_WIDTH - 2) * TILE_SIZE, castle.center_x + TILE_SIZE * 12)
-        by = castle.center_y
-        bounties = [Bounty(bx, by, reward=60, bounty_type="explore")]
+        if args.qa:
+            # QA runs need a bounty that a baseline warrior will actually take quickly.
+            bx = min((MAP_WIDTH - 2) * TILE_SIZE, castle.center_x + TILE_SIZE * 6)
+            by = castle.center_y
+            bounty_system.place_bounty(bx, by, reward=140, bounty_type="explore")
+        else:
+            # Default observer: place far enough that warriors usually ignore it, but rangers consider it.
+            bx = min((MAP_WIDTH - 2) * TILE_SIZE, castle.center_x + TILE_SIZE * 12)
+            by = castle.center_y
+            bounty_system.place_bounty(bx, by, reward=60, bounty_type="explore")
+    if args.scenario == "intent_bounty":
+        place_intent_bounty_scenario(bounty_system=bounty_system, castle=castle, seed=int(args.seed))
+
+    # Local view (unclaimed only); refreshed per tick.
+    bounties = bounty_system.get_unclaimed_bounties()
 
     economy = EconomySystem()
     combat = CombatSystem()
@@ -192,11 +250,68 @@ def main() -> int:
     dt = 1.0 / 60.0
     ticks = int(args.seconds * 60)
 
+    # Drive deterministic sim-time for code that reads "now" (bounties, etc).
+    set_sim_now_ms(0)
+
+    # QA assertion tracking (best-effort; will skip checks if features are not implemented yet)
+    qa_bounty_exists = False
+    qa_bounty_has_responder = False
+    qa_any_intent_seen = False
+    qa_intent_attr_present = False
+    qa_bounty_responder_attr_present = False
+
+    def _hero_intent_label(h) -> str:
+        # Prefer new explicit intent if present.
+        if hasattr(h, "intent"):
+            return str(getattr(h, "intent") or "").strip()
+        # Fallback: derive from target/state for current prototype.
+        tgt = getattr(h, "target", None)
+        if isinstance(tgt, dict):
+            t = str(tgt.get("type", "")).strip()
+            if t:
+                return t
+        st = getattr(getattr(h, "state", None), "name", "")
+        return str(st or "").strip()
+
+    def _bounty_responder_count(bs, hs) -> int:
+        # Prefer explicit responder metadata if present.
+        if hasattr(bs, "responders"):
+            resp = getattr(bs, "responders", None)
+            if isinstance(resp, (list, set, tuple)):
+                return len(resp)
+        if hasattr(bs, "responder_count"):
+            try:
+                return int(getattr(bs, "responder_count"))
+            except Exception:
+                return 0
+        # Fallback: infer from hero targets + assignment.
+        bid = getattr(bs, "bounty_id", None)
+        count = 0
+        for h in hs:
+            if not getattr(h, "is_alive", True):
+                continue
+            tgt = getattr(h, "target", None)
+            if isinstance(tgt, dict) and tgt.get("type") == "bounty":
+                if bid is None:
+                    # If no id, treat any bounty target as "responding"
+                    count += 1
+                elif tgt.get("bounty_id") == bid:
+                    count += 1
+        if getattr(bs, "assigned_to", None):
+            # Ensure at least 1 responder when assigned.
+            count = max(count, 1)
+        return count
+
     for t in range(ticks):
+        # Advance deterministic sim time (ms) at 60Hz.
+        set_sim_now_ms(int((t * 1000) / 60))
         if args.realtime:
             # Keep pygame's internal clock advancing similarly to the real game loop.
             pygame.time.delay(int(dt * 1000))
             pygame.event.pump()
+
+        # Keep bounties consistent with the live game: expose only unclaimed bounties.
+        bounties = bounty_system.get_unclaimed_bounties()
 
         game_state = {
             "heroes": heroes,
@@ -204,6 +319,7 @@ def main() -> int:
             "enemies": enemies,
             "buildings": buildings,
             "bounties": bounties,
+            "bounty_system": bounty_system,
             "castle": castle,
             "economy": economy,
         }
@@ -216,6 +332,36 @@ def main() -> int:
 
         # Process combat so hero hits can trigger retarget logic in CombatSystem.
         combat.process_combat(heroes, enemies, buildings)
+
+        # Process bounties similarly to the live game loop.
+        bounty_system.check_claims(heroes)
+        bounty_system.cleanup()
+
+        # QA assertions:
+        # - Bounty existence/response should be tracked for the whole run (a bounty may be claimed before warmup).
+        # - Intent checks are gated by warmup to give the AI time to transition.
+        if args.qa:
+            bounties_enabled = bool(args.bounty) or (args.scenario != "default")
+            if bounties_enabled:
+                qa_bounty_exists = qa_bounty_exists or (int(getattr(bounty_system, "total_spent", 0)) > 0)
+                if int(getattr(bounty_system, "total_claimed", 0)) > 0:
+                    qa_bounty_has_responder = True
+                if bounties:
+                    b0 = bounties[0]
+                    qa_bounty_responder_attr_present = qa_bounty_responder_attr_present or (
+                        hasattr(b0, "responders") or hasattr(b0, "responder_count")
+                    )
+                    if _bounty_responder_count(b0, heroes) > 0:
+                        qa_bounty_has_responder = True
+
+            if t >= int(args.qa_warmup_ticks):
+                for h in heroes:
+                    if not getattr(h, "is_alive", True):
+                        continue
+                    if hasattr(h, "intent"):
+                        qa_intent_attr_present = True
+                    if _hero_intent_label(h):
+                        qa_any_intent_seen = True
 
         # Damage castle once to confirm peasants prioritize repairing it over construction.
         if (not args.no_enemies) and t == 180:
@@ -231,7 +377,8 @@ def main() -> int:
             nb_state = f"hp={int(getattr(nb,'hp',0))}/{int(getattr(nb,'max_hp',0))} started={getattr(nb,'construction_started',False)} built={getattr(nb,'is_constructed',True)} targetable={getattr(nb,'is_targetable',True)}"
             castle_state = f"castle_hp={int(getattr(castle,'hp',0))}/{int(getattr(castle,'max_hp',0))}"
             pot_state = hero_potions_summary(heroes)
-            print(f"[t={t:04d}] avg_pairwise_dist={apd:.1f}  alive={len([h for h in heroes if h.is_alive])}  {pot_state}  {castle_state}  new_building[{nb_state}]")
+            bstate = bounties_summary(bounty_system)
+            print(f"[t={t:04d}] avg_pairwise_dist={apd:.1f}  alive={len([h for h in heroes if h.is_alive])}  {pot_state}  {bstate}  {castle_state}  new_building[{nb_state}]")
             for h in heroes[: min(8, len(heroes))]:
                 hid = getattr(h, "debug_id", h.name)
                 hcls = getattr(h, "hero_class", "?")
@@ -257,7 +404,39 @@ def main() -> int:
 
     if llm:
         llm.stop()
+    set_sim_now_ms(None)
     pygame.quit()
+    # Restore default time behavior for any subsequent runs in the same Python process.
+    set_sim_now_ms(None)
+
+    if args.qa:
+        failed = False
+        # If the run is configured with bounties, require existence + at least one responder.
+        bounties_enabled = bool(args.bounty) or (args.scenario != "default")
+        if bounties_enabled:
+            if not qa_bounty_exists:
+                print("[qa] FAIL: expected at least one bounty to exist (bounties enabled)")
+                failed = True
+            if not qa_bounty_has_responder:
+                print("[qa] FAIL: expected at least one bounty responder after warmup")
+                failed = True
+
+        # Only enforce 'intent' non-empty if intent field is present (future-proof integration).
+        if qa_intent_attr_present and not qa_any_intent_seen:
+            print("[qa] FAIL: hero.intent exists but no non-empty intent observed after warmup")
+            failed = True
+
+        if not failed:
+            # Print a small summary so CI logs show what was checked vs skipped.
+            print(
+                "[qa] PASS:"
+                f" bounty_exists={qa_bounty_exists if bounties_enabled else 'n/a'}"
+                f" bounty_has_responder={qa_bounty_has_responder if bounties_enabled else 'n/a'}"
+                f" bounty_responder_attr_present={qa_bounty_responder_attr_present if bounties_enabled else 'n/a'}"
+                f" intent_attr_present={qa_intent_attr_present}"
+            )
+        return 1 if failed else 0
+
     return 0
 
 

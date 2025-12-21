@@ -8,7 +8,7 @@ import queue
 from typing import Optional
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import (
-    SYSTEM_PROMPT, build_decision_prompt, get_fallback_decision
+    SYSTEM_PROMPT, VALID_ACTIONS, build_decision_prompt, get_fallback_decision
 )
 from config import LLM_PROVIDER, LLM_TIMEOUT
 
@@ -141,11 +141,17 @@ class LLMBrain:
                 decision = json.loads(json_str)
                 
                 # Validate required fields
-                if "action" in decision:
+                action = decision.get("action", None)
+                if isinstance(action, str):
+                    action = action.strip()
+
+                if action and action in VALID_ACTIONS:
+                    target = decision.get("target", "")
+                    reasoning = decision.get("reasoning", "")
                     return {
-                        "action": decision.get("action", "explore"),
-                        "target": decision.get("target", ""),
-                        "reasoning": decision.get("reasoning", "")
+                        "action": action,
+                        "target": target if isinstance(target, str) else "",
+                        "reasoning": reasoning if isinstance(reasoning, str) else "",
                     }
             
             return None

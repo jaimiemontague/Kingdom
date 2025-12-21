@@ -2,6 +2,7 @@
 Heads-up display for game information.
 """
 import pygame
+from game.sim.timebase import now_ms as sim_now_ms
 from config import (
     WINDOW_WIDTH, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_GOLD, 
     COLOR_WHITE, COLOR_RED, COLOR_GREEN
@@ -23,6 +24,10 @@ class HUD:
         self.font_large = pygame.font.Font(None, 32)
         self.font_medium = pygame.font.Font(None, 24)
         self.font_small = pygame.font.Font(None, 18)
+        self.font_tiny = pygame.font.Font(None, 16)
+
+        # Help/controls overlay (kept lightweight; toggled by engine)
+        self.show_help = True
         
         # Messages
         self.messages = []
@@ -47,6 +52,86 @@ class HUD:
             m for m in self.messages 
             if current_time - m["time"] < self.message_duration
         ]
+
+    def toggle_help(self):
+        """Toggle help/controls visibility."""
+        self.show_help = not self.show_help
+
+    def _compute_hero_intent(self, hero) -> str:
+        """
+        Best-effort "intent" label derived from current state/target.
+        This is intentionally UI-only (safe fallback until intent taxonomy is standardized).
+        """
+        # Bounty pursuit is encoded as hero.target dict {"type": "bounty", ...}
+        try:
+            if isinstance(getattr(hero, "target", None), dict) and hero.target.get("type") == "bounty":
+                btype = hero.target.get("bounty_type", "bounty")
+                if btype == "attack_lair":
+                    return "Attacking lair (bounty)"
+                if btype == "defend_building":
+                    return "Defending building (bounty)"
+                return "Pursuing bounty"
+        except Exception:
+            pass
+
+        state = getattr(getattr(hero, "state", None), "name", "") or ""
+        state = state.upper()
+        if state == "FIGHTING":
+            return "Engaging enemy"
+        if state == "SHOPPING":
+            return "Shopping"
+        if state == "RETREATING":
+            return "Returning to safety"
+        if state == "RESTING":
+            return "Resting"
+        if state == "MOVING":
+            return "Moving"
+        if state == "IDLE":
+            return "Idle"
+        return state.title() if state else "Idle"
+
+    def _format_last_decision(self, hero) -> tuple[str, tuple]:
+        """Format last decision line + suggested color."""
+        action = None
+        target = ""
+        reason = ""
+        try:
+            d = getattr(hero, "last_llm_action", None) or {}
+            if isinstance(d, dict):
+                action = d.get("action", None)
+                target = d.get("target", "") if isinstance(d.get("target", ""), str) else ""
+                reason = d.get("reasoning", "") if isinstance(d.get("reasoning", ""), str) else ""
+        except Exception:
+            action = None
+
+        if not action:
+            return "Last decision: (none yet)", (150, 150, 150)
+
+        # Age (ms) is tracked on the hero; treat 0 as unknown.
+        age_s = None
+        try:
+            t_ms = int(getattr(hero, "last_llm_decision_time", 0) or 0)
+            if t_ms > 0:
+                age_s = max(0.0, (float(sim_now_ms()) - float(t_ms)) / 1000.0)
+        except Exception:
+            age_s = None
+
+        parts = [str(action)]
+        if target:
+            parts.append(f"→ {target}")
+        if age_s is not None:
+            parts.append(f"({age_s:.0f}s ago)")
+        head = " ".join(parts)
+
+        # Keep reasoning short and readable.
+        reason = (reason or "").strip()
+        if reason:
+            reason = reason.replace("\n", " ")
+            if len(reason) > 70:
+                reason = reason[:67].rstrip() + "..."
+            return f"Last decision: {head} — {reason}", COLOR_WHITE
+
+        return f"Last decision: {head}", COLOR_WHITE
     
     def render(self, surface: pygame.Surface, game_state: dict):
         """Render the HUD."""
@@ -93,36 +178,20 @@ class HUD:
         surface.blit(wave_text, (450, 10))
         
         # Instructions
-        instructions = [
-            "1: Warrior Guild ($150)",
-            "2: Marketplace ($100)",
-            "3: Ranger Guild ($175)",
-            "4: Rogue Guild ($160)",
-            "5: Wizard Guild ($220)",
-            "6: Blacksmith ($200)",
-            "7: Inn ($150)",
-            "8: Trading Post ($250)",
-            "T: Temple Agrela ($400)",
-            "G: Gnome Hovel ($300)",
-            "E: Elven Bungalow ($350)",
-            "V: Dwarven Settlement ($300)",
-            "U: Guardhouse ($200)",
-            "Y: Ballista Tower ($300)",
-            "O: Wizard Tower ($500)",
-            "F: Fairgrounds ($400)",
-            "I: Library ($350)",
-            "R: Royal Gardens ($250)",
-            "H: Hire Hero ($50)",
-            "B: Place Bounty ($50)",
-            "Space: Center on Castle",
-            "Esc: Pause",
-            "WASD: Scroll camera",
-            "+/- or Wheel: Zoom",
-            "F1: Debug Panel"
-        ]
-        for i, instr in enumerate(instructions):
-            text = self.font_small.render(instr, True, COLOR_WHITE)
-            surface.blit(text, (self.screen_width - 180, 5 + i * 15))
+        # Context banner: placement mode
+        placing = game_state.get("placing_building_type")
+        if placing:
+            placing_name = str(placing).replace("_", " ").title()
+            banner = f"Placing: {placing_name}  (LMB: place, ESC: cancel)"
+            text = self.font_medium.render(banner, True, COLOR_WHITE)
+            surface.blit(text, (20, self.top_bar_height + 8))
+
+        # Help/controls overlay (toggle via F3)
+        if self.show_help:
+            self._render_help(surface, origin=(self.screen_width - 310, 5))
+        else:
+            hint = self.font_small.render("F3: Help", True, (180, 180, 180))
+            surface.blit(hint, (self.screen_width - hint.get_width() - 12, 12))
         
         # Render messages
         self.render_messages(surface)
@@ -131,6 +200,41 @@ class HUD:
         selected = game_state.get("selected_hero")
         if selected:
             self.render_hero_panel(surface, selected)
+
+    def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]):
+        """Render a compact controls/help panel."""
+        x0, y0 = origin
+        pad = 10
+        w = 300
+        lines = [
+            ("Controls (F3 to hide)", COLOR_GOLD),
+            ("Build:", (200, 200, 200)),
+            ("1 Warrior  2 Market  3 Ranger  4 Rogue  5 Wizard", COLOR_WHITE),
+            ("6 Blacksmith  7 Inn  8 Trading Post", COLOR_WHITE),
+            ("T Temple  G Gnome  E Elf  V Dwarf", COLOR_WHITE),
+            ("U Guardhouse  Y Ballista  O Wizard Tower", COLOR_WHITE),
+            ("F Fairgrounds  I Library  R Royal Gardens", COLOR_WHITE),
+            ("Actions:", (200, 200, 200)),
+            ("H Hire hero (select a built guild first)", COLOR_WHITE),
+            ("B Place bounty ($50)   P Use potion (selected hero)", COLOR_WHITE),
+            ("View:", (200, 200, 200)),
+            ("Space center castle  ESC pause/cancel", COLOR_WHITE),
+            ("WASD pan  Wheel or +/- zoom  F1 debug  F2 perf", COLOR_WHITE),
+        ]
+
+        # Background box sized by content
+        h = pad * 2 + len(lines) * 16 + 6
+        panel = pygame.Surface((w, h), pygame.SRCALPHA)
+        panel.fill((*COLOR_UI_BG, 235))
+        pygame.draw.rect(panel, COLOR_UI_BORDER, (0, 0, w, h), 2)
+
+        y = pad
+        for text, color in lines:
+            t = self.font_tiny.render(text, True, color)
+            panel.blit(t, (pad, y))
+            y += 16
+
+        surface.blit(panel, (x0, y0))
     
     def render_messages(self, surface: pygame.Surface):
         """Render floating messages."""
@@ -223,6 +327,20 @@ class HUD:
         y += 20
         
         # State / Last LLM action
-        state_text = self.font_small.render(f"State: {hero.state.name}", True, COLOR_WHITE)
+        intent = self._compute_hero_intent(hero)
+        intent_text = self.font_small.render(f"Intent: {intent}", True, (200, 200, 200))
+        surface.blit(intent_text, (panel_x + 10, y))
+        y += 16
+
+        state_text = self.font_small.render(f"State: {hero.state.name}", True, (170, 170, 170))
         surface.blit(state_text, (panel_x + 10, y))
+        y += 16
+
+        decision_line, decision_color = self._format_last_decision(hero)
+        # Keep within panel width: simple truncation.
+        max_chars = 48
+        if len(decision_line) > max_chars:
+            decision_line = decision_line[: max_chars - 3].rstrip() + "..."
+        decision_text = self.font_tiny.render(decision_line, True, decision_color)
+        surface.blit(decision_text, (panel_x + 10, y))
 

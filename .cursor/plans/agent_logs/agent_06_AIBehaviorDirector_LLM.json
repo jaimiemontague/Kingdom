@@ -1,0 +1,99 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "06", "name": "AIBehaviorDirector_LLM" },
+  "notes": [
+    "This file is owned by Agent 06 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:35.8571680-07:00"
+          },
+          "prompt_text": "Define intent taxonomy + logging rules; ensure mock/no-llm parity; suggest where to compute intent.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:35.8571680-07:00",
+            "status": "complete",
+            "raw": "# Agent 6 (AIBehaviorDirector_LLM) — wk1_r1 response\n\n## Status\n\nDeliver **Build A (midweek)** P0: stable hero **intent taxonomy** + consistent **last decision logging** that works in **LLM + mock + no-LLM** modes and is safe for determinism/perf.\n\n## Summary (what I’m proposing)\n\n- Add a small, stable **intent taxonomy** for heroes (string label) that UI and QA can display.\n- Add a lightweight **last decision record** on each hero (action, reason, age, compact inputs summary, source) to answer “why did that hero do that?”\n- Keep it **low-risk**: no new LLM call sites; no wall-clock time dependencies; no per-frame heavy allocations; fallbacks in no-LLM.\n\n## Intent taxonomy (P0)\n\nThe taxonomy is a short set of labels (string), used for display/telemetry only (not as authoritative simulation state):\n\n- `idle`\n- `pursuing_bounty`\n- `shopping`\n- `returning_to_safety`\n- `engaging_enemy`\n- `defending_building`\n- `attacking_lair`\n\n### Where to compute intent\n\nPrimary recommendation (most stable, lowest coupling):\n\n- **Derive intent in one place** (preferably the hero entity or a thin “intent resolver”) from current **state + target**.\n- `BasicAI` can call a single method (e.g. `hero._update_intent_and_decision(game_state)`) if present; otherwise it falls back to a small local derivation.\n\nThis keeps UI/system code from needing to “understand” AI internals while still being easy to incrementally refine.\n\n## Decision logging rules (P0)\n\nWe store only the **last** decision per hero (no unbounded buffers), with small bounded strings.\n\n### Required fields\n\n- `action`: string (example: `retreat`, `buy_item`, `pursue_bounty`, `engage_enemy`)\n- `reason`: short string (<= ~140 chars; strip newlines)\n- `at_ms`: integer sim-time timestamp (no wall-clock)\n- `inputs_summary`: compact summary (string or small dict) suitable for UI/debug\n- `source`: string (example: `llm`, `fallback`, `heuristic`, `system`)\n- (optional) `intent`: the intent label at time of decision\n\n### When to record a decision\n\nRecord on meaningful transitions only (avoid per-frame spam):\n\n- When a bounty pursuit begins (and when it transitions into `attacking_lair`)\n- When a hero decides to shop / retreat / engage an enemy\n- When the system triggers an LLM consult (“request_llm” breadcrumb)\n- When an LLM/fallback decision is applied\n\n### Determinism guardrails\n\n- Use sim-time (`sim_now_ms()` / tick-based timebase) for `at_ms` and “age” calculations.\n- Do not introduce new `time.time()` / wall-clock checks in simulation decisions.\n- Avoid adding new randomness to attractiveness/scoring decisions (those live elsewhere and must be deterministic).\n\n## Mock + no-LLM parity\n\nGoal: **no crashes, no softlocks**, and the hero panel still shows reasonable intent/last decision.\n\n- If no LLM brain is wired and the code reaches an LLM decision point, choose a **deterministic fallback decision** from structured context and record it with `source=\"fallback\"`.\n- In mock provider mode, record the applied action with `source=\"llm\"` (or `source=\"mock\"` if you want to differentiate).\n\n## Prompt/schema notes (LLM safety)\n\n- Keep a single shared action whitelist (`VALID_ACTIONS`) and validate parsed LLM output against it.\n- Treat invalid/malformed output as parse failure and **fall back**.\n- Ensure decision record “reason” is safe to show (short, no multiline).\n\n## Acceptance criteria (agent-level)\n\n- UI/inspection can display `hero.intent` at all times (never empty).\n- UI/inspection can display `hero.last_decision` fields:\n  - action + reason + age (computed from `at_ms`)\n  - safe placeholders if no decision exists yet\n- Works in:\n  - `--provider mock`\n  - no-LLM path (LLM disabled / not wired)\n- No new determinism issues (sim-time only, no wall-clock in logic).\n\n## Risks / mitigations\n\n- Risk: logging spam / perf → mitigate by recording only on transitions; keep reasons short; store only last record.\n- Risk: intent derivation drift → mitigate by keeping derivation centralized and simple (state/target driven), refine later.\n- Risk: typed bounty completion semantics → mitigate by not “auto-claiming” typed bounties via proximity; let their systems resolve completion.\n\n## Dependencies\n\n- Agent 3 (Architecture): confirm/standardize the thin contract shape for `last_decision` so UI and QA don’t churn.\n- Agent 8 (UX/UI): define copy/layout for intent + last decision and how “age” should read.\n- Agent 11 (QA): add quick assertions that intent is non-empty and last_decision is present after a short run.\n\n## Recommended next actions\n\n- Finalize `HeroDecisionRecord` shape (dataclass or dict) + ensure UI reads it without heavy allocations.\n- Wire hero panel to show:\n  - `Intent: <label>`\n  - `Last: <action> — <reason> (<age>)`\n- Extend QA smoke to assert:\n  - intent becomes non-empty within N seconds\n  - at least one decision record exists within N seconds (in mock and no-LLM)\n",
+            "summary_bullets": [
+              "Define stable hero intent labels for UI/QA: idle, pursuing_bounty, shopping, returning_to_safety, engaging_enemy, defending_building, attacking_lair",
+              "Record a lightweight last-decision snapshot per hero (action, reason, age via sim-time, compact inputs summary, source)",
+              "Ensure mock + no-LLM parity: deterministic fallbacks at consult points; no crashes/softlocks",
+              "Determinism guardrail: no wall-clock usage for decision age; avoid adding randomness to scoring/attractiveness logic"
+            ],
+            "proposed_changes": [
+              "Add/update hero fields: intent (string) + last_decision record (dict/dataclass)",
+              "Centralize intent derivation from state + target (hero method if available; BasicAI fallback)",
+              "Record decisions on meaningful transitions (bounty start, engage, retreat, shop, LLM consult/applied)",
+              "Validate LLM action outputs against a shared allowlist; fall back on malformed output"
+            ],
+            "acceptance_criteria": [
+              "Hero inspection shows non-empty intent at all times (never blank)",
+              "Hero inspection shows last decision action + short reason + age; safe placeholder when none yet",
+              "Works in --provider mock and in no-LLM mode without crashes/softlocks",
+              "Decision age and timestamps are sim-time based (no wall-clock)"
+            ],
+            "risks": [
+              "UI/perf regressions if logging allocates per frame or stores too much history",
+              "Intent/decision semantics drift if derivation is duplicated across systems",
+              "Typed bounty completion semantics accidentally auto-claiming via proximity"
+            ],
+            "dependencies": [
+              "Agent 3: confirm thin data contract for intent + last_decision to minimize churn",
+              "Agent 8: UI copy/layout for intent + last decision + age formatting",
+              "Agent 11: QA smoke assertions for non-empty intent and presence of a decision record"
+            ],
+            "questions_back_to_pm": [
+              "Do we keep only the last decision (P0), or do you want a tiny ring buffer (last 3) despite higher UI/perf risk?",
+              "Should intent/decision be shown in the main hero panel immediately (P0) or only in debug panel for Build A?",
+              "Do you want to distinguish mock vs real LLM sources (source=mock) for debugging?"
+            ],
+            "recommended_next_actions": [
+              "Finalize HeroDecisionRecord keys/types (action, reason, at_ms, inputs_summary, source, intent)",
+              "Wire hero panel to display intent + last decision + age with caching to avoid per-frame string churn",
+              "Extend QA smoke/observer to assert intent becomes non-empty and a decision record appears within N seconds"
+            ],
+            "agent_fields": {
+              "intent_taxonomy": [
+                "idle",
+                "pursuing_bounty",
+                "shopping",
+                "returning_to_safety",
+                "engaging_enemy",
+                "defending_building",
+                "attacking_lair"
+              ],
+              "logging_rules": [
+                "Store only last decision per hero (no unbounded history)",
+                "Record on meaningful transitions only (avoid per-frame spam)",
+                "Reason strings are short (<~140 chars) and single-line",
+                "Use sim-time for timestamps/age; avoid wall-clock",
+                "Include source label (llm/fallback/heuristic/system) and compact inputs summary"
+              ],
+              "prompt_schema_notes": [
+                "Keep a shared allowed action set and validate parsed LLM output against it",
+                "Treat malformed/unknown actions as parse failure and use deterministic fallback decision",
+                "Prefer compact structured inputs summaries for debug over storing full prompts"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

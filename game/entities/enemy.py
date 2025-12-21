@@ -12,6 +12,7 @@ from config import (
     COLOR_RED, COLOR_WHITE, COLOR_GREEN
 )
 from game.graphics.enemy_sprites import EnemySpriteLibrary
+from game.sim.timebase import now_ms
 
 
 class EnemyState(Enum):
@@ -206,7 +207,7 @@ class Enemy:
             self.state = EnemyState.IDLE
             return
 
-        now_ms = pygame.time.get_ticks()
+        now_ms_val = now_ms()
         
         # Get target position
         if hasattr(self.target, 'x'):
@@ -261,15 +262,15 @@ class Enemy:
                 goal_key = (int(target_x), int(target_y))
 
                 want_replan = (not self.path) or (getattr(self, "_path_goal", None) != goal_key)
-                if want_replan and now_ms >= int(getattr(self, "_next_replan_ms", 0) or 0):
+                if want_replan and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0):
                     self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
                     self._path_goal = goal_key
                     # If no path exists, avoid recomputing every frame.
                     if not self.path:
-                        self._next_replan_ms = now_ms + 800
+                        self._next_replan_ms = now_ms_val + 800
                     else:
                         # Throttle replans a bit even on success.
-                        self._next_replan_ms = now_ms + 150
+                        self._next_replan_ms = now_ms_val + 150
 
                 if self.path:
                     follow_path(self, dt)

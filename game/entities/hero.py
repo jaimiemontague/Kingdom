@@ -8,6 +8,9 @@ from enum import Enum, auto
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.font_cache import get_font
 from game.systems.buffs import Buff
+from game.sim.determinism import get_rng
+from game.sim.timebase import now_ms as sim_now_ms
+from game.sim.contracts import HeroDecisionRecord, HeroIntentSnapshot
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
@@ -38,7 +41,8 @@ class Hero:
         self.x = x
         self.y = y
         self.hero_class = hero_class
-        self.name = random.choice(HERO_NAMES)
+        # Deterministic (seeded) identity when determinism is enabled.
+        self.name = get_rng().choice(HERO_NAMES)
         
         # Stats
         self.level = 1
@@ -89,12 +93,23 @@ class Hero:
         self.last_llm_decision_time = 0
         self.pending_llm_decision = False
         self.last_llm_action = None
-        self.personality = random.choice([
+
+        # Intent + last decision snapshot (for UI/debug/QA).
+        # Keep this data simple for future determinism/networking friendliness.
+        self.intent = "idle"  # intent taxonomy label
+        self.last_decision = None  # {"action","reason","at_ms","inputs_summary","source","intent"}
+        self.personality = get_rng().choice([
             "brave and aggressive",
             "cautious and strategic", 
             "greedy but cowardly",
             "balanced and reliable"
         ])
+
+        # Thin, UI/AI-facing "why did you do that?" records.
+        # Kept small and deterministic-friendly (sim time only).
+        self.intent: str = "idle"
+        self.last_decision: HeroDecisionRecord | None = None
+        self._intent_prev_key: tuple | None = None
         
         # Visual
         self.size = 20
@@ -116,22 +131,22 @@ class Hero:
     @property
     def attack(self) -> int:
         """Total attack including weapon bonus."""
-        now_ms = pygame.time.get_ticks()
+        now_ms_val = sim_now_ms()
         weapon_bonus = self.weapon.get("attack", 0) if self.weapon else 0
         buff_bonus = 0
         for b in getattr(self, "buffs", []):
-            if getattr(b, "expires_at_ms", 0) > now_ms:
+            if getattr(b, "expires_at_ms", 0) > now_ms_val:
                 buff_bonus += int(getattr(b, "atk_delta", 0))
         return self.base_attack + weapon_bonus + buff_bonus + (self.level - 1) * 2
     
     @property
     def defense(self) -> int:
         """Total defense including armor bonus."""
-        now_ms = pygame.time.get_ticks()
+        now_ms_val = sim_now_ms()
         armor_bonus = self.armor.get("defense", 0) if self.armor else 0
         buff_bonus = 0
         for b in getattr(self, "buffs", []):
-            if getattr(b, "expires_at_ms", 0) > now_ms:
+            if getattr(b, "expires_at_ms", 0) > now_ms_val:
                 buff_bonus += int(getattr(b, "def_delta", 0))
         return self.base_defense + armor_bonus + buff_bonus + (self.level - 1)
 
@@ -145,7 +160,7 @@ class Hero:
     ):
         """Apply a buff by name, or refresh its duration if already present (prevents stacking drift)."""
         if now_ms is None:
-            now_ms = pygame.time.get_ticks()
+            now_ms = sim_now_ms()
         expires_at_ms = int(now_ms + max(0.0, float(duration_s)) * 1000.0)
 
         # Refresh existing buff if present.
@@ -167,7 +182,7 @@ class Hero:
 
     def remove_expired_buffs(self, now_ms: int | None = None):
         if now_ms is None:
-            now_ms = pygame.time.get_ticks()
+            now_ms = sim_now_ms()
         self.buffs = [b for b in self.buffs if not b.is_expired(now_ms)]
     
     @property
@@ -188,6 +203,11 @@ class Hero:
             self._play_one_shot("hurt")
         if self.hp <= 0:
             self.state = HeroState.DEAD
+            self.intent = "idle"
+            try:
+                self.record_decision(action="dead", reason="killed in combat")
+            except Exception:
+                pass
             return True
         return False
     
@@ -421,7 +441,14 @@ class Hero:
     def update(self, dt: float, game_state: dict):
         """Update hero state and behavior."""
         if not self.is_alive:
+            self.intent = "idle"
             return
+
+        # Keep intent/decision data fresh even when AI is disabled (best-effort, non-blocking).
+        try:
+            self._update_intent_and_decision(game_state)
+        except Exception:
+            pass
 
         prev_x, prev_y = self.x, self.y
 
@@ -477,6 +504,100 @@ class Hero:
         self._update_animation(dt)
 
         self._last_pos = (float(self.x), float(self.y))
+
+    # -----------------------------
+    # Intent + last decision contract
+    # -----------------------------
+
+    def record_decision(self, action: str, reason: str, now_ms: int | None = None, context: dict | None = None):
+        if now_ms is None:
+            now_ms = sim_now_ms()
+        self.last_decision = HeroDecisionRecord(
+            action=str(action),
+            reason=str(reason)[:120],
+            at_ms=int(now_ms),
+            context={} if context is None else dict(context),
+        )
+
+    def get_intent_snapshot(self, now_ms: int | None = None) -> dict:
+        if now_ms is None:
+            now_ms = sim_now_ms()
+        snap = HeroIntentSnapshot(intent=str(getattr(self, "intent", "idle")), last_decision=getattr(self, "last_decision", None))
+        return snap.to_dict(now_ms=now_ms)
+
+    def _derive_intent(self) -> tuple[str, str, dict]:
+        """
+        Derive (intent, reason, context) from state + target.
+
+        Intents are aligned with the current sprint taxonomy:
+        idle, pursuing_bounty, shopping, returning_to_safety, engaging_enemy, defending_building, attacking_lair.
+        """
+        # Default
+        intent = "idle"
+        reason = "no urgent goal"
+        context: dict = {}
+
+        t = getattr(self, "target", None)
+        state = getattr(self, "state", HeroState.IDLE)
+
+        # Enemy engagement
+        if state == HeroState.FIGHTING or (t is not None and hasattr(t, "is_alive") and getattr(t, "is_alive", False)):
+            return "engaging_enemy", "engaging nearby enemy", {"target": "enemy", "enemy_type": getattr(t, "enemy_type", None)}
+
+        # Dict targets (AI/controller activities)
+        if isinstance(t, dict):
+            ttype = t.get("type")
+            if ttype == "bounty":
+                btype = t.get("bounty_type", "explore")
+                bid = t.get("bounty_id")
+                if btype == "attack_lair":
+                    return "attacking_lair", "pursuing lair bounty", {"target": "bounty", "bounty_id": bid, "bounty_type": btype}
+                if btype == "defend_building":
+                    return "defending_building", "pursuing defense bounty", {"target": "bounty", "bounty_id": bid, "bounty_type": btype}
+                return "pursuing_bounty", "pursuing bounty", {"target": "bounty", "bounty_id": bid, "bounty_type": btype}
+            if ttype == "shopping":
+                return "shopping", "heading to marketplace", {"target": "marketplace", "item": t.get("item")}
+            if ttype == "going_home":
+                return "returning_to_safety", "returning home to rest", {"target": "home"}
+
+        # Movement without a specific activity is usually "idle/exploring" for now.
+        if state in (HeroState.MOVING, HeroState.RETREATING):
+            intent = "idle"
+            reason = "moving"
+            if state == HeroState.RETREATING:
+                intent = "returning_to_safety"
+                reason = "retreating to safety"
+
+        # Resting maps to safety intent (taxonomy-friendly).
+        if state == HeroState.RESTING:
+            intent = "returning_to_safety"
+            reason = "resting at home"
+            context = {"target": "home"}
+
+        return intent, reason, context
+
+    def _update_intent_and_decision(self, game_state: dict | None):
+        now_ms = sim_now_ms()
+        intent, reason, ctx = self._derive_intent()
+
+        # Detect meaningful changes and store a new "last decision" snapshot.
+        t = getattr(self, "target", None)
+        key_target = None
+        if isinstance(t, dict) and t.get("type") == "bounty":
+            key_target = ("bounty", t.get("bounty_id"), t.get("bounty_type"))
+        elif isinstance(t, dict):
+            key_target = ("dict", t.get("type"))
+        elif t is None:
+            key_target = None
+        else:
+            # Avoid non-deterministic identities (id()) in snapshots.
+            key_target = ("obj", t.__class__.__name__)
+
+        new_key = (intent, getattr(self, "state", None), key_target)
+        if self._intent_prev_key != new_key:
+            self.intent = str(intent)
+            self.record_decision(action=intent, reason=reason, now_ms=now_ms, context=ctx)
+            self._intent_prev_key = new_key
 
     def _play_one_shot(self, name: str):
         """Play a non-looping clip and prevent base animation from overriding until it finishes."""

@@ -2,7 +2,10 @@
 Mock LLM provider for testing without API keys.
 Uses rule-based decisions that mimic LLM behavior.
 """
-import random
+from game.sim.determinism import get_rng
+
+# Deterministic RNG stream for mock decisions (stable across runs with the same seed).
+_MOCK_RNG = get_rng("mock_provider")
 import json
 from .base import BaseLLMProvider
 
@@ -133,7 +136,7 @@ class MockProvider(BaseLLMProvider):
         # Outnumbered handling
         if outnumbered and in_combat:
             if personality == "brave":
-                if random.random() < 0.3:  # 30% chance to retreat
+                if _MOCK_RNG.random() < 0.3:  # 30% chance to retreat
                     return {
                         "action": "retreat",
                         "target": "castle",
@@ -161,7 +164,7 @@ class MockProvider(BaseLLMProvider):
                     "target": "Health Potion",
                     "reasoning": "Stocking up on supplies"
                 }
-            elif random.random() < 0.4:
+            elif _MOCK_RNG.random() < 0.4:
                 return {
                     "action": "buy_item", 
                     "target": "Health Potion",

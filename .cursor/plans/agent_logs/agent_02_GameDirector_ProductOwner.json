@@ -1,0 +1,81 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "02", "name": "GameDirector_ProductOwner" },
+  "notes": [
+    "This file is owned by Agent 02 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": "Logged by Agent 02. Note: original prompt sent_at_local was not recorded (template placeholder); using received_at_local as a practical timestamp."
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:41.9642717-07:00"
+          },
+          "prompt_text": "For this week’s broad sweep, what are the 5 acceptance criteria that best capture ‘Majesty feel’ + modern clarity? Keep it testable in 10 minutes.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:41.9642717-07:00",
+            "status": "complete",
+            "raw": "# WK1 R1 — Agent 2 (GameDirector_ProductOwner) Response\n\n## Status\nActing as **Agent 2) GameDirector_ProductOwner** for the WK1 “broad sweep” sprint: deliver the **1-page acceptance checklist** that captures “Majesty feel” improvements (clarity + incentives + pacing) with low bug risk.\n\n## Deliverables\n- **1-page sprint acceptance checklist**: `docs/sprint/wk1_acceptance_checklist.md`\n- **Plan wired to checklist** (single source of truth for QA): `.cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md`\n\n## Questions (only blockers)\n- **Build A vs Build B intent**: Do you want **FS-3 (early pacing guardrail)** strictly **Build B only**, or can a minimal “HUD prompt only” version land in Build A if it’s safe?\n- **Intent labels**: Should we lock the exact intent taxonomy to the plan’s list (`idle`, `pursuing_bounty`, `shopping`, etc.), or allow a smaller subset for this week?\n\n## Next actions\n- Use `docs/sprint/wk1_acceptance_checklist.md` as the QA signoff for Build A and Build B.\n- If you confirm the two questions above, I’ll update the checklist wording to match the exact build split and intent taxonomy (no code changes required).\n\n## Handoff checklist\n- **Files changed**\n  - `docs/sprint/wk1_acceptance_checklist.md`\n  - `.cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md`\n- **How to test**\n  - Open the sprint plan and click the checklist link.\n  - Ensure the checklist matches the sprint’s P0/P1 gates and is usable for a 10-minute manual pass.\n- **Gotchas / future cleanup**\n  - None (docs-only).\n- **Follow-up tasks (other agents)**\n  - Agent 3/6/8 can implement against the checklist gates (intent + last decision + bounty responders/attractiveness + early pacing prompt).\n",
+            "summary_bullets": [
+              "Single source of truth acceptance checklist for WK1 Build A/Build B QA signoff",
+              "Encodes the 3 core proofs: hero intent/why, bounty lever clarity, early 3-minute aliveness",
+              "Includes hard stability + determinism-friendly guardrails to keep changes low-risk"
+            ],
+            "proposed_changes": [
+              "Use `docs/sprint/wk1_acceptance_checklist.md` as the merge/release gate for Build A and Build B",
+              "Build A proves intent/decision inspect + bounty responders/attractiveness + stability",
+              "Build B retains Build A gates and adds the early 3-minute prompt/aliveness gate",
+              "Keep scoring/age logic determinism-friendly (no wall-clock time; no unseeded RNG)"
+            ],
+            "acceptance_criteria": [
+              "No crashes/softlocks in `--no-llm` and `--provider mock`",
+              "Selecting a hero shows Current intent and Last decision (action+reason+age) with safe placeholder",
+              "Bounties display Responders: N and Attractiveness: Low/Med/High (deterministic)",
+              "New game surfaces at least one clear actionable prompt within 3 minutes (Build B target)",
+              "No new wall-clock or unseeded RNG dependencies in sim-relevant logic for scoring/age"
+            ],
+            "risks": [
+              "Scope creep (adding new systems instead of clarity/pacing polish)",
+              "Non-deterministic time usage leaking into sim logic",
+              "UI clutter/spam reducing readability"
+            ],
+            "dependencies": [
+              "Agent 3: thin data contracts for intent/last decision + bounty evaluation fields",
+              "Agent 6: intent taxonomy + decision logging rules across LLM/mock/no-LLM",
+              "Agent 8: UI copy/layout to display intent/decision + responders/attractiveness"
+            ],
+            "questions_back_to_pm": [
+              "Should FS-3 (early pacing guardrail) be strictly Build B, or can a minimal HUD-prompt-only version land in Build A if safe?",
+              "Should we lock the full intent taxonomy this week, or allow a smaller subset for faster integration?"
+            ],
+            "recommended_next_actions": [
+              "PM: confirm Build A vs Build B split for early pacing (FS-3)",
+              "PM: confirm intent taxonomy strictness for WK1",
+              "Engineering: implement to the checklist gates; treat checklist as the release signoff"
+            ],
+            "agent_fields": {
+              "acceptance_checklist_path": "docs/sprint/wk1_acceptance_checklist.md",
+              "qa_gate_usage": "Use checklist as single source of truth for Build A/Build B signoff",
+              "build_split_recommendation": "Build A: gates 0/1/2; Build B: retain plus gate 3 (early aliveness)",
+              "pillars_reference": "docs/vision_pillars.md"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

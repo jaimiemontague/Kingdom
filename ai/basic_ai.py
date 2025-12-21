@@ -8,7 +8,13 @@ from game.entities.hero import HeroState
 from game.systems.pathfinding import find_path, grid_to_world_path
 from config import TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN
 from ai.context_builder import ContextBuilder
+from ai.prompt_templates import get_fallback_decision
 from game.systems.navigation import best_adjacent_tile
+from game.sim.determinism import get_rng
+from game.sim.timebase import now_ms as sim_now_ms
+
+# Deterministic AI RNG stream (isolated from gameplay RNG).
+_AI_RNG = get_rng("ai_basic")
 
 # Debug logging (set to True to see AI decision logs)
 DEBUG_AI = False
@@ -19,11 +25,12 @@ def debug_log(msg, throttle_key=None):
         return
     # Throttle repeated messages
     if throttle_key:
-        import time
-        now = time.time()
-        if throttle_key in _last_log and now - _last_log[throttle_key] < 1.0:
+        # Use sim time to avoid nondeterministic wall-clock dependencies in sim logic.
+        now_ms = sim_now_ms()
+        last_ms = int(_last_log.get(throttle_key, 0) or 0)
+        if now_ms - last_ms < 1000:
             return
-        _last_log[throttle_key] = now
+        _last_log[throttle_key] = now_ms
     print(f"[AI] {msg}")
 
 
@@ -44,6 +51,82 @@ class BasicAI:
         self.bounty_pick_cooldown_ms = 2500
         self.bounty_max_pursue_ms = 35000
         self.bounty_claim_radius_px = TILE_SIZE * 2
+
+    # -----------------------
+    # Intent + decision helpers
+    # -----------------------
+
+    def refresh_intent(self, hero, game_state: dict | None = None) -> None:
+        """
+        Keep hero.intent non-empty and update hero.last_decision on meaningful changes.
+
+        Prefer the hero's own intent-derivation contract if available; fall back to a
+        lightweight label derived from state/target.
+        """
+        try:
+            if hasattr(hero, "_update_intent_and_decision"):
+                hero._update_intent_and_decision(game_state)
+                return
+        except Exception:
+            # Best-effort only; never crash the sim due to intent plumbing.
+            pass
+
+        # Fallback (older hero versions)
+        intent = "idle"
+        t = getattr(hero, "target", None)
+        if isinstance(t, dict):
+            ttype = t.get("type")
+            if ttype == "bounty":
+                intent = "pursuing_bounty"
+            elif ttype == "shopping":
+                intent = "shopping"
+            elif ttype == "going_home":
+                intent = "returning_to_safety"
+        st = getattr(getattr(hero, "state", None), "name", "")
+        if st == "FIGHTING":
+            intent = "engaging_enemy"
+        elif st == "RETREATING":
+            intent = "returning_to_safety"
+        setattr(hero, "intent", str(intent) or "idle")
+
+    def set_intent(self, hero, intent: str) -> None:
+        """Set hero intent label (taxonomy)."""
+        setattr(hero, "intent", str(intent or "idle"))
+
+    def record_decision(
+        self,
+        hero,
+        *,
+        action: str,
+        reason: str,
+        intent: str | None = None,
+        inputs_summary: dict | None = None,
+        source: str | None = None,
+        now_ms: int | None = None,
+    ) -> None:
+        """
+        Store a lightweight last-decision snapshot on the hero.
+
+        We keep compatibility with the thin `HeroDecisionRecord` contract by packing
+        extra metadata into the `context` dict.
+        """
+        ctx: dict = {}
+        if intent is not None:
+            ctx["intent"] = str(intent)
+        if source is not None:
+            ctx["source"] = str(source)
+        if inputs_summary is not None:
+            if isinstance(inputs_summary, dict):
+                ctx["inputs_summary"] = dict(inputs_summary)
+            else:
+                ctx["inputs_summary"] = str(inputs_summary)
+
+        if hasattr(hero, "record_decision"):
+            try:
+                hero.record_decision(action=str(action), reason=str(reason), now_ms=now_ms, context=ctx)
+            except TypeError:
+                # Older signature (without named args)
+                hero.record_decision(str(action), str(reason))
         
     def update(self, dt: float, heroes: list, game_state: dict):
         """Update AI for all heroes."""
@@ -74,8 +157,8 @@ class BasicAI:
             idx = len(self.hero_zones)
         
         num_heroes = max(len(heroes), 1)
-        angle = (2 * math.pi * idx) / num_heroes + random.uniform(-0.2, 0.2)
-        radius = TILE_SIZE * random.uniform(6, 10)  # Spread zones further out
+        angle = (2 * math.pi * idx) / num_heroes + _AI_RNG.uniform(-0.2, 0.2)
+        radius = TILE_SIZE * _AI_RNG.uniform(6, 10)  # Spread zones further out
         
         zone_x = base_x + math.cos(angle) * radius
         zone_y = base_y + math.sin(angle) * radius
@@ -88,6 +171,9 @@ class BasicAI:
         """Update AI for a single hero."""
         enemies = game_state.get("enemies", [])
         buildings = game_state.get("buildings", [])
+
+        # Keep intent non-empty even if we make no decision this tick.
+        self.refresh_intent(hero, game_state)
         
         # Handle resting state first (doesn't need LLM)
         if hero.state == HeroState.RESTING:
@@ -119,13 +205,21 @@ class BasicAI:
         
         # Check if we need an LLM decision
         if self.should_consult_llm(hero, game_state):
-            self.request_llm_decision(hero, game_state)
+            # If no LLM brain is wired, still choose via deterministic fallback so
+            # the no-LLM path produces stable intent/decision logging.
+            if self.llm_brain:
+                self.request_llm_decision(hero, game_state)
+            else:
+                context = ContextBuilder.build_hero_context(hero, game_state)
+                decision = get_fallback_decision(context)
+                self.apply_llm_decision(hero, decision, game_state, source="fallback", context=context)
         
         # Handle LLM decision response
         if hero.pending_llm_decision and self.llm_brain:
             decision = self.llm_brain.get_decision(hero.name)
             if decision:
-                self.apply_llm_decision(hero, decision, game_state)
+                context = ContextBuilder.build_hero_context(hero, game_state)
+                self.apply_llm_decision(hero, decision, game_state, source="llm", context=context)
                 hero.pending_llm_decision = False
         
         # State machine behavior
@@ -142,8 +236,7 @@ class BasicAI:
     
     def should_consult_llm(self, hero, game_state: dict) -> bool:
         """Determine if we should ask the LLM for a decision."""
-        import pygame
-        current_time = pygame.time.get_ticks()
+        current_time = sim_now_ms()
         
         # Respect cooldown
         if current_time - hero.last_llm_decision_time < LLM_DECISION_COOLDOWN:
@@ -171,33 +264,58 @@ class BasicAI:
     
     def request_llm_decision(self, hero, game_state: dict):
         """Request a decision from the LLM brain."""
-        import pygame
-        
         if self.llm_brain:
             context = ContextBuilder.build_hero_context(hero, game_state)
             self.llm_brain.request_decision(hero.name, context)
             hero.pending_llm_decision = True
-            hero.last_llm_decision_time = pygame.time.get_ticks()
+            hero.last_llm_decision_time = sim_now_ms()
+            self.record_decision(
+                hero,
+                action="request_llm",
+                reason="Consulting LLM for decision",
+                intent=getattr(hero, "intent", "idle") or "idle",
+                inputs_summary=ContextBuilder.build_inputs_summary(context),
+                source="system",
+            )
     
-    def apply_llm_decision(self, hero, decision: dict, game_state: dict):
+    def apply_llm_decision(self, hero, decision: dict, game_state: dict, *, source: str = "llm", context: dict | None = None):
         """Apply an LLM decision to the hero."""
         action = decision.get("action", "")
         target = decision.get("target", "")
         
         hero.last_llm_action = decision
+
+        if context is None:
+            context = ContextBuilder.build_hero_context(hero, game_state)
+        inputs_summary = ContextBuilder.build_inputs_summary(context)
+        reason = decision.get("reasoning", "")
+        if not isinstance(reason, str):
+            reason = ""
         
         if action == "retreat":
+            self.set_intent(hero, "returning_to_safety")
+            self.record_decision(hero, action="retreat", reason=reason or "Retreating", intent="returning_to_safety", inputs_summary=inputs_summary, source=source)
             self.start_retreat(hero, game_state)
         elif action == "fight":
+            self.set_intent(hero, "engaging_enemy")
+            self.record_decision(hero, action="fight", reason=reason or "Fighting", intent="engaging_enemy", inputs_summary=inputs_summary, source=source)
             hero.state = HeroState.FIGHTING
         elif action == "buy_item":
+            self.set_intent(hero, "shopping")
+            self.record_decision(hero, action="buy_item", reason=reason or f"Buying {target}", intent="shopping", inputs_summary=inputs_summary, source=source)
             self.go_shopping(hero, target, game_state)
         elif action == "use_potion":
+            self.record_decision(hero, action="use_potion", reason=reason or "Using potion", intent=getattr(hero, "intent", "idle") or "idle", inputs_summary=inputs_summary, source=source)
             hero.use_potion()
         elif action == "explore":
+            self.set_intent(hero, "idle")
+            self.record_decision(hero, action="explore", reason=reason or "Exploring", intent="idle", inputs_summary=inputs_summary, source=source)
             self.explore(hero, game_state)
         elif action == "accept_bounty":
             pass
+        else:
+            debug_log(f"{hero.name} received unknown LLM action={action!r}; ignoring", throttle_key=f"{hero.name}_unknown_llm_action")
+            self.record_decision(hero, action=str(action or "unknown"), reason="Unknown LLM action; ignored", intent=getattr(hero, "intent", "idle") or "idle", inputs_summary=inputs_summary, source=source)
     
     def handle_idle(self, hero, game_state: dict):
         """Handle idle state - heroes patrol their assigned zone."""
@@ -276,9 +394,9 @@ class BasicAI:
             hero.target = {"type": "patrol"}
         else:
             # Wander within zone
-            if random.random() < 0.02:  # 2% chance per frame
-                angle = random.uniform(0, 2 * math.pi)
-                wander_dist = TILE_SIZE * random.uniform(1, 3)
+            if _AI_RNG.random() < 0.02:  # 2% chance per frame
+                angle = _AI_RNG.uniform(0, 2 * math.pi)
+                wander_dist = TILE_SIZE * _AI_RNG.uniform(1, 3)
                 target_x = zone_x + math.cos(angle) * wander_dist
                 target_y = zone_y + math.sin(angle) * wander_dist
                 debug_log(f"{hero.name} -> wandering to ({target_x:.0f}, {target_y:.0f})")
@@ -319,8 +437,7 @@ class BasicAI:
                 return
 
             # Timeout to avoid permanent lock
-            import pygame
-            now_ms = pygame.time.get_ticks()
+            now_ms = sim_now_ms()
             started_ms = int(hero.target.get("started_ms", now_ms))
             if now_ms - started_ms > self.bounty_max_pursue_ms:
                 if hasattr(bounty, "unassign") and getattr(bounty, "assigned_to", None) == hero.name:
@@ -335,12 +452,37 @@ class BasicAI:
             if hasattr(bounty, "get_goal_position"):
                 goal_x, goal_y = bounty.get_goal_position(buildings)
             if hero.distance_to(goal_x, goal_y) <= float(self.bounty_claim_radius_px):
-                if hasattr(bounty, "claim"):
-                    bounty.claim(hero)
-                hero.target = None
-                hero.target_position = None
-                hero.state = HeroState.IDLE
-                return
+                btype = str(getattr(bounty, "bounty_type", "explore") or "explore")
+
+                # Typed bounties are not proximity-claimed.
+                # For attack_lair: reaching the bounty transitions the hero to actually attack the lair.
+                if btype == "attack_lair":
+                    lair = getattr(bounty, "target", None)
+                    if getattr(lair, "is_lair", False) and getattr(lair, "hp", 0) > 0:
+                        hero.target = lair
+                        # Approach an adjacent tile so we don't path into the lair footprint.
+                        world = game_state.get("world")
+                        if world:
+                            adj = best_adjacent_tile(world, buildings, lair, hero.x, hero.y)
+                            if adj:
+                                hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                            else:
+                                hero.target_position = (float(getattr(lair, "center_x", goal_x)), float(getattr(lair, "center_y", goal_y)))
+                        else:
+                            hero.target_position = (float(getattr(lair, "center_x", goal_x)), float(getattr(lair, "center_y", goal_y)))
+                        hero.state = HeroState.MOVING
+                        # Best-effort breadcrumb for debugging/UX (no hard dependency).
+                        setattr(hero, "_active_attack_lair_bounty_id", getattr(bounty, "bounty_id", None))
+                        return
+
+                if btype == "explore":
+                    if hasattr(bounty, "claim"):
+                        bounty.claim(hero)
+                    hero.target = None
+                    hero.target_position = None
+                    hero.state = HeroState.IDLE
+                    return
+                # Other typed bounties: don't auto-claim here; let their systems resolve completion.
         
         # Check if reached destination
         if hero.target_position:
@@ -411,8 +553,20 @@ class BasicAI:
             # Check if target in range
             dist = hero.distance_to(hero.target.x, hero.target.y)
             if dist > hero.attack_range:
-                # Move towards target
-                hero.target_position = (hero.target.x, hero.target.y)
+                # Move towards target (for lairs/buildings, approach adjacent tile to avoid unreachable goals).
+                if getattr(hero.target, "is_lair", False):
+                    buildings = game_state.get("buildings", [])
+                    world = game_state.get("world")
+                    if world:
+                        adj = best_adjacent_tile(world, buildings, hero.target, hero.x, hero.y)
+                        if adj:
+                            hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                        else:
+                            hero.target_position = (hero.target.x, hero.target.y)
+                    else:
+                        hero.target_position = (hero.target.x, hero.target.y)
+                else:
+                    hero.target_position = (hero.target.x, hero.target.y)
                 hero.state = HeroState.MOVING
         else:
             # Find new target
@@ -534,8 +688,8 @@ class BasicAI:
     def explore(self, hero, game_state: dict):
         """Send hero to explore within their zone."""
         zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
-        angle = random.uniform(0, 2 * math.pi)
-        wander_dist = TILE_SIZE * random.uniform(2, 5)
+        angle = _AI_RNG.uniform(0, 2 * math.pi)
+        wander_dist = TILE_SIZE * _AI_RNG.uniform(2, 5)
         target_x = zone_x + math.cos(angle) * wander_dist
         target_y = zone_y + math.sin(angle) * wander_dist
         hero.set_target_position(target_x, target_y)
@@ -565,8 +719,7 @@ class BasicAI:
             return False
 
         # Avoid changing targets too often
-        import pygame
-        now_ms = pygame.time.get_ticks()
+        now_ms = sim_now_ms()
         last_pick = int(getattr(hero, "_last_bounty_pick_ms", 0))
         if now_ms - last_pick < self.bounty_pick_cooldown_ms:
             return False
@@ -647,7 +800,7 @@ class BasicAI:
         base -= risk_w * 0.35 * risk
 
         # Add a small per-hero randomness to reduce synchronized picks.
-        base += random.uniform(-0.15, 0.15)
+        base += _AI_RNG.uniform(-0.15, 0.15)
         return base
 
     def start_bounty_pursuit(self, hero, bounty, game_state: dict):
@@ -675,14 +828,13 @@ class BasicAI:
                 goal_y = adj[1] * TILE_SIZE + TILE_SIZE / 2
 
         hero.target_position = (goal_x, goal_y)
-        import pygame
         hero.target = {
             "type": "bounty",
             "bounty_id": getattr(bounty, "bounty_id", None),
             "bounty_type": getattr(bounty, "bounty_type", "explore"),
             # Keep a direct reference as fallback for headless tests
             "bounty_ref": bounty,
-            "started_ms": pygame.time.get_ticks(),
+            "started_ms": sim_now_ms(),
         }
         hero.state = HeroState.MOVING
     
@@ -796,7 +948,7 @@ class BasicAI:
             return False
 
         # Stochastic willingness (keeps behavior varied and class-flavored).
-        if random.random() > float(willingness):
+        if _AI_RNG.random() > float(willingness):
             return False
 
         # Find nearest enemy near that building.

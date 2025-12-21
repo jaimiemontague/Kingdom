@@ -1,13 +1,21 @@
 """
 Main game engine - handles the game loop, input, and coordination.
 """
+import time
 import pygame
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, GAME_TITLE, TILE_SIZE,
     MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
     CAMERA_SPEED_PX_PER_SEC, CAMERA_EDGE_MARGIN_PX,
     ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
-    MAX_ALIVE_ENEMIES
+    MAX_ALIVE_ENEMIES,
+    LAIR_BOUNTY_COST,
+    BOUNTY_REWARD_LOW,
+    BOUNTY_REWARD_MED,
+    BOUNTY_REWARD_HIGH,
+    DETERMINISTIC_SIM,
+    SIM_TICK_HZ,
+    SIM_SEED,
 )
 from game.graphics.vfx import VFXSystem
 from game.world import World, Visibility
@@ -26,6 +34,8 @@ from game.systems.buffs import BuffSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 from game.graphics.font_cache import get_font
 from game.systems import perf_stats
+from game.sim.determinism import set_sim_seed
+from game.sim.timebase import set_sim_now_ms
 
 
 
@@ -35,6 +45,18 @@ class GameEngine:
     def __init__(self):
         pygame.init()
         pygame.font.init()
+
+        # Determinism knobs (future multiplayer enablement).
+        # Seed early so world gen + initial lairs are reproducible when enabled.
+        set_sim_seed(SIM_SEED)
+        self._sim_now_ms = 0
+
+        # Early pacing guardrail (ContentScenarioDirector, wk1 broad sweep):
+        # Within the first few minutes, surface a clear prompt and optionally place
+        # a starter bounty using existing systems. Driven by sim-time (dt), not wall-clock.
+        self._early_nudge_elapsed_s = 0.0
+        self._early_nudge_tip_shown = False
+        self._early_nudge_starter_bounty_done = False
         
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption(GAME_TITLE)
@@ -48,6 +70,21 @@ class GameEngine:
         self._perf_pf_calls = 0
         self._perf_pf_failures = 0
         self._perf_pf_total_ms = 0.0
+        # Cached overlay panel (avoid per-frame Surface allocations)
+        self._perf_overlay_next_update_ms = 0
+        self._perf_overlay_panel = None
+        self._perf_overlay_dirty = True
+        self._perf_snapshot = {
+            "fps": 0.0,
+            "heroes": 0,
+            "enemies": 0,
+            "peasants": 0,
+            "guards": 0,
+        }
+        # Loop timings (diagnostic only; EMA smoothing)
+        self._perf_events_ms = 0.0
+        self._perf_update_ms = 0.0
+        self._perf_render_ms = 0.0
         
         # Initialize game world
         self.world = World()
@@ -279,11 +316,6 @@ class GameEngine:
                 self.building_menu.select_building("ballista_tower")
             else:
                 self.hud.add_message("Not enough gold!", (255, 100, 100))
-        elif event.key == pygame.K_l:
-            if self.economy.can_afford_building("library"):
-                self.building_menu.select_building("library")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
         elif event.key == pygame.K_o:
             if self.economy.can_afford_building("wizard_tower"):
                 self.building_menu.select_building("wizard_tower")
@@ -320,6 +352,10 @@ class GameEngine:
         elif event.key == pygame.K_F2:
             # Toggle perf overlay
             self.show_perf = not self.show_perf
+        elif event.key == pygame.K_F3:
+            # Toggle HUD help/controls overlay
+            if hasattr(self.hud, "toggle_help"):
+                self.hud.toggle_help()
         
         elif event.key == pygame.K_b:
             # Place a bounty at mouse position
@@ -531,25 +567,108 @@ class GameEngine:
         
         self.buildings.append(building)
         self.building_menu.cancel_selection()
-        self.hud.add_message(f"{building_type.replace('_', ' ').title()} placed (needs building)", (100, 255, 100))
+        self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
     
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
         mouse_pos = pygame.mouse.get_pos()
         world_x, world_y = self.screen_to_world(mouse_pos[0], mouse_pos[1])
         
-        # Default bounty reward
-        reward = 50
+        # Bounty reward tiers (player-paid; cost == reward).
+        mods = pygame.key.get_mods()
+        if mods & pygame.KMOD_CTRL:
+            reward = int(BOUNTY_REWARD_HIGH)
+        elif mods & pygame.KMOD_SHIFT:
+            reward = int(BOUNTY_REWARD_MED)
+        else:
+            reward = int(BOUNTY_REWARD_LOW)
         
         if not self.economy.add_bounty(reward):
             self.hud.add_message("Not enough gold for bounty!", (255, 100, 100))
             return
         
         self.bounty_system.place_bounty(world_x, world_y, reward, "explore")
-        self.hud.add_message(f"Bounty placed: ${reward}", (255, 215, 0))
+        self.hud.add_message(f"Bounty placed (${reward}). Heroes will respond.", (255, 215, 0))
+
+    def _nearest_lair_to(self, x: float, y: float):
+        """Return nearest living lair to (x,y) or None."""
+        lairs = getattr(self.lair_system, "lairs", []) or []
+        best = None
+        best_d2 = None
+        for lair in lairs:
+            if getattr(lair, "hp", 1) <= 0:
+                continue
+            lx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
+            ly = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
+            dx = lx - float(x)
+            dy = ly - float(y)
+            d2 = dx * dx + dy * dy
+            if best is None or (best_d2 is not None and d2 < best_d2):
+                best = lair
+                best_d2 = d2
+        return best
+
+    def _maybe_apply_early_pacing_nudge(self, dt: float, castle):
+        """
+        Deterministic-ish early-session pacing hook:
+        - show a short HUD prompt early if the player hasn't placed a bounty
+        - later, optionally place a starter 'attack_lair' bounty on the nearest lair
+          (only if the player can afford it and hasn't placed any bounties yet)
+        """
+        if not castle:
+            return
+
+        # Only relevant in the early game window.
+        self._early_nudge_elapsed_s += float(dt)
+        if self._early_nudge_elapsed_s > 180.0:
+            return
+
+        unclaimed = self.bounty_system.get_unclaimed_bounties()
+        has_any_bounty = bool(unclaimed)
+
+        # 1) Tip prompt: show once.
+        if (not self._early_nudge_tip_shown) and (self._early_nudge_elapsed_s >= 35.0) and (not has_any_bounty):
+            self._early_nudge_tip_shown = True
+            self.hud.add_message("Tip: Press B to place a bounty and guide heroes.", (220, 220, 255))
+            self.hud.add_message("Try targeting a lair for big stash payouts.", (220, 220, 255))
+
+        # 2) Optional starter bounty: show player a clear lever if they haven't engaged.
+        if self._early_nudge_starter_bounty_done:
+            return
+        if self._early_nudge_elapsed_s < 90.0:
+            return
+        if has_any_bounty:
+            # Player already engaged with the bounty system; don't interfere.
+            self._early_nudge_starter_bounty_done = True
+            return
+
+        lair = self._nearest_lair_to(float(castle.center_x), float(castle.center_y))
+        if lair is None:
+            self._early_nudge_starter_bounty_done = True
+            return
+
+        reward = int(LAIR_BOUNTY_COST) if LAIR_BOUNTY_COST else 75
+        if not self.economy.add_bounty(reward):
+            # Can't afford; keep it non-spammy and don't keep retrying.
+            self._early_nudge_starter_bounty_done = True
+            self.hud.add_message("Tip: Earn more gold to place bounties that guide heroes.", (220, 220, 255))
+            return
+
+        bx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
+        by = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
+        self.bounty_system.place_bounty(bx, by, reward, "attack_lair", target=lair)
+        self._early_nudge_starter_bounty_done = True
+        self.hud.add_message(f"Starter bounty placed: Clear the lair (+${reward})", (255, 215, 0))
     
     def update(self, dt: float):
         """Update game state."""
+        if DETERMINISTIC_SIM:
+            # Drive gameplay timing off simulation time (not wall-clock).
+            self._sim_now_ms += int(round(float(dt) * 1000.0))
+            set_sim_now_ms(self._sim_now_ms)
+        else:
+            set_sim_now_ms(None)
+
         # Allow camera movement even while paused.
         self.update_camera(dt)
         if self.paused:
@@ -574,6 +693,10 @@ class GameEngine:
 
         # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
         castle = game_state.get("castle")
+
+        # Content pacing guardrail: nudge player toward a clear early decision.
+        self._maybe_apply_early_pacing_nudge(dt, castle)
+
         self.peasant_spawn_timer += dt
         alive_peasants = [p for p in self.peasants if p.is_alive]
         if castle and len(alive_peasants) < 2 and self.peasant_spawn_timer >= 5.0:
@@ -640,6 +763,23 @@ class GameEngine:
                     (255, 215, 0),
                 )
                 lair_obj = event.get("lair_obj")
+
+                # Completion-based lair bounty payout (do NOT allow proximity-claim).
+                # If there is an active attack_lair bounty targeting this lair, pay it to the clearing hero now.
+                try:
+                    hero_obj = next((h for h in self.heroes if getattr(h, "name", None) == hero_name), None)
+                    if hero_obj is not None and lair_obj is not None:
+                        for b in list(getattr(self.bounty_system, "bounties", []) or []):
+                            if getattr(b, "claimed", False):
+                                continue
+                            if getattr(b, "bounty_type", None) != "attack_lair":
+                                continue
+                            if getattr(b, "target", None) is lair_obj:
+                                b.claim(hero_obj)
+                except Exception:
+                    # Bounty payout should never crash the sim.
+                    pass
+
                 if lair_obj in self.buildings:
                     self.buildings.remove(lair_obj)
                 if lair_obj in getattr(self.lair_system, "lairs", []):
@@ -819,6 +959,8 @@ class GameEngine:
             "castle": castle,
             "economy": self.economy,
             "world": self.world,
+            # UI helper: placement mode info for HUD
+            "placing_building_type": getattr(self.building_menu, "selected_building", None),
         }
     
     def render(self):
@@ -878,6 +1020,12 @@ class GameEngine:
             self.tax_collector.render(view_surface, camera_offset)
 
         # Render bounties
+        # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
+        if hasattr(self.bounty_system, "update_ui_metrics"):
+            try:
+                self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
+            except Exception:
+                pass
         self.bounty_system.render(view_surface, camera_offset)
 
         # Render building preview
@@ -930,53 +1078,93 @@ class GameEngine:
         if self._perf_last_ms == 0:
             self._perf_last_ms = now_ms
 
-        # Update snapshot ~1x/sec
+        # Update snapshot ~1x/sec (pathfinding stats) and ~4x/sec (counts + timings).
+        if self._perf_overlay_next_update_ms == 0:
+            self._perf_overlay_next_update_ms = now_ms
+
+        if now_ms >= self._perf_overlay_next_update_ms:
+            self._perf_overlay_next_update_ms = now_ms + 250
+            self._perf_snapshot["fps"] = float(self.clock.get_fps())
+            self._perf_snapshot["heroes"] = len([h for h in self.heroes if getattr(h, "is_alive", True)])
+            self._perf_snapshot["enemies"] = len([e for e in self.enemies if getattr(e, "is_alive", False)])
+            self._perf_snapshot["peasants"] = len([p for p in self.peasants if getattr(p, "is_alive", True)])
+            self._perf_snapshot["guards"] = len([g for g in self.guards if getattr(g, "is_alive", False)])
+            self._perf_overlay_dirty = True
+
         if now_ms - self._perf_last_ms >= 1000:
             self._perf_last_ms = now_ms
             self._perf_pf_calls = perf_stats.pathfinding.calls
             self._perf_pf_failures = perf_stats.pathfinding.failures
             self._perf_pf_total_ms = perf_stats.pathfinding.total_ms
             perf_stats.reset_pathfinding()
+            self._perf_overlay_dirty = True
 
-        fps = self.clock.get_fps()
-        enemies_alive = len([e for e in self.enemies if getattr(e, "is_alive", False)])
+        # Rebuild panel only when sampled values change.
+        if self._perf_overlay_panel is None or self._perf_overlay_dirty:
+            self._perf_overlay_dirty = False
 
-        lines = [
-            f"FPS: {fps:0.1f}",
-            f"Enemies alive: {enemies_alive}  (cap={MAX_ALIVE_ENEMIES})",
-            f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}",
-            f"PF ms/s: {self._perf_pf_total_ms:0.1f}",
-        ]
+            fps = float(self._perf_snapshot.get("fps", 0.0))
+            enemies_alive = int(self._perf_snapshot.get("enemies", 0))
+            heroes_alive = int(self._perf_snapshot.get("heroes", 0))
+            peasants_alive = int(self._perf_snapshot.get("peasants", 0))
+            guards_alive = int(self._perf_snapshot.get("guards", 0))
 
-        font = get_font(16)
-        x, y = 10, 10
-        pad = 6
-        # Background panel
-        w = 0
-        h = 0
-        rendered = []
-        for line in lines:
-            s = font.render(line, True, (255, 255, 255))
-            rendered.append(s)
-            w = max(w, s.get_width())
-            h += s.get_height()
+            lines = [
+                f"FPS: {fps:0.1f}",
+                f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
+                f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
+                f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
+            ]
 
-        panel = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
-        panel.fill((0, 0, 0, 140))
-        yy = pad
-        for s in rendered:
-            panel.blit(s, (pad, yy))
-            yy += s.get_height()
-        surface.blit(panel, (x, y))
+            font = get_font(16)
+            pad = 6
+            w = 0
+            h = 0
+            rendered = []
+            for line in lines:
+                s = font.render(line, True, (255, 255, 255))
+                rendered.append(s)
+                w = max(w, s.get_width())
+                h += s.get_height()
+
+            panel = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
+            panel.fill((0, 0, 0, 140))
+            yy = pad
+            for s in rendered:
+                panel.blit(s, (pad, yy))
+                yy += s.get_height()
+            self._perf_overlay_panel = panel
+
+        surface.blit(self._perf_overlay_panel, (10, 10))
     
     def run(self):
         """Main game loop."""
         while self.running:
-            dt = self.clock.tick(FPS) / 1000.0  # Delta time in seconds
-            
+            if DETERMINISTIC_SIM:
+                # Keep realtime pacing, but do not use wall-clock delta for simulation.
+                self.clock.tick(FPS)
+                dt = 1.0 / max(1, int(SIM_TICK_HZ))
+            else:
+                dt = self.clock.tick(FPS) / 1000.0  # Delta time in seconds
+
+            t0 = time.perf_counter()
             self.handle_events()
+            t1 = time.perf_counter()
             self.update(dt)
+            t2 = time.perf_counter()
             self.render()
+            t3 = time.perf_counter()
+
+            # Perf timings (EMA). Diagnostic only: must not affect simulation state.
+            if self.show_perf:
+                evt_ms = (t1 - t0) * 1000.0
+                upd_ms = (t2 - t1) * 1000.0
+                rnd_ms = (t3 - t2) * 1000.0
+
+                alpha = 0.12
+                self._perf_events_ms = evt_ms if self._perf_events_ms <= 0 else (self._perf_events_ms * (1 - alpha) + evt_ms * alpha)
+                self._perf_update_ms = upd_ms if self._perf_update_ms <= 0 else (self._perf_update_ms * (1 - alpha) + upd_ms * alpha)
+                self._perf_render_ms = rnd_ms if self._perf_render_ms <= 0 else (self._perf_render_ms * (1 - alpha) + rnd_ms * alpha)
         
         pygame.quit()
 

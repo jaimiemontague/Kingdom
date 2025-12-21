@@ -1,0 +1,101 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "08", "name": "UX_UI_Director" },
+  "notes": [
+    "This file is owned by Agent 08 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:25.967479-07:00"
+          },
+          "prompt_text": "Write UI copy and layout for hero intent/last decision and bounty responders/attractiveness; keep it readable and non-spammy.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:25.967479-07:00",
+            "status": "complete",
+            "raw": "### Status\n**Assignment:** WK1 R1 — UX/UI clarity (Agent 8: UX_UI_Director). Deliver UI copy + layout rules for **hero intent/last decision** and **bounty responders/attractiveness**, kept readable and non-spammy, and safe in mock/no-LLM.\n\n### Deliverables\n- **Hero inspect UI (FS-1)**:\n  - Show **Current intent** (single, stable label).\n  - Show **Last decision** (action + short reason + age), with safe placeholder if none yet.\n  - Must work in **LLM + mock + no-LLM**.\n- **Bounty legibility UI (FS-2)**:\n  - Each bounty displays **Responders: N**.\n  - Each bounty displays **Attractiveness: Low/Med/High** (or compact icon/text).\n  - Deterministic computation; no extra LLM calls.\n- **Low-risk HUD clarity**:\n  - Reduce always-on “wall of controls” via **toggleable help**.\n  - Show a small **mode banner** when placing a building.\n\n### Proposed UI copy (player-facing)\n- **Hero panel**\n  - `Intent: <Idle | Moving | Engaging enemy | Pursuing bounty | Shopping | Returning to safety | Resting>`\n  - `Last decision: <action> → <target> (<age>s ago) — <short reason>`\n  - Placeholder: `Last decision: (none yet)`\n  - Notes:\n    - Keep reason to ~1 short clause, truncate with ellipsis if needed.\n    - “Age” should be based on **sim-time** (tick/sim clock), not wall-clock.\n\n- **Bounty marker**\n  - `R:<N>  <Low|Med|High>`\n  - Optional expanded tooltip later: `Responders: N` / `Attractiveness: <tier>`\n\n- **Placement mode banner**\n  - `Placing: <Building Name> (LMB: place, ESC: cancel)`\n\n- **Help toggle hint**\n  - When hidden: `F3: Help`\n  - Header: `Controls (F3 to hide)`\n\n### UI layout rules (readability)\n- **Prioritize “now” info**:\n  - Always-visible: gold / counts / wave + small mode banner when applicable.\n  - On-demand: the full control list (help overlay).\n- **Avoid spam**:\n  - Toast messages should be short and non-repeating.\n  - Prefer persistent labels for state (intent/banner) over repeated popups.\n- **Truncation/overflow**:\n  - Never overflow panels; truncate long reasoning lines.\n  - Keep bounty labels compact; avoid multi-line text in world space.\n- **Color semantics**\n  - Attractiveness tiers: Low=gray, Med=gold, High=green.\n  - Keep text readable over fog-of-war; use high contrast.\n\n### Acceptance criteria (for UX slice)\n- Selecting a hero shows **Intent** and **Last decision** (or safe placeholder).\n- Last decision shows **age** derived from sim-time (or blank if unavailable).\n- Each bounty shows **Responders** and **Attractiveness tier**.\n- No crashes if hero has no decision yet / no heroes exist / no bounties exist.\n- UI additions do not allocate heavily per frame (keep text generation lightweight).\n\n### Risks\n- **Mismatch between UI “intent” and future intent taxonomy**: mitigate by keeping labels stable and mapping from real fields when they exist.\n- **Perf regression** from per-frame string work: mitigate by keeping computations lightweight and capped; avoid per-frame allocations where possible.\n- **Visual clutter** if too much overlay text: keep bounty markers compact and help toggleable.\n\n### Dependencies / coordination notes\n- **Agent 3 (Architecture)**: eventual stable contract for `hero.intent` and `hero.last_decision` will replace UI-side inference.\n- **Agent 6 (AIBehaviorDirector_LLM)**: align naming for intent labels and ensure “reason” strings stay short.\n- **Agent 9 (Art/VFX)**: optional iconography for attractiveness tiers; must remain readable over fog-of-war.\n\n### Questions back to PM (max 3)\n- Should help overlay default to **ON** for Build A to support onboarding, or **OFF** to reduce clutter?\n- Should attractiveness reflect **global** risk/reward or be **class-aware** (align with AI scoring) in future?\n- Any preferred copy tone: more “Majesty-like” flavor or strictly utilitarian labels for now?\n\n### Recommended next actions\n- Hook future `hero.intent`/`hero.last_decision` contract into UI when available (remove inference).\n- Add hover tooltips for bounty markers (optional) and/or a tiny legend for Low/Med/High.\n- Add a “bounty placement mode” (toggle B, click to place, ESC cancel) if misfires become common.\n",
+            "summary_bullets": [
+              "Hero inspect: show Intent + Last decision (action/target/reason/age) with safe placeholder.",
+              "Bounties: show responders count and attractiveness tier (Low/Med/High) deterministically.",
+              "HUD clarity: keep always-on HUD minimal; put full controls behind a toggle; show placement-mode banner.",
+              "Keep UI non-spammy with truncation and compact world-space labels."
+            ],
+            "proposed_changes": [
+              "Hero panel adds: Intent line + Last decision line (action/target/reason/age).",
+              "Bounty marker adds: responders count (R:N) and attractiveness tier (Low/Med/High).",
+              "Add help overlay toggle and make controls on-demand.",
+              "Add placement mode banner: \"Placing: <Building> (LMB: place, ESC: cancel)\".",
+              "Enforce truncation/overflow rules to prevent UI overlap."
+            ],
+            "acceptance_criteria": [
+              "Selecting a hero shows Intent and Last decision; if no decision exists, show neutral placeholder without errors.",
+              "Decision age uses sim-time or tick-based time; safe if unavailable.",
+              "Each bounty shows responders (0..N) and attractiveness tier; safe with 0 heroes or 0 bounties.",
+              "UI remains readable: compact bounty labels; no panel overflow; help overlay optional.",
+              "No noticeable per-frame allocation spikes from UI text generation."
+            ],
+            "risks": [
+              "Intent labels could drift from a future standardized taxonomy; mitigate by mapping to hero.intent when available.",
+              "Per-frame computation/text could cause perf regressions if expanded; keep UI metrics lightweight/cadenced.",
+              "Overlay clutter near bounties; keep labels compact and avoid multi-line world text."
+            ],
+            "dependencies": [
+              "Agent 3: stable data contract for hero intent + last decision (eventually replace UI inference).",
+              "Agent 6: align intent taxonomy + keep reason strings short/consistent across providers.",
+              "Agent 9 (optional): readability guidance/icons for attractiveness tiers over fog-of-war."
+            ],
+            "questions_back_to_pm": [
+              "Should help overlay default ON (onboarding) or OFF (cleaner HUD) for Build A?",
+              "Should attractiveness remain global/simple, or later align to AI scoring (still deterministic)?",
+              "Do we want a bounty placement mode (toggle B, click to place, ESC cancel) to prevent misfires?"
+            ],
+            "recommended_next_actions": [
+              "When hero intent/last_decision contract lands, wire UI directly to it and remove inference.",
+              "Add hover tooltips/legend for bounty tiers and verify contrast over fog-of-war.",
+              "If misfires are common, implement bounty placement mode."
+            ],
+            "agent_fields": {
+              "ui_copy": [
+                "Intent: <Idle | Moving | Engaging enemy | Pursuing bounty | Shopping | Returning to safety | Resting>",
+                "Last decision: <action> → <target> (<age>s ago) — <short reason>",
+                "Last decision placeholder: (none yet)",
+                "Bounty label: R:<N>  <Low|Med|High>",
+                "Placement banner: Placing: <Building> (LMB: place, ESC: cancel)",
+                "Help hint: F3: Help / Controls (F3 to hide)"
+              ],
+              "ui_layout_rules": [
+                "Keep always-on HUD minimal; put full controls behind a toggle.",
+                "Prefer persistent state labels (intent/banner) over repeated toast spam.",
+                "Truncate long reasoning; never overflow panels.",
+                "Use compact world-space bounty labels; avoid multi-line text on the map.",
+                "Tier color semantics: Low=gray, Med=gold, High=green; maintain contrast over fog-of-war."
+              ],
+              "ux_acceptance_criteria": [
+                "Player can answer \"what is this hero doing and why\" by selecting a hero.",
+                "Bounties clearly show who is responding and how attractive they are.",
+                "All new UI degrades gracefully with missing data (no exceptions).",
+                "Decision age uses sim-time/ticks (not wall-clock) when available."
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

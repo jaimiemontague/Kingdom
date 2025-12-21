@@ -13,6 +13,13 @@ FPS = 60
 PROTOTYPE_VERSION = "1.2.0"
 GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
 
+# Determinism / simulation settings (future multiplayer enablement)
+# - DETERMINISTIC_SIM=1: run simulation with fixed dt (tick-based) and seeded RNG.
+# - SIM_SEED: base seed for procedural world + spawns (do not use Python's hash()).
+DETERMINISTIC_SIM = os.getenv("DETERMINISTIC_SIM", "0") == "1"
+SIM_TICK_HZ = int(os.getenv("SIM_TICK_HZ", str(FPS)))
+SIM_SEED = int(os.getenv("SIM_SEED", "1"))
+
 # Tile settings
 TILE_SIZE = 32
 # Release tuning: smaller map for better performance / faster gameplay loop.
@@ -201,12 +208,17 @@ SKELETON_SPEED = 1.1
 # (~2/3 reduction from 6 -> 2)
 LAIR_INITIAL_COUNT = 2
 LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = 18
-LAIR_STASH_GROWTH_PER_SPAWN = 6
+LAIR_STASH_GROWTH_PER_SPAWN = 8
 ROGUE_LAIR_GOLD_THRESHOLD = 100
-LAIR_BOUNTY_COST = 75
+LAIR_BOUNTY_COST = 90
+
+# Bounty reward bands (player-paid; cost == reward). Used by Engine input + early pacing nudge.
+BOUNTY_REWARD_LOW = 25
+BOUNTY_REWARD_MED = 60
+BOUNTY_REWARD_HIGH = 150
 
 # Economy settings
-STARTING_GOLD = 10_000
+STARTING_GOLD = 1500
 TAX_RATE = 0.20
 
 # LLM settings

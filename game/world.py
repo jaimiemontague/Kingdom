@@ -2,13 +2,13 @@
 World and tile map system.
 """
 import pygame
-import random
 import math
 from config import (
     TILE_SIZE, MAP_WIDTH, MAP_HEIGHT,
     COLOR_GRASS, COLOR_WATER, COLOR_PATH, COLOR_TREE
 )
 from game.graphics.tile_sprites import TileSpriteLibrary
+from game.sim.determinism import get_rng
 
 
 class TileType:
@@ -42,6 +42,8 @@ class World:
         self.width = MAP_WIDTH
         self.height = MAP_HEIGHT
         self.tiles = [[TileType.GRASS for _ in range(self.width)] for _ in range(self.height)]
+        # Deterministic world-gen stream (independent of other RNG usage).
+        self.rng = get_rng("world_gen")
         self.generate_terrain()
 
         # Fog-of-war visibility grid (tile-based).
@@ -58,11 +60,12 @@ class World:
     def generate_terrain(self):
         """Generate a simple procedural terrain."""
         # Add some water (a pond/lake)
-        lake_x = random.randint(self.width // 4, self.width * 3 // 4)
-        lake_y = random.randint(self.height // 4, self.height * 3 // 4)
+        rng = getattr(self, "rng", get_rng("world_gen"))
+        lake_x = rng.randint(self.width // 4, self.width * 3 // 4)
+        lake_y = rng.randint(self.height // 4, self.height * 3 // 4)
         # Scale lake size with map size so large maps don't look empty.
         base = max(3, min(self.width, self.height) // 25)
-        lake_radius = random.randint(base, base + 4)
+        lake_radius = rng.randint(base, base + 4)
         
         for y in range(self.height):
             for x in range(self.width):
@@ -71,7 +74,7 @@ class World:
                 if dist < lake_radius:
                     self.tiles[y][x] = TileType.WATER
                 # Add scattered trees
-                elif random.random() < 0.06:
+                elif rng.random() < 0.06:
                     self.tiles[y][x] = TileType.TREE
         
         # Create paths from edges to center

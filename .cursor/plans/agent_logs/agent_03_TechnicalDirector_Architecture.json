@@ -1,0 +1,84 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "03", "name": "TechnicalDirector_Architecture" },
+  "notes": [
+    "This file is owned by Agent 03 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:08"
+          },
+          "prompt_text": "Propose minimal data structures/APIs for hero intent + last decision + bounty attractiveness so we avoid cross-system coupling.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:08",
+            "status": "complete",
+            "raw": "### Status\nAssigned as **TechnicalDirector_Architecture** for sprint `wk1-broad-sweep-midweek-endweek` round `wk1_r1`. Delivering thin, stable contracts for **hero intent/last decision** and **bounty evaluation (responders + attractiveness)** with determinism-friendly guardrails.\n\n### Deliverables (Architecture slice)\n- **Thin contract module**: `game/sim/contracts.py`\n  - `HeroDecisionRecord(action, reason, at_ms, context)` + `to_dict(age_ms)`\n  - `HeroIntentSnapshot(intent, last_decision)` + `to_dict()`\n  - `BountyEvalSnapshot(bounty_id, responders, attractiveness_score, attractiveness_tier)`\n- **Hero contract surface** (UI/QA-safe, no AI imports):\n  - `hero.intent: str` (default `\"idle\"`)\n  - `hero.last_decision: HeroDecisionRecord | None`\n  - `hero.get_intent_snapshot(now_ms=None) -> dict`\n  - Auto-derived intent/decision update inside `Hero.update()` so it works in `--no-llm` and mock.\n- **Bounty contract surface** (UI-friendly fields on bounty objects):\n  - `bounty.responders: int`\n  - `bounty.attractiveness_score: float`\n  - `bounty.attractiveness_tier: str` (`low`/`med`/`high`)\n  - `BountySystem.update_metrics(heroes, game_state)` (deterministic, O(H+B)).\n- **Engine wiring**:\n  - Call bounty metrics update once per simulation tick before HUD render so UI sees stable values.\n\n### Proposed interfaces / contracts (minimal, stable)\n- **Hero intent/decision** is *hero-owned state* with a single accessor (`get_intent_snapshot`) for UI/debug.\n- **Bounty evaluation** is *bounty-owned state* updated by `BountySystem` (no per-hero coupling required for Build A).\n\n### Determinism guardrails (for this change set)\n- No wall-clock time in sim logic: use `game.sim.timebase.now_ms()` for ages/timestamps.\n- No RNG in bounty attractiveness (pure function of state).\n- No Python `hash()` for keys; use stable ids like `bounty_id`.\n\n### Note on current implementation state\n- `game/sim/contracts.py` is added.\n- `game/entities/hero.py` is updated to populate `intent` and `last_decision` automatically (best-effort, non-blocking).\n- Next work: implement bounty responders + attractiveness and wire into `game/engine.py` tick.\n",
+            "summary_bullets": [
+              "Added thin contract dataclasses in `game/sim/contracts.py` for hero intent/decision and bounty evaluation.",
+              "Standardized hero-side fields (`intent`, `last_decision`) and a snapshot accessor so UI/QA can read without AI imports.",
+              "Defined bounty-side contract surface (responders + deterministic attractiveness tier) to be updated once per tick."
+            ],
+            "proposed_changes": [
+              "Add `game/sim/contracts.py` with small dataclasses + `to_dict` helpers (serialization-friendly).",
+              "Standardize `Hero.intent` + `Hero.last_decision` and provide `Hero.get_intent_snapshot()` for UI/debug.",
+              "Add `Bounty.responders` + `Bounty.attractiveness_score/tier` and `BountySystem.update_metrics(heroes, game_state)` (deterministic, O(H+B)).",
+              "Wire bounty metrics update into `GameEngine.update()` before HUD render."
+            ],
+            "acceptance_criteria": [
+              "Selecting a hero shows a non-empty intent string; last decision shows action/reason/age or safe placeholder when unavailable.",
+              "Each bounty exposes responders count and a low/med/high attractiveness tier computed deterministically.",
+              "No crashes/softlocks in `--no-llm` and `--provider mock` paths; no new import cycles introduced."
+            ],
+            "risks": [
+              "Perf regression if bounty metrics become O(N_heroes*N_bounties); must remain O(H+B).",
+              "Coupling risk if UI imports AI modules to read intent/decision; UI should read hero/bounty fields only.",
+              "Schema drift if LLM decision logging later diverges from `HeroDecisionRecord` fields."
+            ],
+            "dependencies": [
+              "UI reads `hero.get_intent_snapshot()` (or `hero.intent`/`hero.last_decision`) and bounty responders/tier fields.",
+              "Engine tick calls `BountySystem.update_metrics(...)` once per frame/tick before HUD render.",
+              "QA smoke checks validate intent is present after a short run and bounty fields exist without exceptions."
+            ],
+            "questions_back_to_pm": [
+              "Should bounty attractiveness tier be global (same for all heroes) for Build A, or per-hero (distance/class-weighted)? Recommendation: global for Build A."
+            ],
+            "recommended_next_actions": [
+              "Complete bounty responders + attractiveness implementation and expose fields on `Bounty`/`BountySystem`.",
+              "Add engine wiring to update bounty metrics once per tick.",
+              "Coordinate with UI agent to display intent/decision + responders/tier using only the contract fields (no AI imports)."
+            ],
+            "agent_fields": {
+              "proposed_interfaces_or_contracts": [
+                "HeroDecisionRecord(action, reason, at_ms, context) with to_dict(age_ms).",
+                "HeroIntentSnapshot(intent, last_decision) exposed via hero.get_intent_snapshot().",
+                "BountyEvalSnapshot(bounty_id, responders, attractiveness_score, attractiveness_tier) and fields on Bounty for UI consumption."
+              ],
+              "determinism_guardrails": [
+                "Use sim-time via game.sim.timebase.now_ms(); no wall-clock for sim logic.",
+                "No RNG in bounty attractiveness scoring.",
+                "Use stable ids (bounty_id) and avoid Python hash() for keys."
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

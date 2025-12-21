@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -78,7 +79,9 @@ class BuildingSpriteLibrary:
         base = BUILDING_COLORS.get(building_type, (128, 128, 128))
 
         # Deterministic per (type,state,size) so buildings look consistent.
-        rnd = random.Random(hash((building_type, state, w, h)) & 0xFFFFFFFF)
+        seed_s = f"{building_type}|{state}|{int(w)}|{int(h)}"
+        seed = zlib.crc32(seed_s.encode("utf-8")) & 0xFFFFFFFF
+        rnd = random.Random(seed)
 
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
         surf.fill((*base, 255))

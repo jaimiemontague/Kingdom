@@ -2,6 +2,14 @@
 Prompt templates for LLM decision making.
 """
 
+VALID_ACTIONS = {
+    "fight",
+    "retreat",
+    "buy_item",
+    "use_potion",
+    "explore",
+}
+
 SYSTEM_PROMPT = """You are an AI controlling a hero character in a fantasy kingdom simulation game. 
 You must make tactical decisions to help your hero survive, grow stronger, and protect the kingdom.
 

@@ -1,0 +1,86 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "11", "name": "QA_TestEngineering_Lead" },
+  "notes": [
+    "This file is owned by Agent 11 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:11.6209718-07:00"
+          },
+          "prompt_text": "Update smoke checklist to cover new features; propose 3 regression scenarios to add.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:11.6209718-07:00",
+            "status": "complete",
+            "raw": "### Status\n**Agent 11 (QA_TestEngineering_Lead)** — I reviewed the Week 1 sprint plan and implemented the **QA workstream P0**: expand automated smoke to cover bounty + intent paths, and ensure the “QA gate” (`qa_smoke --quick`) is stable and deterministic-friendly.\n\n### Deliverables\n- **Smoke coverage extended (per plan P0)**\n  - `tools/observe_sync.py` now supports `--qa` assertions:\n    - **Bounty exists** (when bounties/scenario enabled)\n    - **At least one bounty responder/claim happens** (robust even if the bounty is claimed before warmup)\n    - **Hero intent non-empty** after warmup (uses `hero.intent` if present)\n  - Deterministic sim-time is driven in the headless runner via `game.sim.timebase.set_sim_now_ms(...)` so cooldown-based logic works without `--realtime`.\n- **QA gate unblocked + determinism guard passing**\n  - Fixed determinism guard violations:\n    - `ai/basic_ai.py`: removed `time.time()` usage in debug throttling (uses sim-time).\n    - `ai/providers/mock_provider.py`: replaced `random.random()` with seeded `get_rng(\"mock_provider\")`.\n  - Fixed crashers from partially-integrated intent/decision plumbing in `ai/basic_ai.py` by adding small helper methods that delegate to the hero’s contract (`hero._update_intent_and_decision`, `hero.record_decision`).\n- **QA docs updated**\n  - `QA_TEST_PLAN.md` includes new regression bullets for intent + bounty responders.\n\n### Questions (blockers only)\n- None.\n\n### Next actions\n- Run the sprint gate exactly as specified in the plan:\n\n```bash\npython tools/qa_smoke.py --quick\n```\n\n### Handoff checklist\n- **Files changed**\n  - `tools/observe_sync.py` (QA assertions + deterministic sim-time)\n  - `ai/basic_ai.py` (intent/decision helpers + sim-time log throttle fix)\n  - `ai/providers/mock_provider.py` (seeded RNG)\n  - `QA_TEST_PLAN.md` (new regression bullets)\n- **How to test**\n  - `python tools/qa_smoke.py --quick` → should end with **DONE: PASS**\n- **Gotchas / future cleanup**\n  - Headless runs still warn about `pkg_resources` deprecation (Pygame dependency warning) — not a functional failure, but worth pinning/cleaning later if it becomes noisy.\n",
+            "summary_bullets": [
+              "Extended headless smoke to assert bounty existence + responder/claim and (when present) non-empty hero intent.",
+              "Made headless observer deterministic-time-driven so cooldown-gated behavior works without wall-clock.",
+              "Fixed determinism guard violations (wall-clock + global RNG) so the QA gate fails fast on regressions.",
+              "Stabilized intent/decision plumbing in BasicAI by delegating to hero intent/decision contract (no crashes)."
+            ],
+            "proposed_changes": [
+              "tools/observe_sync.py: add --qa assertions, drive sim time via set_sim_now_ms, and make QA bounties attractive/close.",
+              "tools/qa_smoke.py: run determinism_guard first and add bounty-focused profiles (including a deterministic scenario).",
+              "ai/basic_ai.py: replace time.time() throttling with sim-time; add minimal intent/decision helper methods used by sprint UI/debug needs.",
+              "ai/providers/mock_provider.py: replace random.random() with seeded get_rng(\"mock_provider\").",
+              "QA_TEST_PLAN.md: add regression bullets for bounty responders + hero intent display."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick returns exit code 0 (includes determinism_guard + headless profiles).",
+              "In bounty-enabled headless profiles, at least one bounty exists and at least one responder/claim is observed (robust even if claimed early).",
+              "If hero intent fields exist, at least one living hero has a non-empty intent after warmup (no crashes due to intent plumbing).",
+              "No wall-clock (time.time/pygame.time.get_ticks) or global random.* usage in simulation code per determinism_guard."
+            ],
+            "risks": [
+              "QA assertions may become flaky if future tuning makes bounties unattractive again; mitigate by keeping a dedicated deterministic QA scenario/profile.",
+              "Duplicate hero names can make logs confusing and could cause future per-name maps to collide; worth addressing when convenient.",
+              "Determinism guard may block legitimate UI-only wall-clock usage if code is placed under scanned dirs; keep UI/time in game/ui or excluded dirs."
+            ],
+            "dependencies": [
+              "Relies on existing headless runner pattern in tools/observe_sync.py and deterministic timebase in game/sim/timebase.py.",
+              "Upstream hero intent/decision contract in game/entities/hero.py (best-effort delegation; still works with fallback if absent)."
+            ],
+            "questions_back_to_pm": [
+              "No blockers. Do you want duplicate hero-name collisions treated as a QA failure (later), or just logged as a warning for now?"
+            ],
+            "recommended_next_actions": [
+              "PM: make qa_smoke --quick a required pre-merge gate for Build A/Build B.",
+              "UX/UI agent: once intent + bounty UI lands, add a small manual check: selected hero shows intent + last decision age; bounty shows responders + attractiveness tier.",
+              "Tools agent: consider adding a single CLI flag to run the deterministic intent+bounty scenario directly for faster iteration loops."
+            ],
+            "agent_fields": {
+              "smoke_updates": [
+                "qa_smoke --quick runs determinism_guard first and fails fast on nondeterminism regressions.",
+                "observe_sync supports --qa assertions (bounty exists + responder/claim; intent non-empty when field exists).",
+                "Added bounty-focused profiles, including deterministic scenario preset, to avoid tuning-related flakiness."
+              ],
+              "new_regressions": [
+                "Bounty responders/claim: after placing a bounty, responders/claim should occur within ~10–20s in the QA scenario.",
+                "Hero intent: when implemented/displayed, hero intent should be non-empty and update as behavior changes (no crashes).",
+                "Determinism: no wall-clock or global RNG in sim code; determinism_guard must pass before builds."
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

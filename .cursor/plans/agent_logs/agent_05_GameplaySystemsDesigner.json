@@ -1,0 +1,85 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "05", "name": "GameplaySystemsDesigner" },
+  "notes": [
+    "This file is owned by Agent 05 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:37-07:00"
+          },
+          "prompt_text": "Give recommended default values/bands for bounty rewards, lair bounty cost, and early pressure so pacing feels alive but fair.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:37-07:00",
+            "status": "complete",
+            "raw": "### Status\\nCompleted WK1 Agent 5 (GameplaySystemsDesigner) slice: bounty reward bands + lair bounty sanity + early pressure tuning, with a small fix so attack_lair bounties actually result in lair clearing (not instant proximity payout).\\n\\n### Deliverables\\n- Gameplay tuning doc: docs/sprint/wk1_gameplay_tuning.md\\n- Bounty tiers: Low/Med/High rewards via B, Shift+B, Ctrl+B\\n- Lair tuning: stash + spawn pressure adjustments; LAIR_BOUNTY_COST aligned with expected stash payout\\n- Behavior fix (critical for pacing nudge): attack_lair bounties now pay out on lair_cleared, not on proximity\\n\\n### Notes\\n- Implemented completion-based lair bounty payout (engine pays on lair_cleared if a matching attack_lair bounty exists).\\n- Restricted proximity-claim to explore bounties only.\\n- Updated AI so reaching an attack_lair bounty transitions the hero into attacking the lair target (approach adjacent tile, then CombatSystem handles damage).\\n\\n### Handoff checklist\\n- Files changed: docs/sprint/wk1_gameplay_tuning.md, config.py, game/entities/lair.py, game/entities/building.py, ai/basic_ai.py, game/systems/bounty.py, game/engine.py\\n- How to test: python tools/qa_smoke.py --quick; manual: wait ~90s for starter lair bounty and verify heroes clear lair then get payout.",
+            "summary_bullets": [
+              "Added bounty reward tiers (Low/Med/High) and tiered placement controls (B / Shift+B / Ctrl+B).",
+              "Aligned lair bounty cost vs stash payout; slightly increased lair stash and reduced runaway early pressure via slower lair spawn intervals.",
+              "Fixed core behavior bug: attack_lair bounties now pay out on lair_cleared (completion), not proximity; heroes now transition to attacking the lair target."
+            ],
+            "proposed_changes": [
+              "config.py: set STARTING_GOLD=1500, LAIR_BOUNTY_COST=90, LAIR_STASH_GROWTH_PER_SPAWN=8; add BOUNTY_REWARD_LOW/MED/HIGH constants.",
+              "game/engine.py: use bounty tier modifiers for explore bounties; pay attack_lair bounties on lair_cleared event.",
+              "game/systems/bounty.py: restrict proximity-claiming to explore bounties only.",
+              "ai/basic_ai.py: when reaching attack_lair bounty, approach lair and begin attacking; avoid unreachable lair center goals.",
+              "game/entities/lair.py: tune base stash + spawn intervals per lair type; preserve deterministic spawn behavior.",
+              "game/entities/building.py: add x/y properties mapping to building center for safer targeting logic."
+            ],
+            "acceptance_criteria": [
+              "Placing a bounty is a meaningful decision (cost tiers feel distinct; does not feel free/infinite).",
+              "Starter attack_lair bounty results in heroes actually clearing the lair; bounty payout occurs on lair clear, not on arrival.",
+              "Early game feels active but not instantly lethal; lair clear yields satisfying gold (stash + bounty) and reads as a chapter beat."
+            ],
+            "risks": [
+              "STARTING_GOLD=1500 may be too tight for some EA onboarding expectations; adjust upward if early build options feel constrained.",
+              "Typed bounties other than attack_lair (defend_building/hunt_enemy_type) still need completion hooks to match the completion-based model.",
+              "Modifier-key bounty tiers may be non-discoverable without an additional HUD hint/tooltips."
+            ],
+            "dependencies": [
+              "Optional: Agent 8 to add UI hint text for bounty tiers (B / Shift+B / Ctrl+B).",
+              "Optional: Agents 3/8 responders + attractiveness UI/logic workstream (separate from tuning)."
+            ],
+            "questions_back_to_pm": [
+              "Do we want STARTING_GOLD closer to 1500 (tradeoffs) or 2000–3000 (more forgiving) for Build B?",
+              "Should we treat modifier-key tiered bounties as acceptable UX for wk1, or prioritize a small UI affordance (button/menu)?"
+            ],
+            "recommended_next_actions": [
+              "Run a 10-minute manual session focusing on early pacing (first 3 minutes) and lair bounty behavior; adjust only constants if needed.",
+              "Add a small HUD tip mentioning bounty tiers (Shift/Ctrl modifiers) after Build A stabilizes.",
+              "Future: implement completion hooks for defend_building and hunt_enemy_type bounties to match the completion-based model."
+            ],
+            "agent_fields": {
+              "tuning_recommendations": [
+                "BOUNTY_REWARD_LOW=25, BOUNTY_REWARD_MED=60, BOUNTY_REWARD_HIGH=150",
+                "LAIR_BOUNTY_COST=90; LAIR_STASH_GROWTH_PER_SPAWN=8; slight per-lair spawn interval slowdowns",
+                "STARTING_GOLD=1500 (adjustable to 2000–3000 if onboarding feels too tight)"
+              ],
+              "metrics_or_targets": [
+                "Within first 3 minutes, at least one clear lever/decision prompt is surfaced (bounty tip/starter lair bounty).",
+                "Clearing an initial lair should typically yield a satisfying payout (bounty + stash) without spiking difficulty uncontrollably."
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

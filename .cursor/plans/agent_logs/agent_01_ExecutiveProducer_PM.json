@@ -1,0 +1,11 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "01", "name": "ExecutiveProducer_PM" },
+  "notes": [
+    "This file is owned by Agent 01 only.",
+    "Structure nests rounds inside sprints to keep history organized.",
+    "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
+  ],
+  "sprints": {}
+}
+

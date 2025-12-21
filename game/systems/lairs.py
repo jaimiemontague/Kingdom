@@ -4,7 +4,6 @@ Lair system: places monster lairs in the world and updates them to spawn enemies
 
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 
 from config import (
@@ -14,6 +13,7 @@ from config import (
     LAIR_MIN_DISTANCE_FROM_CASTLE_TILES,
 )
 from game.entities.lair import GoblinCamp, WolfDen, SkeletonCrypt, SpiderNest, BanditCamp, MonsterLair
+from game.sim.determinism import get_rng
 
 
 @dataclass
@@ -35,6 +35,8 @@ class LairSystem:
     def __init__(self, world):
         self.world = world
         self.lairs: list[MonsterLair] = []
+        # Deterministic stream for lair placement / type selection.
+        self.rng = get_rng("lair_system")
 
     def _distance_tiles(self, ax: int, ay: int, bx: int, by: int) -> float:
         dx = ax - bx
@@ -55,7 +57,8 @@ class LairSystem:
         bag: list[type[MonsterLair]] = []
         for spec in DEFAULT_LAIR_SPECS:
             bag.extend([spec.lair_cls] * max(1, int(spec.weight)))
-        return random.choice(bag)
+        rng = getattr(self, "rng", get_rng("lair_system"))
+        return rng.choice(bag)
 
     def spawn_initial_lairs(self, buildings: list, castle) -> list[MonsterLair]:
         """
@@ -83,8 +86,9 @@ class LairSystem:
             tmp = lair_cls(0, 0)
             w, h = tmp.size
 
-            gx = random.randint(1, max(1, MAP_WIDTH - w - 2))
-            gy = random.randint(1, max(1, MAP_HEIGHT - h - 2))
+            rng = getattr(self, "rng", get_rng("lair_system"))
+            gx = rng.randint(1, max(1, MAP_WIDTH - w - 2))
+            gy = rng.randint(1, max(1, MAP_HEIGHT - h - 2))
 
             if not self.world.is_buildable(gx, gy, w, h):
                 continue

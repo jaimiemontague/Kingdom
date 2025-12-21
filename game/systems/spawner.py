@@ -1,10 +1,10 @@
 """
 Enemy spawning system.
 """
-import random
 import pygame
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, GOBLIN_SPAWN_INTERVAL
 from game.entities.enemy import Goblin
+from game.sim.determinism import get_rng
 
 
 class EnemySpawner:
@@ -12,6 +12,8 @@ class EnemySpawner:
     
     def __init__(self, world):
         self.world = world
+        # Deterministic stream for wave spawns.
+        self.rng = get_rng("enemy_spawner")
         self.spawn_timer = 0
         # Release tuning: fewer monsters overall.
         self.extra_spawn_delay_ms = 12000  # additional gap between waves
@@ -26,20 +28,21 @@ class EnemySpawner:
         
     def get_spawn_position(self) -> tuple:
         """Get a random spawn position at the edge of the map."""
-        edge = random.choice(['top', 'bottom', 'left', 'right'])
+        rng = getattr(self, "rng", get_rng("enemy_spawner"))
+        edge = rng.choice(['top', 'bottom', 'left', 'right'])
         
         if edge == 'top':
-            x = random.randint(1, MAP_WIDTH - 2)
+            x = rng.randint(1, MAP_WIDTH - 2)
             y = 0
         elif edge == 'bottom':
-            x = random.randint(1, MAP_WIDTH - 2)
+            x = rng.randint(1, MAP_WIDTH - 2)
             y = MAP_HEIGHT - 1
         elif edge == 'left':
             x = 0
-            y = random.randint(1, MAP_HEIGHT - 2)
+            y = rng.randint(1, MAP_HEIGHT - 2)
         else:  # right
             x = MAP_WIDTH - 1
-            y = random.randint(1, MAP_HEIGHT - 2)
+            y = rng.randint(1, MAP_HEIGHT - 2)
         
         # Convert to world coordinates
         world_x = x * TILE_SIZE + TILE_SIZE // 2

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import pygame
+from game.sim.timebase import now_ms as sim_now_ms
 
 
 @dataclass
@@ -30,7 +30,7 @@ class BuffSystem:
     AURA_REFRESH_SECONDS = 1.25
 
     def update(self, heroes: list, buildings: list):
-        now_ms = pygame.time.get_ticks()
+        now_ms = sim_now_ms()
 
         # Prune expired buffs first to keep hero stats stable and avoid drift/stacking.
         for hero in heroes:

@@ -5,6 +5,7 @@ import pygame
 import math
 from config import TILE_SIZE, COLOR_GOLD, COLOR_WHITE
 from game.graphics.font_cache import get_font
+from game.sim.timebase import now_ms as sim_now_ms
 
 
 class Bounty:
@@ -31,10 +32,15 @@ class Bounty:
         self.bounty_id = Bounty._NEXT_ID
         Bounty._NEXT_ID += 1
 
-        self.created_time_ms = pygame.time.get_ticks()
+        self.created_time_ms = sim_now_ms()
         self.claimed_time_ms = None
         self.assigned_to = None
         self.assigned_time_ms = None
+
+        # UI metrics (computed by BountySystem; safe fallbacks if never set)
+        self.ui_responders = 0
+        self.ui_attractiveness = "low"  # "low" | "med" | "high"
+        self.ui_score = 0.0
         
     @property
     def grid_x(self) -> int:
@@ -54,14 +60,14 @@ class Bounty:
                 hero.add_gold(self.reward)
             else:
                 hero.gold += self.reward
-            self.claimed_time_ms = pygame.time.get_ticks()
+            self.claimed_time_ms = sim_now_ms()
             return True
         return False
 
     def assign(self, hero_name: str):
         """Mark this bounty as assigned to a hero (best-effort coordination to avoid dogpiles)."""
         self.assigned_to = hero_name
-        self.assigned_time_ms = pygame.time.get_ticks()
+        self.assigned_time_ms = sim_now_ms()
 
     def unassign(self):
         self.assigned_to = None
@@ -194,6 +200,18 @@ class Bounty:
         text_rect = text.get_rect(center=(screen_x + 10, screen_y - 35))
         surface.blit(text, text_rect)
 
+        # Draw responders + attractiveness (compact, readable)
+        responders = int(getattr(self, "ui_responders", 0) or 0)
+        tier = str(getattr(self, "ui_attractiveness", "low") or "low").lower()
+        tier_label = {"low": "Low", "med": "Med", "high": "High"}.get(tier, "Low")
+        tier_color = {"low": (150, 150, 150), "med": (240, 210, 90), "high": (110, 230, 140)}.get(tier, (150, 150, 150))
+
+        meta_font = get_font(14)
+        r_text = meta_font.render(f"R:{responders}", True, COLOR_WHITE)
+        surface.blit(r_text, (screen_x + 24, screen_y - 18))
+        a_text = meta_font.render(tier_label, True, tier_color)
+        surface.blit(a_text, (screen_x + 24 + r_text.get_width() + 6, screen_y - 18))
+
 
 class BountySystem:
     """Manages bounties in the game."""
@@ -216,6 +234,11 @@ class BountySystem:
         for bounty in self.bounties:
             if bounty.claimed:
                 continue
+
+            # Only "explore" bounties are proximity-claimed.
+            # Typed bounties (e.g. attack_lair) are completed by their owning system (ex: lair_cleared).
+            if getattr(bounty, "bounty_type", "explore") != "explore":
+                continue
             
             for hero in heroes:
                 if hero.is_alive and bounty.is_near(hero.x, hero.y):
@@ -237,7 +260,7 @@ class BountySystem:
         """
         buildings = game_state.get("buildings", [])
         enemies = game_state.get("enemies", [])
-        now_ms = pygame.time.get_ticks()
+        now_ms = sim_now_ms()
 
         summaries = []
         for b in self.get_unclaimed_bounties():
@@ -265,6 +288,50 @@ class BountySystem:
         # Sort: valid first, then closer, then higher reward
         summaries.sort(key=lambda s: (not s["valid"], s["distance_tiles"], -s["reward"]))
         return summaries[: max(0, int(limit))]
+
+    def update_ui_metrics(self, heroes: list, enemies: list, buildings: list):
+        """
+        Compute lightweight UI-only bounty metrics:
+        - responders: count of living heroes currently targeting this bounty
+        - attractiveness tier: based on reward vs local risk (deterministic)
+
+        This avoids importing AI modules (keeps boundaries clean).
+        """
+        alive_heroes = [h for h in heroes if getattr(h, "is_alive", True)]
+
+        for b in self.get_unclaimed_bounties():
+            # responders
+            responders = 0
+            bid = getattr(b, "bounty_id", None)
+            for h in alive_heroes:
+                t = getattr(h, "target", None)
+                if isinstance(t, dict) and t.get("type") == "bounty":
+                    if bid is not None and t.get("bounty_id") == bid:
+                        responders += 1
+                    elif bid is None and t.get("bounty_ref") is b:
+                        responders += 1
+
+            # attractiveness (reward vs risk, small deterministic heuristic)
+            reward = float(getattr(b, "reward", 0) or 0.0)
+            risk = float(b.estimate_risk(enemies)) if hasattr(b, "estimate_risk") else 0.0
+            valid = True
+            if hasattr(b, "is_valid"):
+                try:
+                    valid = bool(b.is_valid(buildings))
+                except Exception:
+                    valid = True
+
+            # Score: higher reward helps, risk hurts. Clamp to >= 0 for sanity.
+            score = max(0.0, (reward / 50.0) - (1.25 * risk))
+            tier = "low"
+            if valid and score >= 2.0:
+                tier = "high"
+            elif valid and score >= 1.0:
+                tier = "med"
+
+            b.ui_responders = int(responders)
+            b.ui_score = float(score)
+            b.ui_attractiveness = str(tier)
     
     def cleanup(self):
         """Remove claimed bounties."""

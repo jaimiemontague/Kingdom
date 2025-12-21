@@ -1,0 +1,29 @@
+{
+  "sprint_id": "wk1-broad-sweep-midweek-endweek",
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+    "notes": ""
+  },
+  "round_id": "wk1_r1",
+  "round_meta": {
+    "prompt_set_id": "wk1_prompts_v1",
+    "build_target": "BuildA_midweek+BuildB_endweek",
+    "sent_at_local": "YYYY-MM-DDTHH:MM:SS"
+  },
+  "prompt_text": "",
+  "response": {
+    "received_at_local": "YYYY-MM-DDTHH:MM:SS",
+    "status": "complete",
+    "raw": "",
+    "summary_bullets": [],
+    "proposed_changes": [],
+    "acceptance_criteria": [],
+    "risks": [],
+    "dependencies": [],
+    "questions_back_to_pm": [],
+    "recommended_next_actions": [],
+    "agent_fields": {}
+  }
+}
+
+

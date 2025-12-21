@@ -15,6 +15,7 @@ from enum import Enum, auto
 from config import TILE_SIZE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
 from game.systems.navigation import compute_path_worldpoints, follow_path, best_adjacent_tile
 from game.graphics.font_cache import get_font, render_text_cached
+from game.sim.timebase import now_ms as sim_now_ms
 
 
 class PeasantState(Enum):
@@ -222,7 +223,7 @@ class Peasant:
             if dist_to_goal > TILE_SIZE * 12:
                 reached = self.move_towards(goal_x, goal_y, dt)
             else:
-                now_ms = pygame.time.get_ticks()
+                now_ms = sim_now_ms()
                 want_replan = (not self.path) or (self._path_goal != goal_key)
                 if want_replan and now_ms >= int(getattr(self, "_next_replan_ms", 0) or 0):
                     self.path = compute_path_worldpoints(world, buildings, self.x, self.y, goal_x, goal_y)

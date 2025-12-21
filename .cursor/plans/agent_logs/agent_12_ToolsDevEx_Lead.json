@@ -1,0 +1,88 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "12", "name": "ToolsDevEx_Lead" },
+  "notes": [
+    "This file is owned by Agent 12 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:20-07:00"
+          },
+          "prompt_text": "Propose one dev flag/command to spawn a deterministic test setup for bounties+intent to speed iteration.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:20-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — implemented the sprint-required deterministic mini-scenario + strengthened smoke gate.\\n\\n### Deliverables\\n- Added deterministic headless scenario preset: `python tools/observe_sync.py --no-enemies --scenario intent_bounty --qa`\\n  - Places two deterministic explore bounties (close + far) to exercise bounty response/claim + hero intent activity quickly.\\n- Updated `tools/qa_smoke.py --quick` to include a dedicated bounty scenario preset profile (responders/claim), in addition to existing profiles and determinism guard.\\n- Updated `tools/observe_sync.py` to use `BountySystem` (closer to live engine), to drive sim-time via `set_sim_now_ms(...)`, and to print compact bounty telemetry in logs (`bounties_unclaimed/claimed/spent`).\\n- Fixed QA assertion robustness: if a bounty is claimed before warmup, it still counts as evidence of a responder (claimed bounties are removed from unclaimed list, so the prior check could fail).\\n\\n### Commands\\n- Required gate: `python tools/qa_smoke.py --quick` (expects PASS / exit code 0).\\n- Focused bounty scenario: `python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --no-enemies --scenario intent_bounty --qa`\\n\\n### Notes\\n- Pygame emits a pkg_resources deprecation warning under Python 3.13; non-fatal but noisy.\\n- QA currently logs whether explicit responder fields exist; it does not enforce them yet until responder tracking lands.",
+            "summary_bullets": [
+              "Added deterministic headless bounty+intent scenario preset: observe_sync --scenario intent_bounty",
+              "Extended qa_smoke --quick to run a bounty scenario preset profile (responders/claim) plus determinism guard",
+              "observe_sync now uses BountySystem + sim-time driving and logs compact bounty telemetry",
+              "Made bounty responder QA assertion robust when bounties are claimed before warmup"
+            ],
+            "proposed_changes": [
+              "tools/observe_sync.py: add --scenario intent_bounty deterministic setup (two explore bounties)",
+              "tools/observe_sync.py: use BountySystem and include bounty_system in game_state; refresh unclaimed bounties each tick",
+              "tools/observe_sync.py: drive sim-time via set_sim_now_ms() to avoid wall-clock dependencies in sim logic",
+              "tools/observe_sync.py: add compact bounty summary to log output",
+              "tools/qa_smoke.py: add 'bounty scenario preset (responders/claim)' to --quick"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick returns exit code 0",
+              "observe_sync --no-enemies --scenario intent_bounty --qa completes without exceptions and emits [qa] PASS",
+              "Scenario output is deterministic under a fixed seed (bounty placement + sim-time driven)",
+              "Tooling changes are isolated to tools and do not require risky gameplay refactors"
+            ],
+            "risks": [
+              "Pygame pkg_resources deprecation warning on Python 3.13 adds noise to logs (non-fatal)",
+              "Headless runs depend on SDL dummy drivers being available (SDL_VIDEODRIVER=dummy)",
+              "QA does not yet enforce explicit responder fields until responder tracking is implemented"
+            ],
+            "dependencies": [
+              "game.systems.bounty.BountySystem",
+              "game.sim.timebase.set_sim_now_ms",
+              "Pygame headless init support (dummy video/audio drivers)"
+            ],
+            "questions_back_to_pm": [
+              "Should duplicate hero-name warnings be promoted to a failing QA condition, or remain informational for now?"
+            ],
+            "recommended_next_actions": [
+              "Use python tools/qa_smoke.py --quick as the default pre-merge/QA gate for Build A/B",
+              "Use observe_sync --scenario intent_bounty to iterate quickly on bounty/intent logic without the full game loop",
+              "After responders/attractiveness fields land, tighten observe_sync --qa to assert responder_count>0 via explicit field (not inference)",
+              "After intent taxonomy lands, tighten observe_sync --qa to assert intent is non-empty and in allowed label set"
+            ],
+            "agent_fields": {
+              "dev_tools_suggestions": [
+                "Deterministic headless scenario presets for fast iteration (no rendering)",
+                "One-command smoke gate returning useful exit code + triage-friendly logs",
+                "Sim-time driving in tools to catch wall-clock dependencies early"
+              ],
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --no-enemies --scenario intent_bounty --qa",
+                "python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --qa --bounty"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

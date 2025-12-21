@@ -1,0 +1,91 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "10", "name": "PerformanceStability_Lead" },
+  "notes": [
+    "This file is owned by Agent 10 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T19:19:26"
+          },
+          "prompt_text": "Identify likely hotspots from these changes and propose 1–2 low-effort mitigations.",
+          "response": {
+            "received_at_local": "2025-12-20T19:19:26",
+            "status": "complete",
+            "raw": "I reviewed the current game loop + existing instrumentation, identified likely hotspots for the wk1 \u201cintent + bounty clarity\u201d changes, and implemented a small set of measurement + guardrail improvements that are low-risk for Build A and useful for Build B perf sanity checks.\n\nLikely hotspots:\n- Pathfinding/navigation replans (A*) as entity counts rise or pursue behaviors increase.\n- Per-frame UI overlay allocations (text + surfaces).\n- Cross-product scans (heroes x bounties) if scoring is done every tick.\n- Replanning churn when targets/goals change frequently.\n\nWhat I implemented:\n- In-game perf overlay now caches its panel surface and refreshes on cadence/value changes (avoid per-frame allocations), and shows loop timing EMA (events/update/render) using time.perf_counter.\n- Added a headless perf benchmark runner (tools/perf_benchmark.py) to report ms/tick total + breakdown and PF counters; optional CSV output.\n- Added a short perf sanity checklist doc for wk1 emphasizing UI allocation avoidance and scan caps/cadence.\n\nPerf acceptance criteria:\n- Perf overlay does not allocate a new panel surface every frame.\n- Overlay shows loop timing (events/update/render) and PF counters without crashing.\n- Headless benchmark runs and prints ms/tick summary + breakdown + PF stats; CSV append works.\n\nRisks:\n- Headless benchmark excludes render/fog cost; treat results as sim baseline only.\n- Future bounty logic could accidentally introduce O(N_heroes*N_bounties) per-tick cost unless cadenced/capped.\n\nDependencies:\n- UI work should cache text/surfaces and refresh on cadence.\n- Intent/decision/bounty scoring should be lightweight and computed on cadence (deterministic).",
+            "summary_bullets": [
+              "Existing PF stats were already wired via navigation; biggest risks are PF thrash and per-frame UI allocations.",
+              "Perf overlay now avoids per-frame Surface allocation and shows loop timing EMA (events/update/render).",
+              "Added headless benchmark to measure ms/tick breakdown and PF stats; can output CSV for trend tracking.",
+              "Added sprint perf sanity checklist focusing on UI allocations and cross-product scan caps."
+            ],
+            "proposed_changes": [
+              "Cache perf overlay panel and refresh on cadence/value change (avoid per-frame allocations).",
+              "Add loop timing instrumentation (events/update/render) using perf_counter; display as EMA.",
+              "Add headless perf benchmark runner to measure ms/tick and PF counters; optional CSV output.",
+              "Add perf sanity checklist doc for wk1."
+            ],
+            "acceptance_criteria": [
+              "Perf overlay does not allocate a new panel surface every frame (cached + periodic refresh).",
+              "Overlay shows stable loop timing readout (events/update/render) plus PF counters without crashing.",
+              "Headless benchmark runs and prints ms/tick summary + breakdown + PF stats; optional CSV append works."
+            ],
+            "risks": [
+              "Headless benchmark excludes render/fog cost; treat results as sim baseline only.",
+              "Future bounty attractiveness/responder logic could introduce O(N_heroes*N_bounties) per-tick scans if not cadenced/capped.",
+              "If overlay strings grow significantly, panel rebuild cadence may need adjustment."
+            ],
+            "dependencies": [
+              "Agent 8: ensure new hero/bounty UI caches text/surfaces and avoids per-frame allocations.",
+              "Agent 3/6: ensure intent/decision/bounty scoring is lightweight and cadenced; avoid heavy per-tick recomputation."
+            ],
+            "questions_back_to_pm": [
+              "Do we want an explicit Build B perf budget target (ms/tick or FPS) tied to a standard scenario + reference machine?"
+            ],
+            "recommended_next_actions": [
+              "Add a perf step to release checklist: run 2–3 standard benchmark profiles and record outputs.",
+              "Once bounty responders/attractiveness lands, extend headless benchmark to include bounties and measure scoring cost.",
+              "Encourage UI changes to follow a refresh-on-cadence pattern to avoid per-frame churn."
+            ],
+            "agent_fields": {
+              "hotspots": [
+                "Pathfinding/navigation replans (A*) under higher entity counts or pursue behaviors",
+                "Per-frame UI overlay allocations (text + surfaces)",
+                "Cross-product scans (heroes x bounties) if computed every tick",
+                "Enemy/hero replanning churn when targets change frequently"
+              ],
+              "mitigations": [
+                "Cache and cadenced-refresh perf overlay panel; avoid per-frame Surface allocations",
+                "Instrument loop timings via perf_counter with EMA smoothing to spot spikes quickly",
+                "Use headless benchmark runner to measure ms/tick breakdown and PF counters; gate regressions",
+                "Cadence/cap bounty scoring to avoid O(N*M) per-tick"
+              ],
+              "perf_acceptance_criteria": [
+                "Overlay panel cached; rebuild on cadence/value change only",
+                "PF counters visible; loop timing EMA visible (events/update/render)",
+                "Headless perf benchmark executes and reports ms/tick + PF stats"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

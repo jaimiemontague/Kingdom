@@ -6,10 +6,9 @@ Auto-spawns neutral civilian buildings near the castle based on hero count.
 
 from __future__ import annotations
 
-import random
-
 from config import TILE_SIZE
 from game.entities.neutral_buildings import House, Farm, FoodStand
+from game.sim.determinism import get_rng
 
 
 def _overlaps_any(buildings: list, gx: int, gy: int, w: int, h: int) -> bool:
@@ -53,6 +52,7 @@ class NeutralBuildingSystem:
         self.world = world
         self._spawn_timer = 0.0
         self.spawn_interval_sec = 6.0
+        self.rng = get_rng("neutral_buildings")
 
     def _castle_center_tile(self, castle) -> tuple[int, int]:
         gx = getattr(castle, "grid_x", 0)
@@ -76,7 +76,8 @@ class NeutralBuildingSystem:
         for r in range(int(min_r), int(max_r) + 1):
             candidates = _ring_positions(cx, cy, r)
             if shuffle_within_ring:
-                random.shuffle(candidates)
+                rng = getattr(self, "rng", get_rng("neutral_buildings"))
+                rng.shuffle(candidates)
             for gx, gy in candidates:
                 if not self.world.is_buildable(gx, gy, w, h):
                     continue

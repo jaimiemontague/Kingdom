@@ -1,0 +1,86 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "04", "name": "NetworkingDeterminism_Lead" },
+  "notes": [
+    "This file is owned by Agent 04 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:32"
+          },
+          "prompt_text": "Review planned changes for determinism pitfalls; list required guardrails.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:32",
+            "status": "complete",
+            "raw": "Agent 4 (NetworkingDeterminism_Lead) determinism review for wk1 planned changes: Hero intent + last decision inspect (FS-1) and Bounty responders + attractiveness (FS-2), plus supporting tooling/QA updates.\n\nSummary (high-signal)\n- These features are determinism-sensitive because they touch “decision age”, “time since…”, and scoring/selection logic.\n- Primary risks: wall-clock time (pygame/time) and unseeded RNG (random.*) leaking into sim logic (inside the sim boundary).\n- Recommendation: enforce guardrails via code patterns and an automated QA gate.\n\nDeterminism pitfalls to avoid (wk1 scope)\n- Bounty attractiveness must not include randomness or wall-clock time; avoid nondeterministic iteration order (no set/dict order dependence for top picks/tie-breaks).\n- “Age since last decision” must not use pygame.time.get_ticks()/time.time; use sim-time or tick accumulation consistently.\n- Responder tracking must not rely on set iteration; if responder sets exist, use them only for membership or sort before outcome-affecting use.\n- Python gotchas: never use hash() for determinism; use stable hashing (e.g., crc32) or explicit IDs.\n\nRequired guardrails (rules)\n- Time: simulation logic uses game.sim.timebase.now_ms() (or passed now_ms/tick), never wall-clock.\n- RNG: simulation logic uses game.sim.determinism.get_rng(tag) if randomness is required; prefer per-system/per-entity streams; avoid RNG entirely for scoring if possible.\n- Iteration: outcome-affecting logic must not depend on set iteration; sort keys/ids for selection.\n- Boundary discipline: entities/systems/AI that change sim state follow these rules; UI/graphics may use wall-clock if they don’t feed back into sim decisions.\n\nRecommended enforcement (low risk)\n- Add/run a static determinism guard: python tools/determinism_guard.py\n- Wire it into tools/qa_smoke.py --quick to fail fast if violations appear.\n\nAcceptance criteria (determinism signoff)\n- Bounty attractiveness: no random.* and no wall-clock; stable ordering/tie-breaks.\n- Hero last-decision age: sim-time or tick is authoritative; safe defaults when missing.\n- QA gate: tools/qa_smoke.py --quick fails if determinism guard fails.\n\nDependencies / notes\n- Agent 3: ensure timestamps are sim-time/tick-based in contracts.\n- Agent 6: keep variability deterministic (seeded RNG) and avoid wall-clock.\n- Agent 11/12: keep determinism guard in smoke tooling and document commands.",
+            "summary_bullets": [
+              "FS-1/FS-2 are determinism-sensitive due to timestamps/“age” and any scoring/picking logic.",
+              "Primary risks: wall-clock time (pygame/time) and unseeded RNG (random.*) leaking into sim logic.",
+              "Require deterministic iteration/tie-breaking (no set-order dependence) for bounty scoring/selection.",
+              "Recommendation: enforce via a static determinism guard + run it in QA smoke as a release gate."
+            ],
+            "proposed_changes": [
+              "Store decision timestamps as sim-time or tick (not wall-clock).",
+              "Compute bounty attractiveness deterministically (no RNG; no wall-clock; stable tie-breaks).",
+              "Add/run `python tools/determinism_guard.py` as a release gate (ideally via `tools/qa_smoke.py --quick`)."
+            ],
+            "acceptance_criteria": [
+              "Bounty attractiveness uses no `random.*` and no wall-clock time; tie-breaks are stable.",
+              "Hero last-decision “age” uses sim-time or tick; safe defaults when no decision exists.",
+              "`tools/qa_smoke.py --quick` (or equivalent) fails if determinism guard finds violations."
+            ],
+            "risks": [
+              "Accidental `pygame.time.get_ticks()` / `time.time()` usage introduced while implementing “age since decision”.",
+              "Adding RNG noise to attractiveness/scoring causes replay/lockstep desync later.",
+              "Using sets/dicts in outcome-affecting ordering (e.g., picking responders/top bounty) introduces nondeterminism."
+            ],
+            "dependencies": [
+              "Agent 3: define hero intent/decision records with sim-time or tick fields.",
+              "Agent 6: keep any variability deterministic (seeded RNG streams) and avoid wall-clock use.",
+              "Agent 11/12: include determinism gate in smoke tooling / CI-ish workflows."
+            ],
+            "questions_back_to_pm": [
+              "Should the determinism guard be mandatory for single-profile smoke runs too, or only `--quick`?",
+              "Is it acceptable for UI-only age displays to use wall-clock, or do we want UI to also reflect sim-time for consistency?"
+            ],
+            "recommended_next_actions": [
+              "Agent 3/6 implement hero intent + last decision schema with tick/sim-time fields.",
+              "Agent 5/8 implement bounty responders/attractiveness with deterministic ordering and no RNG.",
+              "Agent 11/12 wire determinism guard into QA gates and document the command in the sprint DoD."
+            ],
+            "agent_fields": {
+              "determinism_risks": [
+                "Wall-clock time usage for “age since decision” (pygame ticks/time.time).",
+                "Unseeded RNG introduced into attractiveness/scoring.",
+                "Unordered iteration (sets/dicts) affecting picks or scoring outcomes."
+              ],
+              "required_guardrails": [
+                "Use sim-time/ticks for all sim timestamps and elapsed-time calculations.",
+                "Use seeded RNG streams only via `game.sim.determinism.get_rng(tag)` (and avoid RNG entirely for scoring when possible).",
+                "Ensure stable ordering/tie-breaks: never depend on set iteration; sort keys/ids before selection.",
+                "Avoid Python `hash()` for determinism; use stable hashing or explicit IDs."
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,85 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "09", "name": "ArtDirector_Pixel_Animation_VFX" },
+  "notes": [
+    "This file is owned by Agent 09 only.",
+    "Structure nests rounds inside sprints to keep history organized."
+  ],
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk1_r1": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r1",
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T20:19:11.8224330-07:00"
+          },
+          "prompt_text": "Suggest ultra-light icons/shapes for bounty type + attractiveness tiers that remain readable over fog-of-war.",
+          "response": {
+            "received_at_local": "2025-12-20T20:19:11.8224330-07:00",
+            "status": "complete",
+            "raw": "## Status\\nReady to integrate: a minimal, pixel-crisp icon language for bounty markers + attractiveness tiers that stays readable on grass/path/water and under fog-of-war (dark overlays).\\n\\n## Deliverables (P0, low-risk)\\n### 1) Procedural icon pack (no external art required)\\nProvide procedural UI icons so UI can ship now without waiting for PNGs:\\n- `game/graphics/ui_icons.py`\\n\\nProvides:\\n- `get_bounty_type_icon(bounty_type, size=16)`\\n  - `explore`: diamond/compass\\n  - `attack_lair`: crossed swords (simplified)\\n  - `defend_building`: shield\\n  - `hunt_enemy_type`: target reticle\\n- `get_attractiveness_icon(tier, size=16)`\\n  - `low`: 1 chevron\\n  - `med`: 2 chevrons\\n  - `high`: 3 chevrons\\n- `get_bounty_badge(bounty_type, attractiveness_tier, size=20)`\\n  - Composite: backing plate + 1px outline + type icon + tier chevrons\\n  - Intended for world overlays (bounty marker UI) and tooltips\\n\\nDesign intent:\\n- Shape-first (survives zoom, colorblindness, and fog)\\n- High-value ink with near-black outline\\n- Small dark translucent plate behind the icon for contrast\\n- Cached surfaces to avoid per-frame allocations\\n\\n### 2) Overlay readability rules for fog-of-war\\nFog-of-war applies a dark overlay. Add/confirm overlay rules:\\n- Plate behind icons/text\\n- 1px outline on light shapes\\n- Prefer shapes over text\\n- Prioritize value contrast over hue\\n\\nDoc update: `docs/art/pixel_style_guide.md`\\n\\n### 3) Reserved folder for future hand-drawn UI icons (optional)\\n- `assets/sprites/ui/README.md` (+ `.gitkeep`)\\n\\n## Recommended icon language (what UI should display)\\n- Bounty type: one symbol near marker (compass / swords / shield / reticle)\\n- Attractiveness tier: 1/2/3 chevrons (low/med/high)\\n- Prefer composite badge: `get_bounty_badge()`\\n\\n## Acceptance criteria\\n- Bounty marker can display type + tier (or composite badge) readable over fog/terrain\\n- No external PNG assets required for Build A\\n- Icons cached (no per-frame allocations)\\n\\n## Risks\\n- If UI draws icons without plate/outline, they’ll get lost under fog/noisy tiles\\n- If icons are scaled with smoothing, they’ll blur; use nearest-neighbor\\n- Always-visible badges could add clutter if bounty counts get high\\n\\n## Dependencies\\n- Agent 8 decision: always-visible vs hover/selection, and exact placement\\n- Agent 3/5/6: define/compute attractiveness tier strings (low/med/high)\\n\\n## Questions back to PM\\n1) Tier color language: blue/gold/orange (cool→warm) vs green/yellow/red?\\n2) Visibility policy: always-visible vs hover/selection?\\n3) Future-proofing: icons emphasize action (sword/shield/compass) or target?\\n\\n## Recommended next actions\\n- Agent 8: integrate `get_bounty_badge()` into bounty overlay/tooltip\\n- Wire attractiveness tier strings once available\\n- Optionally replace procedural icons with PNGs later without changing UI contract",
+            "summary_bullets": [
+              "Procedural pixel-crisp UI icons for bounty type + attractiveness tier (cached, no art dependency)",
+              "Composite badge includes backing plate + 1px outline for fog/terrain readability",
+              "Overlay readability rules documented for fog-of-war markers",
+              "Optional future PNG location reserved under `assets/sprites/ui/`"
+            ],
+            "proposed_changes": [
+              "Use `game/graphics/ui_icons.py` for bounty overlay icons (type + tier + composite badge)",
+              "Represent tier as 1/2/3 chevrons (low/med/high) and type as symbol (compass/swords/shield/reticle)",
+              "Render icons with a dark translucent plate + outline to maintain contrast under fog-of-war"
+            ],
+            "acceptance_criteria": [
+              "Bounty markers show type + tier (or composite badge) and remain readable on terrain and under fog-of-war",
+              "No external PNG assets required to ship Build A",
+              "Icons are cached; UI integration should not allocate per frame for icon generation"
+            ],
+            "risks": [
+              "Icons become illegible if UI omits backing plate/outline on fogged/noisy backgrounds",
+              "Smoothing/filtered scaling will blur pixel icons; must use nearest-neighbor",
+              "Always-visible badges may add clutter if many bounties exist"
+            ],
+            "dependencies": [
+              "Agent 8 to integrate badges into the bounty overlay and decide visibility policy",
+              "Agent 3/5/6 to provide attractiveness tiers (low/med/high) for UI to display"
+            ],
+            "questions_back_to_pm": [
+              "Confirm tier color language: blue/gold/orange (cool→warm) vs green/yellow/red",
+              "Confirm visibility policy: always-visible vs hover/selection to reduce clutter",
+              "As more bounty types appear, should iconography emphasize action or target?"
+            ],
+            "recommended_next_actions": [
+              "Agent 8 integrate `get_bounty_badge()` into bounty overlay rendering and/or tooltip panel",
+              "After attractiveness tiers land, wire tier strings into badges (low/med/high)",
+              "Optionally replace procedural icons with hand-drawn PNGs later without changing UI contract"
+            ],
+            "agent_fields": {
+              "asset_suggestions": [
+                "Procedural icons via `game/graphics/ui_icons.py` (no PNGs required)",
+                "Optional future PNGs under `assets/sprites/ui/` at 16x16 or 20x20"
+              ],
+              "readability_rules": [
+                "Use a small dark translucent plate behind icons/text for contrast",
+                "Use 1px near-black outline around light shapes",
+                "Prefer shapes over text at small sizes; prioritize value contrast over hue",
+                "Avoid smoothed scaling; keep icons aligned to the pixel grid"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
