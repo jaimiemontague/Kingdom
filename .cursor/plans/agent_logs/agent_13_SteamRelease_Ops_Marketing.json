@@ -465,6 +465,73 @@
             }
           }
         }
+        ,
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_release_closeout_v1",
+            "build_target": "ReleaseCloseout",
+            "sent_at_local": "2025-12-21T16:06:47.8285855-07:00"
+          },
+          "prompt_text": "WK3 final release closeout: no new features, only verification/docs/release hygiene. Agent 13: update docs/sprint/wk3_buildB_patch_notes_draft.md with UI polish highlights, visual snapshot system commands, and asset attribution summary; verify assets/ATTRIBUTION.md covers all assets/third_party/* packs and license/readme files exist; log gate runs and PASS/FAIL.",
+          "response": {
+            "received_at_local": "2025-12-21T16:06:47.8285855-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (Release/Ops/Marketing) — WK3 final closeout: updated Build B patch notes for release hygiene (UI polish highlights + snapshot/gallery commands + attribution summary). Verified required automated gates PASS on my machine.\\n\\n### Files changed\\n- `docs/sprint/wk3_buildB_patch_notes_draft.md` (added UI polish + snapshot commands + concrete credits bullets; tightened gate list)\\n\\n### Attribution packaging check (PASS)\\nConfirmed `assets/third_party/` contains pack dirs and `assets/ATTRIBUTION.md` lists them.\\n- Packs present: `kenney_cc0`, `kingdomsim_cc0_placeholders`\\n- Each has `LICENSE*.txt` and `README*.txt`\\n\\n### Commands run + PASS evidence\\n- PASS: `python tools/qa_smoke.py --quick`\\n  - Evidence: `[determinism_guard] PASS: no violations found` and multiple `[qa] PASS:` lines. Output log: `c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/0c229e15-3109-4701-b1c0-6487e27ebbd4.txt`\\n- PASS: `python tools/validate_assets.py --strict --check-attribution`\\n  - Output: `[validate_assets] OK: no findings` / `SUMMARY errors=0 warns=0`\\n\\n### Blockers\\n[]",
+            "summary_bullets": [
+              "Updated WK3 Build B patch notes draft with closeout-required sections: UI polish highlights, snapshot/gallery commands, and concrete credits bullets.",
+              "Verified attribution packaging: every pack under assets/third_party is listed in assets/ATTRIBUTION and includes LICENSE/README files.",
+              "Ran required automated gates and observed PASS for both qa_smoke and strict validate_assets attribution."
+            ],
+            "proposed_changes": [
+              "Keep release notes precise and gated: only claim pixel art coverage if strict validator + QA confirm.",
+              "Use assets/ATTRIBUTION.md as the single source of truth for Credits/Attribution in patch notes."
+            ],
+            "acceptance_criteria": [
+              "`python tools/qa_smoke.py --quick` PASS.",
+              "`python tools/validate_assets.py --strict --check-attribution` PASS.",
+              "Patch notes include snapshot/gallery commands and a Credits section listing all packs in assets/third_party."
+            ],
+            "risks": [
+              "Manual acceptance spot-check items (borderless behavior, quit/close UI) still require a human interactive run."
+            ],
+            "dependencies": [
+              "Agent 11: final manual acceptance spot-check results and posting PASS/FAIL.",
+              "Agent 12: ensure snapshot/gallery commands remain stable and compare_gallery remains buildable."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After human manual smoke passes: finalize version string in patch notes and tag/release per PM checklist."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "docs/sprint/wk3_buildB_patch_notes_draft.md"
+              ],
+              "packs_verified": [
+                "kenney_cc0",
+                "kingdomsim_cc0_placeholders"
+              ],
+              "qa_evidence": {
+                "qa_smoke_command": "python tools/qa_smoke.py --quick",
+                "qa_smoke_result": "PASS",
+                "qa_smoke_output_log_path": "c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/0c229e15-3109-4701-b1c0-6487e27ebbd4.txt",
+                "qa_smoke_evidence_lines": [
+                  "[determinism_guard] PASS: no violations found",
+                  "[qa] PASS: ... (multiple scenarios)"
+                ],
+                "validate_assets_command": "python tools/validate_assets.py --strict --check-attribution",
+                "validate_assets_result": "PASS",
+                "validate_assets_output": "[validate_assets] OK: no findings; SUMMARY errors=0 warns=0"
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
       }
     }
   }

@@ -89,3 +89,4 @@ Use `get_bounty_badge()` to show both at once in a compact 20px square with a ba
 - After Build A: replace procedural shapes with real PNG icons only if desired; the contract can stay the same.
 
 
+

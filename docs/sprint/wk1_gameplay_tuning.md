@@ -47,3 +47,4 @@ These are **player-paid** rewards (cost == reward). Suggested defaults:
 - Consider scaling lair bounty cost with lair `threat_level` once we have threat surfaced in UI.
 
 
+

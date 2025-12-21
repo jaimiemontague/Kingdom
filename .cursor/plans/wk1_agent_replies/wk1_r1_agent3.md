@@ -118,3 +118,4 @@ These contracts are designed to be:
   - bounty responders/tier fields exist and don’t throw in mock/no-llm.
 
 
+

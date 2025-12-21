@@ -1265,6 +1265,42 @@
             ]
           },
           "status": "ready_for_wk3_r7_asset_ingest"
+        },
+        "wk3_r7": {
+          "round_meta": {
+            "prompt_set_id": "wk3_buildB_exec_r7_v1",
+            "build_target": "BuildB_endweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Build B execution: land real PNG sprites + attribution and make strict validator PASS."
+          },
+          "pm_round7_results": {
+            "high_level_status": "shipped_buildb_gate_green",
+            "what_landed": [
+              "PNG sprite coverage is now present across the override folders (at least frame_000.png per required hero/enemy/building state).",
+              "Attribution scaffolding exists and passes strict checks: assets/ATTRIBUTION.md populated; assets/third_party/<pack> contains LICENSE*.txt and README*.txt.",
+              "Tooling/QA gates are now green on the current repo state."
+            ],
+            "important_note": [
+              "The first landed sprites are a CC0 'kingdomsim_cc0_placeholders' set generated in-repo to unblock the pipeline end-to-end. Kenney CC0 is scaffolded and attributed, but curated Kenney-derived PNG replacements may still be desired for final art direction."
+            ],
+            "evidence": [
+              "Local run (repo root): `python tools/validate_assets.py --strict --check-attribution --report` => OK: no findings (errors=0 warns=0).",
+              "Local run (repo root): `python tools/qa_smoke.py --quick` => PASS (see agent-tools output log: 3fa31bc4-9070-4c25-aa57-9ab1ceeb505d.txt).",
+              "Repo contains frame PNGs (examples): assets/sprites/heroes/*/*/frame_000.png, assets/sprites/enemies/*/*/frame_000.png, assets/sprites/buildings/*/*/frame_000.png."
+            ],
+            "qa_timing_reconcile": [
+              "Agent 11's wk3_r7 strict validator FAIL was a timing artifact (ran before PNGs landed). Current repo state is strict PASS as verified locally."
+            ]
+          },
+          "pm_next_actions": {
+            "option_A_tag_buildb_now": [
+              "If you accept the CC0 placeholders as 'pixel imagery' for this build: run the manual smoke checklist, then bump version + update CHANGELOG/patch notes and tag/release Build B."
+            ],
+            "option_B_swap_to_kenney_then_tag": [
+              "If you want the intended Kenney look before tagging: run one more Art/Ops round to replace placeholder frames with curated Kenney subset while keeping strict validator + qa_smoke green."
+            ]
+          },
+          "status": "ready_for_human_choice_tag_vs_swap"
         }
       }
     }

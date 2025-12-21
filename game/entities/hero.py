@@ -752,7 +752,8 @@ class Hero:
             bubble = self._anim.frame() if self._anim is not None else None
             if bubble is not None:
                 # Small and subtle
-                bubble_small = pygame.transform.smoothscale(bubble, (16, 16))
+                # Pixel art: keep nearest-neighbor scaling (avoid blur + extra cost).
+                bubble_small = pygame.transform.scale(bubble, (16, 16))
                 surface.blit(bubble_small, (int(bx - 8), int(by - 28)))
             return
 

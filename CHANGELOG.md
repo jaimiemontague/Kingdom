@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.2.4
+
+- WK3 UI polish + UX manageability: 1080p borderless default, Quit button, and closeable panels (X).
+- Visual Snapshot System: deterministic screenshot capture + comparison gallery to drive look/feel iteration.
+- Pixel-art pass: improved CC0 placeholder sprites for buildings/enemies (native tile-multiple sizes for buildings) while keeping fallbacks safe.
+- Perf/determinism guardrails: tooling gates remain green (`qa_smoke --quick`, strict asset + attribution validator).
+
 ## Prototype v1.2.3
 
 - Hero AI polish: reduced rapid target/goal oscillation (“spaz loops”) via commitment windows/hysteresis.

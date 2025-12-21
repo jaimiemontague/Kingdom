@@ -95,6 +95,10 @@ class GameEngine:
         self.running = True
         self.paused = False
 
+        # Screenshot tooling hook: when True, skip UI layers for clean world captures.
+        # (Used by tools/capture_screenshots.py scenarios; normal gameplay leaves this False.)
+        self.screenshot_hide_ui = False
+
         # Perf overlay
         self.show_perf = True
         self._perf_last_ms = 0
@@ -1135,28 +1139,29 @@ class GameEngine:
             self.screen.blit(self._scaled_surface, (0, 0))
         
         # Render HUD
-        self.hud.render(self.screen, self.get_game_state())
-        
-        # Render debug panel
-        self.debug_panel.render(self.screen, self.get_game_state())
-        
-        # Render building panel
-        self.building_panel.render(self.screen, self.heroes, self.economy)
-
-        # Perf overlay (helps diagnose lag spikes)
-        if self.show_perf:
-            self.render_perf_overlay(self.screen)
-        
-        # Pause overlay
-        if self.paused:
-            self.screen.blit(self._pause_overlay, (0, 0))
+        if not bool(getattr(self, "screenshot_hide_ui", False)):
+            self.hud.render(self.screen, self.get_game_state())
             
-            font = pygame.font.Font(None, 72)
-            text = font.render("PAUSED", True, (255, 255, 255))
-            win_w = int(getattr(self, "window_width", self.screen.get_width()))
-            win_h = int(getattr(self, "window_height", self.screen.get_height()))
-            text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
-            self.screen.blit(text, text_rect)
+            # Render debug panel
+            self.debug_panel.render(self.screen, self.get_game_state())
+            
+            # Render building panel
+            self.building_panel.render(self.screen, self.heroes, self.economy)
+
+            # Perf overlay (helps diagnose lag spikes)
+            if self.show_perf:
+                self.render_perf_overlay(self.screen)
+            
+            # Pause overlay
+            if self.paused:
+                self.screen.blit(self._pause_overlay, (0, 0))
+                
+                font = pygame.font.Font(None, 72)
+                text = font.render("PAUSED", True, (255, 255, 255))
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
+                self.screen.blit(text, text_rect)
         
         pygame.display.flip()
 

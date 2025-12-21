@@ -435,6 +435,53 @@
             }
           }
         }
+        ,
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_final_release_closeout_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-21T16:06:43"
+          },
+          "prompt_text": "WK3 final release closeout: run release gates (qa_smoke, validate_assets strict+attribution), confirm compare gallery remains buildable, and provide PM/Tech signoff. No scope creep; only fix blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T16:06:43",
+            "status": "complete",
+            "raw": "PM/Tech signoff (Agent 03): ran required automated gates and confirmed PASS. No blockers found from architecture side; no code changes made during closeout.",
+            "summary_bullets": [
+              "qa_smoke --quick: PASS (determinism_guard PASS).",
+              "validate_assets --strict --check-attribution: PASS (exit code 0).",
+              "No new code changes needed for release closeout."
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick returns PASS.",
+              "python tools/validate_assets.py --strict --check-attribution returns exit code 0."
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with human 10-minute smoke in --no-llm to validate borderless 1080p default + close/quit buttons.",
+              "Proceed with screenshot capture + build_gallery step owned by Tools (Agent 12) if not already completed."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see run output; determinism_guard PASS)",
+              "validate_assets_evidence": "exit_code=0 (no output)"
+            }
+          }
+        }
       }
     }
   }

@@ -31,3 +31,4 @@ This is a **scope gate**: it clarifies what we ship first to deliver a satisfyin
 - Any new “smart” behavior must come with: **reason visibility** (debug/tooltip) + **failure-safe** fallback.
 
 
+

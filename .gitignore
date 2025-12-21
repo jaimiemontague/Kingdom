@@ -40,6 +40,17 @@ env/
 .DS_Store
 Thumbs.db
 
+# Downloads / temp artifacts
+*.crdownload
+
+# Visual Snapshot System artifacts (generated)
+docs/screenshots/
+docs/art/compare_gallery.html
+docs/art/compare_gallery.json
+
+# Reference art (prototype-only; keep out of release commits)
+.cursor/plans/art_examples/
+
 # Game saves (if any)
 saves/
 *.save

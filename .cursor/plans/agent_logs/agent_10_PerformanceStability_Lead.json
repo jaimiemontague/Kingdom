@@ -291,6 +291,265 @@
             }
           }
         }
+        ,
+        "wk3_r9_major_graphics_update": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update (Visual Snapshot System) consult response by Agent 10."
+          },
+          "round_id": "wk3_r9_major_graphics_update",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_update_v2",
+            "build_target": "BuildB_endweek+GraphicsMilestones0to5",
+            "sent_at_local": "2025-12-21T15:16:02"
+          },
+          "prompt_text": "Major Graphics Update driven by Visual Snapshot System: review baseline gallery + style guides and flag perf hazards for terrain/building/enemy/UI skin work. Provide caching/scaling/alpha guidance and any blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T15:16:02",
+            "status": "complete",
+            "raw": "Status: Consult-only perf review for Major Graphics Update (Visual Snapshot System). I reviewed the style/animation guides and the baseline snapshot gallery structure (manifests + compare_gallery). No code changes in this round; deliverable is perf hazard checklist + concrete guardrails for Agents 08/09/12.\n\nBaseline artifacts reviewed:\n- docs/art/compare_gallery.html (+ compare_gallery.json)\n- docs/screenshots/wk3_baseline_v2/* (base_overview/building_catalog/enemy_catalog/ui_panels manifests)\n- .cursor/plans/art_examples (prototype refs)\n- tools/capture_screenshots.py (deterministic, headless)\n\nPerf hazards to avoid (P0):\n1) Per-frame Surface allocations in render loops\n- Do NOT create new pygame.Surface in per-frame UI or entity render paths (common regression).\n- Cache panel surfaces/text and re-render only on cadence/value change.\n\n2) Runtime image I/O and scaling\n- Sprite PNG loading/scaling must happen at load time (and be cached), never per entity per frame.\n- The existing sprite libraries already cache by (type,size) and use pygame.transform.scale (nearest neighbor). Keep this pattern.\n\n3) Excessive alpha blending / large translucent overlays\n- Large translucent shadow layers over many sprites can increase fill-rate cost at 1080p.\n- Prefer baked-in shadows in sprite frames, or small pre-baked shadow surfaces reused across entities.\n\n4) Per-pixel operations during gameplay\n- Avoid surf.set_at loops during gameplay; it is OK only when producing cached procedural sprites once.\n\nPixel-crisp / scaling note (quality + perf):\n- Avoid pygame.transform.smoothscale for pixel-art elements; it is both blurrier and more expensive.\n- I found one existing usage: game/entities/hero.py uses smoothscale for a 16x16 bubble icon. For the major graphics pass, ensure inside/building icons use nearest-neighbor scaling or ship dedicated 16x16 art.\n\nMilestones advanced:\n- None directly (consult-only). This review unblocks Milestones 1–4 by setting perf constraints.\n\nScreenshots improved:\n- None yet (no visual changes landed by me).\n\nDependencies / what I need from owners:\n- From Agent 09/08: if adding new shadow/outline approaches, confirm whether shadows are baked per-sprite or composited at runtime; if composited, it must be cached and small.\n- From Agent 12: ensure asset validator remains report-only for Build A and does not decode images; for Build B strict gate, still avoid decoding/scaling (check file presence + naming only).\n\nRecommended next actions (for the studio):\n- Keep snapshot capture deterministic: use tools/capture_screenshots.py with --ticks 0 for static catalogs, and only increase ticks where an animation pose must settle.\n- When large new PNG sets land, run a quick perf spot check in-game with perf overlay (F2) while panning/zooming.\n- If fill-rate becomes a problem, consider reducing alpha overlay usage before optimizing deeper.\n",
+            "summary_bullets": [
+              "Reviewed WK3 major graphics update style/animation contracts and baseline snapshot gallery structure; no code changes.",
+              "P0 perf hazards: per-frame Surface allocations, runtime image load/scale, large alpha overlays, and per-pixel ops during gameplay.",
+              "Existing sprite libraries already cache and use nearest-neighbor scaling; keep that pattern for all new art.",
+              "Flagged one existing smoothscale usage (hero inside bubble) as a pixel-crisp/perf risk for the art pass."
+            ],
+            "proposed_changes": [
+              "Keep all new sprite/tiles/building art loaded once and cached; never load/scale per entity per frame.",
+              "Prefer baked-in shadows or small cached shadow sprites; avoid large translucent overlays across many entities.",
+              "Replace any smoothscale usage for pixel-art UI/icons with nearest-neighbor (scale) or ship native-size icons.",
+              "If adding validation tooling, keep it filesystem-only (no PNG decoding) until/unless a separate offline step is added."
+            ],
+            "acceptance_criteria": [
+              "Visual snapshot commands continue to run deterministically and produce stable manifest entries (sha256 per PNG).",
+              "python tools/qa_smoke.py --quick remains PASS after art assets land.",
+              "No new per-frame allocations introduced in render paths (spot-checked via perf overlay and code review of new UI/widgets)."
+            ],
+            "risks": [
+              "Runtime composited shadows/outlines using large alpha surfaces may spike render time at 1080p under entity load.",
+              "Asset ingestion could regress load times or memory if caches are bypassed or many variants are loaded unnecessarily.",
+              "Inconsistent scaling (fractional/filtered) will cause shimmer and may prompt expensive rescaling workarounds."
+            ],
+            "dependencies": [
+              "Agent 09/08: decide shadow approach (baked vs composited) and ensure any runtime composition is cached and small.",
+              "Agent 12: snapshot tooling + validator must stay deterministic and avoid image decoding/scaling; gallery must remain usable."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "If any PR adds runtime shadow overlays, require a quick before/after perf overlay capture at 1080p and note in PR description.",
+              "As assets land, periodically re-run: python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html",
+              "If entity render cost rises, prioritize removing large alpha layers before deeper optimization."
+            ],
+            "agent_fields": {
+              "reviewed_art_contracts": [
+                "docs/art/pixel_style_guide.md",
+                "docs/art/animation_vfx_guidelines.md",
+                "docs/art/placeholder_sprite_briefs.md"
+              ],
+              "reviewed_baseline_artifacts": [
+                "docs/art/compare_gallery.html",
+                "docs/screenshots/wk3_baseline_v2/* manifests",
+                ".cursor/plans/art_examples"
+              ],
+              "flagged_code_hotspots": [
+                "game/entities/hero.py: pygame.transform.smoothscale used for inside/bubble icon (pixel-crisp + perf concern)"
+              ],
+              "no_code_changes": true
+            }
+          }
+        }
+        ,
+        "wk3_r10_major_graphics_execution": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update execution consult (Milestone 1 terrain + Milestone 4 UI skin)."
+          },
+          "round_id": "wk3_r10_major_graphics_execution",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_exec_v1",
+            "build_target": "GraphicsMilestones1and4",
+            "sent_at_local": "2025-12-21T15:26:39"
+          },
+          "prompt_text": "Major Graphics Update execution: Milestone 1 (terrain) + Milestone 4 (UI skin code-only) in parallel. Provide perf hazard review guardrails; do not overwrite locked baseline; use v2_next for after shots; ensure capture+gallery+qa_smoke remain runnable.",
+          "response": {
+            "received_at_local": "2025-12-21T15:26:39",
+            "status": "complete",
+            "raw": "Status: Consult-only (Agent 10). Milestones 0 and 5 are done; execution is starting for Milestone 1 (terrain) and Milestone 4 (UI skin). I reviewed the locked style target (docs/art/wk3_major_graphics_target.md) and current renderer architecture (tile_sprites/building_sprites/enemy_sprites + screenshot capture system). No code changes from me in this round.\n\nWhat I changed:\n- None (no files modified).\n\nMilestones advanced:\n- None directly (consult review).\n\nPerf guardrails (must hold for both Milestone 1 and 4):\n- No per-frame pygame.Surface allocations in world/UI render loops.\n- No runtime image load/scale in entity render paths (load once, cache).\n- Avoid large alpha overlays across the full screen or across many entities; prefer baked pixels or small cached overlays.\n- No per-pixel loops during gameplay; per-pixel generation is OK only when building cached sprites once.\n\nMilestone 1 (terrain) — specific perf notes:\n- TileSpriteLibrary is already cache-backed and uses deterministic variation (coord hash) with one-time surface generation. Keep all added detail inside that cached generation path.\n- If adding path edge/intersection definition: do NOT compute neighbor masks and regenerate Surfaces every frame. Compute a stable key (tile_type + variant + neighbor_mask + size) and cache the resulting Surface.\n- Keep grass noise down per style target: reduce per-tile speckle density (terrain is low-noise; variation should come from shapes/props, not heavy dithering).\n\nMilestone 4 (UI skin, code-only) — specific perf notes:\n- Prefer drawing borders/highlights directly via pygame.draw.* onto existing surfaces (or cached panel surfaces) rather than allocating intermediate Surfaces each frame.\n- Ensure panel caches invalidate only when content changes (selection changes, values cross thresholds) or on a slow cadence.\n- Avoid smoothscale for pixel UI; use nearest-neighbor scaling if any scaling is needed.\n\nDoD shots expected to improve (by owners):\n- Terrain: base_overview__Z1__world_clean.png and base_overview__Z2__world_clean.png under docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/\n- UI skin: ui_panels_hero.png and ui_panels_debug.png under docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/\n\nCommands run (after changes):\n- Not run by me in this consult-only round. Owners should run the required capture+gallery commands and qa_smoke after their PRs.\n\nBlockers:\n- None.\n",
+            "summary_bullets": [
+              "Reviewed locked style contract (wk3_major_graphics_target) and current sprite/tile caching architecture; no code changes.",
+              "Key perf guardrails: no per-frame Surface allocations, no runtime image load/scale, avoid large alpha overlays, and no per-pixel loops during gameplay.",
+              "Terrain edge/intersection work must be cached by a stable key (neighbor mask) and never recomputed per frame.",
+              "UI skin should be draw-primitive-based or cached-surface-based; avoid intermediate surfaces and smoothscale."
+            ],
+            "proposed_changes": [
+              "If path edges/intersections are added, cache by (tile_type, variant, neighbor_mask, size) and reuse Surfaces.",
+              "Reduce grass speckle density to match low-noise style target; reserve texture for buildings/props.",
+              "UI skin: implement 2-layer borders + highlight language using cached surfaces and draw calls; invalidate caches only on state changes/cadence.",
+              "Avoid smoothscale for pixel UI/icons; use nearest-neighbor scale or ship native-size art."
+            ],
+            "acceptance_criteria": [
+              "Milestone 1/4 PRs do not introduce per-frame Surface allocations in render paths (spot check + perf overlay).",
+              "Required snapshot commands produce updated v2_next shots and gallery is rebuildable and browsable.",
+              "python tools/qa_smoke.py --quick remains PASS after each PR."
+            ],
+            "risks": [
+              "Path edge/intersection logic could accidentally compute neighbor masks or generate surfaces per frame, causing frame spikes.",
+              "UI skin could regress perf if it creates intermediate translucent surfaces each frame or re-renders all text every tick.",
+              "Overusing alpha overlays (shadows/lighting plates) can increase fill-rate cost at 1080p."
+            ],
+            "dependencies": [
+              "Agent 09 (terrain): keep all new tile variation/procedural work cached; no per-frame regeneration.",
+              "Agent 08 (UI skin): preserve caching; avoid new per-frame surfaces; keep code-only skin incremental.",
+              "Agent 12/11: snapshot capture + gallery + qa_smoke remain stable/green as PR gate."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "For any PR that adds runtime shadows/plates, require a quick in-game perf overlay spot check (F2) while panning/zooming at 1080p.",
+              "Prefer incremental caching improvements over new runtime compositing; keep fill-rate in mind.",
+              "After each milestone PR, regenerate v2_next shots and rebuild docs/art/compare_gallery.html for review."
+            ],
+            "agent_fields": {
+              "style_contract_reviewed": "docs/art/wk3_major_graphics_target.md",
+              "milestones_in_scope": [
+                "gfx-1-terrain",
+                "gfx-4-ui-skin"
+              ],
+              "no_code_changes": true,
+              "perf_guardrails": [
+                "no per-frame pygame.Surface allocations",
+                "no runtime image load/scale",
+                "avoid large alpha overlays",
+                "no per-pixel loops during gameplay (cached generation only)"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r11_buildings_enemies": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update execution consult for Milestone 2 (Tier-1 buildings) + Milestone 3 (core enemies)."
+          },
+          "round_id": "wk3_r11_buildings_enemies",
+          "round_meta": {
+            "prompt_set_id": "wk3_gfx_m2_m3_v1",
+            "build_target": "GraphicsMilestones2and3",
+            "sent_at_local": "2025-12-21T15:42:48"
+          },
+          "prompt_text": "Major Graphics Update: Milestone 2 (Tier-1 buildings) + Milestone 3 (core enemies) asset ingestion via snapshot gate. Confirm no runtime load/scale in render paths, avoid large alpha overlays, no per-frame Surface allocations. Log files changed, DoD shot filenames improved, commands run + evidence, blockers (attribution/source).",
+          "response": {
+            "received_at_local": "2025-12-21T15:42:48",
+            "status": "complete",
+            "raw": "Status: Consult-only perf review (Agent 10). Milestone 1 first pass is shipped; Milestones 2 (Tier-1 buildings) and 3 (core enemies) are starting. I reviewed the locked style contract and the engine’s current sprite loading/caching behavior. No code changes from me in this round.\n\nWhat I changed:\n- None (no files modified).\n\nMilestones advanced:\n- None directly (consult).\n\nPerf constraints for Milestone 2/3 (P0):\n- Runtime rendering must NOT:\n  - load PNGs\n  - scale images\n  - allocate new Surfaces per frame\n- Heavy alpha compositing should be avoided (especially large translucent overlays). Prefer baked shadows/outlines in sprite pixels.\n\nRelevant engine behavior (current, OK if not abused):\n- Enemies/Heroes: sprite libraries cache clips by (type,size); load_png_frames scales once at load time.\n- Buildings: BuildingSpriteLibrary caches first frame per (type,state,size_px); load_png_frames scales at load time.\n\nPerf hazards to watch for in PRs:\n- Adding any sprite load/scale call inside per-entity render/update.\n- Adding per-frame shadow plates or glow overlays using big SRCALPHA Surfaces.\n- Providing sprites at mismatched sizes that force additional scaling work (best to ship exact target sizes: 32x32 units; buildings at tile multiples).\n\nDoD shots expected to improve (by Agent 09’s assets):\n- Milestone 2 (buildings):\n  - docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_castle_closeup.png\n  - .../building_marketplace_closeup.png, .../building_inn_closeup.png, .../building_blacksmith_closeup.png, .../building_guardhouse_closeup.png, .../building_house_closeup.png, .../building_farm_closeup.png, .../building_food_stand_closeup.png\n- Milestone 3 (enemies):\n  - docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_goblin_closeup.png\n  - .../enemy_wolf_closeup.png, .../enemy_skeleton_closeup.png, .../enemy_spider_closeup.png, .../enemy_bandit_closeup.png\n\nCommands run + evidence:\n- Not run by me in this consult-only round. Asset owners should run the required capture + gallery rebuild + qa_smoke gate after landing sprites.\n\nBlockers / dependencies:\n- If any asset pack licensing is unclear, we must have clean attribution before merging (assets/ATTRIBUTION.md + assets/third_party/<pack>/{LICENSE,README}.txt). I can’t sign off on assets without that paper trail.\n",
+            "summary_bullets": [
+              "Reviewed locked style/animation contracts and current sprite caching behavior; no code changes from Agent 10.",
+              "P0 perf constraint: no PNG load/scale or Surface allocation inside render/update loops; caching only.",
+              "Avoid large alpha overlays for shadows/glows; prefer baked pixels in sprites to keep fill-rate stable at 1080p.",
+              "Best practice: ship exact-size sprites (32x32 units; buildings at tile multiples) to avoid extra scaling work."
+            ],
+            "proposed_changes": [
+              "Ensure new building/enemy sprites are delivered at exact target sizes to minimize scaling cost (and preserve crispness).",
+              "If any PR adds runtime shadow/glow overlays, require a perf overlay spot check at 1080p with many entities visible.",
+              "Keep sprite loading centralized in sprite libraries and cached; do not add ad-hoc loads in entity render functions."
+            ],
+            "acceptance_criteria": [
+              "After Milestone 2/3 assets land, capture_screenshots + build_gallery succeed against wk3_baseline_v2_next and gallery is browsable.",
+              "python tools/qa_smoke.py --quick remains PASS after each PR.",
+              "No per-frame image loading/scaling/Surface allocations are introduced in render/update paths (code review + perf overlay spot check if needed)."
+            ],
+            "risks": [
+              "Large translucent shadow/lighting overlays may spike render time at 1080p under load.",
+              "Asset packs with unclear licensing/attribution could block merge (must have clean paper trail).",
+              "Sprites provided at inconsistent sizes may cause avoidable scaling work and shimmer."
+            ],
+            "dependencies": [
+              "Agent 09: provide sprites in required folder layout and target sizes; prefer baked shadows/outlines.",
+              "Agents 12/11: ensure capture + gallery + qa_smoke gates remain stable while assets change.",
+              "Agent 13 (if involved): confirm attribution format and source clarity for any third-party packs."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "For each Milestone 2/3 PR: run the required capture commands to wk3_baseline_v2_next, rebuild compare_gallery.html, and run qa_smoke --quick.",
+              "If a PR introduces runtime composited shadows/glows, request a quick in-game perf overlay readout (F2) while panning/zooming at 1080p.",
+              "Treat any attribution uncertainty as a hard stop until assets/ATTRIBUTION.md + per-pack LICENSE/README files are added."
+            ],
+            "agent_fields": {
+              "milestones_in_scope": [
+                "gfx-2-buildings-tier1",
+                "gfx-3-enemies-core"
+              ],
+              "style_contract_reviewed": "docs/art/wk3_major_graphics_target.md",
+              "asset_contract_reviewed": "docs/art/animation_vfx_guidelines.md",
+              "no_code_changes": true,
+              "perf_hazards": [
+                "runtime png load/scale in render paths",
+                "per-frame pygame.Surface allocations",
+                "large alpha overlays (fill-rate spikes)"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3 final closeout: no new features; run required gates; perf regression sniff (Agent 10)."
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_release_closeout_v1",
+            "build_target": "ReleaseCloseout",
+            "sent_at_local": "2025-12-21T16:06:09"
+          },
+          "prompt_text": "WK3 final release closeout: run required gates (qa_smoke --quick, validate_assets --strict --check-attribution), regenerate rolling v2_next snapshots + gallery (others own), and do a perf regression sniff for UI (no per-frame Surface churn). No scope creep; only fix blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T16:06:09",
+            "status": "complete",
+            "raw": "Status: Final release closeout perf sniff (Agent 10). Ran the required automated gates locally and did a quick allocation hotspot scan for UI. No code changes in this closeout.\n\nCommands run + evidence:\n- python tools/qa_smoke.py --quick\n  - PASS: determinism_guard exit_code=0; profiles exit_code=0; DONE: PASS\n- python tools/validate_assets.py --strict --check-attribution\n  - PASS (exit code 0)\n\nPerf regression sniff (UI churn):\n- Reviewed current UI code for per-frame pygame.Surface allocations.\n  - game/ui/widgets.py: Panel and Tooltip surfaces are cached (good).\n  - game/ui/debug_panel.py: panel surface is cached and only rebuilt ~4Hz or on dirty (good).\n  - game/ui/building_panel.py: still allocates a panel Surface per render when visible (potential perf hotspot, but appears legacy and not a new regression).\n\nFiles changed:\n- None.\n\nBlockers:\n- None from automated gates.\n",
+            "summary_bullets": [
+              "Ran required gates locally: qa_smoke --quick PASS; validate_assets --strict --check-attribution PASS (exit code 0).",
+              "UI perf sniff: new widget system and debug panel use cached surfaces; building_panel still allocates per render when visible (legacy hotspot).",
+              "No blockers found; no code changes made."
+            ],
+            "proposed_changes": [
+              "If building_panel remains heavily used in the final UI, consider caching its panel surface and invalidating only on state change (post-release if not a blocker).",
+              "Keep new UI widgets following the cached-surface + cadenced update pattern."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick PASS.",
+              "python tools/validate_assets.py --strict --check-attribution PASS."
+            ],
+            "risks": [
+              "If legacy building_panel becomes prominent in the final layout, per-frame Surface churn could affect render time on lower-end machines."
+            ],
+            "dependencies": [
+              "Agent 11: run and publish final gate outputs + manual smoke results.",
+              "Agent 12: ensure capture+gallery commands remain stable and deterministic during closeout."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with human manual smoke gate; if perf is reported as an issue, prioritize caching building_panel or ensuring it’s not always-on."
+            ],
+            "agent_fields": {
+              "commands_run": [
+                "python tools/qa_smoke.py --quick (PASS)",
+                "python tools/validate_assets.py --strict --check-attribution (PASS, exit code 0)"
+              ],
+              "qa_smoke_snippet": "[qa_smoke] DONE: PASS",
+              "validate_assets_exit_code": 0,
+              "ui_allocation_notes": [
+                "widgets.Panel + widgets.Tooltip cache surfaces (good)",
+                "debug_panel caches surface and refreshes at ~4Hz (good)",
+                "building_panel allocates a panel surface per render when visible (legacy hotspot)"
+              ],
+              "no_code_changes": true
+            }
+          }
+        }
       }
     }
   }

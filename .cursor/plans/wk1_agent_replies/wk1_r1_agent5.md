@@ -72,3 +72,4 @@ Stored in: `docs/sprint/wk1_gameplay_tuning.md`
   - Hire a hero; observe they move to lair and attack it; on destruction, you see lair clear message and the bounty payout is applied.
 
 
+

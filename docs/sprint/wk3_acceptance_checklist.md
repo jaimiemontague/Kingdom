@@ -76,4 +76,29 @@
     - If any `assets/third_party/<pack>/` exists:
       - Require `assets/ATTRIBUTION.md` (rollup) and per-pack `LICENSE*.txt` (and README if available)
 
+## Visual Snapshots (WK3+ prototype) — Scripted screenshots + comparison gallery
+
+Purpose: generate deterministic, reviewable screenshots for look/feel iteration and regression spotting, and build a local side-by-side gallery against the prototype references in `.cursor/plans/art_examples`.
+
+### 1) Capture scripted screenshots (deterministic, headless-capable)
+- Run:
+  - `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/test_run/`
+- **Expected**
+  - Creates `docs/screenshots/test_run/manifest.json` (non-empty).
+  - Creates one or more PNGs under `docs/screenshots/test_run/` (per manifest).
+  - No crash; uses sim ticks (no wall-clock); no LLM.
+
+### 2) Build local comparison gallery (ours vs references)
+- Run:
+  - `python tools/build_gallery.py --shots docs/screenshots/test_run --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`
+- **Expected**
+  - Creates `docs/art/compare_gallery.html` that can be opened locally in a browser.
+  - Page shows our screenshots grouped by scenario and also shows the reference set from `.cursor/plans/art_examples`.
+
+### 3) Determinism sanity (QA check)
+- Run capture twice with the same scenario + seed + output root (different run folders), then compare:
+  - Filenames: stable between runs for the same scenario/targets.
+  - `manifest.json`: stable and deterministic (byte-identical preferred; field-order stability expected).
+  - PNG byte-identical: **optional** (allowed to differ due to platform/driver); treat as “nice-to-have” unless PM upgrades it.
+
 

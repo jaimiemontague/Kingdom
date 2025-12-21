@@ -564,6 +564,355 @@
               "blockers": []
             }
           }
+        },
+        "wk3_r8_visual_snapshots": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Mid-sprint add: Visual Snapshot System (scripted screenshots + compare gallery)."
+          },
+          "round_id": "wk3_r8_visual_snapshots",
+          "round_meta": {
+            "prompt_set_id": "wk3_visual_snapshots_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T14:48:50.7843825-07:00"
+          },
+          "prompt_text": "Define must-capture shot list and evaluation rubric vs .cursor/plans/art_examples for the Visual Snapshot System; keep it deterministic and scenario-driven.",
+          "response": {
+            "received_at_local": "2025-12-21T14:48:50.7843825-07:00",
+            "status": "complete",
+            "raw": "## Status\\nAgent 09 delivered the Art-side spec for the Visual Snapshot System: a concrete must-capture shot list (scenario IDs + framing/zoom/UI layers) and a comparison rubric against `.cursor/plans/art_examples`.\\n\\n## Deliverables\\n- Must-capture shot list + evaluation rubric doc: `docs/art/visual_snapshot_shot_list.md`\\n- Reference set inventory: `.cursor/plans/art_examples/*` (Majesty/Settlers/Warcraft/Populus-style references)\\n\\n## Must-capture scenarios (high signal)\\nScenarios and required outputs are defined in the doc; top-level set:\\n- `base_overview` (overview + UI)\\n- `tight_base` (dense town readability)\\n- `building_catalog` (grid + per-building closeups, incl. built/construction/damaged)\\n- `hero_lineup` (4 classes)\\n- `enemy_catalog` (all manifest enemy types)\\n- `combat_micro` (readability under overlap + VFX)\\n- `ui_panels` (hero selected/building selected/debug)\\n- `minimap_fog` (fog/minimap legibility)\\n\\n## What we evaluate vs references\\n- Composition (town density + landmarks)\\n- Scale (unit/building/tile proportion)\\n- Value contrast (terrain + fog)\\n- Silhouette clarity (hero class + enemy type)\\n- UI ratios (top/bottom/right panel density, no playfield coverage)\\n- Texture/noise budget (terrain not too speckled)\\n- Cohesion (outline thickness + palette ramps; avoid pack mismatch)\\n\\n## Commands run (evidence)\\n- PASS baseline gate: `python tools\\\\qa_smoke.py --quick`\\n  - Evidence: `[qa_smoke] DONE: PASS`\\n\\n## Blockers\\n- Tools-owned implementation is not yet present in repo (expected): `tools/capture_screenshots.py`, `tools/screenshot_scenarios.py`, `tools/build_gallery.py`.\\n- Optional UI hooks may be needed only if Tools cannot force-open right panel/debug for `ui_panels` shots (Agent 08 consult-only if needed).\\n",
+            "summary_bullets": [
+              "Defined must-capture visual snapshot scenarios (overview/catalog/lineups/combat/UI/minimap) with framing + zoom + UI-layer variants",
+              "Defined evaluation rubric vs reference set (Majesty/Settlers/Warcraft/Populus) for readability, scale, composition, and cohesion",
+              "Baseline gate remains green: qa_smoke PASS"
+            ],
+            "proposed_changes": [
+              "Use `docs/art/visual_snapshot_shot_list.md` as the canonical scenario+shot contract for Tools",
+              "Ensure screenshot tool supports fixed zoom presets (Z1/Z2/Z3) and UI layer toggles (world_clean/ui_default/ui_right_panel/ui_debug)",
+              "Keep captures deterministic: seeded sim + tick-based stabilization + manifest.json per run"
+            ],
+            "acceptance_criteria": [
+              "Tools can generate all shots listed in `docs/art/visual_snapshot_shot_list.md` for a given seed, producing non-empty manifest.json and PNGs",
+              "Gallery generator can render our shots alongside `.cursor/plans/art_examples` references in a browsable HTML page",
+              "No gameplay regression; qa_smoke remains PASS"
+            ],
+            "risks": [
+              "UI panel shots may be unstable unless there is a scripted way to force selection/panel open (may require Agent 08 hook)",
+              "Headless rendering differences across platforms could affect byte-identical PNGs (acceptable; manifest+filenames should stay stable)"
+            ],
+            "dependencies": [
+              "Agent 12: implement capture tool + scenario catalog + gallery builder",
+              "Agent 11: document commands/checklist + verify determinism at manifest/filenames level",
+              "Agent 08 (consult-only): add UI hook only if Tools cannot reliably render ui_panels shots"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12 implement scenarios matching the IDs and output naming in `docs/art/visual_snapshot_shot_list.md`",
+              "Agent 11 add acceptance checklist steps + verify the two acceptance commands produce outputs without crash",
+              "Run first baseline capture and use compare_gallery.html to drive UI/art iteration"
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "docs/art/visual_snapshot_shot_list.md",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+              ],
+              "commands_run": [
+                "python tools\\\\qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)"
+              ],
+              "blockers": [
+                "Waiting on Agent 12 to add tools/capture_screenshots.py + tools/screenshot_scenarios.py + tools/build_gallery.py"
+              ]
+            }
+          }
+        },
+        "wk3_r9_major_graphics_update": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update driven by Visual Snapshot System (Milestones 0–3 owned by Agent 09)."
+          },
+          "round_id": "wk3_r9_major_graphics_update",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_gfx_v2",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:17:57.6998125-07:00"
+          },
+          "prompt_text": "Major Graphics Update (WK3 baseline v2): review compare gallery + baseline shots + references; deliver Milestone 0 style lock addendum and log progress toward Milestones 1–3.",
+          "response": {
+            "received_at_local": "2025-12-21T15:17:57.6998125-07:00",
+            "status": "complete",
+            "raw": "## Status\\nMajor Graphics Update is underway. For this round I advanced **Milestone 0 (style lock)** by adding a short “WK3 Major Graphics Target” addendum and by reviewing baseline v2 snapshots vs the reference set to identify the highest-impact readability gaps.\\n\\n## What I reviewed (baseline artifacts)\\n- Gallery: `docs/art/compare_gallery.html`\\n- Shots root: `docs/screenshots/wk3_baseline_v2/`\\n- Reference set: `.cursor/plans/art_examples/`\\n\\nKey baseline v2 observations (high-signal):\\n- Terrain is still very uniform (grass speckle) and paths lack strong edge definition; town landmarks don’t pop.\\n- Building silhouettes are boxy and too similar at a glance; Tier-1 buildings need distinct roof silhouettes and material separation.\\n- Enemies/units are still very “placeholder” in silhouette/value; we need stronger type-first reads at gameplay zoom (Z2).\\n- UI is structurally present but still reads as utility panels; Milestone 4 will handle skin, but world readability must improve first.\\n\\n## What I changed (files)\\n- Added Milestone 0 addendum: `docs/art/wk3_major_graphics_target.md`\\n\\n## Milestones advanced\\n- **Milestone 0 (gfx-0-style-lock)**: DONE (doc shipped; palette/lighting/outline/scale/noise-budget locked).\\n- Milestones 1–3: not yet implemented in sprites/tiles in this round (next steps defined below).\\n\\n## Commands run (evidence)\\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n- PASS: `python tools/qa_smoke.py --quick` (evidence: `[qa_smoke] DONE: PASS`)\\n\\n## Which screenshots improved\\n- None yet (Milestone 0 is a style contract; next snapshot refresh happens after Milestone 1–3 art changes land).\\n\\n## Blockers / dependencies\\n- None blocking Milestone 0.\\n- Milestones 1–3 will require either (a) curated Kenney asset swaps, or (b) replacing current placeholder PNGs with improved originals, while keeping validator + attribution + qa_smoke green. Perf consult (Agent 10) should review any increase in tile variety or per-frame blending.\\n\\n## Next actions (Milestones 1–3 plan)\\n- **Milestone 1 (terrain)**: improve procedural tile generation to reduce speckle noise and add path edge/intersection definition (deterministic variants).\\n- **Milestone 2 (Tier-1 buildings)**: replace Tier-1 building sprites (built/construction/damaged) with distinct silhouettes + readable state overlays (construction scaffolding; damaged cracks/smoke kept subtle).\\n- **Milestone 3 (core enemies)**: replace goblin/wolf/skeleton/spider/bandit with clear silhouette/value reads across idle/walk/attack/hurt/dead (1-frame placeholders acceptable initially, then expand).\\n\\nAfter each milestone step, update snapshots via capture tool and rebuild gallery per plan to measure improvement against refs.",
+            "summary_bullets": [
+              "Reviewed baseline v2 compare gallery vs references and identified top readability gaps (terrain uniformity, weak path edges, boxy building silhouettes, placeholder enemy reads)",
+              "Delivered Milestone 0 style lock addendum with lighting/outline/scale/noise budget + golden palette swatches",
+              "Verified required tooling commands still work; qa_smoke remains PASS"
+            ],
+            "proposed_changes": [
+              "Milestone 1: reduce grass speckle noise; add stronger path edges + intersection definition via deterministic tile variants",
+              "Milestone 2: replace Tier-1 building sprites (built/construction/damaged) with distinct silhouettes and readable state overlays",
+              "Milestone 3: replace core enemy sprites with strong silhouette/value reads (1-frame OK initially), then expand animation frames"
+            ],
+            "acceptance_criteria": [
+              "Milestone 0: style addendum exists and is used as the contract for subsequent art changes",
+              "`python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` runs without error",
+              "`python tools/qa_smoke.py --quick` remains PASS",
+              "After Milestones 1–3 land, updated snapshots show improved readability in base_overview/building_catalog/enemy_catalog compared to baseline v2"
+            ],
+            "risks": [
+              "Over-texturing terrain increases noise and reduces unit readability (must keep terrain low-noise per contract)",
+              "Adding many tile variants could add perf/load overhead if not cached (Agent 10 consult on allocations)",
+              "Mixing third-party packs risks style drift unless normalized to the locked outline/palette rules"
+            ],
+            "dependencies": [
+              "Agent 10 consult on perf hazards for terrain/building/enemy rendering changes",
+              "Agent 12 maintain snapshot tooling stability as we add more scenarios/outputs"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Adopt `docs/art/wk3_major_graphics_target.md` as the locked Milestone 0 contract for all art PRs",
+              "Start Milestone 1 by tuning procedural tile generation for lower noise and better path edges, then refresh baseline_v2_next snapshots",
+              "Proceed to Tier-1 buildings and core enemies, updating snapshots + gallery after each landing"
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "docs/art/wk3_major_graphics_target.md",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+              ],
+              "commands_run": [
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html (PASS)",
+                "python tools/qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)"
+              ],
+              "milestones_advanced": [
+                "gfx-0-style-lock"
+              ],
+              "screenshots_reviewed": [
+                "docs/screenshots/wk3_baseline_v2/base_overview_seed3/base_overview__Z2__world_clean.png",
+                "docs/screenshots/wk3_baseline_v2/building_catalog_seed3/building_castle_closeup.png",
+                "docs/screenshots/wk3_baseline_v2/enemy_catalog_seed3/enemy_goblin_closeup.png"
+              ],
+              "blockers": []
+            }
+          }
+        },
+        "wk3_r10_major_graphics_execution": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update execution (Milestone 1 terrain + Milestone 4 UI skin in parallel across agents)."
+          },
+          "round_id": "wk3_r10_major_graphics_execution",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_gfx_exec_r10",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:30:20.7542294-07:00"
+          },
+          "prompt_text": "Execute Major Graphics Update with snapshot gate. Agent 09 owns Milestone 1 (terrain): lower-noise grass variants, clearer paths, 3+ tree/prop variants; deterministic + cached; refresh wk3_baseline_v2_next shots + rebuild gallery + qa_smoke PASS.",
+          "response": {
+            "received_at_local": "2025-12-21T15:30:20.7542294-07:00",
+            "status": "complete",
+            "raw": "## Status\\nMilestone 1 (terrain) is now in progress and has landed its first readability pass: grass is less speckly, paths have clearer edge definition, and trees have more variant diversity. All changes are deterministic (variant chosen by coord hash) and generated once into cached surfaces (no per-frame Surface allocations).\\n\\n## What I changed (files)\\n- `game/graphics/tile_sprites.py`\\n  - Grass: increased deterministic variants from 4→6, reduced speckle density, added subtle macro clumps and rare tiny prop hints (still low-noise).\\n  - Path: increased variants 3→6, reduced interior noise, added darker border edge definition and simple “lane/diagonal” variants for better intersection feel (still neighbor-agnostic).\\n  - Trees: increased variants 2→4, shifted trunk/canopy subtly and added small ground shadow ellipse for readability.\\n\\n## Milestone advanced\\n- **Milestone 1 (gfx-1-terrain)**: advanced (first pass shipped).\\n\\n## DoD shots improved (rolling after set)\\n- `docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z1__world_clean.png`\\n- `docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z2__world_clean.png`\\n\\n## Commands run (PASS evidence)\\n- `python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0`\\n- PASS: `python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html`\\n- PASS: `python tools\\\\qa_smoke.py --quick`\\n  - Evidence: `[qa_smoke] DONE: PASS`\\n\\n## Blockers\\nNone.\\n\\n## Notes / next terrain iteration targets\\n- If grass still reads too noisy at Z1: further reduce speckle and shift to larger, softer clumps only.\\n- Consider adding a dedicated path highlight strip (top-left lit edge) consistent with the WK3 lighting contract, while keeping intersections readable.",
+            "summary_bullets": [
+              "Shipped first Milestone 1 terrain readability pass: lower-noise grass (6 variants), more defined paths (6 variants + border), and 4 tree variants with subtle shadowing",
+              "Refreshed rolling wk3_baseline_v2_next snapshots and rebuilt compare gallery for review",
+              "Regression gate remains green: qa_smoke PASS"
+            ],
+            "proposed_changes": [
+              "Continue iterating terrain toward WK3 target: reduce grass speckle further if needed; keep variation as macro clumps",
+              "Enhance path readability with lighting-consistent highlights while staying deterministic and cached",
+              "Tune tree shadow/contrast carefully so units remain readable at gameplay zoom (Z2)"
+            ],
+            "acceptance_criteria": [
+              "Determinism preserved: coord-hash selects from a small fixed variant set; surfaces are cached and reused",
+              "DoD shots updated in rolling after set: base_overview Z1/Z2 world_clean show improved terrain readability vs baseline v2",
+              "Gallery rebuild works and is browsable",
+              "`python tools/qa_smoke.py --quick` PASS"
+            ],
+            "risks": [
+              "Over-adding terrain detail can reduce unit/building readability (must keep terrain low-noise per contract)",
+              "Path borders could look too grid-like if too strong (needs snapshot review vs refs)",
+              "Shadows/alpha overlays could become a perf hazard if expanded beyond cached surfaces"
+            ],
+            "dependencies": [
+              "Agent 10: perf consult if we expand shadowing/overlays or add more variants",
+              "Agent 12: keep snapshot tooling stable as shots are refreshed every PR"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Review compare gallery focusing on base_overview Z1/Z2 world_clean (baseline v2 vs v2_next) and decide if grass noise needs further reduction",
+              "Proceed with Tier-1 buildings (Milestone 2) once terrain baseline is acceptable",
+              "Agent 08 to land UI skin pass in parallel and refresh ui_panels shots"
+            ],
+            "agent_fields": {
+              "milestone_advanced": "gfx-1-terrain",
+              "files_changed": [
+                "game/graphics/tile_sprites.py",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+              ],
+              "dod_shots_improved": [
+                "docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z1__world_clean.png",
+                "docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z2__world_clean.png"
+              ],
+              "commands_run": [
+                "python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html (PASS)",
+                "python tools\\\\qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)"
+              ],
+              "blockers": []
+            }
+          }
+        },
+        "wk3_r11_buildings_enemies": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Major Graphics Update execution: Milestone 2 (Tier-1 buildings) + Milestone 3 (core enemies)."
+          },
+          "round_id": "wk3_r11_buildings_enemies",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_gfx_m2_m3_r11",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:49:58.9269046-07:00"
+          },
+          "prompt_text": "Deliver real pixel-art sprites for Tier-1 buildings (castle/marketplace/inn/blacksmith/guardhouse/house/farm/food_stand) across built/construction/damaged and core enemies (goblin/wolf/skeleton/spider/bandit) across idle/walk/attack/hurt/dead. Refresh wk3_baseline_v2_next shots, rebuild gallery, run qa_smoke PASS. No attribution/source blockers (first-party art).",
+          "response": {
+            "received_at_local": "2025-12-21T15:49:58.9269046-07:00",
+            "status": "complete",
+            "raw": "## Status\\nMilestones **2 (Tier-1 buildings)** and **3 (core enemies)** advanced by replacing placeholder `frame_000.png` sprites with an original, first-party pixel-art pass (no third-party source/attribution changes). Generated art follows the locked style contract (1px outline, top-left lighting language, baked shadows) and writes to the existing loader paths.\\n\\n## What I changed (files)\\n- Added generator: `tools/generate_wk3_tier1_buildings_and_enemies.py`\\n- Overwrote sprite PNGs in-place (patterns):\\n  - Buildings: `assets/sprites/buildings/{castle,marketplace,inn,blacksmith,guardhouse,house,farm,food_stand}/{built,construction,damaged}/frame_000.png`\\n  - Enemies: `assets/sprites/enemies/{goblin,wolf,skeleton,spider,bandit}/{idle,walk,attack,hurt,dead}/frame_000.png`\\n\\n## Milestones advanced\\n- **Milestone 2 (gfx-2-buildings-tier1)**: advanced (Tier-1 list now has distinct silhouettes + construction/damaged variants).\\n- **Milestone 3 (gfx-3-enemies-core)**: advanced (core enemies now have distinct silhouette/value reads + action variants).\\n\\n## DoD shots improved (rolling after set)\\nBuildings (Tier-1):\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_castle_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_marketplace_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_inn_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_blacksmith_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_guardhouse_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_house_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_farm_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_food_stand_closeup.png`\\n\\nEnemies (core):\\n- `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_goblin_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_wolf_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_skeleton_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_spider_closeup.png`\\n- `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_bandit_closeup.png`\\n\\n## Commands run (PASS evidence)\\n- `python tools\\\\generate_wk3_tier1_buildings_and_enemies.py`\\n- `python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0`\\n- PASS: `python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html`\\n- PASS: `python tools\\\\qa_smoke.py --quick`\\n  - Evidence: `[qa_smoke] DONE: PASS`\\n- PASS (sanity): `python tools\\\\validate_assets.py --strict --check-attribution --report`\\n  - Evidence: `[validate_assets] OK: no findings`\\n\\n## Blockers / attribution\\nNone. These sprites are first-party originals generated in-repo, so there are no third-party license/source blockers and no changes required to `assets/ATTRIBUTION.md`.\\n",
+            "summary_bullets": [
+              "Advanced Milestone 2 by replacing Tier-1 building placeholders with distinct pixel-art silhouettes and construction/damaged variants",
+              "Advanced Milestone 3 by replacing core enemy placeholders with clearer type-first silhouettes and action variants (frame_000 per action)",
+              "Refreshed rolling snapshots + rebuilt gallery; qa_smoke remains PASS"
+            ],
+            "proposed_changes": [
+              "Iterate on Tier-1 construction/damaged readability (scaffolding clarity; cracks/smoke without noise soup) based on gallery review vs refs",
+              "Expand from 1-frame per action to small multi-frame loops (idle/walk) once silhouettes/palette feel locked",
+              "Keep shadows baked into sprites; avoid adding runtime alpha overlays in render paths"
+            ],
+            "acceptance_criteria": [
+              "Tier-1 buildings have `frame_000.png` for built/construction/damaged under required folders",
+              "Core enemies have `frame_000.png` for idle/walk/attack/hurt/dead under required folders",
+              "Rolling after-set DoD shots in building_catalog/enemy_catalog show improved distinct silhouettes vs baseline v2",
+              "Gates pass: gallery builds and `python tools/qa_smoke.py --quick` PASS"
+            ],
+            "risks": [
+              "Construction overlay readability could be too subtle at gameplay zoom (needs snapshot review)",
+              "Enemy silhouettes may still be too simple; risk of 'placeholder-y' feel until more pose/shape detail lands",
+              "Large building sprites could look too UI-flat until we add more material contrast within the 3-step ramps"
+            ],
+            "dependencies": [
+              "Agent 10: perf consult if we consider adding runtime effects (should remain baked sprites only)",
+              "Agent 12/11: keep snapshot gate stable and verify deterministic capture outputs"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Review compare gallery focusing on Tier-1 building closeups and enemy closeups vs refs; pick 2–3 highest-impact tweaks (silhouette/material contrast) for next iteration",
+              "Proceed to additional building set (beyond Tier-1) only after these read cleanly at Z2",
+              "Optionally add 2-frame idle/walk loops for enemies once type silhouettes are approved"
+            ],
+            "agent_fields": {
+              "milestones_advanced": [
+                "gfx-2-buildings-tier1",
+                "gfx-3-enemies-core"
+              ],
+              "files_changed": [
+                "tools/generate_wk3_tier1_buildings_and_enemies.py",
+                "assets/sprites/buildings/{castle,marketplace,inn,blacksmith,guardhouse,house,farm,food_stand}/{built,construction,damaged}/frame_000.png",
+                "assets/sprites/enemies/{goblin,wolf,skeleton,spider,bandit}/{idle,walk,attack,hurt,dead}/frame_000.png",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+              ],
+              "dod_shots_improved": [
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_castle_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_marketplace_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_inn_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_blacksmith_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_guardhouse_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_house_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_farm_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/building_food_stand_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_goblin_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_wolf_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_skeleton_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_spider_closeup.png",
+                "docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/enemy_bandit_closeup.png"
+              ],
+              "commands_run": [
+                "python tools\\\\generate_wk3_tier1_buildings_and_enemies.py",
+                "python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html (PASS)",
+                "python tools\\\\qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)",
+                "python tools\\\\validate_assets.py --strict --check-attribution --report (PASS: OK: no findings)"
+              ],
+              "blockers": []
+            }
+          }
+        },
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "Final sprint closeout: verification, docs, and release hygiene only (no new features)."
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_release_closeout_v1",
+            "build_target": "wk3_ship",
+            "sent_at_local": "2025-12-21T16:06:57.9396473-07:00"
+          },
+          "prompt_text": "Final release closeout for wk3-ui-polish-1080p-pixelart. Agent 09: art signoff only. Run required gates (qa_smoke, validate_assets strict), refresh rolling after snapshots and rebuild compare gallery; no code changes unless blocking a release gate.",
+          "response": {
+            "received_at_local": "2025-12-21T16:06:57.9396473-07:00",
+            "status": "complete",
+            "raw": "## Status\\nArt signoff for WK3 is complete. Visuals are **meaningfully better than circles/squares** (terrain pass + distinct Tier-1 buildings + core enemy silhouettes). Placeholders remain acceptable for a prototype phase, but the current look now supports snapshot-driven iteration without being \"debug art.\"\\n\\n## Release gates (PASS)\\n- PASS: `python tools\\\\qa_smoke.py --quick`\\n  - Evidence: `[qa_smoke] DONE: PASS`\\n- PASS: `python tools\\\\validate_assets.py --strict --check-attribution`\\n\\n## Rolling \"after\" snapshots + gallery (refreshed)\\nRefreshed `docs/screenshots/wk3_baseline_v2_next/` (did NOT overwrite locked baseline `wk3_baseline_v2/`):\\n- `python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0`\\n- `python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0`\\nRebuilt gallery:\\n- PASS: `python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html`\\n\\n## Files changed\\nNo code changes for closeout. Rolling artifacts updated as intended:\\n- `docs/screenshots/wk3_baseline_v2_next/**` (PNGs + manifests overwritten)\\n- `docs/art/compare_gallery.html` (rebuilt)\\n\\n## Blockers\\nNone found.\\n",
+            "summary_bullets": [
+              "Art signoff: visuals are meaningfully better than circles/squares; acceptable for prototype phase while supporting snapshot-driven iteration",
+              "Release gates verified: qa_smoke PASS, validate_assets strict PASS",
+              "Rolling after-set snapshots refreshed and compare gallery rebuilt without touching locked baseline"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "`python tools/qa_smoke.py --quick` PASS",
+              "`python tools/validate_assets.py --strict --check-attribution` PASS",
+              "Rolling `wk3_baseline_v2_next` captures succeed and `docs/art/compare_gallery.html` rebuilds successfully",
+              "No scope creep: no new features introduced during closeout"
+            ],
+            "risks": [
+              "Art is still early/prototype quality (acceptable for now); future cohesion passes should continue via snapshot gate"
+            ],
+            "dependencies": [
+              "Agent 11: manual acceptance spot-check (borderless 1080p default + quit/close buttons + perf overlay placement)",
+              "Agent 12: ensure manifests avoid machine-dependent absolute paths if that is a determinism requirement for release"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11 to post manual spot-check PASS/FAIL and tag sprint if green",
+              "If manifest determinism requires no absolute paths, have Agent 12 adjust capture tool accordingly (tools-only change)"
+            ],
+            "agent_fields": {
+              "role": "Art signoff only",
+              "files_changed": [
+                "docs/screenshots/wk3_baseline_v2_next/** (overwritten by capture)",
+                "docs/art/compare_gallery.html (rebuilt)",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+              ],
+              "commands_run": [
+                "python tools\\\\qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)",
+                "python tools\\\\validate_assets.py --strict --check-attribution (PASS)",
+                "python tools\\\\capture_screenshots.py --scenario base_overview --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\base_overview_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario building_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\building_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\capture_screenshots.py --scenario ui_panels --seed 3 --out docs\\\\screenshots\\\\wk3_baseline_v2_next\\\\ui_panels_seed3 --size 1920x1080 --ticks 0",
+                "python tools\\\\build_gallery.py --shots docs\\\\screenshots\\\\wk3_baseline_v2_next --refs .cursor\\\\plans\\\\art_examples --out docs\\\\art\\\\compare_gallery.html (PASS)"
+              ],
+              "blockers": []
+            }
+          }
         }
       }
     }

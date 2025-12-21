@@ -52,3 +52,4 @@ Add a pacing guardrail that ensures early activity without spiking difficulty:
 - Does not create unavoidable failure spikes (still recoverable with reasonable play).
 
 
+

@@ -19,9 +19,17 @@ class Panel:
     border_rgb: tuple[int, int, int]
     alpha: int = 235
     border_w: int = 2
+    # Optional "game UI" frame language (code-only):
+    # - inner border provides the 2-layer frame
+    # - highlight draws subtle top/left lighting on the inner frame
+    inner_border_rgb: tuple[int, int, int] | None = None
+    inner_border_w: int = 1
+    highlight_rgb: tuple[int, int, int] | None = None
+    highlight_w: int = 1
 
     _cache_surf: pygame.Surface | None = None
     _cache_size: tuple[int, int] = (0, 0)
+    _cache_style: tuple | None = None
 
     def set_rect(self, rect: pygame.Rect):
         self.rect = pygame.Rect(rect)
@@ -30,11 +38,53 @@ class Panel:
         w, h = int(self.rect.width), int(self.rect.height)
         if w <= 0 or h <= 0:
             return
-        if self._cache_surf is None or self._cache_size != (w, h):
+        style = (
+            int(w),
+            int(h),
+            tuple(self.bg_rgb),
+            tuple(self.border_rgb),
+            int(self.alpha),
+            int(self.border_w),
+            tuple(self.inner_border_rgb) if self.inner_border_rgb is not None else None,
+            int(self.inner_border_w),
+            tuple(self.highlight_rgb) if self.highlight_rgb is not None else None,
+            int(self.highlight_w),
+        )
+        if self._cache_surf is None or self._cache_size != (w, h) or self._cache_style != style:
             self._cache_surf = pygame.Surface((w, h), pygame.SRCALPHA)
             self._cache_size = (w, h)
+            self._cache_style = style
             self._cache_surf.fill((*self.bg_rgb, int(self.alpha)))
+            # Outer frame
             pygame.draw.rect(self._cache_surf, self.border_rgb, (0, 0, w, h), int(self.border_w))
+
+            # Inner frame (2-layer border) + subtle top-left lighting highlight
+            if self.inner_border_rgb is not None and int(self.inner_border_w) > 0:
+                inset = int(self.border_w)
+                iw = max(0, w - inset * 2)
+                ih = max(0, h - inset * 2)
+                if iw > 0 and ih > 0:
+                    inner_rect = pygame.Rect(inset, inset, iw, ih)
+                    pygame.draw.rect(self._cache_surf, self.inner_border_rgb, inner_rect, int(self.inner_border_w))
+
+                    if self.highlight_rgb is not None and int(self.highlight_w) > 0:
+                        hw = int(self.highlight_w)
+                        # Top edge highlight (light direction: top-left)
+                        pygame.draw.line(
+                            self._cache_surf,
+                            self.highlight_rgb,
+                            (inner_rect.left + 1, inner_rect.top + 1),
+                            (inner_rect.right - 2, inner_rect.top + 1),
+                            hw,
+                        )
+                        # Left edge highlight
+                        pygame.draw.line(
+                            self._cache_surf,
+                            self.highlight_rgb,
+                            (inner_rect.left + 1, inner_rect.top + 1),
+                            (inner_rect.left + 1, inner_rect.bottom - 2),
+                            hw,
+                        )
         surface.blit(self._cache_surf, (int(self.rect.x), int(self.rect.y)))
 
 
@@ -91,5 +141,6 @@ class IconButton:
 
     def hit_test(self, pos: tuple[int, int]) -> bool:
         return self.rect.collidepoint(pos)
+
 
 

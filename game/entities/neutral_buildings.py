@@ -98,3 +98,4 @@ class FoodStand(NeutralBuilding):
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, "food_stand", tax_per_minute=3.5)
 
+

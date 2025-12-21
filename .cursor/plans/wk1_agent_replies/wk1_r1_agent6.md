@@ -106,3 +106,4 @@ Goal: **no crashes, no softlocks**, and the hero panel still shows reasonable in
   - at least one decision record exists within N seconds (in mock and no-LLM)
 
 
+

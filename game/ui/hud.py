@@ -19,6 +19,15 @@ class HUD:
         self.screen_height = screen_height
         
         self.theme = UITheme()
+        # Milestone 4 (UI skin, code-only): 2-layer frame + top-left lighting highlight.
+        # Matches `docs/art/wk3_major_graphics_target.md` swatches:
+        # - UI panel background: #282832 (40,40,50) == COLOR_UI_BG
+        # - UI border: #505064 (80,80,100) == COLOR_UI_BORDER
+        # - Outline (near-black): #141419
+        self._frame_outer = (0x14, 0x14, 0x19)
+        self._frame_inner = (0x50, 0x50, 0x64)
+        # Subtle highlight for lit edges (top-left). Keep low-noise and non-white.
+        self._frame_highlight = (0x6B, 0x6B, 0x84)
 
         # HUD dimensions (computed from actual screen size each frame; these are defaults)
         self.top_bar_height = int(getattr(self.theme, "top_bar_h", 48))
@@ -50,10 +59,50 @@ class HUD:
         self._placing_surf = None
 
         # UI panels (cached surfaces)
-        self._panel_top = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
-        self._panel_bottom = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
-        self._panel_right = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
-        self._panel_minimap = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
+        self._panel_top = Panel(
+            pygame.Rect(0, 0, 1, 1),
+            self.theme.panel_bg,
+            self._frame_outer,
+            alpha=int(self.theme.panel_alpha),
+            border_w=2,
+            inner_border_rgb=self._frame_inner,
+            inner_border_w=1,
+            highlight_rgb=self._frame_highlight,
+            highlight_w=1,
+        )
+        self._panel_bottom = Panel(
+            pygame.Rect(0, 0, 1, 1),
+            self.theme.panel_bg,
+            self._frame_outer,
+            alpha=int(self.theme.panel_alpha),
+            border_w=2,
+            inner_border_rgb=self._frame_inner,
+            inner_border_w=1,
+            highlight_rgb=self._frame_highlight,
+            highlight_w=1,
+        )
+        self._panel_right = Panel(
+            pygame.Rect(0, 0, 1, 1),
+            self.theme.panel_bg,
+            self._frame_outer,
+            alpha=int(self.theme.panel_alpha),
+            border_w=2,
+            inner_border_rgb=self._frame_inner,
+            inner_border_w=1,
+            highlight_rgb=self._frame_highlight,
+            highlight_w=1,
+        )
+        self._panel_minimap = Panel(
+            pygame.Rect(0, 0, 1, 1),
+            self.theme.panel_bg,
+            self._frame_outer,
+            alpha=int(self.theme.panel_alpha),
+            border_w=2,
+            inner_border_rgb=self._frame_inner,
+            inner_border_w=1,
+            highlight_rgb=self._frame_highlight,
+            highlight_w=1,
+        )
         self._tooltip = Tooltip(COLOR_UI_BG, COLOR_UI_BORDER, alpha=240)
         self._buttons = []  # list[IconButton]
 
@@ -400,8 +449,7 @@ class HUD:
         mouse = pygame.mouse.get_pos()
         hover = rect.collidepoint(mouse)
         bg = (70, 45, 45) if hover else (55, 40, 40)
-        pygame.draw.rect(surface, bg, rect)
-        pygame.draw.rect(surface, COLOR_UI_BORDER, rect, 2)
+        self._draw_button_frame(surface, rect, bg_rgb=bg)
         surface.blit(label, (rect.x + pad_x, rect.y + pad_y))
 
     def _render_right_close_button(self, surface: pygame.Surface, right_rect: pygame.Rect):
@@ -414,9 +462,20 @@ class HUD:
         mouse = pygame.mouse.get_pos()
         hover = rect.collidepoint(mouse)
         bg = (60, 60, 70) if hover else (45, 45, 55)
-        pygame.draw.rect(surface, bg, rect)
-        pygame.draw.rect(surface, COLOR_UI_BORDER, rect, 2)
+        self._draw_button_frame(surface, rect, bg_rgb=bg)
         surface.blit(x_surf, (rect.centerx - x_surf.get_width() // 2, rect.centery - x_surf.get_height() // 2))
+
+    def _draw_button_frame(self, surface: pygame.Surface, rect: pygame.Rect, bg_rgb: tuple[int, int, int]):
+        """Shared button frame styling (Quit / X / command buttons)."""
+        pygame.draw.rect(surface, bg_rgb, rect)
+        # Outer near-black outline
+        pygame.draw.rect(surface, self._frame_outer, rect, 2)
+        # Inner border + top-left highlight
+        inner = rect.inflate(-4, -4)
+        if inner.width > 0 and inner.height > 0:
+            pygame.draw.rect(surface, self._frame_inner, inner, 1)
+            pygame.draw.line(surface, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.right - 2, inner.top + 1), 1)
+            pygame.draw.line(surface, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.left + 1, inner.bottom - 2), 1)
 
     def _render_command_bar(self, surface: pygame.Surface, game_state: dict, cmd_rect: pygame.Rect):
         """Render the bottom command bar skeleton (no click handling yet)."""
@@ -468,8 +527,7 @@ class HUD:
                 hovered = btn
             # Button frame (opaque to avoid per-frame alpha surfaces)
             bg = (55, 55, 70) if is_hover else (45, 45, 60)
-            pygame.draw.rect(surface, bg, btn.rect)
-            pygame.draw.rect(surface, COLOR_UI_BORDER, btn.rect, 2)
+            self._draw_button_frame(surface, btn.rect, bg_rgb=bg)
 
             # Label (cached by title)
             title_surf = self._cached_value_text(("btn_t", btn.title), 1, btn.title, self.theme.font_body, COLOR_WHITE)
@@ -524,7 +582,13 @@ class HUD:
             h = pad * 2 + len(lines) * 16 + 6
             panel = pygame.Surface((w, h), pygame.SRCALPHA)
             panel.fill((*COLOR_UI_BG, 235))
-            pygame.draw.rect(panel, COLOR_UI_BORDER, (0, 0, w, h), 2)
+            # 2-layer frame + top-left highlight language (cached once)
+            pygame.draw.rect(panel, self._frame_outer, (0, 0, w, h), 2)
+            inner = pygame.Rect(2, 2, w - 4, h - 4)
+            if inner.width > 0 and inner.height > 0:
+                pygame.draw.rect(panel, self._frame_inner, inner, 1)
+                pygame.draw.line(panel, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.right - 2, inner.top + 1), 1)
+                pygame.draw.line(panel, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.left + 1, inner.bottom - 2), 1)
 
             y = pad
             for text, color in lines:

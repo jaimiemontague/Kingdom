@@ -13,3 +13,4 @@ Naming: `frame_000.png`, `frame_001.png`, ...
 See: `docs/art/hero_sprite_pipeline.md`
 
 
+

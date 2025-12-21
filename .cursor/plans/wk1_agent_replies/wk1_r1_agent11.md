@@ -38,3 +38,4 @@ python tools/qa_smoke.py --quick
   - Headless runs still warn about `pkg_resources` deprecation (Pygame dependency warning) — not a functional failure, but worth pinning/cleaning later if it becomes noisy.
 
 
+

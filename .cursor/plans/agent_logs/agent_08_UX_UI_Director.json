@@ -675,6 +675,267 @@
             }
           }
         }
+        ,
+        "wk3_r8_visual_snapshots": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r8_visual_snapshots",
+          "round_meta": {
+            "prompt_set_id": "wk3_visual_snapshots_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T14:49:15.755788-07:00"
+          },
+          "prompt_text": "Mid-sprint high-impact addition: Visual Snapshot System. Reference: .cursor/plans/visual_snapshot_system_a76d3697.plan.md. Goal: implement shots-tool + gallery-compare + qa-docs; ui-hooks-optional only if needed. Agent 08 is consult-only unless Tools cannot reliably render scripted 'UI panels open' shots headlessly/deterministically.",
+          "response": {
+            "received_at_local": "2025-12-21T14:49:15.755788-07:00",
+            "status": "complete",
+            "raw": "### Status\\nConsult-only (Agent 08) for WK3 visual snapshot system. No code changes made. I reviewed the plan and assessed UI feasibility for scripted 'UI panels open' shots.\\n\\n### Assessment: are UI hooks needed?\\n**Likely NO** (preferred): if `tools/capture_screenshots.py` instantiates a real `GameEngine` and calls its render path, scenarios can deterministically force UI panels open by setting engine fields before rendering:\\n- Right info panel (hero/building): set `engine.selected_hero = <hero>` or `engine.selected_building = <building>` (HUD uses these from `get_game_state()`).\\n- Debug panel: set `engine.debug_panel.visible = True` (and call `debug_panel.render(...)`).\\n- Perf overlay: set `engine.show_perf = True` (and call `render_perf_overlay(...)`).\\nThis requires no sim changes and is deterministic.\\n\\n**If Tools chooses a minimal world-only renderer**, then it may not have easy access to the HUD/debug/perf layers. In that case, we can add a tiny UI-only hook later (see below), but I recommend Tools uses `GameEngine` directly for the `ui_panels` scenario.\\n\\n### UI-only hook proposal (only if blocked)\\n- Add a screenshot-only, stable override in `get_game_state()` (or a lightweight setter on HUD) like `game_state['screenshot_ui'] = {'show_hud': bool, 'force_right_panel': 'hero'|'building'|None, 'show_debug': bool, 'show_perf': bool}` so tools can request panels without sim changes or mouse events.\\nNot implementing this unless Agent 12 reports blocker.\\n\\n### Notes for gallery tool robustness\\n- `.cursor/plans/art_examples` includes a non-image download artifact (`*.crdownload`). Gallery builder should ignore non-image extensions (recommend allowlist: .png/.jpg/.jpeg/.webp/.gif) to avoid load errors.\\n\\n### Cross-agent dependencies\\n- Agent 12 owns `capture_screenshots.py` + `screenshot_scenarios.py` + `build_gallery.py`.\\n- Agent 09 defines the must-capture shot list / framing guidance (zoom, targets).\\n- Agent 11 updates checklist + runs non-crash verification.\\n\\n### Blockers\\nNone currently. If Agent 12 cannot render `ui_panels` deterministically via `GameEngine`, ping me and I’ll implement the minimal UI-only hook described above.",
+            "summary_bullets": [
+              "Consult-only: reviewed visual snapshot plan; no code changes made.",
+              "UI panels can be opened deterministically for screenshots by setting `GameEngine` fields (selected hero/building, debug_panel.visible, show_perf) before rendering—no extra UI hooks required if Tools uses the engine render path.",
+              "Gallery tool should ignore non-image files in `.cursor/plans/art_examples` (there is a `.crdownload`)."
+            ],
+            "proposed_changes": [
+              "No changes proposed unless Tools is blocked. Optional fallback: add a screenshot-only UI override contract to force-open panels without sim/mouse input."
+            ],
+            "acceptance_criteria": [
+              "If Tools uses `GameEngine` render path, `ui_panels` scenario can deterministically show right panel + debug/perf overlays without any UI code changes.",
+              "If Tools is blocked, add a minimal UI-only hook that forces panel visibility via `game_state` overrides without touching sim/determinism."
+            ],
+            "risks": [
+              "If `build_gallery.py` attempts to include non-image artifacts from `.cursor/plans/art_examples`, it may error; mitigate by filtering file extensions."
+            ],
+            "dependencies": [
+              "Agent 12: tool implementation approach (GameEngine render path vs minimal renderer).",
+              "Agent 09: shot list + framing so UI panel shots are predictable.",
+              "Agent 11: QA docs + command verification."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12: for `ui_panels`, instantiate `GameEngine`, set `selected_hero/selected_building`, set `debug_panel.visible/show_perf`, then render and capture.",
+              "Agent 12: in gallery builder, ignore non-image extensions in refs folder (notably `.crdownload`).",
+              "If Tools hits a blocker rendering UI layers headlessly, request the optional UI override hook (Agent 08 can implement quickly)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "test_commands_run": [],
+              "test_evidence": [],
+              "blockers": []
+            }
+          }
+        }
+        ,
+        "wk3_r9_major_graphics_update": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r9_major_graphics_update",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_update_baseline_v2",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:15:51.501890-07:00"
+          },
+          "prompt_text": "Major Graphics Update (WK3 baseline v2) driven by Visual Snapshot System. Read: .cursor/plans/major_graphics_update_wk3_baseline_v2.plan.md, docs/art/pixel_style_guide.md, docs/art/animation_vfx_guidelines.md, docs/art/placeholder_sprite_briefs.md. Review baseline artifacts: docs/art/compare_gallery.html, docs/screenshots/wk3_baseline_v2/, .cursor/plans/art_examples. Agent 08 owns Milestone 0 (UI palette/frame direction contribution) + Milestone 4 (UI skin pass). Log what changed, which milestones advanced, which screenshots improved, blockers/deps.",
+          "response": {
+            "received_at_local": "2025-12-21T15:15:51.501890-07:00",
+            "status": "complete",
+            "raw": "### Status\\nReviewed the WK3 baseline v2 plan + style/animation/brief docs and inspected the baseline snapshot outputs via `docs/art/compare_gallery.html` and manifests under `docs/screenshots/wk3_baseline_v2/`. As Agent 08 (UI), I am contributing to **Milestone 0 (style lock)** from a UI framing/palette perspective and preparing the scoped execution plan for **Milestone 4 (UI skin)**. No code changes landed in this round yet (this is an assessment + direction lock step).\\n\\n### Baseline artifacts reviewed (high-signal)\\n- `docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_hero.png`\\n- `docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_building.png`\\n- `docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_debug.png`\\n- `docs/screenshots/wk3_baseline_v2/base_overview_seed3/base_overview__Z1__ui_default.png`\\n\\n### Milestone 0 contribution (UI style lock input)\\nBased on `docs/art/pixel_style_guide.md` constraints (top-left light, 1px outlines, value-first readability, avoid pure black/white) and the reference set, my UI recommendations for the addendum are:\\n- **UI panel framing direction**: move from flat debug rectangles toward a \"carved frame\" look using 1px outer outline + 1px inner highlight (light-facing) and a slightly warmer accent line. Keep corners crisp (no AA).\\n- **Lighting**: treat panels as subtly lit from **top-left** (top edge slightly lighter; bottom edge slightly darker).\\n- **Palette** (initial targets; final values can be tuned by Agent 09 once the world palette is locked):\\n  - Panel fill: keep near current but slightly warmer/darker to avoid looking like IDE overlay.\\n  - Border/outline: near-black (not pure black) + inner highlight.\\n  - Accent: gold reserved for money/important actions; do not overuse on frames.\\n- **Noise budget**: UI should stay **clean/low-noise** so the world art carries texture; use texture only as subtle 2×2 dither in large panel fills if needed (optional).\\n\\n### Milestone 4 plan (UI skin pass — code-only first, assets later)\\nThe current HUD uses `UITheme` + cached `Panel` rectangles; this is a good foundation for a safe skin pass. Proposed incremental approach:\\n1) **Code-only framing upgrade** (no new PNGs): extend `Panel` to support a 2-layer border (outer + inner) and optional top-edge highlight. This should immediately improve `ui_panels_*` shots without asset dependency.\\n2) **Buttons**: unify button styling (Quit / close X / command-bar buttons) into a single helper so they share the same border/highlight language.\\n3) **Icons (later)**: once Agent 09 provides a mini UI icon sheet (CC0 or original), swap text-only command buttons to icon-first with plates/outlines per style guide.\\n\\n### Commands run (required sanity)\\n- `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n  - Result: `[gallery] Wrote docs\\art\\compare_gallery.html`\\n\\n### What changed\\n- No files changed in this round (assessment + direction only).\\n\\n### Screenshots improved\\n- None yet (no UI skin changes landed).\\n\\n### Dependencies / blockers\\n- **Dependency**: Agent 09’s Milestone 0 addendum should include a small UI palette swatch (grass/path/shadow/outline/UI bg) so UI and world don’t fight. I can then tune `UITheme.panel_bg/panel_border` accordingly.\\n- **Perf consult**: when we add inner highlights/9-slice later, confirm we keep panel surface caching (no per-frame allocations).\\n- **Tooling**: snapshot system already captures `ui_panels_seed3` deterministically, which is sufficient for Milestone 4 DoD.\\n",
+            "summary_bullets": [
+              "Reviewed baseline v2 gallery + key shots/manifests; identified UI skin DoD targets (`ui_panels_hero/building/debug`).",
+              "Milestone 0 contribution: proposed UI framing + palette/lighting guidance consistent with pixel style guide (top-left light, 1px outline, value-first).",
+              "Milestone 4 plan: code-only frame upgrade first (2-layer border + highlight) using cached panel surfaces; icons later once art provides a sheet.",
+              "Ran required gallery build command successfully."
+            ],
+            "proposed_changes": [
+              "Milestone 0: add UI panel frame direction + initial palette targets to the 'WK3 Major Graphics Target' addendum.",
+              "Milestone 4: extend `game/ui/widgets.py:Panel` to support an inner border + top-edge highlight while preserving surface caching.",
+              "Milestone 4: centralize button rendering so Quit/close/command buttons share a single style implementation."
+            ],
+            "acceptance_criteria": [
+              "After Milestone 4 step 1, `ui_panels_seed3/ui_panels_hero.png` and `ui_panels_seed3/ui_panels_debug.png` read as 'game UI' rather than dev overlay (frame language + consistent buttons) with no layout regressions.",
+              "No per-frame Surface churn: panel surfaces remain cached and rebuilt only on size/style changes.",
+              "Snapshot/galleries remain buildable: `python tools/build_gallery.py ...` continues to run without crash."
+            ],
+            "risks": [
+              "UI palette could clash with new world palette if tuned too early; mitigate by waiting for Agent 09’s palette swatch lock before finalizing UI colors."
+            ],
+            "dependencies": [
+              "Agent 09: Milestone 0 addendum + palette swatches so UI colors align with world.",
+              "Agent 10: perf review once we add richer frame drawing / potential 9-slice.",
+              "Agent 12/11: snapshot/galleries remain stable for DoD signoff."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 09: include explicit UI swatches (hex) in the Milestone 0 addendum (panel bg, border/outline, shadow/inner highlight, accent).",
+              "Agent 08 (next): implement code-only frame upgrade in `Panel` + unify button styling, then regenerate `ui_panels` snapshots and rebuild gallery for review."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "milestones_advanced": [
+                "gfx-0-style-lock (UI direction contribution)"
+              ],
+              "screenshots_reviewed": [
+                "docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_hero.png",
+                "docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_building.png",
+                "docs/screenshots/wk3_baseline_v2/ui_panels_seed3/ui_panels_debug.png",
+                "docs/screenshots/wk3_baseline_v2/base_overview_seed3/base_overview__Z1__ui_default.png"
+              ],
+              "screenshots_improved": [],
+              "commands_run": [
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ],
+              "command_evidence": [
+                "[gallery] Wrote docs\\art\\compare_gallery.html"
+              ],
+              "blockers": []
+            }
+          }
+        }
+        ,
+        "wk3_r10_major_graphics_execution": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r10_major_graphics_execution",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_exec_r10_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:32:09.821660-07:00"
+          },
+          "prompt_text": "Milestone 4 (UI skin, code-only): upgrade panel rendering to feel like game UI (2-layer border + top-left highlight) and unify button styling (Quit/X/command buttons) via shared helper, preserving caching. Refresh rolling shots under docs/screenshots/wk3_baseline_v2_next/, rebuild docs/art/compare_gallery.html, and keep python tools/qa_smoke.py --quick PASS. Log files changed, milestone advanced, DoD shots improved, commands + evidence, blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T15:32:09.821660-07:00",
+            "status": "complete",
+            "raw": "### Status\\nImplemented Milestone 4 (UI skin, code-only) per locked style contract (`docs/art/wk3_major_graphics_target.md`): panels now render with a 2-layer frame (outer near-black outline + inner border) and a subtle top-left highlight language. HUD buttons (Quit/X/command buttons) now share a single framing helper. Caching preserved (panel surfaces rebuilt only on size/style change; no per-frame Surface churn). Refreshed rolling snapshot set under `docs/screenshots/wk3_baseline_v2_next/`, rebuilt gallery, and kept `qa_smoke --quick` PASS.\\n\\n### Files changed\\n- `game/ui/widgets.py`\\n  - `Panel` upgraded: optional inner border + highlight; caching now keys off size + style tuple (still no per-frame allocations).\\n- `game/ui/hud.py`\\n  - Panels now use the new frame language (outer/inner/highlight).\\n  - Added `_draw_button_frame()` and routed Quit / right-panel close X / command buttons through it.\\n  - Help overlay cached panel frame updated to match style language.\\n- `game/ui/debug_panel.py`\\n  - Debug panel cached surface border updated to 2-layer + highlight; close button frame matches.\\n\\n### Milestone advanced\\n- **gfx-4-ui-skin** (code-only step 1)\\n\\n### DoD shots improved (rolling after set)\\n- `docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_hero.png`\\n- `docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_debug.png`\\n\\n### Commands run + evidence\\n1) Refresh rolling shots:\\n- `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0` (wrote 4 PNGs)\\n- `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0` (wrote 30 PNGs)\\n- `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0` (wrote 6 PNGs)\\n- `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0` (wrote 3 PNGs)\\n2) Rebuild gallery:\\n- `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n  - `[gallery] Wrote docs\\\\art\\\\compare_gallery.html`\\n3) Regression gate:\\n- `python tools/qa_smoke.py --quick` => PASS\\n  - `[qa_smoke] DONE: PASS`\\n\\n### Blockers\\nNone.\\n",
+            "summary_bullets": [
+              "Milestone 4 UI skin (code-only) landed: 2-layer panel frames + subtle top-left highlight; buttons unified via shared frame helper.",
+              "Caching preserved: Panel surfaces rebuild only on size/style changes; no per-frame Surface allocations introduced.",
+              "Rolling `wk3_baseline_v2_next` shots refreshed; gallery rebuilt; `python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "Extend `Panel` to support inner border + highlight while keeping surface caching.",
+              "Use a single HUD helper for button frames (Quit/X/command buttons) to maintain cohesive UI style."
+            ],
+            "acceptance_criteria": [
+              "`docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_hero.png` and `ui_panels_debug.png` show the improved frame language (game UI feel) with no layout regressions.",
+              "`python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` runs without crash.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "If future UI art introduces 9-slice textures, ensure we keep caching and never load/scale images per frame (Perf consult)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Have Agent 10 do a quick perf sanity check (ensure no new per-frame allocations/spikes).",
+              "Next Milestone 4 step (optional): apply the same frame language to `BuildingPanel` once art/UI priorities permit."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/widgets.py",
+                "game/ui/hud.py",
+                "game/ui/debug_panel.py"
+              ],
+              "milestones_advanced": [
+                "gfx-4-ui-skin"
+              ],
+              "dod_shots_improved": [
+                "docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_hero.png",
+                "docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_debug.png"
+              ],
+              "commands_run": [
+                "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "command_evidence": [
+                "[capture] Wrote 4 PNG(s) to ...wk3_baseline_v2_next\\\\base_overview_seed3",
+                "[capture] Wrote 30 PNG(s) to ...wk3_baseline_v2_next\\\\building_catalog_seed3",
+                "[capture] Wrote 6 PNG(s) to ...wk3_baseline_v2_next\\\\enemy_catalog_seed3",
+                "[capture] Wrote 3 PNG(s) to ...wk3_baseline_v2_next\\\\ui_panels_seed3",
+                "[gallery] Wrote docs\\\\art\\\\compare_gallery.html",
+                "[qa_smoke] DONE: PASS"
+              ],
+              "manifest_sha256": {
+                "ui_panels_hero.png": "9d3def15d8e92eb5a872296ba215eb2e25d4875c30c9df2d0732a7388bdd5c7f",
+                "ui_panels_debug.png": "9d52318aad5ecae51c68370a6baf9197acda74f5a912438c02a2f6463cade675"
+              },
+              "blockers": []
+            }
+          }
+        }
+        ,
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_release_closeout_v1",
+            "build_target": "Release",
+            "sent_at_local": "2025-12-21T16:05:46.847651-07:00"
+          },
+          "prompt_text": "Final release closeout for wk3-ui-polish-1080p-pixelart. No new features; verify gates and release hygiene. Required: qa_smoke --quick, validate_assets --strict --check-attribution, regenerate wk3_baseline_v2_next shots + rebuild gallery; manual acceptance spot-check assigned to QA. Agent 08: regression sniff for UI caching/perf and manageability (Quit/X close/perf overlay positioning). Log commands run, PASS evidence, files changed (ideally none), blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T16:05:46.847651-07:00",
+            "status": "complete",
+            "raw": "### Status\\nFinal release closeout (Agent 08): performed UI/perf regression sniff and ran required automated gates locally. No code changes made.\\n\\n### Commands run + evidence\\n- `python tools/qa_smoke.py --quick` => PASS\\n  - `[qa_smoke] DONE: PASS`\\n- `python tools/validate_assets.py --strict --check-attribution` => PASS (exit_code=0)\\n- Refresh rolling “after” snapshots (overwrites `wk3_baseline_v2_next`, baseline `wk3_baseline_v2` untouched):\\n  - `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0` (wrote 4 PNGs)\\n  - `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0` (wrote 30 PNGs)\\n  - `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0` (wrote 6 PNGs)\\n  - `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0` (wrote 3 PNGs)\\n- `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n  - `[gallery] Wrote docs\\\\art\\\\compare_gallery.html`\\n\\n### UI manageability regression sniff (headless)\\n- Dummy SDL click sanity for Quit / debug close / perf close => `ui_manageability_headless_ok`\\n\\n### Files changed\\n- None\\n\\n### Blockers\\n- None\\n",
+            "summary_bullets": [
+              "Ran release gates locally: qa_smoke PASS; validate_assets strict PASS; snapshots refreshed; gallery rebuilt.",
+              "Headless UI manageability sanity passed (Quit + X close for debug/perf).",
+              "No code changes; no blockers found."
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "`python tools/qa_smoke.py --quick` PASS",
+              "`python tools/validate_assets.py --strict --check-attribution` PASS",
+              "Rolling snapshots regenerated under `docs/screenshots/wk3_baseline_v2_next/` and gallery rebuild succeeds",
+              "Quit/X close still functional (regression sniff)"
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "QA (Agent 11) to complete the interactive manual acceptance spot-check (borderless 1080p default + fallback; Quit; X closes; perf overlay position)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html",
+                "python -c (ui_manageability_headless_ok)"
+              ],
+              "test_evidence": [
+                "[qa_smoke] DONE: PASS",
+                "validate_assets exit_code=0",
+                "[gallery] Wrote docs\\\\art\\\\compare_gallery.html",
+                "ui_manageability_headless_ok"
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

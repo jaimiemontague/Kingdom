@@ -553,6 +553,277 @@
             }
           }
         }
+        ,
+        "wk3_r8_visual_snapshots": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r8_visual_snapshots",
+          "round_meta": {
+            "prompt_set_id": "wk3_visual_snapshot_system_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T14:54:11-07:00"
+          },
+          "prompt_text": "Mid-sprint: implement Visual Snapshot System per .cursor/plans/visual_snapshot_system_a76d3697.plan.md. Agent 12 owns shots-tool + gallery-compare: implement tools/capture_screenshots.py, tools/screenshot_scenarios.py, tools/build_gallery.py. Headless-capable, deterministic, sim ticks, no LLM. Outputs: docs/screenshots/<run_id>/manifest.json + PNGs; docs/art/compare_gallery.html. Acceptance commands provided.",
+          "response": {
+            "received_at_local": "2025-12-21T14:54:11-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — shipped the Visual Snapshot System tooling: deterministic headless screenshot capture + a simple local HTML compare gallery against `.cursor/plans/art_examples`.\\n\\n### Files changed\\n- Added `tools/capture_screenshots.py`\\n- Added `tools/screenshot_scenarios.py`\\n- Added `tools/build_gallery.py`\\n\\n### What’s implemented (shots-tool + gallery-compare)\\n- `tools/capture_screenshots.py`\\n  - Headless-capable via SDL dummy drivers\\n  - Deterministic via `game.sim.determinism.set_sim_seed(seed)` and sim-time tick driving (`set_sim_now_ms`)\\n  - Uses `GameEngine.render()` and saves PNGs with `pygame.image.save`\\n  - Emits `<out>/manifest.json` with stable filenames + per-shot metadata + sha256\\n- `tools/screenshot_scenarios.py`\\n  - Implemented `building_catalog` scenario: places one of each building type (from `tools/assets_manifest.json`) and captures\\n    - `building_catalog_overview.png`\\n    - `building_<building_type>_closeup.png` (plus `building_castle_closeup.png`)\\n- `tools/build_gallery.py`\\n  - Builds `docs/art/compare_gallery.html` (plus JSON sidecar) showing our shots + reference images from `.cursor/plans/art_examples`\\n\\n### Acceptance commands run (PASS evidence)\\n- PASS: `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/test_run/`\\n  - Output: 30 PNGs + `docs/screenshots/test_run/manifest.json`\\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/test_run --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n  - Output: `docs/art/compare_gallery.html` (browsable locally)\\n\\n### Coverage added (entities with PNGs)\\n- Buildings: closeups for all building types in `tools/assets_manifest.json` plus overview shot (currently 30 PNGs total for the scenario).\\n\\n### Done vs blocked\\n- Done: shots-tool + gallery-compare for `building_catalog` scenario; baseline compare gallery generation.\\n- Not implemented yet: `enemy_catalog`, `ui_panels`, `base_overview` scenarios (future expansion), and any UI hooks (not required for current acceptance).\\n\\n### Cross-agent dependencies\\n- Agent 09 (Art): provide must-capture shot list + framing guidance for next scenario additions (enemy_catalog/ui_panels).\\n- Agent 11 (QA): add docs/checklist steps and confirm commands run in their environment; determinism check at manifest/filenames level.\\n- Agent 08 (UI) (optional): only if we need stable forced-open UI panels for `ui_panels` shots.",
+            "summary_bullets": [
+              "Implemented deterministic, headless-capable screenshot capture tool with manifest+PNG outputs",
+              "Implemented building_catalog scenario: overview + per-building closeups driven from tools/assets_manifest.json",
+              "Implemented local compare gallery HTML against .cursor/plans/art_examples; acceptance commands PASS"
+            ],
+            "proposed_changes": [
+              "Add tools/capture_screenshots.py (deterministic screenshot runner; manifest + sha256 per shot)",
+              "Add tools/screenshot_scenarios.py (scenario catalog; initial building_catalog)",
+              "Add tools/build_gallery.py (HTML compare gallery generator)"
+            ],
+            "acceptance_criteria": [
+              "python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/test_run/ produces non-empty manifest.json and expected PNGs",
+              "python tools/build_gallery.py --shots docs/screenshots/test_run --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html produces a browsable page showing our shots + references",
+              "No gameplay regression: regular python main.py still runs (tools-only changes)"
+            ],
+            "risks": [
+              "Headless pygame behavior can vary by platform; if SDL dummy driver fails on some machines, we may need an opt-out flag to run windowed"
+            ],
+            "dependencies": [
+              "Agent 11: document/verify commands; add QA checklist step(s) (no pixel-compare in CI)",
+              "Agent 09: lock must-capture shot list + framing guidance for subsequent scenario modules"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Add scenarios incrementally: base_overview, enemy_catalog, ui_panels once Art defines shot list",
+              "If UI-panel shots are flaky, request Agent 08 add stable toggles (ui-hooks-optional)"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "artifacts_generated": [
+                "docs/screenshots/test_run/manifest.json",
+                "docs/screenshots/test_run/*.png",
+                "docs/art/compare_gallery.html",
+                "docs/art/compare_gallery.json"
+              ],
+              "commands_run": [
+                "python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/test_run/",
+                "python tools/build_gallery.py --shots docs/screenshots/test_run --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r9_major_graphics_update": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r9_major_graphics_update",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_update_baseline_v2",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:17:58-07:00"
+          },
+          "prompt_text": "Major Graphics Update (WK3 baseline v2) driven by Visual Snapshot System. Agent 12 owns Milestone 5: maintain snapshot tooling + ensure capture scenarios stable; add scenario improvements only if needed; keep gallery usable for review (grouped runs). Required commands include building gallery from docs/screenshots/wk3_baseline_v2 and regenerating baseline_v2_next captures for base_overview/building_catalog/enemy_catalog/ui_panels.",
+          "response": {
+            "received_at_local": "2025-12-21T15:17:58-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — advanced Milestone 5 (snapshot review gate) by hardening capture manifest determinism and improving gallery usability for multi-run shot roots. Regenerated the required `wk3_baseline_v2_next` snapshot set and rebuilt the compare gallery. No gameplay/loader path changes.\n\n### Files changed\n- `tools/capture_screenshots.py`\n- `tools/build_gallery.py`\n\n### What changed (tooling)\n- `tools/capture_screenshots.py`\n  - Manifest determinism fix: stop embedding absolute file paths (machine-dependent). Outputs now include `relpath` (relative to run dir) and `run.run_dir`.\n  - Schema bumped to `schema_version: 1.1`.\n- `tools/build_gallery.py`\n  - Can now accept a *shots root* and render multiple run dirs (grouped) into one HTML (this supports `docs/screenshots/wk3_baseline_v2_next/`).\n  - Backwards compatible: reads legacy v1.0 manifests that had absolute `path`, and new v1.1 manifests with `relpath`.\n  - Gallery headers now include the run directory name (e.g. `base_overview_seed3`).\n\n### Milestones advanced\n- Milestone 5 (gfx-5-snapshot-gate): tooling + baseline regeneration.\n\n### Required commands run (PASS evidence)\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2 --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n- PASS: `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n- PASS (regression gate): `python tools/qa_smoke.py --quick`\n\n### Screenshots regenerated (wk3_baseline_v2_next)\n- `base_overview_seed3/`\n  - `base_overview__Z1__world_clean.png`\n  - `base_overview__Z1__ui_default.png`\n  - `base_overview__Z2__world_clean.png`\n  - `base_overview__Z2__ui_default.png`\n- `building_catalog_seed3/`: `building_catalog_overview.png` + all `building_*_closeup.png`\n- `enemy_catalog_seed3/`: `enemy_catalog_overview.png` + all `enemy_*_closeup.png`\n- `ui_panels_seed3/`: `ui_panels_hero.png`, `ui_panels_building.png`, `ui_panels_debug.png`\n\n### Blockers / dependencies\n- None for tooling.\n- Art/UX dependencies (for next iterations): Agent 09 + 08 will drive visual changes; once they land new sprites/tiles/UI skin, rerun the above capture commands and rebuild the gallery.",
+            "summary_bullets": [
+              "Hardened capture manifest determinism (no absolute paths) and made gallery support multi-run shot roots with grouped headers",
+              "Regenerated full required baseline snapshot set into docs/screenshots/wk3_baseline_v2_next and rebuilt docs/art/compare_gallery.html",
+              "qa_smoke --quick remains PASS"
+            ],
+            "proposed_changes": [
+              "tools/capture_screenshots.py: emit relpath + run_dir in manifest; schema_version 1.1; avoid machine-dependent absolute paths",
+              "tools/build_gallery.py: accept shots root with multiple run dirs; support both v1.0 and v1.1 manifests; show run dir names in headers"
+            ],
+            "acceptance_criteria": [
+              "build_gallery works on both docs/screenshots/wk3_baseline_v2 and docs/screenshots/wk3_baseline_v2_next roots",
+              "capture_screenshots produces stable filenames + manifest contents across machines (no absolute file paths)",
+              "python tools/qa_smoke.py --quick remains PASS"
+            ],
+            "risks": [
+              "If future tools embed absolute paths again, manifest determinism will regress; treat manifest as a contract for Milestone 5"
+            ],
+            "dependencies": [
+              "Agent 09/08: when visuals change, rerun capture commands and rebuild gallery for review; tooling is ready"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Use wk3_baseline_v2_next as the rolling 'after' set for art PRs; keep wk3_baseline_v2 as the locked baseline",
+              "Agent 11: verify determinism expectation at filename+manifest level holds on their machine (no pixel-compare required)"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "milestone": "gfx-5-snapshot-gate",
+              "artifacts": [
+                "docs/screenshots/wk3_baseline_v2_next/**/manifest.json",
+                "docs/screenshots/wk3_baseline_v2_next/**/*.png",
+                "docs/art/compare_gallery.html",
+                "docs/art/compare_gallery.json"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r10_major_graphics_execution": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r10_major_graphics_execution",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_execution_r10",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:27:50-07:00"
+          },
+          "prompt_text": "Major Graphics Update execution: Milestone 1 (terrain) and Milestone 4 (UI skin) start in parallel. Agent 12: keep snapshot gate smooth (Milestone 5), only touch tools/scenarios if someone is blocked. Required commands: refresh rolling after shots under docs/screenshots/wk3_baseline_v2_next, rebuild gallery, keep qa_smoke --quick PASS.",
+          "response": {
+            "received_at_local": "2025-12-21T15:27:50-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — maintained Milestone 5 (snapshot gate) to keep Milestone 1/4 work unblocked. Hardened `capture_screenshots` to avoid cross-shot UI/selection state contamination, then refreshed rolling `wk3_baseline_v2_next` shots + rebuilt gallery and confirmed qa_smoke stays green.\n\n### Files changed\n- `tools/capture_screenshots.py`\n\n### What changed (snapshot gate hardening)\n- Reset per-shot UI/selection state before applying `Shot.apply()`:\n  - `engine.screenshot_hide_ui = False`\n  - `engine.selected_hero = None`\n  - `engine.selected_building = None`\n  - `engine.debug_panel.visible = False` (if present)\nThis prevents a prior shot (e.g., `world_clean` or `debug`) from contaminating subsequent captures.\n\n### Milestones advanced\n- Milestone 5 (gfx-5-snapshot-gate) maintenance only.\n\n### Commands run (PASS evidence)\n- PASS: `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n- PASS: `python tools/qa_smoke.py --quick`\n\n### DoD shots impacted (regenerated)\n- Terrain DoD targets (Milestone 1):\n  - `docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z1__world_clean.png`\n  - `docs/screenshots/wk3_baseline_v2_next/base_overview_seed3/base_overview__Z2__world_clean.png`\n- UI skin DoD targets (Milestone 4):\n  - `docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_hero.png`\n  - `docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3/ui_panels_debug.png`\n\n### Blockers\n- None.\n\n### Dependencies\n- Agent 09 (terrain) and Agent 08 (UI skin): proceed with visual changes; rerun the required capture+gallery commands each PR. Snapshot tooling is stable and should not block.",
+            "summary_bullets": [
+              "Hardened capture tool against cross-shot state contamination (UI/selection/debug visibility reset per shot)",
+              "Refreshed rolling after-shots under docs/screenshots/wk3_baseline_v2_next and rebuilt gallery",
+              "qa_smoke --quick remains PASS"
+            ],
+            "proposed_changes": [
+              "tools/capture_screenshots.py: reset screenshot_hide_ui + selection + debug visibility per shot before apply()"
+            ],
+            "acceptance_criteria": [
+              "Required capture+gallery commands run without crash and overwrite docs/screenshots/wk3_baseline_v2_next outputs",
+              "Gallery remains rebuildable and browsable: docs/art/compare_gallery.html",
+              "python tools/qa_smoke.py --quick remains PASS"
+            ],
+            "risks": [
+              "If future scenarios rely on persistent selection state across shots, they must express it via Shot.apply() (reset is now the default behavior)"
+            ],
+            "dependencies": [
+              "Agent 09: Milestone 1 terrain changes should improve base_overview world_clean shots",
+              "Agent 08: Milestone 4 UI skin changes should improve ui_panels_hero/debug shots",
+              "Agent 11: verify gate remains reliable after each PR"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Keep locked baseline (wk3_baseline_v2) unchanged; refresh only wk3_baseline_v2_next each PR",
+              "If a PR changes visuals, rerun the 4 capture commands + build_gallery + qa_smoke before requesting review"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "milestone": "gfx-5-snapshot-gate"
+            }
+          }
+        }
+        ,
+        "wk3_r11_buildings_enemies": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r11_buildings_enemies",
+          "round_meta": {
+            "prompt_set_id": "wk3_major_graphics_m2_m3_r11",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T15:43:42-07:00"
+          },
+          "prompt_text": "Major Graphics Update: Milestone 2 (Tier-1 buildings sprites) + Milestone 3 (core enemies sprites) execution. Agent 12/11 own tools/QA gate: keep tooling stable; do not overwrite wk3_baseline_v2; use wk3_baseline_v2_next as rolling after; run capture+gallery+qa_smoke gates after changes; report PASS/FAIL and blockers (incl attribution).",
+          "response": {
+            "received_at_local": "2025-12-21T15:43:42-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — verified Milestone 2/3 sprite folder layout is present, ran strict asset+attribution validation, refreshed rolling snapshot set (`wk3_baseline_v2_next`) and rebuilt the compare gallery, and confirmed regression gate remains green.\n\n### Files changed\n- None (tools-only gate run; no edits needed).\n\n### Milestones advanced\n- Milestone 2 + 3 validation + snapshot refresh (ownership is Art; Tools ensured gate health).\n\n### Asset layout verification (presence)\n- Buildings: `assets/sprites/buildings/<building_type>/<state>/frame_000.png` present for Tier-1 set (castle, marketplace, inn, blacksmith, guardhouse, house, farm, food_stand) and additional building types.\n- Enemies: `assets/sprites/enemies/<enemy_type>/<action>/frame_000.png` present for core set (goblin, wolf, skeleton, spider, bandit) across idle/walk/attack/hurt/dead.\n- Attribution scaffolding present: `assets/ATTRIBUTION.md` and `assets/third_party/*/{LICENSE*.txt,README*.txt}`.\n\n### Commands run + PASS evidence\n- PASS: `python tools/validate_assets.py --strict --check-attribution --report`\n- PASS: `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n- PASS: `python tools/qa_smoke.py --quick`\n\n### DoD shots refreshed (rolling after set)\n- Buildings (Milestone 2): all closeups under `docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3/`, including:\n  - `building_castle_closeup.png`\n  - `building_marketplace_closeup.png`\n  - `building_inn_closeup.png`\n  - `building_blacksmith_closeup.png`\n  - `building_guardhouse_closeup.png`\n  - `building_house_closeup.png`\n  - `building_farm_closeup.png`\n  - `building_food_stand_closeup.png`\n- Enemies (Milestone 3): all closeups under `docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3/`, including:\n  - `enemy_goblin_closeup.png`, `enemy_wolf_closeup.png`, `enemy_skeleton_closeup.png`, `enemy_spider_closeup.png`, `enemy_bandit_closeup.png`\n\n### Blockers\n- None (strict validator + snapshot gate + qa_smoke are all PASS).",
+            "summary_bullets": [
+              "Strict validator and attribution checks PASS with current Milestone 2/3 sprite folders present",
+              "Refreshed rolling wk3_baseline_v2_next snapshots and rebuilt compare gallery",
+              "qa_smoke --quick remains PASS"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "python tools/validate_assets.py --strict --check-attribution --report => PASS",
+              "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html => PASS",
+              "python tools/qa_smoke.py --quick => PASS"
+            ],
+            "risks": [
+              "If new building/enemy types are added, update tools/assets_manifest.json to keep strict validation accurate"
+            ],
+            "dependencies": [
+              "Agent 09: continue improving Tier-1 building states and core enemy actions; rerun captures+gallery each PR",
+              "Agent 11: verify determinism (stable filenames/manifests) and keep qa_smoke gate green in CI"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "As Art iterates, re-run the 4 capture commands + build_gallery + qa_smoke before PR review to keep snapshot DoD current"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "milestones_supported": [
+                "gfx-2-buildings-tier1",
+                "gfx-3-enemies-core",
+                "gfx-5-snapshot-gate"
+              ],
+              "gates_passed": [
+                "python tools/validate_assets.py --strict --check-attribution --report",
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html",
+                "python tools/qa_smoke.py --quick"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_final_release_closeout": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_final_release_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk3_final_closeout_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T16:06:47-07:00"
+          },
+          "prompt_text": "Final release closeout for wk3-ui-polish-1080p-pixelart. Agent 12: ensure snapshot capture + gallery commands are stable; manifests deterministic; run required release gates (qa_smoke --quick, validate_assets --strict --check-attribution) and regenerate rolling after snapshots + gallery (do not overwrite wk3_baseline_v2). Log commands + PASS evidence; files changed (ideally none); blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T16:06:47-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — final closeout: verified snapshot tooling stability + determinism, regenerated rolling `wk3_baseline_v2_next` artifacts, rebuilt the compare gallery, and ran both required automated release gates. No fixes required.\n\n### Files changed\n- None.\n\n### Required release gates (PASS)\n- PASS: `python tools/qa_smoke.py --quick`\n- PASS: `python tools/validate_assets.py --strict --check-attribution`\n\n### Rolling “after” snapshots regenerated (do NOT overwrite baseline)\n- PASS: `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk3_baseline_v2_next/base_overview_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/building_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk3_baseline_v2_next/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- PASS: `python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk3_baseline_v2_next/ui_panels_seed3 --size 1920x1080 --ticks 0`\n\n### Compare gallery rebuilt (PASS)\n- PASS: `python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n\n### Determinism sanity (PASS)\n- Verified refreshed manifests are machine-independent (no embedded absolute paths); manifests use `schema_version: 1.1` with `relpath` fields.\n\n### Blockers\n- None.",
+            "summary_bullets": [
+              "Release gates PASS (qa_smoke --quick; validate_assets --strict --check-attribution)",
+              "Rolling wk3_baseline_v2_next snapshots regenerated and compare_gallery rebuilt successfully",
+              "Snapshot manifests remain deterministic (no machine-dependent paths)"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick => PASS",
+              "python tools/validate_assets.py --strict --check-attribution => PASS",
+              "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html => PASS",
+              "Rolling after snapshots regenerated without touching locked baseline wk3_baseline_v2"
+            ],
+            "risks": [
+              "Manual spot-checks (launch/borderless/quit/close buttons) are still required from humans; tooling gates do not cover interactive behavior"
+            ],
+            "dependencies": [
+              "Agent 11: run manual acceptance spot-checks and post PASS evidence",
+              "Agent 13: patch notes + attribution packaging review"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed to human manual spot-check gate (Agent 11) and release hygiene/patch notes (Agent 13)"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "gates_passed": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/build_gallery.py --shots docs/screenshots/wk3_baseline_v2_next --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        }
       }
     }
   }

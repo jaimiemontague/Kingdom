@@ -34,6 +34,11 @@ class DebugPanel:
         self._next_update_ms = 0
         self._close_rect = pygame.Rect(0, 0, 0, 0)  # in screen coords
         self._close_x_surf = self.font_small.render("X", True, COLOR_WHITE)
+
+        # Milestone 4 (UI skin, code-only): frame language colors (match wk3_major_graphics_target swatches)
+        self._frame_outer = (0x14, 0x14, 0x19)  # near-black outline
+        self._frame_inner = (0x50, 0x50, 0x64)  # inner border
+        self._frame_highlight = (0x6B, 0x6B, 0x84)  # subtle top-left highlight
         
     def toggle(self):
         """Toggle panel visibility."""
@@ -97,7 +102,14 @@ class DebugPanel:
             self._panel_dirty = False
             panel_surf = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
             panel_surf.fill((*COLOR_UI_BG, 230))
-            pygame.draw.rect(panel_surf, COLOR_UI_BORDER, (0, 0, self.panel_width, self.panel_height), 2)
+            # 2-layer frame + top-left highlight language (cached surface)
+            w, h = int(self.panel_width), int(self.panel_height)
+            pygame.draw.rect(panel_surf, self._frame_outer, (0, 0, w, h), 2)
+            inner = pygame.Rect(2, 2, w - 4, h - 4)
+            if inner.width > 0 and inner.height > 0:
+                pygame.draw.rect(panel_surf, self._frame_inner, inner, 1)
+                pygame.draw.line(panel_surf, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.right - 2, inner.top + 1), 1)
+                pygame.draw.line(panel_surf, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.left + 1, inner.bottom - 2), 1)
 
             # Title + close hint (X)
             y = 10
@@ -107,7 +119,12 @@ class DebugPanel:
             # Close button (drawn into cached surface; hover handled by engine click)
             close_local = pygame.Rect(self.panel_width - size - 8, 8, size, size)
             pygame.draw.rect(panel_surf, (45, 45, 55), close_local)
-            pygame.draw.rect(panel_surf, COLOR_UI_BORDER, close_local, 2)
+            pygame.draw.rect(panel_surf, self._frame_outer, close_local, 2)
+            inner_btn = close_local.inflate(-4, -4)
+            if inner_btn.width > 0 and inner_btn.height > 0:
+                pygame.draw.rect(panel_surf, self._frame_inner, inner_btn, 1)
+                pygame.draw.line(panel_surf, self._frame_highlight, (inner_btn.left + 1, inner_btn.top + 1), (inner_btn.right - 2, inner_btn.top + 1), 1)
+                pygame.draw.line(panel_surf, self._frame_highlight, (inner_btn.left + 1, inner_btn.top + 1), (inner_btn.left + 1, inner_btn.bottom - 2), 1)
             panel_surf.blit(self._close_x_surf, (close_local.centerx - self._close_x_surf.get_width() // 2, close_local.centery - self._close_x_surf.get_height() // 2))
 
             y += 30

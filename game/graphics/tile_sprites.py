@@ -59,10 +59,10 @@ class TileSpriteLibrary:
 
         # Variant counts per tile type.
         variant_counts = {
-            0: 4,  # grass
+            0: 6,  # grass (more low-noise variety)
             1: 3,  # water
-            2: 3,  # path
-            3: 2,  # tree
+            2: 6,  # path (more definition variants)
+            3: 4,  # tree (reduce copy-paste feel)
         }
         v = cls._variant(tile_type, x, y, variant_counts.get(int(tile_type), 1))
         key = (int(tile_type), int(v), s)
@@ -91,8 +91,39 @@ class TileSpriteLibrary:
                 col = a if rnd.random() < 0.5 else b
                 surf.set_at((px, py), (*col, 255))
 
+        def blob(px: int, py: int, col: Tuple[int, int, int], r: int):
+            rr = max(1, int(r))
+            x0 = max(0, int(px - rr))
+            x1 = min(s - 1, int(px + rr))
+            y0 = max(0, int(py - rr))
+            y1 = min(s - 1, int(py + rr))
+            r2 = rr * rr
+            for yy in range(y0, y1 + 1):
+                dy = yy - py
+                for xx in range(x0, x1 + 1):
+                    dx = xx - px
+                    if (dx * dx + dy * dy) <= r2:
+                        surf.set_at((xx, yy), (*col, 255))
+
         if tile_type == 0:  # grass
-            speckle(pal.grass, pal.grass_dark, pal.grass_light, density=0.06 + 0.01 * variant)
+            # Milestone 1 (terrain): reduce "debug speckle" and shift to low-noise, readable variation.
+            # We use only 6 deterministic variants chosen by coord hash; each variant is cached.
+            speckle(pal.grass, pal.grass_dark, pal.grass_light, density=0.02 + 0.002 * variant)
+            # Add 1–2 subtle clumps (macro noise) rather than heavy pixel noise.
+            clumps = 1 if variant < 3 else 2
+            for _ in range(clumps):
+                cx = rnd.randrange(6, s - 6)
+                cy = rnd.randrange(6, s - 6)
+                col = pal.grass_dark if rnd.random() < 0.6 else pal.grass_light
+                blob(cx, cy, col, r=rnd.randrange(2, 4))
+            # Very occasional tiny prop hints per variant (kept subtle to avoid noise soup).
+            if variant in (4, 5):
+                # small flower/rock pixels
+                for _ in range(3):
+                    px = rnd.randrange(3, s - 3)
+                    py = rnd.randrange(3, s - 3)
+                    surf.set_at((px, py), (235, 235, 235, 255))
+                    surf.set_at((px + 1, py), (60, 160, 60, 255))
             return surf
 
         if tile_type == 1:  # water
@@ -106,9 +137,31 @@ class TileSpriteLibrary:
             return surf
 
         if tile_type == 2:  # path
-            speckle(pal.path, pal.path_dark, pal.path_light, density=0.08 + 0.02 * variant)
-            # Add a couple of pebble dots
-            for _ in range(6 + variant * 2):
+            # Path readability: clearer edge definition + less noisy interior.
+            speckle(pal.path, pal.path_dark, pal.path_light, density=0.04 + 0.01 * (variant % 3))
+
+            # Edge darkening (gives the path a crisp boundary even without neighbor context).
+            edge = pal.path_dark
+            edge_w = 2
+            pygame.draw.rect(surf, edge, pygame.Rect(0, 0, s, edge_w))
+            pygame.draw.rect(surf, edge, pygame.Rect(0, s - edge_w, s, edge_w))
+            pygame.draw.rect(surf, edge, pygame.Rect(0, 0, edge_w, s))
+            pygame.draw.rect(surf, edge, pygame.Rect(s - edge_w, 0, edge_w, s))
+
+            # Interior "track" variation (variants suggest straight/corner junctions visually).
+            if variant in (1, 4):
+                # light center lane
+                pygame.draw.rect(surf, pal.path_light, pygame.Rect(s // 2 - 2, 2, 4, s - 4))
+            elif variant in (2, 5):
+                # diagonal hint
+                for i in range(0, s, 2):
+                    x = i
+                    y = s - 1 - i
+                    if 1 <= x < s - 1 and 1 <= y < s - 1:
+                        surf.set_at((x, y), (*pal.path_light, 255))
+
+            # Pebbles (kept moderate)
+            for _ in range(4 + (variant % 3) * 2):
                 px = rnd.randrange(1, s - 1)
                 py = rnd.randrange(1, s - 1)
                 surf.set_at((px, py), (*pal.path_light, 255))
@@ -120,15 +173,20 @@ class TileSpriteLibrary:
             # Trunk
             trunk_w = max(2, s // 8)
             trunk_h = max(5, s // 3)
-            tx = s // 2 - trunk_w // 2 + (variant - 0.5)
+            # More variants: shift trunk/canopy subtly to reduce copy-paste feel.
+            tx = s // 2 - trunk_w // 2 + ((variant % 2) * 2 - 1)
             ty = s - trunk_h - 2
             pygame.draw.rect(surf, pal.tree_trunk, pygame.Rect(int(tx), int(ty), int(trunk_w), int(trunk_h)))
             # Canopy
             canopy_r = max(6, s // 3)
-            cx = s // 2 + (1 if variant else -1)
-            cy = s // 2
+            cx = s // 2 + (1 if (variant % 2) else -1)
+            cy = s // 2 + (0 if variant < 2 else 1)
             pygame.draw.circle(surf, pal.tree, (int(cx), int(cy)), int(canopy_r))
             pygame.draw.circle(surf, pal.tree_dark, (int(cx - 2), int(cy - 2)), int(max(2, canopy_r - 4)))
+            # Small ground shadow for readability
+            shadow = pygame.Rect(0, 0, int(canopy_r * 1.6), int(canopy_r * 0.6))
+            shadow.center = (s // 2, s - 6)
+            pygame.draw.ellipse(surf, (0, 0, 0, 45), shadow)
             return surf
 
         # Unknown tile type: fallback to a neutral checker (helps debugging).
@@ -137,5 +195,6 @@ class TileSpriteLibrary:
             for xx in range(0, s, 2):
                 surf.set_at((xx, yy), (95, 95, 95, 255))
         return surf
+
 
 
