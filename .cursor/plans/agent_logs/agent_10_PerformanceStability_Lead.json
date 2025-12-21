@@ -87,6 +87,78 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2 focus: hero AI anti-jank + no-combat-inside + stuck recovery (Build A), plus 4-class sprite set (Build B)."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:09"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Reference wk2 plan; provide acceptance criteria, deterministic repro/QA harness, perf/stability guardrails before heavy implementation. Log in agent file using reply template; do not implement contract-dependent work until Agent 3 posts contract surface.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:09",
+            "status": "complete",
+            "raw": "Status: Active for wk2_r1 async meeting stage as Performance/Stability. My focus is to define perf guardrails + measurement so AI anti-jank work and sprite integration don’t introduce regressions.\n\nDeliverables:\n- Perf/stability acceptance criteria for Build A (AI polish) and Build B (sprites) that can be validated with deterministic commands.\n- A repeatable perf regression check (headless) using tools/perf_benchmark.py and a consistent CSV output location.\n- A short set of “do-not-do” constraints for implementers: avoid per-frame allocations in overlays/sprite loads; stuck detection must be O(N) and cadence-based.\n\nProposed changes (file boundaries; low conflict):\n- docs/perf_sanity_checklist.md: add WK2-specific perf profiles and a small checklist section for sprite integration + stuck recovery.\n- tools/perf_benchmark.py: (post-contract) optionally add a WK2 profile that mirrors Agent 12’s deterministic stuck repro scenario inputs/flags, so we can quantify added per-tick cost once the scenario exists.\n- game/engine.py (only if needed): extend existing perf overlay with one more line for ‘stuck events / unstuck attempts’ counters once Agent 3 defines the contract surface (do not implement before contracts).\n\nAcceptance criteria + exact test commands:\n- Gate: python tools/qa_smoke.py --quick (must pass)\n- Baseline sim-cost check (headless):\n  - python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk2.csv\n  - Post-merge expectation: no >15% increase in ms/tick total vs the pre-merge baseline on the same machine/config for the same command.\n- Sprite perf sanity (manual): run game, toggle perf overlay (F2), and verify render ms does not spike continually when moving camera/zooming and when many heroes are on screen.\n\nRisks (perf/stability):\n- Stuck detection implemented with expensive scans (e.g., scanning all enemies/buildings per hero per tick) can become a hidden O(N^2) hotspot.\n- Sprite pipeline changes can accidentally load/scale images repeatedly (per entity/per frame) if caching is bypassed.\n- Adding debug labels/logging can regress perf if strings/surfaces are rebuilt every frame.\n\nDependencies (blockers only):\n- Need Agent 3’s contract surface for: inside-combat gating field(s), stuck signals/counters, and sim-time semantics, before we can instrument/benchmark those counters.\n- Need Agent 12’s deterministic scenario name/CLI + outputs before we can add a faithful perf profile for stuck recovery.\n\nNext actions:\n- Add WK2 perf profiles and CSV location guidance (perf_wk2.csv at repo root) to docs/perf_sanity_checklist.md.\n- After Agent 3 posts contracts and Agent 12 posts scenario CLI, update perf_benchmark/overlay instrumentation to include stuck metrics without coupling.\n",
+            "summary_bullets": [
+              "WK2 perf focus: ensure AI anti-jank + stuck recovery stays O(N) and cadence-based; avoid hidden cross-product scans.",
+              "Sprite pipeline appears cache-friendly (HeroSpriteLibrary caches clips); main risk is accidental per-entity/per-frame image load/scale if cache is bypassed.",
+              "Define a simple regression gate: keep qa_smoke green and record a perf_benchmark baseline CSV to prevent regressions.",
+              "Wait for Agent 3 contract surface (stuck signals + inside gating) before adding perf counters tied to those fields."
+            ],
+            "proposed_changes": [
+              "Update docs/perf_sanity_checklist.md with WK2 benchmark profiles and sprite/stuck perf guardrails.",
+              "Use tools/perf_benchmark.py to capture a baseline (perf_wk2.csv) and treat >15% ms/tick increase as investigation threshold.",
+              "After Agent 12 publishes a deterministic stuck repro scenario CLI, add a matching perf benchmark profile to quantify scoring/recovery cost (no coupling).",
+              "After Agent 3 posts contracts, optionally add lightweight counters for stuck/unstuck in perf overlay (refresh on cadence; no per-frame allocations)."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick passes.",
+              "Baseline benchmark command produces stable output and appends to CSV: python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk2.csv",
+              "No sustained render-ms spikes attributable to sprite integration when perf overlay is on (manual spot check with F2)."
+            ],
+            "risks": [
+              "Stuck detection may be implemented with expensive per-tick scans or repeated replans, causing perf regressions under load.",
+              "Sprite integration could accidentally reload/scale images repeatedly if caching is bypassed.",
+              "Debug overlays/logging can regress perf if they rebuild surfaces/strings every frame."
+            ],
+            "dependencies": [
+              "Agent 3 must post contract surface for inside-combat gating + stuck signals/counters before perf instrumentation/benchmarks can target them.",
+              "Agent 12 must post deterministic stuck repro scenario CLI/outputs before we can add a faithful perf benchmark profile for it."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Record a perf_benchmark baseline (perf_wk2.csv) at sprint start and re-run after major AI/sprite merges.",
+              "Enforce a perf regression investigation threshold (>15% ms/tick increase) rather than a hard absolute budget for WK2.",
+              "After contracts + scenario land, extend perf checks to include stuck recovery metrics and verify they don’t increase ms/tick materially."
+            ],
+            "agent_fields": {
+              "perf_regression_gate": {
+                "csv_default": "perf_wk2.csv (repo root)",
+                "baseline_command": "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk2.csv",
+                "threshold_policy": ">15% ms/tick increase vs baseline triggers investigation"
+              },
+              "sprite_perf_notes": [
+                "HeroSpriteLibrary caches clips per (hero_class,size); ensure sprite integration does not bypass this cache.",
+                "Avoid per-frame scaling or Surface creation inside render loops; keep loads at startup/cached."
+              ],
+              "wait_for_contracts": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

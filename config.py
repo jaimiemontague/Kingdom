@@ -10,7 +10,7 @@ load_dotenv()
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS = 60
-PROTOTYPE_VERSION = "1.2.1"
+PROTOTYPE_VERSION = "1.2.3"
 GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
 
 # Determinism / simulation settings (future multiplayer enablement)

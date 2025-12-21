@@ -51,6 +51,29 @@ Org: Department-Lead Agent Cards (Single Document)
 - **Audit trail required**: any decision, bug found, or scope change must be written down in the appropriate plan/log so it isn’t lost in chat history.
 - **No drive-by code**: if you are not the designated implementing agent for a change, do not modify code; instead, produce a clear repro + acceptance criteria and hand it to the owner.
 
+### Communication rounds (shared studio operating model)
+
+We operate in **rounds** so asynchronous collaboration stays coherent. A “round” is an async meeting with a specific output.
+
+- **Do not force 5–10 rounds for everything**. Use as many as needed for the risk level:
+  - Small/isolated change: 2–3 rounds
+  - Normal 1-week sprint (2 builds): 4–6 rounds
+  - High-coupling/risky work (AI, determinism, pathing): 6–10 rounds
+
+Default round structure (PM may compress/expand per sprint):
+- **R0**: PM pre-brief (plan + agent roster: Active vs Consult-only)
+- **R1**: Specs/contracts/repro harness (the async “meeting stage”)
+- **R2**: Implementation plan confirmation (files, tests, integration order)
+- **R3**: Integration + Build A gate
+- **R4**: Build B scope lock (if applicable)
+- **R5**: Release + silent-unless-blocked wrap-up
+
+Default sequencing rule (not absolute):
+- If it’s about **player feel/UX** → Agent 2 first (acceptance criteria)
+- If it’s about **system boundaries/determinism** → Agent 3 first (contracts/guardrails)
+- If it needs **repro automation** → Agents 11/12 early (QA + tools harness)
+- If it’s **art/pipeline heavy** → Agent 9 early (deliverables + conventions)
+
 ### Required outputs format (every time you respond)
 
 - **Status**: what you believe your current assignment is.
@@ -105,6 +128,15 @@ Own planning, scope control, and shipping cadence.
 - **Escalation**:
   - If two agents propose conflicting changes, PM resolves by referencing vision/scope docs and choosing the lowest-risk path to ship.
   - If a change risks determinism/perf/stability, PM escalates to NetworkingDeterminism_Lead / PerformanceStability_Lead / QA_TestEngineering_Lead for signoff before it lands.
+
+### Agent roster discipline (avoid over-staffing)
+
+For every sprint, PM must explicitly declare:
+- **Active agents**: must respond and implement this sprint.
+- **Consult-only agents**: respond only if pinged for a specific signoff/blocker.
+- **Silent agents**: do not engage to reduce noise.
+
+Agents must not “self-activate” outside the declared roster unless asked by PM.
 
 ### Bug triage & handoff rules (critical)
 

@@ -349,6 +349,383 @@
           "pm_message_for_agent_05": "Blocker resolved. Build A ships tiered bounty placement WITH the new HUD/help hint from Agent 08. STARTING_GOLD=1500 is explicitly approved for Build A based on human playtest feedback (gold tightness feels good). No further action needed."
         }
       }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2 PM hub: Round-based delegation for hero AI anti-jank + core hero sprite pipeline."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "round_meta": {
+            "prompt_set_id": "wk2_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 1 is the async meeting stage: acceptance criteria + contracts + deterministic repro/QA harness. Some non-active agents responded due to accidental broadcast; they are stood down below."
+          },
+          "pm_decisions": {
+            "roster": {
+              "active_agents": [
+                "02_GameDirector_ProductOwner",
+                "03_TechnicalDirector_Architecture",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "11_QA_TestEngineering_Lead",
+                "12_ToolsDevEx_Lead"
+              ],
+              "consult_only_agents": [
+                "04_NetworkingDeterminism_Lead",
+                "05_GameplaySystemsDesigner",
+                "10_PerformanceStability_Lead",
+                "13_SteamRelease_Ops_Marketing"
+              ],
+              "silent_agents": [
+                "07_ContentScenarioDirector"
+              ],
+              "note": "Only Active agents should respond in wk2_r2 unless PM explicitly pings others."
+            },
+            "build_split": {
+              "build_a_midweek": [
+                "No combat while inside buildings (hard gate)",
+                "Reduced oscillation / target thrash (commitment window + hysteresis)",
+                "Deterministic stuck detection + deterministic recovery (repath/adjacent/goal reset)",
+                "Debug-only visibility for stuck/unstuck counters"
+              ],
+              "build_b_endweek": [
+                "4-class hero sprites (warrior/ranger/rogue/wizard) across idle/walk/attack/hurt/inside",
+                "Animation readability pass (no jitter/flicker; state matches gameplay state)",
+                "Final stability/perf pass"
+              ]
+            },
+            "contracts_locked_from_agent_03": {
+              "combat_gating": [
+                "Hero.can_attack: bool",
+                "Hero.attack_blocked_reason: str (optional)",
+                "Rule: if hero.is_inside_building is True => can_attack=False"
+              ],
+              "stuck_signals": [
+                "Hero.stuck_active: bool",
+                "Hero.stuck_since_ms: int|null (sim-time)",
+                "Hero.last_progress_ms: int (sim-time)",
+                "Hero.unstuck_attempts: int",
+                "Hero.stuck_reason: str",
+                "Hero.get_stuck_snapshot(now_ms=None)->dict"
+              ],
+              "determinism_guardrails": [
+                "Use game.sim.timebase.now_ms() for all timeouts/ages; no wall-clock",
+                "No random.* in sim; stable ordering for tie-breaks"
+              ]
+            },
+            "acceptance_thresholds_locked": {
+              "stuck_displacement_tiles_threshold": 0.25,
+              "stuck_time_s": 2.0,
+              "unstuck_max_attempts_per_target": 3,
+              "unstuck_backoff_s": 0.5,
+              "target_commit_window_s": 1.5,
+              "bounty_commit_window_s": 2.5,
+              "oscillation_note": "Override commitment immediately for: target died/invalid, bounty removed/claimed, target unreachable."
+            },
+            "qa_assertion_policy": {
+              "inside_combat_gate": "P0 assert: no damage while inside buildings. P1 (if available): also assert no 'attack event/animation trigger' while inside.",
+              "stuck_recovery_gate": "Deterministic scenario must show >=1 stuck detection and >=1 recovery attempt OR prove no hero remains stuck >5s in repro.",
+              "gate_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python main.py --no-llm",
+                "python main.py --provider mock"
+              ]
+            },
+            "ui_policy": {
+              "stuck_indicators": "Debug-only for Build A (avoid player-facing clutter).",
+              "inside_state_visibility": "Show inside-building status in selected hero panel if available (can be debug-only if needed)."
+            },
+            "logging_conventions": {
+              "prompt_set_id_canonical": "wk2_kickoff_r1_v1",
+              "note": "Some agents logged prompt_set_id=wk2_prompts_v1; acceptable. Use canonical IDs going forward (wk2_exec_r2_v1, wk2_wrap_r3_v1)."
+            }
+          },
+          "pm_responses_by_agent": {
+            "02": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Acceptance criteria are locked as written (inside-combat gate, oscillation limits, stuck recovery, animation readability for Build B).",
+                "PM decision: debug visibility for stuck is debug-only in Build A."
+              ],
+              "asks": [
+                "No further action in Round 2 unless a vision/feel dispute appears."
+              ]
+            },
+            "03": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Contract surface is accepted and treated as LOCKED for WK2 (Hero.can_attack + stuck snapshot fields).",
+                "Proceed to Round 2 as contract reviewer/signoff; avoid import cycles (UI must not import AI)."
+              ],
+              "asks": [
+                "In Round 2, please review any PRs touching combat/hero fields for contract compliance and determinism pitfalls.",
+                "Pick a single location for tunables (constants module) that AI/QA can reference without cycles."
+              ]
+            },
+            "06": {
+              "status": "assigned",
+              "pm_reply": [
+                "Greenlight for Build A implementation after contracts: implement inside-combat gating at the authoritative attack execution site and add anti-oscillation + stuck recovery in BasicAI (sim-time based).",
+                "Use the exact thresholds in pm_decisions.acceptance_thresholds_locked unless you find a measured reason to adjust."
+              ],
+              "asks": [
+                "Do P0 in this order: (1) combat gating (no damage while inside), (2) deterministic stuck recovery + counters, (3) anti-oscillation commitment/hysteresis.",
+                "Provide evidence: `python tools/qa_smoke.py --quick` PASS and the deterministic repro scenario (once Tools/QA land it)."
+              ]
+            },
+            "08": {
+              "status": "assigned",
+              "pm_reply": [
+                "Proceed with minimal debug-only stuck indicator UI reading Agent 3 contract fields (get_stuck_snapshot) and show inside status when possible.",
+                "Keep additions cache-friendly and rate-limited; do not add player-facing clutter for Build A."
+              ],
+              "asks": [
+                "Implement Build A HUD/debug reads after Agent 6/3 fields exist; keep debug-only by default.",
+                "Coordinate with QA on how to toggle debug mode for verification (if needed)."
+              ]
+            },
+            "09": {
+              "status": "assigned",
+              "pm_reply": [
+                "Proceed with Build B sprite production in the specified folder conventions; no Build A dependency.",
+                "Frame count guidance accepted; ensure pixel-crisp export (nearest-neighbor, no smoothing)."
+              ],
+              "asks": [
+                "In Round 2, confirm whether any loader changes are required; if not, remain assets+docs only."
+              ]
+            },
+            "11": {
+              "status": "assigned",
+              "pm_reply": [
+                "Proceed to wire deterministic WK2 QA gates once Agent 12 lands scenarios: add profiles into qa_smoke --quick and fail on contract-driven assertions.",
+                "PM decision: P0 for inside-combat is 'no damage while inside'; treat 'no attack animation/events' as P1 if instrumentation exists."
+              ],
+              "asks": [
+                "Define 'attack event' for QA as damage application first; add 'attack attempted while inside' counter only if easy and deterministic.",
+                "Keep tests non-flaky; rely on deterministic scenario, not emergent sim."
+              ]
+            },
+            "12": {
+              "status": "assigned",
+              "pm_reply": [
+                "Proceed to implement deterministic scenarios in observe_sync: hero_stuck_repro (required) and inside_combat_repro (nice-to-have if time).",
+                "Confirm prompt_set_id: use wk2_kickoff_r1_v1 (already fine if your log says wk2_prompts_v1)."
+              ],
+              "asks": [
+                "Implement scenario setup that forces repeatable stalls (do not rely on emergent pathing randomness).",
+                "Emit compact counters: stuck_events, unstuck_attempts, inside_attack_blocks; then coordinate with Agent 11 to assert them in qa_smoke."
+              ]
+            },
+            "04": {
+              "status": "stand_down_consult_only",
+              "pm_reply": [
+                "Thanks—determinism guidance is noted. You are consult-only for WK2; no further action unless pinged."
+              ],
+              "asks": []
+            },
+            "05": {
+              "status": "stand_down_consult_only",
+              "pm_reply": [
+                "Thanks—tuning defaults captured. You are consult-only for WK2; no further action unless pinged (we may ask for tuning review after repro harness exists)."
+              ],
+              "asks": []
+            },
+            "07": {
+              "status": "stand_down_silent",
+              "pm_reply": [
+                "You were not on the active roster for WK2. Please stand down unless pinged for a specific scenario/content hook later."
+              ],
+              "asks": []
+            },
+            "10": {
+              "status": "stand_down_consult_only",
+              "pm_reply": [
+                "Thanks—perf gate suggestions captured. You are consult-only for WK2; no further action unless a perf regression appears."
+              ],
+              "asks": []
+            },
+            "13": {
+              "status": "stand_down_consult_only",
+              "pm_reply": [
+                "Thanks—release scaffolds are fine. You are consult-only for WK2; no further action until end-of-sprint when we draft/post Build A/B notes."
+              ],
+              "asks": []
+            }
+          },
+          "pm_integration_order": [
+            "Lock contracts and field names (Agent 3) — treat as API for WK2.",
+            "Tools deterministic repro scenario (Agent 12) + QA assertions wiring (Agent 11).",
+            "Combat gating (Agent 6) + stuck recovery (Agent 6) validated via scenario + qa_smoke.",
+            "Anti-oscillation guardrails (Agent 6) validated via scenario + manual smoke.",
+            "Debug-only stuck/inside UI reads (Agent 8) once fields exist; keep allocations low.",
+            "Build A tag once qa_smoke --quick is green and 10-minute manual smoke in --no-llm and --provider mock passes.",
+            "Build B: sprite asset drop (Agent 9) + animation readability pass + final QA."
+          ],
+          "pm_open_questions_resolved": [
+            "Stuck/unstuck indicators are debug-only for Build A.",
+            "Inside-combat QA asserts P0: no damage while inside; P1: no attack event/animation if instrumentation exists.",
+            "Canonical prompt_set_id naming for WK2 rounds going forward."
+          ]
+        },
+        "wk2_r2": {
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 2 execution: implement against locked contracts, wire deterministic repro + qa_smoke gates, and prepare Build A."
+          },
+          "pm_instruction": "WK2 Round 2 (wk2_r2): Execute. Only ACTIVE agents should respond. Implement against Agent 3 locked contracts and the acceptance thresholds in wk2_r1 pm_decisions. Provide evidence (commands + PASS) and keep changes deterministic/perf-safe. Consult-only agents do not respond unless pinged.",
+          "pm_messages_to_agents": {
+            "03": {
+              "status": "requested",
+              "message": "Round 2: treat your wk2_r1 contract surface as LOCKED. Please review upcoming PRs for contract compliance + determinism pitfalls (sim-time only, no random.*, stable ordering). Also pick a single tunables location (constants module) that AI/QA can read without cycles and note it in your log."
+            },
+            "06": {
+              "status": "requested",
+              "message": "Round 2: implement Build A P0. Order: (1) inside-combat gating at authoritative attack/damage site using `hero.can_attack`/`is_inside_building` (no damage while inside), (2) stuck detection + deterministic recovery + counters per Agent 3 fields (sim-time), (3) anti-oscillation commitment window + hysteresis using locked thresholds. Evidence: `python tools/qa_smoke.py --quick` PASS + deterministic repro scenario run once Tools lands."
+            },
+            "08": {
+              "status": "requested",
+              "message": "Round 2: implement minimal debug-only UI reads: selected hero panel shows inside status and stuck snapshot (reason, attempts, time stuck) by reading Agent 3 contract fields (`get_stuck_snapshot`). Keep rate-limited and cache-friendly; no player-facing clutter. Ensure `python tools/qa_smoke.py --quick` stays PASS."
+            },
+            "09": {
+              "status": "requested",
+              "message": "Round 2: proceed with Build B prep (assets+docs only): confirm folder conventions match loader, create/extend docs for sprite pipeline, and begin producing frames for the 4 classes (idle/walk/attack/hurt/inside). No Build A dependencies."
+            },
+            "11": {
+              "status": "requested",
+              "message": "Round 2: after Agent 12 lands deterministic scenarios, wire them into `python tools/qa_smoke.py --quick` with non-flaky assertions. P0: inside-combat asserts no damage while inside. Stuck: assert >=1 stuck detection and >=1 recovery attempt OR bounded max stuck time in scenario. Keep oscillation checks optional/report-only until thresholds are proven stable."
+            },
+            "12": {
+              "status": "requested",
+              "message": "Round 2: implement deterministic scenarios in `tools/observe_sync.py`: required `--scenario hero_stuck_repro` (forces repeatable stall) and optional `--scenario inside_combat_repro` (hero inside with enemies). Emit compact counters: stuck_events, unstuck_attempts, inside_attack_blocks. Coordinate with Agent 11 to assert these in `qa_smoke --quick`."
+            }
+          },
+          "pm_round2_results": {
+            "high_level_status": "mostly_complete",
+            "what_landed": [
+              "Agent 06 implemented Build A P0: inside-combat damage gating via Hero.can_attack + CombatSystem hard gate; deterministic stuck detection/recovery; anti-oscillation commitment windows. Gates: qa_smoke PASS + boot smoke OK.",
+              "Agent 08 implemented debug-only HUD visibility for inside state + stuck snapshot + attack blocked reason; added game_state.debug_ui gating and caching. Gate: qa_smoke PASS.",
+              "Agent 03 added canonical tunables module `game/sim/hero_guardrails_tunables.py` for locked thresholds; qa_smoke PASS.",
+              "Agent 12 added deterministic observe scenarios: hero_stuck_repro (required) and inside_combat_repro (optional), plus counters; qa_smoke PASS.",
+              "Agent 09 completed Build B prep (docs + folder skeletons) and fixed a HUD init crash discovered during manual smoke; qa_smoke PASS."
+            ],
+            "still_pending_before_tagging_build_a": [
+              "Agent 11 must wire Agent 12 scenarios into `python tools/qa_smoke.py --quick` with non-flaky assertions (hero_stuck_repro required).",
+              "PM/human must complete the 10-minute interactive manual smoke in both modes: `python main.py --no-llm` and `python main.py --provider mock` (player-visible checks: no damage while inside, stuck recovery observed at least once in the repro, reduced oscillation)."
+            ],
+            "integration_risks": [
+              "Potential merge conflict risk: `game/ui/hud.py` was modified by Agents 08 and 09 in wk2_r2; ensure Agent 09's HUD init crash fix is preserved when integrating Agent 08's debug UI additions.",
+              "Drift risk: Agent 06 should import locked thresholds from `game.sim.hero_guardrails_tunables` (avoid duplicating constants)."
+            ]
+          },
+          "pm_responses_by_agent": {
+            "02": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Thanks—gate PASS evidence recorded and no vision disputes. We still need the interactive 10-minute manual smoke before tagging Build A."
+              ],
+              "asks": []
+            },
+            "03": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Approved: `game/sim/hero_guardrails_tunables.py` is now the single source of truth for thresholds. Great call."
+              ],
+              "asks": [
+                "Please sanity-review any final merges for contract compliance and ensure no cycles were introduced by the new tunables module."
+              ]
+            },
+            "06": {
+              "status": "in_review",
+              "pm_reply": [
+                "Excellent—core Build A P0 is implemented and gates are green.",
+                "Please switch any hard-coded thresholds to import from `game.sim.hero_guardrails_tunables` so AI/QA/tools cannot drift."
+              ],
+              "asks": [
+                "Run Agent 12's deterministic scenarios after integration and paste the counter lines into your log: `hero_stuck_repro` (required) and `inside_combat_repro` (optional)."
+              ]
+            },
+            "08": {
+              "status": "in_review",
+              "pm_reply": [
+                "Approved direction: debug-only visibility + caching + game_state.debug_ui gating.",
+                "Important: coordinate merge with Agent 09 since both touched `game/ui/hud.py`."
+              ],
+              "asks": [
+                "When integrating, ensure the HUD init crash fix from Agent 09 is preserved alongside your debug UI changes."
+              ]
+            },
+            "09": {
+              "status": "in_review",
+              "pm_reply": [
+                "Thanks—Build B pipeline prep is on track.",
+                "Note: you fixed a HUD crash (helpful), but for process: please ensure any cross-domain fixes are clearly logged (which you did) and call out merge-risk if another agent touched the same file."
+              ],
+              "asks": [
+                "When integrating with Agent 08 HUD work, double-check `hud.py` keeps your messages init fix."
+              ]
+            },
+            "11": {
+              "status": "action_required",
+              "pm_reply": [
+                "Agent 12 has now landed `hero_stuck_repro` and `inside_combat_repro`. Please wire `hero_stuck_repro` into `tools/qa_smoke.py --quick` as a failing profile with deterministic assertions."
+              ],
+              "asks": [
+                "Update `tools/qa_smoke.py` to run the scenario and assert either (a) stuck_events>=1 AND unstuck_attempts>=1, or (b) bounded max_stuck_ms (per plan).",
+                "Define the inside-combat P0 check as 'no damage while inside' (as previously locked).",
+                "Provide evidence: `python tools/qa_smoke.py --quick` PASS after wiring."
+              ]
+            },
+            "12": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Great—deterministic repro scenarios and counters are exactly what we needed.",
+                "Thanks for keeping assertions conditioned to field presence to avoid flake during rollout."
+              ],
+              "asks": [
+                "Please coordinate with Agent 11 on the exact counter names being asserted in qa_smoke (stuck_events, unstuck_attempts, max_stuck_ms, inside_attack_blocks)."
+              ]
+            }
+          },
+          "status": "in_review"
+        },
+        "wk2_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk2_wrap_r3_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 3 is final sync + blockers only. Goal: close remaining automation gaps and declare Build A ready for human manual smoke + tag."
+          },
+          "pm_decisions": {
+            "automation_status": [
+              "Agent 11 has wired `hero_stuck_repro` into `python tools/qa_smoke.py --quick` (now a mandatory failing profile).",
+              "Agent 06 has imported locked thresholds from `game.sim.hero_guardrails_tunables` (no duplicated constants).",
+              "Agents 08+09 confirmed `game/ui/hud.py` integration preserves both the HUD init crash fix and debug-only stuck/inside indicators.",
+              "Agent 12 confirmed the stable counter keys/format for scenario parsing."
+            ],
+            "build_a_readiness": "Automated gates are satisfied. Remaining gate is HUMAN interactive manual smoke (10 minutes) in both modes before tagging Build A."
+          },
+          "pm_wrapup_notes": [
+            "Evidence (automated): `python tools/qa_smoke.py --quick` PASS including hero_stuck_repro profile.",
+            "Evidence (deterministic repro): Agent 11 observed `[scenario] counters: scenario=hero_stuck_repro stuck_events=11 unstuck_attempts=31 inside_attack_blocks=0 max_stuck_ms=3483` during qa_smoke run.",
+            "Evidence (AI repro run): Agent 06 observed `[scenario] counters: scenario=hero_stuck_repro stuck_events=25 unstuck_attempts=103 inside_attack_blocks=0 max_stuck_ms=19983` and `qa_smoke` PASS.",
+            "Integration risk cleared: `game/ui/hud.py` contains both messages init crash fix + debug_ui gated indicators; qa_smoke PASS after merge."
+          ],
+          "pm_remaining_steps_for_human": [
+            "Run 10-minute interactive manual smoke: `python main.py --no-llm`.",
+            "Run 10-minute interactive manual smoke: `python main.py --provider mock`.",
+            "Confirm player-visible checks: (1) heroes do not deal damage while inside buildings, (2) fewer freezes/unstuck feels reasonable, (3) reduced target thrash/oscillation, (4) debug panel (F1) shows stuck/attack-block info when applicable.",
+            "If both manual runs look good: tag Build A and (optionally) ping Agent 13 to draft/post Build A notes."
+          ],
+          "pm_message_for_all_agents": "WK2 Build A automation is complete (qa_smoke includes hero_stuck_repro). Studio is now waiting on HUMAN manual smoke (10 minutes in --no-llm and provider=mock) before tagging Build A. All agents stand down unless you have a blocker/regression to report.",
+          "status": "ready_for_manual_smoke"
+        }
+      }
     }
   }
 }

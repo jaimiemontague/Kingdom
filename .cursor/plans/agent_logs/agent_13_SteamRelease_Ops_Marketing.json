@@ -81,6 +81,81 @@
           }
         }
       }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:02.3562922-07:00"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Reference plan .cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md. Provide acceptance criteria/contracts/repro/QA harness; log response using REPLY template structure.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:02.3562922-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — producing WK2 Build A/Build B patch-note scaffolds and release-facing acceptance criteria. I will not publish/claim any bullet publicly until the deterministic repro + `python tools/qa_smoke.py --quick` gate is green and the shipped change list is finalized.\\n\\n### Deliverables\\n- Draft player-facing patch notes for WK2 Build A (AI polish) and Build B (hero sprites), including a standard **No API keys required** section and a small **How to test** snippet.\\n- A short release-copy checklist for what must be verified before posting (QA-confirmed known issues, verified bullets only).\\n\\n### Proposed changes (file boundaries)\\n- Add/update sprint patch-note drafts (docs only):\\n  - `docs/sprint/wk2_buildA_patch_notes_draft.md`\\n  - `docs/sprint/wk2_buildB_patch_notes_draft.md`\\n- (Optional, later) Prepare a pinned Steam discussion copy: ‘How to run mock/no-LLM (no API keys)’ in `docs/steam/` for easy reuse.\\n\\n### Acceptance criteria + exact test commands\\n- Build A announcement only after:\\n  - `python tools/qa_smoke.py --quick` passes\\n  - Manual 10-minute smoke in `python main.py --no-llm` AND `python main.py --provider mock`\\n  - Verified: no attacks execute while hero is inside buildings\\n  - Verified: stuck recovery triggers in the deterministic repro scenario (per Tools/QA harness), and heroes do not remain frozen for long spans\\n- Build B announcement only after:\\n  - All 4 classes have sprite folders populated (no missing fallbacks): `assets/sprites/heroes/{warrior,ranger,rogue,wizard}/{idle,walk,attack,hurt,inside}/frame_###.png`\\n  - `python tools/qa_smoke.py --quick` passes\\n  - Manual 10-minute smoke (mock/no-LLM): confirm animations match state (idle/walk/attack/hurt/inside), no jittery state-flipping\\n\\n### Risks\\n- Publishing bullets that aren’t fully verified by QA + deterministic scenario results.\\n- Versioning drift (prototype versions) if Build tags are renumbered late.\\n- Sprite pipeline issues causing missing assets or inconsistent frame naming (would make patch notes inaccurate).\\n\\n### Dependencies (blockers only)\\n- PM: confirm Prototype version numbers for WK2 Build A/Build B once scope is locked (or allow placeholder v1.2.x until tag).\\n- QA/Tools: deterministic repro scenario command + pass/fail criteria for stuck recovery and inside-combat gating.\\n\\n### Questions back to PM (blockers only; otherwise [])\\n[]\\n\\n### Next actions\\n- Keep patch-note drafts updated as Build A/B scope locks; replace placeholders with QA-confirmed known issues at ship time.\\n- When Tools/QA publish the deterministic repro command, include it verbatim in the announcement ‘How to test’ section (optional).",
+            "summary_bullets": [
+              "Prepared WK2 Build A/B patch-note scaffolds: Build A = hero AI jank fixes; Build B = 4-class sprite animations.",
+              "Release-facing gate: publish only verified bullets after deterministic repro + `python tools/qa_smoke.py --quick` and manual smoke are green.",
+              "Includes standard ‘No API keys required’ run modes for every Steam-facing post."
+            ],
+            "proposed_changes": [
+              "Maintain `docs/sprint/wk2_buildA_patch_notes_draft.md` (AI polish, no art dependencies).",
+              "Maintain `docs/sprint/wk2_buildB_patch_notes_draft.md` (sprite set + animation readability).",
+              "Optionally add a reusable pinned post draft explaining mock/no-LLM modes (docs-only)."
+            ],
+            "acceptance_criteria": [
+              "Build A post: `python tools/qa_smoke.py --quick` passes + manual smoke in `--no-llm` and `--provider mock`; claims limited to what shipped.",
+              "Build B post: sprite folders populated for all 4 classes and 5 states; `qa_smoke --quick` passes; manual animation/state verification completed.",
+              "Every post contains ‘No API keys required’ section and a short ‘How to test’ snippet."
+            ],
+            "risks": [
+              "Overstating behavior improvements without deterministic repro confirmation.",
+              "Version number mismatch if tag naming changes late.",
+              "Sprite naming/folder convention mistakes causing missing frames (invalidating release notes)."
+            ],
+            "dependencies": [
+              "PM-confirmed Prototype version tags for WK2 Build A and Build B (or permission to keep placeholder v1.2.x until tag).",
+              "Deterministic repro scenario command from Tools + QA pass/fail assertions for stuck recovery and inside-combat gating.",
+              "Final merged change lists for each build to replace placeholders with verified bullets."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After PM scope lock: confirm whether to label WK2 builds as v1.2.3/v1.2.4 (or other) before publishing.",
+              "After Tools/QA publish scenario command: add it to ‘How to test’ sections for both builds (if useful for players/devlog).",
+              "At ship time: replace placeholders with QA-confirmed known issues and remove any unverified claims."
+            ],
+            "agent_fields": {
+              "patch_notes_build_a": [
+                "Less hero jank: reduced rapid oscillation (goal/target commitment windows).",
+                "No combat while inside buildings (attack/damage gated).",
+                "Stuck detection + deterministic recovery (repath/reset)."
+              ],
+              "patch_notes_build_b": [
+                "Full hero sprite sets for Warrior/Ranger/Rogue/Wizard (idle/walk/attack/hurt/inside).",
+                "Animation readability improved (state matches intent; reduced jitter).",
+                "Stability/perf polish with new animations."
+              ],
+              "draft_paths": [
+                "docs/sprint/wk2_buildA_patch_notes_draft.md",
+                "docs/sprint/wk2_buildB_patch_notes_draft.md"
+              ],
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
     }
   }
 }

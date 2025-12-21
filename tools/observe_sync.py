@@ -30,7 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
 from game.sim.timebase import set_sim_now_ms  # noqa: E402
-from game.world import World  # noqa: E402
+from game.world import World, TileType  # noqa: E402
 from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
@@ -112,6 +112,67 @@ def place_intent_bounty_scenario(*, bounty_system, castle, seed: int) -> None:
     bounty_system.place_bounty(bx2, by2, reward=90, bounty_type="explore")
 
 
+def _clear_and_cage_tile(world: World, grid_x: int, grid_y: int) -> None:
+    """
+    Force a deterministic "stuck" situation by surrounding a single walkable tile with blocking tiles.
+
+    This makes any attempt to path out fail, independent of emergent AI choices.
+    """
+    # Clear a small area to grass so procedural terrain doesn't affect the repro.
+    for dy in range(-2, 3):
+        for dx in range(-2, 3):
+            world.set_tile(grid_x + dx, grid_y + dy, TileType.GRASS)
+
+    # Ring at radius 1 is blocking.
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dx == 0 and dy == 0:
+                continue
+            world.set_tile(grid_x + dx, grid_y + dy, TileType.TREE)
+
+    # Center stays walkable.
+    world.set_tile(grid_x, grid_y, TileType.GRASS)
+
+
+def _scenario_setup(
+    *,
+    scenario: str,
+    seed: int,
+    world: World,
+    heroes: list,
+    buildings: list,
+    enemies: list,
+    bounty_system: BountySystem,
+    castle,
+    market,
+) -> None:
+    """Apply deterministic scenario modifications (tools-only)."""
+    if scenario == "hero_stuck_repro":
+        if heroes:
+            hx, hy = world.world_to_grid(float(heroes[0].x), float(heroes[0].y))
+            _clear_and_cage_tile(world, hx, hy)
+        return
+
+    if scenario == "inside_combat_repro":
+        if heroes:
+            h = heroes[0]
+            h.is_inside_building = True
+            h.inside_building = market
+            h.inside_timer = 0.0
+            # Keep the hero inside (RESTING bypasses inside_timer pop-out).
+            try:
+                h.state = h.state.RESTING
+            except Exception:
+                pass
+
+            # Ensure at least one enemy is within attack range.
+            if not enemies:
+                gx, gy = world.world_to_grid(float(h.x), float(h.y))
+                ex, ey = world.grid_to_world(gx + 1, gy)
+                enemies.append(Goblin(ex + TILE_SIZE / 2, ey + TILE_SIZE / 2))
+        return
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=20.0)
@@ -128,7 +189,7 @@ def main() -> int:
         "--scenario",
         type=str,
         default="default",
-        choices=["default", "intent_bounty"],
+        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro"],
         help="deterministic test setup presets (default: default)",
     )
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
@@ -231,6 +292,20 @@ def main() -> int:
     if args.scenario == "intent_bounty":
         place_intent_bounty_scenario(bounty_system=bounty_system, castle=castle, seed=int(args.seed))
 
+    # WK2 deterministic repro scenarios (tools-only setup).
+    if args.scenario in ("hero_stuck_repro", "inside_combat_repro"):
+        _scenario_setup(
+            scenario=str(args.scenario),
+            seed=int(args.seed),
+            world=world,
+            heroes=heroes,
+            buildings=buildings,
+            enemies=enemies,
+            bounty_system=bounty_system,
+            castle=castle,
+            market=market,
+        )
+
     # Local view (unclaimed only); refreshed per tick.
     bounties = bounty_system.get_unclaimed_bounties()
 
@@ -261,6 +336,13 @@ def main() -> int:
     qa_explicit_responder_seen = False
     qa_explicit_responder_positive = False
     qa_seen_bounty_target = False
+
+    # WK2 scenario counters (deterministic repro harness).
+    scenario_counters = {"stuck_events": 0, "unstuck_attempts": 0, "inside_attack_blocks": 0, "max_stuck_ms": 0}
+    _prev_stuck_active: dict[int, bool] = {}
+    _prev_unstuck_attempts: dict[int, int] = {}
+    _any_can_attack_field = False
+    _any_stuck_fields = False
 
     def _hero_intent_label(h) -> str:
         # Prefer new explicit intent if present.
@@ -324,6 +406,7 @@ def main() -> int:
             "bounty_system": bounty_system,
             "castle": castle,
             "economy": economy,
+            "world": world,
         }
 
         ai.update(dt, heroes, game_state)
@@ -346,11 +429,58 @@ def main() -> int:
         bounty_system.check_claims(heroes)
         bounty_system.cleanup()
 
+        # WK2 scenario metrics/counters (contract-aware, deterministic-friendly).
+        now_ms_val = int((t * 1000) / 60)
+        for h in heroes:
+            hid = id(h)
+
+            # Stuck signals (prefer locked contract fields if present).
+            if hasattr(h, "stuck_active") or hasattr(h, "get_stuck_snapshot"):
+                _any_stuck_fields = True
+            stuck_active = bool(getattr(h, "stuck_active", False))
+            if stuck_active and not _prev_stuck_active.get(hid, False):
+                scenario_counters["stuck_events"] += 1
+            _prev_stuck_active[hid] = stuck_active
+
+            if stuck_active:
+                stuck_since = getattr(h, "stuck_since_ms", None)
+                if stuck_since is not None:
+                    try:
+                        dur = max(0, int(now_ms_val) - int(stuck_since))
+                        scenario_counters["max_stuck_ms"] = max(int(scenario_counters["max_stuck_ms"]), dur)
+                    except Exception:
+                        pass
+
+            # Count recovery attempts as deltas (handles resets per target).
+            if hasattr(h, "unstuck_attempts"):
+                prev = int(_prev_unstuck_attempts.get(hid, 0))
+                cur = int(getattr(h, "unstuck_attempts", 0))
+                if cur > prev:
+                    scenario_counters["unstuck_attempts"] += int(cur - prev)
+                _prev_unstuck_attempts[hid] = cur
+
+            # Inside-combat gating counters:
+            # Count times a hero is inside, cannot attack, and has an enemy in range while off cooldown.
+            if getattr(h, "is_inside_building", False):
+                if hasattr(h, "can_attack"):
+                    _any_can_attack_field = True
+                can_attack_val = bool(getattr(h, "can_attack", True))
+                if (not can_attack_val) and getattr(h, "attack_cooldown", 0) <= 0:
+                    for e in enemies:
+                        if not getattr(e, "is_alive", True):
+                            continue
+                        try:
+                            if h.distance_to(e.x, e.y) <= getattr(h, "attack_range", TILE_SIZE * 1.5):
+                                scenario_counters["inside_attack_blocks"] += 1
+                                break
+                        except Exception:
+                            continue
+
         # QA assertions:
         # - Bounty existence/response should be tracked for the whole run (a bounty may be claimed before warmup).
         # - Intent checks are gated by warmup to give the AI time to transition.
         if args.qa:
-            bounties_enabled = bool(args.bounty) or (args.scenario != "default")
+            bounties_enabled = bool(args.bounty) or (str(args.scenario) == "intent_bounty")
             if bounties_enabled:
                 qa_bounty_exists = qa_bounty_exists or (int(getattr(bounty_system, "total_spent", 0)) > 0)
                 if int(getattr(bounty_system, "total_claimed", 0)) > 0:
@@ -438,7 +568,7 @@ def main() -> int:
     if args.qa:
         failed = False
         # If the run is configured with bounties, require existence + at least one responder.
-        bounties_enabled = bool(args.bounty) or (args.scenario != "default")
+        bounties_enabled = bool(args.bounty) or (str(args.scenario) == "intent_bounty")
         if bounties_enabled:
             if not qa_bounty_exists:
                 print("[qa] FAIL: expected at least one bounty to exist (bounties enabled)")
@@ -455,6 +585,20 @@ def main() -> int:
             print("[qa] FAIL: hero.intent exists but no non-empty intent observed after warmup")
             failed = True
 
+        # WK2 scenario assertions (contract-aware; avoid flakiness before contracts exist).
+        if str(args.scenario) == "hero_stuck_repro" and _any_stuck_fields:
+            if int(scenario_counters.get("stuck_events", 0)) <= 0:
+                print("[qa] FAIL: hero_stuck_repro expected >=1 stuck detection event (stuck_active)")
+                failed = True
+            if int(scenario_counters.get("unstuck_attempts", 0)) <= 0:
+                print("[qa] FAIL: hero_stuck_repro expected >=1 recovery attempt (unstuck_attempts delta)")
+                failed = True
+
+        if str(args.scenario) == "inside_combat_repro" and _any_can_attack_field:
+            if int(scenario_counters.get("inside_attack_blocks", 0)) <= 0:
+                print("[qa] FAIL: inside_combat_repro expected >=1 inside_attack_blocks when can_attack field exists")
+                failed = True
+
         if not failed:
             # Print a small summary so CI logs show what was checked vs skipped.
             print(
@@ -465,6 +609,19 @@ def main() -> int:
                 f" bounty_responder_explicit={qa_explicit_responder_positive if qa_explicit_responder_seen else 'n/a'}"
                 f" intent_attr_present={qa_intent_attr_present}"
             )
+
+        # Always print scenario counters for CI triage.
+        try:
+            print(
+                "[scenario] counters:"
+                f" scenario={args.scenario}"
+                f" stuck_events={int(scenario_counters.get('stuck_events', 0))}"
+                f" unstuck_attempts={int(scenario_counters.get('unstuck_attempts', 0))}"
+                f" inside_attack_blocks={int(scenario_counters.get('inside_attack_blocks', 0))}"
+                f" max_stuck_ms={int(scenario_counters.get('max_stuck_ms', 0))}"
+            )
+        except Exception:
+            pass
         return 1 if failed else 0
 
     return 0

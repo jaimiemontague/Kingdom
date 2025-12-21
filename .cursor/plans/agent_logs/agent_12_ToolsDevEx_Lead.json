@@ -81,6 +81,186 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:18-07:00"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1)\nReference the plan: @.cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md\nRoster rule: you are Active this sprint, so you must respond.\nRound 1 is the async meeting stage: outputs are acceptance criteria, contracts, and deterministic repro/QA harness before heavy implementation.\nRound 1 sequencing (post in this order):\n1) Agent 2 → 2) Agent 3 → 3) Agent 12 → 4) Agent 11 → 5) Agents 6/8/9\nLogging (required):\nIn your agent log file (.cursor/plans/agent_logs/agent_XX_*.json), create/update:\nsprints[\"wk2-hero-polish-ai-sprites\"].rounds[\"wk2_r1\"]\nFill it using the REPLY template structure (prompt_text + response with bullets).\nWhat to include in your wk2_r1 response:\nStatus + deliverables\nProposed changes (with file boundaries)\nAcceptance criteria + exact test commands\nRisks + dependencies (blockers only)\nNext actions\nWait rule: If your work depends on contracts (inside-combat gating, stuck signals), do not implement/merge until Agent 3 posts the contract surface.\nDo not engage other agents unless PM activates them.\nNote this includes changes to our approach noted in recent updates to these files (please review): @.cursor/plans/ai_studio_infrastructure_progress.md and @.cursor/plans/studio-agent-cards_c3880ea5.plan.md",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:18-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — Round 1 output: define deterministic repro/triage harness for WK2 hero jank (stuck recovery + no-combat-inside) without coupling, and specify how QA can gate it.\n\n### Deliverables (Round 1)\n- Deterministic headless repro scenario design for:\n  - stuck/freeze recovery (hero intends to move but position delta ~0)\n  - no-combat-while-inside (attack attempts suppressed)\n- One-command triage output spec: counts + top reasons + recovery attempts.\n- Exact test commands to be used by QA and in release gates.\n\n### Proposed changes (file boundaries)\n- Tools-only first (safe to land early):\n  - Extend `tools/observe_sync.py` with a new preset scenario: `--scenario hero_stuck_repro` (design only until contract surface is posted).\n  - Add log/summary output for stuck/recovery counters (single-line summary suitable for CI).\n  - Optionally add a small wrapper `tools/wk2_hero_polish_harness.py` if `observe_sync` would become too crowded.\n- Docs (safe):\n  - Update `docs/sprint/wk2_acceptance_checklist.md` (if/when created by Agent 2) with standard commands + required seeds.\n\n### Acceptance criteria + exact commands (non-flaky)\n- Baseline gate remains mandatory:\n  - `python tools/qa_smoke.py --quick`\n- WK2-specific deterministic repro (to be added to `qa_smoke --quick` by Agent 11 once implemented):\n  - `python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa`\nExpected outcomes:\n- Exit code 0\n- Output includes a compact summary line with (at minimum): stuck_events, unstuck_attempts, inside_attack_blocks.\n- If explicit contract fields exist (per Agent 3), QA asserts they become non-zero at least once in the scenario; otherwise fallback inference is used (still deterministic).\n\n### Risks (blockers only)\n- Deterministic stuck reproduction can be flaky if it relies on emergent pathing only; scenario must deliberately create a dead-end/obstacle layout or forced target that causes a repeatable stall.\n- If the contract surface for stuck/inside gating is unclear or split across systems, tooling may need to infer too much (risking false positives).\n\n### Dependencies (blockers only)\n- Agent 3 contract surface for:\n  - where to read ‘inside building’ (single boolean) and whether combat gating is AI-side, combat-side, or both\n  - stuck signal field names (e.g., `stuck_reason`, `unstuck_attempts`, `stuck_since_ms`, `inside_attack_blocked_count`)\n  - sim-time source expectations (tick-based vs ms)\n\n### Questions back to PM (blockers)\n- Please confirm `prompt_set_id` naming for WK2 (I assumed `wk2_prompts_v1`) so logs stay consistent.\n\n### Next actions\n- Wait for Agent 3 to post/lock the contract surface, then implement `--scenario hero_stuck_repro` in `tools/observe_sync.py` with deterministic obstacle/goal forcing.\n- Coordinate (via PM) with Agent 11 to add the new scenario profile into `tools/qa_smoke.py --quick` once it’s non-flaky.\n- Keep existing gates green throughout: rerun `python tools/qa_smoke.py --quick` after each tool change.",
+            "summary_bullets": [
+              "WK2 Round 1: propose deterministic headless repro scenario for hero stuck recovery + no-combat-inside gating",
+              "Define one-command triage outputs (counts, top reasons, recovery attempts) suitable for CI logs",
+              "Specify exact commands/seeds to be used by QA and wired into qa_smoke --quick once non-flaky",
+              "Hold implementation until Agent 3 contract surface for stuck/inside gating is posted"
+            ],
+            "proposed_changes": [
+              "tools/observe_sync.py: add new preset `--scenario hero_stuck_repro` (implementation after Agent 3 contracts)",
+              "tools/observe_sync.py: add compact stuck/recovery counters to log output (single-line summary)",
+              "tools/qa_smoke.py: later add a WK2 profile calling the scenario (Agent 11 wires once stable)",
+              "docs: add/update wk2 acceptance checklist to include standard commands + fixed seeds"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick continues to pass (baseline gate)",
+              "New deterministic scenario command (when implemented) exits 0 and prints stuck/recovery metrics: python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa",
+              "Scenario is deterministic under fixed seed (repeatable metrics on repeated runs)",
+              "If explicit contract fields exist, QA asserts explicit counters become >0 at least once; otherwise uses deterministic inference fallback"
+            ],
+            "risks": [
+              "Stuck repro may be flaky if it depends on emergent pathing; must deliberately force a repeatable stall",
+              "If contract fields are not centralized/consistent, tooling may rely on inference and risk false positives",
+              "Adding too many prints can bloat CI logs; need compact summaries + optional verbose mode"
+            ],
+            "dependencies": [
+              "Agent 3: contract surface for inside-building/combat gating + stuck signals + sim-time semantics",
+              "Agent 11: QA wiring into qa_smoke --quick once scenario is deterministic and non-flaky"
+            ],
+            "questions_back_to_pm": [
+              "Confirm WK2 prompt_set_id string (assumed wk2_prompts_v1) for consistent logging."
+            ],
+            "recommended_next_actions": [
+              "After Agent 3 posts contracts, implement tools/observe_sync.py --scenario hero_stuck_repro using deterministic obstacle/goal forcing",
+              "After implementation, add a new qa_smoke --quick profile that runs the scenario and fails on missing/zero counters (Agent 11 owns assertions)",
+              "Keep baseline gate running after each change: python tools/qa_smoke.py --quick"
+            ],
+            "agent_fields": {
+              "dev_tools_suggestions": [
+                "Headless deterministic scenario presets for AI/pathing bugs (seeded, one-command runnable)",
+                "Compact per-run metrics summaries for CI logs (counts + top reasons)",
+                "Fallback inference mode when new contract fields are not present yet (avoid blocking early iterations)"
+              ],
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa (after contracts)"
+              ]
+            }
+          }
+        }
+        ,
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:16:56-07:00"
+          },
+          "prompt_text": "WK2 Round 2 (wk2_r2) — Execute (Build A focus)\nReference PM decisions + assignments here:\n@.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → wk2-hero-polish-ai-sprites / wk2_r1 + wk2_r2\nAnd the sprint plan: @.cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md\nContracts + thresholds are LOCKED (see PM hub wk2_r1). Implement against them; no guessing field names.\nProceed with your assigned tasks from the PM hub (wk2_r2.pm_messages_to_agents).",
+          "response": {
+            "received_at_local": "2025-12-20T22:16:56-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — executed Round 2 assignment: land deterministic scenarios in `tools/observe_sync.py` for Build A validation, emitting compact counters (stuck_events, unstuck_attempts, inside_attack_blocks) and keeping qa_smoke green.\n\n### Deliverables shipped\n- Added deterministic scenarios to `tools/observe_sync.py`:\n  - `--scenario hero_stuck_repro` (required): cages a hero in a locally-cleared tile ring (TREE) to force repeatable path stall.\n  - `--scenario inside_combat_repro` (optional): puts a hero inside a building and ensures an enemy is nearby (countering relies on `Hero.can_attack` when present).\n- `game_state` now includes `world` so pathfinding-based stalls are reproducible headlessly.\n- Scenario counters printed every `--qa` run:\n  - `stuck_events`, `unstuck_attempts`, `inside_attack_blocks`, `max_stuck_ms`.\n- Scenario QA logic is contract-aware and avoids unrelated flakiness:\n  - Bounty QA checks only run when `--bounty` or `--scenario intent_bounty`.\n\n### Files changed\n- `tools/observe_sync.py`\n\n### Test commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0)\n- PASS: `python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa --log-every 600` (exit code 0; prints `[scenario] counters: ... scenario=hero_stuck_repro ...`)\n- PASS: `python tools/observe_sync.py --seconds 8 --seed 3 --heroes 6 --scenario inside_combat_repro --qa --log-every 240` (exit code 0; prints scenario counters)\n\n### Blockers\n- None from tools. Note: `inside_attack_blocks` remains 0 until `Hero.can_attack` is implemented by Agent 6/3 per locked contract; QA assertions are conditioned on field presence to avoid premature failures.\n\n### Next actions\n- Coordinate (via PM) with Agent 11 to wire `hero_stuck_repro` into `qa_smoke --quick` with non-flaky assertions once Agent 6 lands stuck fields/counters.\n- If Agent 6 adds `Hero.can_attack`, rerun `inside_combat_repro` to ensure `inside_attack_blocks > 0` in a deterministic run.",
+            "summary_bullets": [
+              "Implemented deterministic `hero_stuck_repro` scenario in observe_sync to force repeatable stalls",
+              "Implemented optional `inside_combat_repro` setup and counter plumbing (asserts only when can_attack exists)",
+              "observe_sync now passes `world` into game_state for pathfinding-based repros",
+              "qa_smoke --quick remains PASS after tooling changes"
+            ],
+            "proposed_changes": [
+              "tools/observe_sync.py: add scenarios hero_stuck_repro + inside_combat_repro",
+              "tools/observe_sync.py: include world in game_state",
+              "tools/observe_sync.py: emit compact scenario counters in --qa mode",
+              "tools/observe_sync.py: ensure bounty QA gating runs only when bounties are actually enabled"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick returns exit code 0",
+              "hero_stuck_repro runs deterministically and prints counters: python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa",
+              "Scenario counters include: stuck_events, unstuck_attempts, inside_attack_blocks, max_stuck_ms",
+              "No new wall-clock/random usage introduced in sim-relevant code paths (tools stay deterministic-friendly)"
+            ],
+            "risks": [
+              "inside_combat_repro counters rely on Hero.can_attack contract; until implemented, inside_attack_blocks will be 0 and QA will not enforce it",
+              "If unstuck logic changes tie-breaks without stable ordering, stuck metrics could become non-deterministic; keep ordering stable",
+              "Pygame pkg_resources deprecation warning adds noise to logs (non-fatal)"
+            ],
+            "dependencies": [
+              "Agent 6/3: implement locked hero contract fields (can_attack + stuck_* + get_stuck_snapshot) so QA can enforce explicit counters",
+              "Agent 11: wire hero_stuck_repro into qa_smoke --quick assertions once stable"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: add a qa_smoke --quick profile calling: python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa and assert stuck_events>=1 and unstuck_attempts>=1 (or bounded max stuck time) once fields land",
+              "Agent 6: once can_attack exists, validate inside_combat_repro yields inside_attack_blocks>0 deterministically"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "dev_tools_suggestions": [
+                "Deterministic scenario presets should deliberately force failure modes (tile cage) rather than relying on emergent pathing",
+                "Always emit compact counters for CI triage; keep verbose logs behind log cadence/flags"
+              ],
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa --log-every 600",
+                "python tools/observe_sync.py --seconds 8 --seed 3 --heroes 6 --scenario inside_combat_repro --qa --log-every 240"
+              ]
+            }
+          }
+        }
+        ,
+        "wk2_r3": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r3",
+          "round_meta": {
+            "prompt_set_id": "wk2_wrap_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:35:38-07:00"
+          },
+          "prompt_text": "WK2 Round 3 (wk2_r3) — Final sync + blockers only (Build A readiness)\nAgent 12: Confirm counter names and ensure they’re stable for Agent 11 assertions; reply with the exact expected counter keys/format.",
+          "response": {
+            "received_at_local": "2025-12-20T22:35:38-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — confirming the exact counter names and output format emitted by `tools/observe_sync.py` for Agent 11’s deterministic assertions.\n\n### Expected counter output (stable for assertions)\nWhen `--qa` is enabled, `tools/observe_sync.py` always prints one single-line summary with this prefix:\n- `[scenario] counters:`\n\nThe current (stable) key=value fields printed in that line are:\n- `scenario` (string; the scenario name passed via `--scenario`)\n- `stuck_events` (int)\n- `unstuck_attempts` (int)\n- `inside_attack_blocks` (int)\n- `max_stuck_ms` (int)\n\nExact format (single line):\n- `[scenario] counters: scenario=<NAME> stuck_events=<INT> unstuck_attempts=<INT> inside_attack_blocks=<INT> max_stuck_ms=<INT>`\n\nNotes for QA wiring:\n- For `--scenario hero_stuck_repro`, the assertions should target `stuck_events`, `unstuck_attempts`, and optionally bound `max_stuck_ms`.\n- For `--scenario inside_combat_repro`, `inside_attack_blocks` is expected to stay 0 until `Hero.can_attack` is implemented; the tool will print the key regardless.\n\n### Blockers\n- None (counter names are stable and printed unconditionally in `--qa` mode).",
+            "summary_bullets": [
+              "observe_sync prints a deterministic single-line scenario counter summary in --qa mode",
+              "Stable counter keys: scenario, stuck_events, unstuck_attempts, inside_attack_blocks, max_stuck_ms",
+              "Exact format: '[scenario] counters: scenario=<NAME> stuck_events=<INT> unstuck_attempts=<INT> inside_attack_blocks=<INT> max_stuck_ms=<INT>'"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "Agent 11 can parse the '[scenario] counters:' line and assert stuck_events/unstuck_attempts/max_stuck_ms deterministically for hero_stuck_repro"
+            ],
+            "risks": [
+              "If future edits change the prefix or key names, QA parser must be updated in lockstep (treat as a contract for WK2 Build A)."
+            ],
+            "dependencies": [
+              "Agent 11: implement qa_smoke wiring by parsing the '[scenario] counters:' line and asserting on the keys above"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: wire hero_stuck_repro into qa_smoke --quick and parse counters by key name (not positional parsing)"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

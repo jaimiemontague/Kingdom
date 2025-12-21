@@ -87,6 +87,8 @@ def main() -> int:
         # Include bounties so QA can assert at least one responder.
         profiles.append(("base (enemies, construction, combat, bounty)", [*base, "--bounty"]))
         profiles.append(("bounty scenario preset (responders/claim)", [*base, "--no-enemies", "--scenario", "intent_bounty"]))
+        # WK2 deterministic repro (Build A): stuck detection + deterministic recovery must fire at least once.
+        profiles.append(("WK2 hero_stuck_repro (stuck+recovery counters)", [*base, "--no-enemies", "--scenario", "hero_stuck_repro"]))
         profiles.append(("no-enemies (economy/shopping isolation)", [*base, "--no-enemies"]))
         profiles.append(("mock-LLM enabled (decision plumbing)", [*base, "--llm", "--realtime", "--bounty"]))
 

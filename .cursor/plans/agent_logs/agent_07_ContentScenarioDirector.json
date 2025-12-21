@@ -79,6 +79,79 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2 focus: deterministic repro content hooks for hero AI jank (stuck + inside-combat) and acceptance criteria/test commands."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "YYYY-MM-DDTHH:MM:SS"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Provide acceptance criteria, contracts, and deterministic repro/QA harness before heavy implementation. As Agent 7 (ContentScenarioDirector), propose deterministic repro content hooks and test commands for hero AI polish (stuck recovery + no-combat-inside) and sprite/animation readability as needed.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:10",
+            "status": "complete",
+            "raw": "### Status\\nActive (WK2). In Round 1, my scope is to define *deterministic repro scenarios/content hooks* that make AI-jank fixes provable and non-flaky, without introducing new systems.\\n\\n### Deliverables (Round 1)\\n- Deterministic repro scenario spec(s) for Tools/QA to implement:\\n  - `hero_stuck_repro`: reliably triggers stuck detection + recovery at least once\\n  - `inside_combat_repro`: reliably places a hero into an inside-building state while enemies are present, proving no attack execution while inside\\n- Acceptance criteria + exact commands to add to `qa_smoke --quick` once Agent 12/11 wire scenarios\\n- File boundaries guidance (content-side only) so we don’t conflict with AI/UX/Art implementers\\n\\n### Proposed changes (file boundaries; no heavy implementation until contracts)\\n- **Tools/QA (owned by Agents 12/11):** extend `tools/observe_sync.py` scenario presets (it already has `--scenario intent_bounty`)\\n  - Add `--scenario hero_stuck_repro` (seeded)\\n  - Add `--scenario inside_combat_repro` (seeded)\\n  - Output deterministic counters: stuck_events, unstuck_attempts, inside_attack_blocks\\n  - Add these profiles into `tools/qa_smoke.py --quick`\\n- **Engine/Sim (owned by Agents 3/6):** no changes from me until Agent 3 posts the contract surface for inside-combat gating + stuck signals\\n\\n### Acceptance criteria (must be deterministic + automatable)\\n- **Stuck recovery proof (Build A):** In a headless run, at least 1 stuck detection triggers and at least 1 recovery attempt occurs; hero resumes movement (position delta > 0) within a bounded window.\\n- **No combat while inside (Build A):** In the inside-combat repro, there are 0 attack executions while `is_inside_building` is true; if enemies are present, attacks resume only after exiting.\\n- **Non-flaky:** Same seed produces the same stuck counters within a small tolerance (ideally exact).\\n\\n### Exact test commands (target shape)\\n- `python tools/observe_sync.py --scenario hero_stuck_repro --seed 3 --seconds 20 --heroes 6 --log-every 120`\\n- `python tools/observe_sync.py --scenario inside_combat_repro --seed 3 --seconds 20 --heroes 4 --log-every 120`\\n- `python tools/qa_smoke.py --quick` should include these (Agent 11/12)\\n\\n### Risks (blockers only)\\n- If the contract surface for inside/stuck isn’t defined early (Agent 3), Tools/QA can’t assert the right counters/fields without guessing.\\n- If the repro scenario relies on non-deterministic time sources or random placement, it becomes flaky; must be fully seeded + sim-time driven.\\n\\n### Dependencies (blockers only)\\n- **Agent 3:** must define exact contract fields and where they live (e.g., `hero.is_inside_building`, `hero.stuck_reason`, `hero.unstuck_attempts`, sim-time tick source).\\n- **Agent 12:** implement the deterministic scenario presets in `tools/observe_sync.py` (headless) and print counters.\\n- **Agent 11:** add assertions to `tools/qa_smoke.py --quick` based on those counters.\\n\\n### Next actions\\n- Draft concrete scenario setup steps for Agent 12 (map/building placement + movement goals) that deterministically induce (a) stuck and (b) inside-with-enemy-present states, while remaining minimal-risk.\\n- Once Agent 3 posts contracts, update this entry with the exact counter/field names QA should assert.",
+            "summary_bullets": [
+              "WK2 R1: define deterministic repro scenarios so AI-jank fixes are provable and non-flaky",
+              "Propose two headless presets: hero_stuck_repro and inside_combat_repro, wired via tools/qa_smoke",
+              "Blocked on Agent 3 contract surface for stuck/inside fields; no guessing/implementation before that"
+            ],
+            "proposed_changes": [
+              "Extend tools scenario runner (observe_sync) with seeded presets for stuck and inside-combat repros (Agent 12)",
+              "Add QA assertions/counters for stuck recovery and inside-attack gating into qa_smoke --quick (Agent 11)",
+              "Keep scenarios sim-time and seed driven; output deterministic counters for gating"
+            ],
+            "acceptance_criteria": [
+              "Deterministic stuck repro triggers >=1 stuck detection and >=1 recovery attempt; hero resumes movement within bounded sim-time",
+              "Inside-combat repro produces 0 attack executions while inside-building state is true; attacks only after exiting",
+              "Same seed produces stable counters (ideally exact) so qa_smoke remains non-flaky",
+              "qa_smoke --quick includes these repro profiles and fails loudly if criteria not met"
+            ],
+            "risks": [
+              "Cannot define QA assertions without Agent 3’s contract surface (avoid guessing field names/semantics)",
+              "Repro scenarios can become flaky if they depend on wall-clock time or unseeded RNG"
+            ],
+            "dependencies": [
+              "Agent 3 contract surface for inside-combat gating + stuck signals + sim-time fields",
+              "Agent 12 implementing deterministic headless scenarios in tools/observe_sync.py",
+              "Agent 11 wiring those scenarios into tools/qa_smoke.py --quick with assertions"
+            ],
+            "questions_back_to_pm": [
+              "ACK (wk2_r1): I’m ready to provide deterministic repro specs/acceptance criteria, but I will not implement any contract-dependent fields until Agent 3 posts the contract surface. No blockers from my side beyond that dependency."
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 3 contract post; then finalize exact counter/field names QA should assert",
+              "Send Agent 12 a concrete scenario setup recipe (building placement + forced goals) to deterministically induce stuck/inside cases",
+              "After Agent 11/12 wire the scenarios, run the exact observe_sync commands to validate non-flakiness"
+            ],
+            "agent_fields": {
+              "deterministic_repro_scenarios_requested": [
+                "hero_stuck_repro",
+                "inside_combat_repro"
+              ],
+              "qa_gate_commands": [
+                "python tools/observe_sync.py --scenario hero_stuck_repro --seed 3 --seconds 20 --heroes 6 --log-every 120",
+                "python tools/observe_sync.py --scenario inside_combat_repro --seed 3 --seconds 20 --heroes 4 --log-every 120",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "wait_rule_acknowledged": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

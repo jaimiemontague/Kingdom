@@ -99,7 +99,7 @@
           "response": {
             "received_at_local": "2025-12-20T21:21:09-07:00",
             "status": "complete",
-            "raw": "### BLOCKER for Build A readiness\\n\\nPM decisions for Build A require: (a) do not hard-commit STARTING_GOLD=1500 without a quick manual feel test, and (b) modifier-key bounty tiers are acceptable only if Agent 8 ships a minimal HUD hint; otherwise keep a single default bounty reward for Build A.\\n\\nCurrent code state includes both:\\n- Tiered bounty placement (B/Shift+B/Ctrl+B) via BOUNTY_REWARD_LOW/MED/HIGH in config + Engine input handling.\\n- STARTING_GOLD=1500 in config.py.\\n\\nThis is a release readiness blocker unless we either (1) confirm the HUD hint landed, and (2) confirm the starting-gold change is explicitly approved for Build A (or revert it to prior/default for Build A).\\n\\n### Repro (player-visible)\\n1) Run the game (no special flags).\\n2) Observe that bounty placement amount changes with Shift/Ctrl modifiers (no guaranteed discoverability without hint).\\n3) Observe starting gold is 1500 (tuning change) which can materially affect early Build A feel.\\n\\n### Commands / evidence\\n- qa_smoke gate: `python tools/qa_smoke.py --quick` (PASS on my side).\\n- Code locations: `config.py` (STARTING_GOLD + BOUNTY_REWARD_*), `game/engine.py` (place_bounty modifier tiers).\\n\\n### What I need / from whom\\n- Agent 8: confirm and land a minimal HUD hint for bounty tier modifiers (or tell me to revert tiers for Build A).\\n- PM (Agent 01): decide whether STARTING_GOLD=1500 is approved for Build A; if not, I should revert STARTING_GOLD (and any other tuning-only values) to the prior baseline for Build A tagging.",
+            "raw": "### BLOCKER for Build A readiness\\n\\nPM decisions for Build A require: (a) do not hard-commit STARTING_GOLD=1500 without a quick manual feel test, and (b) modifier-key bounty tiers are acceptable only if Agent 8 ships a minimal HUD hint; otherwise keep a single default bounty reward for Build A.\\n\\nCurrent code state includes both:\\n- Tiered bounty placement (B/Shift+B/Ctrl+B) via BOUNTY_REWARD_LOW/MED/HIGH in config + Engine input handling.\\n- STARTING_GOLD=1500 in config.py.\\n\\nThis is a release readiness blocker unless we either (1) confirm the HUD hint landed, and (2) confirm the starting-gold change is explicitly approved for Build A (or revert it to prior/default for Build A).\\n\\n### Repro (player-visible)\\n1) Run the game (no special flags).\\n2) Observe that bounty placement amount changes with Shift/Ctrl modifiers (no guaranteed discoverability without hint).\\n3) Observe starting gold is 1500 (tuning change) which can materially affect early Build A feel.\\n\\n### Commands / evidence\\n- qa_smoke gate: `python tools/qa_smoke.py --quick` (PASS on my side).\\n- Code locations: `config.py` (STARTING_GOLD + BOUNTY_REWARD_*), `game/engine.py` (place_bounty modifier tiers).\\n\\n### What I need / from whom\\n- Agent 8: confirm and land a minimal HUD hint for bounty tier modifiers (or tell me to revert tiers for Build A).\\n- PM (Agent 01): decide whether STARTING_GOLD=1500 is approved for Build A; if not, I should revert STARTING_GOLD (and any other tuning-only values) to the prior baseline for Build A tagging.\\n\\n---\\n\\n### UPDATE (resolved)\\n- Resolution: Build A includes bounty tier discoverability hint (Agent 08 wk1_r2) AND STARTING_GOLD=1500 explicitly approved via human playtest.\\n- Status: blocker cleared as of 2025-12-20T21:25:36-07:00.",
             "summary_bullets": [
               "Build A blocker: PM-decided conditional items are currently in code (bounty modifier tiers + STARTING_GOLD=1500) without explicit Build A approval/hint confirmation."
             ],
@@ -115,26 +115,88 @@
               "Shipping modifier-key tiers without hint risks player confusion and violates PM’s Build A condition.",
               "Shipping STARTING_GOLD=1500 without explicit approval risks unintended difficulty/economy perception for Build A."
             ],
-            "dependencies": [
-              "Agent 8 decision/implementation on HUD hint for bounty tiers.",
-              "PM decision on whether STARTING_GOLD=1500 is approved for Build A."
-            ],
-            "questions_back_to_pm": [
-              "ACK blocker: please confirm whether Build A will ship the HUD hint for bounty tier modifiers; if not, I will revert tiered placement for Build A.",
-              "ACK blocker: please confirm whether STARTING_GOLD=1500 is approved for Build A; if not, I will revert to prior baseline for Build A."
-            ],
-            "recommended_next_actions": [
-              "Await Agent 8 confirmation on HUD hint; if not landing, revert tiered bounty placement for Build A immediately.",
-              "Await PM approval on STARTING_GOLD; if not approved for Build A, revert STARTING_GOLD (and any other tuning-only constants) for Build A tagging."
-            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [],
             "agent_fields": {
               "pm_acknowledged": true,
               "blocker_type": "buildA_scope_condition",
               "qa_smoke_quick": "PASS",
+              "blocker_resolved": true,
+              "blocker_resolved_at_local": "2025-12-20T21:25:36-07:00",
               "files_implicated": [
                 "config.py",
                 "game/engine.py"
               ]
+            }
+          }
+        }
+      }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "Agent 05 is Active this sprint per PM kickoff prompt; role is to validate incentive impacts of AI guardrails and propose small tuning knobs."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:58:35-07:00"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Provide Agent 05 meeting-stage output (acceptance criteria, tuning/guardrail recommendations, deterministic repro/QA harness alignment). Wait rule: do not implement/merge contract-dependent work until Agent 3 posts contract surface (inside-combat gating, stuck signals).",
+          "response": {
+            "received_at_local": "2025-12-20T21:58:35-07:00",
+            "status": "complete",
+            "raw": "### Status\\nActive (per PM kickoff). Scope: validate that AI anti-jank fixes preserve incentives and don\\'t accidentally nerf core loops (bounty pursuit, lair clearing, retreat fairness), and propose small tuning knobs (commit windows, stuck thresholds) for Agent 6 to implement after Agent 3 locks contracts.\\n\\n### Deliverables (Round 1)\\n- Acceptance criteria focused on incentives + feel regressions to watch for.\\n- Recommended default tuning knobs (numbers) for: target commitment windows, unstuck thresholds, retry caps.\\n- QA/Tools alignment: what deterministic scenario assertions should prove (without writing the tool itself).\\n\\n### Proposed changes (file boundaries; do NOT merge until Agent 3 contracts exist)\\n- No code changes in Round 1.\\n- After Agent 3 contract surface is posted, I may propose minimal constant defaults in a single config/constants location (TBD by Agent 3) used by Agent 6\\'s AI/unstuck logic.\\n- If needed, add/update one doc: `docs/sprint/wk2_gameplay_tuning.md` (tuning table + rationale).\\n\\n### Acceptance criteria (incentive-safe)\\n- **Bounty pursuit remains primary lever**: when a bounty is placed, at least one hero commits to it and does not thrash/flip targets multiple times per second.\\n- **Retreat fairness**: heroes do not enter infinite retreat/return loops; retreat triggers are explainable and not overly conservative.\\n- **No combat while inside buildings**: no damage events or attack animations while `is_inside_building=True`.\\n- **Stuck recovery doesn\\'t kill goals**: unstuck actions should prefer repath/adjacent-tile goals and only abandon bounties after a bounded number of attempts or a max time.\\n\\n### Exact test commands (current + contract-dependent)\\n- Must pass now: `python tools/qa_smoke.py --quick`\\n- Manual smoke (10 min): run in `--no-llm` and `--provider mock` and verify: no attack while inside; no long freezes; bounties still work.\\n- Once Agent 12/11 land deterministic stuck scenario: add to smoke gate and run the provided command (e.g., `python tools/observe_sync.py --scenario hero_stuck_repro ...`).\\n\\n### Recommended tuning defaults (numbers)\\n(These are suggestions for Agent 6 once contracts exist; final location depends on Agent 3\\'s contract/knob decision.)\\n- **Target commitment window**: 1.5s (minimum time before retargeting unless target invalid/dies).\\n- **Bounty commitment window**: 2.5s (avoid oscillation between patrol/enemy/bounty).\\n- **Stuck detection**: intent-to-move but displacement < 0.25 tiles for 2.0s sim-time.\\n- **Unstuck attempts**: max 3 attempts per target before abandoning; backoff 0.5s between attempts (sim-time).\\n- **Unstuck strategies order**: (1) repath to same goal, (2) pick adjacent tile near goal, (3) reset target_position to patrol/home-safe, (4) abandon bounty only if max attempts exceeded.\\n\\n### Risks (blockers only)\\n- If stuck recovery abandons bounties too aggressively, the game loses its primary indirect-control feel.\\n- If anti-oscillation windows are too long, heroes feel unresponsive.\\n- If unstuck uses non-deterministic choices/timing, it will break future MP-readiness and the determinism gate.\\n\\n### Dependencies (blockers)\\n- **Agent 3 contracts/guardrails**: field names + where knobs live (inside-combat gating signal, stuck_reason/attempt counters, sim-time source).\\n- **Agent 12 deterministic repro scenario** + **Agent 11 assertions**: I need the final scenario command + asserted metrics so tuning doesn\\'t cause flaky tests.\\n\\n### Next actions\\n- Wait for Agent 3 contract surface; then provide a precise constant table mapped to those fields (where to set thresholds and what defaults).\\n- Once Agent 12 posts the scenario, sanity-check that the proposed thresholds won\\'t create flakiness and update tuning recommendations accordingly.",
+            "summary_bullets": [
+              "Provided incentive-safe acceptance criteria for WK2 AI anti-jank (bounties remain primary lever; retreat fairness; no combat inside; unstuck bounded).",
+              "Proposed initial numeric tuning defaults (commit windows, stuck thresholds, retry caps) for Agent 6 to implement after Agent 3 contracts lock.",
+              "Aligned on QA: keep qa_smoke green now; add deterministic stuck scenario assertions once Tools/QA land it."
+            ],
+            "proposed_changes": [
+              "Round 1: no code changes; produce tuning guidance only.",
+              "After Agent 3 contracts: centralize a small set of AI anti-jank tunables (commit windows, stuck thresholds, retry caps) in a single config/constants module chosen by Agent 3.",
+              "Optional: add `docs/sprint/wk2_gameplay_tuning.md` with the tuning table + rationale."
+            ],
+            "acceptance_criteria": [
+              "Bounties still reliably attract at least one hero and do not thrash targets excessively (no rapid oscillation).",
+              "Heroes do not attack while `is_inside_building=True` (no damage events/attack animations).",
+              "Stuck recovery triggers deterministically and resolves freezes without prematurely abandoning bounties.",
+              "`python tools/qa_smoke.py --quick` passes; manual 10-minute smoke in `--no-llm` and `--provider mock` shows no long freezes and sane retreat behavior."
+            ],
+            "risks": [
+              "Over-aggressive unstuck/abandon logic can weaken the bounty incentive loop (Majesty feel regression).",
+              "Too-long commitment windows can make heroes feel unresponsive; too-short windows can reintroduce thrash.",
+              "Non-deterministic unstuck choices/timing could violate determinism gate."
+            ],
+            "dependencies": [
+              "Agent 3: contract surface for inside-combat gating + stuck signals + where tunables should live (blocker for any tuning implementation).",
+              "Agent 12/11: deterministic stuck repro scenario + non-flaky assertions to ensure tuning won’t break qa_smoke gate."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for Agent 3 contracts, then map my proposed tuning defaults onto the final field names/locations and (if approved) implement only constants in the agreed module.",
+              "After Agent 12 publishes the deterministic stuck scenario command, validate the thresholds against it (avoid flakiness) and revise defaults if needed."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "proposed_tuning_defaults": {
+                "target_commit_window_s": 1.5,
+                "bounty_commit_window_s": 2.5,
+                "stuck_displacement_tiles_threshold": 0.25,
+                "stuck_time_s": 2.0,
+                "unstuck_max_attempts_per_target": 3,
+                "unstuck_backoff_s": 0.5
+              },
+              "wait_rule": "No contract-dependent code changes until Agent 3 posts/locks contracts (inside-combat gating + stuck signals)."
             }
           }
         }

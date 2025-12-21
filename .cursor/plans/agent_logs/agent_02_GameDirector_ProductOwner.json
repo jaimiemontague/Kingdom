@@ -78,6 +78,150 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2 focus: hero feel polish (anti-jank, stuck recovery, no-combat-inside) + core hero sprite pipeline. Agent 02 provides acceptance criteria + test gates; no implementation until Agent 03 contract surface is posted."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:58:35.6495761-07:00"
+          },
+          "prompt_text": "Round 1 kickoff: define WK2 hero feel acceptance criteria (10-minute test) that proves ‘less jank’ + ‘Majesty-like’. Focus on: no attack inside buildings, reduced oscillation, fewer stuck freezes, readable intent via animations.",
+          "response": {
+            "received_at_local": "2025-12-20T21:58:35.6495761-07:00",
+            "status": "complete",
+            "raw": "## Status\nAgent 02 (GameDirector_ProductOwner) for WK2 Round 1: define testable acceptance criteria for “Majesty-like hero feel” and ensure Build A/Build B gates are player-visible and low-risk.\n\n## Deliverables\n- WK2 Build A + Build B acceptance criteria for hero feel (jank reduction + inside combat gating + stuck recovery + animation readability).\n- Explicit test commands / QA gates (deterministic, non-flaky) aligned to the sprint DoD.\n\n## Questions (blockers only)\n- Blocker: none. (Waiting on Agent 03 to publish the contract surface; implementers should not merge contract-dependent logic before that.)\n\n## Next actions\n- Publish acceptance criteria + test commands in this log entry for PM/Agents 3/11/12/6/8/9 to reference.\n- After Agent 03 posts contracts, review the surface for player-facing correctness (especially “inside building” semantics) before Build A merges.\n",
+            "summary_bullets": [
+              "Build A proves: no combat while inside buildings, fewer oscillation/spaz loops, deterministic stuck detection + recovery, debug visibility (debug-only) for stuck events",
+              "Build B proves: 4-class hero sprites (idle/walk/attack/hurt/inside) read clearly as intent and do not introduce jitter/state thrash",
+              "All gates must pass in mock/no-LLM and via deterministic headless repro scenarios"
+            ],
+            "proposed_changes": [
+              "Define Build A acceptance gates around three player-observed problems: oscillation, inside-combat, freezing; require deterministic repro coverage before claiming fixed",
+              "Define Build B acceptance gates around animation readability: state changes should map to intent (idle/walk/attack/hurt/inside) with no rapid flicker",
+              "Require QA to use fixed seed scenarios for stuck/inside cases so the gate is non-flaky",
+              "Keep scope tight: no new systems; only guardrails/visibility/pipeline improvements as per plan"
+            ],
+            "acceptance_criteria": [
+              "Release gate: `python tools/qa_smoke.py --quick` passes",
+              "Manual 10-minute test (both `python main.py --no-llm` and `python main.py --provider mock`): heroes do not attack while inside buildings; heroes recover from common stuck states; no obvious target/goal oscillation spam; animations look consistent (no jitter between states)",
+              "Inside-combat gating (P0): if a hero is inside a building (`is_inside_building` true), the hero must not execute attacks (no damage application and no attack animation) until outside",
+              "Anti-oscillation (P0): heroes do not retarget more than once per second for >3 seconds without an external reason (enemy died, bounty claimed/removed, target became unreachable). Intended enforcement is via commitment window/hysteresis; the exact threshold can be tuned but must eliminate visible stutter",
+              "Stuck recovery (P0): if a hero intends to move but position delta is ~0 for N seconds of sim-time, an unstuck attempt is triggered deterministically; in a 10-minute session, no hero remains frozen in the wild for >5 seconds more than once (rare spikes acceptable but should self-resolve)",
+              "Debug visibility (P0): in debug mode only, a stuck indicator/event exposes at least (stuck_reason, unstuck_attempt_count) so QA/PM can verify recovery occurred without guessing",
+              "Animation readability (Build B P0): for each core class (warrior/ranger/rogue/wizard), each folder `{idle,walk,attack,hurt,inside}` has frames and the engine uses them (no missing-folder fallback); animation state matches gameplay state (no ‘walk’ while stationary; no ‘attack’ while inside)"
+            ],
+            "risks": [
+              "Contract ambiguity risk: if ‘inside building’ semantics differ between AI/combat/render, heroes may still appear to attack from inside (must be unified via Agent 03 contract)",
+              "Non-deterministic stuck heuristics can create flakey gates (must be sim-time/tick based with stable thresholds and fixed seeds)",
+              "Over-aggressive anti-oscillation can make heroes feel unresponsive (commitment windows must have clear override reasons)"
+            ],
+            "dependencies": [
+              "Agent 03 contract surface for: inside-combat gating API/fields, stuck detection signal fields, deterministic sim-time source",
+              "Agent 12 deterministic headless scenario(s) to reliably trigger stuck and inside-building cases (with fixed seeds)",
+              "Agent 11 QA assertions added to `tools/qa_smoke.py --quick` (non-flaky, deterministic)",
+              "Agent 6/8/9 implementation plans must reference the above contracts + acceptance gates"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: confirm P0 thresholds for ‘stuck’ (sim-time seconds) and oscillation (retarget frequency) so QA has a crisp gate",
+              "Agent 03: publish contracts (inside-combat gating + stuck signals + sim-time); implementers hold contract-dependent merges until posted",
+              "Agent 12/11: land deterministic repro scenario + QA assertions before large AI refactors; then re-run `python tools/qa_smoke.py --quick` as the pre-merge gate",
+              "After Agent 03 posts contracts, Agent 02 will do a quick review pass to ensure player-facing semantics match the acceptance criteria"
+            ],
+            "agent_fields": {
+              "build_a_focus": [
+                "No combat while inside buildings (hard correctness)",
+                "Anti-oscillation / commitment windows (feel)",
+                "Stuck detection + deterministic recovery (feel + stability)",
+                "Debug-only visibility for stuck events"
+              ],
+              "build_b_focus": [
+                "4-class hero sprite set completeness (idle/walk/attack/hurt/inside)",
+                "Animation state maps cleanly to gameplay state; no jitter/flicker"
+              ],
+              "determinism_guardrails": [
+                "Use sim-time/ticks (not wall-clock) for stuck timers and commitment windows",
+                "Fixed seeds for repro scenarios; stable ordering for any selection logic"
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+        ,
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:10:54.8348208-07:00"
+          },
+          "prompt_text": "WK2 Round 2 (wk2_r2) — Execute (Build A focus). Implement against Agent 3 locked contracts and locked thresholds; run mandatory gates and provide evidence (commands + PASS).",
+          "response": {
+            "received_at_local": "2025-12-20T22:10:54.8348208-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 02 (GameDirector_ProductOwner) active in WK2 Round 2. My role in R2 is **verification + signoff on player-facing feel thresholds**, and reporting any blockers to Build A readiness.\\n\\n### Deliverables\\n- Evidence that mandatory gates run locally and pass (or flag blockers).\\n- Confirm no vision/feel disputes with locked contracts/thresholds.\\n\\n### Work executed (per PM wk2_r2 message to Agent 02)\\n- No implementation changes required from Agent 02 in this round unless a vision/feel dispute appears.\\n- Ran the mandatory Build A gate and boot sanity checks.\\n\\n### Evidence (commands + PASS)\\n- Gate: `python tools/qa_smoke.py --quick` => PASS (includes determinism_guard PASS).\\n- Boot sanity (non-interactive): started game then force-stopped after 5s:\\n  - `python main.py --no-llm` => BOOT_NO_LLM_OK\\n  - `python main.py --provider mock` => BOOT_MOCK_OK\\n\\n### Notes\\n- Full 10-minute *interactive* manual smoke is still required before tagging Build A (player-visible checks: no attack while inside buildings; stuck recovery; reduced oscillation). My runs validate: headless gate is green + both modes boot without immediate crash.",
+            "summary_bullets": [
+              "PM contracts/thresholds acknowledged; no vision/feel disputes raised",
+              "Mandatory gate `python tools/qa_smoke.py --quick` ran locally and PASSED",
+              "Boot sanity for `--no-llm` and `--provider mock` succeeded (starts without immediate crash)"
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 02 in wk2_r2 (execution is owned by Agents 6/8/11/12; contracts locked by Agent 3)."
+            ],
+            "acceptance_criteria": [
+              "PASS: `python tools/qa_smoke.py --quick`",
+              "PASS: boot sanity `python main.py --no-llm` (starts without immediate crash)",
+              "PASS: boot sanity `python main.py --provider mock` (starts without immediate crash)",
+              "Remaining release gate (process): 10-minute interactive manual smoke in both modes before tagging Build A"
+            ],
+            "risks": [
+              "Process risk: Build A should not be tagged until the 10-minute interactive manual smoke is completed (headless PASS is necessary but not sufficient for feel issues)."
+            ],
+            "dependencies": [
+              "Agent 6/8/11/12: implement + verify inside-combat gate, stuck recovery, and oscillation guardrails under locked thresholds",
+              "PM/human: complete the 10-minute interactive manual smoke in `--no-llm` and `--provider mock` prior to tagging Build A"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: run the 10-minute interactive manual smoke (both modes) and confirm the three player-facing checks explicitly",
+              "Continue integration per PM order; re-run `python tools/qa_smoke.py --quick` after each merge touching AI/combat/UI"
+            ],
+            "agent_fields": {
+              "files_changed": [],
+              "test_commands_run": [
+                "cd C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom",
+                "python tools\\\\qa_smoke.py --quick",
+                "python main.py --no-llm (boot sanity 5s then stop)",
+                "python main.py --provider mock (boot sanity 5s then stop)"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (determinism_guard PASS; see terminal output)",
+              "boot_evidence": [
+                "BOOT_NO_LLM_OK",
+                "BOOT_MOCK_OK"
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+      }
+    }
   }
 }
 

@@ -222,6 +222,52 @@ Agents no longer need to hunt through 13 files or ambiguous chat history:
 
 This is the “repeatable” workflow for sprints going forward.
 
+---
+
+### 10.1) Communication rounds playbook (order of operations)
+
+This is the missing “common sense order” layer: **what each round is for**, who participates, and when to stop talking and start shipping.
+
+#### Key principle: rounds are a tool, not a ritual
+
+Do **not** force 5–10 rounds for everything. The right number depends on risk and coupling:
+
+- **Small, isolated change** (single system, low risk): 2–3 rounds
+  - R1: assignment + acceptance criteria
+  - R2: implement + verify
+  - (optional) R3: wrap-up
+- **Normal 1-week sprint** (2 builds, multiple systems): 4–6 rounds
+  - kickoff/spec → contracts → implement → integrate → QA/release → wrap-up
+- **High-coupling / risky work** (AI, determinism, save/load, pathing): 6–10 rounds
+  - more time in contracts + repro harness + signoffs, fewer surprises later
+
+The goal is always: **minimize rework**, **avoid cross-agent conflicts**, and **keep an audit trail**.
+
+#### Round taxonomy (recommended default)
+
+Think of Round 1 as the async “meeting stage,” but with outputs.
+
+- **Round 0 (PM setup / pre-brief)**\n  - PM writes the sprint plan and identifies **Active vs Consult-only agents**.\n  - PM defines Build A/Build B split and DoD gate (e.g., `qa_smoke --quick`).\n  - PM publishes prompts in the plan.\n
+- **Round 1 (Specs + contracts + repro harness)**\n  - Output is *decisions and interfaces*, not code.\n  - Typical participants:\n    - **Agent 2 (Product)**: acceptance criteria and “feel” targets\n    - **Agent 3 (Architecture)**: data contracts, boundaries, determinism guardrails\n    - **Agent 11 (QA)**: what can be asserted in smoke/regressions\n    - **Agent 12 (Tools)**: deterministic repro scenario(s) and one-command triage\n  - Implementers (e.g., AI/UI/Art) propose plans **referencing** the above.\n  - PM locks decisions in the PM hub (`agent_01` log).\n
+- **Round 2 (Implementation plan confirmation)**\n  - Implementing agents confirm:\n    - exact files to change\n    - integration order position\n    - acceptance tests\n    - risks + rollback plan\n  - PM approves “greenlight to implement.”\n
+- **Round 3 (Build A integration)**\n  - Focus: merge readiness + non-flaky QA gate.\n  - PM runs/requests `qa_smoke --quick` and a short manual smoke.\n
+- **Round 4 (Build B scope lock)**\n  - Only if Build B exists: lock art/content/perf polish scope.\n  - Confirm no Build A regressions.\n
+- **Round 5 (Release + wrap-up)**\n  - “Silent unless blocked” final call.\n  - PM bumps version/changelog/patch notes.\n  - Postmortem: what shipped, what slipped, follow-ups.\n
+You can compress or expand rounds based on scope. The important part is that **Round 1 produces stable contracts** before heavy implementation.
+
+#### Default sequencing (who “goes first”)
+
+It’s usually wrong to say “Agent 2 always goes first.” Better rule:
+
+- If the sprint changes **player-facing feel/UX** → **Agent 2 first** (acceptance criteria)\n- If the sprint changes **systems boundaries/determinism** → **Agent 3 first** (contracts/guardrails)\n- If the sprint needs **repro/automation** (AI/pathing bugs) → **Agents 11/12 first** (harness)\n- If the sprint is **content/art heavy** and low coupling → **Agent 9 first** (pipeline + deliverables)\n
+PM decides the sequencing per sprint and writes it into the sprint plan.
+
+#### Active vs Consult-only agents (avoid over-staffing)
+
+For each sprint, PM should explicitly declare:\n
+- **Active**: must respond and implement\n- **Consult-only**: only respond if pinged for a specific blocker/signoff\n- **Silent**: do not engage (reduces noise)\n
+This keeps the “team” efficient and prevents unnecessary parallel churn.
+
 #### Step A: PM creates sprint + round
 1. Create or update the sprint plan under `.cursor/plans/`.
 2. Decide:

@@ -80,6 +80,188 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2: Build A = AI anti-jank (no art deps). Build B = ship 4-class hero sprite set + pipeline."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:10.4790286-07:00"
+          },
+          "prompt_text": "Round 1 kickoff: confirm sprite pipeline + deliverables for 4 classes (idle/walk/attack/hurt/inside). Provide frame counts, timing, and any blockers. Ensure folder+filename conventions match the engine loader.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:10.4790286-07:00",
+            "status": "complete",
+            "raw": "## Status\\nAgent 9 is the primary owner for WK2 sprite delivery (Build B): ship real 32x32 animations for Warrior/Ranger/Rogue/Wizard (idle/walk/attack/hurt/inside) with a repeatable, non-blocking pipeline.\\n\\n## Deliverables (Round 1 outputs; no heavy implementation yet)\\n- Locked sprite folder conventions + naming (matches current engine loader).\\n- Recommended frame counts and timing alignment (so animation cadence matches combat/AI state changes).\\n- Deterministic verification command QA/tools can run to assert that all required folders contain PNG frames (no procedural fallback).\\n\\n## Proposed changes (file boundaries)\\n- Assets only (Build B):\\n  - `assets/sprites/heroes/warrior/{idle,walk,attack,hurt,inside}/frame_###.png`\\n  - `assets/sprites/heroes/ranger/{idle,walk,attack,hurt,inside}/frame_###.png`\\n  - `assets/sprites/heroes/rogue/{idle,walk,attack,hurt,inside}/frame_###.png`\\n  - `assets/sprites/heroes/wizard/{idle,walk,attack,hurt,inside}/frame_###.png`\\n- Docs (safe in Build A/B):\\n  - Update/extend `docs/art/animation_vfx_guidelines.md` with concrete hero sprite frame-count standards + export rules.\\n  - (Optional) Add a short `docs/art/hero_sprite_pipeline.md` describing: canvas size, alignment, naming, and quick validation.\\n- No engine changes planned for Build A. If we need any sprite-loading tweaks, they must be isolated to graphics loaders and remain pixel-crisp (nearest-neighbor only).\\n\\n## Frame-count + cadence recommendations (matches current defaults)\\nThese are guidance for consistency; the loader supports variable counts per folder as long as there is at least 1 frame.\\n- `idle`: 6 frames (subtle breathing/bob)\\n- `walk`: 8 frames (clear step cycle; no subpixel drift)\\n- `attack`: 6 frames (1–2 anticipation, 1 strike, 2–3 recover)\\n- `hurt`: 4 frames (quick flinch; readable pose change)\\n- `inside`: 6 frames (simple loop, can be “bubble/icon” style or character silhouette)\\n\\n## Art constraints (engine + readability)\\n- Sprite size: 32x32, PNG RGBA, pixel grid aligned.\\n- Export: no AA, no blur; scaling must remain nearest-neighbor.\\n- Silhouette-first with 1px outline (selective edge lightening allowed).\\n- Keep class readability via accents: Warrior blue, Ranger green, Rogue desat steel/gray, Wizard purple (consistent with existing placeholder colors).\\n\\n## Acceptance criteria (Build B)\\n- All 4 classes have non-empty PNG frame folders for all 5 actions; game uses them (no procedural fallback for these classes).\\n- Animations read clearly at common zoom levels (no jittering between states).\\n- `python tools/qa_smoke.py --quick` remains green after asset drop.\\n\\n## Deterministic test commands (asset presence)\\n1) Quick asset presence check (fails if any required folder is empty/missing):\\n\\n`python -c \\\"import itertools; from game.graphics.hero_sprites import HeroSpriteLibrary as H; classes=['warrior','ranger','rogue','wizard']; actions=['idle','walk','attack','hurt','inside']; missing=[(c,a) for c,a in itertools.product(classes,actions) if not H._try_load_asset_frames(c,a,32)]; print('missing', missing); raise SystemExit(1 if missing else 0)\\\"`\\n\\n2) Manual smoke (10 min) in both:\\n- `python main.py --no-llm`\\n- `python main.py --provider mock`\\nConfirm: hire each class (if available), observe walk/attack/hurt/inside transitions, and ensure no sprite blurring.\\n\\n## Risks\\n- Asset size bloat: too many frames or too many colors can inflate repo size; mitigate by sticking to recommended counts and compact palettes.\\n- Inside-state coupling: if inside/attack gating changes contract fields, animation state mapping may drift; mitigate by waiting for Agent 3 contract surface before wiring any state-driven sprite changes beyond existing action names.\\n- Visual clutter: if always-on indicators (icons/bubbles) overlap sprites, keep them debug-only or hover/selection.\\n\\n## Dependencies (blockers only)\\n- Contract surface from Agent 3 for inside-building state and any new stuck/unstuck signals that might need a distinct animation cue. (I can create assets regardless; integration validation depends on the finalized contract.)\\n\\n## Recommended next actions\\n- Wait for Agent 3 contracts regarding inside-building + any animation-state signals before suggesting any engine-side state mapping tweaks.\\n- Begin producing the 4-class sprite set in the specified folder structure (Build B).\\n- Coordinate with Tools/QA only via their published harness: adopt their deterministic scenario for quick visual verification once it exists.\\n",
+            "summary_bullets": [
+              "Build B deliverable: real 32x32 hero animations for Warrior/Ranger/Rogue/Wizard across idle/walk/attack/hurt/inside",
+              "Pipeline is folder- and filename-based; no engine changes required to load sprites if conventions are followed",
+              "Provided recommended frame counts and a deterministic asset presence check command"
+            ],
+            "proposed_changes": [
+              "Add PNG frame folders for 4 hero classes under `assets/sprites/heroes/<class>/<action>/frame_###.png` (Build B only)",
+              "Update `docs/art/animation_vfx_guidelines.md` with concrete frame-count/export/alignment rules",
+              "Optionally add `docs/art/hero_sprite_pipeline.md` with a short repeatable checklist + validation command"
+            ],
+            "acceptance_criteria": [
+              "All 4 classes have non-empty PNG frame sets for all 5 actions; engine loads them without falling back to procedural frames",
+              "Sprites remain pixel-crisp (no smoothing blur) and animation reads cleanly (no visible jitter between states)",
+              "`python tools/qa_smoke.py --quick` passes after the asset drop",
+              "Asset presence check command exits 0 (no missing class/action folders)"
+            ],
+            "risks": [
+              "Repo bloat from oversized/too-many-frame sprite sets",
+              "Contract drift on inside-building state could desync intended 'inside' visuals until Agent 3 finalizes fields",
+              "Always-visible overlays/bubbles may add clutter; keep debug-only or hover/selection by default"
+            ],
+            "dependencies": [
+              "Agent 3: finalize contract surface for inside-building state / any new stuck signals before any state-driven animation mapping changes"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for Agent 3 contract surface before proposing any new state-to-animation mapping beyond existing action names",
+              "Proceed with sprite production for 4 classes in the engine’s existing folder/action conventions (Build B)",
+              "After Tools/QA publish deterministic repro scenario, use it for a quick visual verification pass"
+            ],
+            "agent_fields": {
+              "sprite_set_spec": {
+                "size_px": [32, 32],
+                "classes": ["warrior", "ranger", "rogue", "wizard"],
+                "actions": ["idle", "walk", "attack", "hurt", "inside"],
+                "recommended_frame_counts": {
+                  "idle": 6,
+                  "walk": 8,
+                  "attack": 6,
+                  "hurt": 4,
+                  "inside": 6
+                },
+                "naming": "frame_000.png ... (filename-sorted)",
+                "format": "PNG RGBA, pixel-aligned, no smoothing"
+              }
+            }
+          }
+        },
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:18:15.6230281-07:00"
+          },
+          "prompt_text": "WK2 Round 2 (Build A focus): Agent 9 execute PM assignment (Build B prep only): confirm folder conventions match loader, extend docs for sprite pipeline, and begin sprite set prep (no Build A dependencies). Also provide evidence that mandatory gates remain green.",
+          "response": {
+            "received_at_local": "2025-12-20T22:18:15.6230281-07:00",
+            "status": "complete",
+            "raw": "## Status\\nExecuted WK2 Round 2 assignment for Agent 9: Build B prep (assets+docs) only, plus validated Build A gates remain green.\\n\\n## Deliverables\\n- Sprite pipeline docs: added a short WK2-specific pipeline doc + extended animation guidelines with export/alignment checklist.\\n- Asset folder skeletons for 4 hero classes and 5 actions (empty placeholders only; no PNG frames landed yet).\\n- Build A stability: fixed a crash found while running required manual smoke commands (HUD messages init regression).\\n\\n## Files changed\\n- `docs/art/animation_vfx_guidelines.md` (added export/alignment checklist + WK2 hero set section)\\n- `docs/art/hero_sprite_pipeline.md` (new)\\n- `assets/sprites/heroes/README.md` (new)\\n- `assets/sprites/heroes/<class>/<action>/.gitkeep` for: warrior/ranger/rogue/wizard × idle/walk/attack/hurt/inside\\n- `game/ui/hud.py` (bugfix: initialize `messages` + `message_duration` in `__init__`)\\n\\n## Test commands run (evidence)\\n- PASS: `python tools\\\\qa_smoke.py --quick`\\n- PASS (boot sanity; auto-kill after 3s):\\n  - `python main.py --no-llm` → `boot_ok_no_llm`\\n  - `python main.py --provider mock` → `boot_ok_mock`\\n\\n## Notes\\n- Deterministic sprite presence check was run and is expected to FAIL until PNG frames are added in Build B: it currently reports missing for all class/action pairs (placeholders only).\\n\\n## Blockers\\nNone for Build A. Build B pending: actual PNG frame production + verification once frames exist.\\n",
+            "summary_bullets": [
+              "Build B prep: sprite pipeline docs + folder skeletons aligned to engine loader",
+              "Build A gates validated: qa_smoke PASS; manual smoke boot sanity PASS for --no-llm and --provider mock",
+              "Fixed a main-loop crash in HUD (messages init) discovered during manual smoke requirement"
+            ],
+            "proposed_changes": [
+              "Keep Build A free of art dependencies; only docs/skeletons land now",
+              "Land actual PNG frame sets in Build B under `assets/sprites/heroes/<class>/<action>/frame_###.png`",
+              "Use deterministic presence check (logged in docs) to verify sprite completeness once frames exist"
+            ],
+            "acceptance_criteria": [
+              "Build A gate remains green: `python tools/qa_smoke.py --quick` PASS",
+              "`python main.py --no-llm` and `python main.py --provider mock` boot without immediate crash (manual smoke prerequisite)",
+              "Sprite pipeline docs and folder conventions match `HeroSpriteLibrary` loader paths"
+            ],
+            "risks": [
+              "Repo size bloat if frame counts/palette aren’t kept tight (mitigate via recommended counts)",
+              "Sprite alignment jitter if anchors drift (mitigate via pipeline alignment rules + spot-check in-game)"
+            ],
+            "dependencies": [
+              "Build B only: actual sprite frame production for 4 classes + QA visual verification pass"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Build A integration (no further dependencies from Agent 9)",
+              "For Build B: start committing PNG frame sets class-by-class, using pipeline doc + naming rules",
+              "After first class lands, run qa_smoke and a short visual check to ensure pixel-crisp + no state jitter"
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "docs/art/animation_vfx_guidelines.md",
+                "docs/art/hero_sprite_pipeline.md",
+                "assets/sprites/heroes/README.md",
+                "assets/sprites/heroes/*/*/.gitkeep",
+                "game/ui/hud.py"
+              ],
+              "tests_run": [
+                "python tools\\\\qa_smoke.py --quick (PASS)",
+                "python main.py --no-llm (boot_ok_no_llm; killed after 3s)",
+                "python main.py --provider mock (boot_ok_mock; killed after 3s)"
+              ],
+              "notes": [
+                "Sprite presence check currently fails (expected) until PNG frames exist; placeholders only.",
+                "HUD crash fix was required to satisfy Build A manual smoke boot requirement."
+              ]
+            }
+          }
+        },
+        "wk2_r3": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r3",
+          "round_meta": {
+            "prompt_set_id": "wk2_final_sync_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:35:42.2593859-07:00"
+          },
+          "prompt_text": "WK2 Round 3 final sync (Build A readiness): confirm HUD integration preserves both Agent 09 crash fix and Agent 08 debug-only stuck/inside indicators with caching + debug_ui gating; rerun qa_smoke and provide PASS evidence.",
+          "response": {
+            "received_at_local": "2025-12-20T22:35:42.2593859-07:00",
+            "status": "complete",
+            "raw": "## Status\\nBuild A readiness: HUD integration confirmed. `game/ui/hud.py` includes (a) Agent 09 crash fix (messages initialized in `__init__`) and (b) Agent 08 debug-only stuck snapshot + caching + debug_ui gating.\\n\\n## What I verified in `game/ui/hud.py`\\n- `self.messages` + `self.message_duration` are initialized in `HUD.__init__` (prevents crash on first update).\\n- Inside-building display: shows an 'Inside: ...' line when `hero.is_inside_building` is true.\\n- Debug-only stuck/inside visibility: `render_hero_panel(..., debug_ui=game_state['debug_ui'])` gates stuck snapshot rendering; uses cached text surfaces via `_cached_line` to avoid per-frame allocations.\\n\\n## Tests run (evidence)\\n- PASS: `python tools\\\\qa_smoke.py --quick`\\n\\n## Blockers\\nNone.",
+            "summary_bullets": [
+              "HUD integration preserved: messages init crash fix + debug-only stuck snapshot with caching and debug_ui gating",
+              "Build A smoke gate re-verified: qa_smoke PASS"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "No crash in HUD update loop (messages initialized)",
+              "Stuck/inside indicators remain debug-only and cache-friendly",
+              "`python tools/qa_smoke.py --quick` PASS"
+            ],
+            "risks": [
+              "If Agent 08 lands additional HUD edits later, must preserve messages init lines and debug_ui gating to avoid regression"
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Build A readiness tagging once other active agents (06/11/12) confirm their remaining gates"
+            ],
+            "agent_fields": {
+              "files_touched": [],
+              "tests_run": [
+                "python tools\\\\qa_smoke.py --quick (PASS)"
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }
 

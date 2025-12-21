@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.2.3
+
+- Hero AI polish: reduced rapid target/goal oscillation (“spaz loops”) via commitment windows/hysteresis.
+- Combat correctness: heroes **cannot apply damage while inside buildings** (hard-gated).
+- Stuck recovery: deterministic detection + recovery attempts (repath/nudge/reset) to reduce “frozen in the wild” cases.
+- QA gate: `python tools/qa_smoke.py --quick` includes deterministic `hero_stuck_repro` and passes (determinism guard first).
+- Debuggability: debug UI exposes stuck snapshot + attack-block reason (debug-only, cache-friendly).
+
 ## Prototype v1.2.1
 
 - Hero UI: show **Intent** and **Last decision** (action + short reason + age) in **mock** and **--no-llm** modes.

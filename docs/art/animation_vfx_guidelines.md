@@ -79,4 +79,21 @@ Guidelines:
 - **Size discipline**: keep particles **2–3 px** to match the pixel grid.
 - **Density discipline**: prefer short bursts over sustained noise.
 
+## Export + alignment checklist (sprites)
+These rules prevent jitter and keep sprites crisp:
+- **Canvas**: 32x32 per frame for heroes/enemies (buildings are tile multiples)
+- **Format**: PNG (RGBA)
+- **Scaling**: nearest-neighbor only (no smoothing / filtered scaling)
+- **Pixel grid**: keep key features on whole pixels; avoid subpixel drift
+- **Consistent anchor**: keep “feet/contact” aligned across frames (don’t vertically shift sprites unless the motion is intentional and readable)
+- **Filename sorting**: use `frame_000.png`, `frame_001.png`, ... (engine loads filename-sorted)
+
+## WK2 hero sprite set (Build B) — required folders
+The engine will load frames if present under:
+`assets/sprites/heroes/<hero_class>/<action>/*.png`
+
+Required for WK2:
+- Classes: `warrior`, `ranger`, `rogue`, `wizard`
+- Actions: `idle`, `walk`, `attack`, `hurt`, `inside`
+
 

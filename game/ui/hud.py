@@ -35,10 +35,28 @@ class HUD:
         # Session start (sim-time) for one-time / early hints.
         self._session_start_ms = int(sim_now_ms())
         self._bounty_hint_cache = None
-        
-        # Messages
+
+        # Cached hero panel lines (avoid per-frame allocations for slow-changing debug text)
+        self._hero_line_cache = {}  # key -> pygame.Surface
+
+        # Messages (top-left transient text)
         self.messages = []
         self.message_duration = 3000  # ms
+
+    def _cached_line(self, key: tuple, text: str, color: tuple):
+        """
+        Cache a rendered text line by (key, text, color).
+        This prevents per-frame Surface churn for debug-only indicators.
+        """
+        cache_key = (key, text, color)
+        surf = self._hero_line_cache.get(cache_key)
+        if surf is None:
+            surf = self.font_tiny.render(text, True, color)
+            # Simple bound to avoid unbounded growth in long sessions.
+            if len(self._hero_line_cache) > 64:
+                self._hero_line_cache.clear()
+            self._hero_line_cache[cache_key] = surf
+        return surf
         
     def add_message(self, text: str, color: tuple = COLOR_WHITE):
         """Add a message to display."""
@@ -265,7 +283,7 @@ class HUD:
         # Render selected hero info
         selected = game_state.get("selected_hero")
         if selected:
-            self.render_hero_panel(surface, selected)
+            self.render_hero_panel(surface, selected, debug_ui=bool(game_state.get("debug_ui", False)))
 
     def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]):
         """Render a compact controls/help panel."""
@@ -314,7 +332,7 @@ class HUD:
             surface.blit(text, (10, y_offset))
             y_offset += 18
     
-    def render_hero_panel(self, surface: pygame.Surface, hero):
+    def render_hero_panel(self, surface: pygame.Surface, hero, debug_ui: bool = False):
         """Render detailed info panel for selected hero."""
         panel_width = self.side_panel_width
         panel_height = 200
@@ -396,7 +414,7 @@ class HUD:
         surface.blit(armor_text, (panel_x + 10, y))
         y += 20
         
-        # State / Last LLM action
+        # State / Intent / Decision
         intent = self._compute_hero_intent(hero)
         intent_text = self.font_small.render(f"Intent: {intent}", True, (200, 200, 200))
         surface.blit(intent_text, (panel_x + 10, y))
@@ -413,4 +431,63 @@ class HUD:
             decision_line = decision_line[: max_chars - 3].rstrip() + "..."
         decision_text = self.font_tiny.render(decision_line, True, decision_color)
         surface.blit(decision_text, (panel_x + 10, y))
+        y += 16
+
+        # Inside-building visibility (PM: show if available; can be debug-only, but safe to show always when true)
+        try:
+            if bool(getattr(hero, "is_inside_building", False)):
+                b = getattr(hero, "inside_building", None)
+                bname = None
+                if b is not None:
+                    bname = getattr(b, "building_type", None) or b.__class__.__name__
+                inside_line = f"Inside: {str(bname).replace('_',' ').title()}" if bname else "Inside: yes"
+                inside_surf = self._cached_line(("inside", id(hero)), inside_line, (220, 220, 255))
+                surface.blit(inside_surf, (panel_x + 10, y))
+                y += 14
+        except Exception:
+            pass
+
+        # Debug-only: stuck snapshot + attack gating surface
+        if debug_ui:
+            now_ms = int(sim_now_ms())
+
+            # Stuck snapshot per locked contract: Hero.get_stuck_snapshot(now_ms=None)->dict
+            try:
+                if hasattr(hero, "get_stuck_snapshot"):
+                    snap = hero.get_stuck_snapshot(now_ms=now_ms)
+                else:
+                    snap = None
+
+                if isinstance(snap, dict) and bool(snap.get("stuck_active", False)):
+                    reason = str(snap.get("stuck_reason", "") or "stuck").strip()
+                    attempts = int(snap.get("unstuck_attempts", 0) or 0)
+                    stuck_since = snap.get("stuck_since_ms", None)
+                    stuck_s = None
+                    if stuck_since is not None:
+                        try:
+                            stuck_s = max(0.0, (float(now_ms) - float(stuck_since)) / 1000.0)
+                        except Exception:
+                            stuck_s = None
+                    if stuck_s is None:
+                        stuck_line = f"STUCK: {reason} (attempts {attempts})"
+                    else:
+                        stuck_line = f"STUCK: {reason} ({stuck_s:.1f}s, attempts {attempts})"
+
+                    stuck_surf = self._cached_line(("stuck", id(hero)), stuck_line, (255, 180, 100))
+                    surface.blit(stuck_surf, (panel_x + 10, y))
+                    y += 14
+            except Exception:
+                pass
+
+            # Combat gating visibility: Hero.can_attack + optional attack_blocked_reason
+            try:
+                can_attack = getattr(hero, "can_attack", None)
+                if isinstance(can_attack, bool) and not can_attack:
+                    reason = str(getattr(hero, "attack_blocked_reason", "") or "").strip()
+                    line = f"ATK BLOCKED: {reason}" if reason else "ATK BLOCKED"
+                    atk_surf = self._cached_line(("atk_block", id(hero)), line[:48], (255, 160, 160))
+                    surface.blit(atk_surf, (panel_x + 10, y))
+                    y += 14
+            except Exception:
+                pass
 

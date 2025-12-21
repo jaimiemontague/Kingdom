@@ -972,6 +972,8 @@ class GameEngine:
             "world": self.world,
             # UI helper: placement mode info for HUD
             "placing_building_type": getattr(self.building_menu, "selected_building", None),
+            # UI helper: whether debug UI is currently visible (used to gate debug-only HUD indicators)
+            "debug_ui": bool(getattr(self.debug_panel, "visible", False)),
         }
     
     def render(self):

@@ -127,6 +127,27 @@ class Hero:
         self.is_inside_building = False
         self.inside_building = None
         self.inside_timer = 0.0  # for short non-rest "enter" moments (e.g. shopping)
+
+        # -----------------------------
+        # WK2 contracts: combat gating + stuck signals (Hero-owned, UI-readable)
+        # -----------------------------
+        self.can_attack: bool = True
+        self.attack_blocked_reason: str = ""
+
+        self.stuck_active: bool = False
+        self.stuck_since_ms: int | None = None
+        self.last_progress_ms: int = int(sim_now_ms())
+        self.last_progress_pos: tuple[float, float] = (float(self.x), float(self.y))
+        self.unstuck_attempts: int = 0
+        self.stuck_reason: str = ""
+        # Internal bookkeeping for backoff/caps (not a public contract)
+        self._last_unstuck_attempt_ms: int = 0
+        self._unstuck_attempts_for_target: int = 0
+        self._unstuck_target_key: tuple | None = None
+
+        # Anti-oscillation commitment windows (sim-time based; controlled by AI)
+        self._target_commit_until_ms: int = 0
+        self._bounty_commit_until_ms: int = 0
         
     @property
     def attack(self) -> int:
@@ -450,6 +471,15 @@ class Hero:
         except Exception:
             pass
 
+        # Combat gating: source of truth for Build A is inside-building state.
+        # Combat system must treat can_attack=False as a hard gate (no damage/events).
+        if getattr(self, "is_inside_building", False):
+            self.can_attack = False
+            self.attack_blocked_reason = "inside_building"
+        else:
+            self.can_attack = True
+            self.attack_blocked_reason = ""
+
         prev_x, prev_y = self.x, self.y
 
         # Handle brief "inside building" timer (shopping etc.)
@@ -524,6 +554,28 @@ class Hero:
             now_ms = sim_now_ms()
         snap = HeroIntentSnapshot(intent=str(getattr(self, "intent", "idle")), last_decision=getattr(self, "last_decision", None))
         return snap.to_dict(now_ms=now_ms)
+
+    def get_stuck_snapshot(self, now_ms: int | None = None) -> dict:
+        """
+        UI/QA-friendly stuck status snapshot (contract field names).
+        """
+        if now_ms is None:
+            now_ms = sim_now_ms()
+        since = getattr(self, "stuck_since_ms", None)
+        age_ms = 0
+        if since is not None:
+            try:
+                age_ms = max(0, int(now_ms) - int(since))
+            except Exception:
+                age_ms = 0
+        return {
+            "stuck_active": bool(getattr(self, "stuck_active", False)),
+            "stuck_since_ms": since,
+            "stuck_age_ms": int(age_ms),
+            "last_progress_ms": int(getattr(self, "last_progress_ms", 0) or 0),
+            "unstuck_attempts": int(getattr(self, "unstuck_attempts", 0) or 0),
+            "stuck_reason": str(getattr(self, "stuck_reason", "") or ""),
+        }
 
     def _derive_intent(self) -> tuple[str, str, dict]:
         """

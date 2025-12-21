@@ -152,6 +152,209 @@
         }
       }
     }
+    ,
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2 kickoff: Agent 08 focuses on minimal debug visibility + readability for stuck/inside-combat/animation state."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_kickoff_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:09.250207-07:00"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1) — Agent 8: propose minimal debug visibility for stuck/unstuck (debug-only) and ensure animations/readability align with intent. Keep UI changes lightweight and avoid per-frame allocations. Wait for Agent 3 contract surface before contract-dependent changes.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:09.250207-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK2 R1 (async meeting stage): Agent 08 is active. I am proposing the smallest UI/UX additions needed to make hero behavior fixes (anti-oscillation, stuck recovery, no-combat-inside) **visible and debuggable** without a UI rework, and to ensure the new sprite states read as intent.\\n\\n### Deliverables (R1 output)\\n- UX acceptance criteria for: inside-combat gating readability, stuck/unstuck visibility, animation-state readability.\\n- Implementation plan with file boundaries (HUD + optional debug panel only).\\n- Deterministic-friendly display rules (sim-time-based ages; no wall-clock dependence for sim-relevant UI).\\n\\n### Proposed changes (Build A vs Build B)\\n**Build A (Midweek): visibility + debug-only indicators**\\n- Add a **stuck indicator** to selected-hero panel (debug-only): stuck_reason + unstuck_attempts + time stuck (sim-time).\\n- Add a lightweight **one-line debug toast** when an unstuck event triggers (debug-only; rate-limited).\\n- Ensure \"inside building\" state is always visually explainable (panel shows 'Inside: <building>' or 'Inside: yes').\\n\\n**Build B (Endweek): polish/readability + sprites**\\n- Verify sprite states map cleanly to intent: idle/walk/attack/hurt/inside are visually distinct; no jittery toggles.\\n- Optional: small 'inside' badge/icon near hero when selected (debug-only or always-on if Agent 2 approves).\\n\\n### File boundaries (my domain only)\\n- `game/ui/hud.py`\\n  - Selected-hero panel: add stuck/inside labels (behind debug flag/condition).\\n  - Debug-only toast for unstuck events (optional; uses existing HUD messages with throttle).\\n- `game/ui/debug_panel.py` (optional)\\n  - Add compact stuck counters and the last stuck_reason per selected hero for developers.\\n- **No AI/nav/path changes**; I will only read fields defined by Agent 3’s contract surface.\\n\\n### Acceptance criteria (UX)\\n- **No-combat-inside readability**: When a hero is inside a building, UI makes it obvious (panel shows inside status/building), and the hero does not show \"attacking\" while inside.\\n- **Stuck visibility**: If stuck recovery triggers in the repro scenario, the selected hero panel shows stuck_reason + attempts (debug-only) and a single toast appears (debug-only).\\n- **Non-spammy**: No repeated toasts every frame; all debug notices are rate-limited.\\n- **Determinism guardrails**: Any displayed durations use sim-time/ticks (not wall-clock).\\n\\n### Exact test commands (expected to be added/extended by Agents 11/12)\\n- Gate: `python tools/qa_smoke.py --quick`\\n- Deterministic repro: `python tools/observe_sync.py --seconds 20 --scenario hero_stuck_repro --qa --seed <N>` (exact scenario name pending Agent 12).\\n- Manual: `python main.py --no-llm` and `python main.py --provider mock` (10 min smoke): observe no attacks while inside buildings; observe unstuck events are visible in debug mode.\\n\\n### Risks (blockers only)\\n- Blocker risk: UI field names may change; must wait for Agent 3 contract surface (stuck_reason/attempt counters/inside gating signal).\\n\\n### Dependencies\\n- **Agent 3**: define final contract fields for stuck detection and inside-combat gating visibility (field names + meaning).\\n- **Agent 11/12**: provide deterministic repro scenario and QA assertions so UI indicators can be validated without flake.\\n\\n### Next actions\\n- Wait for Agent 3’s posted contract surface for: `stuck_reason`, `unstuck_attempts`, and any `can_attack`/inside-combat gating signal.\\n- Once contracts land: implement minimal HUD additions (selected hero panel) and keep them debug-only by default.\\n",
+            "summary_bullets": [
+              "Build A: minimal debug visibility for stuck/unstuck + inside-building state in the selected hero panel (debug-only, rate-limited).",
+              "Build B: verify sprite state readability (idle/walk/attack/hurt/inside) aligns with intent; optional inside badge if approved.",
+              "No AI/nav changes; UI will only read Agent 3 contract fields (wait rule enforced)."
+            ],
+            "proposed_changes": [
+              "Add stuck indicators (reason/attempts/time stuck) to selected hero panel behind debug flag/condition.",
+              "Add debug-only rate-limited toast when an unstuck event triggers.",
+              "Expose inside-building state clearly in hero panel to support no-combat-inside acceptance criteria.",
+              "Optional: add stuck info to DebugPanel for developer triage."
+            ],
+            "acceptance_criteria": [
+              "Heroes never appear to attack while inside buildings; UI clearly indicates inside status when applicable.",
+              "In deterministic stuck repro scenario, unstuck triggers are visible via debug-only UI (panel indicator + single toast).",
+              "All debug UI is rate-limited and does not spam per-frame.",
+              "All elapsed-time displays use sim-time/ticks (no wall-clock reliance).",
+              "`python tools/qa_smoke.py --quick` remains PASS."
+            ],
+            "risks": [
+              "Contract-dependent fields may shift; UI work must wait for Agent 3 contract surface to avoid schema drift.",
+              "Debug visibility could clutter HUD if not gated; keep debug-only by default."
+            ],
+            "dependencies": [
+              "Agent 3: contract surface for stuck_reason/unstuck_attempts/can_attack gating signals.",
+              "Agent 12: deterministic headless repro scenario (hero_stuck_repro) with seed and outputs.",
+              "Agent 11: QA assertions integrated into qa_smoke to validate stuck recovery + inside-combat gating."
+            ],
+            "questions_back_to_pm": [
+              "Blocker question: should stuck/unstuck indicators be debug-only (recommended) or player-facing in Build A?"
+            ],
+            "recommended_next_actions": [
+              "After Agent 3 posts contracts, implement the minimal HUD/DebugPanel reads with caching (avoid per-frame allocations).",
+              "Coordinate with Agent 11/12 on which scenario/seed to use for validating stuck indicators.",
+              "After Agent 9 sprite drop, do a readability pass to ensure inside/attack/hurt frames are unmistakable at 32x32."
+            ],
+            "agent_fields": {
+              "ui_copy": [
+                "Debug: STUCK (<reason>) attempts=<n> for <t>s",
+                "Inside: <building_type> / Inside: yes"
+              ],
+              "ui_layout_rules": [
+                "Debug-only indicators must be gated and rate-limited.",
+                "Never allocate new Surfaces per frame; cache text surfaces where possible.",
+                "Use sim-time/ticks for durations displayed in UI."
+              ],
+              "ux_acceptance_criteria": [
+                "Debug UI makes it obvious when stuck recovery triggers and why.",
+                "Inside-building state is always clear to prevent combat-while-inside confusion.",
+                "Animation states are readable and do not jitter between states."
+              ],
+              "wait_for_agent3_contracts": true
+            }
+          }
+        }
+        ,
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:09:53.426958-07:00"
+          },
+          "prompt_text": "WK2 Round 2 (wk2_r2) — Execute Build A focus. Agent 08: implement minimal debug-only UI reads for inside status + stuck snapshot using locked contracts; keep cache-friendly; ensure `python tools/qa_smoke.py --quick` PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T22:09:53.426958-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK2 R2 execution complete for Agent 08: added debug-only HUD visibility for inside-building state, stuck snapshot, and attack-gating surface (contract fields only).\\n\\n### What changed\\n- **Debug-only HUD indicators (selected hero panel)**\\n  - Reads locked contract fields:\\n    - `hero.get_stuck_snapshot(now_ms)` (expects dict with `stuck_active`, `stuck_since_ms`, `unstuck_attempts`, `stuck_reason`)\\n    - `hero.can_attack` + optional `hero.attack_blocked_reason`\\n  - Shows \"Inside: <building>\" when `hero.is_inside_building` is true (player-facing only when inside; otherwise hidden).\\n  - Indicators are gated behind `debug_ui` so they appear only when the debug panel is visible.\\n- **Cache-friendly**\\n  - Added small text-surface caching for debug lines to avoid per-frame allocations.\\n- **Plumbing**\\n  - Added `debug_ui` boolean into `game_state` so HUD can reliably gate debug-only indicators based on `DebugPanel.visible`.\\n\\n### Files changed\\n- `game/ui/hud.py`\\n- `game/engine.py`\\n\\n### Test commands run (evidence)\\n- `python tools/qa_smoke.py --quick` => PASS\\n  - `[determinism_guard] PASS: no violations found`\\n  - `[qa_smoke] DONE: PASS`\\n\\n### Manual smoke (required by sprint)\\n- Commands (not run here due to interactive window):\\n  - `python main.py --no-llm`\\n  - `python main.py --provider mock`\\n  - Open debug panel (F1), select hero, verify debug-only stuck/atk-block indicators appear when applicable.\\n",
+            "summary_bullets": [
+              "HUD now shows debug-only stuck snapshot + attack-block reason using locked contract fields (no AI imports).",
+              "Inside-building state is visible in selected hero panel when applicable (reduces confusion about inside-combat gating).",
+              "Added `debug_ui` flag to game_state so HUD can gate debug-only indicators based on DebugPanel visibility.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "Add `debug_ui` to `GameEngine.get_game_state()` based on `DebugPanel.visible`.",
+              "In HUD selected-hero panel: show Inside status; if debug_ui is true, show stuck snapshot + ATK BLOCKED details.",
+              "Cache debug text surfaces to avoid per-frame Surface churn."
+            ],
+            "acceptance_criteria": [
+              "When DebugPanel is visible, selecting a hero shows stuck snapshot (if stuck_active) and attack blocked details (if can_attack=False).",
+              "When hero is inside a building, selected hero panel shows Inside status; otherwise does not add clutter.",
+              "No contract guessing: only reads `get_stuck_snapshot`, `can_attack`, `attack_blocked_reason` (safe if absent).",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "If Agent 6/3 contract fields aren’t present yet in a branch, debug indicators will silently not show; mitigated by safe hasattr/try blocks.",
+              "Text caching could grow unbounded; mitigated by a small cache size cap/clear."
+            ],
+            "dependencies": [
+              "Agent 6/3 must implement the locked Hero fields and `get_stuck_snapshot` semantics for full usefulness.",
+              "Agent 11/12 deterministic repro scenarios will be needed to reliably observe stuck indicators."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Once Tools/QA land `hero_stuck_repro`, validate debug indicators in that scenario (debug panel open).",
+              "If debug UI needs a non-interactive toggle for CI screenshots, coordinate with Agent 12 (optional)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/hud.py",
+                "game/engine.py"
+              ],
+              "test_commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "test_evidence": [
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS"
+              ],
+              "blockers": []
+            }
+          }
+        }
+        ,
+        "wk2_r3": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r3",
+          "round_meta": {
+            "prompt_set_id": "wk2_wrap_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:36:46.194190-07:00"
+          },
+          "prompt_text": "WK2 Round 3 (wk2_r3) — Final sync + blockers only (Build A readiness). Agents 08+09: coordinate HUD integration to preserve Agent 09 HUD init crash fix (messages init) and Agent 08 debug-only stuck/inside indicators + caching + debug_ui gating. Rerun `python tools/qa_smoke.py --quick` and include PASS evidence.",
+          "response": {
+            "received_at_local": "2025-12-20T22:36:46.194190-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK2 R3 final sync: confirmed `game/ui/hud.py` contains BOTH Agent 09's HUD init crash fix and Agent 08's debug-only stuck/inside indicator + caching + debug gating, and re-ran the mandatory gate successfully.\\n\\n### Integration check (HUD)\\n- **Preserved Agent 09 crash fix**: `HUD.__init__` initializes `self.messages` and `self.message_duration` (prevents crash during manual smoke when HUD message methods are called).\\n- **Preserved Agent 08 features**: debug-only stuck/inside indicators, `debug_ui` gating (via `game_state['debug_ui']`), and cache-friendly line rendering.\\n\\n### Gate evidence\\n- `python tools/qa_smoke.py --quick` => PASS\\n  - `[determinism_guard] PASS: no violations found`\\n  - `[qa_smoke] DONE: PASS`\\n\\n### Files involved\\n- `game/ui/hud.py` (merged crash fix + debug-only indicators + caching)\\n- `game/engine.py` (provides `debug_ui` in game_state for gating)\\n\\n### Blockers\\nNone.\\n",
+            "summary_bullets": [
+              "HUD integration preserved: messages init crash fix + debug-only stuck/inside indicators + caching + debug_ui gating.",
+              "Mandatory gate re-run: `python tools/qa_smoke.py --quick` PASS (determinism_guard PASS).",
+              "No blockers for Build A readiness from Agent 08."
+            ],
+            "proposed_changes": [
+              "No further changes required from Agent 08; this round was an integration/preservation check plus gate evidence."
+            ],
+            "acceptance_criteria": [
+              "HUD does not crash on boot/manual smoke due to missing message fields.",
+              "Debug-only indicators remain gated by DebugPanel visibility (`debug_ui`) and do not allocate per frame excessively.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "If further merges touch `game/ui/hud.py`, re-check that messages init remains above any message usage, and that debug gating still uses `game_state['debug_ui']`."
+            ],
+            "dependencies": [
+              "Agent 11/12: ensure `hero_stuck_repro` is wired into qa_smoke (Agent 08 has no further dependencies)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Build A readiness; no remaining Agent 08 work unless QA requests additional debug toggles."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_checked": [
+                "game/ui/hud.py",
+                "game/engine.py"
+              ],
+              "test_commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "test_evidence": [
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS"
+              ],
+              "blockers": []
+            }
+          }
+        }
+      }
+    }
   }
 }
 

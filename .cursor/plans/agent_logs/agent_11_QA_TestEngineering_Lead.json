@@ -81,6 +81,201 @@
           }
         }
       }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2: AI anti-jank + inside-combat gating + stuck recovery + hero sprites. Agent 11 owns deterministic repro assertions + smoke gate stability."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": "WK2: AI anti-jank + inside-combat gating + stuck recovery + hero sprites. Agent 11 owns deterministic repro assertions + smoke gate stability."
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:58:37.8916021-07:00"
+          },
+          "prompt_text": "WK2 kickoff (wk2_r1): update QA plan + propose non-flaky deterministic regression checks for (1) no attacks while inside buildings, (2) stuck recovery triggers in a repro profile, and (3) reduced oscillation; ensure enforceable in python tools/qa_smoke.py --quick; wait for Agent 3 contract surface before contract-dependent assertions.",
+          "response": {
+            "received_at_local": "2025-12-20T21:58:37.8916021-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) for WK2 Round 1: defining deterministic, non-flaky QA assertions + smoke gate updates for hero anti-jank work (inside-combat gating, stuck recovery, anti-oscillation), without implementing contract-dependent logic until Agent 3 posts the contract surface.\n\n### Deliverables\n- Add/define WK2 QA assertions to plug into the existing gate (`python tools/qa_smoke.py --quick`) once contracts + repro scenarios land.\n- Update `QA_TEST_PLAN.md` with WK2 regression bullets (inside-combat, stuck recovery, oscillation).\n- Provide exact headless repro commands + acceptance criteria (seeded) for Build A signoff.\n\n### Questions (blockers only)\n- Blocker (dependency): waiting on Agent 3 to publish the contract surface for inside-combat gating + stuck signals.\n- Blocker (dependency): waiting on Agent 12 to land a deterministic `--scenario hero_stuck_repro` (or equivalent) so we can assert stuck recovery deterministically.\n\n### Next actions\n- After Agent 3 contract posts: implement contract-driven `--qa` assertions in `tools/observe_sync.py` and ensure they run via `tools/qa_smoke.py --quick`.\n- After Agent 12 scenario posts: add a dedicated `qa_smoke --quick` profile that runs the stuck scenario and asserts at least one recovery (or a bounded maximum frozen time), without flakiness.\n",
+            "summary_bullets": [
+              "WK2 R1: define non-flaky, deterministic QA assertions for inside-combat gating + stuck recovery + anti-oscillation, integrated into qa_smoke --quick.",
+              "Wait on Agent 3 contract surface and Agent 12 deterministic stuck repro scenario before implementing/merging contract-dependent checks.",
+              "Keep Build A gate stability-first: assertions should be robust to tuning and avoid timing/flakiness."
+            ],
+            "proposed_changes": [
+              "tools/qa_smoke.py: add/extend WK2 profiles (e.g., hero_stuck_repro) and fail on QA assertion failures (nonzero exit).",
+              "tools/observe_sync.py: add --qa assertions for (a) no attacks while inside buildings, (b) stuck detection/recovery counters, (c) anti-oscillation metric thresholds (optional, debug-only).",
+              "QA_TEST_PLAN.md: add WK2 regression bullets and exact commands for Build A signoff."
+            ],
+            "acceptance_criteria": [
+              "Gate: python tools/qa_smoke.py --quick exits 0 and includes a deterministic stuck repro profile once Agent 12 lands it.",
+              "Inside-combat: in a headless profile that forces a hero inside a building, QA asserts 0 attack events while is_inside_building==True (requires Agent 3 contract + implementer wiring).",
+              "Stuck recovery: in hero_stuck_repro, QA asserts at least 1 recovery attempt OR asserts no hero remains \"intending to move\" with ~0 position delta for >N sim-seconds (contract-dependent).",
+              "Manual (10 min): python main.py --no-llm and python main.py --provider mock: no visible combat while inside buildings; heroes recover from common stuck states; no obvious spaz retarget loops."
+            ],
+            "risks": [
+              "Flaky tests if stuck repro depends on emergent sim randomness; mitigate by deterministic scenario design (Agent 12) + sim-time driven checks.",
+              "Over-strict oscillation metrics could fail on legitimate target changes; keep oscillation checks optional/debug-only until tuned.",
+              "Inside-combat gating may need clear definition of \"attack event\" (animation vs damage). Contract must specify which we assert."
+            ],
+            "dependencies": [
+              "Agent 3 contract surface for: inside-combat gating fields and stuck signal fields/counters.",
+              "Agent 12 deterministic headless scenario: --scenario hero_stuck_repro (or equivalent) with structured stuck/recovery outputs.",
+              "Agent 6 implementation: actual gating + recovery behavior must exist before assertions can be enforced."
+            ],
+            "questions_back_to_pm": [
+              "Blocker until Agent 3 + Agent 12 post: do you want Build A QA acceptance for inside-combat to assert \"no damage events\" only, or also \"no attack animation/events\" while inside?"
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 3 contract and Agent 12 scenario; do not land contract-dependent assertions until both are posted.",
+              "Once posted, implement WK2 QA assertions in tools/observe_sync.py and wire the scenario into tools/qa_smoke.py --quick.",
+              "Update QA_TEST_PLAN.md with final WK2 commands/criteria once the contract names are finalized."
+            ],
+            "agent_fields": {
+              "planned_smoke_profiles": [
+                "hero_stuck_repro (deterministic, no-render; asserts recovery)",
+                "inside_combat_gate (forces hero inside; asserts no attack/damage while inside)",
+                "oscillation_watch (optional; reports target flips/minute without failing until tuned)"
+              ],
+              "assertions_waiting_on_contracts": [
+                "inside building combat gating (attack/damage event definition)",
+                "stuck signals (intent-to-move + position delta thresholds + counters)"
+              ]
+            }
+          }
+        },
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": "WK2: AI anti-jank + inside-combat gating + stuck recovery + hero sprites. Agent 11 owns deterministic repro assertions + smoke gate stability."
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:08:50.2021800-07:00"
+          },
+          "prompt_text": "WK2 Round 2 (wk2_r2): Execute (Build A focus). Assigned to Agent 11: after Agent 12 lands deterministic scenarios (hero_stuck_repro required; inside_combat_repro optional) wire them into python tools/qa_smoke.py --quick with non-flaky assertions: P0 inside-combat asserts no damage while inside; stuck asserts >=1 stuck detection and >=1 recovery attempt OR bounded max stuck time; keep oscillation checks optional/report-only until stable. Provide evidence: python tools/qa_smoke.py --quick PASS; manual smoke (python main.py --no-llm and python main.py --provider mock).",
+          "response": {
+            "received_at_local": "2025-12-20T22:08:50.2021800-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 11 (QA_TestEngineering_Lead) — WK2 Round 2 execution update.\\n\\n### Work completed\\n- Ran the mandatory automated gate and captured PASS evidence.\\n- Verified current tools do NOT yet expose WK2-specific scenarios (`hero_stuck_repro`, `inside_combat_repro`) in `tools/observe_sync.py` (still only {default,intent_bounty}), so no WK2-specific qa_smoke wiring landed yet.\\n\\n### Files changed\\n- None (waiting on Agent 12 scenario additions and Agent 6 combat/stuck counters implementation).\\n\\n### Test commands run (evidence)\\n- PASS: `python tools/qa_smoke.py --quick` (includes determinism_guard; exit code 0).\\n\\n### Blockers\\n- Waiting on Agent 12 to land `tools/observe_sync.py --scenario hero_stuck_repro` (required) and emit compact counters (stuck_events, unstuck_attempts, inside_attack_blocks) so qa_smoke can assert them deterministically.\\n- Manual smoke (`python main.py --no-llm` and `python main.py --provider mock`) is a human-interactive gate; cannot be executed non-interactively here without a dedicated timed/auto-exit harness.",
+            "summary_bullets": [
+              "Ran Build A automated gate: qa_smoke --quick PASS (includes determinism_guard).",
+              "No code changes yet for WK2-specific QA profiles because observe_sync currently lacks hero_stuck_repro/inside_combat_repro scenarios.",
+              "Ready to wire non-flaky scenario-based assertions into qa_smoke immediately after Agent 12 lands the deterministic scenarios and counters."
+            ],
+            "proposed_changes": [
+              "tools/qa_smoke.py: add a WK2 profile that runs `observe_sync --scenario hero_stuck_repro --qa` and fails if counters/criteria not met (after Agent 12 lands it).",
+              "tools/observe_sync.py: extend `--qa` assertions to read locked contract fields/counters when present (Hero.can_attack, stuck snapshot), but only after Agent 6/12 implementations land.",
+              "Optional (if PM approves): add a non-interactive timed smoke mode for `main.py` to make the manual smoke gate runnable in automation."
+            ],
+            "acceptance_criteria": [
+              "PASS evidence this round: python tools/qa_smoke.py --quick exits 0.",
+              "After Agent 12 lands hero_stuck_repro: qa_smoke --quick includes it and fails if stuck_events/unstuck_attempts criteria are not met (per PM locked thresholds).",
+              "After Agent 6 lands inside-combat gating: qa_smoke asserts P0 'no damage while inside buildings' using damage as the definition of attack event."
+            ],
+            "risks": [
+              "If WK2 QA is wired before the deterministic scenario exists, the gate could become flaky or non-actionable; waiting avoids false failures.",
+              "Manual smoke remains a release gate and currently requires human execution unless we add a timed auto-exit harness."
+            ],
+            "dependencies": [
+              "Agent 12: implement `tools/observe_sync.py --scenario hero_stuck_repro` and emit compact deterministic counters (stuck_events, unstuck_attempts, inside_attack_blocks).",
+              "Agent 6: implement combat gating (no damage while inside) + stuck counters per locked contract fields.",
+              "Agent 3: contract reviewer/signoff if QA needs to read new hero fields/counters."
+            ],
+            "questions_back_to_pm": [
+              "Do you want me to add a small `--smoke-seconds N` / auto-exit mode to `main.py` to make the manual smoke gate runnable non-interactively, or should we keep manual smoke strictly human-run for Build A?"
+            ],
+            "recommended_next_actions": [
+              "Once Agent 12 lands hero_stuck_repro + counters, wire it into qa_smoke --quick as a failing profile (non-flaky, deterministic).",
+              "Once Agent 6 lands inside-combat gating + stuck counters, add contract-driven assertions (P0: no damage while inside; stuck: >=1 stuck + >=1 recovery OR bounded max stuck time).",
+              "Keep oscillation checks report-only until thresholds are proven stable in the deterministic scenario."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-20T22:08:50.2021800-07:00"
+              ],
+              "blocked_on": [
+                "Agent 12 scenario: hero_stuck_repro + counters",
+                "Manual smoke requires human input (unless we add timed auto-exit harness)"
+              ]
+            }
+          }
+        },
+        "wk2_r3": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": "WK2: AI anti-jank + inside-combat gating + stuck recovery + hero sprites. Agent 11 owns deterministic repro assertions + smoke gate stability."
+          },
+          "round_id": "wk2_r3",
+          "round_meta": {
+            "prompt_set_id": "wk2_wrap_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:37:40.1495126-07:00"
+          },
+          "prompt_text": "WK2 Round 3 (wk2_r3): Final sync + blockers only (Build A readiness). Agent 11 required: wire tools/observe_sync.py --scenario hero_stuck_repro --qa into python tools/qa_smoke.py --quick as a failing profile with deterministic assertions using counters (stuck_events, unstuck_attempts, max_stuck_ms; inside_attack_blocks optional) and provide PASS evidence.",
+          "response": {
+            "received_at_local": "2025-12-20T22:37:40.1495126-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK2 Round 3: closed the remaining Build A QA gate gap by wiring the deterministic stuck repro scenario into `qa_smoke --quick`.\n\n### Files changed\n- `tools/qa_smoke.py`\n\n### What changed\n- Added a new `--quick` profile that runs:\n  - `python tools/observe_sync.py --seconds 12 --heroes 10 --seed 3 --log-every 240 --qa --no-enemies --scenario hero_stuck_repro`\n- This profile fails if `observe_sync` returns nonzero (it already contains deterministic `--qa` assertions for hero_stuck_repro using the scenario counters).\n\n### Counter keys / format (stable)\n- `tools/observe_sync.py` emits (always, when --qa):\n  - `[scenario] counters: scenario=<name> stuck_events=<int> unstuck_attempts=<int> inside_attack_blocks=<int> max_stuck_ms=<int>`\n- For this gate we require at least `stuck_events` and `unstuck_attempts` to be >0 in the `hero_stuck_repro` run (max_stuck_ms recorded for triage).\n\n### Tests run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0; includes determinism_guard and the new WK2 hero_stuck_repro profile)\n- Evidence counter line observed during the run:\n  - `[scenario] counters: scenario=hero_stuck_repro stuck_events=11 unstuck_attempts=31 inside_attack_blocks=0 max_stuck_ms=3483`\n\n### Blockers\n- None for the automated gate.\n- Manual smoke (`python main.py --no-llm` / `python main.py --provider mock`) remains a human-run release gate unless PM approves an auto-exit harness.",
+            "summary_bullets": [
+              "Wired `observe_sync --scenario hero_stuck_repro --qa` into `qa_smoke --quick` as a mandatory Build A failing profile.",
+              "Confirmed counter keys and format are stable and printed in a single line for CI/triage.",
+              "Ran `python tools/qa_smoke.py --quick` and got PASS with deterministic stuck+recovery evidence."
+            ],
+            "proposed_changes": [
+              "tools/qa_smoke.py: add WK2 hero_stuck_repro profile to --quick (now mandatory)."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick exits 0 and includes the WK2 hero_stuck_repro profile.",
+              "hero_stuck_repro run produces `stuck_events>=1` and `unstuck_attempts>=1` (deterministic counters) and returns exit code 0."
+            ],
+            "risks": [
+              "Manual smoke remains a human-run gate unless we add a timed/auto-exit mode to main.py (PM decision)."
+            ],
+            "dependencies": [
+              "tools/observe_sync.py already contains the deterministic hero_stuck_repro scenario setup and `--qa` assertions.",
+              "ai/basic_ai.py stuck detection/recovery logic + hero stuck contract fields must remain deterministic for the scenario to stay stable."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Build A readiness using the updated `python tools/qa_smoke.py --quick` gate output as automated evidence.",
+              "Have a human run the manual smoke commands (no-llm + provider mock) to satisfy the interactive gate."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-20T22:37:40.1495126-07:00",
+                "[scenario] counters: scenario=hero_stuck_repro stuck_events=11 unstuck_attempts=31 inside_attack_blocks=0 max_stuck_ms=3483"
+              ],
+              "counter_keys": [
+                "stuck_events",
+                "unstuck_attempts",
+                "max_stuck_ms",
+                "inside_attack_blocks"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

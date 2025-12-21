@@ -10,6 +10,18 @@ class CombatSystem:
     
     def __init__(self):
         self.combat_log = []
+
+    def _hero_can_attack(self, hero) -> bool:
+        """
+        WK2 contract: combat must hard-gate attack execution when hero.can_attack is False.
+        Fallback for older heroes: do not allow attacks while inside buildings.
+        """
+        if hasattr(hero, "can_attack"):
+            try:
+                return bool(getattr(hero, "can_attack"))
+            except Exception:
+                return not bool(getattr(hero, "is_inside_building", False))
+        return not bool(getattr(hero, "is_inside_building", False))
         
     def process_combat(self, heroes: list, enemies: list, buildings: list) -> list:
         """
@@ -23,6 +35,16 @@ class CombatSystem:
             if not hero.is_alive:
                 continue
             if hero.attack_cooldown > 0:
+                continue
+
+            # P0 hard gate: no damage while hero is inside a building.
+            if not self._hero_can_attack(hero):
+                # Optional breadcrumb for debug/QA counters (kept internal; non-contract).
+                try:
+                    hero.attack_blocked_reason = getattr(hero, "attack_blocked_reason", "") or "inside_building"
+                    hero._inside_attack_blocks = int(getattr(hero, "_inside_attack_blocks", 0) or 0) + 1
+                except Exception:
+                    pass
                 continue
                 
             # Find closest enemy in range
@@ -108,6 +130,13 @@ class CombatSystem:
             if not getattr(hero, "is_alive", False):
                 continue
             if getattr(hero, "attack_cooldown", 0) > 0:
+                continue
+            if not self._hero_can_attack(hero):
+                try:
+                    hero.attack_blocked_reason = getattr(hero, "attack_blocked_reason", "") or "inside_building"
+                    hero._inside_attack_blocks = int(getattr(hero, "_inside_attack_blocks", 0) or 0) + 1
+                except Exception:
+                    pass
                 continue
 
             lair = getattr(hero, "target", None)

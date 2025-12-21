@@ -83,6 +83,77 @@
           }
         }
       }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2: AI anti-jank + inside-combat gating (Build A), hero sprites pipeline (Build B). Agent 04 focuses on determinism guardrails + deterministic repro/QA gates."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:58:56"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Provide acceptance criteria, contracts, and deterministic repro/QA harness before heavy implementation. As Agent 04, focus on determinism pitfalls/guardrails and deterministic repro commands; do not implement contract-dependent changes until Agent 3 posts the contract surface.",
+          "response": {
+            "received_at_local": "2025-12-20T21:58:56",
+            "status": "complete",
+            "raw": "Status: Agent 04 (NetworkingDeterminism_Lead) active for WK2 Round 1. My goal is to keep the AI anti-jank work (unstuck + anti-oscillation + no-combat-inside gating) lockstep-ready by preventing wall-clock/RNG leaks into sim logic and by ensuring the repro/QA harness is deterministic.\n\nDeliverables (Round 1 outputs)\n- Determinism guardrails for inside-combat gating + stuck detection/recovery (sim-time/tick only; stable ordering).\n- Deterministic repro/QA guidance for new scenarios (hero_stuck_repro / inside_combat_gating) and how they should be asserted in qa_smoke.\n- File-boundary recommendations to reduce cross-agent conflicts (where time/RNG/ordering rules must hold).\n\nProposed changes (file boundaries; no heavy implementation yet)\n- Docs/guardrails:\n  - docs/networking_determinism.md (extend with WK2-specific notes: inside-combat gating + stuck signals must be sim-time driven).\n- QA gates:\n  - tools/determinism_guard.py (keep scanning: game/entities, game/systems, ai; exclude UI/graphics/sim). Potentially extend banned patterns if new ones appear during WK2.\n  - tools/qa_smoke.py (ensure it runs determinism_guard first; add/keep deterministic scenarios once Agent 12/11 land them).\n\nAcceptance criteria (determinism + gate)\n- All sim-critical timing uses sim-time/tick (no pygame.time.get_ticks/time.time/monotonic in sim code).\n- No unseeded RNG (no random.*) in sim-critical AI/stuck/gating logic.\n- Any selection/tie-break logic in recovery uses stable ordering (no set iteration dependence).\n- QA commands must be deterministic and non-flaky:\n  - python tools/determinism_guard.py\n  - python tools/qa_smoke.py --quick\n  - (after Agent 12 adds scenarios) python tools/observe_sync.py --scenario hero_stuck_repro --seed <seed> --qa\n\nRisks (blockers only)\n- Contract drift: if inside-combat gating and stuck-signal fields are implemented ad-hoc before Agent 3 posts the contract surface, we risk rework and nondeterministic time usage.\n- Repro flakiness: if the stuck repro relies on emergent randomness or variable dt, QA assertions will be flaky.\n\nDependencies (blockers only)\n- Agent 3 must publish/lock the contract surface for:\n  - inside-combat gating (where/how to express can_attack/inside flags)\n  - stuck signals (stuck_reason, unstuck_attempts, last_progress_ms/tick)\n  - time source (explicit sim-time/tick usage expectations)\n- Agent 12/11 must define deterministic scenario(s) + assertions so we can gate regressions without manual repro.\n\nNext actions\n- Await Agent 3’s contract post; review it specifically for determinism pitfalls (time source, ordering, ID usage).\n- When Agent 12 posts scenario plan, validate it is deterministic (seeded, fixed dt where needed) and update determinism_guard patterns only if necessary.\n- If needed, propose minimal updates to determinism_guard so new sim-code patterns introduced in WK2 remain gated.",
+            "summary_bullets": [
+              "WK2 AI anti-jank work (unstuck, anti-oscillation, no-combat-inside) is determinism-sensitive; sim-time/tick must be authoritative.",
+              "Release gates should remain deterministic: determinism_guard + qa_smoke --quick + deterministic scenario runs.",
+              "Primary blocker dependency is Agent 3’s contract surface (inside-combat gating + stuck signals + timebase)."
+            ],
+            "proposed_changes": [
+              "Keep `tools/determinism_guard.py` scoped to sim code (game/entities, game/systems, ai) and extend only if WK2 introduces new nondeterministic patterns.",
+              "Ensure `tools/qa_smoke.py --quick` continues to run determinism_guard first and later includes deterministic WK2 scenarios (after Agents 11/12 land them).",
+              "Add WK2-specific determinism notes to `docs/networking_determinism.md` once Agent 3 contract is known."
+            ],
+            "acceptance_criteria": [
+              "No wall-clock time usage inside sim code related to gating/stuck detection (no pygame ticks/time.time/monotonic/datetime).",
+              "No unseeded RNG (`random.*`) inside sim code for WK2 AI changes.",
+              "Recovery/tie-break logic is order-stable (no set-iteration dependence).",
+              "Commands: `python tools/determinism_guard.py` and `python tools/qa_smoke.py --quick` must pass; deterministic scenario commands (from Agent 12) must be non-flaky for a fixed seed."
+            ],
+            "risks": [
+              "Implementing gating/stuck logic before Agent 3 posts contracts leads to schema drift and hidden nondeterminism.",
+              "Stuck repro scenarios that rely on emergent randomness will be flaky and unsuitable for gating."
+            ],
+            "dependencies": [
+              "BLOCKER: Agent 3 posts/locks contracts for inside-combat gating + stuck signals + sim-time/tick semantics.",
+              "BLOCKER: Agent 12 defines deterministic repro scenario(s) and Agent 11 defines non-flaky assertions for qa_smoke."
+            ],
+            "questions_back_to_pm": [
+              "No blockers beyond waiting for Agent 3 contract surface and Agent 12/11 deterministic harness outputs."
+            ],
+            "recommended_next_actions": [
+              "After Agent 3 posts contracts, I will review specifically for determinism hazards (time source, ordering, IDs) and sign off or request changes.",
+              "After Agent 12 posts scenario plan, I will validate determinism (seed stability, fixed dt assumptions) and suggest tweaks so QA is non-flaky.",
+              "Keep Build A gate unchanged: determinism_guard + qa_smoke --quick must stay green pre-merge."
+            ],
+            "agent_fields": {
+              "required_guardrails": [
+                "Inside-combat gating and stuck detection must use sim-time or tick accumulation, not wall-clock time.",
+                "No unseeded RNG in sim logic; use seeded streams only if absolutely necessary.",
+                "Stable ordering for any selection/tie-break in recovery logic (never depend on set iteration)."
+              ],
+              "determinism_risks": [
+                "Wall-clock time leaking into stuck detection thresholds or cooldowns.",
+                "Unseeded RNG used to pick recovery steps or targets.",
+                "Nondeterministic ordering when choosing recovery candidates."
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

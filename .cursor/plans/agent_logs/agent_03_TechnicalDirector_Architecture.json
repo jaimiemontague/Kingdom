@@ -140,6 +140,136 @@
           }
         }
       }
+    },
+    "wk2-hero-polish-ai-sprites": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+        "notes": "WK2: Round 1 is contracts/acceptance/repro-harness (no heavy implementation yet)."
+      },
+      "rounds": {
+        "wk2_r1": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r1",
+          "round_meta": {
+            "prompt_set_id": "wk2_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T21:59:08"
+          },
+          "prompt_text": "WK2 Kickoff (Round 1 / wk2_r1): Reference plan .cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md. Provide contracts/guardrails (inside-combat gating + stuck signals + sim-time) plus acceptance criteria and deterministic repro/QA harness notes before heavy implementation.",
+          "response": {
+            "received_at_local": "2025-12-20T21:59:08",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) active for WK2. My Round-1 output is the **contract surface + guardrails** that AI/UI/Tools/QA implementers will code against: (1) **no combat while inside buildings**, (2) **stuck detection signals + deterministic recovery bookkeeping**, (3) **sim-time-only** time sources.\n\n### Deliverables\n- Locked field-level contracts for:\n  - **Combat gating**: `hero.can_attack` + optional `hero.attack_blocked_reason`.\n  - **Stuck signals**: `hero.stuck_status` (snapshot) + counters (`unstuck_attempts`, `stuck_reason`, timestamps in sim-ms).\n  - **Determinism/timebase**: sim-time (`game.sim.timebase.now_ms`) only for any age/timeout logic.\n- File-boundary guidance so Agents 6/8/12/11 can implement without cycles.\n\n### Contract surface (proposed, minimal)\n1) **Combat gating (no attacks while inside buildings)**\n- Source of truth lives on `Hero`:\n  - `hero.can_attack: bool` (computed or stored)\n  - `hero.attack_blocked_reason: str` (optional; e.g. `\"inside_building\"`, `\"resting\"`, `\"dead\"`)\n- Rules (deterministic):\n  - If `hero.is_inside_building` is True => `can_attack=False`.\n  - Combat system must treat `can_attack=False` as a hard gate: no damage application and no attack animation trigger.\n\n2) **Stuck detection + recovery bookkeeping (signals only in contract)**\n- Source of truth lives on `Hero` (so UI can read without AI imports):\n  - `hero.stuck_since_ms: int | None` (sim-time ms)\n  - `hero.last_progress_ms: int` (sim-time ms)\n  - `hero.last_progress_pos: tuple[float,float]` (world coords)\n  - `hero.unstuck_attempts: int` (monotonic)\n  - `hero.stuck_reason: str` (small allowlist string)\n  - `hero.stuck_active: bool`\n  - `hero.get_stuck_snapshot(now_ms=None) -> dict` (UI/QA-friendly)\n- Detection definition (owned by implementer, but contract expects these signals):\n  - \"intends to move\" AND position delta < epsilon for >= N sim-ms.\n\n3) **Determinism guardrails**\n- All \"age since\" and timeout logic uses `game.sim.timebase.now_ms()`.\n- Avoid wall-clock (`pygame.time.get_ticks`, `time.time`) and avoid `random.*` in sim.\n\n### Proposed changes (file boundaries)\n- **Contracts live in**: `game/sim/contracts.py` or a new `game/sim/hero_guardrails.py` (preferred if contracts grow).\n- **Hero-owned fields/accessors**: `game/entities/hero.py` only (no imports from AI modules).\n- **Combat hard-gate check**: `game/systems/combat.py` should consult `attacker.can_attack` if present, else fallback to `not attacker.is_inside_building` (back-compat).\n- **UI display** (Agent 8): read `hero.get_stuck_snapshot()` and show indicator in debug-only.\n\n### Acceptance criteria (WK2 Build A)\n- No attack occurs while `hero.is_inside_building=True`:\n  - no damage events emitted from inside state\n  - no attack animation one-shot while inside\n- Stuck recovery observability:\n  - in a deterministic repro scenario, at least one stuck event is detected and at least one recovery attempt occurs (counters increment).\n\n### Exact test commands (current + planned)\n- Release gate (must pass): `python tools/qa_smoke.py --quick`\n- Planned deterministic repro (Agent 12/11 to implement):\n  - `python tools/observe_sync.py --qa --scenario hero_stuck_repro --seconds 20 --seed 3 --log-every 240`\n- Manual sanity (10 min):\n  - `python main.py --no-llm`\n  - `python main.py --provider mock`\n\n### Risks\n- False positives on stuck detection (too small epsilon / too short N) causing jittery resets.\n- Extra per-tick cost if detection is too heavy; must remain O(N heroes).\n- Contract drift between Hero/Combat/UI/QA if field names aren’t treated as stable API.\n\n### Dependencies / blockers\n- No blockers.\n- Dependencies for implementation rounds:\n  - Agent 12: add deterministic stuck repro scenario.\n  - Agent 11: add non-flaky assertions to `qa_smoke --quick`.\n\n### Next actions\n- Publish this contract surface (this log entry) so implementers can proceed.\n- In Round 2, review PRs for contract compliance: no AI imports into UI, sim-time only, and combat gate enforced in combat system.\n",
+            "summary_bullets": [
+              "Locked proposed WK2 contract surface for inside-combat gating + stuck signals (Hero-owned fields, UI-readable).",
+              "Defined determinism guardrails: sim-time only for ages/timeouts; no wall-clock or random in sim logic.",
+              "Provided file-boundary guidance so AI/UI/Tools/QA can implement without import cycles."
+            ],
+            "proposed_changes": [
+              "Define `hero.can_attack` (+ optional `attack_blocked_reason`) as the combat gating API; combat system must hard-gate attacks when false/inside.",
+              "Define Hero-owned stuck bookkeeping fields (`stuck_since_ms`, `last_progress_ms`, `unstuck_attempts`, `stuck_reason`) and a `get_stuck_snapshot()` accessor.",
+              "Ensure all timeouts use `game.sim.timebase.now_ms()` (sim-time) to keep determinism-friendly behavior.",
+              "Add deterministic headless repro scenario + QA assertions in tools/qa_smoke (Agents 12/11) that exercise stuck recovery and inside-combat gating."
+            ],
+            "acceptance_criteria": [
+              "Heroes do not execute damage or attack animations while `is_inside_building=True` (enforced in combat system).",
+              "In a deterministic repro scenario, stuck is detected and at least one recovery attempt is recorded (counters increment).",
+              "`python tools/qa_smoke.py --quick` remains PASS."
+            ],
+            "risks": [
+              "Stuck detection thresholds may be too aggressive, causing oscillation; mitigate with hysteresis and capped attempt cadence.",
+              "Per-tick cost regression if stuck detection scans are heavy; must remain O(N heroes).",
+              "Contract drift if implementers use different field names; treat these as stable API for WK2."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12/11: implement `hero_stuck_repro` scenario and QA assertions referencing these contract fields.",
+              "Agent 6: implement anti-oscillation + stuck recovery using the Hero-owned signals (no UI/AI cross-imports).",
+              "Agent 8: add debug-only stuck indicator by reading `hero.get_stuck_snapshot()` (no AI imports)."
+            ],
+            "agent_fields": {
+              "contracts_locked": true,
+              "contract_fields": [
+                "Hero.can_attack (bool)",
+                "Hero.attack_blocked_reason (str, optional)",
+                "Hero.stuck_active (bool)",
+                "Hero.stuck_since_ms (int|None, sim-time ms)",
+                "Hero.last_progress_ms (int, sim-time ms)",
+                "Hero.unstuck_attempts (int)",
+                "Hero.stuck_reason (str)",
+                "Hero.get_stuck_snapshot(now_ms=None)->dict"
+              ],
+              "determinism_guardrails": [
+                "Use game.sim.timebase.now_ms() for ages/timeouts; no pygame.time.get_ticks/time.time in sim logic.",
+                "Avoid random.* in sim logic; if RNG is needed, use game.sim.determinism.get_rng(tag).",
+                "Avoid relying on set/dict iteration order for tie-breaks; use stable sorting when needed."
+              ],
+              "test_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/observe_sync.py --qa --scenario hero_stuck_repro --seconds 20 --seed 3 --log-every 240"
+              ]
+            }
+          }
+        }
+        ,
+        "wk2_r2": {
+          "sprint_id": "wk2-hero-polish-ai-sprites",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk2_r2",
+          "round_meta": {
+            "prompt_set_id": "wk2_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T22:09:18"
+          },
+          "prompt_text": "WK2 Round 2 execution (Build A focus): review PRs for contract/determinism compliance and pick a single tunables location (constants module) that AI/QA can read without cycles. Evidence required: python tools/qa_smoke.py --quick PASS; manual smoke: python main.py --no-llm and python main.py --provider mock.",
+          "response": {
+            "received_at_local": "2025-12-20T22:09:18",
+            "status": "complete",
+            "raw": "Executed Agent 03 Round-2 assignment: selected a single, cycle-free tunables module for WK2 locked thresholds so AI/QA/Tools share identical values. Verified qa_smoke gate remains PASS after adding the module.",
+            "summary_bullets": [
+              "Chose a single tunables location for WK2 locked thresholds: `game/sim/hero_guardrails_tunables.py`.",
+              "Values match PM-locked thresholds (stuck displacement/time, unstuck caps/backoff, commitment windows).",
+              "Ran `python tools/qa_smoke.py --quick` and confirmed PASS (determinism_guard PASS)."
+            ],
+            "proposed_changes": [
+              "Add `game/sim/hero_guardrails_tunables.py` as the canonical import point for WK2 thresholds (cycle-free)."
+            ],
+            "acceptance_criteria": [
+              "AI/QA/Tools can import thresholds from a single module without import cycles.",
+              "`python tools/qa_smoke.py --quick` remains PASS."
+            ],
+            "risks": [
+              "If implementers re-encode thresholds locally instead of importing, behavior/test drift can return; mitigation: treat this module as the only source of truth for thresholds."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 6/11/12: import thresholds from `game.sim.hero_guardrails_tunables` (do not duplicate constants elsewhere).",
+              "As PRs land, I will review for: sim-time only, no random.*, stable ordering, and contract field name compliance."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/sim/hero_guardrails_tunables.py"
+              ],
+              "test_commands_run": [
+                "cd C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom",
+                "python tools\\\\qa_smoke.py --quick"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (determinism_guard PASS)",
+              "manual_smoke_note": "Manual smoke requires interactive exit; main.py has no --seconds/headless flag. Recommend PM/human run: `python main.py --no-llm` and `python main.py --provider mock` for 10 minutes each as per gate."
+            }
+          }
+        }
+      }
     }
   }
 }
