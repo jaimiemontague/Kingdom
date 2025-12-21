@@ -3,7 +3,6 @@ Builds context dictionaries for LLM decision making.
 """
 from config import TILE_SIZE
 from game.sim.timebase import now_ms as sim_now_ms
-import pygame
 
 
 class ContextBuilder:

@@ -48,21 +48,23 @@
             "risks": [
               "Accidental `pygame.time.get_ticks()` / `time.time()` usage introduced while implementing “age since decision”.",
               "Adding RNG noise to attractiveness/scoring causes replay/lockstep desync later.",
-              "Using sets/dicts in outcome-affecting ordering (e.g., picking responders/top bounty) introduces nondeterminism."
+              "Using sets/dicts in outcome-affecting ordering (e.g., picking responders/top bounty) introduces nondeterminism.",
+              "Checklist drift risk: if the forbidden-pattern list isn’t copied into the sprint acceptance checklist, agents may reintroduce nondeterminism accidentally."
             ],
             "dependencies": [
               "Agent 3: define hero intent/decision records with sim-time or tick fields.",
               "Agent 6: keep any variability deterministic (seeded RNG streams) and avoid wall-clock use.",
-              "Agent 11/12: include determinism gate in smoke tooling / CI-ish workflows."
+              "Agent 11/12: include determinism gate in smoke tooling / CI-ish workflows.",
+              "Agent 2: incorporate the forbidden-pattern list into `docs/sprint/wk1_acceptance_checklist.md` so everyone runs the same gate."
             ],
             "questions_back_to_pm": [
-              "Should the determinism guard be mandatory for single-profile smoke runs too, or only `--quick`?",
-              "Is it acceptable for UI-only age displays to use wall-clock, or do we want UI to also reflect sim-time for consistency?"
+              "ACK. ETA: <1 day. Blockers: none."
             ],
             "recommended_next_actions": [
-              "Agent 3/6 implement hero intent + last decision schema with tick/sim-time fields.",
-              "Agent 5/8 implement bounty responders/attractiveness with deterministic ordering and no RNG.",
-              "Agent 11/12 wire determinism guard into QA gates and document the command in the sprint DoD."
+              "Add explicit forbidden-pattern bullets (wall-clock time, random.*, hash()) to determinism docs/checklist so all agents have the same guardrails.",
+              "Keep determinism guard mandatory in `tools/qa_smoke.py --quick` and ensure it scans only sim-code directories (avoid UI/graphics false positives).",
+              "Coordinate with Agent 2 to paste the forbidden-pattern list into `docs/sprint/wk1_acceptance_checklist.md`.",
+              "Re-run `python tools/determinism_guard.py` and `python tools/qa_smoke.py --quick` after FS-1/FS-2 land to verify no regressions."
             ],
             "agent_fields": {
               "determinism_risks": [
@@ -75,7 +77,8 @@
                 "Use seeded RNG streams only via `game.sim.determinism.get_rng(tag)` (and avoid RNG entirely for scoring when possible).",
                 "Ensure stable ordering/tie-breaks: never depend on set iteration; sort keys/ids before selection.",
                 "Avoid Python `hash()` for determinism; use stable hashing or explicit IDs."
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

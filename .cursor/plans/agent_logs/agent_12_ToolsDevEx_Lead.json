@@ -26,7 +26,7 @@
           },
           "prompt_text": "Propose one dev flag/command to spawn a deterministic test setup for bounties+intent to speed iteration.",
           "response": {
-            "received_at_local": "2025-12-20T20:19:20-07:00",
+            "received_at_local": "2025-12-20T20:36:56-07:00",
             "status": "complete",
             "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — implemented the sprint-required deterministic mini-scenario + strengthened smoke gate.\\n\\n### Deliverables\\n- Added deterministic headless scenario preset: `python tools/observe_sync.py --no-enemies --scenario intent_bounty --qa`\\n  - Places two deterministic explore bounties (close + far) to exercise bounty response/claim + hero intent activity quickly.\\n- Updated `tools/qa_smoke.py --quick` to include a dedicated bounty scenario preset profile (responders/claim), in addition to existing profiles and determinism guard.\\n- Updated `tools/observe_sync.py` to use `BountySystem` (closer to live engine), to drive sim-time via `set_sim_now_ms(...)`, and to print compact bounty telemetry in logs (`bounties_unclaimed/claimed/spent`).\\n- Fixed QA assertion robustness: if a bounty is claimed before warmup, it still counts as evidence of a responder (claimed bounties are removed from unclaimed list, so the prior check could fail).\\n\\n### Commands\\n- Required gate: `python tools/qa_smoke.py --quick` (expects PASS / exit code 0).\\n- Focused bounty scenario: `python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --no-enemies --scenario intent_bounty --qa`\\n\\n### Notes\\n- Pygame emits a pkg_resources deprecation warning under Python 3.13; non-fatal but noisy.\\n- QA currently logs whether explicit responder fields exist; it does not enforce them yet until responder tracking lands.",
             "summary_bullets": [
@@ -51,23 +51,21 @@
             "risks": [
               "Pygame pkg_resources deprecation warning on Python 3.13 adds noise to logs (non-fatal)",
               "Headless runs depend on SDL dummy drivers being available (SDL_VIDEODRIVER=dummy)",
-              "QA does not yet enforce explicit responder fields until responder tracking is implemented"
+              "QA will automatically tighten once responder tracking fields exist; ensure responder tracking is deterministic to avoid flakiness"
             ],
             "dependencies": [
               "game.systems.bounty.BountySystem",
               "game.sim.timebase.set_sim_now_ms",
               "Pygame headless init support (dummy video/audio drivers)"
             ],
-            "questions_back_to_pm": [
-              "Should duplicate hero-name warnings be promoted to a failing QA condition, or remain informational for now?"
-            ],
+            "questions_back_to_pm": [],
             "recommended_next_actions": [
               "Use python tools/qa_smoke.py --quick as the default pre-merge/QA gate for Build A/B",
-              "Use observe_sync --scenario intent_bounty to iterate quickly on bounty/intent logic without the full game loop",
-              "After responders/attractiveness fields land, tighten observe_sync --qa to assert responder_count>0 via explicit field (not inference)",
-              "After intent taxonomy lands, tighten observe_sync --qa to assert intent is non-empty and in allowed label set"
+              "Ensure docs/sprint/wk1_acceptance_checklist.md stays aligned with the standard commands (qa_smoke --quick + observe_sync --scenario intent_bounty)",
+              "When responder tracking is implemented, verify headless output reports bounty_responder_attr_present=True and bounty_responder_explicit=True (and stays deterministic)"
             ],
             "agent_fields": {
+              "pm_acknowledged": true,
               "dev_tools_suggestions": [
                 "Deterministic headless scenario presets for fast iteration (no rendering)",
                 "One-command smoke gate returning useful exit code + triage-friendly logs",

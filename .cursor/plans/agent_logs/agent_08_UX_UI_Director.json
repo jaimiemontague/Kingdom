@@ -51,7 +51,7 @@
             ],
             "risks": [
               "Intent labels could drift from a future standardized taxonomy; mitigate by mapping to hero.intent when available.",
-              "Per-frame computation/text could cause perf regressions if expanded; keep UI metrics lightweight/cadenced.",
+              "Per-frame computation/text could cause perf regressions if expanded; mitigate by caching UI surfaces/strings and throttling UI-metric recompute.",
               "Overlay clutter near bounties; keep labels compact and avoid multi-line world text."
             ],
             "dependencies": [
@@ -60,16 +60,15 @@
               "Agent 9 (optional): readability guidance/icons for attractiveness tiers over fog-of-war."
             ],
             "questions_back_to_pm": [
-              "Should help overlay default ON (onboarding) or OFF (cleaner HUD) for Build A?",
-              "Should attractiveness remain global/simple, or later align to AI scoring (still deterministic)?",
-              "Do we want a bounty placement mode (toggle B, click to place, ESC cancel) to prevent misfires?"
+              "ACK (PM wk1_r1): help overlay default OFF + persistent 'F3: Help' hint; global attractiveness tier. ETA: same-day for caching pass. Blockers: none."
             ],
             "recommended_next_actions": [
-              "When hero intent/last_decision contract lands, wire UI directly to it and remove inference.",
-              "Add hover tooltips/legend for bounty tiers and verify contrast over fog-of-war.",
-              "If misfires are common, implement bounty placement mode."
+              "Implement PM ask: default help overlay OFF; keep persistent 'F3: Help' hint when hidden.",
+              "Implement PM ask: eliminate per-frame allocations by caching help panel surface and caching bounty label text surfaces; throttle UI-metric recompute cadence.",
+              "Re-run `py_compile`/smoke and keep the UI changes isolated to UI modules only."
             ],
             "agent_fields": {
+              "pm_acknowledged": true,
               "ui_copy": [
                 "Intent: <Idle | Moving | Engaging enemy | Pursuing bounty | Shopping | Returning to safety | Resting>",
                 "Last decision: <action> → <target> (<age>s ago) — <short reason>",
@@ -90,6 +89,63 @@
                 "Bounties clearly show who is responding and how attractive they are.",
                 "All new UI degrades gracefully with missing data (no exceptions).",
                 "Decision age uses sim-time/ticks (not wall-clock) when available."
+              ]
+            }
+          }
+        },
+        "wk1_r2": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r2",
+          "round_meta": {
+            "prompt_set_id": "wk1_final_changes_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T21:10:03.927477-07:00"
+          },
+          "prompt_text": "WK1 Final Changes Round (wk1_r2): If you are Agent 08: complete WK1-BUG-001 and WK1-BUG-002. Gate: python tools/qa_smoke.py --quick must PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T21:10:03.927477-07:00",
+            "status": "complete",
+            "raw": "### Status\\nCompleted WK1-BUG-001 + WK1-BUG-002 (Agent 08) for Build A final changes.\\n\\n### What changed (bugfixes)\\n- **WK1-BUG-001** (no-LLM hero panel): HUD now prefers the hero contract snapshot (`hero.get_intent_snapshot()` / `hero.last_decision`) so **Last decision** populates in `--no-llm` (not LLM-only fields).\\n- **WK1-BUG-002** (bounty placement discoverability): Help overlay copy explicitly explains **B places a bounty at the mouse cursor** and that **Shift/Ctrl** place larger bounties (tiered rewards). Added a short early-session on-screen hint (non-spammy, time-limited) when no bounties exist.\\n\\n### Files changed\\n- `game/ui/hud.py`\\n- `game/systems/bounty.py` (minor responder-field robustness to satisfy QA gate; keeps responder_count >0 once a bounty is explicitly taken)\\n\\n### How to test\\n- Manual (no-LLM):\\n  - `python main.py --no-llm`\\n  - Wait ~30–90s, select a hero → **Last decision** should not stay `(none yet)` for at least one hero.\\n  - Press **F3** → help overlay shows bounty instructions.\\n  - Move mouse over ground and press **B** (Shift/Ctrl optional) → bounty appears at cursor and gold decreases.\\n- Gate: `python tools/qa_smoke.py --quick`\\n\\n### Evidence\\n`python tools/qa_smoke.py --quick` => PASS\\n- `[determinism_guard] PASS: no violations found`\\n- `[qa_smoke] DONE: PASS`\\n",
+            "summary_bullets": [
+              "Fixed hero panel Last decision in --no-llm by reading hero intent/decision contract snapshot (not LLM-only fields).",
+              "Made bounty placement discoverable: explicit help overlay copy + early on-screen hint; mentions Shift/Ctrl tiers (since tiers ship).",
+              "Kept QA gate green: `python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "HUD uses `hero.get_intent_snapshot()` to populate intent + last decision (action/reason/age) across LLM and no-LLM.",
+              "Help overlay: clarify 'B places bounty at mouse' and list Shift/Ctrl tier modifiers.",
+              "Early-session hint: show one short bounty placement hint until first bounty or timeout."
+            ],
+            "acceptance_criteria": [
+              "In `python main.py --no-llm`, at least one hero shows a non-empty Last decision after 30–90s.",
+              "Help overlay (F3) clearly explains bounty placement behavior and tier modifiers.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "Extra on-screen hint could add clutter; mitigated by time limit + only shown when no bounties exist.",
+              "Responder tracking fields are consumed by QA; ensure they remain deterministic and lightweight."
+            ],
+            "dependencies": [
+              "Hero contract snapshot (`hero.get_intent_snapshot()` / `hero.last_decision`) must remain stable (Agent 03/06)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Optional: add small UX affordance for bounty placement mode (toggle B then click) if misfires remain a playtest complaint.",
+              "Optional: add hover tooltip for bounties with full 'Responders: N' + tier text if readability issues persist."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/hud.py",
+                "game/systems/bounty.py"
+              ],
+              "qa_smoke_evidence": [
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS"
               ]
             }
           }

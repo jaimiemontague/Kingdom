@@ -9,6 +9,11 @@
 ### How to run quick perf checks
 
 - **In-game**: press `F2` to toggle the perf overlay; watch loop ms and PF counters.
-- **Headless benchmark**: `python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --seed 3`
+- **Headless benchmark (baseline)**:
+  - Run from repo root: `python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --seed 3`
+  - Optional CSV (append one row): `python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --seed 3 --csv perf_wk1.csv`
+- **Headless benchmark (with bounties / scoring cost)**:
+  - `python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk1.csv`
+  - Note: this becomes especially important once responder/attractiveness scoring lands; it quantifies the added cost.
 
 

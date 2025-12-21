@@ -56,12 +56,12 @@
               "Agent 3/6: ensure intent/decision/bounty scoring is lightweight and cadenced; avoid heavy per-tick recomputation."
             ],
             "questions_back_to_pm": [
-              "Do we want an explicit Build B perf budget target (ms/tick or FPS) tied to a standard scenario + reference machine?"
+              "ACK: PM asks received. ETA: benchmark doc updates + bounties benchmark profile landed now. Blockers: none."
             ],
             "recommended_next_actions": [
-              "Add a perf step to release checklist: run 2–3 standard benchmark profiles and record outputs.",
-              "Once bounty responders/attractiveness lands, extend headless benchmark to include bounties and measure scoring cost.",
-              "Encourage UI changes to follow a refresh-on-cadence pattern to avoid per-frame churn."
+              "Document benchmark commands + CSV location in docs/perf_sanity_checklist.md (baseline + with-bounties profile).",
+              "Add/maintain a benchmark profile including bounties (tools/perf_benchmark.py --bounties N) to quantify scoring cost once responders/attractiveness lands.",
+              "Run a small baseline and record outputs before/after bounty scoring merges to detect regressions."
             ],
             "agent_fields": {
               "hotspots": [
@@ -80,7 +80,8 @@
                 "Overlay panel cached; rebuild on cadence/value change only",
                 "PF counters visible; loop timing EMA visible (events/update/render)",
                 "Headless perf benchmark executes and reports ms/tick + PF stats"
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

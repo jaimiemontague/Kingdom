@@ -70,4 +70,17 @@ Run:
 
 It statically scans simulation code and fails if it finds new wall-clock time usage (e.g. `pygame.time.get_ticks()`, `time.time()`) or unseeded RNG (`random.*`).
 
+## Forbidden patterns (simulation code)
+
+These should **not** appear inside simulation logic (`game/entities`, `game/systems`, `ai`):
+
+- **Wall-clock time**:
+  - `pygame.time.get_ticks()`
+  - `time.time()` / `time.monotonic()`
+  - `datetime.now()` / `datetime.utcnow()`
+- **Unseeded RNG**:
+  - `random.random()` / `random.randint()` / `random.choice()` / `random.shuffle()` (use `game.sim.determinism.get_rng(tag)` instead)
+- **Unstable hashing**:
+  - `hash(...)` (Python’s hash is process-randomized; use stable hashing like `zlib.crc32` or explicit IDs)
+
 

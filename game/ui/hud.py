@@ -27,7 +27,14 @@ class HUD:
         self.font_tiny = pygame.font.Font(None, 16)
 
         # Help/controls overlay (kept lightweight; toggled by engine)
-        self.show_help = True
+        # PM decision (wk1): default OFF + persistent hint when hidden.
+        self.show_help = False
+        self._help_panel_cache = None  # pygame.Surface built once (avoid per-frame allocations)
+        self._help_hint_cache = self.font_small.render("F3: Help", True, (180, 180, 180))
+
+        # Session start (sim-time) for one-time / early hints.
+        self._session_start_ms = int(sim_now_ms())
+        self._bounty_hint_cache = None
         
         # Messages
         self.messages = []
@@ -56,13 +63,34 @@ class HUD:
     def toggle_help(self):
         """Toggle help/controls visibility."""
         self.show_help = not self.show_help
+        # Nothing else to do; cached help panel surface is re-used.
 
     def _compute_hero_intent(self, hero) -> str:
         """
         Best-effort "intent" label derived from current state/target.
         This is intentionally UI-only (safe fallback until intent taxonomy is standardized).
         """
-        # Bounty pursuit is encoded as hero.target dict {"type": "bounty", ...}
+        # Preferred: hero intent snapshot contract (works in no-LLM + LLM).
+        try:
+            if hasattr(hero, "get_intent_snapshot"):
+                snap = hero.get_intent_snapshot(now_ms=int(sim_now_ms()))
+                if isinstance(snap, dict):
+                    intent = str(snap.get("intent", "") or "")
+                    if intent:
+                        mapping = {
+                            "idle": "Idle",
+                            "pursuing_bounty": "Pursuing bounty",
+                            "shopping": "Shopping",
+                            "returning_to_safety": "Returning to safety",
+                            "engaging_enemy": "Engaging enemy",
+                            "defending_building": "Defending building",
+                            "attacking_lair": "Attacking lair",
+                        }
+                        return mapping.get(intent, intent.replace("_", " ").title())
+        except Exception:
+            pass
+
+        # Fallback: Bounty pursuit is encoded as hero.target dict {"type": "bounty", ...}
         try:
             if isinstance(getattr(hero, "target", None), dict) and hero.target.get("type") == "bounty":
                 btype = hero.target.get("bounty_type", "bounty")
@@ -95,26 +123,47 @@ class HUD:
         action = None
         target = ""
         reason = ""
+        age_s = None
+
+        # Preferred: hero intent snapshot contract (works in no-LLM + LLM).
+        try:
+            if hasattr(hero, "get_intent_snapshot"):
+                snap = hero.get_intent_snapshot(now_ms=int(sim_now_ms()))
+                if isinstance(snap, dict):
+                    last_decision = snap.get("last_decision", None)
+                    if isinstance(last_decision, dict):
+                        action = last_decision.get("action", None)
+                        reason = last_decision.get("reason", "") if isinstance(last_decision.get("reason", ""), str) else ""
+                        age_ms = last_decision.get("age_ms", None)
+                        if age_ms is not None:
+                            try:
+                                age_s = max(0.0, float(age_ms) / 1000.0)
+                            except Exception:
+                                age_s = None
+        except Exception:
+            pass
+
+        # Fallback: legacy LLM decision dict
         try:
             d = getattr(hero, "last_llm_action", None) or {}
             if isinstance(d, dict):
-                action = d.get("action", None)
+                action = action or d.get("action", None)
                 target = d.get("target", "") if isinstance(d.get("target", ""), str) else ""
-                reason = d.get("reasoning", "") if isinstance(d.get("reasoning", ""), str) else ""
+                reason = reason or (d.get("reasoning", "") if isinstance(d.get("reasoning", ""), str) else "")
         except Exception:
-            action = None
+            action = action
 
         if not action:
             return "Last decision: (none yet)", (150, 150, 150)
 
-        # Age (ms) is tracked on the hero; treat 0 as unknown.
-        age_s = None
-        try:
-            t_ms = int(getattr(hero, "last_llm_decision_time", 0) or 0)
-            if t_ms > 0:
-                age_s = max(0.0, (float(sim_now_ms()) - float(t_ms)) / 1000.0)
-        except Exception:
-            age_s = None
+        # Age: prefer contract age_ms; fallback to legacy last_llm_decision_time.
+        if age_s is None:
+            try:
+                t_ms = int(getattr(hero, "last_llm_decision_time", 0) or 0)
+                if t_ms > 0:
+                    age_s = max(0.0, (float(sim_now_ms()) - float(t_ms)) / 1000.0)
+            except Exception:
+                age_s = None
 
         parts = [str(action)]
         if target:
@@ -190,8 +239,25 @@ class HUD:
         if self.show_help:
             self._render_help(surface, origin=(self.screen_width - 310, 5))
         else:
-            hint = self.font_small.render("F3: Help", True, (180, 180, 180))
+            hint = self._help_hint_cache
             surface.blit(hint, (self.screen_width - hint.get_width() - 12, 12))
+
+        # Early, non-spammy bounty hint (addresses WK1-BUG-002 discoverability).
+        # Show until the player places their first bounty, and only for the first ~90s.
+        try:
+            now_ms = int(sim_now_ms())
+            elapsed_ms = now_ms - int(getattr(self, "_session_start_ms", now_ms))
+            has_any_bounty = bool(game_state.get("bounties", []))
+            if (not has_any_bounty) and elapsed_ms < 90000 and (not self.show_help):
+                if self._bounty_hint_cache is None:
+                    self._bounty_hint_cache = self.font_small.render(
+                        "Tip: Press B to place a bounty at mouse (Shift/Ctrl: bigger).",
+                        True,
+                        (220, 220, 255),
+                    )
+                surface.blit(self._bounty_hint_cache, (20, self.top_bar_height + 28))
+        except Exception:
+            pass
         
         # Render messages
         self.render_messages(surface)
@@ -204,37 +270,41 @@ class HUD:
     def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]):
         """Render a compact controls/help panel."""
         x0, y0 = origin
-        pad = 10
-        w = 300
-        lines = [
-            ("Controls (F3 to hide)", COLOR_GOLD),
-            ("Build:", (200, 200, 200)),
-            ("1 Warrior  2 Market  3 Ranger  4 Rogue  5 Wizard", COLOR_WHITE),
-            ("6 Blacksmith  7 Inn  8 Trading Post", COLOR_WHITE),
-            ("T Temple  G Gnome  E Elf  V Dwarf", COLOR_WHITE),
-            ("U Guardhouse  Y Ballista  O Wizard Tower", COLOR_WHITE),
-            ("F Fairgrounds  I Library  R Royal Gardens", COLOR_WHITE),
-            ("Actions:", (200, 200, 200)),
-            ("H Hire hero (select a built guild first)", COLOR_WHITE),
-            ("B Place bounty ($50)   P Use potion (selected hero)", COLOR_WHITE),
-            ("View:", (200, 200, 200)),
-            ("Space center castle  ESC pause/cancel", COLOR_WHITE),
-            ("WASD pan  Wheel or +/- zoom  F1 debug  F2 perf", COLOR_WHITE),
-        ]
+        if self._help_panel_cache is None:
+            pad = 10
+            w = 300
+            lines = [
+                ("Controls (F3 to hide)", COLOR_GOLD),
+                ("Build:", (200, 200, 200)),
+                ("1 Warrior  2 Market  3 Ranger  4 Rogue  5 Wizard", COLOR_WHITE),
+                ("6 Blacksmith  7 Inn  8 Trading Post", COLOR_WHITE),
+                ("T Temple  G Gnome  E Elf  V Dwarf", COLOR_WHITE),
+                ("U Guardhouse  Y Ballista  O Wizard Tower", COLOR_WHITE),
+                ("F Fairgrounds  I Library  R Royal Gardens", COLOR_WHITE),
+                ("Actions:", (200, 200, 200)),
+                ("H Hire hero (select a built guild first)", COLOR_WHITE),
+                ("B Bounty at mouse (cost=reward). Shift/Ctrl: bigger", COLOR_WHITE),
+                ("P Use potion (selected hero)", COLOR_WHITE),
+                ("View:", (200, 200, 200)),
+                ("Space center castle  ESC pause/cancel", COLOR_WHITE),
+                ("WASD pan  Wheel or +/- zoom  F1 debug  F2 perf", COLOR_WHITE),
+            ]
 
-        # Background box sized by content
-        h = pad * 2 + len(lines) * 16 + 6
-        panel = pygame.Surface((w, h), pygame.SRCALPHA)
-        panel.fill((*COLOR_UI_BG, 235))
-        pygame.draw.rect(panel, COLOR_UI_BORDER, (0, 0, w, h), 2)
+            # Background box sized by content
+            h = pad * 2 + len(lines) * 16 + 6
+            panel = pygame.Surface((w, h), pygame.SRCALPHA)
+            panel.fill((*COLOR_UI_BG, 235))
+            pygame.draw.rect(panel, COLOR_UI_BORDER, (0, 0, w, h), 2)
 
-        y = pad
-        for text, color in lines:
-            t = self.font_tiny.render(text, True, color)
-            panel.blit(t, (pad, y))
-            y += 16
+            y = pad
+            for text, color in lines:
+                t = self.font_tiny.render(text, True, color)
+                panel.blit(t, (pad, y))
+                y += 16
 
-        surface.blit(panel, (x0, y0))
+            self._help_panel_cache = panel
+
+        surface.blit(self._help_panel_cache, (x0, y0))
     
     def render_messages(self, surface: pygame.Surface):
         """Render floating messages."""

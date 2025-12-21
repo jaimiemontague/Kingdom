@@ -50,22 +50,22 @@
             "risks": [
               "STARTING_GOLD=1500 may be too tight for some EA onboarding expectations; adjust upward if early build options feel constrained.",
               "Typed bounties other than attack_lair (defend_building/hunt_enemy_type) still need completion hooks to match the completion-based model.",
-              "Modifier-key bounty tiers may be non-discoverable without an additional HUD hint/tooltips."
+              "Modifier-key bounty tiers may be non-discoverable without an additional HUD hint/tooltips (PM decision: only keep tiers for WK1 if a minimal hint ships)."
             ],
             "dependencies": [
               "Optional: Agent 8 to add UI hint text for bounty tiers (B / Shift+B / Ctrl+B).",
               "Optional: Agents 3/8 responders + attractiveness UI/logic workstream (separate from tuning)."
             ],
             "questions_back_to_pm": [
-              "Do we want STARTING_GOLD closer to 1500 (tradeoffs) or 2000–3000 (more forgiving) for Build B?",
-              "Should we treat modifier-key tiered bounties as acceptable UX for wk1, or prioritize a small UI affordance (button/menu)?"
+              "ACK (Agent 05): PM asks done. Files changed: docs/sprint/wk1_gameplay_tuning.md, config.py, game/engine.py, game/systems/bounty.py, ai/basic_ai.py, game/entities/lair.py, game/entities/building.py. qa_smoke --quick: PASS. Typed bounties cannot proximity-claim (BountySystem.check_claims is explore-only; attack_lair pays on lair_cleared). ETA: done. Blockers: none."
             ],
             "recommended_next_actions": [
-              "Run a 10-minute manual session focusing on early pacing (first 3 minutes) and lair bounty behavior; adjust only constants if needed.",
-              "Add a small HUD tip mentioning bounty tiers (Shift/Ctrl modifiers) after Build A stabilizes.",
-              "Future: implement completion hooks for defend_building and hunt_enemy_type bounties to match the completion-based model."
+              "Coordinate with Agent 8: either add a minimal HUD hint for bounty tier modifiers (B / Shift+B / Ctrl+B) or, if we decide not to ship the hint for Build A, revert to a single default bounty reward for Build A.",
+              "Run a short manual feel test to decide whether STARTING_GOLD stays at 1500 or is raised to 2000–3000 (per PM decision).",
+              "Follow-up (later): implement completion hooks for defend_building and hunt_enemy_type bounties so all typed bounties are completion-based and consistent."
             ],
             "agent_fields": {
+              "pm_acknowledged": true,
               "tuning_recommendations": [
                 "BOUNTY_REWARD_LOW=25, BOUNTY_REWARD_MED=60, BOUNTY_REWARD_HIGH=150",
                 "LAIR_BOUNTY_COST=90; LAIR_STASH_GROWTH_PER_SPAWN=8; slight per-lair spawn interval slowdowns",
@@ -74,7 +74,11 @@
               "metrics_or_targets": [
                 "Within first 3 minutes, at least one clear lever/decision prompt is surfaced (bounty tip/starter lair bounty).",
                 "Clearing an initial lair should typically yield a satisfying payout (bounty + stash) without spiking difficulty uncontrollably."
-              ]
+              ],
+              "pm_followups": {
+                "qa_smoke_quick": "PASS",
+                "typed_bounty_claim_semantics": "Proximity-claiming restricted to explore only; attack_lair bounty paid on lair_cleared; other typed bounties are not proximity-claimed."
+              }
             }
           }
         }

@@ -44,11 +44,15 @@ Not implementing multiplayer, but we keep the sim future-friendly.
 
 ### Build A (Midweek) must prove
 - [ ] Gates 0, 1, 2 pass (stability + intent/decision inspect + bounty legibility).
+- [ ] `python tools/qa_smoke.py --quick` passes (includes determinism guard).
+- [ ] Manual smoke (10 min) passes in **mock/no-LLM** modes.
 
 ### Build B (Endweek) must prove
 - [ ] Gates 0, 1, 2 still pass after changes.
 - [ ] Gate 3 passes (early pacing/aliveness).
 - [ ] Minor tuning/polish does not reduce clarity.
+- [ ] `python tools/qa_smoke.py --quick` passes (includes determinism guard).
+- [ ] Manual smoke (10 min) passes in **mock/no-LLM** modes.
 
 ## Notes (what to cut immediately if it risks the week)
 - If a change adds cross-system coupling, large refactors, or increases bug surface area: **cut/defer**.

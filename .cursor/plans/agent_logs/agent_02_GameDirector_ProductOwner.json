@@ -50,27 +50,29 @@
             "risks": [
               "Scope creep (adding new systems instead of clarity/pacing polish)",
               "Non-deterministic time usage leaking into sim logic",
-              "UI clutter/spam reducing readability"
+              "UI clutter/spam reducing readability",
+              "Checklist drift vs PM decisions (Build A/B split + mandatory QA gates) if not kept in sync"
             ],
             "dependencies": [
               "Agent 3: thin data contracts for intent/last decision + bounty evaluation fields",
               "Agent 6: intent taxonomy + decision logging rules across LLM/mock/no-LLM",
-              "Agent 8: UI copy/layout to display intent/decision + responders/attractiveness"
+              "Agent 8: UI copy/layout to display intent/decision + responders/attractiveness",
+              "Tools: `python tools/qa_smoke.py --quick` available and treated as mandatory pre-merge gate"
             ],
             "questions_back_to_pm": [
-              "Should FS-3 (early pacing guardrail) be strictly Build B, or can a minimal HUD-prompt-only version land in Build A if safe?",
-              "Should we lock the full intent taxonomy this week, or allow a smaller subset for faster integration?"
+              "ACK: PM decisions received (FS-3 Build B only; full intent taxonomy locked). ETA: checklist updated now. Blockers: none."
             ],
             "recommended_next_actions": [
-              "PM: confirm Build A vs Build B split for early pacing (FS-3)",
-              "PM: confirm intent taxonomy strictness for WK1",
-              "Engineering: implement to the checklist gates; treat checklist as the release signoff"
+              "Update `docs/sprint/wk1_acceptance_checklist.md` to include explicit Build A vs Build B gates plus mandatory `qa_smoke --quick` and 10-min mock/no-LLM manual smoke in both",
+              "Keep checklist aligned to locked intent taxonomy and Build A global attractiveness tier policy (documented in PM decisions)",
+              "Engineering: use the checklist as the release signoff; do not merge Build A/B items unless gates are met"
             ],
             "agent_fields": {
               "acceptance_checklist_path": "docs/sprint/wk1_acceptance_checklist.md",
               "qa_gate_usage": "Use checklist as single source of truth for Build A/Build B signoff",
               "build_split_recommendation": "Build A: gates 0/1/2; Build B: retain plus gate 3 (early aliveness)",
-              "pillars_reference": "docs/vision_pillars.md"
+              "pillars_reference": "docs/vision_pillars.md",
+              "pm_acknowledged": true
             }
           }
         }

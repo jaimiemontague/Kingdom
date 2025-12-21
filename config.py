@@ -217,6 +217,13 @@ BOUNTY_REWARD_LOW = 25
 BOUNTY_REWARD_MED = 60
 BOUNTY_REWARD_HIGH = 150
 
+# Early pacing guardrail (FS-3 / Build B): deterministic nudge to surface bounties early.
+# Values:
+# - "auto": default behavior (tip at ~35s if no bounties; starter lair bounty at ~90s if none + affordable)
+# - "off": disable entirely
+# - "force": fire immediately (for QA verification), still respecting "don't trigger if any bounties exist"
+EARLY_PACING_NUDGE_MODE = os.getenv("EARLY_PACING_NUDGE_MODE", "auto")
+
 # Economy settings
 STARTING_GOLD = 1500
 TAX_RATE = 0.20

@@ -219,7 +219,8 @@ class BasicAI:
             decision = self.llm_brain.get_decision(hero.name)
             if decision:
                 context = ContextBuilder.build_hero_context(hero, game_state)
-                self.apply_llm_decision(hero, decision, game_state, source="llm", context=context)
+                src = "mock" if getattr(self.llm_brain, "provider_name", None) == "mock" else "llm"
+                self.apply_llm_decision(hero, decision, game_state, source=src, context=context)
                 hero.pending_llm_decision = False
         
         # State machine behavior

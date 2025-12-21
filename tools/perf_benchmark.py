@@ -43,6 +43,7 @@ from game.entities import (  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
 from game.systems import perf_stats  # noqa: E402
+from game.systems.bounty import Bounty  # noqa: E402
 from ai.basic_ai import BasicAI  # noqa: E402
 
 
@@ -56,6 +57,7 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=3)
     ap.add_argument("--heroes", type=int, default=20, help="number of warrior heroes")
     ap.add_argument("--enemies", type=int, default=20, help="number of goblins")
+    ap.add_argument("--bounties", type=int, default=0, help="number of bounties to include (to measure scoring cost)")
     ap.add_argument("--realtime", action="store_true", help="advance pygame time similarly to realtime (slower)")
     ap.add_argument("--csv", type=str, default="", help="optional path to append one row of results")
     ns = ap.parse_args()
@@ -105,6 +107,16 @@ def main() -> int:
     combat = CombatSystem()
     ai = BasicAI(llm_brain=None)
 
+    bounties = []
+    n_bounties = max(0, int(ns.bounties))
+    if n_bounties:
+        # Place bounties in a loose line outward from the castle to encourage evaluation/pursuit.
+        # Deterministic placement derived from seed + index (no wall-clock).
+        for i in range(n_bounties):
+            bx = min((MAP_WIDTH - 2) * TILE_SIZE, castle.center_x + TILE_SIZE * (8 + (i % 12)))
+            by = min((MAP_HEIGHT - 2) * TILE_SIZE, castle.center_y + TILE_SIZE * ((i // 12) * 2))
+            bounties.append(Bounty(bx, by, reward=60, bounty_type="explore"))
+
     dt = 1.0 / 60.0
     ticks = int(float(ns.seconds) * 60.0)
 
@@ -129,7 +141,7 @@ def main() -> int:
             "guards": [],
             "enemies": enemies,
             "buildings": buildings,
-            "bounties": [],
+            "bounties": bounties,
             "castle": castle,
             "economy": economy,
             "world": world,
@@ -177,7 +189,7 @@ def main() -> int:
     pf_ms_per_tick = (pf_total_ms / ticks_done) if ticks_done else 0.0
 
     print("[perf] seconds:", sim_s, "ticks:", ticks_done)
-    print("[perf] entities: heroes=", len(heroes), "enemies(end)=", len(enemies), "peasants=", len(peasants))
+    print("[perf] entities: heroes=", len(heroes), "enemies(end)=", len(enemies), "peasants=", len(peasants), "bounties=", len(bounties))
     print("[perf] ms/tick total:", _fmt(total_ms_per_tick))
     print(
         "[perf] ms/tick breakdown: ai=",
@@ -205,6 +217,7 @@ def main() -> int:
                         "seed",
                         "heroes",
                         "enemies_start",
+                        "bounties",
                         "enemies_end",
                         "ticks",
                         "ms_per_tick_total",
@@ -225,6 +238,7 @@ def main() -> int:
                     int(ns.seed),
                     int(ns.heroes),
                     int(ns.enemies),
+                    int(len(bounties)),
                     int(len(enemies)),
                     int(ticks_done),
                     float(total_ms_per_tick),

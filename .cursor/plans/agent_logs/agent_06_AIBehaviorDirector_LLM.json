@@ -50,22 +50,21 @@
             "risks": [
               "UI/perf regressions if logging allocates per frame or stores too much history",
               "Intent/decision semantics drift if derivation is duplicated across systems",
-              "Typed bounty completion semantics accidentally auto-claiming via proximity"
+              "Typed bounty completion semantics accidentally auto-claiming via proximity",
+              "Duplicate hero names can collide LLM decision routing if any path keys by hero.name (warning today, but can become correctness issue)"
             ],
             "dependencies": [
-              "Agent 3: confirm thin data contract for intent + last_decision to minimize churn",
               "Agent 8: UI copy/layout for intent + last decision + age formatting",
-              "Agent 11: QA smoke assertions for non-empty intent and presence of a decision record"
+              "Agent 11: QA smoke assertions for non-empty intent and presence of a decision record",
+              "Agent 3 contract is the source of truth for decision record shape (HeroDecisionRecord); keep AI-side context additions inside record.context"
             ],
             "questions_back_to_pm": [
-              "Do we keep only the last decision (P0), or do you want a tiny ring buffer (last 3) despite higher UI/perf risk?",
-              "Should intent/decision be shown in the main hero panel immediately (P0) or only in debug panel for Build A?",
-              "Do you want to distinguish mock vs real LLM sources (source=mock) for debugging?"
+              "ACK: PM asks completed (aligned with Agent 3 HeroDecisionRecord contract; allowlist + deterministic fallback; mock vs llm source tagging). ETA: done. Blockers: none."
             ],
             "recommended_next_actions": [
-              "Finalize HeroDecisionRecord keys/types (action, reason, at_ms, inputs_summary, source, intent)",
-              "Wire hero panel to display intent + last decision + age with caching to avoid per-frame string churn",
-              "Extend QA smoke/observer to assert intent becomes non-empty and a decision record appears within N seconds"
+              "Coordinate with Agent 8 to display hero intent + last decision in the main hero panel using hero.get_intent_snapshot() (use age_ms from contract), with cached formatting to avoid per-frame allocations",
+              "Coordinate with Agent 11/12 to add/keep deterministic QA assertions: intent present + last_decision present in base, no-LLM, and mock profiles",
+              "If LLM decisions are keyed by hero.name anywhere, consider a stable unique hero key/uid to eliminate duplicate-name collisions (small follow-up PR if PM wants it in Build A)"
             ],
             "agent_fields": {
               "intent_taxonomy": [
@@ -88,7 +87,8 @@
                 "Keep a shared allowed action set and validate parsed LLM output against it",
                 "Treat malformed/unknown actions as parse failure and use deterministic fallback decision",
                 "Prefer compact structured inputs summaries for debug over storing full prompts"
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

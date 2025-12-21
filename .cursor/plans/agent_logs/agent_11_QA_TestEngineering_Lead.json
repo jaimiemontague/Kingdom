@@ -51,21 +51,22 @@
             "risks": [
               "QA assertions may become flaky if future tuning makes bounties unattractive again; mitigate by keeping a dedicated deterministic QA scenario/profile.",
               "Duplicate hero names can make logs confusing and could cause future per-name maps to collide; worth addressing when convenient.",
-              "Determinism guard may block legitimate UI-only wall-clock usage if code is placed under scanned dirs; keep UI/time in game/ui or excluded dirs."
+              "Determinism guard may block legitimate UI-only wall-clock usage if code is placed under scanned dirs; keep UI/time in game/ui or excluded dirs.",
+              "Intent/decision semantics may drift between BasicAI logging and Agent 6's policy; mitigate by aligning on a single contract and source labels."
             ],
             "dependencies": [
               "Relies on existing headless runner pattern in tools/observe_sync.py and deterministic timebase in game/sim/timebase.py.",
-              "Upstream hero intent/decision contract in game/entities/hero.py (best-effort delegation; still works with fallback if absent)."
+              "Upstream hero intent/decision contract in game/entities/hero.py (best-effort delegation; still works with fallback if absent).",
+              "Agent 6: confirm intent taxonomy + decision logging/source semantics match the sprint policy and UI expectations."
             ],
-            "questions_back_to_pm": [
-              "No blockers. Do you want duplicate hero-name collisions treated as a QA failure (later), or just logged as a warning for now?"
-            ],
+            "questions_back_to_pm": [],
             "recommended_next_actions": [
-              "PM: make qa_smoke --quick a required pre-merge gate for Build A/Build B.",
-              "UX/UI agent: once intent + bounty UI lands, add a small manual check: selected hero shows intent + last decision age; bounty shows responders + attractiveness tier.",
-              "Tools agent: consider adding a single CLI flag to run the deterministic intent+bounty scenario directly for faster iteration loops."
+              "ACK (ETA: today): keep qa_smoke --quick non-flaky by relying on the deterministic intent_bounty scenario preset (tuning-independent gate).",
+              "Coordinate with Agent 6 to verify intent/decision logging semantics (taxonomy + source labels) match the sprint policy.",
+              "After explicit responder tracking lands, tighten QA to assert responder count > 0 (not just claim evidence) in the deterministic scenario."
             ],
             "agent_fields": {
+              "pm_acknowledged": true,
               "smoke_updates": [
                 "qa_smoke --quick runs determinism_guard first and fails fast on nondeterminism regressions.",
                 "observe_sync supports --qa assertions (bounty exists + responder/claim; intent non-empty when field exists).",

@@ -35,6 +35,13 @@ def parse_args():
         action="store_true",
         help="Disable LLM integration, use only basic AI"
     )
+    parser.add_argument(
+        "--early-nudge",
+        type=str,
+        default=None,
+        choices=["auto", "off", "force"],
+        help="Early pacing nudge mode (Build B). Overrides config EARLY_PACING_NUDGE_MODE if set."
+    )
     return parser.parse_args()
 
 
@@ -49,7 +56,7 @@ def main():
     
     # Create the game engine
     print("Initializing game engine...")
-    game = GameEngine()
+    game = GameEngine(early_nudge_mode=args.early_nudge)
     
     # Set up AI
     if args.no_llm:

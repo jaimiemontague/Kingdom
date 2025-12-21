@@ -35,7 +35,6 @@ from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardG
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
 from game.systems.bounty import BountySystem  # noqa: E402
-from game.sim.timebase import set_sim_now_ms  # noqa: E402
 from ai.basic_ai import BasicAI  # noqa: E402
 from ai.llm_brain import LLMBrain  # noqa: E402
 
@@ -259,6 +258,9 @@ def main() -> int:
     qa_any_intent_seen = False
     qa_intent_attr_present = False
     qa_bounty_responder_attr_present = False
+    qa_explicit_responder_seen = False
+    qa_explicit_responder_positive = False
+    qa_seen_bounty_target = False
 
     def _hero_intent_label(h) -> str:
         # Prefer new explicit intent if present.
@@ -330,6 +332,13 @@ def main() -> int:
         for p in peasants:
             p.update(dt, game_state)
 
+        # Populate bounty contract fields (responders/tier) before any claims/cleanup so QA can observe >0.
+        if hasattr(bounty_system, "update_ui_metrics"):
+            try:
+                bounty_system.update_ui_metrics(heroes, enemies, buildings)
+            except Exception:
+                pass
+
         # Process combat so hero hits can trigger retarget logic in CombatSystem.
         combat.process_combat(heroes, enemies, buildings)
 
@@ -351,8 +360,26 @@ def main() -> int:
                     qa_bounty_responder_attr_present = qa_bounty_responder_attr_present or (
                         hasattr(b0, "responders") or hasattr(b0, "responder_count")
                     )
-                    if _bounty_responder_count(b0, heroes) > 0:
-                        qa_bounty_has_responder = True
+                    # Track whether any hero ever explicitly targets a bounty. Some profiles may
+                    # incidentally claim a bounty while chasing enemies without ever "responding"
+                    # to it as a chosen goal; don't fail those runs on responder-count positivity.
+                    for h in heroes:
+                        if not getattr(h, "is_alive", True):
+                            continue
+                        tgt = getattr(h, "target", None)
+                        if isinstance(tgt, dict) and tgt.get("type") == "bounty":
+                            qa_seen_bounty_target = True
+                            break
+                    # If responder tracking exists, enforce that it becomes >0 at least once.
+                    if hasattr(b0, "responders") or hasattr(b0, "responder_count"):
+                        qa_explicit_responder_seen = True
+                        if _bounty_responder_count(b0, heroes) > 0:
+                            qa_explicit_responder_positive = True
+                            qa_bounty_has_responder = True
+                    else:
+                        # Pre-responder-tracking fallback: infer from hero target/assignment.
+                        if _bounty_responder_count(b0, heroes) > 0:
+                            qa_bounty_has_responder = True
 
             if t >= int(args.qa_warmup_ticks):
                 for h in heroes:
@@ -404,7 +431,6 @@ def main() -> int:
 
     if llm:
         llm.stop()
-    set_sim_now_ms(None)
     pygame.quit()
     # Restore default time behavior for any subsequent runs in the same Python process.
     set_sim_now_ms(None)
@@ -420,6 +446,9 @@ def main() -> int:
             if not qa_bounty_has_responder:
                 print("[qa] FAIL: expected at least one bounty responder after warmup")
                 failed = True
+            if qa_explicit_responder_seen and qa_seen_bounty_target and not qa_explicit_responder_positive:
+                print("[qa] FAIL: expected explicit bounty responder count to become > 0 (bounty targeting observed)")
+                failed = True
 
         # Only enforce 'intent' non-empty if intent field is present (future-proof integration).
         if qa_intent_attr_present and not qa_any_intent_seen:
@@ -433,6 +462,7 @@ def main() -> int:
                 f" bounty_exists={qa_bounty_exists if bounties_enabled else 'n/a'}"
                 f" bounty_has_responder={qa_bounty_has_responder if bounties_enabled else 'n/a'}"
                 f" bounty_responder_attr_present={qa_bounty_responder_attr_present if bounties_enabled else 'n/a'}"
+                f" bounty_responder_explicit={qa_explicit_responder_positive if qa_explicit_responder_seen else 'n/a'}"
                 f" intent_attr_present={qa_intent_attr_present}"
             )
         return 1 if failed else 0

@@ -55,13 +55,12 @@
               "Agent 3/5/6 to provide attractiveness tiers (low/med/high) for UI to display"
             ],
             "questions_back_to_pm": [
-              "Confirm tier color language: blue/gold/orange (cool→warm) vs green/yellow/red",
-              "Confirm visibility policy: always-visible vs hover/selection to reduce clutter",
-              "As more bounty types appear, should iconography emphasize action or target?"
+              "ACK (PM wk1_r1). ETA: complete (tier colors aligned to Low=gray, Med=gold, High=green; caching already in place). Blockers: none."
             ],
             "recommended_next_actions": [
               "Agent 8 integrate `get_bounty_badge()` into bounty overlay rendering and/or tooltip panel",
               "After attractiveness tiers land, wire tier strings into badges (low/med/high)",
+              "If clutter is noticeable, prefer hover/selection badges by default; keep always-visible as an optional toggle later",
               "Optionally replace procedural icons with hand-drawn PNGs later without changing UI contract"
             ],
             "agent_fields": {
@@ -74,7 +73,8 @@
                 "Use 1px near-black outline around light shapes",
                 "Prefer shapes over text at small sizes; prioritize value contrast over hue",
                 "Avoid smoothed scaling; keep icons aligned to the pixel grid"
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

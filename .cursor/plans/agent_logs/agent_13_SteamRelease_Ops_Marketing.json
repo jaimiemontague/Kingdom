@@ -47,22 +47,19 @@
             "risks": [
               "Overstating tuning/perf results before measurement or QA confirmation.",
               "Listing features that slip out of the build due to scope changes.",
-              "Known issues list incomplete without QA feedback loop."
+              "Known issues list incomplete without QA feedback loop.",
+              "Forgetting to include the short mock/no-LLM reminder in the public post (PM decision)."
             ],
             "dependencies": [
-              "Final merged change list for Build A and Build B (what actually shipped).",
-              "QA results from `python tools/qa_smoke.py --quick` + manual smoke confirmation.",
-              "PM decision on naming/versioning (e.g., v1.2.1/v1.2.2 vs Build A/Build B)."
+              "Final merged change list for Build A (publish as Prototype v1.2.1).",
+              "Final merged change list for Build B (publish as Prototype v1.2.2, including early pacing guardrail description).",
+              "QA known-issues list + confirmation that `python tools/qa_smoke.py --quick` and manual 10-minute smoke passed for each build."
             ],
-            "questions_back_to_pm": [
-              "How should we label these builds publicly: semantic Prototype versions or ‘Week 1 Build A/Build B’?",
-              "Any must-mention headline fix/tuning change for each build once code lands?",
-              "Should each Steam post include a short reminder about running with mock/no-LLM (no API keys)?"
-            ],
+            "questions_back_to_pm": [],
             "recommended_next_actions": [
-              "After Build A merge: replace placeholders with exact shipped bullets + QA-confirmed known issues; post Steam announcement.",
-              "After Build B merge: update tuning/perf bullets with verified statements only; post endweek announcement.",
-              "Optionally pin a ‘How to run mock/no-LLM’ Steam discussion post and link it in announcements."
+              "After Build A merge + QA: update draft to Prototype v1.2.1 announcement-ready copy (only verified bullets) + QA-confirmed known issues; include mock/no-LLM reminder; publish.",
+              "After Build B merge + QA: update draft to Prototype v1.2.2 announcement-ready copy + early pacing guardrail description + QA-confirmed known issues; include mock/no-LLM reminder; publish.",
+              "Prepare (optional) pinned Steam discussion post: ‘How to run mock/no-LLM (no API keys)’ and link it in both announcements."
             ],
             "agent_fields": {
               "patch_notes_build_a": [
@@ -78,7 +75,8 @@
               "known_issues": [
                 "(Build A placeholder) Possible UI overlap at small resolutions when bounties cluster; ‘No decision yet’ briefly after spawn.",
                 "(Build B placeholder) Responder count may lag 1–2 ticks after retarget; rare UI jitter when panning over dense overlays."
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

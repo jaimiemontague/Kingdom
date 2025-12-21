@@ -1,7 +1,11 @@
 ## Build A (Midweek) — Patch Notes Draft
 
 ### Title
-**Kingdom Sim — Week 1 Broad Sweep (Build A / Midweek)**
+**Kingdom Sim — Prototype v1.2.1 (Build A / Midweek)**
+
+### No API keys required
+- Run with mock AI: `python main.py` (default) or `python main.py --provider mock`
+- Run without any LLM integration: `python main.py --no-llm`
 
 ### Highlights
 - **Hero clarity**: Hero panel now exposes **Current intent** + **Last decision** (action + short reason + age).

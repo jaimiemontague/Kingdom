@@ -28,7 +28,7 @@
           "response": {
             "received_at_local": "2025-12-20T20:19:07",
             "status": "complete",
-            "raw": "### Status\\nCompleted implementation of the wk1 plan’s minimal early-game pacing nudge using existing systems (HUD + bounties + lairs) and sim-time (determinism-friendly).\\n\\n### Deliverables\\n- Early pacing nudge implementation: `game/engine.py`\\n  - Shows a HUD bounty tip (~35s sim-time) if the player hasn’t placed any bounties\\n  - At ~90s sim-time, optionally auto-places a starter `attack_lair` bounty on the nearest lair if the player placed none and can afford it (charges via `EconomySystem.add_bounty`; reward uses `LAIR_BOUNTY_COST`)\\n- Doc note tying this to scenarios: `docs/scenarios.md`\\n\\n### Questions\\n- None.\\n\\n### Next actions\\n- Optional: add a config/CLI toggle to disable/force the nudge for QA/tuning.\\n\\n### Handoff checklist\\n- Files changed: `game/engine.py`, `docs/scenarios.md`\\n- How to test: run `python main.py --no-llm` (or `--provider mock`), don’t place any bounties; observe HUD tip ~35s and starter lair bounty ~90s; confirm gold decreases by bounty amount; place a manual bounty before 90s to confirm auto-bounty never triggers.",
+            "raw": "### Status\\nCompleted implementation of the wk1 plan’s minimal early-game pacing nudge using existing systems (HUD + bounties + lairs) and sim-time (determinism-friendly).\\n\\n### Deliverables\\n- Early pacing nudge implementation: `game/engine.py`\\n  - Shows a HUD bounty tip (~35s sim-time) if the player hasn’t placed any bounties\\n  - At ~90s sim-time, optionally auto-places a starter `attack_lair` bounty on the nearest lair if the player placed none and can afford it (charges via `EconomySystem.add_bounty`; reward uses `LAIR_BOUNTY_COST`)\\n  - `attack_lair` bounties are completion-claimed on `lair_cleared` (not proximity-claimed)\\n- QA control: `EARLY_PACING_NUDGE_MODE` in `config.py` + CLI override `--early-nudge {auto,off,force}`\\n- Doc note tying this to scenarios: `docs/scenarios.md`\\n\\n### Questions\\n- None.\\n\\n### Next actions\\n- Verify QA can disable/force quickly and that force mode never triggers if any bounty already exists.\\n\\n### Handoff checklist\\n- Files changed: `game/engine.py`, `config.py`, `main.py`, `docs/scenarios.md`\\n- How to test: run `python main.py --no-llm --early-nudge force` to see tip + starter bounty immediately (if no bounties exist). Use `--early-nudge off` to confirm it never fires. Default `auto` should behave ~35s/~90s.",
             "summary_bullets": [
               "Sim-time driven early prompt + starter objective without a full scenario system",
               "Teaches bounty lever and lair-stash loop early; preserves player agency",
@@ -48,18 +48,22 @@
             "risks": [
               "Starter bounty may not place if early gold is tuned too low (still shows tip once)",
               "Runs with zero lairs will skip starter bounty (safe no-op)",
-              "Future lair placement changes could affect 'nearest' selection but should remain reasonable"
+              "Future lair placement changes could affect 'nearest' selection but should remain reasonable",
+              "New CLI arg/engine init parameter could break external scripts if they instantiate GameEngine positionally (should be low risk)"
             ],
             "dependencies": [
               "Existing BountySystem + EconomySystem.add_bounty (cost path)",
               "Existing LairSystem.lairs list and lair center coords",
-              "Config: LAIR_BOUNTY_COST for tuning"
+              "Config: LAIR_BOUNTY_COST for tuning",
+              "Agent 5: confirm attack_lair reward/cost band feels right for early pacing teaching moment"
             ],
-            "questions_back_to_pm": [],
+            "questions_back_to_pm": [
+              "ACK: added `--early-nudge {auto,off,force}` + `EARLY_PACING_NUDGE_MODE` and ensured attack_lair bounty is completion-claimed on lair_cleared. ETA: done. Blockers: none."
+            ],
             "recommended_next_actions": [
-              "Optional: add config/CLI toggle to disable/force nudge for QA/tuning",
-              "Coordinate with Agent 8 to align HUD copy style and avoid message spam",
-              "After FS-2 lands, consider follow-up hint referencing responders/attractiveness (optional)"
+              "Run a quick manual verification pass: `--early-nudge off|auto|force` and ensure no auto-bounty if any bounty already exists",
+              "Coordinate with Agent 5 on LAIR_BOUNTY_COST / early gold tuning so the starter bounty is affordable but meaningful",
+              "Coordinate with Agent 8 to keep HUD copy concise and consistent with help overlay language"
             ],
             "agent_fields": {
               "content_hooks": [
@@ -68,7 +72,8 @@
               "pacing_nudges": [
                 "~35s: HUD tip to place bounties if none exist",
                 "~90s: auto 'attack_lair' starter bounty on nearest lair if still none and affordable (charges economy)"
-              ]
+              ],
+              "pm_acknowledged": true
             }
           }
         }

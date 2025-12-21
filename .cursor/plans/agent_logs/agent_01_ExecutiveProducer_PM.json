@@ -6,6 +6,343 @@
     "Structure nests rounds inside sprints to keep history organized.",
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
-  "sprints": {}
+  "sprints": {
+    "wk1-broad-sweep-midweek-endweek": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+        "notes": "PM synthesis + responses to all agents for this sprint live here."
+      },
+      "rounds": {
+        "wk1_r1": {
+          "round_meta": {
+            "prompt_set_id": "wk1_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "visibility": "All agents should read this round entry for PM decisions + follow-ups."
+          },
+          "pm_decisions": {
+            "build_split": {
+              "build_a_midweek": [
+                "FS-1: Hero intent + last decision inspect (UI-visible)",
+                "FS-2: Bounty clarity: responders + attractiveness (UI-visible)",
+                "QA/Tools gates required: qa_smoke --quick (includes determinism guard) must pass"
+              ],
+              "build_b_endweek": [
+                "FS-3: Early pacing guardrail (tip + optional starter objective) plus tuning polish",
+                "Perf/stability pass + any follow-up QA tightening"
+              ]
+            },
+            "intent_taxonomy": [
+              "idle",
+              "pursuing_bounty",
+              "shopping",
+              "returning_to_safety",
+              "engaging_enemy",
+              "defending_building",
+              "attacking_lair"
+            ],
+            "decision_history_policy": "P0 = store ONLY the last decision per hero (no ring buffer) to minimize perf/UI risk.",
+            "bounty_attractiveness_policy": "Build A uses a GLOBAL/hero-agnostic tier (low/med/high) computed deterministically. Per-hero scoring can be revisited later.",
+            "help_overlay_default": "Default OFF (clean HUD) with a persistent hint (e.g., 'F3: Help'). Revisit after onboarding feedback.",
+            "tier_color_language": "Low=gray, Med=gold, High=green (value-contrast first; must remain readable under fog-of-war).",
+            "determinism_gate": "Mandatory in Build A/B: no wall-clock time usage inside sim logic; no global random.* usage for sim; stable ordering/tie-breaks."
+          },
+          "pm_responses_by_agent": {
+            "02": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: create `docs/sprint/wk1_acceptance_checklist.md` as the single QA signoff doc for Build A and Build B.",
+                "Decision: FS-3 (early pacing guardrail) is Build B only (but Build A may include a non-invasive HUD help hint if it doesn't change sim state).",
+                "Decision: lock full intent taxonomy for WK1 (see pm_decisions.intent_taxonomy)."
+              ],
+              "asks": [
+                "Please draft the 1-page checklist with two sections: Build A gates and Build B gates.",
+                "Include explicit 'qa_smoke --quick must pass' and 'mock/no-llm manual smoke (10 min)' in both."
+              ]
+            },
+            "03": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted direction: thin contracts are the right move; UI must only read hero/bounty fields (no AI imports).",
+                "Decision: attractiveness tier is global for Build A (your recommendation accepted).",
+                "Guardrail: any 'age since decision' must use sim-time/ticks only (no wall-clock)."
+              ],
+              "asks": [
+                "If you already added `game/sim/contracts.py`, please ensure it has zero cyclical imports and minimal serialization helpers.",
+                "Coordinate with Agent 8 to ensure UI reads only the contract fields."
+              ]
+            },
+            "04": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: determinism guard must be a release gate this week.",
+                "Decision: determinism guard is mandatory in `tools/qa_smoke.py --quick` (not optional).",
+                "Decision: UI should display sim-time-based ages for consistency (avoid 'wall-clock vs sim-time' confusion)."
+              ],
+              "asks": [
+                "If a `tools/determinism_guard.py` exists/gets added, keep it focused on sim-code directories only (avoid false positives in pure UI/graphics).",
+                "Please provide a short list of forbidden patterns (time.time, pygame ticks in sim, random.* in sim) to add to the checklist doc."
+              ]
+            },
+            "05": {
+              "status": "acknowledged_with_risk_review",
+              "pm_reply": [
+                "Your completion-based `attack_lair` bounty payout is high-leverage and aligns with Majesty; accepted in principle, but we must verify it's stable and doesn't break other bounty types.",
+                "Decision: we will NOT hard-commit STARTING_GOLD=1500 without a quick manual feel test; treat it as a tuning candidate.",
+                "Decision: modifier-key bounty tiers are acceptable for WK1 only if Agent 8 adds a minimal HUD hint; otherwise keep a single default bounty reward for Build A."
+              ],
+              "asks": [
+                "Please list exactly which files changed and confirm `qa_smoke --quick` passes after your changes.",
+                "If typed bounties beyond attack_lair exist, ensure their claim semantics remain correct (no accidental proximity-claim)."
+              ]
+            },
+            "06": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: store only last decision; record on meaningful transitions only; keep reason strings short.",
+                "Decision: show intent + last decision in the main hero panel for Build A (not debug-only).",
+                "Decision: use `source` values but keep them simple (`llm`, `mock`, `fallback`, `heuristic`, `system`)."
+              ],
+              "asks": [
+                "Please align with Agent 3's contract keys/types to avoid schema drift.",
+                "If you add validation/allowlist logic, ensure fallback behavior is deterministic and never blocks the sim."
+              ]
+            },
+            "07": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: pacing nudge via sim-time with HUD tip and optional starter lair bounty fits FS-3 and should land in Build B.",
+                "Guardrail: auto-bounty must never trigger if the player has placed any bounty; and must charge economy (no freebies)."
+              ],
+              "asks": [
+                "Please ensure the nudge is behind a small config/flag so QA can force/disable it.",
+                "Coordinate with Agent 5 on `attack_lair` completion semantics so the starter bounty reliably teaches lair clearing."
+              ]
+            },
+            "08": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: copy/layout rules; keep bounty world labels compact (R:N + tier) and truncate hero reason strings.",
+                "Decision: help overlay default OFF, but add an always-visible hint (F3: Help).",
+                "Decision: attractiveness tier is global/simple for Build A."
+              ],
+              "asks": [
+                "Please ensure UI additions avoid per-frame allocations; cache formatted strings where possible.",
+                "Add a minimal HUD hint for bounty tier modifiers only if we ship the tiered controls in WK1."
+              ]
+            },
+            "09": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: procedural/cached icon approach is great as a non-blocking placeholder.",
+                "Decision: go with value-contrast-first; tier colors Low=gray, Med=gold, High=green."
+              ],
+              "asks": [
+                "If implemented, keep icon generation cached and ensure nearest-neighbor scaling only.",
+                "Defer always-visible composite badges if clutter becomes an issue; prefer hover/selection if needed."
+              ]
+            },
+            "10": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: prioritize caching UI overlay surfaces and cadenced refresh; we will treat O(H*B) scans as a regression risk.",
+                "Decision: no hard perf budget number this week; instead record a baseline from the headless benchmark and prevent regressions."
+              ],
+              "asks": [
+                "Please document the benchmark command(s) and where outputs/CSV go (if applicable).",
+                "After responders/attractiveness land, add a benchmark profile that includes bounties to quantify scoring cost."
+              ]
+            },
+            "11": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: qa_smoke --quick becomes mandatory pre-merge for Build A and Build B.",
+                "Decision: duplicate hero-name collisions remain a warning for now (not a failing condition) unless they break behavior determinism.",
+                "Good call on replacing wall-clock + global RNG usage; that aligns with the determinism gate."
+              ],
+              "asks": [
+                "Please ensure QA assertions remain non-flaky by using the deterministic scenario preset (so tuning doesn't break the gate).",
+                "If you touched AI modules, coordinate with Agent 6 to ensure intent/decision logging semantics match."
+              ]
+            },
+            "12": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: dedicated deterministic `intent_bounty` scenario is exactly what we need for fast iteration.",
+                "Decision: responders field enforcement can wait until responder tracking is implemented; for now, require claim evidence and non-empty intent.",
+                "Decision: hero-name duplicates remain warning-only for now."
+              ],
+              "asks": [
+                "Please add the command(s) to the sprint checklist doc so every agent runs the same gate.",
+                "After responder tracking lands, tighten QA to assert explicit responder counts > 0 in the scenario."
+              ]
+            },
+            "13": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: patch note structure; we will only publish verified bullets that are merged + QA-confirmed.",
+                "Decision: public labeling will be Prototype semantic version bumps (e.g., v1.2.1 for Build A, v1.2.2 for Build B) unless we decide otherwise later.",
+                "Yes: each post should include a short reminder about mock/no-LLM mode (no API keys required)."
+              ],
+              "asks": [
+                "After Build A code merges, update the draft with exact shipped bullets + known issues from QA.",
+                "After Build B merges, do the same and include the early pacing guardrail description."
+              ]
+            }
+          },
+          "pm_integration_order": [
+            "Merge/land thin contracts (Agent 3) and hero intent/last decision logging semantics (Agent 6).",
+            "Land bounty responders + global attractiveness tier (Agent 3/8).",
+            "Land UI display for hero intent/last decision and bounty overlay (Agent 8) + optional icons (Agent 9).",
+            "Ensure qa_smoke --quick + deterministic scenario gate is green (Agents 11/12) before tagging Build A.",
+            "Land early pacing guardrail (Agent 7) + any tuning (Agent 5) for Build B, then re-run QA/perf checks."
+          ],
+          "pm_open_questions_resolved": [
+            "FS-3 split: Build B only.",
+            "Intent taxonomy: lock full list for WK1.",
+            "Decision history: last-decision only.",
+            "Attractiveness: global/simple tier for Build A."
+          ]
+        },
+        "wk1_r2": {
+          "round_meta": {
+            "prompt_set_id": "wk1_final_changes_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Final changes round based on human playtest feedback. Only agents with remaining issues are contacted."
+          },
+          "bug_tickets": [
+            {
+              "id": "WK1-BUG-001",
+              "title": "Hero panel 'Last decision' stays '(none yet)' in --no-llm play",
+              "severity": "major",
+              "build_target": "BuildA",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py --no-llm",
+                "Select a hero after ~60s of sim time",
+                "Observe 'Last decision' line remains '(none yet)'"
+              ],
+              "expected": "Hero panel shows last decision (action + reason + age) after a hero has taken any meaningful action (bounty pursue, engage enemy, retreat, shop, etc.).",
+              "actual": "Hero panel always shows '(none yet)' in no-LLM mode.",
+              "evidence": "Human playtest report; QA smoke passes but doesn't validate hero panel text.",
+              "suspected_area": [
+                "game/ui/hud.py (hero panel formatting currently reads LLM-only fields)",
+                "game/entities/hero.py (source of truth: hero.last_decision / hero.get_intent_snapshot())"
+              ],
+              "constraints": [
+                "Use sim-time for decision age display (no wall-clock).",
+                "Avoid per-frame allocations; cache formatted text/surfaces if needed."
+              ],
+              "proposed_fix": [
+                "Update HUD hero panel to read hero.get_intent_snapshot() or hero.last_decision (HeroDecisionRecord).",
+                "Keep fallback behavior safe if fields are missing (placeholder OK early)."
+              ],
+              "acceptance_test": [
+                "Run: python main.py --no-llm",
+                "After 30–90s, select hero and verify Last decision is not '(none yet)' for at least one hero",
+                "Run: python tools/qa_smoke.py --quick (must remain PASS)"
+              ],
+              "integration_notes": {
+                "depends_on": [
+                  "Agent 03 contract field names (hero intent/decision snapshot) if needed"
+                ],
+                "risk_notes": [
+                  "UI currently uses legacy LLM-only fields; ensure new code path works in all modes"
+                ]
+              },
+              "status": "assigned"
+            },
+            {
+              "id": "WK1-BUG-002",
+              "title": "Bounty placement is unclear to players (controls + tiers not discoverable)",
+              "severity": "major",
+              "build_target": "BuildA",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py --no-llm",
+                "Try to place a bounty without reading console help",
+                "Unclear how to place bounty and where it will land"
+              ],
+              "expected": "Player can discover how to place bounties quickly (key + placement behavior + cost).",
+              "actual": "Player doesn't know the control path to place a bounty.",
+              "suspected_area": [
+                "HUD help overlay copy",
+                "In-game tip messaging"
+              ],
+              "constraints": [
+                "Keep HUD minimal; avoid spam",
+                "Explain tiers only if we keep tiered bounties for WK1"
+              ],
+              "proposed_fix": [
+                "Update help overlay to explicitly say: 'B: place bounty at mouse cursor (Shift/Ctrl for tiers)'",
+                "Add a one-time toast hint on first minute if no bounty placed (already present tip text; ensure it’s visible and accurate)"
+              ],
+              "acceptance_test": [
+                "Run: python main.py --no-llm",
+                "Press F3 to view help; confirm bounty instructions are explicit",
+                "Press B with mouse over ground; confirm bounty appears at cursor and gold decreases"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK1-BUG-003",
+              "title": "QA smoke reports bounty responder attribute missing (contract mismatch / UI-only field names)",
+              "severity": "minor",
+              "build_target": "BuildA",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "qa_smoke",
+              "repro_steps": [
+                "Run: python tools/qa_smoke.py --quick",
+                "Observe output includes: bounty_responder_attr_present=False"
+              ],
+              "expected": "Bounty objects expose stable responder/tier fields per contract (so QA can assert them reliably).",
+              "actual": "Responder/tier appears to be computed as UI-only fields (QA can’t detect contract fields).",
+              "evidence": "qa_smoke output: bounty_responder_attr_present=False while scenario passes.",
+              "suspected_area": [
+                "game/systems/bounty.py field naming (ui_responders vs contract fields)",
+                "game/sim/contracts.py expectations"
+              ],
+              "constraints": [
+                "Deterministic computation only; stable ordering",
+                "Avoid O(N_heroes*N_bounties) per-tick if possible"
+              ],
+              "proposed_fix": [
+                "Align bounty responder/tier fields with contract names (e.g., responders + attractiveness_tier) while preserving UI caches",
+                "Update QA detection to check the stable contract fields"
+              ],
+              "acceptance_test": [
+                "Run: python tools/qa_smoke.py --quick and confirm bounty_responder_attr_present=True",
+                "Run: python main.py --no-llm and verify bounty overlay still renders and remains performant"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_messages_to_agents": {
+            "03": {
+              "status": "requested",
+              "message": "Please address WK1-BUG-003 (contract mismatch): ensure bounties expose stable responder/tier fields per contract (responders + attractiveness_tier, optional score). Keep existing UI caches if needed. Update/verify qa_smoke reports bounty_responder_attr_present=True. Gate: python tools/qa_smoke.py --quick must PASS."
+            },
+            "08": {
+              "status": "requested",
+              "message": "Please address WK1-BUG-001 and WK1-BUG-002: hero panel should display last decision in --no-llm by reading hero.last_decision / hero.get_intent_snapshot (not LLM-only fields). Also update help/UX so bounty placement is discoverable: 'B places bounty at mouse cursor' and mention Shift/Ctrl tiers only if we keep tiered bounties. Provide before/after screenshots if possible. Gate: python tools/qa_smoke.py --quick must PASS."
+            }
+          }
+        },
+        "wk1_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk1_wrap_up_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Final wrap-up round. Only agents with blockers/late-breaking issues should respond."
+          },
+          "pm_instruction": "If you have last-minute blockers or need cross-agent coordination to finish WK1 Build A, log them under your agent file in this round and tag the owner(s). If no blockers, do not respond.",
+          "status": "pending"
+        }
+      }
+    }
+  }
 }
 

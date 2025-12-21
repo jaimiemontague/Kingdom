@@ -25,9 +25,11 @@ class IconTheme:
     outline: Color = (20, 20, 25)
 
     # Tier accents (low/med/high)
-    low: Color = (120, 180, 255)   # cool blue
+    # PM decision (WK1): value-contrast-first language
+    # - Low = gray, Med = gold, High = green (must read under fog-of-war)
+    low: Color = (170, 175, 185)   # gray
     med: Color = (255, 215, 80)    # gold
-    high: Color = (255, 120, 80)   # orange/red
+    high: Color = (110, 220, 140)  # green
 
     # Background plate for readability over fog/terrain
     plate: Tuple[int, int, int, int] = (0, 0, 0, 140)

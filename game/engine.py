@@ -13,6 +13,7 @@ from config import (
     BOUNTY_REWARD_LOW,
     BOUNTY_REWARD_MED,
     BOUNTY_REWARD_HIGH,
+    EARLY_PACING_NUDGE_MODE,
     DETERMINISTIC_SIM,
     SIM_TICK_HZ,
     SIM_SEED,
@@ -42,7 +43,7 @@ from game.sim.timebase import set_sim_now_ms
 class GameEngine:
     """Main game engine class."""
     
-    def __init__(self):
+    def __init__(self, early_nudge_mode: str | None = None):
         pygame.init()
         pygame.font.init()
 
@@ -57,6 +58,7 @@ class GameEngine:
         self._early_nudge_elapsed_s = 0.0
         self._early_nudge_tip_shown = False
         self._early_nudge_starter_bounty_done = False
+        self._early_nudge_mode = (early_nudge_mode or EARLY_PACING_NUDGE_MODE or "auto").strip().lower()
         
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption(GAME_TITLE)
@@ -618,6 +620,12 @@ class GameEngine:
         if not castle:
             return
 
+        mode = getattr(self, "_early_nudge_mode", "auto")
+        if mode == "off":
+            return
+        if mode not in ("auto", "force"):
+            mode = "auto"
+
         # Only relevant in the early game window.
         self._early_nudge_elapsed_s += float(dt)
         if self._early_nudge_elapsed_s > 180.0:
@@ -626,8 +634,11 @@ class GameEngine:
         unclaimed = self.bounty_system.get_unclaimed_bounties()
         has_any_bounty = bool(unclaimed)
 
+        tip_time_s = 0.0 if mode == "force" else 35.0
+        starter_time_s = 0.0 if mode == "force" else 90.0
+
         # 1) Tip prompt: show once.
-        if (not self._early_nudge_tip_shown) and (self._early_nudge_elapsed_s >= 35.0) and (not has_any_bounty):
+        if (not self._early_nudge_tip_shown) and (self._early_nudge_elapsed_s >= tip_time_s) and (not has_any_bounty):
             self._early_nudge_tip_shown = True
             self.hud.add_message("Tip: Press B to place a bounty and guide heroes.", (220, 220, 255))
             self.hud.add_message("Try targeting a lair for big stash payouts.", (220, 220, 255))
@@ -635,7 +646,7 @@ class GameEngine:
         # 2) Optional starter bounty: show player a clear lever if they haven't engaged.
         if self._early_nudge_starter_bounty_done:
             return
-        if self._early_nudge_elapsed_s < 90.0:
+        if self._early_nudge_elapsed_s < starter_time_s:
             return
         if has_any_bounty:
             # Player already engaged with the bounty system; don't interfere.
