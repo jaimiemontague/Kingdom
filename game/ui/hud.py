@@ -3,9 +3,11 @@ Heads-up display for game information.
 """
 import pygame
 from game.sim.timebase import now_ms as sim_now_ms
+from game.ui.theme import UITheme
+from game.ui.widgets import Panel, Tooltip, IconButton
 from config import (
-    WINDOW_WIDTH, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_GOLD, 
-    COLOR_WHITE, COLOR_RED, COLOR_GREEN
+    COLOR_UI_BG, COLOR_UI_BORDER, COLOR_GOLD,
+    COLOR_WHITE, COLOR_RED, COLOR_GREEN, BUILDING_COSTS, HERO_HIRE_COST
 )
 
 
@@ -16,9 +18,12 @@ class HUD:
         self.screen_width = screen_width
         self.screen_height = screen_height
         
-        # HUD dimensions
-        self.top_bar_height = 40
-        self.side_panel_width = 200
+        self.theme = UITheme()
+
+        # HUD dimensions (computed from actual screen size each frame; these are defaults)
+        self.top_bar_height = int(getattr(self.theme, "top_bar_h", 48))
+        self.bottom_bar_height = int(getattr(self.theme, "bottom_bar_h", 96))
+        self.side_panel_width = 360  # computed per-frame; this is just an initial value
         
         # Fonts
         self.font_large = pygame.font.Font(None, 32)
@@ -39,6 +44,19 @@ class HUD:
         # Cached hero panel lines (avoid per-frame allocations for slow-changing debug text)
         self._hero_line_cache = {}  # key -> pygame.Surface
 
+        # Cached value text surfaces (avoid per-frame font.render churn)
+        self._value_text_cache = {}  # key -> (last_value, surf)
+        self._last_placing = None
+        self._placing_surf = None
+
+        # UI panels (cached surfaces)
+        self._panel_top = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
+        self._panel_bottom = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
+        self._panel_right = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
+        self._panel_minimap = Panel(pygame.Rect(0, 0, 1, 1), COLOR_UI_BG, COLOR_UI_BORDER, alpha=235)
+        self._tooltip = Tooltip(COLOR_UI_BG, COLOR_UI_BORDER, alpha=240)
+        self._buttons = []  # list[IconButton]
+
         # Messages (top-left transient text)
         self.messages = []
         self.message_duration = 3000  # ms
@@ -57,6 +75,49 @@ class HUD:
                 self._hero_line_cache.clear()
             self._hero_line_cache[cache_key] = surf
         return surf
+
+    def _cached_value_text(self, key: str, value, text: str, font: pygame.font.Font, color: tuple):
+        """Cache a rendered value text surface by key + last_value."""
+        last = self._value_text_cache.get(key)
+        if last is not None:
+            last_value, surf = last
+            if last_value == value and surf is not None:
+                return surf
+        surf = font.render(text, True, color)
+        if len(self._value_text_cache) > 64:
+            self._value_text_cache.clear()
+        self._value_text_cache[key] = (value, surf)
+        return surf
+
+    def _compute_layout(self, surface: pygame.Surface):
+        """Compute UI rects from the actual render surface size (no hardcoded 1920×1080)."""
+        w, h = surface.get_width(), surface.get_height()
+        self.screen_width = int(w)
+        self.screen_height = int(h)
+
+        top_h = int(getattr(self.theme, "top_bar_h", 48))
+        bottom_h = int(getattr(self.theme, "bottom_bar_h", 96))
+        margin = int(getattr(self.theme, "margin", 8))
+        gutter = int(getattr(self.theme, "gutter", 8))
+
+        right_w = int(max(getattr(self.theme, "right_panel_min_w", 320), min(getattr(self.theme, "right_panel_max_w", 420), int(w * 0.24))))
+        right_w = int(max(280, min(right_w, w - 2 * margin)))  # clamp for small screens
+        self.side_panel_width = right_w
+
+        top = pygame.Rect(0, 0, w, top_h)
+        bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
+        right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
+
+        # Minimap lives inside the bottom bar (bottom-left square).
+        mm_size = max(64, bottom_h - 2 * margin)
+        minimap = pygame.Rect(margin, bottom.y + margin, mm_size, mm_size)
+
+        # Command bar area is the remaining bottom bar space excluding minimap and right panel.
+        cmd_x = minimap.right + gutter
+        cmd_w = max(0, (w - right_w) - cmd_x - gutter)
+        cmd = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, mm_size)
+
+        return top, bottom, right, minimap, cmd
         
     def add_message(self, text: str, color: tuple = COLOR_WHITE):
         """Add a message to display."""
@@ -202,56 +263,53 @@ class HUD:
     
     def render(self, surface: pygame.Surface, game_state: dict):
         """Render the HUD."""
-        # Top bar background
-        pygame.draw.rect(
-            surface,
-            COLOR_UI_BG,
-            (0, 0, self.screen_width, self.top_bar_height)
-        )
-        pygame.draw.line(
-            surface,
-            COLOR_UI_BORDER,
-            (0, self.top_bar_height),
-            (self.screen_width, self.top_bar_height),
-            2
-        )
+        top, bottom, right, minimap, cmd = self._compute_layout(surface)
+
+        # Panels (cached surfaces)
+        self._panel_top.set_rect(top)
+        self._panel_bottom.set_rect(bottom)
+        self._panel_right.set_rect(right)
+        self._panel_minimap.set_rect(minimap)
+        self._panel_top.render(surface)
+        self._panel_bottom.render(surface)
+        self._panel_right.render(surface)
+        self._panel_minimap.render(surface)
         
-        # Gold display
-        gold = game_state.get("gold", 0)
-        gold_text = self.font_large.render(f"Gold: {gold}", True, COLOR_GOLD)
-        surface.blit(gold_text, (20, 8))
-        
-        # Hero count
+        # Top bar stats (cache text on value change)
+        gold = int(game_state.get("gold", 0) or 0)
         heroes = game_state.get("heroes", [])
-        alive_heroes = sum(1 for h in heroes if h.is_alive)
-        hero_text = self.font_medium.render(
-            f"Heroes: {alive_heroes}", True, COLOR_WHITE
-        )
-        surface.blit(hero_text, (200, 10))
-        
-        # Enemy count
         enemies = game_state.get("enemies", [])
-        alive_enemies = sum(1 for e in enemies if e.is_alive)
-        enemy_text = self.font_medium.render(
-            f"Enemies: {alive_enemies}", True, COLOR_RED
-        )
-        surface.blit(enemy_text, (320, 10))
+        alive_heroes = sum(1 for h in heroes if getattr(h, "is_alive", True))
+        alive_enemies = sum(1 for e in enemies if getattr(e, "is_alive", True))
+        wave = int(game_state.get("wave", 1) or 1)
+
+        gold_surf = self._cached_value_text("top_gold", gold, f"Gold: {gold}", self.theme.font_title, COLOR_GOLD)
+        heroes_surf = self._cached_value_text("top_heroes", alive_heroes, f"Heroes: {alive_heroes}", self.theme.font_body, COLOR_WHITE)
+        enemies_surf = self._cached_value_text("top_enemies", alive_enemies, f"Enemies: {alive_enemies}", self.theme.font_body, COLOR_RED)
+        wave_surf = self._cached_value_text("top_wave", wave, f"Wave: {wave}", self.theme.font_body, COLOR_WHITE)
+
+        x = int(self.theme.margin)
+        y = int((top.height - gold_surf.get_height()) // 2)
+        surface.blit(gold_surf, (x, y))
+        x += gold_surf.get_width() + int(self.theme.gutter) * 2
+        surface.blit(heroes_surf, (x, y + 2))
+        x += heroes_surf.get_width() + int(self.theme.gutter)
+        surface.blit(enemies_surf, (x, y + 2))
+        x += enemies_surf.get_width() + int(self.theme.gutter)
+        surface.blit(wave_surf, (x, y + 2))
         
-        # Wave number
-        wave = game_state.get("wave", 1)
-        wave_text = self.font_medium.render(
-            f"Wave: {wave}", True, COLOR_WHITE
-        )
-        surface.blit(wave_text, (450, 10))
-        
-        # Instructions
-        # Context banner: placement mode
+        # Context banner: placement mode (rendered near the bottom bar, above command buttons)
         placing = game_state.get("placing_building_type")
-        if placing:
-            placing_name = str(placing).replace("_", " ").title()
-            banner = f"Placing: {placing_name}  (LMB: place, ESC: cancel)"
-            text = self.font_medium.render(banner, True, COLOR_WHITE)
-            surface.blit(text, (20, self.top_bar_height + 8))
+        if placing != self._last_placing:
+            self._last_placing = placing
+            if placing:
+                placing_name = str(placing).replace("_", " ").title()
+                banner = f"Placing: {placing_name} (LMB: place, ESC: cancel)"
+                self._placing_surf = self.theme.font_body.render(banner, True, COLOR_WHITE)
+            else:
+                self._placing_surf = None
+        if self._placing_surf is not None:
+            surface.blit(self._placing_surf, (int(self.theme.margin), bottom.y - self._placing_surf.get_height() - 2))
 
         # Help/controls overlay (toggle via F3)
         if self.show_help:
@@ -280,10 +338,102 @@ class HUD:
         # Render messages
         self.render_messages(surface)
         
-        # Render selected hero info
-        selected = game_state.get("selected_hero")
-        if selected:
-            self.render_hero_panel(surface, selected, debug_ui=bool(game_state.get("debug_ui", False)))
+        # Bottom bar: command buttons (skeleton only; keyboard controls remain authoritative)
+        self._render_command_bar(surface, game_state, cmd_rect=cmd)
+
+        # Right panel: selected entity summary (hero preferred; else building; else placeholder)
+        selected_hero = game_state.get("selected_hero")
+        selected_building = game_state.get("selected_building")
+        if selected_hero:
+            self.render_hero_panel(surface, selected_hero, debug_ui=bool(game_state.get("debug_ui", False)), rect=right)
+        elif selected_building is not None:
+            self._render_building_summary(surface, selected_building, rect=right)
+        else:
+            empty = self._cached_value_text("right_none", 1, "Select a hero or building", self.theme.font_body, (180, 180, 180))
+            surface.blit(empty, (right.x + int(self.theme.margin), right.y + int(self.theme.margin)))
+
+        # Minimap placeholder label (Build A skeleton; real minimap in later iteration)
+        mm_label = self._cached_value_text("minimap_lbl", 1, "Minimap", self.theme.font_small, (200, 200, 200))
+        surface.blit(mm_label, (minimap.x + 6, minimap.y + 6))
+
+    def _render_command_bar(self, surface: pygame.Surface, game_state: dict, cmd_rect: pygame.Rect):
+        """Render the bottom command bar skeleton (no click handling yet)."""
+        if cmd_rect.width <= 0 or cmd_rect.height <= 0:
+            return
+
+        mouse = pygame.mouse.get_pos()
+        gutter = int(self.theme.gutter)
+
+        # Build A: 3 core actions only. Hotkeys remain in engine.
+        if not self._buttons or getattr(self, "_buttons_last_size", None) != (cmd_rect.width, cmd_rect.height):
+            self._buttons_last_size = (cmd_rect.width, cmd_rect.height)
+            self._buttons = []
+            bw = min(140, max(110, int(cmd_rect.width / 3) - gutter))
+            bh = int(cmd_rect.height)
+            x = int(cmd_rect.x)
+            y = int(cmd_rect.y)
+            self._buttons.append(
+                IconButton(
+                    rect=pygame.Rect(x, y, bw, bh),
+                    title="Build",
+                    hotkey="1-8/T/G/E/V/U/Y/O/F/I/R",
+                    tooltip="Build\nHotkeys: 1-8, T,G,E,V,U,Y,O,F,I,R\nCost shown in top messages on fail.",
+                )
+            )
+            x += bw + gutter
+            self._buttons.append(
+                IconButton(
+                    rect=pygame.Rect(x, y, bw, bh),
+                    title="Hire",
+                    hotkey="H",
+                    tooltip=f"Hire Hero\nHotkey: H\nCost: ${int(HERO_HIRE_COST)} (select a built guild first)",
+                )
+            )
+            x += bw + gutter
+            self._buttons.append(
+                IconButton(
+                    rect=pygame.Rect(x, y, bw, bh),
+                    title="Bounty",
+                    hotkey="B",
+                    tooltip="Place Bounty\nHotkey: B\nPlace at mouse cursor\nShift/Ctrl: bigger (cost=reward)",
+                )
+            )
+
+        hovered = None
+        for btn in self._buttons:
+            is_hover = btn.hit_test(mouse)
+            if is_hover:
+                hovered = btn
+            # Button frame (opaque to avoid per-frame alpha surfaces)
+            bg = (55, 55, 70) if is_hover else (45, 45, 60)
+            pygame.draw.rect(surface, bg, btn.rect)
+            pygame.draw.rect(surface, COLOR_UI_BORDER, btn.rect, 2)
+
+            # Label (cached by title)
+            title_surf = self._cached_value_text(("btn_t", btn.title), 1, btn.title, self.theme.font_body, COLOR_WHITE)
+            hk_surf = self._cached_value_text(("btn_hk", btn.hotkey), 1, btn.hotkey, self.theme.font_small, (180, 180, 180))
+            surface.blit(title_surf, (btn.rect.x + 10, btn.rect.y + 10))
+            surface.blit(hk_surf, (btn.rect.x + 10, btn.rect.y + 10 + title_surf.get_height() + 2))
+
+        # Tooltip (cached; built only when hovered text changes)
+        if hovered is not None:
+            self._tooltip.set_text(self.theme.font_small, hovered.tooltip, (230, 230, 230))
+            self._tooltip.render(surface, mouse[0] + 12, mouse[1] + 12)
+        else:
+            self._tooltip.set_text(self.theme.font_small, "", (230, 230, 230))
+
+    def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect):
+        """Minimal right-panel building summary for Build A."""
+        x = rect.x + int(self.theme.margin)
+        y = rect.y + int(self.theme.margin)
+        btype = str(getattr(building, "building_type", building.__class__.__name__) or "")
+        title = self._cached_value_text(("bsel", btype), 1, btype.replace("_", " ").title(), self.theme.font_title, COLOR_WHITE)
+        surface.blit(title, (x, y))
+        y += title.get_height() + 6
+        hp = int(getattr(building, "hp", 0) or 0)
+        mhp = int(getattr(building, "max_hp", 0) or 0)
+        hp_surf = self._cached_value_text(("bhp", id(building), hp, mhp), 1, f"HP: {hp}/{mhp}", self.theme.font_body, (200, 200, 200))
+        surface.blit(hp_surf, (x, y))
 
     def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]):
         """Render a compact controls/help panel."""
@@ -332,25 +482,21 @@ class HUD:
             surface.blit(text, (10, y_offset))
             y_offset += 18
     
-    def render_hero_panel(self, surface: pygame.Surface, hero, debug_ui: bool = False):
+    def render_hero_panel(self, surface: pygame.Surface, hero, debug_ui: bool = False, rect: pygame.Rect | None = None):
         """Render detailed info panel for selected hero."""
-        panel_width = self.side_panel_width
-        panel_height = 200
-        panel_x = self.screen_width - panel_width - 10
-        panel_y = self.top_bar_height + 10
+        if rect is None:
+            panel_width = self.side_panel_width
+            panel_height = 220
+            panel_x = self.screen_width - panel_width - 10
+            panel_y = self.top_bar_height + 10
+            rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        else:
+            panel_width = int(rect.width)
+            panel_height = int(rect.height)
+            panel_x = int(rect.x)
+            panel_y = int(rect.y)
         
-        # Panel background
-        pygame.draw.rect(
-            surface,
-            COLOR_UI_BG,
-            (panel_x, panel_y, panel_width, panel_height)
-        )
-        pygame.draw.rect(
-            surface,
-            COLOR_UI_BORDER,
-            (panel_x, panel_y, panel_width, panel_height),
-            2
-        )
+        # Panel background is already drawn by the right panel; do not redraw to avoid allocations.
         
         # Hero info
         y = panel_y + 10

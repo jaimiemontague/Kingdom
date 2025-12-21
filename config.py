@@ -7,11 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Window settings
-WINDOW_WIDTH = 1280
-WINDOW_HEIGHT = 720
+# WK3 decision: default launch is borderless fullscreen at 1920x1080 (fallback handled in engine).
+WINDOW_WIDTH = 1920
+WINDOW_HEIGHT = 1080
 FPS = 60
 PROTOTYPE_VERSION = "1.2.3"
 GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
+
+# Display behavior (Build A): borderless default, with safe fallback to display resolution if smaller.
+# Note: pygame flags are applied in `game/engine.py` where we can query display size.
+DEFAULT_BORDERLESS = True
 
 # Determinism / simulation settings (future multiplayer enablement)
 # - DETERMINISTIC_SIM=1: run simulation with fixed dt (tick-based) and seeded RNG.

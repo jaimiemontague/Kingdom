@@ -261,6 +261,187 @@
         }
       }
     }
+    ,
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:08:01-07:00"
+          },
+          "prompt_text": "WK3 Kickoff (Round 1 / wk3_r1) — UI Polish + 1080p Borderless + Pixel Art\nReference the sprint plan: @.cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md\nRound 1 outputs: acceptance criteria + contracts + asset conventions + perf/QA gates.\nHard decisions locked: default launch is borderless fullscreen 1920×1080 (fallback to display resolution if smaller); CC0/open-license assets allowed w/ clean attribution; qa_smoke --quick must remain PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:08:01-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — WK3 Round 1 meeting-stage output: define the asset ingestion + validation + attribution scaffolding so Build B can land lots of pixel art safely, and so QA can gate it without flakiness.\n\n### Deliverables (Round 1)\n- Asset folder conventions + required states for heroes/enemies/buildings (aligned to existing loaders).\n- Validation + attribution tool contract (CLI, outputs, failure conditions) to be wired into QA.\n- Perf-friendly ingestion guidance (avoid load-time spikes; deterministic scaling rules).\n\n### Proposed changes (file boundaries)\n- Tools (new, owned by Agent 12; no gameplay coupling):\n  - `tools/validate_assets.py` (or `tools/asset_audit.py`): verifies required folders, at least one PNG per required state, and sortable naming (`frame_000.png` etc.).\n  - Optional manifest file: `tools/assets_manifest.json` to list the *current* enemy types + building types to validate (prevents guessing).\n- Assets (Build B):\n  - `assets/ATTRIBUTION.md` (human-readable list of packs + links + license + what we used)\n  - `assets/third_party/<pack_name>/{LICENSE,README}.txt` (verbatim)\n- Docs (to be referenced by PM/QA):\n  - Add a short section to WK3 checklist (once PM/Agent 2 create it) describing the standard commands for validation.\n\n### Asset conventions (proposal, matches current loaders)\n- Heroes:\n  - `assets/sprites/heroes/<warrior|ranger|rogue|wizard>/{idle,walk,attack,hurt,inside}/frame_###.png`\n- Enemies:\n  - `assets/sprites/enemies/<type>/{idle,walk,attack,hurt,dead}/frame_###.png` (type names must match `enemy_type` strings)\n- Buildings:\n  - `assets/sprites/buildings/<building_type>/{built,construction,damaged}/frame_###.png`\n- Naming:\n  - zero-padded numeric frames, filename-sort order is playback order.\n\n### Acceptance criteria + exact test commands\n- Baseline gate remains mandatory:\n  - `python tools/qa_smoke.py --quick` => PASS\n- Asset validation (Build B gate; wired by QA):\n  - `python tools/validate_assets.py --strict` => exit code 0 when all required folders/states exist\n  - `python tools/validate_assets.py --report` => prints a short summary of missing folders/states and attribution status\n- Attribution gate (Build B):\n  - `python tools/validate_assets.py --check-attribution` fails if any `assets/third_party/*/LICENSE*` is missing when third-party sprites exist.\n\n### Risks (blockers only)\n- If we don't lock the canonical mapping of \"enemy_type\"/\"building_type\" strings to folder names, the validator will either miss assets or fail incorrectly.\n\n### Dependencies (blockers only)\n- Agent 3: any contract decisions that impact folder naming/scaling (if they want a different root or state naming).\n- Agent 13: attribution/credits standard (exact fields to include in `assets/ATTRIBUTION.md`), so tooling can validate it.\n- Agent 8/9: if UI introduces new icon/state names that require additional asset folders, they must be added to the manifest (avoid hidden requirements).\n\n### Next actions\n- Wait for Agent 3/13 to lock any changes to folder/scaling/attribution rules (if any). Then implement `tools/validate_assets.py` + an initial manifest derived from current entity types.\n- Coordinate with Agent 11 to wire `validate_assets.py` into QA gates (report-only in Build A; strict in Build B).",
+            "summary_bullets": [
+              "Define asset validation + attribution scaffolding so Build B pixel art lands safely",
+              "Propose tools/validate_assets.py + optional tools/assets_manifest.json to avoid guessing entity types",
+              "Validation gates: required folders, at least one PNG per state, sortable frame naming, attribution presence",
+              "Blocker dependency: lock mapping of enemy_type/building_type strings to folder names"
+            ],
+            "proposed_changes": [
+              "Add tools/validate_assets.py (or tools/asset_audit.py) to verify sprite folder/state/filename conventions",
+              "Add optional tools/assets_manifest.json to list current enemy/building types for validation",
+              "Add assets/ATTRIBUTION.md and assets/third_party/<pack_name>/{LICENSE,README}.txt conventions for Build B",
+              "Coordinate with QA to run validator in report-only mode during Build A and strict mode for Build B"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick remains PASS throughout WK3",
+              "Asset validator can run locally and returns non-zero when required folders/states are missing: python tools/validate_assets.py --strict",
+              "Validator reports missing states in a short, readable summary: python tools/validate_assets.py --report",
+              "Attribution check fails when third-party packs are present but license files are missing: python tools/validate_assets.py --check-attribution"
+            ],
+            "risks": [
+              "If folder naming diverges from enemy_type/building_type strings, validation becomes noisy or ineffective (must lock mapping early)",
+              "Large asset drops can cause load-time spikes if loaders decode/scale repeatedly; need caching and consistent frame sizes",
+              "Validator may become stale if new entity types are added without updating the manifest (mitigate by auto-discovery + allowlist)"
+            ],
+            "dependencies": [
+              "Agent 3: confirm/lock folder naming + any UI scaling contract that would affect asset expectations",
+              "Agent 13: lock attribution schema for assets/ATTRIBUTION.md + third_party license storage rules",
+              "Agent 11: wire validator into QA gates (report-only Build A, strict Build B)"
+            ],
+            "questions_back_to_pm": [
+              "Do we want asset validation to be strict only in Build B (recommended), with Build A staying report-only to avoid blocking UI work?"
+            ],
+            "recommended_next_actions": [
+              "After Agent 3/13 contract decisions, implement tools/validate_assets.py + initial assets_manifest.json",
+              "Have Agent 11 call the validator from qa_smoke --quick in report-only mode during Build A, then flip to strict for Build B"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "dev_tools_suggestions": [
+                "Use a manifest/allowlist for current entity types so validator failures are intentional, not guessy",
+                "Support both report-only and strict modes to avoid blocking early UI work"
+              ],
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report",
+                "python tools/validate_assets.py --strict",
+                "python tools/validate_assets.py --check-attribution"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:23:35-07:00"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2) — Execute (Build A).\nAgent 12 assignment: implement tools/validate_assets.py + initial manifest/allowlist; fast (no image decoding/scaling); provide --report example and exit behavior for --strict/--check-attribution; do not block Build A (report-only if integrated).",
+          "response": {
+            "received_at_local": "2025-12-20T23:23:35-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — implemented Build A report-only asset validation tooling (fast filesystem checks only) per PM assignment. No UI/gameplay code touched.\n\n### Deliverables shipped\n- `tools/validate_assets.py`: fast asset validator (no image decoding/scaling). Supports:\n  - `--report` (default): prints warnings/errors + summary; always exits 0 unless `--strict` is specified.\n  - `--strict`: exits 1 only if there are **ERROR** findings (Build B can tighten severity later).\n  - `--check-attribution`: validates `assets/third_party/<pack>/LICENSE*.txt` + `README*.txt` when third_party packs exist; warns if `assets/ATTRIBUTION.md` missing.\n  - `--json`: emits a single JSON object for CI parsing.\n- `tools/assets_manifest.json`: initial allowlist of currently shipped hero classes, enemy types, and building types (aligned to current code/config).\n\n### Files changed\n- Added `tools/validate_assets.py`\n- Added `tools/assets_manifest.json`\n\n### Evidence (commands run)\n- PASS (required gate): `python tools/qa_smoke.py --quick`\n- PASS (report-only example): `python tools/validate_assets.py --report`\n  - Example summary line: `[validate_assets] SUMMARY errors=0 warns=34`\n- PASS (attribution check behavior in Build A; no packs present): `python tools/validate_assets.py --check-attribution --report` (exits 0)\n\n### Exit behavior (for PM/QA)\n- `python tools/validate_assets.py --report` => exit 0 always (Build A report-only).\n- `python tools/validate_assets.py --strict` => exit 1 if any ERROR findings exist; currently missing per-kind/state dirs are WARN (so strict still exits 0 today; can be tightened for Build B).\n- `python tools/validate_assets.py --check-attribution --strict` => exit 1 if third_party packs exist but LICENSE*.txt is missing.\n\n### Blockers\n- None.\n\n### Risks (blockers only)\n- Manifest can drift if new enemy/building types ship without updating `tools/assets_manifest.json` (mitigate later via discovery + allowlist checks).\n\n### Next actions\n- Coordinate with Agent 11 to optionally call `validate_assets.py --report` from QA in Build A (no failing gate), then tighten to strict mode for Build B once assets land and severity policy is agreed.",
+            "summary_bullets": [
+              "Shipped fast, report-only asset validator for WK3 (no image decoding/scaling)",
+              "Added initial allowlist manifest of currently shipped heroes/enemies/buildings",
+              "qa_smoke --quick remains PASS after tooling changes"
+            ],
+            "proposed_changes": [
+              "Add tools/validate_assets.py (fast filesystem-only checks; report/strict/attribution modes)",
+              "Add tools/assets_manifest.json allowlist for shipped entity types",
+              "Optionally wire validator in report-only mode during Build A; tighten to strict for Build B"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick stays PASS",
+              "python tools/validate_assets.py --report runs fast and exits 0 with a readable summary",
+              "python tools/validate_assets.py --check-attribution behaves deterministically and exits non-zero only when strict + missing required license files"
+            ],
+            "risks": [
+              "Manifest drift if new entity types are added without updating allowlist"
+            ],
+            "dependencies": [
+              "Agent 11: decide whether to call validate_assets.py in Build A (report-only) and how to tighten severities for Build B strict gate"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: optionally add report-only validator run to QA workflow (not a failing gate) for Build A, then promote to strict for Build B"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report",
+                "python tools/validate_assets.py --check-attribution --report",
+                "python tools/validate_assets.py --json"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_wrap_and_buildb_kick_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:41-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (wk3_r3) — Blockers-only. Agent 12: Build B prep only: propose how to tighten validator severity for strict mode (what becomes ERROR once packs land) and coordinate wiring plan with QA (Build A report-only, Build B strict).",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:41-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — Build B prep only: proposing strict-mode severity policy for `tools/validate_assets.py` and the QA wiring plan. No code changes in this blockers-only round.\\n\\n### Files touched\\n- None (plan + coordination only).\\n\\n### Commands run (evidence)\\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0).\\n\\n### Proposed strict-mode severity policy (Build B)\\nCurrent Build A behavior: report-only; missing per-kind/state is WARN and does not fail.\\n\\nFor Build B strict gate, recommend the following severity tightening:\\n- **ERROR (failing in --strict)**\\n  - Missing base dirs: `assets/sprites/heroes|enemies|buildings`\\n  - Missing kind/type dir for any manifest entry (e.g., `assets/sprites/enemies/goblin/`)\\n  - Missing required state dir OR state dir exists but has **0** matching `frame_###.png`\\n  - Bad frame naming (non-matching files) *if* there are files present but none match the frame pattern\\n  - Attribution: if any `assets/third_party/<pack>/` exists, require `LICENSE*.txt` (verbatim) as ERROR if missing\\n- **WARN (non-failing by default)**\\n  - Missing `README*.txt` in third_party pack dir (I’d like this as WARN; can be ERROR if PM wants “license + readme always”)\\n  - Missing `assets/ATTRIBUTION.md` (could be ERROR once we ship packs; recommend ERROR for release tagging)\\n  - Gaps in frame numbers (optional; keep WARN unless we see loader issues)\\n\\n### QA wiring plan (Agent 11 coordination)\\n- **Build A**: optional non-blocking step\\n  - `python tools/validate_assets.py --report` (always exit 0; provides visibility without blocking UI work)\\n- **Build B**: strict failing gate (once packs land)\\n  - `python tools/validate_assets.py --strict --check-attribution --report`\\n  - Optionally also emit `--json` for CI artifact parsing.\\n\\n### Blockers\\n- None.\\n\\n### Next actions\\n- If PM/Agent 11 agrees with the severity policy, I’ll implement the strict-mode change as a small patch: in strict mode, treat missing kind/state as ERROR and optionally require assets/ATTRIBUTION.md when third_party packs exist.",
+            "summary_bullets": [
+              "Proposed Build B strict-mode severity policy for validate_assets (which findings become ERROR vs WARN)",
+              "Confirmed Build A gate still PASS: qa_smoke --quick",
+              "Recommended QA wiring: Build A report-only; Build B strict + attribution check"
+            ],
+            "proposed_changes": [
+              "Build B: tighten validate_assets strict mode to treat missing kind/state/frame set as ERROR",
+              "Build B: require third_party LICENSE*.txt as ERROR when packs exist; optionally make ATTRIBUTION.md required for release tagging",
+              "QA wiring: Build A run validate_assets --report (non-blocking), Build B run validate_assets --strict --check-attribution"
+            ],
+            "acceptance_criteria": [
+              "Build A remains unblocked: validate_assets --report exits 0 and is informational only",
+              "Build B strict mode fails when any manifest entry is missing required state frames",
+              "Build B strict mode fails when third_party pack dirs exist but LICENSE*.txt is missing"
+            ],
+            "risks": [
+              "Strict gate can be noisy if manifest drifts; mitigate by updating tools/assets_manifest.json alongside entity changes",
+              "Deciding whether ATTRIBUTION.md is WARN vs ERROR affects release process; recommend ERROR at tag time once packs ship"
+            ],
+            "dependencies": [
+              "Agent 11: decide whether to include validate_assets --report as optional Build A checklist step, and to wire strict mode for Build B",
+              "PM: confirm whether README*.txt and ATTRIBUTION.md should be WARN vs ERROR for Build B"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM/Agent 11: confirm severity policy (especially ATTRIBUTION.md and README*.txt) so I can implement strict-mode behavior as a small patch",
+              "Agent 11: add validate_assets --report as optional Build A checklist item; reserve strict mode for Build B"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

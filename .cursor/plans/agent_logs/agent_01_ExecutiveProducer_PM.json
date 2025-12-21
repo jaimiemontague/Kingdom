@@ -726,6 +726,424 @@
           "status": "ready_for_manual_smoke"
         }
       }
+    },
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3 PM hub: ship borderless 1920x1080 default + Majesty-inspired UI skeleton (Build A), then pixel-art ingestion + attribution + validation (Build B)."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 1 is the async meeting stage: lock contracts (window + UI layout + asset conventions + attribution rules) before heavy implementation."
+          },
+          "pm_decisions": {
+            "roster": {
+              "active_agents": [
+                "02_GameDirector_ProductOwner",
+                "03_TechnicalDirector_Architecture",
+                "08_UX_UI_Director",
+                "10_PerformanceStability_Lead",
+                "11_QA_TestEngineering_Lead",
+                "12_ToolsDevEx_Lead",
+                "13_SteamRelease_Ops_Marketing"
+              ],
+              "consult_only_agents": [
+                "09_ArtDirector_Pixel_Animation_VFX"
+              ],
+              "silent_agents": [
+                "04_NetworkingDeterminism_Lead",
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "07_ContentScenarioDirector"
+              ],
+              "note": "Keep roster tight. Only Active agents should respond in wk3_r2 unless PM explicitly pings others."
+            },
+            "build_split": {
+              "build_a_midweek": [
+                "Default launch: borderless fullscreen 1920x1080 (fallback to display resolution if smaller)",
+                "Majesty-inspired HUD layout skeleton (top bar / bottom command bar / right info panel / minimap region) with theme primitives",
+                "No new external art dependency; sprite fallbacks remain OK",
+                "Perf-safe widgets (cache surfaces; no per-frame allocations)"
+              ],
+              "build_b_endweek": [
+                "Pixel-art ingestion for all currently shipped heroes/enemies/buildings (PNG override folders populated)",
+                "Attribution compliance: assets/ATTRIBUTION.md + assets/third_party/<pack>/{LICENSE,README}.txt (verbatim)",
+                "Asset validation tool (strict mode) + QA wiring; keep qa_smoke green"
+              ]
+            },
+            "display_contract_locked": {
+              "default_mode": "borderless fullscreen at 1920x1080",
+              "fallback_mode": "if display smaller than 1920x1080, use display's current resolution (still borderless)",
+              "owner": "Agent 03",
+              "implementation_boundary": [
+                "config.py owns defaults/toggles",
+                "game/engine.py owns pygame.display.set_mode flags + fallback resolution selection"
+              ]
+            },
+            "ui_scaling_contract_locked": {
+              "design_reference": "1920x1080",
+              "policy": [
+                "Primary target is 1080p: pixel-crisp, no smoothing.",
+                "If runtime resolution differs (fallback), compute layout using actual screen_w/screen_h; do NOT assume 1920x1080.",
+                "Avoid fractional scaling of pixel art; if any scaling is needed, prefer integer-ish/rounded sizes and nearest-neighbor."
+              ],
+              "owner": "Agent 08 (final layout details), Agent 03 (window + any scale primitives)"
+            },
+            "asset_conventions_locked": {
+              "heroes": "assets/sprites/heroes/<class>/{idle,walk,attack,hurt,inside}/frame_###.png",
+              "enemies": "assets/sprites/enemies/<type>/{idle,walk,attack,hurt,dead}/frame_###.png",
+              "buildings": "assets/sprites/buildings/<building_type>/{built,construction,damaged}/frame_###.png",
+              "frame_naming": "frame_000.png ... (filename-sort order is playback order)",
+              "note": "Do not change loader paths this sprint unless absolutely required; prefer matching existing loaders."
+            },
+            "attribution_contract_locked": {
+              "rollup_file": "assets/ATTRIBUTION.md",
+              "per_pack_dir": "assets/third_party/<pack_name>/",
+              "required_verbatim_files": [
+                "LICENSE*.txt",
+                "README*.txt"
+              ],
+              "policy": "Strict attribution is a Build B gate; Build A may add scaffolding docs/tools but must not block UI work."
+            },
+            "qa_and_perf_gates_locked": {
+              "always_on_gate": "python tools/qa_smoke.py --quick (must PASS)",
+              "manual_smoke": [
+                "python main.py --no-llm (10 min; verify window mode + UI readability)",
+                "python main.py --provider mock (10 min; verify window mode + UI readability)"
+              ],
+              "perf_baseline_policy": "Record perf_wk3.csv baseline via tools/perf_benchmark.py; investigate >15% ms/tick increase on same machine/config (not a hard fail gate this sprint).",
+              "asset_validation_policy": "Build A: report-only; Build B: strict/failing gate."
+            }
+          },
+          "pm_responses_by_agent": {
+            "02": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: your 1080p readability + ‘no clutter’ rules are the product acceptance lens for Build A.",
+                "Decision: we are not attempting a full settings menu this sprint; focus on default behavior + clarity."
+              ],
+              "asks": [
+                "In wk3_r2, please do an approval/cut pass on Agent 8’s concrete HUD layout and list any ‘must cut’ items if clutter risk appears."
+              ]
+            },
+            "03": {
+              "status": "assigned",
+              "pm_reply": [
+                "Greenlight: implement the borderless 1920x1080 default + smaller-display fallback as you described.",
+                "Decision: keep changes localized to config/engine; no UI coupling."
+              ],
+              "asks": [
+                "Expose the selected window size (screen_w/screen_h) to UI in a simple, non-cyclic way if not already available.",
+                "Provide evidence: `python tools/qa_smoke.py --quick` PASS and a one-line startup log (optional) stating chosen window mode + resolution."
+              ]
+            },
+            "08": {
+              "status": "assigned",
+              "pm_reply": [
+                "Approved: your Majesty-inspired layout spec and minimal theme/widgets approach.",
+                "Decision: Build A must be shippable without any new PNG assets; do not hardcode asset paths beyond existing contracts."
+              ],
+              "asks": [
+                "Build A: implement HUD layout skeleton + theme primitives with caching (no per-frame surface churn).",
+                "Answer the scaling question by following the locked policy: compute layout from actual screen_w/screen_h; keep pixel-crisp; avoid fractional scaling."
+              ]
+            },
+            "10": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Accepted: perf guardrails and baseline approach (perf_wk3.csv + >15% investigate threshold)."
+              ],
+              "asks": [
+                "In wk3_r2, record a baseline perf_wk3.csv and call out any obvious new allocation hotspots introduced by UI work."
+              ]
+            },
+            "11": {
+              "status": "assigned",
+              "pm_reply": [
+                "Accepted: keep fullscreen verification as human smoke (platform-dependent).",
+                "Decision: do not add flaky automated fullscreen asserts to qa_smoke; focus on no-crash + tool validation for Build B."
+              ],
+              "asks": [
+                "In wk3_r2, add/refresh a short manual smoke checklist for borderless 1080p + UI readability (Windows).",
+                "Coordinate with Agent 12 on validator wiring: report-only in Build A, strict in Build B."
+              ]
+            },
+            "12": {
+              "status": "assigned",
+              "pm_reply": [
+                "Decision: asset validation is report-only for Build A; strict/failing gate for Build B (recommended).",
+                "Approved: optional manifest/allowlist approach to avoid guessing entity types."
+              ],
+              "asks": [
+                "In wk3_r2, implement `tools/validate_assets.py` (or similar) + initial manifest and keep it fast (no image decoding/scaling).",
+                "Provide output examples for --report and exit codes for --strict/--check-attribution."
+              ]
+            },
+            "13": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Approved: create attribution standard doc + patch-notes template section for Credits/Attribution.",
+                "Decision: keep release notes precise: we will not claim ‘pixel art for everything’ unless validator passes and QA confirms coverage."
+              ],
+              "asks": [
+                "In wk3_r2, add docs-only scaffolds: attribution standard + WK3 Build A/B patch notes drafts (with Credits section placeholders)."
+              ]
+            },
+            "09": {
+              "status": "stand_down_consult_only",
+              "pm_reply": [
+                "Thanks—style direction is accepted. You are consult-only for wk3_r2; no response needed unless pinged.",
+                "We may ask you in wk3_r3 to shortlist 1–2 CC0/open-license packs per category (heroes/enemies/buildings/UI) with cohesion notes."
+              ],
+              "asks": []
+            }
+          },
+          "pm_integration_order": [
+            "Agent 03 lands borderless 1920x1080 default + fallback in config/engine; keep qa_smoke green.",
+            "Agent 08 lands UI skeleton + theme/widgets with caching; keep changes incremental and shippable without new art.",
+            "Agent 10 records perf_wk3 baseline and flags any new per-frame allocations.",
+            "Agents 12+11 land asset validator in report-only mode (no failing gate) + document Build B strict gate plan.",
+            "Agent 13 lands attribution standard + patch-note scaffolds."
+          ],
+          "pm_open_questions_resolved": [
+            "Asset validator strictness: Build A report-only, Build B strict/failing gate.",
+            "UI scaling policy: 1080p-first; compute layout from actual screen size; keep pixel-crisp; avoid fractional scaling."
+          ]
+        },
+        "wk3_r2": {
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 2 is execution (Build A). Only ACTIVE agents should respond."
+          },
+          "pm_instruction": "WK3 Round 2 (wk3_r2): Execute Build A. Implement borderless 1920x1080 default + fallback, and the Majesty-inspired UI skeleton/theme, keeping perf safe and `python tools/qa_smoke.py --quick` PASS. Asset validation should be report-only (no failing gate yet). Only ACTIVE agents respond; consult-only agents stand down unless pinged.",
+          "pm_messages_to_agents": {
+            "02": {
+              "status": "requested",
+              "message": "Round 2: do an approval/cut pass on Agent 8’s HUD layout implementation once it’s posted/landed. Call out any clutter risks; prioritize readability at 1080p and ‘key info always visible’ (gold/time/alerts) without covering the playfield."
+            },
+            "03": {
+              "status": "requested",
+              "message": "Round 2: implement borderless fullscreen default 1920x1080 with fallback to display resolution if smaller. Keep changes localized to config/engine. If feasible, expose chosen screen_w/screen_h to UI (game_state) without cycles. Evidence: `python tools/qa_smoke.py --quick` PASS."
+            },
+            "08": {
+              "status": "requested",
+              "message": "Round 2: implement Build A UI skeleton: top bar + bottom command bar + right info panel + minimap region, plus minimal `theme.py` + `widgets.py` primitives. Keep it incremental (don’t refactor everything at once), cache surfaces/text to avoid per-frame churn, and compute layout from actual screen_w/screen_h (no hardcoded 1920x1080 assumptions). Evidence: `python tools/qa_smoke.py --quick` PASS."
+            },
+            "10": {
+              "status": "requested",
+              "message": "Round 2: record a baseline perf run (perf_wk3.csv) and review any UI PRs for per-frame allocations. Flag any hotspots early. Keep changes minimal and coordination-safe."
+            },
+            "11": {
+              "status": "requested",
+              "message": "Round 2: keep qa_smoke green. Add/refresh a short Windows manual smoke checklist for borderless 1080p + UI readability. Coordinate with Agent 12: validator is report-only in Build A and strict in Build B (do not add flaky fullscreen asserts)."
+            },
+            "12": {
+              "status": "requested",
+              "message": "Round 2: implement `tools/validate_assets.py` (or similar) + initial manifest/allowlist. It must be fast (no image decoding/scaling). Provide `--report` output example and `--strict`/`--check-attribution` exit behavior. Do NOT block Build A; wire as report-only if integrated."
+            },
+            "13": {
+              "status": "requested",
+              "message": "Round 2: docs-only scaffolding: attribution standard doc + patch-notes template Credits section + WK3 Build A/B patch note draft files. Keep claims precise and gated by validator/QA later."
+            }
+          },
+          "pm_round2_results": {
+            "high_level_status": "mostly_complete_with_one_blocker",
+            "what_landed": [
+              "Agent 08 shipped Build A UI skeleton + minimal UI framework (`game/ui/theme.py`, `game/ui/widgets.py`) and refactored `game/ui/hud.py` to compute layout from actual surface size; qa_smoke PASS.",
+              "Display mode work appears landed in code: `config.py` sets WINDOW_WIDTH/HEIGHT=1920/1080 + DEFAULT_BORDERLESS=True, and `game/engine.py` selects desired window size with fallback to display resolution and uses NOFRAME for borderless (skips in SDL dummy); qa_smoke PASS.",
+              "Agent 12 shipped report-only asset validator tooling: `tools/validate_assets.py` + `tools/assets_manifest.json`; qa_smoke PASS.",
+              "Agent 11 added Windows manual smoke checklist: `docs/sprint/wk3_acceptance_checklist.md`; qa_smoke PASS.",
+              "Agent 10 recorded perf baseline to local perf_wk3.csv and flagged legacy per-frame Surface allocations in `game/ui/building_panel.py` and `game/ui/debug_panel.py`.",
+              "Agent 13 shipped docs scaffolding: attribution standard + patch notes templates/drafts for WK3 Build A/B."
+            ],
+            "still_pending_before_calling_build_a_ready": [
+              "HUMAN manual smoke (required): `python main.py --no-llm` and `python main.py --provider mock` for ~10 minutes each, verifying borderless behavior and UI readability.",
+              "P0 tech blocker: ensure render/camera/scaling paths do not assume WINDOW_WIDTH/WINDOW_HEIGHT when window resolution differs due to fallback. (Engine currently sets `self.window_width/height`, but many downstream uses still reference constants; this can break smaller-display fallback.)",
+              "Audit trail gap: Agent 03 did not log a wk3_r2 entry even though display-mode code appears landed. We need a retro-log for traceability."
+            ],
+            "integration_risks": [
+              "Fallback resolution risk: `pygame.transform.scale(..., (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)` and camera edge logic may mismatch the actual window size when fallback < 1920x1080. Must use `self.window_width/self.window_height` (or derive from `self.screen.get_width/height`) consistently.",
+              "Perf risk: legacy `building_panel.py` and `debug_panel.py` allocate surfaces per render; keep behind debug toggles or schedule a caching pass if they remain frequently visible."
+            ]
+          },
+          "pm_responses_by_agent": {
+            "02": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Thanks—your cut guidance is accepted. Good call that we should avoid always-on clutter and keep full control legends behind F3."
+              ],
+              "asks": [
+                "In wk3_r3, please sanity-check the completed UI skeleton at 1920x1080 and confirm it meets readability rules (no overlap/clipping; right panel not too wide)."
+              ]
+            },
+            "08": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Great—UI skeleton + theme/widgets landed with caching and screen-size-derived layout; that matches Build A goals."
+              ],
+              "asks": [
+                "In wk3_r3, do a quick pass to ensure the new HUD doesn’t accidentally force legacy panels to stay visible (building/debug panels) and that layout remains usable if window size changes."
+              ]
+            },
+            "10": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Perf baseline recorded; hotspot notes accepted."
+              ],
+              "asks": [
+                "After Agent 03 fixes any fallback sizing issues (wk3_r3), rerun perf_benchmark and compare to baseline (investigate >15% increases)."
+              ]
+            },
+            "11": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Checklist addition is correct; keep fullscreen verification human-run as planned."
+              ],
+              "asks": [
+                "In wk3_r3, add one line to the checklist to also validate behavior on a smaller-than-1080 display if available (or at least verify window size mismatch does not crash).",
+                "Coordinate with Agent 12 on whether to mention `python tools/validate_assets.py --report` as optional Build A informational command."
+              ]
+            },
+            "12": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Validator shipped as requested (fast + report-only). Good job keeping it non-blocking."
+              ],
+              "asks": [
+                "In wk3_r3, coordinate with Agent 11 to optionally call `python tools/validate_assets.py --report` in Build A workflow (non-failing).",
+                "Prepare a severity-tightening plan for Build B strict mode (which findings become ERROR vs WARN once assets land)."
+              ]
+            },
+            "13": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Docs scaffolding is landed; keep claims gated by validator+QA."
+              ],
+              "asks": [
+                "In wk3_r3, stand by for pack list so you can convert it into Credits bullets; no further action unless pinged."
+              ]
+            }
+          },
+          "status": "action_required"
+        },
+        "wk3_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk3_wrap_and_buildb_kick_r3_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Round 3: close remaining Build A blockers and (if clear) kickoff Build B asset ingestion + strict validation."
+          },
+          "pm_instruction": "WK3 Round 3 (wk3_r3): Blockers-only. Primary goal is to make borderless fallback safe (no WINDOW_WIDTH/HEIGHT assumptions when window differs), keep `python tools/qa_smoke.py --quick` PASS, and declare Build A ready for human manual smoke + tag. If Build A is cleared early, we’ll immediately kickoff Build B prep (pack shortlist + strict validator severity plan + attribution wiring).",
+          "pm_messages_to_agents": {
+            "03": {
+              "status": "requested",
+              "message": "P0 blocker fix: ensure engine/render/camera/scaling uses the actual window size when fallback < 1920x1080. Today the window is created with `self.window_width/height`, but many downstream computations still use WINDOW_WIDTH/WINDOW_HEIGHT. Fix minimally: derive `screen_w/screen_h` from `self.window_width/height` (or `self.screen.get_width/height`) and use it consistently for camera center, edge-scroll boundaries, view scaling, and `pygame.transform.scale` destinations. Keep determinism unchanged. Evidence: `python tools/qa_smoke.py --quick` PASS. Also retro-log a wk3_r2 entry summarizing your earlier display-mode changes (audit trail)."
+            },
+            "11": {
+              "status": "requested",
+              "message": "Update docs checklist (small): add a note to validate that window-size mismatch (smaller-than-1080 display) does not crash or clip UI catastrophically. Optionally add `python tools/validate_assets.py --report` as a non-blocking informational command for Build A. Keep qa_smoke PASS."
+            },
+            "02": {
+              "status": "requested",
+              "message": "Quick signoff: once Agent 03 lands fallback-safe sizing, review UI readability at 1920x1080 and confirm no overlap/clipping + right panel not too wide. If anything is too cluttered, list the top 1–2 cuts (Build A only)."
+            },
+            "08": {
+              "status": "requested",
+              "message": "Sanity pass after Agent 03 sizing fix: ensure HUD layout remains correct (derived from surface size), and confirm no legacy panels are forced always-on. Keep caching intact; qa_smoke must remain PASS."
+            },
+            "12": {
+              "status": "requested",
+              "message": "Build B prep (no asset ingestion yet unless cleared): propose severity-tightening for strict mode (what becomes ERROR once we add packs) and coordinate with Agent 11 on wiring `validate_assets.py` into QA (Build A report-only, Build B strict)."
+            },
+            "09": {
+              "status": "requested",
+              "message": "Build B kickoff prep: shortlist 1–2 CC0/open-license packs per category (heroes/enemies/buildings, optional UI icons) with cohesion notes (outline thickness, palette/ramp). Keep it minimal and curated (avoid repo bloat). Do not commit assets yet in this round—just shortlist + rationale + any normalization steps."
+            },
+            "13": {
+              "status": "requested",
+              "message": "Stand by for Build B: once Agent 09/12 select packs, convert the pack list into exact Credits bullets format (assets/ATTRIBUTION.md + per-pack third_party folder expectations). No new claims until validator+QA confirm coverage."
+            }
+          },
+          "pm_round3_results": {
+            "high_level_status": "blocker_resolved_build_a_ready_for_human_smoke",
+            "what_landed": [
+              "Agent 03 removed remaining WINDOW_WIDTH/WINDOW_HEIGHT assumptions from camera + render scaling paths and exposed `screen_w/screen_h` in game_state; `python tools/qa_smoke.py --quick` PASS.",
+              "Agent 11 updated `docs/sprint/wk3_acceptance_checklist.md` to explicitly validate smaller-than-1080 fallback safety and added optional `python tools/validate_assets.py --report` (non-blocking); `qa_smoke` PASS.",
+              "Agent 12 proposed Build B strict-mode severity policy for `tools/validate_assets.py` and confirmed `qa_smoke` PASS.",
+              "Agent 09 delivered Build B pack shortlist (Kenney primary; LPC fallback) and confirmed `qa_smoke` PASS.",
+              "Agent 13 is standing by to convert the final pack list into Credits/Attribution bullets; `qa_smoke` PASS."
+            ],
+            "build_a_readiness": "Automation gates are green and the fallback-resolution blocker is resolved in code. However, a new P0 crash was found during manual smoke boot: UITheme dataclass slots prevent setting font_* attributes in __post_init__. Build A is NOT smokeable until WK3-BUG-001 is fixed.",
+            "required_human_steps": [
+              "Manual smoke 10 min: `python main.py --no-llm` — verify borderless behavior and UI readability at actual runtime resolution; confirm no catastrophic clipping/crash if display <1080p.",
+              "Manual smoke 10 min: `python main.py --provider mock` — same checks.",
+              "Optional informational: `python tools/validate_assets.py --report` (should exit 0 and report missing sprite folders/states as WARNs)."
+            ],
+            "build_b_go_no_go": "GO for Build B kickoff planning now (pack/license verification + strict validator policy), but do not claim ‘pixel art for everything’ until validator+QA confirm coverage."
+          },
+          "pm_decisions": {
+            "build_a_status": "blocked_on_WK3-BUG-001",
+            "build_b_validator_strict_policy": {
+              "ATTRIBUTION_md": "ERROR (required) once any third_party packs are added",
+              "third_party_LICENSE": "ERROR when pack dir exists",
+              "third_party_README": "WARN (upgrade to ERROR if we find license requires it)",
+              "missing_required_state_frames": "ERROR in strict mode for Build B"
+            },
+            "pack_selection_policy": "Prefer single-source cohesion. Start with a minimal curated subset; avoid importing entire packs."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK3-BUG-001",
+              "title": "Boot crash: UITheme dataclass(slots=True) cannot set font_* attributes in __post_init__",
+              "severity": "blocker",
+              "build_target": "BuildA",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_manual_smoke",
+              "repro_steps": [
+                "Run: python main.py (or python main.py --no-llm / --provider mock)",
+                "Observe crash during GameEngine init when HUD creates UITheme"
+              ],
+              "expected": "Game boots successfully; UITheme initializes fonts safely.",
+              "actual": "Crash: AttributeError: 'UITheme' object has no attribute 'font_title' and no __dict__ for setting new attributes",
+              "evidence": [
+                "Trace points to game/ui/theme.py: UITheme.__post_init__ assigning self.font_title/body/small on a slots dataclass without declaring those fields."
+              ],
+              "suspected_area": [
+                "game/ui/theme.py (UITheme dataclass)",
+                "game/ui/hud.py (constructs UITheme in HUD.__init__)"
+              ],
+              "constraints": [
+                "Keep behavior deterministic and perf-safe.",
+                "Prefer keeping slots=True; declare font fields properly (init=False) rather than removing slots unless necessary."
+              ],
+              "proposed_fix": [
+                "In UITheme dataclass, add fields: font_title/font_body/font_small (e.g., pygame.font.Font | None) with init=False default=None, then assign in __post_init__.",
+                "Alternative: remove slots=True (less preferred)."
+              ],
+              "acceptance_test": [
+                "python main.py --no-llm boots to a running window (no crash)",
+                "python tools/qa_smoke.py --quick remains PASS"
+              ],
+              "status": "resolved",
+              "resolution_summary": [
+                "Agent 08 kept `@dataclass(slots=True)` and declared `font_title/font_body/font_small` as dataclass fields (init=False, default=None), then assigned them in `UITheme.__post_init__`.",
+                "Boot verified in `--no-llm` and `--provider mock` and `python tools/qa_smoke.py --quick` PASS per Agent 08 log (wk3_r4)."
+              ],
+              "resolution_evidence": [
+                "Agent 08 log: sprints[\"wk3-ui-polish-1080p-pixelart\"].rounds[\"wk3_r4\"]",
+                "Code: game/ui/theme.py declares the font fields using dataclasses.field(...) and assigns in __post_init__."
+              ]
+            }
+          ],
+          "status": "ready_for_human_manual_smoke"
+        }
+      }
     }
   }
 }

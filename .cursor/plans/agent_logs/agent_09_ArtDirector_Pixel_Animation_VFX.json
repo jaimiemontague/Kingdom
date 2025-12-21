@@ -262,6 +262,150 @@
         }
       }
     }
+    ,
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3: Build A = 1080p borderless default + UI layout skeleton/theme (no new art dependency). Build B = pixel-art ingestion for heroes/enemies/buildings + attribution compliance."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_r1_async_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:47.9625288-07:00"
+          },
+          "prompt_text": "WK3 Round 1 kickoff: provide acceptance criteria + asset conventions + perf/QA gates for UI polish + 1080p borderless default + pixel-art sprite pass (CC0/open-license allowed with attribution).",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:47.9625288-07:00",
+            "status": "complete",
+            "raw": "## Status\\nAgent 9 (ArtDirector_Pixel_Animation_VFX) is ACTIVE for WK3. Round 1 deliverable is **art direction + asset conventions** (not a big implementation dump): define a cohesive UI skin direction (Majesty-like) and a safe plan for ingesting CC0/open-license pixel art with clean attribution while keeping `python tools/qa_smoke.py --quick` green.\\n\\n## Deliverables (Round 1 outputs)\\n- UI art direction constraints (palette/value, outlines, 9-slice style, icon readability) suitable for 1080p UI.\\n- Asset conventions for sprite ingestion (heroes/enemies/buildings) and UI icon/sheet usage without breaking pixel integrity.\\n- Acceptance criteria + test gates for Build A (UI + borderless) and Build B (asset ingestion).\\n\\n## Proposed changes (file boundaries; Round 1 = plan/spec only)\\n- Docs (safe, low-conflict):\\n  - Extend `docs/art/pixel_style_guide.md` with a short UI-skin section (panel materials, value ramps, outline rules).\\n  - Add `docs/art/ui_skin_style_guide.md` describing: 1080p UI scale targets, 9-slice padding rules, button states, and icon sizes (16/20/24 px).\\n- Assets (Build B, larger change):\\n  - Populate existing sprite override directories:\\n    - `assets/sprites/heroes/<class>/<action>/*.png`\\n    - `assets/sprites/enemies/<type>/<action>/*.png`\\n    - `assets/sprites/buildings/<type>/<state>/*.png`\\n  - UI sprites (optional; Build B): `assets/sprites/ui/` for icon PNGs if we move beyond procedural icons.\\n  - Attribution structure (expected, but owned by Tools/Ops): `assets/ATTRIBUTION.md` + `assets/third_party/<pack_name>/...`\\n\\n## Art direction (UI + sprites)\\n### 1) UI skin (Majesty-inspired, modern readable)\\n- **Value-first readability**: panels should be darker than world; text/icons high-value with 1px outline or shadow.\\n- **Materials**: carved wood + parchment + metal trims; avoid pure black/white.\\n- **9-slice panels**: corners must remain crisp; avoid gradients that band at 1080p.\\n- **Iconography**: prefer silhouette icons over text for bottom command bar; keep icon sizes consistent (recommended 20px) with a 1px outline and a dark plate for world-overlays.\\n- **State language**: hover/pressed/disabled should be readable with 2–3 value steps, not just hue shift.\\n\\n### 2) Sprite ingestion coherence\\n- Keep sprites **32x32 aligned** (or deterministically scaled to that); no smoothing/filtered scaling.\\n- Maintain class color accents consistent with existing placeholder language (Warrior=blue, Ranger=green, Rogue=desat steel/gray, Wizard=purple).\\n- Prefer packs with consistent outline thickness and ramp style; if mixed packs are unavoidable, normalize via palette/value adjustments.\\n\\n## Acceptance criteria + gates\\n### Build A (Midweek): borderless 1920x1080 + UI skeleton (no new art dependency)\\n- Default launch is **borderless 1920×1080**, or **borderless at native display resolution** if smaller.\\n- UI layout is readable at 1080p (no overlaps; text not clipped; minimap/panels fit).\\n- `python tools/qa_smoke.py --quick` remains PASS.\\n- Manual smoke (10 min) in both:\\n  - `python main.py --no-llm`\\n  - `python main.py --provider mock`\\n\\n### Build B (Endweek): pixel art for everything visible + attribution\\n- Heroes/enemies/buildings use pixel sprites when assets exist; procedural fallback OK for missing frames.\\n- Attribution is complete and clean (human-readable + verbatim license text preserved).\\n- No regressions: `python tools/qa_smoke.py --quick` PASS.\\n\\n## Exact test commands (what I will treat as gates)\\n- Required: `python tools/qa_smoke.py --quick`\\n- Required manual: `python main.py --no-llm` and `python main.py --provider mock`\\n- Asset presence validation: to be added by Tools/QA (Agent 12/11) as a script; I will not guess the final command name.\\n\\n## Risks\\n- Mixed-pack art style drift (different outlines/palettes) makes the game feel inconsistent; mitigate by choosing one primary pack per category or normalizing ramps.\\n- UI scaling conflicts: if borderless+scaling strategy changes later, UI art sizing could thrash; mitigate by waiting for Agent 3’s locked scaling contract before producing UI sheet pixel sizes beyond icons.\\n- Repo size bloat: large CC0 packs can balloon repo; mitigate by selecting minimal subsets and documenting source packs in `assets/third_party/`.\\n\\n## Dependencies (blockers only)\\n- Agent 3 contract decision: final window scaling / UI scale strategy (so UI art can be authored at the correct pixel scale).\\n- Agent 12 + Agent 13 conventions: final attribution folder/file rules and validation approach (so we ingest packs compliantly without rework).\\n\\n## Recommended next actions\\n- Wait for Agent 3’s scaling/window contract before creating any fixed-size UI sprite sheets beyond small icons.\\n- In parallel: shortlist 1–2 CC0/open-license packs per category (UI, heroes, enemies, buildings) and record pros/cons for cohesion.\\n- Once attribution conventions are locked: ingest pack subsets into existing override folders and add required attribution files.\\n",
+            "summary_bullets": [
+              "Defined UI skin art direction for 1080p: value-first readability, carved-wood/parchment materials, crisp 9-slice rules, icon-first command bar",
+              "Outlined safe asset ingestion conventions using existing sprite override directories (heroes/enemies/buildings) plus optional UI icons folder",
+              "Specified Build A/Build B acceptance criteria and required QA/manual gates (qa_smoke must stay PASS)"
+            ],
+            "proposed_changes": [
+              "Add a short UI skin style guide doc (palette/value/outline, 9-slice padding, icon sizes) and extend existing pixel style guide with UI rules",
+              "Build B: ingest CC0/open-license pixel art into existing sprite override folders; keep nearest-neighbor and 32x32 alignment",
+              "Follow attribution conventions (assets/ATTRIBUTION.md + assets/third_party/<pack>/license files) once Tools/Ops lock them"
+            ],
+            "acceptance_criteria": [
+              "Default launch is borderless fullscreen 1920×1080 (fallback to display resolution if smaller) with UI readable at 1080p",
+              "`python tools/qa_smoke.py --quick` remains PASS throughout WK3",
+              "Manual smoke: `python main.py --no-llm` and `python main.py --provider mock` (10 minutes each) without crashes or unreadable UI",
+              "Build B: when assets exist, heroes/enemies/buildings render with pixel sprites; fallback remains safe for missing frames; attribution is complete"
+            ],
+            "risks": [
+              "Mixed-pack style inconsistency (outline/palette/ramp differences) reduces cohesion",
+              "UI scaling contract changes could thrash UI art sizing and require rework",
+              "Repo bloat from large packs if subsets aren’t curated"
+            ],
+            "dependencies": [
+              "Agent 3: locked window/scaling/UI scale contract for borderless 1080p default",
+              "Agent 12/13: locked attribution conventions + validation script approach"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for Agent 3’s scaling contract before producing any fixed-size UI sprite sheets beyond small icons",
+              "Shortlist CC0/open-license packs per category (UI, heroes, enemies, buildings) prioritizing cohesion and minimal footprint",
+              "After attribution conventions are locked, ingest curated subsets into existing override folders and add attribution files"
+            ],
+            "agent_fields": {
+              "ui_skin_direction": [
+                "Value-first readability (dark panels, light text/icons with 1px outline/shadow)",
+                "Materials: wood/parchment/metal trims; avoid pure black/white",
+                "Crisp 9-slice corners; minimal gradients at 1080p",
+                "Icon-first bottom command bar; consistent icon size (recommend 20px)"
+              ],
+              "asset_conventions": [
+                "Keep 32x32 alignment; nearest-neighbor only (no smoothing)",
+                "Use existing override folders for heroes/enemies/buildings; optional UI icons in assets/sprites/ui/",
+                "Attribution will live under assets/ATTRIBUTION.md + assets/third_party/<pack>/ once locked by Tools/Ops"
+              ]
+            }
+          }
+        },
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_blockers_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:34:30.1856705-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (blockers-only): Agent 09 consult reactivated for Build B prep only. Shortlist 1–2 CC0/open-license packs per category (heroes/enemies/buildings, optional UI icons) with cohesion notes. Do not commit assets.",
+          "response": {
+            "received_at_local": "2025-12-20T23:34:30.1856705-07:00",
+            "status": "complete",
+            "raw": "## Status\\nConsult reactivated for wk3_r3 with a Build B-only assignment: provide a shortlist of 1–2 CC0/open-license pixel art packs per category (heroes/enemies/buildings + optional UI icons) with cohesion notes. No asset commits.\\n\\n## Shortlist (candidates to verify license + scope before ingest)\\n### 1) Primary cohesive candidate (recommended) — Kenney (one-source consistency)\\n- **Heroes + enemies + props/tiles**: Kenney “Roguelike / RPG” style packs (candidate: a single Kenney pack that includes characters + monsters + items).\\n  - **Why**: consistent palette/outlines; easy to keep a unified look across hero/enemy silhouettes; widely used; typically offered with permissive licensing.\\n  - **Cohesion notes**: pick one Kenney pack family for characters+enemies so outline thickness and ramp style match; avoid mixing with non-Kenney characters unless recolored/outlined.\\n- **Buildings / environment**: Kenney “Tiny” town/dungeon-style packs (candidate: Tiny Town / Tiny Dungeon style set).\\n  - **Why**: consistent with other Kenney pixel sets; good readability and modular buildings/props.\\n  - **Cohesion notes**: prefer building sprites that read top-down/isometric consistently with the game’s current camera; if perspective mismatch appears, choose top-down tiles + separate building sprites that occupy 1–3 tiles.\\n- **Optional UI icons**: Kenney UI/Interface icon packs (candidate: a 1-color/flat pixel icon set).\\n  - **Why**: iconography consistency for bottom command bar; quick coverage; easy recolor to match our theme.\\n\\n### 2) Secondary/fallback candidate (if Kenney scope doesn’t cover everything cleanly) — LPC (large, but heavy)\\n- **Heroes (animations)**: Liberated Pixel Cup (LPC) character bases / fantasy characters (open-license, attribution required).\\n  - **Why**: rich animation coverage (walk/attack/hurt) if we want higher-fidelity hero animation quickly.\\n  - **Cohesion notes**: LPC style can clash with Kenney unless we commit to LPC broadly or normalize palettes/outlines; also asset volume is large (curate subset only).\\n- **Enemies/buildings**: LPC-style packs exist but are varied; only use if we can keep a coherent subset.\\n\\n## Cohesion rules for selection (must follow regardless of source)\\n- **Single-source preference** per category: pick one main pack family per category; mixing is allowed only with deliberate normalization.\\n- **Outline thickness**: standardize to ~1px outline on 32x32 units; keep near-black outlines consistent.\\n- **Value ramps**: 3-step ramps (shadow/mid/high) for readability; avoid noisy dithering on units.\\n- **Perspective**: match top-down-ish read (avoid side-view characters unless we commit to a side-view look).\\n\\n## Integration mapping (how we’ll use packs)\\n- Engine expects folder overrides: `assets/sprites/heroes/<class>/<action>/*.png`, `assets/sprites/enemies/<type>/<action>/*.png`, `assets/sprites/buildings/<type>/<state>/*.png`.\\n- If a pack provides only 1 frame, we can still ship by placing a single `frame_000.png` per action (idle/walk/attack/hurt/inside) while we iterate on fuller animation later.\\n\\n## Tests / evidence (Build A gate stays green)\\n- PASS: `python tools/qa_smoke.py --quick`\\n  - Evidence snippet: `[qa_smoke] DONE: PASS` (includes WK2 hero_stuck_repro profile).\\n\\n## Blockers\\nNone. (Build B pack selection requires license+scope verification before ingest, but that’s expected.)\\n",
+            "summary_bullets": [
+              "Provided Build B pixel-art pack shortlist (heroes/enemies/buildings + optional UI icons) with cohesion notes; no assets committed",
+              "Recommended primary approach: single-source Kenney pack family for cohesion; LPC as animation-rich fallback if needed",
+              "Build A gate remains green: `python tools/qa_smoke.py --quick` PASS (evidence includes DONE: PASS)"
+            ],
+            "proposed_changes": [
+              "Build B: select one primary pack family per category (ideally single-source) and curate minimal subsets for repo size",
+              "Normalize palette/outline thickness if mixing packs is unavoidable",
+              "When ingesting, map assets into existing override folder structure without changing loader paths"
+            ],
+            "acceptance_criteria": [
+              "Pack selection: 1 primary (+ optional fallback) per category with license verified and attribution plan clear",
+              "Cohesion: consistent outline thickness and palette/value ramps across visible sprites",
+              "Build A remains unblocked: `python tools/qa_smoke.py --quick` PASS"
+            ],
+            "risks": [
+              "Style mismatch if mixing packs (outline/perspective/palette drift)",
+              "Repo bloat if packs are imported wholesale instead of curated subsets",
+              "License/attribution mistakes if not verified before ingest"
+            ],
+            "dependencies": [
+              "Agent 12/13: confirm final attribution layout and validator strict-mode expectations before importing any third-party packs"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM/Tools: pick the primary pack family (Kenney vs alternative) after quick scope/license verification",
+              "Once chosen, Agent 12 can prepare an import plan that curates only needed sprites and records verbatim license files under assets/third_party/",
+              "After first small subset lands (Build B), run validator in report mode + qa_smoke to confirm no perf/regressions"
+            ],
+            "agent_fields": {
+              "pack_shortlist": {
+                "heroes": [
+                  "Kenney (candidate: a single CC0/open-license fantasy/roguelike character pack; verify exact pack and license before ingest)",
+                  "LPC character base/fantasy characters (open-license; verify exact license/attribution requirements)"
+                ],
+                "enemies": [
+                  "Kenney (same pack family as heroes if possible, for cohesion; verify coverage of goblin/wolf/skeleton equivalents)",
+                  "LPC/OGA enemies (only if matching the chosen hero style; curate subset)"
+                ],
+                "buildings": [
+                  "Kenney 'Tiny' town/dungeon style buildings/props (verify license; curate subset)",
+                  "Alternative OGA building set (only if matching perspective/palette; curate subset)"
+                ],
+                "ui_icons_optional": [
+                  "Kenney UI/Interface icons (verify license; recolor to match WK3 theme)",
+                  "Fallback OGA icon set (verify license; prefer simple silhouettes)"
+                ]
+              },
+              "files_touched": [],
+              "tests_run": [
+                "python tools/qa_smoke.py --quick (PASS; evidence: [qa_smoke] DONE: PASS)"
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }
 

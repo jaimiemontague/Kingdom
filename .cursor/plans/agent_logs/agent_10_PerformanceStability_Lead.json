@@ -158,6 +158,140 @@
           }
         }
       }
+    },
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3 focus: borderless 1080p default + UI polish + pixel art ingestion; maintain perf and qa_smoke gate."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:44"
+          },
+          "prompt_text": "WK3 Kickoff (wk3_r1): Provide perf/QA gates and constraints for UI polish + 1920x1080 borderless default + pixel art ingestion. Log acceptance criteria, file boundaries, risks/deps; do not assume contracts for scaling/asset conventions/attribution.",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:44",
+            "status": "complete",
+            "raw": "Status: Active for WK3 Round 1 as Performance/Stability. My output is perf guardrails + measurable gates so borderless 1080p + UI overhaul + sprite ingestion don’t regress frame time or allocate heavily per frame.\n\nDeliverables:\n- Perf acceptance criteria for Build A (borderless 1080p + UI skeleton) and Build B (asset ingestion).\n- Concrete gates/commands (qa_smoke + perf_benchmark baseline) and on-machine manual perf spot checks.\n- Constraints for implementers: avoid per-frame allocations in UI/widgets; ensure sprite loads are cached and never done per-entity/per-frame.\n\nProposed changes (file boundaries; coordination-safe):\n- docs/perf_sanity_checklist.md: add WK3 UI/sprite perf guardrails + standard perf_benchmark command and CSV naming for this sprint.\n- (Optional, post-contract) tools/asset_validate.py (owned by Tools/QA): validation itself should be linear in number of required folders/files and avoid loading/scaling images.\n- game/engine.py and game/ui/* (owned by UI/Arch): if adding new panels/widgets, they must cache surfaces and only re-render text on a cadence or on value change.\n\nAcceptance criteria + exact test commands:\n- Mandatory gate: python tools/qa_smoke.py --quick (PASS)\n- Perf regression baseline (sim-cost):\n  - python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk3.csv\n  - Policy: investigate if ms/tick total increases >15% vs the baseline on the same machine/config.\n- Manual perf smoke (UI/render):\n  - python main.py --no-llm\n  - Toggle perf overlay (F2) and verify no sustained spikes while panning/zooming and while UI panels are visible.\n\nRisks:\n- UI rewrite can regress perf via per-frame text rendering and per-frame Surface allocations (panels, buttons, tooltips).\n- Sprite ingestion can regress perf if image loads/scales happen during gameplay rather than once/cached.\n- Borderless/fullscreen changes can unintentionally trigger continuous resizes/reallocations if not stabilized.\n\nDependencies (blockers only):\n- Agent 3 must define the scaling/window contract (how to pick 1080p vs fallback, UI scale factor strategy) before we can sign off on perf-sensitive resize behavior.\n- Agent 12/13 must lock asset folder conventions + attribution layout so validation scripts and caching assumptions align.\n\nNext actions:\n- Update docs/perf_sanity_checklist.md with WK3-specific guardrails and baseline command (perf_wk3.csv).\n- Once Agent 3/12 publish contracts, review for any perf pitfalls (e.g., per-frame layout recalcs; loading assets on-demand) and request fixes if needed.\n",
+            "summary_bullets": [
+              "Main perf risk for WK3 is per-frame UI allocations (text + surfaces) during the new layout/theme work.",
+              "Sprite pipeline already supports cached PNG overrides; enforce ‘load once, reuse’ so ingestion doesn’t add runtime stalls.",
+              "Define a regression gate: keep qa_smoke PASS and record perf_benchmark baseline to prevent sim-cost regressions.",
+              "Wait for Agent 3/12/13 contract decisions (scaling + folder/attribution conventions) before finalizing perf validation details."
+            ],
+            "proposed_changes": [
+              "Add WK3 section to docs/perf_sanity_checklist.md: UI allocation rules, sprite caching rules, baseline perf command + CSV name.",
+              "Use tools/perf_benchmark.py baseline (perf_wk3.csv) and investigate >15% ms/tick increases vs baseline.",
+              "Require UI widgets to cache their surfaces and only re-render text on cadence/value changes (no per-frame churn).",
+              "Ensure sprite loaders rely on caches and never load/scale images per entity per frame."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick passes.",
+              "Baseline perf benchmark command works and writes/appends CSV: python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk3.csv",
+              "Manual run at default borderless 1080p shows stable perf overlay timings during camera pan/zoom with UI visible (no sustained spikes)."
+            ],
+            "risks": [
+              "UI refactor may cause per-frame surface/text rebuilds, increasing render ms and GC pressure.",
+              "Sprite ingestion may cause runtime hitches if loads/scales are done lazily during gameplay.",
+              "Borderless resizing logic may trigger repeated reallocations if the display-mode contract is not stable."
+            ],
+            "dependencies": [
+              "Agent 3: window/scaling contract (1080p selection + fallback + UI scale strategy).",
+              "Agent 12/13: asset folder conventions + attribution rules to align validation and caching assumptions."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Capture perf_wk3.csv baseline early and re-run after major UI/sprite merges to detect regressions.",
+              "Treat >15% ms/tick increase as ‘investigate’ threshold; keep focus on allocation hotspots (render text/surfaces).",
+              "After scaling contract is locked, add a small QA check to ensure no repeated resize/reallocation loop occurs on startup."
+            ],
+            "agent_fields": {
+              "perf_focus_areas": [
+                "UI surface/text caching (avoid per-frame allocations)",
+                "Sprite load/scale caching (no runtime I/O or scaling per entity)",
+                "Display-mode stability (avoid repeated resizes/reallocations)"
+              ],
+              "perf_regression_gate": {
+                "csv_default": "perf_wk3.csv (repo root)",
+                "baseline_command": "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk3.csv",
+                "threshold_policy": ">15% ms/tick increase vs baseline triggers investigation"
+              },
+              "wait_for_contracts": true
+            }
+          }
+        },
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:21:01"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2): Execute Build A. My assignment (Agent 10) is to record perf_wk3 baseline and review UI work for per-frame allocation hotspots; keep changes minimal; ensure qa_smoke stays PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:21:01",
+            "status": "complete",
+            "raw": "Status: Executed Agent 10 assignment for Build A execution. Recorded a perf_wk3 baseline and verified qa_smoke gate. Reviewed UI code for obvious per-frame allocation hotspots to flag early.\n\nDeliverables:\n- Baseline perf capture written to perf_wk3.csv (repo root; local artifact).\n- QA gate verification: qa_smoke --quick PASS.\n- Allocation hotspot notes for UI: places still allocating new Surfaces per render when panels are visible.\n\nEvidence (commands run):\n- python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk3.csv\n  - Result: ms/tick total=9.652; PF ms/tick=8.979; wrote perf_wk3.csv\n- python tools/qa_smoke.py --quick\n  - Result: PASS (determinism_guard PASS; scenarios PASS)\n\nHotspot review notes (no code changes made):\n- game/ui/building_panel.py creates a new pygame.Surface each render when the panel is visible (potential per-frame allocation hotspot).\n- game/ui/debug_panel.py similarly creates a new surface each render.\n- game/ui/hud.py help panel is cached; other text rendering (messages/panel text) is per-frame but bounded by small counts.\n\nFiles changed:\n- Local artifact created: perf_wk3.csv (baseline CSV output).\n\nBlockers:\n- None identified in automation; qa_smoke remains green.\n",
+            "summary_bullets": [
+              "Recorded Build A perf baseline to perf_wk3.csv using tools/perf_benchmark.py (seed=3).",
+              "Verified mandatory gate: python tools/qa_smoke.py --quick PASS.",
+              "Flagged potential per-frame allocation hotspots in legacy UI panels (building_panel/debug_panel create new Surfaces per render)."
+            ],
+            "proposed_changes": [
+              "If legacy building/debug panels remain in Build A path, cache their panel surfaces (re-render only on value change) to avoid per-frame allocations.",
+              "Keep new HUD/widgets following the same pattern: cache surfaces and throttle text rerendering.",
+              "Consider excluding perf_wk3.csv from source control (treat as local benchmark artifact)."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick stays PASS after Build A merges.",
+              "Baseline perf CSV exists and can be appended on subsequent runs: perf_wk3.csv (repo root)."
+            ],
+            "risks": [
+              "UI skeleton work could regress perf if it rebuilds surfaces/text every frame across multiple panels.",
+              "Leaving legacy panels unoptimized could skew perf perception if they remain visible often in the new UI."
+            ],
+            "dependencies": [
+              "Agent 08: ensure Build A UI widgets cache surfaces/text and avoid per-frame Surface allocations.",
+              "Agent 03: ensure window mode change does not trigger repeated resize/reallocation loops."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 08’s HUD skeleton lands, re-run perf_benchmark and compare to perf_wk3.csv baseline to catch regressions early.",
+              "If building_panel/debug_panel remain used in Build A, schedule a quick caching pass or ensure they’re hidden behind debug-only toggles."
+            ],
+            "agent_fields": {
+              "perf_baseline": {
+                "csv": "perf_wk3.csv",
+                "command": "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 10 --seed 3 --csv perf_wk3.csv",
+                "ms_per_tick_total": 9.652,
+                "ms_per_tick_pathfinding": 8.979
+              },
+              "qa_gate": {
+                "command": "python tools/qa_smoke.py --quick",
+                "result": "PASS"
+              },
+              "allocation_hotspots": [
+                "game/ui/building_panel.py: per-render pygame.Surface allocation when panel visible",
+                "game/ui/debug_panel.py: per-render pygame.Surface allocation when panel visible"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

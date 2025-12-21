@@ -2,6 +2,7 @@
 Main game engine - handles the game loop, input, and coordination.
 """
 import time
+import os
 import pygame
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, GAME_TITLE, TILE_SIZE,
@@ -17,6 +18,7 @@ from config import (
     DETERMINISTIC_SIM,
     SIM_TICK_HZ,
     SIM_SEED,
+    DEFAULT_BORDERLESS,
 )
 from game.graphics.vfx import VFXSystem
 from game.world import World, Visibility
@@ -60,7 +62,34 @@ class GameEngine:
         self._early_nudge_starter_bounty_done = False
         self._early_nudge_mode = (early_nudge_mode or EARLY_PACING_NUDGE_MODE or "auto").strip().lower()
         
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        # -----------------------------
+        # Display / window mode (WK3)
+        # -----------------------------
+        # Default: borderless 1920x1080. Fallback: if display is smaller, use display resolution.
+        # NOTE: For headless smoke runs, SDL_VIDEODRIVER is often "dummy" and size/flags are ignored.
+        driver = str(os.environ.get("SDL_VIDEODRIVER", "")).lower()
+        info = pygame.display.Info()
+        disp_w = int(getattr(info, "current_w", WINDOW_WIDTH) or WINDOW_WIDTH)
+        disp_h = int(getattr(info, "current_h", WINDOW_HEIGHT) or WINDOW_HEIGHT)
+
+        desired_w = int(WINDOW_WIDTH)
+        desired_h = int(WINDOW_HEIGHT)
+        if disp_w < desired_w or disp_h < desired_h:
+            desired_w = max(1, disp_w)
+            desired_h = max(1, disp_h)
+
+        flags = 0
+        if DEFAULT_BORDERLESS and driver != "dummy":
+            flags |= pygame.NOFRAME
+            # Center on larger displays; pin to origin when matching display resolution.
+            if desired_w == disp_w and desired_h == disp_h:
+                os.environ.setdefault("SDL_VIDEO_WINDOW_POS", "0,0")
+            else:
+                os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
+
+        self.window_width = int(desired_w)
+        self.window_height = int(desired_h)
+        self.screen = pygame.display.set_mode((self.window_width, self.window_height), flags)
         pygame.display.set_caption(GAME_TITLE)
         self.clock = pygame.time.Clock()
         self.running = True
@@ -100,8 +129,8 @@ class GameEngine:
         # Render surfaces (avoid per-frame allocations).
         self._view_surface = None
         self._view_surface_size = (0, 0)
-        self._scaled_surface = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self._pause_overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
+        self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
         self._pause_overlay.fill((0, 0, 0, 128))
         
         # Game objects
@@ -122,10 +151,10 @@ class GameEngine:
         self.buff_system = BuffSystem()
         
         # UI
-        self.hud = HUD(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.hud = HUD(self.window_width, self.window_height)
         self.building_menu = BuildingMenu()
-        self.debug_panel = DebugPanel(WINDOW_WIDTH, WINDOW_HEIGHT)
-        self.building_panel = BuildingPanel(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.debug_panel = DebugPanel(self.window_width, self.window_height)
+        self.building_panel = BuildingPanel(self.window_width, self.window_height)
         
         # Selection
         self.selected_building = None
@@ -866,8 +895,10 @@ class GameEngine:
 
     def clamp_camera(self):
         """Clamp camera to world bounds given current zoom."""
-        view_w = max(1, int(WINDOW_WIDTH / (self.zoom if self.zoom else 1.0)))
-        view_h = max(1, int(WINDOW_HEIGHT / (self.zoom if self.zoom else 1.0)))
+        win_w = int(getattr(self, "window_width", self.screen.get_width()))
+        win_h = int(getattr(self, "window_height", self.screen.get_height()))
+        view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
+        view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
         world_w = MAP_WIDTH * TILE_SIZE
         world_h = MAP_HEIGHT * TILE_SIZE
 
@@ -890,8 +921,10 @@ class GameEngine:
         if not castle:
             return
 
-        self.camera_x = castle.center_x - WINDOW_WIDTH // 2
-        self.camera_y = castle.center_y - WINDOW_HEIGHT // 2
+        win_w = int(getattr(self, "window_width", self.screen.get_width()))
+        win_h = int(getattr(self, "window_height", self.screen.get_height()))
+        self.camera_x = castle.center_x - win_w // 2
+        self.camera_y = castle.center_y - win_h // 2
         self.clamp_camera()
 
     def set_zoom(self, new_zoom: float):
@@ -940,12 +973,12 @@ class GameEngine:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         if mouse_x < CAMERA_EDGE_MARGIN_PX:
             dx -= speed
-        elif mouse_x > WINDOW_WIDTH - CAMERA_EDGE_MARGIN_PX:
+        elif mouse_x > int(getattr(self, "window_width", self.screen.get_width())) - CAMERA_EDGE_MARGIN_PX:
             dx += speed
 
         if mouse_y < CAMERA_EDGE_MARGIN_PX:
             dy -= speed
-        elif mouse_y > WINDOW_HEIGHT - CAMERA_EDGE_MARGIN_PX:
+        elif mouse_y > int(getattr(self, "window_height", self.screen.get_height())) - CAMERA_EDGE_MARGIN_PX:
             dy += speed
 
         if dx or dy:
@@ -957,6 +990,8 @@ class GameEngine:
         """Get current game state for AI and UI."""
         castle = next((b for b in self.buildings if b.building_type == "castle"), None)
         return {
+            "screen_w": int(getattr(self, "window_width", self.screen.get_width())),
+            "screen_h": int(getattr(self, "window_height", self.screen.get_height())),
             "gold": self.economy.player_gold,
             "heroes": self.heroes,
             "peasants": self.peasants,
@@ -967,6 +1002,7 @@ class GameEngine:
             "bounty_system": self.bounty_system,
             "wave": self.spawner.wave_number,
             "selected_hero": self.selected_hero,
+            "selected_building": getattr(self, "selected_building", None),
             "castle": castle,
             "economy": self.economy,
             "world": self.world,
@@ -989,8 +1025,10 @@ class GameEngine:
             view_surface = self.screen
         else:
             # Render world + entities to a zoomed "camera view" surface, then scale to window.
-            view_w = max(1, int(WINDOW_WIDTH / (self.zoom if self.zoom else 1.0)))
-            view_h = max(1, int(WINDOW_HEIGHT / (self.zoom if self.zoom else 1.0)))
+            win_w = int(getattr(self, "window_width", self.screen.get_width()))
+            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
+            view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
             if self._view_surface is None or self._view_surface_size != (view_w, view_h):
                 self._view_surface = pygame.Surface((view_w, view_h))
                 self._view_surface_size = (view_w, view_h)
@@ -1059,7 +1097,9 @@ class GameEngine:
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:
             # Pixel art: nearest-neighbor scaling (no blur).
-            pygame.transform.scale(view_surface, (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)
+            win_w = int(getattr(self, "window_width", self.screen.get_width()))
+            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
             self.screen.blit(self._scaled_surface, (0, 0))
         
         # Render HUD
@@ -1081,7 +1121,9 @@ class GameEngine:
             
             font = pygame.font.Font(None, 72)
             text = font.render("PAUSED", True, (255, 255, 255))
-            text_rect = text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+            win_w = int(getattr(self, "window_width", self.screen.get_width()))
+            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
             self.screen.blit(text, text_rect)
         
         pygame.display.flip()

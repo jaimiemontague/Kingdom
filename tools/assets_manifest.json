@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "notes": "WK3 asset validation manifest. Build A is report-only; Build B will treat missing items as a failing gate. Keep this list aligned with currently shipped entity types.",
+  "heroes": {
+    "classes": ["warrior", "ranger", "rogue", "wizard"],
+    "states": ["idle", "walk", "attack", "hurt", "inside"]
+  },
+  "enemies": {
+    "types": ["goblin", "wolf", "skeleton", "spider", "bandit"],
+    "states": ["idle", "walk", "attack", "hurt", "dead"]
+  },
+  "buildings": {
+    "types": [
+      "castle",
+      "warrior_guild",
+      "ranger_guild",
+      "rogue_guild",
+      "wizard_guild",
+      "marketplace",
+      "blacksmith",
+      "inn",
+      "trading_post",
+      "temple_agrela",
+      "temple_dauros",
+      "temple_fervus",
+      "temple_krypta",
+      "temple_krolm",
+      "temple_helia",
+      "temple_lunord",
+      "gnome_hovel",
+      "elven_bungalow",
+      "dwarven_settlement",
+      "guardhouse",
+      "ballista_tower",
+      "wizard_tower",
+      "fairgrounds",
+      "library",
+      "royal_gardens",
+      "palace",
+      "house",
+      "farm",
+      "food_stand"
+    ],
+    "states": ["built", "construction", "damaged"]
+  }
+}
+
+

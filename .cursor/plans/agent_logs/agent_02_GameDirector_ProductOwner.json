@@ -222,6 +222,213 @@
         }
       }
     }
+    ,
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3: Agent 02 provides ‘Majesty-like’ UI acceptability criteria (clarity/readability/cuts). Hard decisions locked: 1920x1080 borderless default with fallback; CC0/open-license allowed with attribution; qa_smoke stays PASS."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:27.8553474-07:00"
+          },
+          "prompt_text": "WK3 Kickoff (Round 1 / wk3_r1) — UI Polish + 1080p Borderless + Pixel Art. Output: acceptance criteria + contracts + asset conventions + perf/QA gates (not implementation).",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:27.8553474-07:00",
+            "status": "complete",
+            "raw": "## Status\nAgent 02 (GameDirector_ProductOwner), WK3 Round 1: define **Majesty-like UI acceptability** (what must be visible, what’s too noisy) and lock player-facing acceptance criteria for 1080p borderless + pixel-art pass.\n\n## Deliverables\n- Acceptance criteria for the new UI at 1920×1080 borderless (readability, information hierarchy, and ‘no clutter’ rules).\n- Player-facing acceptance criteria for the pixel-art swap (no placeholder circles/letters when assets exist; fallbacks acceptable when missing).\n- Minimal, testable release gates (manual + `qa_smoke --quick`).\n\n## Questions (blockers only)\n- None from Product. I’m waiting on other agents to publish contract decisions (see dependencies).\n\n## Next actions\n- Review Agent 8’s UI layout spec against the acceptance criteria below (approve/cut).\n- Review Agent 3’s scaling plan and ensure it doesn’t undermine readability at 1080p.\n",
+            "summary_bullets": [
+              "UI must become ‘Majesty-readable’: key economy/alerts always visible, actions icon-first with tooltips/hotkeys, right panel shows selected entity info without covering the world",
+              "Borderless 1920×1080 default is locked; fallback to display resolution if smaller must preserve UI readability (no overlap/cutoff)",
+              "Pixel art goal: when assets exist, no more colored placeholder shapes for heroes/enemies/buildings; attribution must be clean"
+            ],
+            "proposed_changes": [
+              "Build A acceptance focus: readability + hierarchy at 1080p, minimal HUD clutter, consistent theming primitives; no new art dependency",
+              "Build B acceptance focus: asset ingestion covers all currently visible entities; UI remains readable and performance stable",
+              "Maintain release gate: `python tools/qa_smoke.py --quick` stays PASS throughout"
+            ],
+            "acceptance_criteria": [
+              "Default launch opens borderless fullscreen at 1920×1080; if display is smaller, fallback uses current display resolution in borderless mode (no crash; no black bars required)",
+              "At 1920×1080: no core UI overlap; no text clipped; key info readable without squinting (gold, time/wave, alerts) and remains visible during normal play",
+              "Primary player actions are discoverable via icon buttons + tooltips + hotkeys (no need to memorize printed console controls); tooltips do not obscure critical info",
+              "Right info panel shows selected entity summary (hero/building) with the most important stats first; it must not cover the center playfield excessively",
+              "Pixel art: for each currently shipped hero class/enemy type/placeable building, if the corresponding sprite folders exist and contain PNGs, the game renders those assets (not procedural placeholders). Missing frames may fall back procedurally, but should not crash",
+              "Attribution: an `assets/ATTRIBUTION.md` exists and third-party license texts are stored verbatim under `assets/third_party/<pack>/...` (exact paths TBD by Agents 12/13)",
+              "Non-negotiable gate remains green: `python tools/qa_smoke.py --quick` PASS"
+            ],
+            "risks": [
+              "UI clutter risk: adding too many always-on elements will reduce readability; prefer progressive disclosure (tooltips, selected panel) over constant text",
+              "Scaling risk: naïve scaling may blur pixel art or cause UI misalignment; must preserve nearest-neighbor scaling and stable layouts",
+              "Licensing risk: CC0/open-license ingestion without consistent attribution structure becomes a release blocker"
+            ],
+            "dependencies": [
+              "Agent 3: window/scaling implementation contract (borderless flags, fallback behavior, UI scale strategy) — do not assume details",
+              "Agent 8: UI layout spec + widget/theme primitives (panels/buttons/tooltips) to evaluate against these acceptance criteria",
+              "Agent 12 + Agent 13: asset ingestion conventions + attribution rules (folder paths, where licenses live) — required for Build B",
+              "Agent 10: perf constraints (no per-frame allocations; sprite caching/loading constraints)",
+              "Agent 11: QA gates (resolution launch sanity + asset presence validation) integrated without breaking `qa_smoke --quick`"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 8: post layout spec (regions + what’s always visible vs contextual) and a minimal theme/widget plan; Agent 02 will approve/cut based on clutter/readability",
+              "Agent 3: post window/scaling contract (borderless + fallback + UI scale) ensuring pixel-crisp scaling; Agent 02 will sanity-check that it supports the 1080p acceptance criteria",
+              "Agent 12/13: publish attribution + folder conventions before Build B asset ingestion starts (avoid rework)",
+              "All: keep `python tools/qa_smoke.py --quick` green; add only perf-safe UI primitives"
+            ],
+            "agent_fields": {
+              "ui_must_always_show": [
+                "Gold (and delta if easy), plus at least one clear alert/notification channel",
+                "Time/wave/day indicator (whatever the game uses as pacing signal)",
+                "Selected mode / placement mode feedback (so players don’t misclick)"
+              ],
+              "ui_should_be_contextual": [
+                "Detailed stats (panel/tooltip on selection/hover)",
+                "Control legend (help overlay toggle, not always-on)"
+              ],
+              "cuts_if_risky": [
+                "Large new UI framework refactors beyond what’s needed for the skeleton",
+                "Complex settings menu (defer; keep default behavior locked and stable)",
+                "Non-essential animations that risk perf regressions"
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+        ,
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:20:08.5487609-07:00"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2) — Execute Build A. Agent 02 assignment: do an approval/cut pass on Agent 8’s HUD layout to ensure readability at 1080p with minimal clutter; provide PASS evidence for gates.",
+          "response": {
+            "received_at_local": "2025-12-20T23:20:08.5487609-07:00",
+            "status": "complete",
+            "raw": "## Status\\nAgent 02 (GameDirector_ProductOwner) active in WK3 Round 2. My R2 work is **review/signoff**: assess the HUD layout for Majesty-like readability and flag clutter risks/cuts.\\n\\n## Deliverables\\n- Approval/cut notes for the current HUD layout implementation (top bar + right panel + contextual help/hints).\\n- Gate evidence that `python tools/qa_smoke.py --quick` stays PASS.\\n\\n## Review notes (current HUD state)\\n- `game/ui/hud.py` already provides a **top bar** (gold/hero count/enemy count/wave), a **right-side hero panel** on selection, and caching for some text surfaces.\\n- Help overlay is **toggleable** (F3) with a persistent hint when hidden, which matches prior PM guidance.\\n- I do **not** yet see the new Build A UI skeleton files (`game/ui/theme.py`, `game/ui/widgets.py`) or a minimap region wiring in `HUD.render()` in this snapshot. That’s fine if Agent 8 is mid-implementation; but for Build A goals, we should ensure the skeleton exists and layout computes from actual screen dimensions.\\n\\n## Cut / clutter guidance for Agent 8 (Build A)\\n- Keep top bar to: Gold + primary pacing signal + compact alerts; avoid adding always-on debug text.\\n- Bottom command bar should be icon-first with tooltips; do not print full control legends permanently (keep in F3 help).\\n- Right info panel should remain narrow enough to preserve playfield; prefer collapsing details behind selection/tooltip rather than always-on paragraphs.\\n- Minimap region: OK as a framed placeholder box in Build A (no art dependency), but avoid expensive per-frame surface rebuilds.\\n\\n## Evidence (commands + PASS)\\n- `python tools/qa_smoke.py --quick` => PASS (includes determinism_guard and headless profiles).\\n\\n## Blockers\\n- None from Product. If Agent 8’s UI skeleton lands and introduces overlap/clipping at non-1920 widths, that would become a blocker; layout must be derived from `screen_w/screen_h` not constants.",
+            "summary_bullets": [
+              "Reviewed current HUD state: top bar + right hero panel exist; help overlay is toggleable and cache-friendly",
+              "No new theme/widgets/minimap skeleton visible yet in this snapshot; Build A should ensure skeleton exists and computes layout from actual screen size",
+              "qa_smoke gate remains PASS"
+            ],
+            "proposed_changes": [
+              "No code changes by Agent 02 in wk3_r2 (review/signoff only).",
+              "Agent 8 should prioritize: layout computed from screen_w/screen_h, minimal always-on UI, caching/rate-limiting to avoid per-frame allocations."
+            ],
+            "acceptance_criteria": [
+              "PASS: `python tools/qa_smoke.py --quick`",
+              "At 1080p: top bar readable and unclipped; right info panel does not cover central playfield excessively; bottom command bar uses icons+tooltips (no always-on control wall)",
+              "Layout derived from actual `screen_w/screen_h` (no hardcoded 1920×1080 assumptions) and remains usable at smaller resolutions"
+            ],
+            "risks": [
+              "UI clutter risk if too much info becomes always-on (hurts Majesty readability).",
+              "Perf risk if UI surfaces/text are re-rendered per frame rather than cached/cadenced."
+            ],
+            "dependencies": [
+              "Agent 8: implementation of Build A UI skeleton (theme/widgets + layout regions) and ensuring layout uses screen_w/screen_h",
+              "Agent 3: borderless 1080p default + fallback, and exposing screen_w/screen_h to UI safely"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 8: land the skeleton minimally (top/bottom/right/minimap placeholder) with caching; then Agent 02 will do a second pass once it’s in place",
+              "PM/QA: spot-check UI at a smaller-than-1080 display to confirm no clipping/overlap regressions",
+              "Keep running `python tools/qa_smoke.py --quick` after UI merges"
+            ],
+            "agent_fields": {
+              "files_changed": [],
+              "test_commands_run": [
+                "cd C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom",
+                "python tools\\\\qa_smoke.py --quick"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see latest terminal output file ca13f6e5-6b39-4c8b-b3f7-a07319e9f5d6.txt)",
+              "approval_notes": [
+                "Top bar should remain compact: Gold + pacing + alerts; avoid always-on debug text",
+                "Keep full control legend behind F3 help; use icon+tooltip discovery in command bar",
+                "Right panel must not become a wall of text; prefer contextual/selection details",
+                "Minimap can be a placeholder box in Build A; focus on layout + caching first"
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+        ,
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_blockers_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:16.4520360-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (wk3_r3) blockers-only: close P0 fallback-resolution safety issue; after fix, do quick readability signoff at 1920×1080 and list 1–2 cuts if cluttered.",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:16.4520360-07:00",
+            "status": "complete",
+            "raw": "## Status\\nAgent 02 (Product) in WK3 R3: perform a quick readability signoff **after** the fallback-resolution fix lands; report blockers/regressions if found.\\n\\n## Evidence (commands run + PASS)\\n- `python tools/qa_smoke.py --quick` => PASS (headless gate).\\n\\n## Blocker (P0) — fallback resolution still unsafe in render path\\nI verified `game/engine.py` still uses `WINDOW_WIDTH/WINDOW_HEIGHT` in the **render surface sizing and scaling path**, which will break (or clip/mis-scale) when the actual window is smaller than 1920×1080.\\n\\n### Suspected locations (must switch to actual window size)\\n- `view_w/view_h` computed from `WINDOW_WIDTH/HEIGHT` (should use `self.window_width/self.window_height` or `self.screen.get_width()/get_height()`)\\n- `pygame.transform.scale(..., (WINDOW_WIDTH, WINDOW_HEIGHT), self._scaled_surface)` (size arg must match destination surface / actual window)\\n- pause text centering uses `WINDOW_WIDTH/HEIGHT` (should use actual window dims)\\n\\n### What I need / owner\\n- Owner: **Agent 03 (Architecture)**. Please replace these remaining `WINDOW_WIDTH/HEIGHT` usages in `game/engine.py` with actual runtime size and rerun `python tools/qa_smoke.py --quick` PASS.\\n\\n## Readability signoff (pending Agent 03 fix)\\n- I can’t do the requested ‘small display fallback’ readability signoff until the above is fixed; the current code is still at-risk for clipping/crash on <1080p windows.\\n- At 1920×1080, the current HUD top bar + right panel widths look reasonable on paper (top bar text positions are left-aligned and within bounds; right panel is narrow), so I expect no clutter blocker once fallback is safe.",
+            "summary_bullets": [
+              "qa_smoke remains PASS, but headless doesn’t guarantee small-display fallback safety",
+              "P0 blocker found: `game/engine.py` still uses `WINDOW_WIDTH/HEIGHT` in render scaling paths; must use actual window dims",
+              "Readability signoff for fallback-resolutions is blocked until Agent 03 lands the fix"
+            ],
+            "proposed_changes": [
+              "Agent 03: replace remaining `WINDOW_WIDTH/HEIGHT` references in render scaling/centering with `self.window_width/self.window_height` or `self.screen.get_width()/get_height()`"
+            ],
+            "acceptance_criteria": [
+              "After fix: smaller-than-1080 fallback does not crash or catastrophically clip; render scaling uses actual window size",
+              "PASS: `python tools/qa_smoke.py --quick` remains green after the change",
+              "At 1920×1080: no HUD overlap/clipping; right panel not excessively wide"
+            ],
+            "risks": [
+              "Headless QA may miss window-size regressions because SDL dummy driver ignores real display sizes; must be validated on a smaller-than-1080 setup (manual or forced mode) once code is corrected"
+            ],
+            "dependencies": [
+              "Agent 03: land the render-path fix in `game/engine.py` and provide PASS evidence",
+              "Optional QA note (Agent 11): add a reminder in WK3 checklist to validate smaller-than-1080 fallback behavior on Windows"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 03: patch `game/engine.py` at the identified render-path sites; rerun qa_smoke",
+              "After fix lands: Agent 02 will do quick 1920×1080 readability signoff and list up to 2 Build A cuts if cluttered"
+            ],
+            "agent_fields": {
+              "files_changed": [],
+              "test_commands_run": [
+                "cd C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom",
+                "python tools\\\\qa_smoke.py --quick"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see agent-tools output b4371bc2-7abe-44f8-99e1-cefce63dce94.txt)",
+              "blocker_owner": "03_TechnicalDirector_Architecture",
+              "blocker_files": [
+                "game/engine.py"
+              ],
+              "blocker_grep_hits": [
+                "game/engine.py contains WINDOW_WIDTH/WINDOW_HEIGHT uses at render scaling path (view_w/view_h, transform.scale size, pause text centering)"
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+      }
+    }
   }
 }
 

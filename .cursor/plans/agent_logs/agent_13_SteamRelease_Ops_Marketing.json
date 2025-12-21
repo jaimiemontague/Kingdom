@@ -156,6 +156,182 @@
           }
         }
       }
+    },
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:08:17.3179717-07:00"
+          },
+          "prompt_text": "WK3 Kickoff (Round 1 / wk3_r1) — UI Polish + 1080p Borderless + Pixel Art. Provide acceptance criteria + contracts + asset conventions + perf/QA gates (not big implementation). Default launch is borderless 1920×1080 (fallback if smaller). CC0/open-license assets allowed with clean attribution. qa_smoke --quick must remain PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:08:17.3179717-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — WK3 Round 1: define attribution/credits conventions for CC0/open-license pixel art, and seed patch-notes scaffolds for Build A (1080p borderless + UI skeleton) and Build B (pixel art ingestion + attribution).\\n\\n### Deliverables\\n- Attribution standard doc with required repo file locations + patch-notes ‘Credits’ snippet.\\n- WK3 Build A/B patch-notes draft files (docs-only) that encode the release gates and borderless 1080p messaging.\\n\\n### Proposed changes (file boundaries)\\nDocs-only changes (safe, no gameplay coupling):\\n- `docs/assets/attribution_standard.md` (repo conventions + patch-notes credits snippet)\\n- `docs/release/patch_notes_template.md` (adds Credits/Attribution section)\\n- `docs/sprint/wk3_buildA_patch_notes_draft.md`\\n- `docs/sprint/wk3_buildB_patch_notes_draft.md`\\n\\n### Acceptance criteria + exact test commands\\nRelease/announce only after:\\n- `python tools/qa_smoke.py --quick` is PASS\\n- Manual smoke (10 min each):\\n  - `python main.py --no-llm`\\n  - `python main.py --provider mock`\\nBuild A acceptance for messaging:\\n- Default launch is **borderless 1920×1080**; if display is smaller, fallback uses display resolution while staying borderless.\\n- UI is readable at 1920×1080 with no overlapping critical panels.\\nBuild B acceptance for messaging:\\n- Pixel art sprites are present for current heroes/enemies/buildings where added; fallbacks remain acceptable for missing frames.\\n- Attribution is complete: `assets/ATTRIBUTION.md` plus per-pack license/readme stored under `assets/third_party/<pack_name>/`.\\n\\n### Risks\\n- License/attribution drift (assets merged without the required license text or source URL).\\n- Patch notes claim ‘pixel art for everything’ while some types still fallback (must be precise).\\n\\n### Dependencies (blockers only)\\n- Agent 12: final asset ingestion/validation tooling conventions (folder naming, required states) so the Credits list can be generated/verified consistently.\\n- Agent 3: any locked contract for window scaling/UI scale behavior (so Build A messaging matches reality).\\n\\n### Questions back to PM (blockers only)\\n[]\\n\\n### Next actions\\n- When Agent 12 posts the exact pack list and directories touched, I will draft the exact Credits bullets to paste into Build B patch notes.\\n- When Agent 3 finalizes window/scaling behavior, I will tighten Build A patch-note wording (especially fallback behavior).",
+            "summary_bullets": [
+              "Established attribution/credits conventions for CC0/open-license asset ingestion (repo file layout + patch-notes snippet).",
+              "Seeded WK3 Build A/B patch-notes drafts with borderless 1080p messaging and release gates.",
+              "Flagged blockers-only dependencies: window scaling contract (Agent 3) and final asset conventions/tooling (Agent 12)."
+            ],
+            "proposed_changes": [
+              "Adopt `assets/ATTRIBUTION.md` + `assets/third_party/<pack_name>/LICENSE.txt` / `README.txt` as required attribution layout.",
+              "Add a Credits/Attribution section to patch notes template and use it for Build B.",
+              "Maintain WK3 Build A/B patch-notes drafts and update them only with verified, shipped bullets."
+            ],
+            "acceptance_criteria": [
+              "`python tools/qa_smoke.py --quick` remains PASS throughout WK3.",
+              "Build A: launches borderless 1920×1080 by default with smaller-display fallback; UI readable at 1080p without critical overlap.",
+              "Build B: any ingested packs have complete attribution (rollup + per-pack license/readme) and patch notes include a short Credits section."
+            ],
+            "risks": [
+              "Assets merged without complete license/source documentation (compliance risk).",
+              "Overbroad release claims (e.g., ‘pixel art for everything’) if fallbacks remain for some entities."
+            ],
+            "dependencies": [
+              "Agent 12: final asset conventions + validation rules + list of packs used (so credits can be exact).",
+              "Agent 3: confirmed UI scaling/window fallback behavior to avoid mismatch in public messaging.",
+              "Final merged change list per build before publishing."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 12 selects packs: record pack name/author/license/source in `assets/ATTRIBUTION.md` and mirror license/readme files under `assets/third_party/`.",
+              "After Agent 3 finalizes display/scaling: update Build A patch-notes wording to match the exact fallback behavior.",
+              "At ship time: keep release notes precise (call out which entity sets received pixel art vs which still fallback)."
+            ],
+            "agent_fields": {
+              "attribution_standard_doc": "docs/assets/attribution_standard.md",
+              "wk3_patch_drafts": [
+                "docs/sprint/wk3_buildA_patch_notes_draft.md",
+                "docs/sprint/wk3_buildB_patch_notes_draft.md"
+              ],
+              "pm_acknowledged": true
+            }
+          }
+        }
+        ,
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:21:26.1213911-07:00"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2) — Execute Build A. Agent 13 assignment: docs-only scaffolding (attribution standard + patch-notes template Credits section + WK3 Build A/B patch note draft files). Keep claims precise and gated by validator/QA later. Evidence: `python tools/qa_smoke.py --quick` PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:21:26.1213911-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — wk3_r2 execution: completed docs-only scaffolding requested by PM; no code/UI changes from Agent 13 this round.\\n\\n### Deliverables\\n- Attribution standard doc + patch-notes credits section ready for Build B asset ingestion.\\n- WK3 Build A/B patch-notes draft scaffolds (claims kept precise; Build B pixel-art claims gated by validator + QA).\\n\\n### Proposed changes (file boundaries)\\nDocs-only files (already landed):\\n- `docs/assets/attribution_standard.md`\\n- `docs/release/patch_notes_template.md` (adds Credits / Attribution section)\\n- `docs/sprint/wk3_buildA_patch_notes_draft.md`\\n- `docs/sprint/wk3_buildB_patch_notes_draft.md`\\n\\n### Evidence (commands run + PASS)\\n- Ran from repo root: `python tools/qa_smoke.py --quick`\\n  - Evidence excerpt: `[determinism_guard] PASS: no violations found` and multiple `[qa] PASS:` lines in the captured output log.\\n\\n### Risks (blockers only)\\n[]\\n\\n### Dependencies (blockers only)\\n[]\\n\\n### Next actions\\n- Stand by for wk3_r3+ once Agent 12 selects/ingests packs: convert pack list into exact Credits bullets (`assets/ATTRIBUTION.md` + patch notes).\\n- Keep Build A notes limited to verified UI/display behavior; keep Build B notes limited to validated asset coverage.",
+            "summary_bullets": [
+              "Completed PM-requested docs scaffolding (attribution standard + patch-note Credits section + WK3 patch drafts).",
+              "Ran `python tools/qa_smoke.py --quick` from repo root and observed PASS evidence in output (determinism guard + QA passes).",
+              "No code/UI changes from Agent 13 in wk3_r2."
+            ],
+            "proposed_changes": [
+              "Maintain attribution and credits conventions for Build B asset ingestion.",
+              "Keep patch notes precise and validator/QA-gated (no overbroad ‘pixel art for everything’ claims)."
+            ],
+            "acceptance_criteria": [
+              "Docs scaffolds exist and are ready to be populated with verified build notes and credits at ship time.",
+              "`python tools/qa_smoke.py --quick` remains PASS after docs-only changes (verified by the run captured in agent-tools output)."
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "When Agent 12 posts the final pack list + touched directories, translate it into exact Credits bullets and ensure license files are present under `assets/third_party/<pack_name>/`.",
+              "At Build A tag: finalize Build A patch note wording around borderless 1080p behavior based on Agent 3’s implementation (no assumptions)."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "docs/assets/attribution_standard.md",
+                "docs/release/patch_notes_template.md",
+                "docs/sprint/wk3_buildA_patch_notes_draft.md",
+                "docs/sprint/wk3_buildB_patch_notes_draft.md"
+              ],
+              "qa_evidence": {
+                "command": "python tools/qa_smoke.py --quick",
+                "result": "PASS",
+                "evidence_lines": [
+                  "[determinism_guard] PASS: no violations found",
+                  "[qa] PASS: ... (multiple scenarios)"
+                ],
+                "output_log_path": "c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/a238c732-d913-41db-8eec-30230599cebb.txt"
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
+        ,
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_wrap_and_buildb_kick_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:14.4741574-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (wk3_r3) — blockers-only. Agent 13: stand by for Build B. Once Agent 09/12 select packs, convert pack list into Credits bullets format (assets/ATTRIBUTION.md + per-pack third_party layout expectations). Keep claims gated by validator+QA. Log status, files touched, commands run + PASS, blockers.",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:14.4741574-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — wk3_r3 blockers-only: standing by for Build B pack shortlist. No blockers found on my side.\\n\\n### Files touched\\n- None (no new changes in wk3_r3; docs scaffolds were completed in wk3_r2).\\n\\n### Commands run + evidence (PASS)\\n- `python tools/qa_smoke.py --quick` (repo root)\\n  - PASS evidence captured in log file; includes `[determinism_guard] PASS: no violations found` and `[qa] PASS:` lines.\\n\\n### Blockers\\n[]\\n\\n### What I need / next\\n- Waiting on Agent 09/12 final pack shortlist + license/source details so I can generate exact Credits bullets and confirm required `assets/third_party/<pack>/LICENSE.txt` + `README.txt` layout expectations.",
+            "summary_bullets": [
+              "Stand-by round: no new changes required from Agent 13 until Build B pack list is chosen.",
+              "Re-ran `python tools/qa_smoke.py --quick` and observed PASS evidence in output log.",
+              "No blockers to Build A release from Agent 13 perspective."
+            ],
+            "proposed_changes": [
+              "None in wk3_r3 (awaiting Build B pack shortlist to generate credits)."
+            ],
+            "acceptance_criteria": [
+              "`python tools/qa_smoke.py --quick` remains PASS (verified by run captured in agent-tools output).",
+              "Once packs are chosen, credits can be expressed as pack name/author/license/source and mirrored by verbatim license files in `assets/third_party/<pack_name>/`."
+            ],
+            "risks": [],
+            "dependencies": [
+              "Agent 09/12: pack shortlist + cohesion notes + license/source URLs to produce correct Credits/Attribution entries."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After pack shortlist is locked: draft `assets/ATTRIBUTION.md` entries (pack name/author/license/source/modifications/used-for) and ensure per-pack license/readme files are included under `assets/third_party/`."
+            ],
+            "agent_fields": {
+              "files_touched": [],
+              "qa_evidence": {
+                "command": "python tools/qa_smoke.py --quick",
+                "result": "PASS",
+                "output_log_path": "c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/76f4fa4b-c99e-4e2d-8da7-9a9d1759fbc8.txt",
+                "evidence_lines": [
+                  "[determinism_guard] PASS: no violations found",
+                  "[qa] PASS: ... (multiple scenarios)"
+                ]
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
     }
   }
 }

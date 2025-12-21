@@ -26,6 +26,9 @@
 ### Known Issues
 - (Top 3 issues + workarounds if needed)
 
+### Credits / Attribution
+- (If applicable) Third-party CC0/open-license assets used this patch (pack name, author, license, source).
+
 ---
 
 ## Example (based on v1.2.0)

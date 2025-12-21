@@ -1,0 +1,2 @@
+seconds,seed,heroes,enemies_start,bounties,enemies_end,ticks,ms_per_tick_total,ms_per_tick_ai,ms_per_tick_heroes,ms_per_tick_peasants,ms_per_tick_enemies,ms_per_tick_combat,pf_calls,pf_fails,pf_total_ms,pf_ms_per_tick
+12.0,3,20,20,10,0,720,9.651806249975278,0.3851230578018456,1.3492154166063604,0.027924028270515718,7.789608749185896,0.09619333335043241,1383,55,6464.565102010965,8.978562641681897

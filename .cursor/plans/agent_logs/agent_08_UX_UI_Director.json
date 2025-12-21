@@ -355,6 +355,257 @@
         }
       }
     }
+    ,
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3: UI redesign owner (layout + theme + widgets), with 1080p borderless default and pixel-art pass (assets/attribution handled by Tools/QA/Art)."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:38.863660-07:00"
+          },
+          "prompt_text": "WK3 Kickoff (Round 1 / wk3_r1) — UI Polish + 1080p Borderless + Pixel Art. Agent 08: post UI layout spec (top/bottom/right/minimap), typography, tooltip rules, and minimal widget/theme system plan. Include acceptance criteria + test commands; call out dependencies on window scaling + asset conventions/attribution.",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:38.863660-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK3 R1 (async meeting stage): Agent 08 is active. I’m locking the UI **layout spec**, **tooltip rules**, and a minimal **theme/widgets** plan for a Majesty-inspired HUD at 1920×1080 borderless default (hard decision already locked). No heavy implementation in this round.\\n\\n### Deliverables (R1 output)\\n- Layout spec: top bar + bottom command bar + right info panel + bottom-left minimap region, with spacing rules.\\n- Tooltip rules: single source of truth for hotkeys/costs, no spam.\\n- Theme/widgets plan: a small set of reusable primitives to prevent per-screen one-offs.\\n- Acceptance criteria + gates for Build A (UI skeleton + borderless default) and Build B (asset ingestion + polish).\\n\\n### Proposed UI layout (Majesty-inspired)\\n- **Top bar (height ~48px)**: Gold (left), Wave/Day (center), Alerts queue (right).\\n- **Bottom command bar (height ~88–104px)**: icon-first buttons for Build/Hire/Bounty + hover tooltips, with hotkey labels as secondary text.\\n- **Right info panel (width ~340–420px)**: selected hero/building details + action buttons; contains intent/decision, inside-state, and debug-only stuck indicators (when debug UI enabled).\\n- **Bottom-left minimap box (~220–260px square)**: minimap + fog overlay + pings (Build B can enhance).\\n\\n### Widget/theme plan (Build A)\\n- `game/ui/theme.py`: palette, spacing, typography, panel alpha, and 9-slice style constants.\\n- `game/ui/widgets.py`: Panel, Label, IconButton, Tooltip, NineSlice (or border rect) helpers.\\n- Refactor surfaces gradually: start with `game/ui/hud.py` (top/bottom/right scaffolding), then migrate `game/ui/building_panel.py` to use shared widgets.\\n\\n### File boundaries (my domain)\\n- Build A UI skeleton:\\n  - `game/ui/hud.py` (layout + composition; no gameplay logic)\\n  - `game/ui/building_panel.py` (move toward shared widgets)\\n  - `game/ui/theme.py` (new)\\n  - `game/ui/widgets.py` (new)\\n- No window-mode logic here (Agent 3 owns `game/engine.py`/`config.py` display contract).\\n\\n### Acceptance criteria (UI + 1080p)\\n- Default launch is **borderless fullscreen 1920×1080**, fallback to current display resolution if smaller (hard decision locked; implementation by Agent 3).\\n- UI is readable at 1920×1080: no overlap between top bar / right panel / bottom bar.\\n- Build/Hire/Bounty actions are discoverable via icon bar + tooltips (hotkeys included).\\n- `python tools/qa_smoke.py --quick` remains PASS.\\n\\n### Exact test commands\\n- Gate: `python tools/qa_smoke.py --quick`\\n- Manual (UI sanity at launch):\\n  - `python main.py --no-llm` (verify window mode + UI layout readability)\\n  - `python main.py --provider mock`\\n- Build B (assets validation; owned by Tools/QA):\\n  - `python tools/validate_assets.py` (name TBD; must fail if required folders are missing/empty or attribution missing).\\n\\n### Risks (blockers only)\\n- UI scaling contract not yet posted: I won’t implement scaling assumptions until Agent 3 posts the window/scaling contract (how world-space rendering maps to window size and how UI scaling is applied).\\n- Asset conventions/attribution rules not yet locked: do not bake paths into UI until Agent 12/13 lock conventions for `assets/third_party/*` and `assets/ATTRIBUTION.md`.\\n\\n### Dependencies\\n- **Agent 3 (blocker)**: window/scaling contract for borderless 1080p default + fallback behavior; clarify whether the world is letterboxed/pillarboxed or scaled, and where UI is rendered (screen-space overlay).\\n- **Agent 12/13 (blocker)**: asset folder + attribution conventions (exact paths + required files) for CC0/open-license packs.\\n- **Agent 10 (consult)**: perf constraints for UI widgets (surface caching, no per-frame allocations).\\n\\n### Next actions\\n- After Agent 3 posts scaling/window contract: finalize pixel-perfect layout constants and begin Build A UI skeleton (theme + widgets + HUD composition).\\n- After Agent 12/13 lock conventions: add tooltip icon slots and attribution-friendly asset lookup patterns (Build B).\\n",
+            "summary_bullets": [
+              "WK3 UI layout spec: top bar + bottom command bar + right info panel + minimap region for 1920×1080 borderless default.",
+              "Plan to add minimal UI framework: `theme.py` + `widgets.py`, then refactor HUD/building panel to use it.",
+              "Explicit wait on Agent 3 window/scaling contract and Agent 12/13 asset+attribution conventions before assuming paths/scales."
+            ],
+            "proposed_changes": [
+              "Build A: implement HUD layout skeleton (top/bottom/right/minimap boxes) using shared widgets and theme primitives.",
+              "Build A: migrate existing HUD/building panel rendering to shared Panel/Label/IconButton/Tooltip widgets (incremental).",
+              "Build B: integrate icon slots + polish once assets/attribution conventions are locked (do not hardcode until Tools/Marketing confirm)."
+            ],
+            "acceptance_criteria": [
+              "Default launch uses borderless fullscreen 1920×1080; fallback to current display resolution if smaller (Agent 3 implementation).",
+              "UI readable at 1920×1080: no overlapping panels; consistent typography and spacing.",
+              "Actions discoverable: bottom command bar has icon buttons with tooltips and hotkey hints.",
+              "`python tools/qa_smoke.py --quick` PASS.",
+              "Manual smoke: `python main.py --no-llm` and `python main.py --provider mock` show correct window mode and no UI crashes."
+            ],
+            "risks": [
+              "Blocker: UI scaling/window mapping contract unknown; do not implement assumptions until Agent 3 posts it.",
+              "Blocker: asset/attribution conventions unknown; do not hardcode paths until Agent 12/13 lock them."
+            ],
+            "dependencies": [
+              "Agent 3: window + scaling contract for borderless 1080p default + fallback; UI scale strategy.",
+              "Agent 12/13: asset ingestion + attribution conventions (required files/paths)."
+            ],
+            "questions_back_to_pm": [
+              "Blocker question: are we targeting pixel-perfect UI at 1080p (fixed scale) or allowing integer UI scaling for smaller displays (e.g., 0.75/0.5) per Agent 3 contract?"
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 3 scaling/window contract; then start Build A UI skeleton (theme + widgets + HUD regions).",
+              "After Agent 12/13 lock attribution conventions, add validation expectations to tooltips/icon slots (Build B)."
+            ],
+            "agent_fields": {
+              "ui_layout_rules": [
+                "Icon-first controls in bottom bar; tooltips provide cost + hotkey + one-line description.",
+                "Right panel is the single source of truth for selected entity details/actions.",
+                "Keep debug-only diagnostics gated; avoid player-facing clutter by default."
+              ],
+              "perf_guardrails": [
+                "No per-frame Surface allocations in UI; cache rendered text and panel backgrounds.",
+                "Avoid per-frame filesystem sprite lookups; rely on cached sprite libraries."
+              ],
+              "wait_for_contracts": [
+                "Agent 3 window/scaling contract",
+                "Agent 12/13 asset + attribution conventions"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:24:07.218483-07:00"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2): Execute Build A. Agent 08 implement UI skeleton: top bar + bottom command bar + right info panel + minimap region with minimal `theme.py` + `widgets.py` primitives; perf-safe caching; compute layout from actual screen_w/screen_h. Keep `python tools/qa_smoke.py --quick` PASS. No new PNG assets.",
+          "response": {
+            "received_at_local": "2025-12-20T23:24:07.218483-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK3 R2 Build A execution complete for Agent 08: landed a Majesty-inspired HUD **layout skeleton** (top bar / bottom command bar / right info panel / minimap region) with minimal theme+widget primitives and caching to avoid per-frame churn. No new PNG assets.\\n\\n### Deliverables\\n- **UI layout skeleton** computed from the actual render surface size (`surface.get_width()/get_height()`), not hardcoded 1920×1080.\\n- **Minimal UI primitives**:\\n  - `game/ui/theme.py` (`UITheme`)\\n  - `game/ui/widgets.py` (`Panel`, `Tooltip`, `IconButton`)\\n- **Perf-safe caching**:\\n  - Cached panel surfaces per size (`Panel`)\\n  - Cached top-bar value texts (gold/heroes/enemies/wave) rendered only when values change\\n  - Cached placement banner surface only when placing state changes\\n- **Right panel selection**: shows selected hero (existing hero panel) or selected building summary (new minimal building summary).\\n\\n### Files changed\\n- `game/ui/theme.py` (new)\\n- `game/ui/widgets.py` (new)\\n- `game/ui/hud.py` (layout + caching + command bar skeleton + minimap placeholder + right panel)\\n- `game/engine.py` (expose `selected_building` in game_state for right panel)\\n\\n### Test commands run (evidence)\\n- `python tools/qa_smoke.py --quick` => PASS\\n  - `[determinism_guard] PASS: no violations found`\\n  - `[qa_smoke] DONE: PASS`\\n\\n### Notes\\n- Bottom command bar buttons are **visual/discoverability only** in Build A; keyboard controls remain authoritative (no click plumbing added this round).\\n- Minimap is a placeholder panel + label in Build A; real minimap rendering can follow in later rounds.\\n",
+            "summary_bullets": [
+              "Implemented Build A HUD skeleton: top bar + bottom command bar + right info panel + minimap region (computed from actual screen size).",
+              "Added minimal UI framework: `UITheme` + cached `Panel`/`Tooltip`/`IconButton` primitives.",
+              "Reduced per-frame allocations by caching top-bar value text + panels + placement banner.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "Introduce `game/ui/theme.py` and `game/ui/widgets.py` for reuse and consistent styling.",
+              "Refactor `HUD.render()` to compute layout from `surface` size and render cached panels/labels.",
+              "Expose `selected_building` in `GameEngine.get_game_state()` to support right info panel content."
+            ],
+            "acceptance_criteria": [
+              "UI skeleton draws correctly at varying window sizes (no hardcoded 1920×1080).",
+              "UI remains pixel-crisp (integer coordinates; no fractional scaling in HUD).",
+              "No new PNG assets required for Build A.",
+              "Caching present for panel surfaces and recurring stat text (no per-frame font.render for stable values).",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "If Agent 3 changes window mode to non-integer scaling, UI crispness could degrade; HUD uses integer coords but overall scaling policy must remain pixel-friendly."
+            ],
+            "dependencies": [
+              "Agent 3: borderless 1920×1080 default + fallback implementation and any scaling policy changes."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 3 lands borderless fullscreen default, do a quick manual UI readability pass at 1920×1080 and at a smaller display fallback.",
+              "Incrementally migrate `building_panel.py` to reuse widgets/theme (avoid full refactor in one PR)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/theme.py",
+                "game/ui/widgets.py",
+                "game/ui/hud.py",
+                "game/engine.py"
+              ],
+              "test_commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "test_evidence": [
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS"
+              ],
+              "blockers": []
+            }
+          }
+        }
+        ,
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_blockers_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:32:11.360835-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (wk3_r3) blockers-only: P0 blocker is smaller-than-1080 fallback safety (no WINDOW_WIDTH/WINDOW_HEIGHT assumptions when actual window is smaller). Agent 08: after Agent 03 lands fix, sanity-check HUD layout still uses surface size + caching intact. No new features.",
+          "response": {
+            "received_at_local": "2025-12-20T23:32:11.360835-07:00",
+            "status": "complete",
+            "raw": "### Status\\nBlocker-only update (Agent 08). Agent 03’s P0 fallback-resolution fix is **not yet visible in `game/engine.py`**: there are still several uses of `WINDOW_WIDTH/WINDOW_HEIGHT` in camera centering, edge scroll, and render scaling paths.\\n\\n### What I verified (UI)\\n- `game/ui/hud.py` already computes layout from `surface.get_width()/get_height()` and uses integer coordinates + caching, so it should remain safe once the engine/window-size fix lands.\\n\\n### Evidence / commands\\n- No new commands run in this blockers-only round (waiting on Agent 03 fix to land).\\n\\n### Blocker (needs Agent 03)\\n`game/engine.py` still references `WINDOW_WIDTH/WINDOW_HEIGHT` in window-size-sensitive paths (examples):\\n- `center_on_castle`: camera centers using constants\\n- `update_camera`: edge-scroll bounds use constants\\n- `render`: view surface sizing + `pygame.transform.scale` destinations use constants\\n\\nExpected: these should use `self.window_width/self.window_height` or `self.screen.get_width()/get_height()` consistently.\\n",
+            "summary_bullets": [
+              "Blocker: engine still uses WINDOW_WIDTH/WINDOW_HEIGHT in camera + render paths; unsafe for smaller-than-1080 fallback.",
+              "HUD itself is already surface-size-driven and cached; should be OK once engine fix lands.",
+              "Waiting on Agent 03 to land the P0 fix before re-running gates."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 08 in blockers-only round; will re-check HUD after Agent 03 lands fix."
+            ],
+            "acceptance_criteria": [
+              "After Agent 03 fix lands, HUD still lays out correctly at smaller fallback resolutions (no overlap/clipping) using surface size.",
+              "Caching remains intact (no per-frame churn introduced).",
+              "`python tools/qa_smoke.py --quick` remains PASS after integration."
+            ],
+            "risks": [
+              "If engine render scaling changes to fractional non-integer scaling, pixel-crisp UI could degrade; HUD uses integer coords but overall scaling policy must remain pixel-friendly."
+            ],
+            "dependencies": [
+              "Agent 03: remove WINDOW_WIDTH/WINDOW_HEIGHT assumptions from render/camera/edge-scroll and use actual window size consistently."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 03 lands the fix, re-run `python tools/qa_smoke.py --quick` and do a quick manual visual sanity check at a smaller-than-1080 window.",
+              "If any HUD overlap is observed on small displays, apply only minimal layout clamps (no feature adds)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_touched": [],
+              "test_commands_run": [],
+              "test_evidence": [],
+              "blockers": [
+                "P0 engine fallback resolution safety not yet landed: WINDOW_WIDTH/WINDOW_HEIGHT still used in `game/engine.py` camera + render paths."
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r4": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r4",
+          "round_meta": {
+            "prompt_set_id": "wk3_bugfix_r4_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:45:13.636276-07:00"
+          },
+          "prompt_text": "WK3-BUG-001 (Build A blocker): boot crash `AttributeError: UITheme has no attribute font_title` due to dataclass(slots=True) assigning undeclared attributes in __post_init__. Fix by declaring font fields with init=False and setting in __post_init__. Run: `python main.py --no-llm` boot, `python main.py --provider mock` boot, and `python tools/qa_smoke.py --quick` PASS. Log under wk3_r4.",
+          "response": {
+            "received_at_local": "2025-12-20T23:45:13.636276-07:00",
+            "status": "complete",
+            "raw": "### Status\\nFixed WK3-BUG-001: startup crash in `UITheme` caused by `@dataclass(slots=True)` assigning new attributes in `__post_init__`. Kept `slots=True` and declared font fields properly.\\n\\n### Fix\\n- Declared `font_title`, `font_body`, `font_small` as dataclass fields with `init=False` and default `None`, then assigned them in `__post_init__`.\\n\\n### Files changed\\n- `game/ui/theme.py`\\n\\n### Test commands + evidence\\n- Boot (non-interactive dummy video/audio; kill after 2s):\\n  - `python main.py --no-llm` => `boot_ok_no_llm`\\n  - `python main.py --provider mock` => `boot_ok_mock`\\n- Gate:\\n  - `python tools/qa_smoke.py --quick` => PASS\\n    - `[determinism_guard] PASS: no violations found`\\n    - `[qa_smoke] DONE: PASS`\\n",
+            "summary_bullets": [
+              "Fixed WK3-BUG-001 by declaring font fields on `UITheme` while keeping dataclass `slots=True`.",
+              "Verified boot succeeds for `--no-llm` and `--provider mock` (non-interactive dummy driver).",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "No further changes; bugfix only."
+            ],
+            "acceptance_criteria": [
+              "`python main.py --no-llm` boots without crashing.",
+              "`python main.py --provider mock` boots without crashing.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Continue WK3 Build A work once Agent 03 lands the fallback-resolution safety fix (separate P0)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/theme.py"
+              ],
+              "test_commands_run": [
+                "python main.py --no-llm (dummy driver; killed after 2s)",
+                "python main.py --provider mock (dummy driver; killed after 2s)",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "test_evidence": [
+                "boot_ok_no_llm",
+                "boot_ok_mock",
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS"
+              ],
+              "blockers": []
+            }
+          }
+        }
+      }
+    }
   }
 }
 

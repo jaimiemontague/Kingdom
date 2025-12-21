@@ -270,6 +270,172 @@
           }
         }
       }
+    },
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3: UI polish + 1080p borderless default + pixel art ingestion. Round 1 is contracts/specs (no big implementation dump)."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:34"
+          },
+          "prompt_text": "WK3 Kickoff (Round 1 / wk3_r1): Provide acceptance criteria + contracts + asset conventions + perf/QA gates (not a big implementation dump yet). Hard decisions locked: default launch borderless fullscreen 1920×1080 (fallback to display resolution if smaller), CC0/open-license assets allowed with clean attribution, and python tools/qa_smoke.py --quick must remain PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:34",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) ACTIVE for WK3. Round-1 output is the **display/window contract + UI scaling contract + safe file boundaries** so Agent 8/12/11 can implement without regressions.\n\n### Deliverables\n- Display/window behavior contract for default launch:\n  - borderless fullscreen 1920×1080 by default\n  - fallback to current display resolution if smaller\n- UI scaling contract for 1080p-first layout (how we treat coordinates, camera, and UI surfaces)\n- Safe boundaries (avoid import cycles): config vs engine vs UI\n\n### Contracts (LOCKED decisions + proposed implementation contract)\n1) **Display mode contract (Build A)**\n- Default requested mode: **borderless fullscreen at 1920×1080**.\n- Fallback: if primary display width/height < 1920×1080, use **that display’s current resolution**, still borderless.\n- Implementation detail contract:\n  - `game/engine.py` owns window creation flags (`pygame.display.set_mode`).\n  - `config.py` owns defaults (target resolution) and any opt-out toggles.\n\n2) **UI coordinate/scaling contract (Build A)**\n- Use **1080p as the design reference space**:\n  - UI layout authored against a virtual canvas of 1920×1080.\n  - If runtime resolution differs, UI can either:\n    - letterbox/pillarbox UI to preserve pixel-perfect scale, OR\n    - apply a uniform UI scale factor s = min(w/1920, h/1080) and anchor panels.\n- Keep game-world zoom independent from UI scaling:\n  - camera/world rendering already supports zoom; UI should not fight it.\n\n3) **Determinism + perf guardrails (always-on)**\n- No new per-frame allocations for UI text/surfaces; cache and refresh on cadence or value changes.\n- Sprite loading: keep existing “PNG override else procedural fallback” behavior; do not require new assets for Build A.\n\n### Proposed changes (file boundaries)\n- **Config/constants**: `config.py` (add/adjust defaults: target width/height, borderless toggle)\n- **Window init/runtime behavior**: `game/engine.py` (set_mode flags; compute fallback resolution)\n- **UI scaling primitives** (owned by Agent 8, but boundary defined here): new `game/ui/theme.py` and `game/ui/widgets.py` should NOT import AI/systems.\n- **QA/Tools** (owned by Agents 11/12): extend `tools/qa_smoke.py` or `tools/observe_sync.py` to validate window config doesn’t crash headless.\n\n### Acceptance criteria (WK3)\n- Default launch chooses borderless 1920×1080 when available; otherwise uses display resolution.\n- UI is readable at 1080p and does not overlap critically (Agent 8 owns layout specifics).\n- Pixel art pipeline remains backward compatible: if frames are missing, procedural fallback renders (Build A cannot depend on new assets).\n- `python tools/qa_smoke.py --quick` remains PASS.\n\n### Exact test commands\n- Mandatory gate: `python tools/qa_smoke.py --quick`\n- Manual sanity:\n  - `python main.py --no-llm`\n  - `python main.py --provider mock`\n\n### Risks\n- Window mode differences across Windows GPUs/drivers (borderless flags behave differently); mitigate by using pygame’s display info and safe fallbacks.\n- UI perf regressions from rich widgets; mitigate with caching + rate-limited updates.\n\n### Dependencies (blockers only)\n- None.\n\n### Wait rule / do-not-assume notes\n- **Asset folder conventions + attribution**: plan suggests `assets/ATTRIBUTION.md` and `assets/third_party/<pack>/...`; final structure should be confirmed by Agents 12/13. I will not hard-code attribution paths outside config until they post the final convention.\n\n### Next actions\n- Provide PR review signoff on any window/config changes for determinism/perf.\n- If Agent 8 needs a specific UI-scale strategy (letterbox vs scale), I’ll lock the contract based on their layout constraints and QA needs.\n",
+            "summary_bullets": [
+              "Defined the Build A display contract: default borderless 1920×1080, fallback to smaller display resolution (still borderless).",
+              "Proposed 1080p reference-space UI scaling contract and safe boundaries between config/engine/UI modules.",
+              "Reinforced perf/determinism guardrails: cache UI surfaces, keep PNG-override sprite pipeline, qa_smoke stays green."
+            ],
+            "proposed_changes": [
+              "Add/adjust display defaults in `config.py` (target 1920×1080, borderless toggle/flags).",
+              "Implement borderless fullscreen fallback logic in `game/engine.py` using display info; no new art dependency for Build A.",
+              "Introduce UI scaling primitives in UI-only modules (Agent 8 owned) without importing AI/systems."
+            ],
+            "acceptance_criteria": [
+              "On 1920×1080+ displays, default launch is borderless 1920×1080; on smaller displays, uses display resolution without crashing.",
+              "`python tools/qa_smoke.py --quick` remains PASS.",
+              "Build A remains shippable without any new external assets (sprite fallbacks still work)."
+            ],
+            "risks": [
+              "Borderless behavior varies across Windows drivers; mitigate via safe fallbacks and minimal mode switching.",
+              "UI perf regressions from new widgets; mitigate with caching and cadence-based refresh."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 8: choose UI scaling behavior (letterbox vs uniform scale) based on layout needs; I can lock the final contract after that decision.",
+              "Agent 12/13: confirm final attribution file/folder convention before any code hard-codes paths.",
+              "Agent 11: add a non-flaky window-mode sanity check if feasible in headless (ensure no crash when display mode defaults are applied)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "contracts_locked_for_wk3": {
+                "default_display_mode": "borderless 1920x1080 (fallback to display res if smaller)",
+                "qa_gate": "python tools/qa_smoke.py --quick must PASS"
+              },
+              "file_boundaries": [
+                "config.py: defaults/toggles only",
+                "game/engine.py: pygame display mode selection + fallback logic",
+                "game/ui/*: layout/theme/widgets only; no AI/system imports"
+              ],
+              "test_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python main.py --no-llm",
+                "python main.py --provider mock"
+              ]
+            }
+          }
+        },
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:55"
+          },
+          "prompt_text": "WK3 Round 2 execution (Build A): implement borderless fullscreen default 1920x1080 with fallback to display resolution if smaller, localized to config/engine; keep qa_smoke PASS. Compute UI layout from actual window size.",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:55",
+            "status": "complete",
+            "raw": "Audit trail (retro): Landed WK3 Build A display-mode defaults and initial borderless + fallback sizing in config/engine (no UI assumptions). This entry is the missing wk3_r2 record requested by PM for completeness; wk3_r3 contains the P0 follow-up that removes remaining WINDOW_WIDTH/HEIGHT assumptions in camera/render scaling.",
+            "summary_bullets": [
+              "Set default window target to 1920x1080 (WK3 decision) and added DEFAULT_BORDERLESS toggle.",
+              "Engine chooses desired_w/h with safe fallback when display is smaller; uses borderless window flags where supported.",
+              "Kept changes localized to config/engine; deterministic behavior unchanged."
+            ],
+            "proposed_changes": [
+              "Update `config.py` defaults to 1920x1080 and add DEFAULT_BORDERLESS.",
+              "Update `game/engine.py` window initialization to choose borderless size with fallback to display resolution if smaller."
+            ],
+            "acceptance_criteria": [
+              "Default launch requests borderless 1920x1080; falls back safely if display smaller.",
+              "qa_smoke remains PASS."
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Follow up with P0: remove remaining WINDOW_WIDTH/WINDOW_HEIGHT assumptions in camera/render paths when actual window is smaller (tracked in wk3_r3)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "config.py",
+                "game/engine.py"
+              ]
+            }
+          }
+        },
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_blockers_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:55"
+          },
+          "prompt_text": "WK3 blockers-only: P0 fix. Ensure render/camera/edge-scroll/scaling uses actual window size (self.window_width/self.window_height or screen.get_width/height) consistently; minimal change; determinism unchanged. Evidence: python tools/qa_smoke.py --quick PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:55",
+            "status": "complete",
+            "raw": "P0 FIX: Removed remaining WINDOW_WIDTH/WINDOW_HEIGHT assumptions in camera clamp/centering, mouse edge scroll bounds, view-surface sizing, scale destination, pause overlay centering, and exposed (screen_w, screen_h) in game_state so UI can lay out against actual window size. Determinism unchanged. Gate: qa_smoke PASS.",
+            "summary_bullets": [
+              "Replaced fixed-dimension assumptions with runtime window dimensions throughout camera + render scaling paths.",
+              "Exposed screen_w/screen_h in game_state for UI layout to use actual window size.",
+              "qa_smoke --quick remains PASS after changes."
+            ],
+            "proposed_changes": [
+              "Use self.window_width/self.window_height (or screen.get_width/height) for clamp_camera view sizes and center_on_castle offsets.",
+              "Use runtime window dims for edge-scroll bounds and pygame.transform.scale destinations.",
+              "Add screen_w/screen_h to get_game_state for UI."
+            ],
+            "acceptance_criteria": [
+              "No crash/clipping regressions when actual window is smaller than 1920x1080; camera and scaling use actual dimensions.",
+              "python tools/qa_smoke.py --quick PASS."
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 08: use game_state[screen_w/screen_h] for layout; avoid hardcoded 1920x1080 in pixel coordinates.",
+              "Human smoke: validate borderless fallback on a <1080p display if available."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/engine.py"
+              ],
+              "test_commands_run": [
+                "cd C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom",
+                "python tools\\\\qa_smoke.py --quick"
+              ],
+              "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see tool output; includes determinism_guard PASS)"
+            }
+          }
+        }
+      }
     }
   }
 }

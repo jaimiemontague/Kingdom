@@ -277,6 +277,178 @@
         }
       }
     }
+    ,
+    "wk3-ui-polish-1080p-pixelart": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+        "notes": "WK3: UI polish + 1080p borderless default + pixel-art asset pass. Agent 11 owns regression/QA gates (borderless launch sanity, UI no-crash at 1080p, asset presence validation) while keeping qa_smoke green."
+      },
+      "rounds": {
+        "wk3_r1": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3: UI polish + 1080p borderless default + pixel-art asset pass. Agent 11 owns regression/QA gates (borderless launch sanity, UI no-crash at 1080p, asset presence validation) while keeping qa_smoke green."
+          },
+          "round_id": "wk3_r1",
+          "round_meta": {
+            "prompt_set_id": "wk3_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-20T23:07:52.5831339-07:00"
+          },
+          "prompt_text": "WK3 Kickoff (wk3_r1): provide acceptance criteria + contracts + asset conventions + perf/QA gates (not big implementation). Hard decisions locked: default launch borderless 1920x1080 (fallback to display resolution if smaller); CC0/open-license assets allowed with clean attribution; qa_smoke --quick must remain PASS. Output should include: Status/Deliverables, Proposed changes (file boundaries), Acceptance criteria + exact test commands, Risks/Dependencies (blockers only), Next actions; do not assume other agents' contract decisions (window scaling, asset folder conventions, attribution rules).",
+          "response": {
+            "received_at_local": "2025-12-20T23:07:52.5831339-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 11 (QA_TestEngineering_Lead) — WK3 Round 1: define QA acceptance criteria and regression gates for (1) borderless 1080p default launch, (2) UI stability/perf at 1080p, and (3) pixel-art asset ingestion validation, while keeping `python tools/qa_smoke.py --quick` PASS.\\n\\n### Deliverables (Round 1)\\n- WK3 Build A/B QA acceptance criteria and exact test commands (automation + manual).\\n- Proposed validation checks to add to tooling/CI (asset presence + attribution files), scoped to avoid blocking Build A.\\n- Risk list focused on regressions: window mode behavior, UI allocations, asset loading spikes.\\n\\n### Questions (blockers only)\\n- None yet; I am waiting on contract decisions for scaling + asset conventions + attribution file layout before implementing any validation scripts.\\n\\n### Next actions\\n- After Agent 3 posts the window/scaling contract: propose/implement a small automated smoke that verifies mode selection logic in a non-interactive way (as much as SDL allows).\\n- After Agent 12/13 post asset+attribution conventions: add a validation script and wire it into `qa_smoke --quick` (Build B), keeping Build A shippable without new external assets.\\n",
+            "summary_bullets": [
+              "Define WK3 QA gates: borderless 1920x1080 default behavior (fallback if display smaller), UI no-crash at 1080p, and pixel-art asset validation for Build B.",
+              "Keep the existing mandatory gate green: python tools/qa_smoke.py --quick must remain PASS throughout.",
+              "Wait for Agent 3 (scaling/window contract) and Agents 12/13 (asset conventions + attribution rules) before implementing validation tooling to avoid mismatched assumptions."
+            ],
+            "proposed_changes": [
+              "tools/qa_smoke.py: keep as required baseline; optionally add a WK3-specific lightweight check hook (only after contracts).",
+              "tools/validate_assets.py (new, Build B): verify required sprite folders exist and contain at least one PNG per required state; verify sortable naming (frame_000.png).",
+              "assets/ATTRIBUTION.md + assets/third_party/<pack>/* (Build B, owned by Tools/Ops): QA validates presence/structure only (not content correctness)."
+            ],
+            "acceptance_criteria": [
+              "Always: python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "Build A manual gate (human, 10 min): verify game launches borderless at 1920x1080 on 1080p+ displays; on smaller displays, launches borderless at native resolution; UI remains readable and does not overlap critically.",
+              "Build A manual stability: run 10 minutes each: python main.py --no-llm and python main.py --provider mock; no crashes/softlocks; UI remains responsive.",
+              "Build B validation (automation): python tools/validate_assets.py exits 0 when required hero/enemy/building sprite folders are populated and attribution files exist."
+            ],
+            "risks": [
+              "Borderless fullscreen behavior varies by OS/driver; risk of black screen or incorrect scaling. Mitigate with a small manual checklist and (where possible) a minimal SDL display-info log line at startup.",
+              "UI polish may introduce per-frame allocations (text/surface churn). Mitigate by caching surfaces and adding perf guardrails (Agent 10).",
+              "Asset ingestion may cause load-time spikes if everything is loaded eagerly. Mitigate via lazy loading + caching; validate that missing frames fall back safely."
+            ],
+            "dependencies": [
+              "Agent 3: window mode/scaling contract (exact pygame flags, fallback behavior, UI scale strategy).",
+              "Agent 12: asset import pipeline + validation script location/contract (folder lists, required states).",
+              "Agent 13: attribution/third-party license file layout rules (paths + naming)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 3 contract is posted, add a tiny non-interactive startup log/validation hook (if feasible) and document the exact manual steps for borderless verification on Windows.",
+              "After Agent 12/13 conventions are posted, implement the asset presence validator and wire it into qa_smoke --quick for Build B.",
+              "Coordinate with Agent 10 to ensure any new UI validation avoids adding heavy per-frame work."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "wk3_gate_plan": [
+                "Keep qa_smoke --quick as the always-on regression gate.",
+                "Add asset presence validation as a Build B-only gate once conventions are locked.",
+                "Keep borderless/fullscreen verification as a human smoke gate (platform-dependent)."
+              ]
+            }
+          }
+        },
+        "wk3_r2": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3: UI polish + 1080p borderless default + pixel-art asset pass. Agent 11 owns regression/QA gates (borderless launch sanity, UI no-crash at 1080p, asset presence validation) while keeping qa_smoke green."
+          },
+          "round_id": "wk3_r2",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:21:46.1627170-07:00"
+          },
+          "prompt_text": "WK3 Round 2 (wk3_r2): Execute Build A. Agent 11 assignment: keep qa_smoke green; add/refresh short Windows manual smoke checklist for borderless 1080p + UI readability; coordinate with Agent 12 on validator wiring (report-only Build A, strict Build B); do not add flaky automated fullscreen asserts.",
+          "response": {
+            "received_at_local": "2025-12-20T23:21:46.1627170-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK3 Round 2 execution support: delivered the Windows manual smoke checklist for borderless 1080p + UI readability, and verified `qa_smoke --quick` remains PASS after the change.\n\n### Deliverables\n- Added WK3 Build A manual smoke checklist (Windows) covering borderless 1920x1080 default + fallback behavior and UI readability expectations.\n- Captured automation evidence: `python tools/qa_smoke.py --quick` PASS.\n\n### Files changed\n- `docs/sprint/wk3_acceptance_checklist.md`\n\n### Commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick`\n\n### Notes on validator wiring (coordination)\n- Build A: validator should be report-only (non-failing).\n- Build B: validator becomes strict/failing gate + attribution checks (per PM locked policy).\n",
+            "summary_bullets": [
+              "Added a short Windows manual smoke checklist for borderless 1080p + UI readability (Build A).",
+              "Kept the always-on gate green: python tools/qa_smoke.py --quick PASS."
+            ],
+            "proposed_changes": [
+              "docs/sprint/wk3_acceptance_checklist.md: Build A manual smoke steps (borderless default + fallback + UI readability) and reminder of validator policy (report-only Build A / strict Build B)."
+            ],
+            "acceptance_criteria": [
+              "Automation: python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "Human (Windows) manual smoke per checklist: borderless default behavior correct; UI readable at actual runtime resolution; no crashes in --no-llm and provider=mock runs."
+            ],
+            "risks": [
+              "Borderless fullscreen verification remains platform-dependent; keep as human smoke (no flaky automation) per PM decision."
+            ],
+            "dependencies": [
+              "Agent 12: asset validator wiring details and any report-only invocation flags (Build A) vs strict flags (Build B)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12: once validator exists, add a report-only mention/command to the checklist (Build A) and reserve strict mode for Build B gate.",
+              "Human: run both 10-minute manual smokes (python main.py --no-llm; python main.py --provider mock) and sign off borderless + UI readability."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-20T23:21:46.1627170-07:00"
+              ]
+            }
+          }
+        },
+        "wk3_r3": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3: UI polish + 1080p borderless default + pixel-art asset pass. Agent 11 owns regression/QA gates (borderless launch sanity, UI no-crash at 1080p, asset presence validation) while keeping qa_smoke green."
+          },
+          "round_id": "wk3_r3",
+          "round_meta": {
+            "prompt_set_id": "wk3_blockers_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T23:33:46.0915261-07:00"
+          },
+          "prompt_text": "WK3 Round 3 (wk3_r3): blockers-only. Agent 11 assignment: update docs/sprint/wk3_acceptance_checklist.md to note validating smaller-than-1080 fallback does not crash/catastrophically clip; optionally add python tools/validate_assets.py --report as a non-blocking Build A command. Keep python tools/qa_smoke.py --quick PASS.",
+          "response": {
+            "received_at_local": "2025-12-20T23:33:46.0915261-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK3 Round 3: completed assigned doc update for fallback safety validation and confirmed `qa_smoke --quick` remains PASS.\n\n### Files changed\n- `docs/sprint/wk3_acceptance_checklist.md`\n\n### What changed\n- Added an explicit manual smoke expectation: if the actual window is smaller than 1920x1080, the fallback resolution path must not crash and must not catastrophically clip/scale (no invalid scale targets / negative rects).\n- Added an optional Build A non-blocking command: `python tools/validate_assets.py --report`.\n\n### Commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0; ends with `DONE: PASS`).\n\n### Blockers\n- None for QA deliverables this round.\n- System P0 fix (owned by Agent 03): ensure smaller-than-1080 fallback is safe in render/camera/edge-scroll/scaling; once landed, validate via the manual smoke note above.",
+            "summary_bullets": [
+              "Updated the manual smoke checklist to explicitly validate smaller-than-1080 fallback does not crash/catastrophically clip.",
+              "Added optional report-only asset validation command for Build A.",
+              "Reconfirmed the required gate: python tools/qa_smoke.py --quick PASS."
+            ],
+            "proposed_changes": [
+              "docs/sprint/wk3_acceptance_checklist.md: add fallback-safety validation note; add optional `python tools/validate_assets.py --report` (non-blocking Build A)."
+            ],
+            "acceptance_criteria": [
+              "Automation: python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "Human (Windows) manual smoke: on displays smaller than 1080p (or forced smaller window), fallback resolution path does not crash and UI is not catastrophically clipped/scaled."
+            ],
+            "risks": [
+              "Borderless/fullscreen behavior is platform-dependent; keep fallback verification as manual smoke (avoid flaky automated asserts)."
+            ],
+            "dependencies": [
+              "Agent 03: P0 fix ensuring render/camera/edge-scroll/scaling uses actual window size; QA will validate once landed."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 03 lands the P0 fix, run the Windows manual smoke note: validate smaller-than-1080 fallback does not crash/catastrophically clip.",
+              "Optionally run `python tools/validate_assets.py --report` in Build A as a non-blocking health check (should exit 0)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_touched": [
+                "docs/sprint/wk3_acceptance_checklist.md"
+              ],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-20T23:33:46.0915261-07:00"
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }
 
