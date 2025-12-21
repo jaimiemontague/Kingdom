@@ -415,6 +415,38 @@ class GameEngine:
             return
 
         if event.button == 1:  # Left click
+            # UI clicks should consume input before world selection.
+            try:
+                gs = self.get_game_state()
+                if hasattr(self.hud, "handle_click"):
+                    action = self.hud.handle_click(event.pos, gs)
+                    if action == "quit":
+                        self.running = False
+                        return
+                    if action == "close_selection":
+                        self.selected_hero = None
+                        self.building_panel.deselect()
+                        self.selected_building = None
+                        return
+            except Exception:
+                pass
+
+            # Debug panel close/consume
+            try:
+                if getattr(self.debug_panel, "visible", False) and hasattr(self.debug_panel, "handle_click"):
+                    if self.debug_panel.handle_click(event.pos):
+                        return
+            except Exception:
+                pass
+
+            # Perf overlay close/consume
+            try:
+                if self.show_perf and hasattr(self, "_perf_close_rect") and self._perf_close_rect and self._perf_close_rect.collidepoint(event.pos):
+                    self.show_perf = False
+                    return
+            except Exception:
+                pass
+
             # Check if clicking on building panel first
             if self.building_panel.visible:
                 if self.building_panel.handle_click(event.pos, self.economy, self.get_game_state()):
@@ -1188,9 +1220,30 @@ class GameEngine:
             for s in rendered:
                 panel.blit(s, (pad, yy))
                 yy += s.get_height()
+
+            # Close button (X) drawn into cached panel
+            x_surf = font.render("X", True, (255, 255, 255))
+            size = 18
+            close_local = pygame.Rect(panel.get_width() - size - 4, 4, size, size)
+            pygame.draw.rect(panel, (45, 45, 55), close_local)
+            pygame.draw.rect(panel, (120, 120, 150), close_local, 1)
+            panel.blit(x_surf, (close_local.centerx - x_surf.get_width() // 2, close_local.centery - x_surf.get_height() // 2))
             self._perf_overlay_panel = panel
 
-        surface.blit(self._perf_overlay_panel, (10, 10))
+        # Reposition: bottom-left of the world area (avoid top bar, right panel, bottom bar)
+        win_w = int(getattr(self, "window_width", surface.get_width()))
+        win_h = int(getattr(self, "window_height", surface.get_height()))
+        top_h = int(getattr(self.hud, "top_bar_height", 48))
+        bottom_h = int(getattr(self.hud, "bottom_bar_height", 96))
+
+        panel = self._perf_overlay_panel
+        px = 10
+        py = max(top_h + 10, win_h - bottom_h - panel.get_height() - 10)
+        surface.blit(panel, (px, py))
+
+        # Click target in screen coords (for close)
+        size = 18
+        self._perf_close_rect = pygame.Rect(px + panel.get_width() - size - 4, py + 4, size, size)
     
     def run(self):
         """Main game loop."""

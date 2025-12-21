@@ -10,6 +10,16 @@ todos:
     status: pending
     dependencies:
       - wk3-round1-lock
+  - id: wk3-buildA-quit-button
+    content: Add a clear, working Quit button in the HUD (top-left or top-right) so the player can exit reliably
+    status: pending
+    dependencies:
+      - wk3-buildA-ui
+  - id: wk3-buildA-closeable-panels
+    content: "Make UI panels manageable: add an 'X' close button to hero details + debug/perf panels; move/reposition FPS/perf overlay to a less intrusive area"
+    status: pending
+    dependencies:
+      - wk3-buildA-ui
   - id: wk3-buildB-assets
     content: Ingest CC0/open-license pixel art for all current heroes/enemies/buildings into existing sprite directories; add attribution files
     status: pending
@@ -59,6 +69,7 @@ This sprint is primarily about **(1) window/UI layout + theme**, and **(2) popul
 
 - Default launch opens **borderless 1920×1080** and UI is readable at that resolution.
 - Core UI surfaces are themed (panels, buttons, typography) and consistent.
+- UI is **manageable**: player can **Quit** via a visible HUD button, and key panels can be **closed** (X buttons) so they don’t cover the playfield.
 - All current hero classes, current enemy types, and all placeable buildings render with **pixel art** when assets exist (fallbacks OK for missing frames).
 - `python tools/qa_smoke.py --quick` passes.
 
@@ -133,6 +144,16 @@ Implementation approach:
 - `game/ui/theme.py` (palette, spacing, fonts)
 - `game/ui/widgets.py` (panel, icon button, tooltip, 9-slice)
 - Refactor [`game/ui/hud.py`](game/ui/hud.py) and [`game/ui/building_panel.py`](game/ui/building_panel.py) to use it.
+
+### UI manageability (new P0 usability polish)
+
+- Add a **Quit** button in the HUD (top-left or top-right) that reliably exits the game.
+- Add **close (X)** buttons for:
+- hero details panel (selected hero/info panel)
+- debug/perf overlays/panels (FPS readout / debug windows)
+- Prefer **non-invasive defaults**:
+- panels open when relevant but can be dismissed
+- FPS/perf overlay should not cover key HUD regions (move it to a corner that doesn’t fight the top bar/right panel)
 
 ---
 

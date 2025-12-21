@@ -57,6 +57,10 @@ class HUD:
         self._tooltip = Tooltip(COLOR_UI_BG, COLOR_UI_BORDER, alpha=240)
         self._buttons = []  # list[IconButton]
 
+        # Click targets (computed during render; read by engine input handler)
+        self.quit_rect: pygame.Rect | None = None
+        self.right_close_rect: pygame.Rect | None = None
+
         # Messages (top-left transient text)
         self.messages = []
         self.message_duration = 3000  # ms
@@ -274,6 +278,9 @@ class HUD:
         self._panel_bottom.render(surface)
         self._panel_right.render(surface)
         self._panel_minimap.render(surface)
+
+        # Quit button (top-right; player-manageable UI)
+        self._render_quit_button(surface, top_rect=top)
         
         # Top bar stats (cache text on value change)
         gold = int(game_state.get("gold", 0) or 0)
@@ -344,6 +351,12 @@ class HUD:
         # Right panel: selected entity summary (hero preferred; else building; else placeholder)
         selected_hero = game_state.get("selected_hero")
         selected_building = game_state.get("selected_building")
+
+        # Right panel close button (only when something is selected)
+        self.right_close_rect = None
+        if selected_hero is not None or selected_building is not None:
+            self._render_right_close_button(surface, right_rect=right)
+
         if selected_hero:
             self.render_hero_panel(surface, selected_hero, debug_ui=bool(game_state.get("debug_ui", False)), rect=right)
         elif selected_building is not None:
@@ -355,6 +368,55 @@ class HUD:
         # Minimap placeholder label (Build A skeleton; real minimap in later iteration)
         mm_label = self._cached_value_text("minimap_lbl", 1, "Minimap", self.theme.font_small, (200, 200, 200))
         surface.blit(mm_label, (minimap.x + 6, minimap.y + 6))
+
+    def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:
+        """
+        Handle HUD click targets only. Returns an action string if handled:
+        - "quit"
+        - "close_selection"
+        """
+        x, y = int(mouse_pos[0]), int(mouse_pos[1])
+        if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
+            return "quit"
+
+        if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
+            # Close selected hero/building panel
+            return "close_selection"
+
+        return None
+
+    def _render_quit_button(self, surface: pygame.Surface, top_rect: pygame.Rect):
+        """Render a clear Quit button in the top bar (cached label)."""
+        label = self._cached_value_text("btn_quit_lbl", 1, "Quit", self.theme.font_small, (240, 240, 240))
+        pad_x = 10
+        pad_y = 6
+        w = label.get_width() + pad_x * 2
+        h = label.get_height() + pad_y * 2
+        x = int(top_rect.right - w - int(self.theme.margin))
+        y = int(top_rect.y + (top_rect.height - h) // 2)
+        rect = pygame.Rect(x, y, w, h)
+        self.quit_rect = rect
+
+        mouse = pygame.mouse.get_pos()
+        hover = rect.collidepoint(mouse)
+        bg = (70, 45, 45) if hover else (55, 40, 40)
+        pygame.draw.rect(surface, bg, rect)
+        pygame.draw.rect(surface, COLOR_UI_BORDER, rect, 2)
+        surface.blit(label, (rect.x + pad_x, rect.y + pad_y))
+
+    def _render_right_close_button(self, surface: pygame.Surface, right_rect: pygame.Rect):
+        """Render an X close button for the right info panel (selected entity panel)."""
+        x_surf = self._cached_value_text("btn_close_x", 1, "X", self.theme.font_small, (240, 240, 240))
+        size = max(18, x_surf.get_height() + 6)
+        rect = pygame.Rect(int(right_rect.right - size - 6), int(right_rect.y + 6), int(size), int(size))
+        self.right_close_rect = rect
+
+        mouse = pygame.mouse.get_pos()
+        hover = rect.collidepoint(mouse)
+        bg = (60, 60, 70) if hover else (45, 45, 55)
+        pygame.draw.rect(surface, bg, rect)
+        pygame.draw.rect(surface, COLOR_UI_BORDER, rect, 2)
+        surface.blit(x_surf, (rect.centerx - x_surf.get_width() // 2, rect.centery - x_surf.get_height() // 2))
 
     def _render_command_bar(self, surface: pygame.Surface, game_state: dict, cmd_rect: pygame.Rect):
         """Render the bottom command bar skeleton (no click handling yet)."""

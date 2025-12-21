@@ -604,6 +604,77 @@
             }
           }
         }
+        ,
+        "wk3_r5": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r5",
+          "round_meta": {
+            "prompt_set_id": "wk3_exec_r5_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-21T00:07:32.597569-07:00"
+          },
+          "prompt_text": "WK3 UI Manageability (P0 polish): Add Quit button to HUD; add X close buttons for hero details panel and debug/perf UI; reposition perf overlay to avoid fighting top bar/right panel. Keep perf-safe (no per-frame churn), no determinism/sim changes, and keep `python tools/qa_smoke.py --quick` PASS. Log under wk3_r5 with evidence.",
+          "response": {
+            "received_at_local": "2025-12-21T00:07:32.597569-07:00",
+            "status": "complete",
+            "raw": "### Status\\nWK3 R5 P0 UI manageability implemented: Quit button added, key panels are closeable via X, and perf overlay moved to a less intrusive location. Changes are UI/input only; sim/determinism untouched.\\n\\n### Deliverables\\n- **Quit button** in HUD top bar (click => exit).\\n- **Closeable right info panel**: X button clears selected hero/building.\\n- **Closeable debug panel**: X button hides debug panel; debug UI consumes clicks so it doesn’t select entities behind it.\\n- **Closeable perf overlay**: X button hides perf overlay (`show_perf=False`).\\n- **Perf overlay repositioned** to the bottom-left of the world area (above bottom command bar) to avoid overlapping the top bar/right panel.\\n\\n### Perf-safety\\n- HUD buttons use cached text surfaces and do not create new Surfaces per frame.\\n- Debug panel now caches its panel surface and only rebuilds ~4x/sec or when the log changes (removes per-frame panel Surface allocations while visible).\\n- Perf overlay remains cached and only rebuilt when sampled values change; close button is drawn into the cached panel.\\n\\n### Files changed\\n- `game/ui/hud.py` (Quit + close X; click targets exported for engine)\\n- `game/ui/debug_panel.py` (X close + click handling + caching)\\n- `game/engine.py` (route clicks to HUD/debug/perf before world selection; perf overlay reposition + close hitbox)\\n\\n### Evidence (commands run)\\n- Gate:\\n  - `python tools/qa_smoke.py --quick` => PASS\\n    - `[determinism_guard] PASS: no violations found`\\n    - `[qa_smoke] DONE: PASS`\\n- Headless UI click sanity (dummy SDL):\\n  - Quit click => `ui_quit_click_ok`\\n  - Right panel X closes selection => `ui_right_panel_close_ok`\\n  - Debug X closes => `ui_debug_close_ok`\\n  - Perf X closes => `ui_perf_close_ok`\\n\\n### Manual sanity (human)\\n- Launch `python main.py --no-llm` and `python main.py --provider mock`:\\n  - Click hero/building → close via X\\n  - Toggle debug/perf (F1/F2) → close via X\\n  - Click Quit → exits\\n",
+            "summary_bullets": [
+              "Added HUD Quit button and routed click to reliably exit game.",
+              "Added X close buttons for right info panel (hero/building selection) and debug/perf overlays.",
+              "Moved perf overlay to avoid overlapping top bar/right panel; added click-to-close.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "proposed_changes": [
+              "HUD: render Quit + right-panel close X and expose click rects for engine hit testing.",
+              "Engine: prioritize UI click handling before world selection; add perf close hitbox and reposition overlay.",
+              "DebugPanel: add close X and cache panel surface (no per-frame allocations when visible)."
+            ],
+            "acceptance_criteria": [
+              "Quit button present and exits the game reliably when clicked.",
+              "Right info panel closable via X (clears selected hero/building).",
+              "Debug panel closable via X; clicks inside debug panel do not select entities behind it.",
+              "Perf overlay closable via X and no longer obscures top bar/right panel.",
+              "`python tools/qa_smoke.py --quick` PASS."
+            ],
+            "risks": [
+              "If Agent 03 changes fallback sizing, ensure perf overlay placement still respects HUD bar sizes (uses HUD heights, should remain safe)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Have QA run the human interactive sanity checklist (click Quit / X closes) on Windows with real display driver.",
+              "If users misclick Quit, consider requiring a confirmation modal later (post-Build A)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [
+                "game/ui/hud.py",
+                "game/ui/debug_panel.py",
+                "game/engine.py"
+              ],
+              "test_commands_run": [
+                "python tools/qa_smoke.py --quick",
+                "python -c (ui_quit_click_ok)",
+                "python -c (ui_right_panel_close_ok)",
+                "python -c (ui_debug_close_ok)",
+                "python -c (ui_perf_close_ok)"
+              ],
+              "test_evidence": [
+                "[determinism_guard] PASS: no violations found",
+                "[qa_smoke] DONE: PASS",
+                "ui_quit_click_ok",
+                "ui_right_panel_close_ok",
+                "ui_debug_close_ok",
+                "ui_perf_close_ok"
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

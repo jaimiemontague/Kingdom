@@ -446,6 +446,197 @@
               ]
             }
           }
+        },
+        "wk3_r5": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3: UI manageability P0 polish — quit button + closeable panels. Agent 11 documents acceptance checks and preserves qa_smoke gate."
+          },
+          "round_id": "wk3_r5",
+          "round_meta": {
+            "prompt_set_id": "wk3_manageability_r5_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-21T00:03:41.1789102-07:00"
+          },
+          "prompt_text": "WK3 UI Manageability (P0 polish): add Quit button in HUD; make hero details panel + debug/perf UI closeable via X; reposition perf overlay so it doesn't fight top bar/right panel. Agent 11: update docs/sprint/wk3_acceptance_checklist.md with manageability checks; run python tools/qa_smoke.py --quick PASS; log wk3_r5.",
+          "response": {
+            "received_at_local": "2025-12-21T00:03:41.1789102-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK3 R5: added the required UI-manageability acceptance bullets to the manual smoke checklist and verified the automated gate remains PASS.\n\n### Files changed\n- `docs/sprint/wk3_acceptance_checklist.md`\n\n### Checklist additions (manual)\n- Quit button present + exits reliably.\n- Hero details panel closable via X.\n- Debug/perf UI closable via X.\n- Perf overlay placed to avoid overlapping key HUD regions.\n\n### Commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0; ends with `DONE: PASS`).\n\n### Blockers\n- None for QA tasks this round.\n- Manual sanity (human): after Agent 08 lands UI, verify: click hero → X closes panel; open debug/perf → X closes; click Quit → exits.",
+            "summary_bullets": [
+              "Updated the WK3 manual smoke checklist with UI-manageability P0 bullets (Quit + close buttons + overlay placement).",
+              "Reconfirmed qa_smoke gate stays green: python tools/qa_smoke.py --quick PASS."
+            ],
+            "proposed_changes": [
+              "docs/sprint/wk3_acceptance_checklist.md: add UI manageability section (Quit; closeable hero panel; closeable debug/perf UI; perf overlay placement)."
+            ],
+            "acceptance_criteria": [
+              "Automation: python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "Manual: Quit button exists in HUD and exits reliably when clicked.",
+              "Manual: hero details panel has X and closes immediately when clicked.",
+              "Manual: debug/perf UI has X and closes immediately when clicked.",
+              "Manual: perf overlay does not obscure top bar/right panel key regions."
+            ],
+            "risks": [
+              "Manual-only validation is required for UI clicks; avoid adding flaky headless assertions for quit/panel-close behavior."
+            ],
+            "dependencies": [
+              "Agent 08: implement Quit button + close buttons + overlay reposition (UI workstream)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After Agent 08 lands UI changes, run the manual steps in the checklist to confirm manageability behaviors.",
+              "Keep qa_smoke --quick in CI as the non-flaky regression gate; do not add sim-touching UI instrumentation."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_touched": [
+                "docs/sprint/wk3_acceptance_checklist.md"
+              ],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-21T00:03:41.1789102-07:00"
+              ]
+            }
+          }
+        },
+        "wk3_r6": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3 Build B kickoff: pixel art packs + attribution + strict validator gate. Agent 11 wires the QA gate plan and updates checklist."
+          },
+          "round_id": "wk3_r6",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_kickoff_r6_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:17:03.7381957-07:00"
+          },
+          "prompt_text": "WK3 Round 6 (wk3_r6): Build B execution kickoff. QA assignment: keep qa_smoke --quick baseline gate; add validator as failing gate for Build B (once assets land): python tools/validate_assets.py --strict --check-attribution; update docs/sprint/wk3_acceptance_checklist.md accordingly; log status/files/commands/PASS evidence/blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T00:17:03.7381957-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK3 R6 (Build B kickoff): documented the Build B gate plan (qa_smoke baseline + strict asset validation) and confirmed `qa_smoke --quick` remains PASS.\n\n### Files changed\n- `docs/sprint/wk3_acceptance_checklist.md`\n\n### Build B gate plan (wired in docs)\n- Baseline (always-on): `python tools/qa_smoke.py --quick` must PASS.\n- Build B failing gate (once assets/attribution land): `python tools/validate_assets.py --strict --check-attribution`.\n\n### Commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (exit code 0; ends with `DONE: PASS`).\n\n### Blockers\n- None for QA documentation/gate plan.\n- Note: `validate_assets --strict --check-attribution` is expected to FAIL until the sprite folders + attribution scaffolding are actually populated (Build B work owned by Agents 09/12/13).",
+            "summary_bullets": [
+              "Updated checklist with Build B required gates: qa_smoke baseline + strict validate_assets gate (strict + attribution).",
+              "Reconfirmed qa_smoke --quick PASS at Build B kickoff."
+            ],
+            "proposed_changes": [
+              "docs/sprint/wk3_acceptance_checklist.md: add Build B automated gates section including `python tools/validate_assets.py --strict --check-attribution`."
+            ],
+            "acceptance_criteria": [
+              "Always: python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "Build B (after assets land): python tools/validate_assets.py --strict --check-attribution exits 0 (PASS) with required sprites + attribution present."
+            ],
+            "risks": [
+              "Strict validation will surface missing sprite folders/states and missing attribution early; expected until packs are integrated—coordinate landing order to avoid transient red builds."
+            ],
+            "dependencies": [
+              "Agent 09: lock pack family + mapping table for entity types to sprites (subset to avoid bloat).",
+              "Agent 12: tighten strict policy + publish exact Build B gate commands and expected semantics.",
+              "Agent 13: credits/attribution format + populate assets/ATTRIBUTION.md + per-pack LICENSE*.txt layout."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Once Agents 09/12/13 land packs + attribution + strict policy, QA will run `python tools/validate_assets.py --strict --check-attribution` and treat nonzero as Build B blocker.",
+              "Keep qa_smoke --quick as the baseline regression gate throughout asset integration."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_touched": [
+                "docs/sprint/wk3_acceptance_checklist.md"
+              ],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS (exit code 0) at 2025-12-21T00:17:03.7381957-07:00"
+              ],
+              "buildb_gate_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution"
+              ]
+            }
+          }
+        },
+        "wk3_r7": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": "WK3 Build B execution (asset ingest): strict validator must pass with curated PNG subsets + attribution."
+          },
+          "round_id": "wk3_r7",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_ingest_r7_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:27:31.9485555-07:00"
+          },
+          "prompt_text": "WK3 Round 7 (wk3_r7): Build B execution — actual asset ingest. Agent 11: after assets land, run/report PASS/FAIL: python tools/qa_smoke.py --quick and python tools/validate_assets.py --strict --check-attribution. Log files changed, commands run + evidence, and coverage added (entities now have frame_###.png).",
+          "response": {
+            "received_at_local": "2025-12-21T00:27:31.9485555-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK3 R7 (Build B ingest): ran the required gates against current repo state. Baseline regression gate is PASS; strict asset validation is FAIL because no real sprite frames (`frame_###.png`) have landed yet.\n\n### Files changed\n- `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` (log only)\n\n### Commands run (evidence)\n- PASS: `python tools/qa_smoke.py --quick` (ends with `DONE: PASS`).\n- FAIL: `python tools/validate_assets.py --strict --check-attribution --report` (exit code 1).\n  - Current failure mode: missing `frame_###.png` across required manifest entries.\n  - Summary line: `[validate_assets] SUMMARY errors=166 warns=0`.\n\n### Required coverage (manifest snapshot)\n- Heroes: 4 classes × 5 states = 20 required state folders needing at least `frame_000.png`.\n- Enemies: 5 types × 5 states = 25 required state folders needing at least `frame_000.png`.\n- Buildings: 29 types × 3 states = 87 required state folders needing at least `frame_000.png`.\n\n### Coverage added this round\n- None yet (no `assets/sprites/**/frame_###.png` present in repo at time of check).\n\n### Blockers\n- Build B blocker (expected at this moment): strict validator cannot pass until Agents 09/13 land curated PNG subsets into the existing override folders and create per-pack `assets/third_party/<pack>/LICENSE*.txt` (+ README*.txt) with a fully-populated `assets/ATTRIBUTION.md`.\n- Once those assets land, I will re-run:\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - `python tools/qa_smoke.py --quick`\n  and update this entry with PASS evidence.",
+            "summary_bullets": [
+              "qa_smoke baseline gate PASS.",
+              "validate_assets strict+attribution gate FAIL (expected): no frame_###.png present yet; errors=166."
+            ],
+            "proposed_changes": [
+              "No code changes proposed by QA; waiting on asset ingest + attribution scaffold landings to satisfy strict validator."
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick exits 0 (PASS).",
+              "python tools/validate_assets.py --strict --check-attribution exits 0 (PASS) once curated PNGs + attribution land."
+            ],
+            "risks": [
+              "If assets are landed partially, strict validator will keep Build B red; recommend landing curated sprite subset + attribution scaffold in the same PR."
+            ],
+            "dependencies": [
+              "Agent 09: curated sprite list + entity→sprite mapping (subset).",
+              "Agent 13: assets/third_party/<pack>/LICENSE*.txt (+ README*.txt) and fully-populated assets/ATTRIBUTION.md before PNGs land.",
+              "Agent 12: keep validate_assets strict semantics as Build B failing gate."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After the first PNG subset + attribution scaffold lands, re-run strict validator and treat any nonzero as Build B blocker until corrected.",
+              "Keep qa_smoke --quick green throughout asset integration."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "commands_run": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution --report"
+              ],
+              "pass_evidence": [
+                "qa_smoke --quick: PASS at 2025-12-21T00:27:31.9485555-07:00"
+              ],
+              "fail_evidence": [
+                "validate_assets --strict --check-attribution: FAIL (exit code 1) at 2025-12-21T00:27:31.9485555-07:00",
+                "[validate_assets] SUMMARY errors=166 warns=0"
+              ],
+              "required_coverage_manifest": {
+                "heroes": {
+                  "classes": ["warrior", "ranger", "rogue", "wizard"],
+                  "states": ["idle", "walk", "attack", "hurt", "inside"]
+                },
+                "enemies": {
+                  "types": ["goblin", "wolf", "skeleton", "spider", "bandit"],
+                  "states": ["idle", "walk", "attack", "hurt", "dead"]
+                },
+                "buildings": {
+                  "types_count": 29,
+                  "states": ["built", "construction", "damaged"]
+                }
+              },
+              "coverage_added": {
+                "heroes": [],
+                "enemies": [],
+                "buildings": []
+              }
+            }
+          }
         }
       }
     }

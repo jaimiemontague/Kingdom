@@ -331,6 +331,140 @@
             }
           }
         }
+        ,
+        "wk3_r6": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r6",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_exec_r6_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:15:56.8472365-07:00"
+          },
+          "prompt_text": "WK3 Round 6 (wk3_r6) — Build B execution kickoff. Agent 13: define exact Credits bullets format (pack name/author/license/source/what-used) and prepare to populate assets/ATTRIBUTION.md once packs are chosen; ensure per-pack license layout under assets/third_party/<pack>/. Log status, files changed, commands run + PASS evidence, blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T00:15:56.8472365-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — wk3_r6 Build B kickoff: added attribution scaffolding and locked the exact Credits bullet format we will use in Steam patch notes once Agent 09/12 finalize pack selection.\\n\\n### Deliverables\\n- `assets/ATTRIBUTION.md` skeleton (required rollup) including the exact Steam Credits bullet structure.\\n- `assets/third_party/README.md` describing required per-pack license/provenance layout.\\n\\n### Credits bullets format (exact)\\nUse one bullet per pack:\\n- `<Pack Name>` by `<Author>` — License: `<License>` — Source: `<URL>` — Used for: `<heroes/enemies/buildings/ui>`\\n\\n### Required repo layout (once packs are chosen)\\n- `assets/ATTRIBUTION.md` must list each pack with: author, license, source, retrieved date, modifications, and exact `assets/sprites/...` directories used.\\n- For each pack: `assets/third_party/<pack_name>/LICENSE*.txt` (verbatim) and `README.txt` (verbatim or provenance note).\\n\\n### Files changed\\n- `assets/ATTRIBUTION.md`\\n- `assets/third_party/README.md`\\n\\n### Commands run + PASS evidence\\n- `python tools/qa_smoke.py --quick` (repo root)\\n  - PASS evidence: `[determinism_guard] PASS: no violations found` and multiple `[qa] PASS:` lines in the captured output log.\\n\\n### Blockers\\n[]\\n\\n### Next actions\\n- When Agent 09/12 lock the pack list, I will fill in `assets/ATTRIBUTION.md` with exact per-pack entries and provide the final Credits section for Build B patch notes.",
+            "summary_bullets": [
+              "Locked the exact Credits bullets format for Steam patch notes (one bullet per pack: name/author/license/source/used-for).",
+              "Added attribution scaffolding files to ensure Build B asset ingestion is compliant and auditable.",
+              "Re-ran `python tools/qa_smoke.py --quick` and confirmed PASS evidence after docs changes."
+            ],
+            "proposed_changes": [
+              "Use `assets/ATTRIBUTION.md` as the single source of truth for third-party packs included in the repo.",
+              "Require per-pack license/provenance files under `assets/third_party/<pack_name>/` (LICENSE*.txt + README.txt).",
+              "Keep patch notes Credits section synchronized with `assets/ATTRIBUTION.md` entries."
+            ],
+            "acceptance_criteria": [
+              "Once packs land, every pack has: license text saved, source URL recorded, and usage directories listed; Credits bullets can be generated from `assets/ATTRIBUTION.md`.",
+              "`python tools/qa_smoke.py --quick` remains PASS after attribution scaffolding changes (verified)."
+            ],
+            "risks": [
+              "Packs land without complete provenance (missing license/source), blocking Build B strict attribution gate.",
+              "Overstating coverage (must avoid claiming ‘pixel art for everything’ until validator + QA confirm)."
+            ],
+            "dependencies": [
+              "Agent 09: final pack shortlist and mapping (entity types → pack sprites).",
+              "Agent 12: strict validator policy + exact gate command (`python tools/validate_assets.py --strict --check-attribution`).",
+              "Agent 11: QA wiring to make validator a failing gate for Build B."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "After pack selection: populate `assets/ATTRIBUTION.md` with final entries per pack (retrieved date, modifications, used-for, file locations).",
+              "At Build B release: include a short Credits / Attribution section in patch notes with one bullet per pack using the locked format."
+            ],
+            "agent_fields": {
+              "credits_bullet_format": "- <Pack Name> by <Author> — License: <License> — Source: <URL> — Used for: <heroes/enemies/buildings/ui>",
+              "files_changed": [
+                "assets/ATTRIBUTION.md",
+                "assets/third_party/README.md"
+              ],
+              "qa_evidence": {
+                "command": "python tools/qa_smoke.py --quick",
+                "result": "PASS",
+                "output_log_path": "c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/e18780d1-3089-4819-9bf7-084477651f0e.txt",
+                "evidence_lines": [
+                  "[determinism_guard] PASS: no violations found",
+                  "[qa] PASS: ... (multiple scenarios)"
+                ]
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
+        ,
+        "wk3_r7": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r7",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_ingest_r7_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:27:42.5877705-07:00"
+          },
+          "prompt_text": "WK3 Round 7 (wk3_r7) — Build B asset ingest. Agent 13: before any PNGs land, create assets/third_party/<pack_name>/LICENSE*.txt + README*.txt and fully populate assets/ATTRIBUTION.md for the chosen packs (Kenney primary). Ensure attribution compliance checks pass. Log files changed, commands run + PASS evidence, blockers.",
+          "response": {
+            "received_at_local": "2025-12-21T00:27:42.5877705-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (Ops/Attribution) — wk3_r7: prepared attribution compliance for Kenney CC0 ingestion BEFORE any PNG sprites are committed.\\n\\n### What I shipped (attribution compliance)\\n- Created `assets/third_party/kenney_cc0/` with:\\n  - `LICENSE_CC0-1.0.txt` containing the verbatim CC0 1.0 legal code (downloaded from Creative Commons legalcode.txt).\\n  - `README.txt` provenance note (source, author, retrieved date, normalization notes).\\n- Updated `assets/ATTRIBUTION.md` with a fully populated entry for Kenney (license/source/retrieved/modifications/used-for/file locations).\\n\\n### Files changed\\n- `assets/ATTRIBUTION.md`\\n- `assets/third_party/kenney_cc0/LICENSE_CC0-1.0.txt`\\n- `assets/third_party/kenney_cc0/README.txt`\\n\\n### Commands run + PASS evidence\\n- PASS: `python tools/qa_smoke.py --quick`\\n  - Evidence lines include: `[determinism_guard] PASS: no violations found` and multiple `[qa] PASS:` lines (see output log path).\\n- PASS: `python tools/validate_assets.py --check-attribution --report`\\n  - Output: `[validate_assets] OK: no findings` and `SUMMARY errors=0 warns=0`\\n\\n### Coverage added (attribution)\\n- Attribution coverage for the Kenney CC0 pack family is now in place; sprite PNG coverage will be added by Agent 09 ingesting curated sprites into existing override folders.\\n\\n### Blockers\\n[]",
+            "summary_bullets": [
+              "Prepared attribution compliance for Kenney ingestion: third_party license + provenance + populated ATTRIBUTION entry.",
+              "Verified baseline gate stays green: `python tools/qa_smoke.py --quick` PASS.",
+              "Verified attribution check path passes: `python tools/validate_assets.py --check-attribution --report` -> errors=0 warns=0."
+            ],
+            "proposed_changes": [
+              "Treat `assets/ATTRIBUTION.md` as the single source of truth for credits; keep it synchronized with third_party pack directories.",
+              "Require `assets/third_party/kenney_cc0/LICENSE*.txt` to exist before any Kenney-derived PNGs are committed."
+            ],
+            "acceptance_criteria": [
+              "If any `assets/third_party/<pack>/` exists, `assets/ATTRIBUTION.md` lists that pack with license, source, retrieved date, modifications, and file locations.",
+              "Per-pack directory includes `LICENSE*.txt` (verbatim) and a `README*.txt` (verbatim or provenance note).",
+              "Attribution validation passes: `python tools/validate_assets.py --check-attribution --report` (and later `--strict --check-attribution` once assets are present)."
+            ],
+            "risks": [
+              "If Agent 09 uses additional non-Kenney packs (e.g., LPC fallback), those must be added to ATTRIBUTION and third_party before merging PNGs."
+            ],
+            "dependencies": [
+              "Agent 09: confirm whether ingestion is Kenney-only or if any fallback pack is actually used this round (to avoid missing attribution).",
+              "Agent 11: run final Build B gates after PNG ingestion: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Before merging any non-Kenney PNGs, create a dedicated `assets/third_party/<pack>/` directory and add a populated section to `assets/ATTRIBUTION.md`.",
+              "After Agent 09 ingests curated PNGs, rerun strict gate: `python tools/validate_assets.py --strict --check-attribution` and confirm PASS."
+            ],
+            "agent_fields": {
+              "packs_attributed": [
+                "kenney_cc0"
+              ],
+              "files_changed": [
+                "assets/ATTRIBUTION.md",
+                "assets/third_party/kenney_cc0/LICENSE_CC0-1.0.txt",
+                "assets/third_party/kenney_cc0/README.txt"
+              ],
+              "qa_evidence": {
+                "qa_smoke_command": "python tools/qa_smoke.py --quick",
+                "qa_smoke_result": "PASS",
+                "qa_smoke_output_log_path": "c:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/agent-tools/22350509-6bc1-4257-9dde-a259bee0212c.txt",
+                "qa_smoke_evidence_lines": [
+                  "[determinism_guard] PASS: no violations found",
+                  "[qa] PASS: ... (multiple scenarios)"
+                ],
+                "validate_assets_command": "python tools/validate_assets.py --check-attribution --report",
+                "validate_assets_result": "PASS",
+                "validate_assets_output": "[validate_assets] OK: no findings; SUMMARY errors=0 warns=0"
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
       }
     }
   }

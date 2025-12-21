@@ -1142,6 +1142,129 @@
             }
           ],
           "status": "ready_for_human_manual_smoke"
+        },
+        "wk3_r5": {
+          "round_meta": {
+            "prompt_set_id": "wk3_manageability_r5_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "UI manageability polish: Quit button + closeable panels + moved perf overlay. UI-only changes; keep qa_smoke green."
+          },
+          "pm_decisions": {
+            "roster": {
+              "active_agents": [
+                "08_UX_UI_Director",
+                "11_QA_TestEngineering_Lead"
+              ],
+              "note": "Tight roster for a small UX polish pass."
+            },
+            "scope_locked": [
+              "Quit button visible in HUD (top bar) and exits game reliably on click.",
+              "Add X close buttons for: right info panel (hero/building selection), debug panel, perf overlay.",
+              "Reposition perf overlay so it does not fight top bar/right panel.",
+              "Perf-safe: no per-frame surface churn.",
+              "No sim/determinism changes."
+            ],
+            "qa_gate": "python tools/qa_smoke.py --quick must PASS"
+          },
+          "pm_round5_results": {
+            "high_level_status": "shipped",
+            "what_landed": [
+              "Agent 08 implemented Quit button, close (X) on right info panel + debug panel + perf overlay, and moved perf overlay to a less intrusive placement; also added caching to debug panel to remove per-frame surface allocs while visible.",
+              "Engine click routing now prioritizes UI clicks before world selection: HUD returns actions (quit/close_selection), DebugPanel consumes clicks and has close X, perf overlay has close hitbox.",
+              "Agent 11 updated `docs/sprint/wk3_acceptance_checklist.md` with UI manageability checks and confirmed `python tools/qa_smoke.py --quick` PASS."
+            ],
+            "evidence": [
+              "Agent 08 log wk3_r5: qa_smoke PASS + headless click sanity markers (ui_quit_click_ok/ui_*_close_ok).",
+              "Agent 11 log wk3_r5: qa_smoke PASS; checklist updated."
+            ],
+            "remaining_human_steps": [
+              "Run the manual smoke checklist items (Quit + X close behaviors) in a real display run (Windows): `python main.py --no-llm` and `python main.py --provider mock`."
+            ]
+          },
+          "pm_responses_by_agent": {
+            "08": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Shipped as requested. Great job keeping it UI-only and perf-safe (debug panel caching was a nice win)."
+              ],
+              "asks": [
+                "No further action unless a UX issue appears during manual smoke (e.g., quit misclicks → consider confirm dialog later)."
+              ]
+            },
+            "11": {
+              "status": "acknowledged",
+              "pm_reply": [
+                "Checklist updates accepted. Keep click behaviors manual-verified; avoid flaky headless assertions beyond what’s already in place."
+              ],
+              "asks": [
+                "No further action unless Build B validator wiring changes are ready."
+              ]
+            }
+          },
+          "status": "complete"
+        },
+        "wk3_r6": {
+          "round_meta": {
+            "prompt_set_id": "wk3_buildB_kickoff_r6_v1",
+            "build_target": "BuildB_endweek",
+            "pm_authored_at_local": "2025-12-21T00:00:00",
+            "notes": "Build B kickoff: lock pack family + mapping, tighten validator strict policy, add attribution scaffolding + QA gate plan. No asset import expected in this kickoff round."
+          },
+          "pm_decisions": {
+            "roster": {
+              "active_agents": [
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "12_ToolsDevEx_Lead",
+                "11_QA_TestEngineering_Lead",
+                "13_SteamRelease_Ops_Marketing"
+              ],
+              "note": "Build B kickoff is tooling/QA/Ops-led with Art providing pack+mapping. Keep roster tight; no sim/determinism changes."
+            },
+            "scope_locked": [
+              "Primary pack family preference: Kenney (single-source cohesion).",
+              "Curate subsets only (avoid importing whole packs).",
+              "Do not change loader paths; use existing override folders under assets/sprites/.",
+              "Build A remains report-only for assets; Build B adds failing gate via validate_assets strict + attribution checks."
+            ],
+            "buildb_required_gates": [
+              "python tools/qa_smoke.py --quick (PASS)",
+              "python tools/validate_assets.py --strict --check-attribution (PASS once assets land)"
+            ]
+          },
+          "pm_round6_results": {
+            "high_level_status": "prep_complete_no_assets",
+            "what_landed": [
+              "Agent 12 implemented strict enforcement in `tools/validate_assets.py` (missing kind/state frames become ERROR in strict; attribution requirements enforced when third_party packs exist).",
+              "Agent 11 documented Build B gate plan in `docs/sprint/wk3_acceptance_checklist.md` (qa_smoke baseline + strict validate_assets gate).",
+              "Agent 13 added attribution scaffolding: `assets/ATTRIBUTION.md` (rollup template + Steam credits bullet format) and `assets/third_party/README.md` (required per-pack license/provenance layout).",
+              "Agent 09 locked a pack-family plan (Kenney primary; LPC minimal fallback) and provided a mapping table for shipped heroes/enemies/buildings with placeholder rules (1 frame per required action/state OK initially)."
+            ],
+            "verification_notes": [
+              "Repo currently contains `.gitkeep` placeholders under assets/sprites/ but no `frame_###.png` files yet; Build B art ingestion has NOT happened in wk3_r6 (as expected for kickoff)."
+            ],
+            "evidence": [
+              "Agent 12 log wk3_r6: validate_assets strict policy implemented; qa_smoke PASS; validate_assets --report PASS.",
+              "Agent 11 log wk3_r6: checklist updated; qa_smoke PASS.",
+              "Agent 13 log wk3_r6: attribution scaffolding committed; qa_smoke PASS.",
+              "Agent 09 log wk3_r6: mapping plan + pack-family lock; qa_smoke PASS."
+            ],
+            "blockers_to_buildb_claims": [
+              "Cannot claim 'pixel art replaces shapes for all entities' until curated PNGs are imported AND `python tools/validate_assets.py --strict --check-attribution` PASS is demonstrated."
+            ]
+          },
+          "pm_next_round_plan": {
+            "round_id": "wk3_r7",
+            "goal": "Actual asset ingestion: import curated Kenney subset into override folders + fill ATTRIBUTION + per-pack LICENSE files, then make strict validator PASS.",
+            "success_criteria": [
+              "At least one `frame_000.png` exists for every required hero class action folder.",
+              "At least one `frame_000.png` exists for every required enemy type action folder.",
+              "At least one `frame_000.png` exists for every required building type state folder.",
+              "If any `assets/third_party/<pack>/` exists: `assets/ATTRIBUTION.md` is fully populated AND each pack dir contains `LICENSE*.txt` (verbatim) and a `README*.txt` (verbatim or provenance note).",
+              "Gates: `python tools/qa_smoke.py --quick` PASS and `python tools/validate_assets.py --strict --check-attribution` PASS."
+            ]
+          },
+          "status": "ready_for_wk3_r7_asset_ingest"
         }
       }
     }

@@ -70,6 +70,7 @@ def _validate_sprite_tree(
     category: str,
     kinds: Iterable[str],
     states: Iterable[str],
+    strict: bool,
 ) -> tuple[list[Finding], dict[str, Any]]:
     """
     Validate directory structure like:
@@ -87,13 +88,29 @@ def _validate_sprite_tree(
         kind_report: dict[str, Any] = {"states": {}, "missing_states": [], "present_states": 0}
         kind_dir = base / kind
         if not kind_dir.exists():
-            findings.append(Finding("warn", "missing_kind_dir", f"Missing {category} kind directory: {kind}", str(kind_dir)))
+            findings.append(
+                Finding(
+                    "error" if strict else "warn",
+                    "missing_kind_dir",
+                    f"Missing {category} kind directory: {kind}",
+                    str(kind_dir),
+                )
+            )
         for st in states:
             st_dir = kind_dir / st
             frames = _list_png_frames(st_dir)
             if not frames:
                 kind_report["missing_states"].append(st)
                 kind_report["states"][st] = {"frames": 0, "ok": False}
+                # In strict mode, missing required state frames is a hard error.
+                findings.append(
+                    Finding(
+                        "error" if strict else "warn",
+                        "missing_state_frames",
+                        f"Missing frames for {category}:{kind}:{st} (expected frame_###.png)",
+                        str(st_dir),
+                    )
+                )
             else:
                 kind_report["present_states"] += 1
                 ok = _has_sortable_frames(frames)
@@ -105,7 +122,7 @@ def _validate_sprite_tree(
     return findings, report
 
 
-def _validate_attribution(*, assets_root: Path) -> list[Finding]:
+def _validate_attribution(*, assets_root: Path, strict: bool) -> list[Finding]:
     findings: list[Finding] = []
     third_party = assets_root / "third_party"
     if not third_party.exists():
@@ -115,8 +132,10 @@ def _validate_attribution(*, assets_root: Path) -> list[Finding]:
     if not third_party.is_dir():
         return [Finding("error", "third_party_not_dir", "assets/third_party exists but is not a directory", str(third_party))]
 
+    packs = sorted([p for p in third_party.iterdir() if p.is_dir()], key=lambda p: p.name.lower())
+
     # If packs exist, require verbatim LICENSE*/README* files within each pack dir.
-    for pack in sorted([p for p in third_party.iterdir() if p.is_dir()], key=lambda p: p.name.lower()):
+    for pack in packs:
         has_license = False
         has_readme = False
         for f in pack.iterdir():
@@ -130,12 +149,48 @@ def _validate_attribution(*, assets_root: Path) -> list[Finding]:
         if not has_license:
             findings.append(Finding("error", "missing_pack_license", f"Missing LICENSE*.txt in third-party pack dir: {pack.name}", str(pack)))
         if not has_readme:
-            findings.append(Finding("warn", "missing_pack_readme", f"Missing README*.txt in third-party pack dir: {pack.name}", str(pack)))
+            findings.append(
+                Finding(
+                    "error" if strict else "warn",
+                    "missing_pack_readme",
+                    f"Missing README*.txt in third-party pack dir: {pack.name}",
+                    str(pack),
+                )
+            )
 
-    # If third_party exists, recommend ATTRIBUTION.md (warn, not error).
+    # If we have any third-party packs, require ATTRIBUTION.md in strict mode.
     attribution = assets_root / "ATTRIBUTION.md"
     if not attribution.exists():
-        findings.append(Finding("warn", "missing_attribution_rollup", "Missing assets/ATTRIBUTION.md rollup file", str(attribution)))
+        findings.append(
+            Finding(
+                "error" if (strict and len(packs) > 0) else "warn",
+                "missing_attribution_rollup",
+                "Missing assets/ATTRIBUTION.md rollup file",
+                str(attribution),
+            )
+        )
+    elif strict and len(packs) > 0:
+        # Minimal "fully populated" check: the rollup must be non-empty and mention each pack dir name.
+        try:
+            txt = attribution.read_text(encoding="utf-8", errors="replace")
+        except Exception as e:
+            findings.append(Finding("error", "attribution_read_error", f"Failed to read assets/ATTRIBUTION.md: {e}", str(attribution)))
+            txt = ""
+
+        if not txt.strip():
+            findings.append(Finding("error", "attribution_empty", "assets/ATTRIBUTION.md is empty", str(attribution)))
+        else:
+            lower = txt.lower()
+            for pack in packs:
+                if pack.name.lower() not in lower:
+                    findings.append(
+                        Finding(
+                            "error",
+                            "attribution_missing_pack_entry",
+                            f"assets/ATTRIBUTION.md does not mention pack directory name: {pack.name}",
+                            str(attribution),
+                        )
+                    )
 
     return findings
 
@@ -184,6 +239,7 @@ def main() -> int:
         category="heroes",
         kinds=heroes.get("classes", []),
         states=heroes.get("states", []),
+        strict=bool(ns.strict),
     )
     findings.extend(h_findings)
     full_report["categories"]["heroes"] = h_report
@@ -193,6 +249,7 @@ def main() -> int:
         category="enemies",
         kinds=enemies.get("types", []),
         states=enemies.get("states", []),
+        strict=bool(ns.strict),
     )
     findings.extend(e_findings)
     full_report["categories"]["enemies"] = e_report
@@ -202,12 +259,13 @@ def main() -> int:
         category="buildings",
         kinds=buildings.get("types", []),
         states=buildings.get("states", []),
+        strict=bool(ns.strict),
     )
     findings.extend(b_findings)
     full_report["categories"]["buildings"] = b_report
 
     if ns.check_attribution:
-        findings.extend(_validate_attribution(assets_root=assets_root))
+        findings.extend(_validate_attribution(assets_root=assets_root, strict=bool(ns.strict)))
 
     # Output
     if ns.json:
@@ -226,8 +284,7 @@ def main() -> int:
             print(f"[validate_assets] SUMMARY errors={errors} warns={warns}")
 
     if ns.strict:
-        # Strict gate: errors are always failing. Missing kind/state dirs are warnings by default today
-        # because Build A should not be blocked; QA can tighten severity in Build B if desired.
+        # Strict gate: errors are failing. (Build B should run strict; Build A should stay report-only.)
         if any(f.severity == "error" for f in findings):
             return 1
 

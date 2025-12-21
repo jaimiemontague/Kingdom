@@ -440,6 +440,119 @@
             }
           }
         }
+        ,
+        "wk3_r6": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r6",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_kick_r6_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:17:17-07:00"
+          },
+          "prompt_text": "WK3 Round 6 (wk3_r6) — Build B execution kickoff. Agent 12: tighten strict validation in tools/validate_assets.py: missing required state frames => ERROR in strict; if any assets/third_party/<pack>/ exists require assets/ATTRIBUTION.md => ERROR; require LICENSE*.txt in each pack dir => ERROR. Provide exact Build B gate command(s) QA should run.",
+          "response": {
+            "received_at_local": "2025-12-21T00:17:17-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — implemented Build B strict validation tightening in `tools/validate_assets.py` per PM request. Build A report-only behavior unchanged.\\n\\n### Files changed\\n- `tools/validate_assets.py`\\n\\n### Strict-mode policy (Build B) — now enforced\\nWhen `--strict` is passed, these become **ERROR** (fail):\\n- Missing kind/type directory for any manifest entry (e.g., enemies/goblin, buildings/castle)\\n- Missing required state frames for any manifest entry (state dir missing OR contains 0 files matching `frame_###.png`)\\nWhen `--check-attribution` is passed:\\n- If any `assets/third_party/<pack>/` directories exist, require `assets/ATTRIBUTION.md` (ERROR if missing in strict)\\n- Require `LICENSE*.txt` in each pack dir (ERROR if missing; already enforced)\\n- `README*.txt` remains WARN (non-failing)\\n\\n### Build B gate command for QA (failing)\\n- `python tools/validate_assets.py --strict --check-attribution --report`\\n(Optional for CI parsing: add `--json`.)\\n\\n### Commands run (evidence)\\n- PASS: `python tools/qa_smoke.py --quick`\\n- PASS (Build A informational): `python tools/validate_assets.py --report`\\n\\n### Blockers\\n- None.\\n\\n### Notes\\n- On current repo state (no Build B assets yet), strict mode will fail as intended; Build A should continue using report-only mode.",
+            "summary_bullets": [
+              "Tightened validate_assets strict mode so missing kind dirs and missing state frames are ERROR",
+              "Tightened attribution strictness: when third_party packs exist, require assets/ATTRIBUTION.md and per-pack LICENSE*.txt",
+              "Baseline gate remains PASS: qa_smoke --quick"
+            ],
+            "proposed_changes": [
+              "tools/validate_assets.py: in strict mode, treat missing kind dirs as ERROR (fail)",
+              "tools/validate_assets.py: in strict mode, treat missing required state frames as ERROR (fail)",
+              "tools/validate_assets.py: when --check-attribution and strict, require assets/ATTRIBUTION.md if any third_party packs exist"
+            ],
+            "acceptance_criteria": [
+              "Build B gate fails if any manifest-required folder/state has zero frames: python tools/validate_assets.py --strict --check-attribution --report",
+              "Build B gate fails if third_party packs exist but assets/ATTRIBUTION.md or per-pack LICENSE*.txt is missing",
+              "qa_smoke --quick remains PASS after tooling changes"
+            ],
+            "risks": [
+              "Manifest drift can cause unexpected strict failures; keep tools/assets_manifest.json in sync with shipped types"
+            ],
+            "dependencies": [
+              "Agent 11: wire Build B validator gate into acceptance checklist + release procedure once assets land",
+              "Agent 13: populate assets/ATTRIBUTION.md and assets/third_party/<pack>/LICENSE*.txt once pack list is locked"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: add Build B failing gate: python tools/validate_assets.py --strict --check-attribution --report (and keep qa_smoke --quick as baseline)",
+              "Agent 13: once packs are chosen, ensure third_party license files + ATTRIBUTION.md exist before tagging"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report",
+                "python tools/validate_assets.py --strict --check-attribution --report",
+                "python tools/validate_assets.py --strict --check-attribution --json"
+              ]
+            }
+          }
+        }
+        ,
+        "wk3_r7": {
+          "sprint_id": "wk3-ui-polish-1080p-pixelart",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk3-ui-polish-1080p-pixelart_f37350f2.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk3_r7",
+          "round_meta": {
+            "prompt_set_id": "wk3_buildb_ingest_r7_v1",
+            "build_target": "BuildB_endweek",
+            "sent_at_local": "2025-12-21T00:28:31-07:00"
+          },
+          "prompt_text": "WK3 Round 7 (wk3_r7) — Build B execution (actual asset ingest). Agent 12: ensure tools/validate_assets.py --strict --check-attribution is the required Build B failing gate; adjust only if needed for correctness (no loosening without PM approval).",
+          "response": {
+            "received_at_local": "2025-12-21T00:28:31-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 12 (ToolsDevEx_Lead) — ensured strict validator matches the hard acceptance criteria for Build B attribution + required frames. No loader path changes.\\n\\n### Files changed\\n- `tools/validate_assets.py`\\n\\n### What changed (correctness tightening; no loosening)\\n- In strict mode (`--strict`): missing kind/type dirs and missing required state frames remain ERROR (failing).\\n- Attribution strictness (`--check-attribution`):\\n  - `README*.txt` in each `assets/third_party/<pack>/` is now **ERROR** when `--strict` (matches acceptance criteria).\\n  - If any third_party pack dirs exist and `--strict`, `assets/ATTRIBUTION.md` must exist AND be non-empty AND mention each pack directory name (minimal “fully populated” check).\\n\\n### Required Build B gate command(s)\\n- Failing gate: `python tools/validate_assets.py --strict --check-attribution --report`\\n- Optional CI parsing: add `--json`\\n\\n### Commands run (evidence)\\n- PASS: `python tools/qa_smoke.py --quick`\\n- PASS (Build A informational): `python tools/validate_assets.py --report`\\n\\n### Notes\\n- `python tools/validate_assets.py --strict --check-attribution` is expected to FAIL until Agent 13 adds third_party licenses + ATTRIBUTION and Agent 09 ingests the first curated PNG subset.\\n\\n### Blockers\\n- None.",
+            "summary_bullets": [
+              "Strict validator now enforces README requirement and minimal ATTRIBUTION completeness when third_party packs exist",
+              "Build B failing gate remains: python tools/validate_assets.py --strict --check-attribution --report",
+              "Baseline qa_smoke --quick remains PASS"
+            ],
+            "proposed_changes": [
+              "tools/validate_assets.py: in strict+check-attribution, treat missing README*.txt as ERROR",
+              "tools/validate_assets.py: in strict+check-attribution, require non-empty assets/ATTRIBUTION.md and mention each pack dir name"
+            ],
+            "acceptance_criteria": [
+              "Build B gate fails if any manifest entry is missing kind dir or required state frames: python tools/validate_assets.py --strict --check-attribution",
+              "Build B gate fails if any third_party pack is missing LICENSE*.txt or README*.txt in strict mode",
+              "Build B gate fails if assets/ATTRIBUTION.md is missing/empty or omits a pack dir name when third_party packs exist (strict mode)",
+              "qa_smoke --quick remains PASS"
+            ],
+            "risks": [
+              "ATTRIBUTION pack-name mention check is a minimal heuristic; still requires human review for full correctness"
+            ],
+            "dependencies": [
+              "Agent 13: create assets/third_party/<pack>/{LICENSE*.txt,README*.txt} and populate assets/ATTRIBUTION.md per pack",
+              "Agent 09: ingest curated frame_000.png placeholders per required state so strict frame checks pass",
+              "Agent 11: run and report PASS/FAIL after assets land"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: once assets land, run: python tools/validate_assets.py --strict --check-attribution --report and include output in log",
+              "Agent 13: ensure ATTRIBUTION.md includes each pack dir name verbatim to satisfy the strict heuristic"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "proposed_flags_or_commands": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report",
+                "python tools/validate_assets.py --strict --check-attribution --report",
+                "python tools/validate_assets.py --strict --check-attribution --json"
+              ]
+            }
+          }
+        }
       }
     }
   }
