@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.2.1
+
+- Hero UI: show **Intent** and **Last decision** (action + short reason + age) in **mock** and **--no-llm** modes.
+- Bounty UI: show **responders count** and deterministic **attractiveness** tier (low/med/high).
+- Early-session clarity: improved bounty placement discoverability (help + tip).
+- Determinism guardrails: `qa_smoke --quick` includes a determinism guard and passes (no wall-clock time in sim logic; no global RNG in sim).
+
 ## Prototype v1.2.0
 
 - Pixel-art render pipeline improvements: nearest-neighbor scaling + reduced camera shimmer.

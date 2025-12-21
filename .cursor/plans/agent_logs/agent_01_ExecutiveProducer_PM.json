@@ -339,7 +339,14 @@
             "notes": "Final wrap-up round. Only agents with blockers/late-breaking issues should respond."
           },
           "pm_instruction": "If you have last-minute blockers or need cross-agent coordination to finish WK1 Build A, log them under your agent file in this round and tag the owner(s). If no blockers, do not respond.",
-          "status": "pending"
+          "status": "resolved",
+          "pm_wrapup_notes": [
+            "Agent 05 raised a Build A scope-condition blocker: (1) tiered bounty placement requires a HUD hint; (2) STARTING_GOLD=1500 requires explicit approval.",
+            "Resolved: Agent 08 shipped explicit help-overlay copy + early-session hint for bounty tiers/placement (wk1_r2).",
+            "Resolved: Human playtest feedback confirmed gold tightness feels good; approve STARTING_GOLD=1500 for Prototype v1.2.1 (Build A).",
+            "Gate status: python tools/qa_smoke.py --quick => PASS (determinism_guard PASS; bounty_responder_attr_present=True)."
+          ],
+          "pm_message_for_agent_05": "Blocker resolved. Build A ships tiered bounty placement WITH the new HUD/help hint from Agent 08. STARTING_GOLD=1500 is explicitly approved for Build A based on human playtest feedback (gold tightness feels good). No further action needed."
         }
       }
     }

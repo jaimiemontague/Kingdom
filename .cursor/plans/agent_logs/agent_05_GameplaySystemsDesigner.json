@@ -82,6 +82,62 @@
             }
           }
         }
+        ,
+        "wk1_r3": {
+          "sprint_id": "wk1-broad-sweep-midweek-endweek",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk1_r3",
+          "round_meta": {
+            "prompt_set_id": "wk1_wrapup_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-20T21:21:09-07:00"
+          },
+          "prompt_text": "WK1 Wrap-up Round (wk1_r3): We are preparing to declare Build A ready. Only respond if you have a BLOCKER (qa_smoke fails, crash/softlock in --no-llm/mock, or a must-have acceptance criterion still failing). If you have a blocker, log it here with repro + command/seed + what you need from whom.",
+          "response": {
+            "received_at_local": "2025-12-20T21:21:09-07:00",
+            "status": "complete",
+            "raw": "### BLOCKER for Build A readiness\\n\\nPM decisions for Build A require: (a) do not hard-commit STARTING_GOLD=1500 without a quick manual feel test, and (b) modifier-key bounty tiers are acceptable only if Agent 8 ships a minimal HUD hint; otherwise keep a single default bounty reward for Build A.\\n\\nCurrent code state includes both:\\n- Tiered bounty placement (B/Shift+B/Ctrl+B) via BOUNTY_REWARD_LOW/MED/HIGH in config + Engine input handling.\\n- STARTING_GOLD=1500 in config.py.\\n\\nThis is a release readiness blocker unless we either (1) confirm the HUD hint landed, and (2) confirm the starting-gold change is explicitly approved for Build A (or revert it to prior/default for Build A).\\n\\n### Repro (player-visible)\\n1) Run the game (no special flags).\\n2) Observe that bounty placement amount changes with Shift/Ctrl modifiers (no guaranteed discoverability without hint).\\n3) Observe starting gold is 1500 (tuning change) which can materially affect early Build A feel.\\n\\n### Commands / evidence\\n- qa_smoke gate: `python tools/qa_smoke.py --quick` (PASS on my side).\\n- Code locations: `config.py` (STARTING_GOLD + BOUNTY_REWARD_*), `game/engine.py` (place_bounty modifier tiers).\\n\\n### What I need / from whom\\n- Agent 8: confirm and land a minimal HUD hint for bounty tier modifiers (or tell me to revert tiers for Build A).\\n- PM (Agent 01): decide whether STARTING_GOLD=1500 is approved for Build A; if not, I should revert STARTING_GOLD (and any other tuning-only values) to the prior baseline for Build A tagging.",
+            "summary_bullets": [
+              "Build A blocker: PM-decided conditional items are currently in code (bounty modifier tiers + STARTING_GOLD=1500) without explicit Build A approval/hint confirmation."
+            ],
+            "proposed_changes": [
+              "If Agent 8 HUD hint is not shipping in Build A: revert bounty placement to a single default reward for Build A (keep tiers for Build B).",
+              "If STARTING_GOLD=1500 is not approved for Build A: revert STARTING_GOLD to prior baseline for Build A tagging (re-apply tuning in Build B)."
+            ],
+            "acceptance_criteria": [
+              "Build A either includes a minimal HUD hint for bounty tier modifiers OR reverts to a single bounty reward amount for Build A.",
+              "Build A either explicitly approves STARTING_GOLD=1500 after quick manual feel test OR reverts STARTING_GOLD for Build A tagging."
+            ],
+            "risks": [
+              "Shipping modifier-key tiers without hint risks player confusion and violates PM’s Build A condition.",
+              "Shipping STARTING_GOLD=1500 without explicit approval risks unintended difficulty/economy perception for Build A."
+            ],
+            "dependencies": [
+              "Agent 8 decision/implementation on HUD hint for bounty tiers.",
+              "PM decision on whether STARTING_GOLD=1500 is approved for Build A."
+            ],
+            "questions_back_to_pm": [
+              "ACK blocker: please confirm whether Build A will ship the HUD hint for bounty tier modifiers; if not, I will revert tiered placement for Build A.",
+              "ACK blocker: please confirm whether STARTING_GOLD=1500 is approved for Build A; if not, I will revert to prior baseline for Build A."
+            ],
+            "recommended_next_actions": [
+              "Await Agent 8 confirmation on HUD hint; if not landing, revert tiered bounty placement for Build A immediately.",
+              "Await PM approval on STARTING_GOLD; if not approved for Build A, revert STARTING_GOLD (and any other tuning-only constants) for Build A tagging."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "blocker_type": "buildA_scope_condition",
+              "qa_smoke_quick": "PASS",
+              "files_implicated": [
+                "config.py",
+                "game/engine.py"
+              ]
+            }
+          }
+        }
       }
     }
   }
