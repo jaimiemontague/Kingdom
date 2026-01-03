@@ -1739,6 +1739,101 @@
                 }
               }
             }
+          },
+          "wk5_r8": {
+            "sprint_id": "wk5-demolition-projectiles-workers",
+            "round_id": "wk5_r8",
+            "round_meta": {
+              "prompt_set_id": "wk5_r8_hotfix_v1",
+              "build_target": "Hotfix",
+              "sent_at_local": "2026-01-03T13:00:00.0000000-07:00",
+              "pm_prompt_ref": "WK5 Hotfix — Ranger ranged readability + demolition debris visibility. Task 1: Ranger 'bow shot' readability (attack frame reads as bow usage at 32×32). Task 2: Debris visuals (use footprint size, 10-25 pieces, 2-3px chunks, higher contrast, darker underlay, persist)."
+            },
+            "prompt_text": "WK5 Hotfix: Task 1 — Ranger 'bow shot' readability (ensure Ranger attack frame reads as bow usage at gameplay zoom 32×32). Task 2 — Debris visuals (update debris rendering to use footprint size, scatter 10-25 pieces across footprint, 2-3px chunks, higher contrast, add subtle darker underlay patch, debris persists).",
+            "response": {
+              "received_at_local": "2026-01-03T13:00:00.0000000-07:00",
+              "updated_at_local": "2026-01-03T13:00:00.0000000-07:00",
+              "status": "complete",
+              "hotfix_completion": true,
+              "evidence_provided": true,
+              "status_summary": "✅ COMPLETE — Ranger bow cue added to procedural attack frames. Debris rendering enhanced (footprint-based, 10-25 pieces, 2-3px chunks, higher contrast, darker underlay). QA gates PASS.",
+              "deliverables": {
+                "task_1_ranger_bow_readability": {
+                  "status": "✅ COMPLETE",
+                  "changes": {
+                    "procedural_attack_frames": "Updated game/graphics/hero_sprites.py _procedural_frames() to check for ranger class in attack action",
+                    "bow_cue": "Ranger attack frames now draw C-curve bow limb (vertical arc), string, and arrow cue instead of sword arc",
+                    "readability": "Bow cue visible at 32×32 gameplay zoom, matches skeleton_archer style for consistency"
+                  },
+                  "files_changed": ["game/graphics/hero_sprites.py"],
+                  "exact_locations": {
+                    "ranger_check": "Lines 151-152: Check if hero_class is 'ranger'",
+                    "bow_rendering": "Lines 160-175: Draw C-curve bow limb (pixel-based arc), string, and arrow cue for rangers",
+                    "sword_fallback": "Lines 176-180: Non-ranger classes still use sword arc (backwards compatible)"
+                  }
+                },
+                "task_2_debris_visuals": {
+                  "status": "✅ COMPLETE",
+                  "changes": {
+                    "footprint_support": "DebrisDecal dataclass extended with w/h fields for building footprint dimensions",
+                    "scatter_count": "Increased from 3-6 pieces to 10-25 pieces when footprint provided (more visible)",
+                    "chunk_size": "Increased from 1-2px to 2-3px chunks (more visible)",
+                    "contrast": "Brighter base colors (80-130 vs 60-100) with more contrast variation",
+                    "underlay_patch": "Added subtle darker underlay patch (semi-transparent dark patch) for contrast",
+                    "persistence": "Debris persists (no fade-out, already implemented in Build B)"
+                  },
+                  "files_changed": ["game/graphics/vfx.py"],
+                  "exact_locations": {
+                    "dataclass_extension": "Lines 38-45: DebrisDecal now includes w/h fields (default 0.0 for backwards compatibility)",
+                    "event_handling": "Lines 97-101: Extract w/h from building_destroyed event (optional, defaults to 0)",
+                    "spawn_method": "Lines 210-230: _spawn_debris() accepts w/h parameters, stores in DebrisDecal",
+                    "render_logic": "Lines 327-380: Enhanced rendering with footprint-based scattering, 10-25 pieces, 2-3px chunks, higher contrast, darker underlay"
+                  },
+                  "coordination_note": "Agent 03 must add w/h to building_destroyed event payload (building.width, building.height). VFX system handles both cases (with/without footprint) for backwards compatibility."
+                }
+              },
+              "questions": [],
+              "next_actions": [
+                "Wait for Agent 03 to add w/h to building_destroyed event payload",
+                "After event update, verify debris appears correctly across building footprint in gameplay",
+                "Coordinate with Agent 12 for building_debris screenshot scenario (optional)"
+              ],
+              "evidence": {
+                "qa_gates": {
+                  "qa_smoke": {
+                    "command": "python tools/qa_smoke.py --quick",
+                    "exit_code": 0,
+                    "status": "✅ PASS",
+                    "output_note": "All scenarios passed (determinism_guard, base, bounty, hero_stuck_repro, no-enemies, mock-LLM)"
+                  },
+                  "syntax_verification": {
+                    "command": "python -c 'import game.graphics.vfx; import game.graphics.hero_sprites; print(\"Syntax OK\")'",
+                    "exit_code": 0,
+                    "status": "✅ PASS"
+                  }
+                },
+                "before_after": {
+                  "ranger_attack": "BEFORE: All heroes (including rangers) showed sword arc in attack frames. AFTER: Rangers show C-curve bow limb + string + arrow cue, warriors/others still show sword arc",
+                  "debris_visibility": "BEFORE: 3-6 pieces, 1-2px chunks, low contrast, no underlay. AFTER: 10-25 pieces (when footprint provided), 2-3px chunks, higher contrast (80-130 base), subtle darker underlay patch"
+                }
+              },
+              "agent_fields": {
+                "role": "Art/VFX implementation",
+                "files_changed": ["game/graphics/hero_sprites.py", "game/graphics/vfx.py"],
+                "implementation_details": {
+                  "ranger_bow_cue": "C-curve bow limb drawn as pixel-based arc (vertical), string line, arrow cue appears mid-attack (t > 0.2)",
+                  "debris_enhancement": "Footprint-based scattering (uniform distribution), 10-25 pieces, 2-3px chunks, brighter colors (80-130 base), subtle dark underlay (30 alpha)"
+                },
+                "determinism_notes": {
+                  "ranger_frames": "Procedural frames are deterministic (same hero_class + action + frame index = same output)",
+                  "debris_pattern": "Debris pattern seeded from building position + type (using zlib.crc32, not Python hash())"
+                },
+                "coordination_notes": {
+                  "agent_03": "Must add w/h to building_destroyed event: {'type': 'building_destroyed', 'x': building.x, 'y': building.y, 'building_type': building.building_type, 'w': building.width, 'h': building.height}",
+                  "agent_12": "Optional: Add building_debris screenshot scenario (place house, advance ticks, demolish, capture post-demolish frame)"
+                }
+              }
+            }
           }
         }
       }

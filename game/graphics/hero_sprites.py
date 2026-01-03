@@ -148,17 +148,43 @@ class HeroSpriteLibrary:
 
         if action == "attack":
             frames = []
+            hc_lower = (hero_class or "").lower()
+            is_ranger = (hc_lower == "ranger")
+            
             for i in range(6):
                 t = i / 5.0
                 surf = mk_surface()
                 lean = 0.9 if t > 0.3 else 0.2
                 draw_base(surf, bob_px=0.0, lean=lean, brighten=1.10)
 
-                # sword arc
-                start = (cx + r - 2, cy - 2)
-                end = (cx + r + 10, cy - 12 + int(18 * t))
-                pygame.draw.line(surf, (245, 245, 245), start, end, 3)
-                pygame.draw.circle(surf, (255, 220, 120), end, 3)
+                if is_ranger:
+                    # Bow cue: C-curve vertical arc + string (WK5 Hotfix: ranger ranged readability)
+                    # Bow limb: vertical C-curve from left side (drawn as arc points)
+                    bow_left_x = cx - r - 2
+                    # Draw bow arc (C-curve) using line segments
+                    # Top to middle (curved left)
+                    for i in range(4):
+                        y_off = -4 + i
+                        x_off = int((i / 3.0) ** 2 * 2)  # Curved left
+                        pygame.draw.circle(surf, (20, 20, 25), (bow_left_x - x_off, cy + y_off), 1)
+                    # Middle to bottom (curved left)
+                    for i in range(4):
+                        y_off = i
+                        x_off = int(((3 - i) / 3.0) ** 2 * 2)  # Curved left
+                        pygame.draw.circle(surf, (20, 20, 25), (bow_left_x - x_off, cy + y_off), 1)
+                    # String (vertical line connecting top and bottom)
+                    pygame.draw.line(surf, (200, 200, 210), (bow_left_x + 2, cy - 4), (bow_left_x + 2, cy + 4), 1)
+                    # Arrow cue (minimal, matches skeleton_archer style)
+                    if t > 0.2:  # Arrow appears mid-attack
+                        arrow_start = (bow_left_x + 2, cy)
+                        arrow_end = (cx + r + 2, cy - 2)
+                        pygame.draw.line(surf, (255, 245, 220), arrow_start, arrow_end, 2)
+                else:
+                    # sword arc (non-ranger classes)
+                    start = (cx + r - 2, cy - 2)
+                    end = (cx + r + 10, cy - 12 + int(18 * t))
+                    pygame.draw.line(surf, (245, 245, 245), start, end, 3)
+                    pygame.draw.circle(surf, (255, 220, 120), end, 3)
                 frames.append(surf)
             return frames
 

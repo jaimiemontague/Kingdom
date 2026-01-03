@@ -42,6 +42,8 @@ class DebrisDecal:
     y: float
     building_type: str  # For deterministic pattern variation
     pattern_seed: int  # Deterministic seed for debris pattern
+    w: float = 0.0  # Building footprint width (0 = use default radius)
+    h: float = 0.0  # Building footprint height (0 = use default radius)
 
 
 class VFXSystem:
@@ -97,7 +99,9 @@ class VFXSystem:
             elif et == "building_destroyed":
                 # WK5 Build B: Spawn debris decal at building location
                 building_type = e.get("building_type", "unknown")
-                self._spawn_debris(float(x), float(y), building_type)
+                w = e.get("w", 0.0)  # Footprint width (optional, 0 = use default)
+                h = e.get("h", 0.0)  # Footprint height (optional, 0 = use default)
+                self._spawn_debris(float(x), float(y), building_type, float(w), float(h))
 
     def _spawn_hit(self, x: float, y: float):
         rnd = random.Random((int(x) << 16) ^ int(y))
@@ -207,12 +211,14 @@ class VFXSystem:
             )
         )
 
-    def _spawn_debris(self, x: float, y: float, building_type: str):
+    def _spawn_debris(self, x: float, y: float, building_type: str, w: float = 0.0, h: float = 0.0):
         """
         Spawn visual-only debris/rubble decal at building destruction site.
         
-        WK5 Build B: Deterministic debris pattern based on building position and type.
-        Debris is visual-only (does not block movement or pathing).
+        WK5 Hotfix: Enhanced visibility with footprint-based scattering.
+        - 10-25 pieces across footprint (or default radius if w/h not provided)
+        - 2-3px chunks, higher contrast, darker underlay patch
+        - Debris persists (no fade-out)
         """
         # Deterministic seed from position and building type
         # NOTE: Do NOT use Python's built-in hash() here; it is salted per-process and breaks determinism.
@@ -226,6 +232,8 @@ class VFXSystem:
                 y=y,
                 building_type=building_type,
                 pattern_seed=pattern_seed,
+                w=w,
+                h=h,
             )
         )
 
@@ -324,7 +332,7 @@ class VFXSystem:
                 trail_color = (int(proj.color[0] * 0.7), int(proj.color[1] * 0.7), int(proj.color[2] * 0.7))
                 pygame.draw.rect(surface, trail_color, pygame.Rect(sx, sy, 1, 1))
         
-        # Render debris decals (WK5 Build B: building destruction rubble)
+        # Render debris decals (WK5 Hotfix: enhanced visibility with footprint-based scattering)
         for debris in self._debris:
             sx = int(debris.x - cam_x)
             sy = int(debris.y - cam_y)
@@ -332,22 +340,50 @@ class VFXSystem:
             # Deterministic debris pattern based on seed
             rnd = random.Random(debris.pattern_seed)
             
-            # Generate 3-6 rubble pieces in a small area around building center
-            num_pieces = 3 + rnd.randint(0, 3)
+            # Determine scatter area: use footprint if provided, otherwise default radius
+            if debris.w > 0 and debris.h > 0:
+                # Use footprint dimensions (scatter across building area)
+                scatter_w = debris.w / 2.0  # Half-width for radius-like behavior
+                scatter_h = debris.h / 2.0  # Half-height
+                num_pieces = 10 + rnd.randint(0, 15)  # 10-25 pieces (WK5 Hotfix: more visible)
+            else:
+                # Fallback: default small radius (for backwards compatibility)
+                scatter_w = scatter_h = 20.0
+                num_pieces = 3 + rnd.randint(0, 3)  # 3-6 pieces (original)
+            
+            # WK5 Hotfix: Draw darker underlay patch for contrast
+            if debris.w > 0 and debris.h > 0:
+                # Darker underlay patch (subtle, doesn't block visibility)
+                underlay_rect = pygame.Rect(
+                    sx - int(scatter_w), sy - int(scatter_h),
+                    int(scatter_w * 2), int(scatter_h * 2)
+                )
+                # Semi-transparent dark patch (very subtle)
+                underlay_surf = pygame.Surface((underlay_rect.width, underlay_rect.height), pygame.SRCALPHA)
+                underlay_surf.fill((20, 20, 20, 30))  # Very subtle dark patch
+                surface.blit(underlay_surf, underlay_rect)
+            
+            # Generate rubble pieces across footprint
             for i in range(num_pieces):
-                # Offset from center (deterministic)
-                angle = rnd.random() * 6.283  # 0 to 2π
-                radius = 8 + rnd.random() * 12  # 8-20 pixels from center
-                px = sx + int(math.cos(angle) * radius)
-                py = sy + int(math.sin(angle) * radius)
+                # Offset from center (deterministic, uniform distribution across footprint)
+                if debris.w > 0 and debris.h > 0:
+                    # Uniform distribution across footprint
+                    px = sx + int((rnd.random() - 0.5) * scatter_w * 2)
+                    py = sy + int((rnd.random() - 0.5) * scatter_h * 2)
+                else:
+                    # Fallback: circular distribution
+                    angle = rnd.random() * 6.283  # 0 to 2π
+                    radius = 8 + rnd.random() * 12  # 8-20 pixels from center
+                    px = sx + int(math.cos(angle) * radius)
+                    py = sy + int(math.sin(angle) * radius)
                 
-                # Debris color: dark gray/brown rubble
-                # Vary slightly based on building type and seed
-                base_gray = 60 + rnd.randint(0, 40)
-                debris_color = (base_gray, base_gray - 10, base_gray - 20)
+                # WK5 Hotfix: Higher contrast debris colors (2-3px chunks)
+                # Dark gray/brown rubble with better contrast
+                base_gray = 80 + rnd.randint(0, 50)  # Brighter base (80-130 vs 60-100)
+                debris_color = (base_gray, base_gray - 15, base_gray - 25)  # More contrast
                 
-                # Draw small rubble piece (1-2px square)
-                size = 1 + rnd.randint(0, 1)
+                # WK5 Hotfix: 2-3px chunks (was 1-2px)
+                size = 2 + rnd.randint(0, 1)  # 2-3px (was 1-2px)
                 pygame.draw.rect(surface, debris_color, pygame.Rect(px, py, size, size))
 
 

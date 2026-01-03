@@ -87,7 +87,11 @@ class Hero:
         # Combat
         self.attack_cooldown = 0
         self.attack_cooldown_max = 1000  # ms between attacks
-        self.attack_range = TILE_SIZE * 1.5
+        # WK5 Hotfix: Rangers have proper ranged attack range (5-7 tiles, using 6 tiles)
+        if self.hero_class == "ranger":
+            self.attack_range = TILE_SIZE * 6  # 6 tiles = 192 pixels at 32px/tile
+        else:
+            self.attack_range = TILE_SIZE * 1.5  # Melee range for other classes
         
         # LLM decision tracking
         self.last_llm_decision_time = 0

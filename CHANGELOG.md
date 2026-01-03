@@ -1,5 +1,14 @@
 # Changelog
 
+## Prototype v1.2.6 — The Ranged Update
+
+- Combat readability: **visible ranged projectiles** for ranged attackers (heroes/enemies/towers), tuned for readability (slower + larger pixels).
+- Rangers: **attack from range** (no more running into melee range first) and **bow-shot cue** in attack frames.
+- Buildings: **auto-demolish at 0 HP** (except castle = game over) + **player demolish button** (instant, no refund).
+- Destruction: demolished/destroyed buildings leave **rubble/debris** behind (visual-only, deterministic).
+- Workers: **Peasants and Tax Collectors render as pixel sprites** (no glyphs).
+- Tooling: Visual Snapshot System scenarios updated/added (including `ranged_projectiles` and `building_debris`) and strict asset validation stays green.
+
 ## Prototype v1.2.5
 
 - New enemy: **Skeleton Archer** (`skeleton_archer`) — ranged-only instant-hit attacks with kiting behavior.

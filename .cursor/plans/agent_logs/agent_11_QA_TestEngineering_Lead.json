@@ -1728,6 +1728,81 @@
                 "manual_checklist_required": "In live play, watch Ranger/SkeletonArcher/Ballista fire and confirm you can track projectiles; destroy/demolish a building and confirm rubble remains. This requires human operator interaction and cannot be automated."
               }
             }
+          },
+          "wk5_r8": {
+            "sprint_id": "wk5-demolition-projectiles-workers",
+            "sprint_meta": {
+              "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+              "notes": "WK5 Hotfix: Ranger ranged readability + demolition debris visibility. Rangers should fire from distance (not run into melee), attack pose should match (bow cue). Manual demolish should leave clearly visible rubble at former building footprint."
+            },
+            "round_id": "wk5_r8",
+            "round_meta": {
+              "prompt_set_id": "wk5_r8_hotfix_v1",
+              "build_target": "BuildB_hotfix",
+              "sent_at_local": "2026-01-03T13:48:14.9058281-07:00"
+            },
+            "prompt_text": "WK5 Hotfix: Ranger ranged readability + demolition debris visibility. Rangers should fire from distance (not run into melee range), attack pose should match (bow cue). Manual demolish should leave clearly visible rubble at former building footprint. Agent 11 (optional): After fixes land, run gates + capture new scenario(s) and rebuild gallery; confirm rubble + ranger ranged behavior in quick manual check.",
+            "response": {
+              "received_at_local": "2026-01-03T13:48:14.9058281-07:00",
+              "status": "complete",
+              "raw": "### Status\nAgent 11 (QA_TestEngineering_Lead) — WK5 Round 8 (Hotfix verification): **Gates PASS, but hotfix implementations not yet complete**. I have run the required gates and verified current implementation state. Ranger attack range is still melee (TILE_SIZE * 1.5), debris only generates 3-6 pieces (not 10-25), and building_destroyed events don't include footprint size.\n\n**Context:**\n- WK5 Hotfix: Ranger ranged readability + demolition debris visibility.\n- Goals: Rangers should fire from distance (not run into melee), attack pose should match (bow cue), manual demolish should leave clearly visible rubble.\n- Agent 11 scope (optional): After fixes land, run gates + capture new scenario(s) and rebuild gallery; confirm rubble + ranger ranged behavior.\n\n**Current implementation status (pre-hotfix):**\n- ❌ **Ranger attack range:** Still `TILE_SIZE * 1.5` (melee range) in `game/entities/hero.py` line 90. Should be 5-7 tiles for ranged behavior.\n- ❌ **Building_destroyed events:** Don't include footprint size (`w`, `h`) in `game/engine.py` lines 1062-1067. Only includes `x`, `y`, `building_type`.\n- ❌ **Debris visuals:** Only generates 3-6 pieces (line 336 in `game/graphics/vfx.py`), not 10-25 pieces as required. Debris pieces are 1-2px (line 350), not 2-3px as required. No footprint size usage.\n- ❌ **Building_debris scenario:** Not yet implemented in `tools/screenshot_scenarios.py`.\n- ✅ **Gates PASS:** `qa_smoke --quick`, `validate_assets --strict --check-attribution`.\n\n### Deliverables\n- **Gates verification (PASS):**\n  1. `python tools/qa_smoke.py --quick` → **PASS** (exit code 0)\n     - Output: `[qa_smoke] DONE: PASS`\n  2. `python tools/validate_assets.py --strict --check-attribution` → **PASS** (exit code 0)\n\n### Questions (blockers only; max 3)\n- **Ranger attack range not updated:** `game/entities/hero.py` line 90 still has `attack_range = TILE_SIZE * 1.5` (melee range). Should Agent 03 update this to 5-7 tiles for rangers?\n- **Building_destroyed events missing footprint size:** `game/engine.py` lines 1062-1067 don't include `w` and `h` in the event payload. Should Agent 03 add these fields?\n- **Debris visuals not meeting requirements:** `game/graphics/vfx.py` lines 335-351 only generate 3-6 pieces (not 10-25) and use 1-2px chunks (not 2-3px). Should Agent 09 update debris rendering to use footprint size and meet requirements?\n\n### Next actions\n- **After Agent 03 + Agent 09 fixes land:**\n  1. Run `python tools/qa_smoke.py --quick` and verify PASS.\n  2. Run `python tools/validate_assets.py --strict --check-attribution` and verify PASS.\n  3. If Agent 12 adds `building_debris` scenario, run `python tools/capture_screenshots.py --scenario building_debris --seed 3 --out docs/screenshots/wk5_hotfix/building_debris_seed3 --size 1920x1080 --ticks 0`.\n  4. Rebuild gallery: `python tools/build_gallery.py --shots docs/screenshots/wk5_hotfix --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`.\n  5. Manual checklist: In live play, watch Ranger fire and confirm it stops at range (not runs into melee); destroy/demolish a building and confirm clearly visible rubble remains.\n\n### Files changed\n- **Agent 11 will NOT touch implementation files (verification-only):**\n  - `game/entities/hero.py` (Agent 03: ranger attack range update)\n  - `game/engine.py` (Agent 03: building_destroyed event footprint size)\n  - `game/graphics/vfx.py` (Agent 09: debris visuals update)\n  - `tools/screenshot_scenarios.py` (Agent 12: building_debris scenario)\n- **Agent 11 will only touch:**\n  - `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` (log entries only, verification evidence)\n\n### Evidence (commands run + outputs)\n1. **`python tools/qa_smoke.py --quick`**\n   - Exit code: **0 (PASS)**\n   - Output: `[qa_smoke] DONE: PASS`\n   - Key evidence: All profiles passed (determinism_guard, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM).\n\n2. **`python tools/validate_assets.py --strict --check-attribution`**\n   - Exit code: **0 (PASS)**\n   - Output: No errors (empty output indicates success in strict mode).\n\n### Implementation verification details\n1. **Ranger attack range:**\n   - Current: `game/entities/hero.py` line 90: `self.attack_range = TILE_SIZE * 1.5` (melee range, ~48 pixels at TILE_SIZE=32).\n   - Required: 5-7 tiles (160-224 pixels at TILE_SIZE=32) for ranged behavior.\n   - AI movement: `ai/basic_ai.py` line 557 checks `if dist <= hero.attack_range` to transition to FIGHTING state, so updating attack_range should make rangers stop at range.\n   - **Status:** Not yet updated. Agent 03 needs to add conditional logic for rangers.\n\n2. **Building_destroyed events:**\n   - Current: `game/engine.py` lines 1062-1067 emit events with only `x`, `y`, `building_type`.\n   - Required: Add `w` (building width in pixels) and `h` (building height in pixels) to event payload.\n   - **Status:** Not yet updated. Agent 03 needs to add footprint size to event.\n\n3. **Debris visuals:**\n   - Current: `game/graphics/vfx.py` lines 335-351:\n     - Generates 3-6 pieces (line 336: `num_pieces = 3 + rnd.randint(0, 3)`)\n     - Pieces are 1-2px (line 350: `size = 1 + rnd.randint(0, 1)`)\n     - Scattered in 8-20 pixel radius from center (line 340)\n   - Required:\n     - Scatter 10-25 pieces across footprint\n     - 2-3px chunks\n     - Higher contrast, subtle darker underlay patch\n     - Debris should persist (no fade-out)\n     - Use footprint size if provided\n   - **Status:** Not yet updated. Agent 09 needs to update debris rendering.\n\n4. **Building_debris scenario:**\n   - Current: Not implemented in `tools/screenshot_scenarios.py`.\n   - Required: Place a house, advance a few ticks, demolish it deterministically, capture post-demolish frame.\n   - **Status:** Not yet implemented. Agent 12 needs to add scenario.\n\n### Stop condition (ready-for-verification)\n- **PENDING:** Hotfix implementations not yet complete. Gates pass, but ranger attack range, building_destroyed event footprint size, debris visuals, and building_debris scenario need updates.\n- **After fixes land:** Run gates, capture new scenario(s) if available, rebuild gallery, perform manual checklist (ranger ranged behavior, debris visibility).",
+              "summary_bullets": [
+                "Gates PASS: qa_smoke --quick, validate_assets --strict --check-attribution.",
+                "Ranger attack range still melee (TILE_SIZE * 1.5), needs 5-7 tiles for ranged behavior (Agent 03).",
+                "Building_destroyed events missing footprint size (w, h) (Agent 03).",
+                "Debris visuals only generate 3-6 pieces (not 10-25), 1-2px chunks (not 2-3px) (Agent 09).",
+                "Building_debris scenario not yet implemented (Agent 12).",
+                "Verification pending after fixes land."
+              ],
+              "proposed_changes": [
+                "No code changes by Agent 11; verification-only scope (run gates + snapshots after fixes land, report PASS/FAIL evidence)."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick exits 0 (PASS) after hotfix implementations land.",
+                "validate_assets --strict --check-attribution exits 0 (PASS).",
+                "Ranger stops at 5-7 tile range and fires from distance (not runs into melee).",
+                "Manual demolish leaves clearly visible rubble (10-25 pieces, 2-3px chunks, higher contrast, persistent).",
+                "Building_debris snapshot captures post-demolish frame with visible rubble (if scenario implemented).",
+                "Gallery rebuilds without error."
+              ],
+              "risks": [
+                "No blockers found. Gates pass, but hotfix implementations not yet complete.",
+                "Manual checklist (watching ranger ranged behavior, destroying buildings) requires human operator interaction and cannot be automated."
+              ],
+              "dependencies": [
+                "Agent 03: Update ranger attack_range to 5-7 tiles in game/entities/hero.py, add footprint size (w, h) to building_destroyed events in game/engine.py.",
+                "Agent 09: Update debris rendering to use footprint size, generate 10-25 pieces, 2-3px chunks, higher contrast, persistent (no fade-out).",
+                "Agent 12: Add building_debris screenshot scenario (place house, advance ticks, demolish deterministically, capture post-demolish frame)."
+              ],
+              "questions_back_to_pm": [],
+              "recommended_next_actions": [
+                "After Agent 03 + Agent 09 + Agent 12 fixes land, run full verification suite: gates, building_debris snapshot (if available), gallery rebuild, manual checklist (ranger ranged behavior, debris visibility)."
+              ],
+              "agent_fields": {
+                "pm_acknowledged": false,
+                "verification_complete": false,
+                "files_touched": [
+                  ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (log only, no code changes)"
+                ],
+                "commands_run": [
+                  "python tools/qa_smoke.py --quick (PASS, exit 0)",
+                  "python tools/validate_assets.py --strict --check-attribution (PASS, exit 0)"
+                ],
+                "evidence": {
+                  "qa_smoke_exit_code": 0,
+                  "validate_assets_exit_code": 0,
+                  "ranger_attack_range_current": "TILE_SIZE * 1.5 (melee range, ~48 pixels)",
+                  "ranger_attack_range_required": "5-7 tiles (160-224 pixels)",
+                  "building_destroyed_events_missing": "footprint size (w, h)",
+                  "debris_pieces_current": "3-6 pieces, 1-2px chunks",
+                  "debris_pieces_required": "10-25 pieces, 2-3px chunks, higher contrast, persistent",
+                  "building_debris_scenario": "not yet implemented"
+                },
+                "ready_for_integration": false,
+                "hotfix_implementations_pending": true,
+                "gates_pass": true
+              }
+            }
           }
         }
       }

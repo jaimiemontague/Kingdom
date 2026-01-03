@@ -1345,6 +1345,64 @@
               "blockers": []
             }
           }
+        },
+        "wk5_r8": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": "WK5 Hotfix: Ranger ranged readability + demolition debris visibility"
+          },
+          "round_id": "wk5_r8",
+          "round_meta": {
+            "prompt_set_id": "wk5_r8_hotfix",
+            "build_target": "Hotfix",
+            "sent_at_local": "2025-12-27T12:00:00-07:00"
+          },
+          "prompt_text": "WK5 Hotfix — Ranger ranged readability + demolition debris visibility. Add building_debris screenshot scenario: place a house, advance a few ticks, demolish it deterministically, capture post-demolish frame.",
+          "response": {
+            "received_at_local": "2025-12-27T12:00:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — **COMPLETE**: Added `scenario_building_debris` screenshot scenario for WK5 Hotfix. Scenario places a house, advances ticks, demolishes it deterministically, and captures post-demolish frames showing debris.\n\n### Deliverables\n- **Scenario added**: `tools/screenshot_scenarios.py` — `scenario_building_debris()` function implemented\n- **Registered**: Added `building_debris` to `get_scenario()` registry\n- **Deterministic demolition**: Uses `Shot.apply` hook to call `_cleanup_destroyed_buildings(emit_messages=False)` after tick advance\n- **Two shots**: Overview (zoom 2.0) and close-up (zoom 3.5) to capture debris visibility\n\n### Questions (blockers only; max 3)\n- **None**.\n\n### Next actions\n- **Ready for Agent 11**: Scenario is ready for snapshot capture. Agent 11 should run: `python tools/capture_screenshots.py --scenario building_debris --seed 3 --out docs/screenshots/wk5_hotfix/building_debris_seed3 --size 1920x1080 --ticks 0`\n- **Gallery**: Scenario will be automatically included in gallery builds (no manual registration needed)\n\n### Files changed\n- `tools/screenshot_scenarios.py`:\n  - Added `scenario_building_debris()` function (lines ~650-710)\n  - Registered `building_debris` in `get_scenario()` function\n  - Uses `Shot.apply` hook to demolish building after tick advance (deterministic)\n\n### Scenario details\n- **Setup**: Places castle as anchor, then places a house building at `cgx+4, cgy+2`\n- **First shot** (`building_debris_overview.png`):\n  - Advances 3 ticks to let building settle visually\n  - `apply` hook demolishes house (sets hp=0, calls cleanup)\n  - Captures at zoom 2.0 centered on building location\n- **Second shot** (`building_debris_closeup.png`):\n  - Advances 1 additional tick to ensure debris VFX is spawned\n  - Captures at zoom 3.5 for close-up debris visibility\n- **Determinism**: Uses grid coordinates for building lookup (not object references)\n\n### Evidence\n- File updated: `tools/screenshot_scenarios.py`\n- Gates remain PASS:\n  - `python tools/qa_smoke.py --quick` → Exit code 0 (PASS)\n  - `python tools/validate_assets.py --strict --check-attribution` → No changes needed (debris is code-based VFX)\n- Scenario registered and ready for capture\n\n### Integration notes\n- **For Agent 11**: Run snapshot capture to verify debris visibility. Scenario uses deterministic demolition via `apply` hook.\n- **For Agent 09**: Debris VFX should be visible in snapshots once implemented. Scenario triggers `building_destroyed` event via cleanup.\n- **For Agent 03**: Scenario confirms that `_cleanup_destroyed_buildings(emit_messages=False)` is the correct path for manual demolish debris spawning.\n\n### Gallery integration\n- Scenario will be automatically discovered by `build_gallery.py` (no manual registration needed)\n- Gallery should include `building_debris` shots in comparison view once Agent 11 captures them",
+            "summary_bullets": [
+              "Added scenario_building_debris() function to tools/screenshot_scenarios.py",
+              "Registered building_debris in get_scenario() registry",
+              "Scenario uses Shot.apply hook to demolish building deterministically after tick advance",
+              "Two shots: overview (zoom 2.0) and close-up (zoom 3.5) to capture debris visibility",
+              "Gates remain PASS: qa_smoke --quick and validate_assets --strict --check-attribution"
+            ],
+            "proposed_changes": [
+              "tools/screenshot_scenarios.py: Add scenario_building_debris() function",
+              "tools/screenshot_scenarios.py: Register building_debris in get_scenario()"
+            ],
+            "acceptance_criteria": [
+              "Scenario places house, advances ticks, demolishes it, and captures debris",
+              "Scenario is deterministic (uses grid coordinates for building lookup)",
+              "Gates remain PASS",
+              "Scenario is ready for Agent 11 to capture snapshots"
+            ],
+            "risks": [
+              "None identified: scenario follows existing pattern and uses established apply hook mechanism"
+            ],
+            "dependencies": [
+              "Agent 09: Debris VFX must be implemented and visible for snapshots to show debris",
+              "Agent 11: Run snapshot capture to verify debris visibility"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 11: Run snapshot capture command to verify debris visibility",
+              "Agent 09: Confirm debris VFX is implemented and will be visible in snapshots",
+              "No other tooling changes needed for hotfix"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": false,
+              "tooling_status": "complete_hotfix",
+              "files_changed": ["tools/screenshot_scenarios.py"],
+              "gates_passed": ["qa_smoke --quick", "validate_assets --strict --check-attribution (no changes needed)"],
+              "scenario_registered": true,
+              "scenario_name": "building_debris",
+              "blockers": []
+            }
+          }
         }
       }
     }

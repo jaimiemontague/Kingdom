@@ -1058,12 +1058,17 @@ class GameEngine:
                     bounty.target = None
             
             # WK5 Build B: Emit building destruction event for debris spawning
+            # WK5 Hotfix: Include footprint size for better debris visibility
             # (after all cleanup to avoid stale references)
+            building_w = getattr(building, "width", 0) or (getattr(building, "size", (1, 1))[0] * TILE_SIZE)
+            building_h = getattr(building, "height", 0) or (getattr(building, "size", (1, 1))[1] * TILE_SIZE)
             destruction_events.append({
                 "type": "building_destroyed",
                 "x": float(building_x),
                 "y": float(building_y),
                 "building_type": building_type,
+                "w": int(building_w),  # Footprint width in pixels
+                "h": int(building_h),  # Footprint height in pixels
             })
         
         # WK5 Build B: Feed building destruction events to VFX system for debris

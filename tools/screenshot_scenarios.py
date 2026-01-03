@@ -648,6 +648,76 @@ def scenario_ranged_projectiles(engine, *, seed: int) -> list[Shot]:
     return shots
 
 
+def scenario_building_debris(engine, *, seed: int) -> list[Shot]:
+    """
+    Capture building debris after manual demolition.
+    Places a house, advances a few ticks, demolishes it deterministically, then captures post-demolish frame showing debris.
+    
+    WK5 Hotfix: Ensures debris is clearly visible after demolition.
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    # Place castle as anchor
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    # Place a house building near the castle
+    house_gx = cgx + 4
+    house_gy = cgy + 2
+    house = _place_building(engine, "house", house_gx, house_gy)
+
+    # Get building center for camera (use this even after demolition for debris location)
+    house_x = float(getattr(house, "center_x", getattr(house, "x", 0.0)))
+    house_y = float(getattr(house, "center_y", getattr(house, "y", 0.0)))
+
+    # Create a closure to capture the house reference for demolition
+    # Note: apply() is called AFTER tick advance, so we demolish it after letting it settle
+    def demolish_house(eng):
+        """Demolish the house by setting hp=0 and calling cleanup to trigger debris spawning."""
+        # Find the house by grid position (deterministic lookup)
+        for b in eng.buildings:
+            if (getattr(b, "building_type", "") == "house" and
+                int(getattr(b, "grid_x", -1)) == house_gx and
+                int(getattr(b, "grid_y", -1)) == house_gy):
+                b.hp = 0
+                # Call cleanup to trigger debris spawning (emit_messages=False to avoid HUD noise)
+                if hasattr(eng, "_cleanup_destroyed_buildings"):
+                    eng._cleanup_destroyed_buildings(emit_messages=False)
+                break
+
+    shots: list[Shot] = [
+        Shot(
+            filename="building_debris_overview.png",
+            label="Building Debris (Overview)",
+            center_x=house_x,
+            center_y=house_y,
+            zoom=2.0,
+            ticks=3,  # Advance 3 ticks to let building settle visually
+            apply=demolish_house,  # Demolish after tick advance (cleanup triggers debris event)
+            meta={"scenario": "building_debris", "seed": int(seed), "building_type": "house"},
+        ),
+        Shot(
+            filename="building_debris_closeup.png",
+            label="Building Debris (Close-up)",
+            center_x=house_x,
+            center_y=house_y,
+            zoom=3.5,
+            ticks=1,  # Advance 1 tick after demolition to ensure debris VFX is spawned and visible
+            meta={"scenario": "building_debris", "seed": int(seed), "zoom": "closeup"},
+        ),
+    ]
+
+    return shots
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -662,6 +732,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_worker_catalog(engine, seed=int(seed))
     if scenario_name == "ranged_projectiles":
         return scenario_ranged_projectiles(engine, seed=int(seed))
+    if scenario_name == "building_debris":
+        return scenario_building_debris(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

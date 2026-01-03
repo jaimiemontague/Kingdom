@@ -9,18 +9,64 @@ Sprint status
   - Watch Ranger/SkeletonArcher/Ballista fire and confirm projectiles are readable.
   - Destroy/demolish a building and confirm rubble remains.
 
-Next prompt: NOT NEEDED (unless you want a final “manual signoff” log entry)
-If you want it, send to Agent 11 only.
+Hotfix follow-up (player feedback)
+- Rangers still *look melee* (they walk into point-blank before firing).
+- Manual demolish shows *no visible debris* (likely too subtle at gameplay zoom).
+
+Plan to troubleshoot + fix
+- Ranger: confirm it’s a gameplay/range issue (not projectile pipeline). Fix by giving Rangers a proper ranged attack range and (optionally) a min-range/kite behavior similar to SkeletonArcher.
+- Debris: confirm `building_destroyed` event emits on manual demolish (it should). Fix by making debris visually obvious at gameplay zoom:
+  - include building footprint size in the event (w/h) so rubble scatters across the footprint, not a tiny center radius
+  - increase piece size/count and contrast (2–3px, more pieces, add a darker “scorch/crumbled patch” underlay)
+  - add a deterministic screenshot scenario `building_debris` so this never regresses silently.
+
+Next prompt (send to only necessary agents)
+Send to: Agent 03 (Architecture/Gameplay) + Agent 09 (Art/VFX). CC Agent 12 (Tools) and Agent 11 (QA) as-needed for scenario + verification.
 
 PROMPT START
-WK5 Manual signoff log (optional)
+WK5 Hotfix — Ranger ranged readability + demolition debris visibility
 
 Write your reply under:
-`sprints["wk5-demolition-projectiles-workers"].rounds["wk5_r7"]`
+`sprints["wk5-demolition-projectiles-workers"].rounds["wk5_r8"]`
 
-Run `python main.py --no-llm` and do a 5-minute manual check:
-- Confirm ranged projectiles are readable in live play (Ranger + SkeletonArcher + Ballista).
-- Confirm debris appears after destroying/demolishing a building and persists.
+Goal
+- Rangers should *read as ranged*: they should fire from distance (not run into melee range), and the attack pose should match (bow cue).
+- Manual demolish should leave clearly visible rubble at the former building footprint.
+
+Constraints
+- Determinism: no wall-clock dependencies; no Python `hash()` in deterministic seeds.
+- Keep gates green: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`.
+
+Agent 03 — Gameplay/Architecture (required)
+1) Ranger ranged behavior
+- Update `Hero` so `hero_class == "ranger"` has a proper ranged `attack_range` (recommend 5–7 tiles).
+- Ensure AI movement respects this range (stop at range and fire; avoid point-blank unless forced).
+- Optional (nice): introduce a small min-range/kite band similar to `SkeletonArcher` if it’s cheap.
+
+2) Demolish debris visibility
+- Confirm manual demolish path (`demolish_building` click → `_cleanup_destroyed_buildings(emit_messages=False)`) still emits `building_destroyed` events.
+- Extend `building_destroyed` event payload to include footprint size:
+  - `w`: building width in pixels
+  - `h`: building height in pixels
+  - (optional) `grid_w/grid_h` if that’s easier
+
+Agent 09 — Art/VFX (required)
+1) Ranger “bow shot” readability
+- Ensure Ranger attack frame reads as bow usage at gameplay zoom (32×32). If the engine is falling back to procedural attack frames, adjust those to a bow cue for rangers (not sword arc).
+
+2) Debris visuals
+- Update debris rendering to use footprint size (if provided) and make it obvious:
+  - scatter 10–25 pieces across the footprint
+  - 2–3px chunks, higher contrast, add a subtle darker underlay patch
+  - debris should persist (no fade-out)
+
+Agent 12 — Tools (optional but recommended)
+- Add `building_debris` screenshot scenario:
+  - place a house, advance a few ticks, demolish it deterministically, capture post-demolish frame
+- Add this scenario to the gallery run list (if appropriate).
+
+Agent 11 — QA (optional)
+- After fixes land: run gates + capture the new scenario(s) and rebuild gallery; confirm rubble + ranger ranged behavior in a quick manual check.
 
 Reply with: PASS/FAIL + any issues observed + minimal repro steps.
 PROMPT END
