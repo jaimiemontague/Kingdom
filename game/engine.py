@@ -21,6 +21,7 @@ from config import (
     DEFAULT_BORDERLESS,
 )
 from game.graphics.vfx import VFXSystem
+from game.audio.audio_system import AudioSystem
 from game.world import World, Visibility
  
 from game.entities import (
@@ -35,6 +36,8 @@ from game.entities import (
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem, NeutralBuildingSystem
 from game.systems.buffs import BuffSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
+from game.ui.building_list_panel import BuildingListPanel
+from game.ui.building_list_panel import BuildingListPanel
 from game.graphics.font_cache import get_font
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
@@ -157,6 +160,7 @@ class GameEngine:
         # UI
         self.hud = HUD(self.window_width, self.window_height)
         self.building_menu = BuildingMenu()
+        self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
         self.debug_panel = DebugPanel(self.window_width, self.window_height)
         self.building_panel = BuildingPanel(self.window_width, self.window_height)
         
@@ -179,11 +183,21 @@ class GameEngine:
         # - emit_from_events(events: list[dict]) -> None
         self.vfx_system = VFXSystem()
         
+        # Audio system (WK6: non-authoritative, event-driven sound effects and ambient music).
+        # Expected interface:
+        # - emit_from_events(events: list[dict]) -> None
+        # - set_ambient(track_name: str, volume: float) -> None
+        self.audio_system = AudioSystem(enabled=True)
+        
         # Tax collector (created after castle is placed)
         self.tax_collector = None
         
         # Initialize starting buildings
         self.setup_initial_state()
+        
+        # WK6: Start ambient loop on game start (Build A: single neutral loop)
+        if self.audio_system is not None:
+            self.audio_system.set_ambient("day_loop", volume=0.4)
 
     def _update_fog_of_war(self):
         """Update fog-of-war visibility around the castle and living heroes."""
@@ -193,15 +207,38 @@ class GameEngine:
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
         revealers = []
+        hero_revealers = []  # Track which revealers are heroes (for XP tracking)
+        
         if castle is not None:
             revealers.append((castle.center_x, castle.center_y, CASTLE_VISION_TILES))
 
         for hero in self.heroes:
             if getattr(hero, "is_alive", True):
                 revealers.append((hero.x, hero.y, HERO_VISION_TILES))
+                hero_revealers.append((hero, hero.x, hero.y, HERO_VISION_TILES))
 
         if revealers:
-            self.world.update_visibility(revealers)
+            # WK6: Track newly revealed tiles for XP awards
+            newly_revealed = self.world.update_visibility(revealers, return_new_reveals=True)
+            
+            # WK6: Award XP to Rangers for newly revealed tiles
+            if newly_revealed:
+                for hero, hx, hy, radius in hero_revealers:
+                    if hero.hero_class == "ranger":
+                        # Check which newly revealed tiles are within this hero's vision radius
+                        hero_grid_x, hero_grid_y = self.world.world_to_grid(hx, hy)
+                        radius_sq = radius * radius
+                        
+                        for grid_x, grid_y in newly_revealed:
+                            # Check if this tile is within hero's vision circle
+                            dx = grid_x - hero_grid_x
+                            dy = grid_y - hero_grid_y
+                            if (dx * dx + dy * dy) <= radius_sq:
+                                # First-time reveal: award XP (idempotent via set check)
+                                if (grid_x, grid_y) not in hero._revealed_tiles:
+                                    hero._revealed_tiles.add((grid_x, grid_y))
+                                    # Award small XP (1 per tile, Agent 06 can tune)
+                                    hero.xp += 1
         
     def setup_initial_state(self):
         """Set up the initial game state."""
@@ -258,120 +295,95 @@ class GameEngine:
                 elif event.y < 0:
                     self.zoom_by(1.0 / ZOOM_STEP)
     
+    def select_building_for_placement(self, building_type: str) -> bool:
+        """
+        Unified method for selecting a building for placement.
+        Called by both hotkeys and panel clicks.
+        Returns True if selection succeeded, False otherwise.
+        """
+        # Check affordability
+        if not self.economy.can_afford_building(building_type):
+            self.hud.add_message("Not enough gold!", (255, 100, 100))
+            return False
+        
+        # Check prerequisites
+        from config import BUILDING_PREREQUISITES
+        if building_type in BUILDING_PREREQUISITES:
+            required = BUILDING_PREREQUISITES[building_type]
+            has_prereq = False
+            for building in self.buildings:
+                if building.building_type in required and getattr(building, "is_constructed", False):
+                    has_prereq = True
+                    break
+            if not has_prereq:
+                req_names = ", ".join(b.replace("_", " ").title() for b in required)
+                self.hud.add_message(f"Requires: {req_names}", (255, 200, 100))
+                return False
+        
+        # Check constraints (mutually exclusive)
+        from config import BUILDING_CONSTRAINTS
+        if building_type in BUILDING_CONSTRAINTS:
+            excluded = BUILDING_CONSTRAINTS[building_type]
+            for building in self.buildings:
+                if building.building_type in excluded:
+                    excl_name = building.building_type.replace("_", " ").title()
+                    self.hud.add_message(f"Cannot build: {excl_name} exists", (255, 200, 100))
+                    return False
+        
+        # All checks passed - select building
+        self.building_menu.select_building(building_type)
+        # Close panel if open
+        if self.building_list_panel.visible:
+            self.building_list_panel.close()
+        return True
+    
     def handle_keydown(self, event):
         """Handle keyboard input."""
         if event.key == pygame.K_ESCAPE:
-            if self.building_menu.selected_building:
+            if self.building_list_panel.visible:
+                self.building_list_panel.close()
+                self.building_menu.cancel_selection()
+            elif self.building_menu.selected_building:
                 self.building_menu.cancel_selection()
             else:
                 self.paused = not self.paused
                 
         elif event.key == pygame.K_1:
-            # Select warrior guild for placement
-            if self.economy.can_afford_building("warrior_guild"):
-                self.building_menu.select_building("warrior_guild")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-                
+            self.select_building_for_placement("warrior_guild")
         elif event.key == pygame.K_2:
-            # Select marketplace for placement
-            if self.economy.can_afford_building("marketplace"):
-                self.building_menu.select_building("marketplace")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-
+            self.select_building_for_placement("marketplace")
         elif event.key == pygame.K_3:
-            # Select ranger guild for placement
-            if self.economy.can_afford_building("ranger_guild"):
-                self.building_menu.select_building("ranger_guild")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-
+            self.select_building_for_placement("ranger_guild")
         elif event.key == pygame.K_4:
-            # Select rogue guild for placement
-            if self.economy.can_afford_building("rogue_guild"):
-                self.building_menu.select_building("rogue_guild")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-
+            self.select_building_for_placement("rogue_guild")
         elif event.key == pygame.K_5:
-            # Select wizard guild for placement
-            if self.economy.can_afford_building("wizard_guild"):
-                self.building_menu.select_building("wizard_guild")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-        # Phase 1: Economic Buildings
+            self.select_building_for_placement("wizard_guild")
         elif event.key == pygame.K_6:
-            if self.economy.can_afford_building("blacksmith"):
-                self.building_menu.select_building("blacksmith")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("blacksmith")
         elif event.key == pygame.K_7:
-            if self.economy.can_afford_building("inn"):
-                self.building_menu.select_building("inn")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("inn")
         elif event.key == pygame.K_8:
-            if self.economy.can_afford_building("trading_post"):
-                self.building_menu.select_building("trading_post")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-        # Phase 2: Temples (using letters)
+            self.select_building_for_placement("trading_post")
         elif event.key == pygame.K_t:
-            # Cycle through temples or use T for first temple
-            if self.economy.can_afford_building("temple_agrela"):
-                self.building_menu.select_building("temple_agrela")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-        # Phase 3: Non-Human Dwellings
+            self.select_building_for_placement("temple_agrela")
         elif event.key == pygame.K_g:
-            if self.economy.can_afford_building("gnome_hovel"):
-                self.building_menu.select_building("gnome_hovel")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("gnome_hovel")
         elif event.key == pygame.K_e:
-            if self.economy.can_afford_building("elven_bungalow"):
-                self.building_menu.select_building("elven_bungalow")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("elven_bungalow")
         elif event.key == pygame.K_v:
-            if self.economy.can_afford_building("dwarven_settlement"):
-                self.building_menu.select_building("dwarven_settlement")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-        # Phase 4: Defensive Structures
+            self.select_building_for_placement("dwarven_settlement")
         elif event.key == pygame.K_u:
-            if self.economy.can_afford_building("guardhouse"):
-                self.building_menu.select_building("guardhouse")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("guardhouse")
         elif event.key == pygame.K_y:
-            # Y for ballista tower (B is used for bounties)
-            if self.economy.can_afford_building("ballista_tower"):
-                self.building_menu.select_building("ballista_tower")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("ballista_tower")
         elif event.key == pygame.K_o:
-            if self.economy.can_afford_building("wizard_tower"):
-                self.building_menu.select_building("wizard_tower")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
-        # Phase 5: Special Buildings
+            self.select_building_for_placement("wizard_tower")
         elif event.key == pygame.K_f:
-            if self.economy.can_afford_building("fairgrounds"):
-                self.building_menu.select_building("fairgrounds")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("fairgrounds")
         elif event.key == pygame.K_i:
-            if self.economy.can_afford_building("library"):
-                self.building_menu.select_building("library")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("library")
         elif event.key == pygame.K_r:
-            if self.economy.can_afford_building("royal_gardens"):
-                self.building_menu.select_building("royal_gardens")
-            else:
-                self.hud.add_message("Not enough gold!", (255, 100, 100))
+            self.select_building_for_placement("royal_gardens")
                 
         elif event.key == pygame.K_h:
             # Hire a hero
@@ -451,7 +463,17 @@ class GameEngine:
             except Exception:
                 pass
 
-            # Check if clicking on building panel first
+            # Check if clicking on building list panel first (if visible)
+            if self.building_list_panel.visible:
+                result = self.building_list_panel.handle_click(event.pos, self.economy, self.buildings)
+                if result:  # Building type string
+                    self.select_building_for_placement(result)
+                    return
+                # Click outside panel - close it
+                self.building_list_panel.close()
+                return
+            
+            # Check if clicking on building panel
             if self.building_panel.visible:
                 result = self.building_panel.handle_click(event.pos, self.economy, self.get_game_state())
                 if isinstance(result, dict) and result.get("type") == "demolish_building":
@@ -505,6 +527,10 @@ class GameEngine:
                 (self.camera_x, self.camera_y),
                 zoom=self.zoom
             )
+        
+        # Update building list panel hover state
+        if self.building_list_panel.visible:
+            self.building_list_panel.update_hover(event.pos, self.economy, self.buildings)
         
         # Update building panel hover state
         self.building_panel.update_hover(event.pos)
@@ -651,6 +677,13 @@ class GameEngine:
         self.buildings.append(building)
         self.building_menu.cancel_selection()
         self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
+        
+        # WK6: Emit building_placed event for audio
+        if self.audio_system is not None:
+            try:
+                self.audio_system.emit_from_events([{"type": "building_placed"}])
+            except Exception:
+                pass  # Audio should never crash simulation
     
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
@@ -672,6 +705,13 @@ class GameEngine:
         
         self.bounty_system.place_bounty(world_x, world_y, reward, "explore")
         self.hud.add_message(f"Bounty placed (${reward}). Heroes will respond.", (255, 215, 0))
+        
+        # WK6: Emit bounty_placed event for audio
+        if self.audio_system is not None:
+            try:
+                self.audio_system.emit_from_events([{"type": "bounty_placed"}])
+            except Exception:
+                pass  # Audio should never crash simulation
 
     def _nearest_lair_to(self, x: float, y: float):
         """Return nearest living lair to (x,y) or None."""
@@ -849,6 +889,14 @@ class GameEngine:
                 # VFX should never crash the simulation.
                 pass
         
+        # WK6: Feed combat/enemy events into AudioSystem (for ranged projectile sounds).
+        if self.audio_system is not None:
+            try:
+                self.audio_system.emit_from_events(events)
+            except Exception:
+                # Audio should never crash the simulation.
+                pass
+        
         # Handle combat events
         for event in events:
             if event["type"] == "enemy_killed":
@@ -956,6 +1004,13 @@ class GameEngine:
         if building_ranged_events and self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
             try:
                 self.vfx_system.emit_from_events(building_ranged_events)
+            except Exception:
+                pass
+        
+        # WK6: Feed building projectile events into AudioSystem (for bow release sounds).
+        if building_ranged_events and self.audio_system is not None and hasattr(self.audio_system, "emit_from_events"):
+            try:
+                self.audio_system.emit_from_events(building_ranged_events)
             except Exception:
                 pass
         
@@ -1077,6 +1132,14 @@ class GameEngine:
                 self.vfx_system.emit_from_events(destruction_events)
             except Exception:
                 # VFX should never crash the simulation
+                pass
+        
+        # WK6: Feed building destruction events to AudioSystem
+        if destruction_events and self.audio_system is not None:
+            try:
+                self.audio_system.emit_from_events(destruction_events)
+            except Exception:
+                # Audio should never crash the simulation
                 pass
     
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
@@ -1272,6 +1335,11 @@ class GameEngine:
 
         # Render building preview
         self.building_menu.render(view_surface, camera_offset)
+        
+        # Render building list panel (if visible)
+        if self.building_list_panel.visible:
+            selected_type = getattr(self.building_menu, "selected_building", None)
+            self.building_list_panel.render(view_surface, self.economy, self.buildings, selected_type)
 
         # Render VFX overlay (world-space) if present.
         if self.vfx_system is not None and hasattr(self.vfx_system, "render"):

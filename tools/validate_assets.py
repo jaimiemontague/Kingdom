@@ -122,6 +122,126 @@ def _validate_sprite_tree(
     return findings, report
 
 
+def _validate_audio_tree(
+    *,
+    assets_root: Path,
+    sfx_files: dict[str, list[str]] | list[str] | None,
+    ambient_files: Iterable[str],
+    strict: bool,
+) -> tuple[list[Finding], dict[str, Any]]:
+    """
+    Validate audio file structure (WK6 nested structure):
+      assets/audio/sfx/<category>/<name>.wav (or .ogg)
+      assets/audio/ambient/<name>.ogg (or .wav)
+    
+    WK6 Final: Matches Agent 14's nested structure (sfx/build/place.wav, etc.).
+    Supports both nested dict structure and flat list (backward compatibility).
+    """
+    findings: list[Finding] = []
+    report: dict[str, Any] = {"category": "audio", "sfx": {}, "ambient": {}}
+
+    # Validate SFX files (nested structure: sfx/<category>/<name>.wav)
+    sfx_dir = assets_root / "audio" / "sfx"
+    if not sfx_dir.exists():
+        findings.append(
+            Finding(
+                "error" if strict else "warn",
+                "missing_audio_sfx_dir",
+                "Missing audio SFX directory: assets/audio/sfx",
+                str(sfx_dir),
+            )
+        )
+        # Continue to check ambient even if SFX dir is missing
+    else:
+        # Handle nested dict structure (new format)
+        if isinstance(sfx_files, dict):
+            for category, file_list in sfx_files.items():
+                category_dir = sfx_dir / category
+                if not category_dir.exists():
+                    findings.append(
+                        Finding(
+                            "error" if strict else "warn",
+                            "missing_audio_sfx_category_dir",
+                            f"Missing audio SFX category directory: assets/audio/sfx/{category}",
+                            str(category_dir),
+                        )
+                    )
+                    continue
+                
+                for sfx_name in file_list:
+                    # Check for .wav or .ogg in nested path
+                    wav_path = category_dir / f"{sfx_name}.wav"
+                    ogg_path = category_dir / f"{sfx_name}.ogg"
+                    full_path = f"{category}/{sfx_name}"
+                    if wav_path.exists():
+                        report["sfx"][full_path] = {"file": wav_path.name, "ok": True}
+                    elif ogg_path.exists():
+                        report["sfx"][full_path] = {"file": ogg_path.name, "ok": True}
+                    else:
+                        report["sfx"][full_path] = {"file": None, "ok": False}
+                        findings.append(
+                            Finding(
+                                "error" if strict else "warn",
+                                "missing_audio_sfx",
+                                f"Missing audio SFX file: sfx/{category}/{sfx_name}.wav or .ogg",
+                                str(category_dir),
+                            )
+                        )
+        # Handle flat list structure (backward compatibility)
+        elif isinstance(sfx_files, list):
+            for sfx_name in sfx_files:
+                # Check for .wav or .ogg (flat structure, no subdirectories)
+                wav_path = sfx_dir / f"{sfx_name}.wav"
+                ogg_path = sfx_dir / f"{sfx_name}.ogg"
+                if wav_path.exists():
+                    report["sfx"][sfx_name] = {"file": wav_path.name, "ok": True}
+                elif ogg_path.exists():
+                    report["sfx"][sfx_name] = {"file": ogg_path.name, "ok": True}
+                else:
+                    report["sfx"][sfx_name] = {"file": None, "ok": False}
+                    findings.append(
+                        Finding(
+                            "error" if strict else "warn",
+                            "missing_audio_sfx",
+                            f"Missing audio SFX file: {sfx_name}.wav or {sfx_name}.ogg",
+                            str(sfx_dir),
+                        )
+                    )
+
+    # Validate ambient files
+    ambient_dir = assets_root / "audio" / "ambient"
+    if not ambient_dir.exists():
+        findings.append(
+            Finding(
+                "error" if strict else "warn",
+                "missing_audio_ambient_dir",
+                "Missing audio ambient directory: assets/audio/ambient",
+                str(ambient_dir),
+            )
+        )
+    else:
+        for ambient_name in ambient_files:
+            # Check for .ogg or .wav
+            ogg_path = ambient_dir / f"{ambient_name}.ogg"
+            wav_path = ambient_dir / f"{ambient_name}.wav"
+            if ogg_path.exists():
+                report["ambient"][ambient_name] = {"file": ogg_path.name, "ok": True}
+            elif wav_path.exists():
+                report["ambient"][ambient_name] = {"file": wav_path.name, "ok": True}
+            else:
+                report["ambient"][ambient_name] = {"file": None, "ok": False}
+                findings.append(
+                    Finding(
+                        "error" if strict else "warn",
+                        "missing_audio_ambient",
+                        f"Missing audio ambient file: {ambient_name}.ogg or {ambient_name}.wav",
+                        str(ambient_dir),
+                    )
+                )
+
+    return findings, report
+
+
 def _validate_attribution(*, assets_root: Path, strict: bool) -> list[Finding]:
     findings: list[Finding] = []
     third_party = assets_root / "third_party"
@@ -274,6 +394,18 @@ def main() -> int:
     )
     findings.extend(w_findings)
     full_report["categories"]["workers"] = w_report
+
+    # Validate audio assets (WK6)
+    audio = manifest.get("audio", {})
+    if audio:
+        a_findings, a_report = _validate_audio_tree(
+            assets_root=assets_root,
+            sfx_files=audio.get("sfx", []),
+            ambient_files=audio.get("ambient", []),
+            strict=bool(ns.strict),
+        )
+        findings.extend(a_findings)
+        full_report["categories"]["audio"] = a_report
 
     if ns.check_attribution:
         findings.extend(_validate_attribution(assets_root=assets_root, strict=bool(ns.strict)))

@@ -152,6 +152,10 @@ class Hero:
         # WK5: Ranged attacker interface
         self.is_ranged_attacker = (self.hero_class == "ranger")
         
+        # WK6: Per-hero revealed tile tracking (for XP awards)
+        # Only used for Rangers; other classes can ignore this
+        self._revealed_tiles: set[tuple[int, int]] = set()  # (grid_x, grid_y) tuples
+        
         # Anti-oscillation commitment windows (sim-time based; controlled by AI)
         self._target_commit_until_ms: int = 0
         self._bounty_commit_until_ms: int = 0
@@ -512,8 +516,28 @@ class Hero:
             buildings = game_state.get("buildings", [])
             if world:
                 from game.systems.navigation import compute_path_worldpoints, follow_path, best_adjacent_tile
+                from game.world import Visibility
 
                 goal_x, goal_y = self.target_position
+                
+                # WK6: Fog bounty pathing - use direct steering for long-distance black-fog targets
+                # (matches enemy AI pattern for consistency)
+                dist = self.distance_to(goal_x, goal_y)
+                goal_grid_x, goal_grid_y = world.world_to_grid(goal_x, goal_y)
+                goal_in_black_fog = False
+                
+                # Check if goal is in black fog (UNSEEN)
+                if (0 <= goal_grid_x < world.width and 0 <= goal_grid_y < world.height):
+                    goal_visibility = world.visibility[goal_grid_y][goal_grid_x]
+                    goal_in_black_fog = (goal_visibility == Visibility.UNSEEN)
+                
+                # Use direct steering for far-away black-fog targets (like enemy AI does)
+                # Switch to A* pathfinding when close or terrain is revealed
+                if goal_in_black_fog and dist > TILE_SIZE * 12:
+                    # Direct steering toward black-fog target (optimistic pathing)
+                    # When hero gets close, terrain will be revealed and we can switch to A*
+                    self.move_towards(goal_x, goal_y, dt)
+                    return
 
                 # Replan if needed
                 goal_key = (int(goal_x), int(goal_y))

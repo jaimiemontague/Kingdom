@@ -423,6 +423,7 @@ class HUD:
         Handle HUD click targets only. Returns an action string if handled:
         - "quit"
         - "close_selection"
+        - "build_menu_toggle"
         """
         x, y = int(mouse_pos[0]), int(mouse_pos[1])
         if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
@@ -431,6 +432,12 @@ class HUD:
         if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
             # Close selected hero/building panel
             return "close_selection"
+        
+        # Check Build button click
+        if self._buttons:
+            build_button = self._buttons[0]  # First button is Build
+            if build_button.hit_test((x, y)):
+                return "build_menu_toggle"
 
         return None
 

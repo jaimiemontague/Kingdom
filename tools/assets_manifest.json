@@ -46,6 +46,27 @@
   "workers": {
     "types": ["peasant", "tax_collector"],
     "states": ["idle", "walk", "work", "collect", "return", "hurt", "dead"]
+  },
+  "audio": {
+    "sfx": {
+      "build": [
+        "place",
+        "destroyed"
+      ],
+      "bounty": [
+        "placed"
+      ],
+      "weapons": [
+        "ranger_shot",
+        "skeleton_archer_shot"
+      ],
+      "ui": [
+        "click"
+      ]
+    },
+    "ambient": [
+      "day_loop"
+    ]
   }
 }
 

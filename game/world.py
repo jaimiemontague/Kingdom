@@ -151,11 +151,21 @@ class World:
                     color = TILE_COLORS.get(tile_type, COLOR_GRASS)
                     pygame.draw.rect(surface, color, (screen_x, screen_y, TILE_SIZE, TILE_SIZE))
 
-    def _reveal_circle(self, grid_cx: int, grid_cy: int, radius_tiles: int):
-        """Mark tiles within a circle as VISIBLE."""
+    def _reveal_circle(self, grid_cx: int, grid_cy: int, radius_tiles: int, newly_revealed: set = None):
+        """
+        Mark tiles within a circle as VISIBLE.
+        
+        Args:
+            grid_cx, grid_cy: Center grid coordinates
+            radius_tiles: Vision radius in tiles
+            newly_revealed: Optional set to populate with (grid_x, grid_y) tiles that transitioned UNSEEN -> VISIBLE
+        """
         r = max(0, int(radius_tiles))
         if r <= 0:
             if 0 <= grid_cx < self.width and 0 <= grid_cy < self.height:
+                # WK6: Track UNSEEN -> VISIBLE transitions
+                if newly_revealed is not None and self.visibility[grid_cy][grid_cx] == Visibility.UNSEEN:
+                    newly_revealed.add((grid_cx, grid_cy))
                 self.visibility[grid_cy][grid_cx] = Visibility.VISIBLE
                 self._currently_visible.add((grid_cx, grid_cy))
             return
@@ -170,15 +180,25 @@ class World:
             x1 = min(self.width - 1, grid_cx + dx_max)
             row = self.visibility[y]
             for x in range(x0, x1 + 1):
+                # WK6: Track UNSEEN -> VISIBLE transitions
+                if newly_revealed is not None and row[x] == Visibility.UNSEEN:
+                    newly_revealed.add((x, y))
                 row[x] = Visibility.VISIBLE
                 self._currently_visible.add((x, y))
 
-    def update_visibility(self, revealers: list[tuple[float, float, int]]):
+    def update_visibility(self, revealers: list[tuple[float, float, int]], return_new_reveals: bool = False):
         """
         Update the fog-of-war based on a set of revealers.
 
         `revealers`: list of (world_x, world_y, radius_tiles).
+        `return_new_reveals`: If True, return set of (grid_x, grid_y) tiles that transitioned UNSEEN -> VISIBLE.
+        
+        Returns:
+            If return_new_reveals=True: set of (grid_x, grid_y) tuples for newly revealed tiles.
+            Otherwise: None
         """
+        newly_revealed = set() if return_new_reveals else None
+        
         # Demote last frame's visible tiles to SEEN (without scanning the whole map).
         for (x, y) in self._currently_visible:
             if 0 <= x < self.width and 0 <= y < self.height:
@@ -188,7 +208,13 @@ class World:
 
         for world_x, world_y, radius_tiles in revealers:
             gx, gy = self.world_to_grid(world_x, world_y)
-            self._reveal_circle(gx, gy, int(radius_tiles))
+            if return_new_reveals:
+                # Track which tiles transition UNSEEN -> VISIBLE
+                self._reveal_circle(gx, gy, int(radius_tiles), newly_revealed=newly_revealed)
+            else:
+                self._reveal_circle(gx, gy, int(radius_tiles))
+        
+        return newly_revealed if return_new_reveals else None
 
     def render_fog(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         """Render fog-of-war overlay over the currently-visible screen region."""

@@ -253,3 +253,11 @@ LLM_DECISION_COOLDOWN = 2000  # milliseconds between LLM calls per hero
 LLM_TIMEOUT = 5.0  # seconds
 HEALTH_THRESHOLD_FOR_DECISION = 0.5  # 50% health triggers retreat consideration
 
+# WK6: Ranger exploration bias toward black fog
+RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
+RANGER_FRONTIER_SCAN_RADIUS_TILES = 10  # Maximum radius (in tiles) to scan for black fog frontier tiles
+RANGER_FRONTIER_COMMIT_MS = 4000  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
+
+# WK6: Bounty targeting in black fog
+BOUNTY_BLACK_FOG_DISTANCE_PENALTY = 1.2  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
+

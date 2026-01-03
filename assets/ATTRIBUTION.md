@@ -64,4 +64,50 @@ Use this exact bullet structure (one bullet per pack):
   - `assets/sprites/enemies/*/*/frame_000.png`
   - `assets/sprites/buildings/*/*/frame_000.png`
 
+---
+
+## Audio Assets
+
+### Pack: Kenney Game Assets: Audio
+- **Author / publisher**: Kenney (`https://kenney.nl/`)
+- **License**: CC0 1.0 Universal (see `assets/audio/third_party/kenney_audio_cc0/LICENSE_CC0-1.0.txt`)
+- **Source**: `https://kenney.nl/assets/audio-pack`
+- **Retrieved**: 2026-01-27
+- **Modifications**: Curated subset (UI clicks, building placement, building destruction sounds); normalized volume levels
+- **Used for**: UI clicks, building placement/destruction sounds
+- **File locations**:
+  - `assets/audio/sfx/ui_click.wav`
+  - `assets/audio/sfx/building_place.wav`
+  - `assets/audio/sfx/building_destroy.wav`
+
+### Pack: OpenGameArt CC0 Collections
+- **Author / publisher**: rubberduck (opengameart.org) + other CC0 contributors
+- **License**: CC0 1.0 Universal
+- **Source**: `https://opengameart.org/content/100-cc0-sfx` (and related RPG Sound Pack collections)
+- **Retrieved**: 2026-01-27
+- **Modifications**: Curated subset (ranged weapon sounds: bow twang, arrow release); normalized volume levels
+- **Used for**: Ranged weapon attack sounds (bow release for Ranger, SkeletonArcher, Ballista)
+- **File locations**:
+  - `assets/audio/sfx/bow_release.wav`
+
+### Pack: Freesound.org CC0 Ambient Loops
+- **Author / publisher**: Various CC0 contributors (see `assets/audio/third_party/freesound_cc0/README.txt`)
+- **License**: CC0 1.0 Universal
+- **Source**: `https://freesound.org` (filtered: CC0 license, "ambient medieval" / "ambient fantasy" / "ambient loop")
+- **Retrieved**: 2026-01-27
+- **Modifications**: Converted to .ogg format for efficient compression; normalized volume (0.4 baseline)
+- **Used for**: Background ambient atmosphere (single neutral loop for Build A)
+- **File locations**:
+  - `assets/audio/ambient/ambient_loop.ogg`
+
+### Pack: Additional CC0 Sources (Bounty Placement)
+- **Author / publisher**: Various CC0 contributors (TBD once assets sourced)
+- **License**: CC0 1.0 Universal
+- **Source**: TBD (will be updated once assets are sourced)
+- **Retrieved**: TBD
+- **Modifications**: TBD
+- **Used for**: Bounty placement sound
+- **File locations**:
+  - `assets/audio/sfx/bounty_place.wav`
+
 

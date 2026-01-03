@@ -718,6 +718,158 @@ def scenario_building_debris(engine, *, seed: int) -> list[Shot]:
     return shots
 
 
+def scenario_bounty_in_black_fog(engine, *, seed: int) -> list[Shot]:
+    """
+    Capture bounty marker visible in solid black fog (UNSEEN visibility).
+    Places a bounty at unrevealed coordinates and ensures the marker is visible.
+    
+    WK6: Ensures bounties are visible even in black fog and Rangers can path to them.
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    
+    # Place castle as anchor
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    # Reveal only the castle area (keep bounty area in black fog)
+    # Use _reveal_all for now, then manually set bounty area to UNSEEN
+    _reveal_all(engine.world)
+    
+    # Place bounty at unrevealed coordinates (far from castle, in black fog)
+    bounty_gx = cgx + 20
+    bounty_gy = cgy + 15
+    bounty_x, bounty_y = _tile_center_px(bounty_gx, bounty_gy)
+    
+    # Ensure bounty tile and surrounding area are UNSEEN (black fog)
+    from game.world import Visibility
+    if hasattr(engine.world, "visibility"):
+        vis = engine.world.visibility
+        # Set bounty area to UNSEEN (black fog)
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                tx = bounty_gx + dx
+                ty = bounty_gy + dy
+                if 0 <= tx < len(vis[0]) and 0 <= ty < len(vis):
+                    vis[ty][tx] = Visibility.UNSEEN
+        # Also clear from currently_visible set if it exists
+        if hasattr(engine.world, "_currently_visible"):
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    tx = bounty_gx + dx
+                    ty = bounty_gy + dy
+                    engine.world._currently_visible.discard((tx, ty))
+
+    # Place bounty using bounty system
+    if hasattr(engine, "bounty_system"):
+        engine.bounty_system.place_bounty(bounty_x, bounty_y, reward=100, bounty_type="explore")
+    else:
+        # Fallback: create bounty manually if system not available
+        from game.systems.bounty import Bounty
+        if not hasattr(engine, "bounties"):
+            engine.bounties = []
+        bounty = Bounty(bounty_x, bounty_y, reward=100, bounty_type="explore")
+        engine.bounties.append(bounty)
+
+    shots: list[Shot] = [
+        Shot(
+            filename="bounty_in_black_fog_overview.png",
+            label="Bounty in Black Fog (Overview)",
+            center_x=bounty_x,
+            center_y=bounty_y,
+            zoom=2.0,
+            ticks=0,
+            meta={"scenario": "bounty_in_black_fog", "seed": int(seed), "bounty_type": "explore"},
+        ),
+        Shot(
+            filename="bounty_in_black_fog_closeup.png",
+            label="Bounty in Black Fog (Close-up)",
+            center_x=bounty_x,
+            center_y=bounty_y,
+            zoom=3.5,
+            ticks=0,
+            meta={"scenario": "bounty_in_black_fog", "seed": int(seed), "zoom": "closeup"},
+        ),
+    ]
+
+    return shots
+
+
+def scenario_building_menu_open(engine, *, seed: int) -> list[Shot]:
+    """
+    Capture build menu panel when open.
+    Opens the build menu and captures the clickable building list UI.
+    
+    WK6: Ensures build menu UI is visible and functional.
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    # Place castle as anchor
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    # Place a few buildings for context
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    _place_building(engine, "marketplace", cgx + 6, cgy - 2)
+    _place_building(engine, "inn", cgx + 6, cgy + 2)
+
+    # Get castle center for camera
+    castle_x = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    castle_y = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+
+    # Apply hook to open build list panel (WK6)
+    def _open_build_menu(eng):
+        """Open the build list panel (BuildingListPanel)."""
+        # Ensure UI is visible (not hidden for screenshots)
+        if hasattr(eng, "screenshot_hide_ui"):
+            eng.screenshot_hide_ui = False
+        # Open building list panel (WK6 implementation)
+        if hasattr(eng, "building_list_panel"):
+            eng.building_list_panel.visible = True
+            # Ensure panel is properly initialized
+            if hasattr(eng.building_list_panel, "toggle"):
+                # Use toggle to ensure proper state
+                if not eng.building_list_panel.visible:
+                    eng.building_list_panel.toggle()
+
+    shots: list[Shot] = [
+        Shot(
+            filename="building_menu_open_overview.png",
+            label="Building Menu Open (Overview)",
+            center_x=castle_x,
+            center_y=castle_y,
+            zoom=1.5,
+            ticks=0,
+            apply=_open_build_menu,
+            meta={"scenario": "building_menu_open", "seed": int(seed), "ui": "menu_open"},
+        ),
+        Shot(
+            filename="building_menu_open_closeup.png",
+            label="Building Menu Open (Close-up)",
+            center_x=castle_x,
+            center_y=castle_y,
+            zoom=2.5,
+            ticks=0,
+            apply=_open_build_menu,
+            meta={"scenario": "building_menu_open", "seed": int(seed), "zoom": "closeup", "ui": "menu_open"},
+        ),
+    ]
+
+    return shots
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -734,6 +886,10 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_ranged_projectiles(engine, seed=int(seed))
     if scenario_name == "building_debris":
         return scenario_building_debris(engine, seed=int(seed))
+    if scenario_name == "bounty_in_black_fog":
+        return scenario_bounty_in_black_fog(engine, seed=int(seed))
+    if scenario_name == "building_menu_open":
+        return scenario_building_menu_open(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

@@ -7,6 +7,79 @@
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
   "sprints": {
+    "wk6-audio-buildmenu-fogbounties-explorexp": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",
+        "notes": "WK6: Audio + Build Menu + Fog Bounties + Ranger Exploration XP"
+      },
+      "rounds": {
+        "wk6_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk6_r3_finalization_ship_gate",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "visibility": "WK6 finalization: only send to agents with remaining work."
+          },
+          "pm_status_summary": {
+            "overall_status": "Implementation complete; finalization required to ship",
+            "gates": {
+              "qa_smoke_quick": "PASS (current workspace)",
+              "validate_assets_report": "WARN (missing audio files; expected until assets added)"
+            },
+            "remaining_ship_blockers": [
+              "Audio asset naming contract mismatch (code+manifest expect flat keys; attribution/sound pack plan uses nested folders).",
+              "Actual audio files are not present yet in assets/audio/{sfx,ambient} (folders exist but empty).",
+              "Screenshot capture for new WK6 scenarios + gallery rebuild not yet performed."
+            ]
+          },
+          "pm_decisions": {
+            "audio_direction": {
+              "tone": "cozy/peaceful (Majesty-like) (LOCKED)",
+              "ambient_build_a": "single neutral loop (LOCKED)",
+              "variants_build_b": "multiple variants with deterministic selection (LOCKED; Build A ships single files per event)"
+            },
+            "audio_contract_resolution_policy": "Pick ONE naming/file layout and align: AudioSystem, EVENT_CONTRACT.md, tools/assets_manifest.json, tools/validate_assets.py, and assets/ATTRIBUTION.md."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "needs_followup",
+              "asks": [
+                "Resolve audio naming contract mismatch (choose flat vs nested; preferred: adopt SoundDirector/Attribution nested structure) and update `game/audio/audio_system.py` + `game/audio/EVENT_CONTRACT.md` accordingly.",
+                "Ensure ambient actually plays in Build A (start loop on game start when audio enabled).",
+                "Coordinate with Agent 12 so validator and manifest match the final contract."
+              ]
+            },
+            "12": {
+              "status": "needs_followup",
+              "asks": [
+                "Align `tools/assets_manifest.json` + `tools/validate_assets.py` with the final locked audio contract (support nested paths if chosen).",
+                "Fix `building_menu_open` screenshot scenario apply-hook to open the new Build list panel (`building_list_panel`)."
+              ]
+            },
+            "14": {
+              "status": "needs_followup",
+              "asks": [
+                "Provide the actual CC0/permissive audio files into `assets/audio/**` exactly matching the final locked contract.",
+                "Ensure third_party proof files remain present and `assets/ATTRIBUTION.md` audio section stays accurate."
+              ]
+            },
+            "11": {
+              "status": "needs_followup",
+              "asks": [
+                "After above fixes land: re-run `python tools/qa_smoke.py --quick` and confirm PASS; run `python tools/validate_assets.py --report` and confirm no errors.",
+                "Capture deterministic screenshots: `bounty_in_black_fog` and `building_menu_open` and confirm visuals (bounty visible on black fog; build menu visible).",
+                "Quick manual interaction check: Build → click building row → place → ESC cancels."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "12", "14", "11"],
+            "do_not_send": ["06", "08"],
+            "rationale": "AI + UI implementations are complete and passing qa_smoke; remaining work is audio asset alignment/files + tooling scenario hook + QA verification."
+          }
+        }
+      }
+    },
     "wk1-broad-sweep-midweek-endweek": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",

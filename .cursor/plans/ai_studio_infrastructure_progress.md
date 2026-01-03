@@ -1,6 +1,6 @@
 ### AI Studio / Agents Infrastructure — Progress Log (Kingdom Sim)
 
-**Document purpose**: This is a detailed, “printable” record of what we’ve built so far to operationalize the **AI Studio** (13 department-lead agents) inside Cursor for Kingdom Sim, including planning structure, multi-agent coordination, logging formats, and PM synthesis patterns.
+**Document purpose**: This is a detailed, “printable” record of what we’ve built so far to operationalize the **AI Studio** (14 department-lead agents) inside Cursor for Kingdom Sim, including planning structure, multi-agent coordination, logging formats, and PM synthesis patterns.
 
 **Audience**: Jaimie (solo dev + studio operator), and future “you” returning after time away.
 
@@ -10,7 +10,7 @@
 
 ### 1) Starting point (what existed at the beginning)
 
-- **Agent card set**: A single document listing 13 directors and shared rules:
+- **Agent card set**: A single document listing the directors and shared rules:
   - `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`
   - Contains:
     - Department lead definitions (ExecutiveProducer_PM, GameDirector_ProductOwner, TechnicalDirector_Architecture, etc.)
@@ -92,7 +92,7 @@ Even with instructions like “only edit your line,” concurrency still led to 
 
 ### 5) Solution: per-agent files (no conflicts) + structured schema
 
-We switched to **13 agent-owned files** (one per director), placed under:
+We switched to **agent-owned files** (one per director), placed under:
 
 - `.cursor/plans/agent_logs/`
 
@@ -110,6 +110,7 @@ We switched to **13 agent-owned files** (one per director), placed under:
 - `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json`
 - `.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json`
 - `.cursor/plans/agent_logs/agent_13_SteamRelease_Ops_Marketing.json`
+- `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json` (added later when audio work entered scope)
 
 #### Design goals for the new schema
 - **No collisions**: each agent edits only their own file.
@@ -306,7 +307,7 @@ This keeps coordination tight and avoids repeating guidance 13 times.
 ### 11) Key conventions established
 
 #### IDs
-- **Agents**: `01`..`13`
+- **Agents**: `01`..`14`
 - **Sprints**: descriptive string, stable (example: `wk1-broad-sweep-midweek-endweek`)
 - **Rounds**: `wkN_rM` (or similar)
 
@@ -360,7 +361,7 @@ These are not required, but will make future sprints smoother.
 
 **Agent logs**
 - `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` (PM hub)
-- `.cursor/plans/agent_logs/agent_02_...json` through `agent_13_...json`
+- `.cursor/plans/agent_logs/agent_02_...json` through `agent_14_...json`
 
 **Template**
 - `.cursor/plans/agent_logs/REPLY_ENTRY_TEMPLATE.json`
@@ -373,9 +374,27 @@ These are not required, but will make future sprints smoother.
 ### 15) Current status snapshot (as of this document)
 
 - Agent infrastructure is now stable:
-  - 13 agent files, no collisions
+  - Agent-owned log files, no collisions
   - structured replies nested by sprint/round
   - PM decisions centralized and broadcast through Agent 01 file
 - Agents are currently working on a broadcast prompt to acknowledge PM decisions and proceed with follow-ups.
+
+---
+
+### 16) Adding a new agent (example: Agent 14 SoundDirector_Audio)
+
+When a new domain becomes important (e.g., audio), we add a dedicated director to keep decisions consistent and licensing safe.
+
+Checklist:
+- Update the agent cards doc:
+  - Add the new role to the TOC in `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`
+  - Add a full card section with: Mission, Responsibilities, Constraints, Typical deliverables, Interfaces
+- Add a new agent-owned log file under:
+  - `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json`
+  - Schema must match v2.0 (nested sprints → rounds) and follow `REPLY_ENTRY_TEMPLATE.json`.
+- PM roster discipline:
+  - Only activate Agent 14 in sprints where audio is in scope; otherwise keep silent to reduce noise.
+- Tooling note:
+  - If the sprint adds new asset classes (audio), ToolsDevEx should extend the validator + attribution rules in the same sprint so release gates remain credible.
 
 

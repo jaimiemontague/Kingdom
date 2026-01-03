@@ -70,3 +70,212 @@ Agent 11 — QA (optional)
 
 Reply with: PASS/FAIL + any issues observed + minimal repro steps.
 PROMPT END
+
+
+========================
+WK6 sprint status (after wk6_r2)
+========================
+
+Status (confirmed via local repo + agent logs)
+- ✅ `python tools/qa_smoke.py --quick` PASS (determinism guard + scenarios).
+- ✅ Audio pipeline code exists: `game/audio/audio_system.py` + `game/audio/EVENT_CONTRACT.md`.
+- ✅ Build menu list panel exists: `game/ui/building_list_panel.py` and engine wiring for click/hotkey parity.
+- ✅ Rangers: exploration bias + black-fog bounty eligibility implemented (Agent 06).
+- ✅ Fog: bounty rendering/pathing support + deterministic XP-for-reveal implemented (Agent 03).
+- ⚠️ Assets: `assets/audio/sfx/` and `assets/audio/ambient/` are present but **empty**; `validate_assets --report` warns missing audio files.
+- ⚠️ Audio naming mismatch to resolve:
+  - Code/contract currently expects flat filenames like `assets/audio/sfx/building_place.wav` and `assets/audio/ambient/ambient_loop.ogg`.
+  - Attribution + SoundDirector plan currently references nested files like `assets/audio/sfx/build/place.wav` and `assets/audio/ambient/day_loop.ogg`.
+
+Sprint status
+- WK6 feature work is **implemented**, but sprint is **NOT shippable yet** until we:
+  - Align audio naming (contract + validator + attribution must agree), and
+  - Add actual CC0/permissive audio files into `assets/audio/**`, and
+  - Run snapshot captures for `bounty_in_black_fog` + `building_menu_open` and rebuild gallery.
+
+
+Next prompt (send to only necessary agents)
+Send to: Agent 03 (Architecture), Agent 12 (Tools/DevEx), Agent 14 (SoundDirector), Agent 11 (QA)
+Do NOT send to: Agent 06, Agent 08 (implemented and gates pass; only re-engage if fixes needed).
+
+PROMPT START
+WK6 Finalization — wk6_r3 (ship gate)
+
+Write your reply under:
+`sprints["wk6-audio-buildmenu-fogbounties-explorexp"].rounds["wk6_r3"]`
+
+Goal
+- Make WK6 **shippable** by aligning the audio contract + validator + attribution, landing actual CC0 audio files, and producing the required deterministic screenshots.
+
+Hard gates
+- `python tools/qa_smoke.py --quick` must PASS.
+- `python tools/validate_assets.py --report` must have **0 errors** (warns allowed for Build A, but try to eliminate warns if audio files are added).
+- Snapshot capture commands must run successfully:
+  - `python tools/capture_screenshots.py --scenario bounty_in_black_fog --seed 3 --out docs/screenshots/wk6_after/bounty_in_black_fog_seed3 --size 1920x1080 --ticks 0`
+  - `python tools/capture_screenshots.py --scenario building_menu_open --seed 3 --out docs/screenshots/wk6_after/building_menu_open_seed3 --size 1920x1080 --ticks 0`
+
+PM decisions (LOCKED)
+- Tone: **cozy/peaceful (Majesty-like)**
+- Ambient: **single neutral loop (Build A)**
+- Variants: **Build B only** (multiple variants with deterministic selection)
+
+Agent 03 — Architecture (required)
+1) Resolve audio naming contract mismatch (pick ONE and make it consistent)
+- Option A (preferred): adopt SoundDirector/Attribution structure:
+  - `assets/audio/sfx/build/place.wav`
+  - `assets/audio/sfx/build/destroyed.wav`
+  - `assets/audio/sfx/bounty/placed.wav`
+  - `assets/audio/sfx/weapons/ranger_shot.wav` (and optionally `skeleton_archer_shot.wav`)
+  - `assets/audio/ambient/day_loop.ogg`
+  - Update `game/audio/audio_system.py` + `game/audio/EVENT_CONTRACT.md` accordingly.
+- Coordinate with Agent 12 so validator matches whatever you lock.
+
+2) Ensure ambient actually plays (Build A)
+- Pick a simple rule: start ambient loop on game start (or first tick) when audio enabled.
+
+Agent 14 — SoundDirector_Audio (required)
+1) Provide the actual audio files (CC0/permissive) into `assets/audio/**`
+- Place files to exactly match the final locked contract (after Agent 03 aligns it).
+- Ensure third_party proof files remain present and attribution stays accurate.
+
+Agent 12 — Tools/DevEx (required)
+1) Align `tools/assets_manifest.json` + `tools/validate_assets.py` with the final audio contract
+- If the contract uses nested paths (e.g., `sfx/build/place.wav`), validator must support that.
+- Keep Build A policy: warn-only is acceptable, but once files exist, aim for **no warnings**.
+
+2) Fix `building_menu_open` scenario apply-hook to open the new Build list panel
+- Ensure it opens the correct panel (`building_list_panel`) implemented in WK6.
+
+Agent 11 — QA (required)
+1) Run verification suite after fixes land
+- Re-run `qa_smoke --quick` and confirm PASS.
+- Capture the two screenshots above and confirm visually:
+  - bounty marker readable in black fog
+  - build menu panel visible and readable
+- Quick manual check (5 min): click Build → click a building row → place building → ESC cancels.
+
+Reply format (all agents)
+- Status: COMPLETE / IN_PROGRESS / BLOCKED
+- Files changed
+- Evidence (commands + outputs)
+- Remaining risks (max 3)
+PROMPT END
+
+
+========================
+WK6 sprint status (current)
+========================
+
+Status (confirmed via agent logs: wk6_r1)
+- Agent 03 posted `wk6_r1`: ✅ Architecture contracts defined for AudioSystem (event-driven, non-authoritative), fog bounty/pathing (recommends direct steering fallback), and deterministic XP-for-reveal data flow.
+- Agent 06 posted `wk6_r1`: ✅ AI behavior spec for Rangers: bias exploration toward black-fog “frontiers” + ensure black-fog bounties remain eligible; proposes tuning knobs + anti-thrash commitment window.
+- Agent 08 posted `wk6_r1`: ✅ UX spec for clickable Build menu list panel; requires unified “select building” code path shared by hotkeys and clicks.
+- Agent 12 posted `wk6_r1`: ✅ Tools specs for audio asset validation + new snapshot scenarios (bounty_in_black_fog, building_menu_open); marked “awaiting dependencies” (audio naming + event contracts).
+- Agent 14 posted `wk6_r1`: ✅ Sound map + CC0 sourcing plan + folder structure + mixing/cooldown guidance; asks PM preference on tone/day-night/variants.
+- Agent 11 posted `wk6_r1`: ✅ QA checklist + suggested minimal deterministic checks; no code changes yet.
+
+Sprint status
+- WK6 is **READY FOR IMPLEMENTATION (wk6_r2)**. All Round-1 specs are in; no hard blockers.
+- Primary dependency ordering:
+  - Lock audio naming + event names (03 + 14) → enables asset manifest/validator work (12) and engine integration (03).
+  - Implement Build menu list + unified selection path (08 + 03).
+  - Implement black-fog bounty targeting/pathing + Ranger exploration bias + deterministic XP (03 + 06).
+  - Then QA verification + snapshots (11 + 12).
+
+PM decision needed (to unblock audio asset finalization)
+- Tone preference: **cozy/peaceful (Majesty-like)**.
+- Ambient: **single neutral loop (Build A)**.
+- Variants: **multiple variants with deterministic selection (Build B)** (Build A ships single file per event).
+
+
+Next prompt (send to only necessary agents)
+Send to: Agent 03 (Architecture), Agent 06 (AI), Agent 08 (UX/UI), Agent 12 (Tools), Agent 14 (Sound)
+Do NOT send to: Agent 11 (QA) yet (they can wait until implementation lands; we’ll ping them for verification later).
+
+PROMPT START
+WK6 Implementation Kickoff — wk6_r2 (Build A focus)
+
+Write your reply under:
+`sprints["wk6-audio-buildmenu-fogbounties-explorexp"].rounds["wk6_r2"]`
+
+Context files (keep in your working set):
+- `.cursor/plans/wk6_ranged_update+_dee12351.plan.md`
+- `.cursor/plans/ai_studio_infrastructure_progress.md`
+- `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`
+
+Sprint goal (Build A)
+- Audio: Event-driven, non-authoritative `AudioSystem` with CC0/permissive SFX + ambient; safe when disabled/mixer missing.
+- UI: Clicking **Build** opens a clickable building list; clicking a row behaves exactly like the hotkey (unified selection path).
+- Fog: Bounties must be visible even in solid black fog; Rangers must respond/path to those bounties even when unrevealed/far.
+- Rangers: More likely to explore black fog; gain deterministic XP for newly revealed black fog tiles.
+
+Global constraints
+- Determinism: no wall-clock dependencies; no Python `hash()` for deterministic selection.
+- Keep gates green: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`.
+- Audio must never affect simulation outcomes (pure consumer).
+
+Agent 03 — Architecture/Integration (required)
+1) Lock audio event contract + naming (today)
+- Confirm final event `type` names used for audio triggers (use your wk6_r1 contract).
+- Publish the canonical list (event name → logical sound key) so Agent 14 and Agent 12 can align file naming + manifest.
+
+2) Implement `AudioSystem` skeleton + engine wiring (Build A)
+- Create `game/audio/audio_system.py` (safe mixer init, preload SFX, cooldowns, ambient loop).
+- Wire into `game/engine.py` similarly to VFX: consume emitted events and trigger sound.
+- Ensure safe no-op behavior if audio disabled or mixer init fails.
+
+3) Fog bounty support (Build A)
+- Ensure bounty markers render even when tile is `Visibility.UNSEEN` (solid black).
+- Ensure Rangers can pursue bounties in black fog:
+  - Prefer your recommended approach: direct steering toward far unrevealed targets, switching to normal pathing when near/revealed.
+
+4) Deterministic XP-for-reveal (Build A)
+- Add per-Ranger revealed tile tracking + XP awards for newly revealed tiles (idempotent/deterministic).
+
+Agent 06 — AI Behavior (required)
+1) Implement Ranger black-fog exploration bias
+- Add deterministic frontier-target selection (UNSEEN tiles adjacent to SEEN/VISIBLE) with bounded scan radius.
+- Add commitment window to prevent thrash.
+- Add tuning knobs in `config.py` (as in your wk6_r1 spec) with sensible defaults.
+
+2) Ensure bounty targeting does not exclude black-fog bounties
+- Remove any visibility-based filtering in bounty selection/scoring.
+- If needed, add a small black-fog distance penalty (but never exclusion).
+
+Agent 08 — UX/UI (required)
+1) Implement Build menu list panel (Build A)
+- Add clickable panel listing buildings (icon/name/cost/hotkey).
+- Close rules: ESC, click outside, Build button toggles closed; selecting building closes panel and enters placement mode.
+- Unavailable rows are grayed and non-clickable (cannot afford / prerequisites / conflicts).
+
+2) Enforce click/hotkey parity
+- Coordinate with Agent 03 on a single unified method like `select_building_for_placement(building_type)` and route both hotkeys + clicks through it.
+
+Agent 12 — Tools/DevEx (required, but after audio naming is locked)
+1) Audio asset validation
+- Add `audio` section to `tools/assets_manifest.json` and validate `assets/audio/**` exists and attribution is present (reuse existing attribution checks).
+- Decide strictness: for Build A, OK to warn-only if missing; for Build B, make missing audio a strict failure (but follow repo conventions).
+
+2) Snapshot scenarios (Build A)
+- Add `bounty_in_black_fog` and `building_menu_open` scenarios to `tools/screenshot_scenarios.py`.
+- Register scenarios; ensure determinism; ensure captures work headless.
+
+Agent 14 — SoundDirector_Audio (required)
+1) Finalize Build A audio pack + naming aligned to Agent 03 contract
+- Provide final file list (exact filenames + folders) that match the sound map keys.
+- Keep Build A minimal: one file per event is acceptable; no variants unless you can define deterministic selection rules.
+
+2) Attribution + third_party proof
+- Update `assets/ATTRIBUTION.md` with audio section, and include `assets/audio/third_party/**` license/README proof files.
+
+3) Confirm 3 PM choices (reply with your recommendation, or ask for final decision)
+- Tone: **cozy/peaceful (Majesty-like)** (locked).
+- Ambient: **single neutral loop (Build A)** (locked).
+- Variants: **multiple variants with deterministic selection (Build B)** (locked; for Build A, ship single files per event).
+
+Reply format (all agents)
+- Status: COMPLETE / IN_PROGRESS / BLOCKED
+- What you changed (files + key behaviors)
+- Evidence: commands run + results
+- Any risks/edge cases you want QA to target
+PROMPT END

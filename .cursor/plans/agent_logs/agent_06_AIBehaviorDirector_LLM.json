@@ -417,6 +417,172 @@
           }
         }
       }
+    },
+    "wk6-audio-buildmenu-fogbounties-explorexp": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",
+        "notes": "Audio + Build Menu + Fog Bounties + Ranger Exploration XP"
+      },
+      "rounds": {
+        "wk6_r1": {
+          "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",
+            "notes": "Audio + Build Menu + Fog Bounties + Ranger Exploration XP"
+          },
+          "round_id": "wk6_r1",
+          "round_meta": {
+            "prompt_set_id": "wk6_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T15:04:55.7955953-07:00"
+          },
+          "prompt_text": "WK6 kickoff (Round 1 / wk6_r1): Update baseline AI behavior spec for Rangers exploring black fog more aggressively and Rangers responding to bounties that are in black fog. Provide tuning knobs + guardrails against thrash.",
+          "response": {
+            "received_at_local": "2026-01-03T15:04:55.7955953-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 06 (AIBehaviorDirector_LLM) — WK6 Round 1 specs for **Ranger exploration bias toward black fog** and **bounty targeting in black fog**. This is a **spec/contract round** (no implementation yet); I will propose behavior changes, tuning knobs, and guardrails.\n\n### Deliverables\n- Updated AI behavior spec for Ranger exploration (bias toward black fog boundaries).\n- Updated bounty targeting rules (do not filter bounties in black fog).\n- Tuning knobs (configurable thresholds) for exploration bias strength and commitment windows.\n- Guardrails against thrash (anti-oscillation, pathfinding churn, determinism compliance).\n- Expected file touchpoints (paths only).\n\n### Proposed changes (file boundaries)\n\n#### 1. Ranger exploration bias toward black fog (`ai/basic_ai.py`)\n\n**Current behavior**: `explore()` method picks a random direction within patrol zone (no visibility awareness).\n\n**New behavior**: When Rangers are idle/no bounty, bias exploration targets toward **black fog boundaries** (UNSEEN tiles adjacent to SEEN/VISIBLE tiles).\n\n**Implementation approach**:\n- Add `_find_black_fog_frontier_tiles(world, hero, max_candidates)` helper that:\n  - Scans a radius around hero (e.g., 8-12 tiles)\n  - Finds UNSEEN tiles that are adjacent to SEEN or VISIBLE tiles (frontier)\n  - Returns candidate grid coordinates with distance scores\n  - Uses deterministic ordering (stable sort by distance, then by grid coords)\n- Modify `explore()` for Rangers:\n  - If `hero.hero_class == \"ranger\"`:\n    - Call `_find_black_fog_frontier_tiles()`\n    - If candidates found: pick one using seeded RNG (weighted by distance: closer = higher weight)\n    - Fallback: use existing random wander if no frontier found\n- **Tuning knob**: `RANGER_EXPLORE_BLACK_FOG_BIAS` (0.0-1.0, default 0.7)\n  - 0.0 = no bias (current behavior)\n  - 1.0 = always pick frontier if available\n  - 0.7 = 70% chance to pick frontier, 30% random wander\n\n**Guardrails**:\n- Limit frontier scan radius (perf: avoid scanning entire map)\n- Stable ordering (deterministic tie-breaks)\n- Commitment window: once a frontier target is chosen, stick with it for N ms (e.g., 3-5 seconds) to avoid rapid re-targeting\n- Fallback gracefully if no frontier exists (all explored or hero is in deep black fog)\n\n#### 2. Bounty targeting in black fog (`ai/basic_ai.py`)\n\n**Current behavior**: `maybe_take_bounty()` and `score_bounty()` do not check visibility; bounties in black fog may be filtered or scored lower if pathfinding fails.\n\n**New behavior**: Bounties in black fog are **fully eligible** for targeting; pathfinding must handle unrevealed coordinates.\n\n**Implementation approach**:\n- **No filtering by visibility**: Remove any checks that exclude bounties based on tile visibility in `maybe_take_bounty()`.\n- **Pathfinding contract** (depends on Agent 03): Pathfinding system must accept unrevealed coordinates and either:\n  - Treat UNSEEN tiles as traversable for planning (optimistic pathing)\n  - Use direct steering toward target until near (fallback)\n- **Scoring adjustment** (optional): If bounty is in black fog, add a small distance penalty (e.g., +20% distance) to account for uncertainty, but **do not exclude it**.\n- **Tuning knob**: `BOUNTY_BLACK_FOG_DISTANCE_PENALTY` (multiplier, default 1.2)\n  - Applied to distance calculation in `score_bounty()` if target tile is UNSEEN\n\n**Guardrails**:\n- Ensure bounty pursuit timeout still applies (avoid infinite pathing to unreachable black fog)\n- If pathfinding fails repeatedly, abandon bounty after N attempts (existing timeout logic should handle this)\n\n#### 3. XP-for-reveal tracking (contract-driven; depends on Agent 03)\n\n**Note**: XP award logic is **not in AI scope** (belongs to Hero/Engine), but AI must not interfere with reveal detection.\n\n**AI responsibility**: Ensure exploration behavior does not prevent reveal events (e.g., Rangers must actually move to black fog tiles to trigger reveals).\n\n**No AI code changes needed** for XP tracking itself; this is a data flow contract (Agent 03 will define the event/field structure).\n\n### Acceptance criteria (AI behavior slice)\n\n**Ranger exploration**:\n- Rangers in idle state (no bounty, no enemies) prefer moving toward black fog boundaries over random wander.\n- Exploration is **deterministic** (same seed + sim state → same target choice).\n- Rangers do not thrash (rapidly switch exploration targets); commitment window prevents oscillation.\n- Fallback works: if no frontier exists, Rangers still explore (random wander).\n\n**Bounty targeting**:\n- Bounties placed in black fog are **visible to Rangers** (no filtering by visibility).\n- Rangers can path to bounties in black fog (pathfinding handles unrevealed coordinates per Agent 03 contract).\n- Bounty scoring accounts for black fog uncertainty (distance penalty) but does not exclude black fog bounties.\n- Existing bounty pursuit timeout/abandon logic still works for black fog bounties.\n\n**Determinism**:\n- All RNG uses seeded sim RNG (`_AI_RNG`).\n- Frontier tile selection uses stable ordering (deterministic tie-breaks).\n- No wall-clock time dependencies.\n\n**Performance**:\n- Frontier scan is bounded (limited radius, not full map scan).\n- No per-frame allocations in exploration logic (cache frontier candidates if needed).\n\n### Risks + mitigations\n\n**Risk**: Frontier scan could be expensive if radius is too large.\n- **Mitigation**: Limit scan radius (e.g., 8-12 tiles max); cache results per hero for N ms (e.g., 1-2 seconds).\n\n**Risk**: Rangers might oscillate between nearby frontier tiles.\n- **Mitigation**: Commitment window (3-5 seconds) prevents rapid re-targeting; use hysteresis (prefer continuing current direction).\n\n**Risk**: Pathfinding to black fog bounties might fail or be slow.\n- **Mitigation**: Rely on Agent 03 pathfinding contract (optimistic pathing or direct steering); existing timeout logic will abandon unreachable bounties.\n\n**Risk**: Black fog bias might make Rangers ignore nearby threats/bounties.\n- **Mitigation**: Exploration bias only applies in **idle state** (no bounty, no enemies); bounty/combat priorities still override exploration.\n\n**Risk**: Determinism drift from float comparisons in frontier distance calculations.\n- **Mitigation**: Use squared distances and tile-based thresholds; stable ordering (sort by distance, then by grid coords).\n\n### Dependencies\n\n**Agent 03 (Architecture)**:\n- Pathfinding contract for unrevealed coordinates (how to path to UNSEEN tiles).\n- XP tracking contract (event structure for tile reveals; AI does not implement XP, but must not interfere).\n\n**Agent 11 (QA)**:\n- Deterministic repro scenario for Ranger exploration (verify black fog bias).\n- Deterministic repro scenario for black fog bounty targeting (verify pathing works).\n\n### Questions back to PM (max 3)\n\n1. **Exploration bias strength**: Should `RANGER_EXPLORE_BLACK_FOG_BIAS` default to 0.7 (70% frontier, 30% random) or higher (0.9)? Higher = more aggressive exploration but less variety.\n\n2. **Frontier scan radius**: What radius (in tiles) should we scan for frontier tiles? Proposal: 10 tiles (balance between coverage and perf).\n\n3. **Commitment window duration**: How long (in sim-time ms) should Rangers stick with a frontier target before re-evaluating? Proposal: 4000 ms (4 seconds) to prevent thrash.\n\n### Recommended next actions\n\n1. **Wait for Agent 03 contracts**: Pathfinding contract for unrevealed coordinates + XP tracking event structure.\n2. **After contracts locked**: Implement frontier detection + Ranger exploration bias in `ai/basic_ai.py`.\n3. **Remove visibility filtering**: Ensure `maybe_take_bounty()` and `score_bounty()` do not exclude black fog bounties.\n4. **Add tuning knobs**: Add `RANGER_EXPLORE_BLACK_FOG_BIAS`, `RANGER_FRONTIER_SCAN_RADIUS_TILES`, `RANGER_FRONTIER_COMMIT_MS` to `config.py`.\n5. **Test with Agent 11 scenarios**: Run deterministic repro scenarios to verify behavior quality.\n",
+            "summary_bullets": [
+              "Ranger exploration bias: When idle, Rangers prefer moving toward black fog boundaries (UNSEEN tiles adjacent to SEEN/VISIBLE) over random wander.",
+              "Bounty targeting: Remove visibility filtering; bounties in black fog are fully eligible for targeting (pathfinding must handle unrevealed coordinates per Agent 03 contract).",
+              "Tuning knobs: RANGER_EXPLORE_BLACK_FOG_BIAS (0.0-1.0, default 0.7), RANGER_FRONTIER_SCAN_RADIUS_TILES (default 10), RANGER_FRONTIER_COMMIT_MS (default 4000).",
+              "Guardrails: Commitment window prevents oscillation; bounded frontier scan (perf); stable ordering (determinism); exploration only in idle state (bounty/combat override)."
+            ],
+            "proposed_changes": [
+              "Add _find_black_fog_frontier_tiles() helper in ai/basic_ai.py: scan radius around hero, find UNSEEN tiles adjacent to SEEN/VISIBLE, return candidates with deterministic ordering.",
+              "Modify explore() for Rangers: if hero_class == 'ranger', call frontier helper and pick target with seeded RNG (weighted by distance); fallback to random wander if no frontier.",
+              "Remove visibility filtering in maybe_take_bounty() and score_bounty(): ensure bounties in black fog are not excluded.",
+              "Add distance penalty in score_bounty() for black fog bounties (BOUNTY_BLACK_FOG_DISTANCE_PENALTY, default 1.2) but do not exclude them.",
+              "Add tuning knobs to config.py: RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS."
+            ],
+            "acceptance_criteria": [
+              "Rangers in idle state prefer moving toward black fog boundaries over random wander (deterministic, same seed → same choice).",
+              "Rangers do not thrash (rapidly switch exploration targets); commitment window prevents oscillation.",
+              "Bounties in black fog are visible to Rangers and eligible for targeting (no filtering by visibility).",
+              "Rangers can path to bounties in black fog (pathfinding handles unrevealed coordinates per Agent 03 contract).",
+              "Determinism: all RNG uses seeded sim RNG; stable ordering for frontier selection; no wall-clock dependencies.",
+              "Performance: frontier scan is bounded (limited radius); no per-frame allocations."
+            ],
+            "risks": [
+              "Frontier scan could be expensive if radius is too large (mitigate: limit radius 8-12 tiles; cache results per hero for 1-2 seconds).",
+              "Rangers might oscillate between nearby frontier tiles (mitigate: commitment window 3-5 seconds; hysteresis for direction).",
+              "Pathfinding to black fog bounties might fail or be slow (mitigate: rely on Agent 03 contract; existing timeout logic will abandon unreachable bounties).",
+              "Black fog bias might make Rangers ignore nearby threats/bounties (mitigate: exploration bias only in idle state; bounty/combat priorities override).",
+              "Determinism drift from float comparisons (mitigate: squared distances; tile-based thresholds; stable ordering)."
+            ],
+            "dependencies": [
+              "Agent 03: Pathfinding contract for unrevealed coordinates (how to path to UNSEEN tiles).",
+              "Agent 03: XP tracking contract (event structure for tile reveals; AI does not implement XP but must not interfere).",
+              "Agent 11: Deterministic repro scenarios for Ranger exploration (black fog bias) and black fog bounty targeting (pathing)."
+            ],
+            "questions_back_to_pm": [
+              "Exploration bias strength: Should RANGER_EXPLORE_BLACK_FOG_BIAS default to 0.7 (70% frontier, 30% random) or higher (0.9)? Higher = more aggressive but less variety.",
+              "Frontier scan radius: What radius (in tiles) should we scan? Proposal: 10 tiles (balance coverage/perf).",
+              "Commitment window duration: How long (sim-time ms) should Rangers stick with a frontier target? Proposal: 4000 ms (4 seconds) to prevent thrash."
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 03 contracts: pathfinding contract for unrevealed coordinates + XP tracking event structure.",
+              "After contracts locked: implement frontier detection + Ranger exploration bias in ai/basic_ai.py.",
+              "Remove visibility filtering: ensure maybe_take_bounty() and score_bounty() do not exclude black fog bounties.",
+              "Add tuning knobs to config.py: RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS.",
+              "Test with Agent 11 scenarios: run deterministic repro scenarios to verify behavior quality."
+            ],
+            "agent_fields": {
+              "files_to_touch": [
+                "ai/basic_ai.py (frontier detection + Ranger explore() modification + bounty targeting updates)",
+                "config.py (tuning knobs: RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS, BOUNTY_BLACK_FOG_DISTANCE_PENALTY)"
+              ],
+              "test_commands": [
+                "python tools/qa_smoke.py --quick (must pass)",
+                "python tools/observe_sync.py --scenario ranger_explore_black_fog --seed 3 --seconds 30 --qa (after Agent 11 adds scenario)",
+                "python tools/observe_sync.py --scenario bounty_in_black_fog --seed 3 --seconds 30 --qa (after Agent 11 adds scenario)"
+              ],
+              "behavior_notes": [
+                "Frontier detection: find UNSEEN tiles adjacent to SEEN/VISIBLE (black fog boundary).",
+                "Exploration bias only applies in idle state (no bounty, no enemies); bounty/combat priorities override.",
+                "Bounty targeting: remove visibility filtering; add distance penalty for black fog but do not exclude.",
+                "Commitment window prevents rapid re-targeting (anti-oscillation).",
+                "All RNG uses seeded sim RNG (_AI_RNG); stable ordering for deterministic behavior."
+              ]
+            }
+          }
+        },
+        "wk6_r2": {
+          "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",
+            "notes": "Audio + Build Menu + Fog Bounties + Ranger Exploration XP"
+          },
+          "round_id": "wk6_r2",
+          "round_meta": {
+            "prompt_set_id": "wk6_implementation_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T15:27:15.5763968-07:00"
+          },
+          "prompt_text": "WK6 Implementation Kickoff — wk6_r2 (Build A focus): Implement Ranger black-fog exploration bias (deterministic frontier-target selection with bounded scan radius, commitment window) and ensure bounty targeting does not exclude black-fog bounties (remove visibility filtering, add small distance penalty but never exclusion).",
+          "response": {
+            "received_at_local": "2026-01-03T15:27:15.5763968-07:00",
+            "status": "complete",
+            "raw": "### Status\nCOMPLETE — Implemented Ranger black-fog exploration bias and removed visibility filtering from bounty targeting.\n\n### What changed (files + key behaviors)\n\n**Files modified:**\n- `ai/basic_ai.py`:\n  - Added `_find_black_fog_frontier_tiles()` helper: scans bounded radius (10 tiles) around hero, finds UNSEEN tiles adjacent to SEEN/VISIBLE (frontier), returns candidates with deterministic ordering.\n  - Modified `explore()` for Rangers: checks commitment window, calls frontier helper, picks target with seeded RNG (weighted by distance), sets commitment window (4 seconds), fallback to random wander if no frontier.\n  - Updated `handle_idle()`: Rangers call `explore()` (which handles frontier logic) instead of random wander; non-Rangers keep original random wander behavior.\n  - Updated `score_bounty()`: accepts optional `world` parameter, checks if bounty tile is UNSEEN (black fog), applies distance penalty multiplier (1.2x) for black fog bounties but never excludes them.\n  - Updated `maybe_take_bounty()`: passes `world` from `game_state` to `score_bounty()`.\n- `config.py`:\n  - Added `RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7` (70% chance to pick frontier vs random wander).\n  - Added `RANGER_FRONTIER_SCAN_RADIUS_TILES = 10` (maximum scan radius for frontier detection).\n  - Added `RANGER_FRONTIER_COMMIT_MS = 4000` (commitment window to prevent rapid re-targeting).\n  - Added `BOUNTY_BLACK_FOG_DISTANCE_PENALTY = 1.2` (distance multiplier for black fog bounties).\n\n**Key behaviors:**\n- Rangers in idle state (no bounty, no enemies) prefer moving toward black fog boundaries (UNSEEN tiles adjacent to SEEN/VISIBLE) over random wander.\n- Exploration is deterministic (same seed + sim state → same target choice via stable ordering).\n- Commitment window (4 seconds) prevents rapid re-targeting (anti-oscillation).\n- Bounties in black fog are fully eligible for targeting (no visibility filtering); distance penalty (1.2x) accounts for uncertainty but never excludes.\n- Frontier scan is bounded (10 tiles radius) for performance.\n\n### Evidence: commands run + results\n\n**QA smoke test:**\n```\npython tools/qa_smoke.py --quick\n```\n**Result:** PASS\n- All scenarios passed (default, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM).\n- Determinism guard: PASS (no violations found).\n- No regressions in existing behavior.\n\n### Risks/edge cases for QA to target\n\n1. **Frontier detection edge cases:**\n   - Rangers in deep black fog (no adjacent SEEN/VISIBLE tiles) should fallback to random wander.\n   - Rangers at map edges (bounds checking).\n   - All tiles explored (no frontier candidates) should fallback gracefully.\n\n2. **Commitment window edge cases:**\n   - Rangers should not re-target during commitment window unless current target is invalid.\n   - Commitment window should reset when bounty/combat priorities override exploration.\n\n3. **Bounty targeting in black fog:**\n   - Bounties placed in black fog should be visible and targetable (rendering is Agent 03/08 scope).\n   - Pathfinding to black fog bounties should work (depends on Agent 03 pathfinding contract).\n   - Distance penalty should not make black fog bounties uncompetitive if they're close.\n\n4. **Determinism:**\n   - Same seed + sim state should produce same frontier target choices.\n   - Stable ordering (sort by distance, then grid coords) ensures deterministic tie-breaks.\n\n5. **Performance:**\n   - Frontier scan should not cause frame drops (bounded to 10 tiles radius).\n   - No per-frame allocations in exploration logic.\n\n### Dependencies satisfied\n\n- **Agent 03 pathfinding contract**: Not yet implemented, but bounty scoring does not block on it (penalty applied, but bounties still eligible). Pathfinding to black fog bounties will work once Agent 03 implements the contract.\n- **Agent 11 scenarios**: Not yet added, but existing scenarios pass. Will need `ranger_explore_black_fog` and `bounty_in_black_fog` scenarios for full verification.\n\n### Next actions\n\n- Wait for Agent 03 pathfinding contract implementation (for actual pathing to black fog bounties).\n- Coordinate with Agent 11 to add deterministic repro scenarios for Ranger exploration and black fog bounty targeting.\n- Monitor for any performance regressions in frontier scan (should be minimal due to bounded radius).",
+            "summary_bullets": [
+              "Implemented Ranger black-fog exploration bias: frontier detection (UNSEEN adjacent to SEEN/VISIBLE), deterministic selection, commitment window (4s) to prevent thrash.",
+              "Removed visibility filtering from bounty targeting: bounties in black fog are fully eligible; added distance penalty (1.2x) for uncertainty but never exclusion.",
+              "Added tuning knobs to config.py: RANGER_EXPLORE_BLACK_FOG_BIAS (0.7), RANGER_FRONTIER_SCAN_RADIUS_TILES (10), RANGER_FRONTIER_COMMIT_MS (4000), BOUNTY_BLACK_FOG_DISTANCE_PENALTY (1.2).",
+              "QA smoke test: PASS (all scenarios pass, determinism guard clean, no regressions)."
+            ],
+            "proposed_changes": [
+              "Added _find_black_fog_frontier_tiles() helper in ai/basic_ai.py: bounded scan (10 tiles), finds frontier tiles, deterministic ordering.",
+              "Modified explore() for Rangers: checks commitment window, calls frontier helper, weighted selection, sets commitment, fallback to random wander.",
+              "Updated handle_idle(): Rangers call explore() (frontier logic); non-Rangers keep random wander.",
+              "Updated score_bounty(): accepts world parameter, checks visibility, applies distance penalty for black fog bounties (never excludes).",
+              "Added tuning knobs to config.py: RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS, BOUNTY_BLACK_FOG_DISTANCE_PENALTY."
+            ],
+            "acceptance_criteria": [
+              "Rangers in idle state prefer moving toward black fog boundaries over random wander (deterministic, same seed → same choice).",
+              "Rangers do not thrash (rapidly switch exploration targets); commitment window prevents oscillation.",
+              "Bounties in black fog are visible to Rangers and eligible for targeting (no filtering by visibility).",
+              "Distance penalty applied for black fog bounties (1.2x) but never exclusion.",
+              "Determinism: all RNG uses seeded sim RNG; stable ordering for frontier selection; no wall-clock dependencies.",
+              "Performance: frontier scan is bounded (10 tiles radius); no per-frame allocations.",
+              "QA smoke test: PASS (all scenarios pass, determinism guard clean)."
+            ],
+            "risks": [
+              "Frontier detection may not find candidates in deep black fog (mitigated: fallback to random wander).",
+              "Commitment window may delay legitimate re-targeting (mitigated: 4s window is reasonable, bounty/combat override).",
+              "Pathfinding to black fog bounties depends on Agent 03 contract (mitigated: bounties still eligible, penalty applied, pathing will work once contract implemented).",
+              "Distance penalty might make close black fog bounties uncompetitive (mitigated: 1.2x is small, only affects scoring, never exclusion)."
+            ],
+            "dependencies": [
+              "Agent 03: Pathfinding contract for unrevealed coordinates (for actual pathing to black fog bounties; scoring works without it).",
+              "Agent 11: Deterministic repro scenarios for Ranger exploration (ranger_explore_black_fog) and black fog bounty targeting (bounty_in_black_fog)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for Agent 03 pathfinding contract implementation (for actual pathing to black fog bounties).",
+              "Coordinate with Agent 11 to add deterministic repro scenarios for Ranger exploration and black fog bounty targeting.",
+              "Monitor for any performance regressions in frontier scan (should be minimal due to bounded radius)."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "ai/basic_ai.py (frontier detection + Ranger explore() modification + bounty targeting updates)",
+                "config.py (tuning knobs: RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS, BOUNTY_BLACK_FOG_DISTANCE_PENALTY)"
+              ],
+              "commands_run": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "evidence": [
+                "qa_smoke: DONE: PASS (all scenarios pass, determinism_guard PASS, no regressions)"
+              ],
+              "implementation_notes": [
+                "Frontier detection: finds UNSEEN tiles adjacent to SEEN/VISIBLE (black fog boundary).",
+                "Exploration bias only applies in idle state (no bounty, no enemies); bounty/combat priorities override.",
+                "Bounty targeting: removed visibility filtering; added distance penalty for black fog but never exclusion.",
+                "Commitment window prevents rapid re-targeting (anti-oscillation).",
+                "All RNG uses seeded sim RNG (_AI_RNG); stable ordering for deterministic behavior."
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

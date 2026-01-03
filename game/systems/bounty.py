@@ -204,7 +204,16 @@ class Bounty:
         screen_x = self.x - cam_x
         screen_y = self.y - cam_y
         
-        # Draw flag pole
+        # WK6: Draw flag pole with stronger outline for black fog visibility
+        # Pole outline (darker brown for contrast)
+        pygame.draw.line(
+            surface,
+            (80, 50, 25),  # Dark brown outline
+            (screen_x, screen_y),
+            (screen_x, screen_y - 30),
+            5
+        )
+        # Pole core
         pygame.draw.line(
             surface,
             (139, 90, 43),  # Brown
@@ -213,13 +222,15 @@ class Bounty:
             3
         )
         
-        # Draw flag
+        # Draw flag with outline for black fog visibility
         flag_color = COLOR_GOLD
         flag_points = [
             (screen_x, screen_y - 30),
             (screen_x + 20, screen_y - 25),
             (screen_x, screen_y - 20),
         ]
+        # WK6: Add dark outline for black fog contrast
+        pygame.draw.polygon(surface, (100, 80, 0), flag_points)  # Dark gold outline
         pygame.draw.polygon(surface, flag_color, flag_points)
         
         # Draw reward amount

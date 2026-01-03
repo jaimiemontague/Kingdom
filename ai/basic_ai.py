@@ -6,7 +6,12 @@ import math
 import random
 from game.entities.hero import HeroState
 from game.systems.pathfinding import find_path, grid_to_world_path
-from config import TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN
+from game.world import Visibility
+from config import (
+    TILE_SIZE, HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN,
+    RANGER_EXPLORE_BLACK_FOG_BIAS, RANGER_FRONTIER_SCAN_RADIUS_TILES, RANGER_FRONTIER_COMMIT_MS,
+    BOUNTY_BLACK_FOG_DISTANCE_PENALTY
+)
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
 from game.systems.navigation import best_adjacent_tile
@@ -412,16 +417,25 @@ class BasicAI:
             hero.state = HeroState.MOVING
             hero.target = {"type": "patrol"}
         else:
-            # Wander within zone
-            if _AI_RNG.random() < 0.02:  # 2% chance per frame
-                angle = _AI_RNG.uniform(0, 2 * math.pi)
-                wander_dist = TILE_SIZE * _AI_RNG.uniform(1, 3)
-                target_x = zone_x + math.cos(angle) * wander_dist
-                target_y = zone_y + math.sin(angle) * wander_dist
-                debug_log(f"{hero.name} -> wandering to ({target_x:.0f}, {target_y:.0f})")
-                hero.target_position = (target_x, target_y)
-                hero.state = HeroState.MOVING
-                hero.target = {"type": "patrol"}
+            # WK6: Rangers use explore() which has black fog frontier bias; others use random wander
+            if getattr(hero, "hero_class", None) == "ranger":
+                # Check commitment window (prevent rapid re-targeting)
+                now_ms = sim_now_ms()
+                frontier_commit_until = int(getattr(hero, "_frontier_commit_until_ms", 0) or 0)
+                if now_ms >= frontier_commit_until or not hero.target_position:
+                    # Not committed or no current target, call explore() which handles frontier logic
+                    self.explore(hero, game_state)
+            else:
+                # Non-Rangers: random wander (original behavior)
+                if _AI_RNG.random() < 0.02:  # 2% chance per frame
+                    angle = _AI_RNG.uniform(0, 2 * math.pi)
+                    wander_dist = TILE_SIZE * _AI_RNG.uniform(1, 3)
+                    target_x = zone_x + math.cos(angle) * wander_dist
+                    target_y = zone_y + math.sin(angle) * wander_dist
+                    debug_log(f"{hero.name} -> wandering to ({target_x:.0f}, {target_y:.0f})")
+                    hero.target_position = (target_x, target_y)
+                    hero.state = HeroState.MOVING
+                    hero.target = {"type": "patrol"}
     
     def find_marketplace_with_potions(self, buildings: list):
         """Find a marketplace that can sell potions."""
@@ -704,14 +718,114 @@ class BasicAI:
                 hero.target = {"type": "shopping", "item": item_name}
                 break
     
+    def _find_black_fog_frontier_tiles(self, world, hero, max_candidates: int = 5):
+        """
+        Find UNSEEN tiles that are adjacent to SEEN or VISIBLE tiles (black fog frontier).
+        Returns list of (grid_x, grid_y, distance_tiles) tuples, sorted by distance (closest first).
+        Uses deterministic ordering (stable sort by distance, then by grid coords).
+        """
+        if not world or not hasattr(world, "visibility"):
+            return []
+        
+        hero_gx = int(hero.x // TILE_SIZE)
+        hero_gy = int(hero.y // TILE_SIZE)
+        scan_radius = RANGER_FRONTIER_SCAN_RADIUS_TILES
+        
+        candidates = []
+        # Scan a square region around hero (bounded for perf)
+        for dy in range(-scan_radius, scan_radius + 1):
+            for dx in range(-scan_radius, scan_radius + 1):
+                gx = hero_gx + dx
+                gy = hero_gy + dy
+                
+                # Bounds check
+                if gx < 0 or gx >= world.width or gy < 0 or gy >= world.height:
+                    continue
+                
+                # Check if this tile is UNSEEN (black fog)
+                if world.visibility[gy][gx] != Visibility.UNSEEN:
+                    continue
+                
+                # Check if it's adjacent to SEEN or VISIBLE (frontier)
+                is_frontier = False
+                for adj_dy in [-1, 0, 1]:
+                    for adj_dx in [-1, 0, 1]:
+                        if adj_dx == 0 and adj_dy == 0:
+                            continue
+                        adj_gx = gx + adj_dx
+                        adj_gy = gy + adj_dy
+                        if 0 <= adj_gx < world.width and 0 <= adj_gy < world.height:
+                            adj_vis = world.visibility[adj_gy][adj_gx]
+                            if adj_vis == Visibility.SEEN or adj_vis == Visibility.VISIBLE:
+                                is_frontier = True
+                                break
+                    if is_frontier:
+                        break
+                
+                if is_frontier:
+                    # Calculate distance (squared for comparison, avoid sqrt until needed)
+                    dist_sq = dx * dx + dy * dy
+                    candidates.append((gx, gy, math.sqrt(dist_sq)))
+        
+        # Stable sort: by distance (closest first), then by grid coords (deterministic tie-break)
+        candidates.sort(key=lambda c: (c[2], c[1], c[0]))
+        
+        # Return top N candidates
+        return candidates[:max_candidates]
+    
     def explore(self, hero, game_state: dict):
-        """Send hero to explore within their zone."""
+        """Send hero to explore within their zone. Rangers prefer black fog frontiers."""
         zone_x, zone_y = self.assign_patrol_zone(hero, game_state)
+        
+        # WK6: Rangers have exploration bias toward black fog frontiers
+        if getattr(hero, "hero_class", None) == "ranger":
+            world = game_state.get("world")
+            if world:
+                # Check commitment window (prevent rapid re-targeting)
+                now_ms = sim_now_ms()
+                frontier_commit_until = int(getattr(hero, "_frontier_commit_until_ms", 0) or 0)
+                if now_ms < frontier_commit_until:
+                    # Still committed to current exploration target, continue
+                    if hero.target_position:
+                        return
+                
+                # Try to find frontier tiles
+                frontier_candidates = self._find_black_fog_frontier_tiles(world, hero, max_candidates=5)
+                
+                if frontier_candidates and _AI_RNG.random() < RANGER_EXPLORE_BLACK_FOG_BIAS:
+                    # Pick a frontier tile (weighted by distance: closer = higher weight)
+                    # Use inverse distance as weight (closer = higher weight)
+                    weights = [1.0 / (c[2] + 0.1) for c in frontier_candidates]
+                    total_weight = sum(weights)
+                    if total_weight > 0:
+                        r = _AI_RNG.uniform(0, total_weight)
+                        cumsum = 0
+                        selected = None
+                        for i, w in enumerate(weights):
+                            cumsum += w
+                            if r <= cumsum:
+                                selected = frontier_candidates[i]
+                                break
+                        
+                        if selected:
+                            gx, gy, _ = selected
+                            # Convert grid coords to world coords (center of tile)
+                            target_x = gx * TILE_SIZE + TILE_SIZE / 2
+                            target_y = gy * TILE_SIZE + TILE_SIZE / 2
+                            hero.set_target_position(target_x, target_y)
+                            hero.target = {"type": "explore_frontier"}
+                            # Set commitment window
+                            hero._frontier_commit_until_ms = int(now_ms + RANGER_FRONTIER_COMMIT_MS)
+                            debug_log(f"{hero.name} -> exploring black fog frontier at ({gx}, {gy})")
+                            return
+        
+        # Fallback: random wander (original behavior, or if no frontier found)
         angle = _AI_RNG.uniform(0, 2 * math.pi)
         wander_dist = TILE_SIZE * _AI_RNG.uniform(2, 5)
         target_x = zone_x + math.cos(angle) * wander_dist
         target_y = zone_y + math.sin(angle) * wander_dist
         hero.set_target_position(target_x, target_y)
+        hero.target = {"type": "patrol"}
 
     # -----------------------
     # Bounty pursuit behavior
@@ -763,7 +877,8 @@ class BasicAI:
             if hasattr(b, "is_valid") and not b.is_valid(buildings):
                 continue
 
-            score = self.score_bounty(hero, b, buildings, enemies)
+            world = game_state.get("world")
+            score = self.score_bounty(hero, b, buildings, enemies, world=world)
             if score > best_score:
                 best_score = score
                 best = b
@@ -777,13 +892,27 @@ class BasicAI:
         hero._last_bounty_pick_ms = now_ms
         return True
 
-    def score_bounty(self, hero, bounty, buildings: list, enemies: list) -> float:
+    def score_bounty(self, hero, bounty, buildings: list, enemies: list, world=None) -> float:
         """Heuristic bounty scoring: reward vs distance vs risk, with class biases + noise."""
         try:
             goal_x, goal_y = bounty.get_goal_position(buildings) if hasattr(bounty, "get_goal_position") else (bounty.x, bounty.y)
             dist_tiles = max(0.1, float(hero.distance_to(goal_x, goal_y)) / float(TILE_SIZE))
         except Exception:
             dist_tiles = 10.0
+
+        # WK6: Check if bounty is in black fog and apply distance penalty (uncertainty), but never exclude
+        is_black_fog = False
+        if world and hasattr(world, "visibility"):
+            try:
+                # Get bounty grid coordinates
+                bounty_gx = int(goal_x // TILE_SIZE)
+                bounty_gy = int(goal_y // TILE_SIZE)
+                if 0 <= bounty_gx < world.width and 0 <= bounty_gy < world.height:
+                    bounty_vis = world.visibility[bounty_gy][bounty_gx]
+                    is_black_fog = (bounty_vis == Visibility.UNSEEN)
+            except Exception:
+                # If we can't determine, assume not black fog (no penalty)
+                pass
 
         reward = float(getattr(bounty, "reward", 0))
         risk = float(bounty.estimate_risk(enemies)) if hasattr(bounty, "estimate_risk") else 0.0
@@ -818,8 +947,11 @@ class BasicAI:
         if cls == "wizard" and btype == "defend_building":
             type_bonus += 0.4
 
+        # WK6: Apply black fog distance penalty (uncertainty multiplier)
+        effective_dist_tiles = dist_tiles * (BOUNTY_BLACK_FOG_DISTANCE_PENALTY if is_black_fog else 1.0)
+        
         # Reward grows sublinearly; distance is a smooth penalty; risk subtracts.
-        base = (reward_w * math.sqrt(max(0.0, reward)) + type_bonus) / (1.0 + dist_w * (dist_tiles ** 1.1))
+        base = (reward_w * math.sqrt(max(0.0, reward)) + type_bonus) / (1.0 + dist_w * (effective_dist_tiles ** 1.1))
         base -= risk_w * 0.35 * risk
 
         # Add a small per-hero randomness to reduce synchronized picks.
