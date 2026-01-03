@@ -700,6 +700,99 @@
           }
         }
       }
+    },
+    "wk5-demolition-projectiles-workers": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+        "notes": "WK5 focus: building demolition + ranged projectiles (visual-only) + worker pixel sprites. Agent 10 is consult-only for projectile VFX perf review."
+      },
+      "rounds": {
+        "wk5_r2": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r2",
+          "round_meta": {
+            "prompt_set_id": "wk5_r2_contracts_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T17:00:00"
+          },
+          "prompt_text": "WK5 Round 2 (wk5_r2): Review projectile VFX approach for perf: cap active projectiles, avoid per-frame allocations, avoid O(N²).",
+          "response": {
+            "received_at_local": "2025-12-25T17:00:00",
+            "status": "complete",
+            "raw": "Status: Consult-only (Agent 10). Reviewed WK5 plan and existing VFXSystem architecture. Providing performance guardrails for projectile VFX pipeline.\n\nExisting VFXSystem architecture review (game/graphics/vfx.py):\n- Uses a list of VFXParticle objects (self._particles: List[VFXParticle])\n- update(dt) filters dead particles (O(N) per frame, acceptable)\n- render() iterates and draws (O(N) per frame, acceptable)\n- Deterministic RNG via seeded random.Random((int(x) << 16) ^ int(y)) (good pattern)\n\nProjectile VFX performance guardrails (P0):\n1. Cap active projectiles:\n   - Hard cap: MAX_ACTIVE_PROJECTILES = 50 (or configurable via config.py)\n   - Policy: drop oldest projectile if cap reached (FIFO)\n   - Rationale: prevents unbounded growth during large battles\n\n2. Avoid per-frame allocations:\n   - Reuse existing VFXParticle pattern (dataclass, append to list)\n   - Do NOT allocate new pygame.Surface per projectile\n   - Use pygame.draw.line() or pygame.draw.rect() for 1-2px arrows (no surface creation)\n   - Avoid string formatting/concatenation in render loop\n\n3. Avoid O(N²) operations:\n   - Projectile spawn: O(1) per ranged attack event (append to list)\n   - Projectile update: O(N) where N = active projectiles (acceptable)\n   - Projectile render: O(N) where N = visible projectiles (acceptable)\n   - Do NOT scan all entities per projectile (no collision checks in Build A)\n\n4. Determinism constraints:\n   - Spawn jitter must use seeded RNG (not random.random())\n   - Lifetime/travel time must use sim-time (dt), not wall-clock\n   - Position interpolation must be deterministic (linear interpolation from from_ to to_ over fixed lifetime)\n\nRecommended implementation pattern:\n- Extend VFXSystem.emit_from_events() to handle 'ranged_projectile' events\n- Add _spawn_projectile() method that creates a single VFXParticle with linear interpolation (from_x,from_y) -> (to_x,to_y) over lifetime\n- Use existing VFXParticle dataclass (no new data structures)\n- Render via pygame.draw.line() or pygame.draw.rect() (1-2px, no surface creation)\n- Check len(self._particles) < MAX_ACTIVE_PROJECTILES before spawning\n\nRisks + mitigations:\n- Risk: Unbounded projectile growth during large battles (many ranged attackers)\n  Mitigation: Hard cap MAX_ACTIVE_PROJECTILES; drop oldest if cap reached\n- Risk: Per-frame surface allocation if projectiles use sprites\n  Mitigation: Use pygame.draw.line() or pygame.draw.rect() only (no surface creation)\n- Risk: O(N²) if projectiles check collision with entities\n  Mitigation: Build A is visual-only (no collision checks); defer physics to Build B if needed\n\nAcceptance criteria (perf):\n- No per-frame pygame.Surface allocations in projectile render path\n- Active projectile count capped (configurable via config.py, default 50)\n- update(dt) remains O(N) where N = active projectiles (no nested loops)\n- render() remains O(N) where N = visible projectiles (no nested loops)\n- Deterministic spawn/update (seeded RNG, sim-time only)\n\nDependencies:\n- Agent 03: Confirm projectile event contract fields (from_x, from_y, to_x, to_y, lifetime, color) match VFXSystem expectations\n- Agent 12: Ensure snapshot scenarios can capture projectiles mid-flight (fixed tick strategy recommended)\n\nQuestions back to PM: None (consult-only; no blockers)\n\nRecommended next actions:\n- Add MAX_ACTIVE_PROJECTILES tunable to config.py (default 50)\n- Extend VFXSystem.emit_from_events() to handle ranged_projectile events\n- Use existing VFXParticle pattern (no new data structures)\n- Render projectiles via pygame.draw.line() or pygame.draw.rect() (1-2px, no surface creation)\n- Test with many simultaneous ranged attacks (20+ rangers + skeleton_archers) to verify cap behavior",
+            "summary_bullets": [
+              "Reviewed existing VFXSystem architecture: uses VFXParticle list, O(N) update/render, deterministic seeded RNG (good pattern).",
+              "P0 perf guardrails: cap active projectiles (MAX_ACTIVE_PROJECTILES=50), avoid per-frame Surface allocations, avoid O(N²) operations.",
+              "Recommended pattern: extend emit_from_events() for 'ranged_projectile', use pygame.draw.line/rect (no surfaces), check cap before spawn.",
+              "Determinism: seeded RNG for jitter, sim-time for lifetime, linear interpolation for position (all deterministic)."
+            ],
+            "proposed_changes": [
+              "Add MAX_ACTIVE_PROJECTILES tunable to config.py (default 50).",
+              "Extend VFXSystem.emit_from_events() to handle 'ranged_projectile' events.",
+              "Add _spawn_projectile() method using existing VFXParticle pattern with linear interpolation.",
+              "Render projectiles via pygame.draw.line() or pygame.draw.rect() (1-2px, no surface creation).",
+              "Enforce cap: check len(self._particles) < MAX_ACTIVE_PROJECTILES before spawning (drop oldest if cap reached)."
+            ],
+            "acceptance_criteria": [
+              "No per-frame pygame.Surface allocations in projectile render path.",
+              "Active projectile count capped (configurable via config.py, default 50).",
+              "update(dt) remains O(N) where N = active projectiles (no nested loops).",
+              "render() remains O(N) where N = visible projectiles (no nested loops).",
+              "Deterministic spawn/update (seeded RNG, sim-time only)."
+            ],
+            "risks": [
+              "Unbounded projectile growth during large battles if cap is not enforced.",
+              "Per-frame surface allocation if projectiles use sprite surfaces instead of draw primitives.",
+              "O(N²) operations if projectiles check collision with entities (mitigated: Build A is visual-only)."
+            ],
+            "dependencies": [
+              "Agent 03: Confirm projectile event contract fields (from_x, from_y, to_x, to_y, lifetime, color) match VFXSystem expectations.",
+              "Agent 12: Ensure snapshot scenarios can capture projectiles mid-flight (fixed tick strategy recommended)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Add MAX_ACTIVE_PROJECTILES tunable to config.py (default 50).",
+              "Extend VFXSystem.emit_from_events() to handle ranged_projectile events.",
+              "Use existing VFXParticle pattern (no new data structures).",
+              "Render projectiles via pygame.draw.line() or pygame.draw.rect() (1-2px, no surface creation).",
+              "Test with many simultaneous ranged attacks (20+ rangers + skeleton_archers) to verify cap behavior."
+            ],
+            "agent_fields": {
+              "role": "PerformanceStability_Lead",
+              "consult_only": true,
+              "vfx_architecture_reviewed": "game/graphics/vfx.py",
+              "existing_patterns": [
+                "VFXParticle dataclass (reusable)",
+                "List-based particle storage (O(N) update/render)",
+                "Deterministic seeded RNG (good pattern)",
+                "No per-frame surface allocations (uses draw primitives)"
+              ],
+              "perf_guardrails": [
+                "Cap active projectiles (MAX_ACTIVE_PROJECTILES=50)",
+                "Avoid per-frame pygame.Surface allocations",
+                "Avoid O(N²) operations (no collision checks in Build A)",
+                "Use pygame.draw primitives (line/rect) for 1-2px arrows"
+              ],
+              "determinism_constraints": [
+                "Seeded RNG for spawn jitter (not random.random())",
+                "Sim-time (dt) for lifetime/travel time (not wall-clock)",
+                "Deterministic linear interpolation for position"
+              ],
+              "recommended_implementation": {
+                "extend": "VFXSystem.emit_from_events()",
+                "add_method": "_spawn_projectile()",
+                "reuse": "VFXParticle dataclass",
+                "render": "pygame.draw.line() or pygame.draw.rect()",
+                "cap_check": "len(self._particles) < MAX_ACTIVE_PROJECTILES"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

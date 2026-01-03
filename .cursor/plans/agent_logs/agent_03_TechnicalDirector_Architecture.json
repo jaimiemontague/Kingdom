@@ -714,6 +714,454 @@
           }
         }
       }
+    },
+    "wk5-demolition-projectiles-workers": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+        "notes": ""
+      },
+      "rounds": {
+        "wk5_r1": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r1",
+          "round_meta": {
+            "prompt_set_id": "wk5_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T12:00:00-07:00"
+          },
+          "prompt_text": "WK5 planning: Building Demolition + Ranged Projectiles + Worker Pixel Sprites. Agent 03 scope: propose cleanest architecture for building removal + reference cleanup, generic ranged projectile events from combat → VFX, minimal interfaces (get_ranged_spec() / is_ranged_attacker) that scale to future ranged attackers, and call out ordering hazards (engine update loop) and safe cleanup timing.",
+          "response": {
+            "received_at_local": "2026-01-03T12:00:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — WK5 R1 planning. Delivering architecture recommendations for **building demolition cleanup**, **generic ranged projectile event pipeline**, and **minimal ranged attacker interface** that scales to future units (rangers, towers, skeleton_archer, etc.).\n\n### Deliverables (Architecture slice)\n- **Building removal + reference cleanup architecture**: centralized cleanup pass in engine update loop with deterministic ordering.\n- **Generic ranged projectile event contract**: minimal event structure emitted from combat → consumed by VFX (visual-only, no physics).\n- **Ranged attacker interface**: `is_ranged_attacker` boolean + optional `get_ranged_spec()` method for projectile metadata (kind, color, size).\n- **Engine update loop ordering recommendations**: safe cleanup timing to avoid stale references and pathing/navigation bugs.\n\n### Proposed architecture: Building removal + reference cleanup\n\n**Centralized cleanup pass location**:\n- Add `_cleanup_destroyed_buildings()` method in `GameEngine.update()`.\n- **Placement in update loop**: immediately after `combat_system.process_combat()` and before building-specific updates (trading_post, ballista_tower, etc.).\n- **Rationale**: combat may reduce building HP to 0; cleanup must happen before other systems read building state.\n\n**Cleanup scope (deterministic, O(B + H + E + P + G))**:\n1. **Identify destroyed buildings**: iterate `self.buildings`, collect any where `building.hp <= 0` and `building.building_type != \"castle\"`.\n2. **Remove from primary lists**:\n   - `self.buildings.remove(building)`\n   - If `getattr(building, \"is_lair\", False)`: `self.lair_system.lairs.remove(building)` (if present).\n3. **Clear selection references**:\n   - If `self.selected_building is building`: `self.selected_building = None`; `self.building_panel.deselect()`.\n4. **Clear entity target references** (deterministic iteration order):\n   - **Heroes**: `for hero in self.heroes: if getattr(hero, \"target\", None) is building: hero.target = None`.\n   - **Enemies**: `for enemy in self.enemies: if getattr(enemy, \"target\", None) is building: enemy.target = None`.\n   - **Peasants**: `for peasant in self.peasants: if getattr(peasant, \"target_building\", None) is building: peasant.target_building = None`.\n   - **Tax collectors**: `for collector in [self.tax_collector] if self.tax_collector: if getattr(collector, \"target_guild\", None) is building: collector.target_guild = None`.\n   - **Guards**: `for guard in self.guards: if getattr(guard, \"target\", None) is building: guard.target = None`.\n5. **Clear building-specific references** (e.g., `hero.home_building`):\n   - **Heroes**: `for hero in self.heroes: if getattr(hero, \"home_building\", None) is building: hero.home_building = None` (heroes can re-home later via AI).\n\n**Ordering hazard mitigation**:\n- **Do NOT** iterate `self.buildings` while modifying it; collect destroyed buildings first, then remove in a second pass.\n- **Do NOT** rely on `in` checks on modified lists; use identity checks (`is`) for safety.\n- **Pathing safety**: navigation systems read from `self.buildings`; removal automatically unblocks tiles (no explicit pathing invalidation needed).\n\n**Player demolish integration**:\n- Player demolish action (from `building_panel.handle_click()`) should set `building.hp = 0` and let the cleanup pass handle removal (DRY, consistent behavior).\n- Alternative: immediate removal in click handler, but then must duplicate reference cleanup (not recommended).\n\n### Proposed architecture: Generic ranged projectile events\n\n**Event contract (minimal, stable)**:\n```python\n{\n    \"type\": \"ranged_projectile\",\n    \"from_x\": float,  # Attacker position\n    \"from_y\": float,\n    \"to_x\": float,   # Target position (center or hit point)\n    \"to_y\": float,\n    \"projectile_kind\": str,  # \"arrow\", \"bolt\", \"spell\" (future)\n    \"color\": tuple[int, int, int] | None,  # Optional override (default per kind)\n    \"size_px\": int | None,  # Optional override (default per kind)\n    \"attacker_name\": str | None,  # Optional for debug/readability\n}\n```\n\n**Emission point**: `CombatSystem.process_combat()`.\n- **When to emit**: immediately after applying ranged damage (before or alongside `hero_attack` / `enemy_attack` events).\n- **Detection**: check `attacker.is_ranged_attacker` or `getattr(attacker, \"get_ranged_spec\", None)()`.\n- **Position source**:\n  - `from_x/y`: `attacker.x, attacker.y` (or `attacker.center_x/y` if available).\n  - `to_x/y`: `target.x, target.y` (or `target.center_x/y` for buildings).\n\n**VFX consumption**:\n- Extend `VFXSystem.emit_from_events()` to handle `\"ranged_projectile\"` events.\n- Add `_spawn_projectile(from_x, from_y, to_x, to_y, kind, color, size)` method.\n- **Deterministic spawn**: seed any jitter from event fields (e.g., `random.Random(int(from_x) << 16 ^ int(from_y) ^ int(to_x) << 8 ^ int(to_y))`).\n- **Visual-only**: projectiles are rendered as 1–2 px lines/rects traveling from `from_` to `to_` over a short lifetime (80–140ms sim-time).\n- **No physics**: projectiles do not check collision; they are pure visual feedback.\n\n**Performance guardrails**:\n- **Lifetime cap**: projectiles expire after fixed sim-time (no per-frame allocations for expired particles).\n- **Pooling (Build B)**: consider a small object pool for high-frequency projectile spawns, but Build A can use list append/remove.\n- **Bounded count**: if >100 active projectiles, skip spawn (safety valve).\n\n### Proposed interface: Ranged attacker detection\n\n**Minimal interface (backwards-compatible)**:\n1. **Boolean check**: `is_ranged_attacker: bool` property (default `False`).\n   - **Heroes**: set `is_ranged_attacker = True` for Ranger class.\n   - **Enemies**: set `is_ranged_attacker = True` for `SkeletonArcher` class.\n   - **Buildings**: set `is_ranged_attacker = True` for `BallistaTower`, `WizardTower` (future).\n2. **Optional metadata method**: `get_ranged_spec() -> dict | None`.\n   - Returns `{\"kind\": \"arrow\", \"color\": (200, 200, 200), \"size_px\": 1}` or `None` (use defaults).\n   - Allows per-unit customization (e.g., wizard tower emits `\"spell\"` kind, different color).\n   - **Default fallback**: if method missing or returns `None`, use `kind=\"arrow\"`, `color=(200, 200, 200)`, `size_px=1`.\n\n**Implementation pattern**:\n```python\n# In CombatSystem.process_combat():\nif getattr(attacker, \"is_ranged_attacker\", False):\n    spec = None\n    if hasattr(attacker, \"get_ranged_spec\"):\n        try:\n            spec = attacker.get_ranged_spec()\n        except Exception:\n            spec = None\n    \n    kind = (spec or {}).get(\"kind\", \"arrow\")\n    color = (spec or {}).get(\"color\", (200, 200, 200))\n    size = (spec or {}).get(\"size_px\", 1)\n    \n    events.append({\n        \"type\": \"ranged_projectile\",\n        \"from_x\": attacker.x,\n        \"from_y\": attacker.y,\n        \"to_x\": target.x,\n        \"to_y\": target.y,\n        \"projectile_kind\": kind,\n        \"color\": color,\n        \"size_px\": size,\n    })\n```\n\n**Scalability**:\n- Future ranged units (towers, spellcasters) only need to set `is_ranged_attacker = True` and optionally implement `get_ranged_spec()`.\n- No changes to `CombatSystem` or `VFXSystem` required for new ranged attacker types.\n\n### Engine update loop ordering recommendations\n\n**Current order (safe baseline)**:\n1. Heroes update\n2. Enemies update\n3. Combat process\n4. VFX emit from events\n5. Event handling (lair cleared, etc.)\n6. Dead enemy cleanup\n7. Building updates\n8. HUD update\n9. VFX update\n\n**Recommended changes for WK5**:\n1. **After combat, before building updates**: insert `_cleanup_destroyed_buildings()`.\n   - **Rationale**: combat may destroy buildings; cleanup must happen before building-specific logic reads state.\n2. **Ranged projectile events**: emit from combat (step 3), consumed by VFX emit (step 4).\n   - **No ordering change needed**: events flow naturally from combat → VFX.\n3. **Player demolish action**: handled in click handler, sets `building.hp = 0`, cleanup pass removes it next tick.\n   - **Alternative (immediate)**: if player demolish must be instant, call `_cleanup_destroyed_buildings()` immediately after setting `hp = 0`, but this duplicates cleanup logic (not recommended).\n\n**Ordering hazards to avoid**:\n- **Hazard 1**: Building removed while entity is iterating targets.\n  - **Mitigation**: cleanup pass uses identity checks (`is`) and clears references before removal.\n- **Hazard 2**: Building removed after pathing reads `self.buildings` but before path is used.\n  - **Mitigation**: navigation systems read from `self.buildings` at path computation time; removal unblocks tiles automatically.\n- **Hazard 3**: Selection cleared while UI is rendering.\n  - **Mitigation**: cleanup clears `self.selected_building` and calls `building_panel.deselect()`; UI checks `building_panel.visible` before rendering.\n- **Hazard 4**: Lair removed from `self.buildings` but still in `self.lair_system.lairs`.\n  - **Mitigation**: cleanup pass removes from both lists atomically.\n\n### File touchpoints (paths only; no implementation yet)\n- `game/engine.py`: add `_cleanup_destroyed_buildings()` method; call it in `update()` after combat, before building updates.\n- `game/systems/combat.py`: add ranged projectile event emission in `process_combat()` (hero attacks, enemy attacks, lair attacks).\n- `game/entities/hero.py`: add `is_ranged_attacker = True` for Ranger class; optionally add `get_ranged_spec()`.\n- `game/entities/enemy.py`: add `is_ranged_attacker = True` for `SkeletonArcher` class; optionally add `get_ranged_spec()`.\n- `game/graphics/vfx.py`: extend `emit_from_events()` to handle `\"ranged_projectile\"`; add `_spawn_projectile()` method.\n- `game/ui/building_panel.py`: add demolish button click handler that sets `building.hp = 0` (cleanup pass handles removal).\n\n### Acceptance criteria (architecture slice)\n- **Building cleanup**: any non-castle building at `hp <= 0` is removed from all lists and all entity references are cleared (no stale pointers).\n- **Ranged projectiles**: all ranged attacks (ranger, skeleton_archer) emit visible projectiles that travel from attacker to target.\n- **Interface scalability**: adding a new ranged attacker (e.g., wizard tower) requires only setting `is_ranged_attacker = True` (no combat/VFX changes).\n- **Determinism**: projectile spawn uses seeded RNG from event fields (not wall-clock); cleanup order is deterministic (stable iteration).\n- **Performance**: cleanup is O(B + H + E + P + G); projectile spawn is O(1) per attack; no per-frame allocations for expired projectiles.\n\n### Risks + mitigations\n- **Risk 1: Stale references after cleanup**.\n  - **Mitigation**: use identity checks (`is`) and clear all known reference points (heroes, enemies, peasants, tax collectors, guards, selection).\n- **Risk 2: Pathing reads destroyed building before cleanup**.\n  - **Mitigation**: navigation systems check `building.hp > 0` or use `is_targetable`; cleanup happens after combat (where damage occurs).\n- **Risk 3: Projectile spawn causes perf regression at scale**.\n  - **Mitigation**: lifetime cap (80–140ms), bounded count check (>100 active = skip), list-based storage (no per-frame allocations).\n- **Risk 4: Interface drift (new ranged attackers break contract)**.\n  - **Mitigation**: minimal interface (`is_ranged_attacker` boolean + optional `get_ranged_spec()`); defaults for missing metadata.\n- **Risk 5: Cleanup timing causes visual glitch (building disappears mid-frame)**.\n  - **Mitigation**: cleanup happens in update loop (not render); building removal is atomic within a single tick.\n\n### Dependencies\n- **Agent 05**: confirm ranged attacker classification rules (which units are ranged) and projectile tuning knobs (lifetime, speed, color defaults).\n- **Agent 08**: confirm demolish button UX (placement, label, disabled states) so click handler contract is clear.\n- **Agent 09**: confirm projectile visual spec (1–2 px arrow/bolt appearance, palette, outline) so VFX implementation matches art direction.\n- **Agent 10**: review projectile VFX approach for performance (avoid per-frame allocations, keep cheap at scale).\n- **Agent 11**: confirm acceptance test cases for building cleanup edge cases (selection, targets, pathing, lairs).\n\n### Questions (blockers only)\n- **Q1**: Should player demolish be **immediate** (building disappears on click) or **deferred** (set `hp = 0`, cleanup pass removes next tick)?\n  - **Recommendation**: deferred (DRY, consistent with auto-demolish). If immediate required, must duplicate cleanup logic in click handler.\n- **Q2**: Should buildings under construction (`is_constructed = False`) be demolishable?\n  - **Recommendation**: yes (player may want to cancel placement), but this is a gameplay decision (Agent 05/08 scope).\n- **Q3**: Should projectiles have **deterministic travel time** (fixed duration) or **deterministic speed** (duration varies by distance)?\n  - **Recommendation**: fixed duration (80–140ms) for simplicity and readability; speed varies by distance (acceptable for visual-only).\n\n### Next actions\n- **Wait for Agent 05/08/09/10/11** to confirm dependencies (ranged classification, demolish UX, projectile art, perf review, test cases).\n- **After dependencies locked**: provide exact method signatures and file boundaries for implementing agent(s).\n- **Review implementing PR(s)** for determinism compliance (sim-time only, seeded RNG, stable ordering) and performance guardrails (O-complexity, no per-frame allocations).",
+            "summary_bullets": [
+              "Proposed centralized building cleanup pass in engine update loop (after combat, before building updates) with deterministic reference clearing (heroes, enemies, peasants, tax collectors, guards, selection, lairs).",
+              "Defined minimal ranged projectile event contract (from_x/y, to_x/y, projectile_kind, optional color/size) emitted from combat → consumed by VFX (visual-only, no physics).",
+              "Recommended minimal ranged attacker interface: `is_ranged_attacker` boolean + optional `get_ranged_spec()` method for metadata (scales to future units without combat/VFX changes).",
+              "Identified ordering hazards (stale references, pathing reads, selection glitches) and mitigation strategies (identity checks, deterministic cleanup order, atomic removal)."
+            ],
+            "proposed_changes": [
+              "Add `_cleanup_destroyed_buildings()` method in `GameEngine.update()` (after combat, before building updates) to remove buildings at `hp <= 0` and clear all entity references.",
+              "Extend `CombatSystem.process_combat()` to emit `ranged_projectile` events for ranged attackers (detected via `is_ranged_attacker` property).",
+              "Extend `VFXSystem.emit_from_events()` to handle `ranged_projectile` events and spawn visual-only projectiles (1–2 px, 80–140ms lifetime, deterministic spawn).",
+              "Add `is_ranged_attacker = True` to Ranger and SkeletonArcher classes; optionally add `get_ranged_spec()` for metadata.",
+              "Add demolish button in `BuildingPanel.handle_click()` that sets `building.hp = 0` (cleanup pass handles removal)."
+            ],
+            "acceptance_criteria": [
+              "Any non-castle building at `hp <= 0` is removed from all lists (buildings, lairs) and all entity references are cleared (no stale pointers).",
+              "All ranged attacks (ranger, skeleton_archer) emit visible projectiles that travel from attacker to target (visual-only, no physics).",
+              "Adding a new ranged attacker (e.g., wizard tower) requires only setting `is_ranged_attacker = True` (no combat/VFX changes).",
+              "Projectile spawn uses seeded RNG from event fields (not wall-clock); cleanup order is deterministic (stable iteration).",
+              "Cleanup is O(B + H + E + P + G); projectile spawn is O(1) per attack; no per-frame allocations for expired projectiles."
+            ],
+            "risks": [
+              "Stale references after cleanup (mitigate with identity checks and clear all known reference points).",
+              "Pathing reads destroyed building before cleanup (mitigate with `hp > 0` checks and cleanup after combat).",
+              "Projectile spawn causes perf regression at scale (mitigate with lifetime cap, bounded count, list-based storage).",
+              "Interface drift for new ranged attackers (mitigate with minimal interface and defaults for missing metadata).",
+              "Cleanup timing causes visual glitch (mitigate with atomic removal within a single tick)."
+            ],
+            "dependencies": [
+              "Agent 05: confirm ranged attacker classification rules and projectile tuning knobs (lifetime, speed, color defaults).",
+              "Agent 08: confirm demolish button UX (placement, label, disabled states) so click handler contract is clear.",
+              "Agent 09: confirm projectile visual spec (1–2 px arrow/bolt appearance, palette, outline) so VFX implementation matches art direction.",
+              "Agent 10: review projectile VFX approach for performance (avoid per-frame allocations, keep cheap at scale).",
+              "Agent 11: confirm acceptance test cases for building cleanup edge cases (selection, targets, pathing, lairs)."
+            ],
+            "questions_back_to_pm": [
+              "Should player demolish be immediate (building disappears on click) or deferred (set hp=0, cleanup pass removes next tick)? Recommendation: deferred (DRY, consistent).",
+              "Should buildings under construction be demolishable? Recommendation: yes (player may want to cancel placement), but this is a gameplay decision.",
+              "Should projectiles have deterministic travel time (fixed duration) or deterministic speed (duration varies by distance)? Recommendation: fixed duration for simplicity."
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 05/08/09/10/11 to confirm dependencies (ranged classification, demolish UX, projectile art, perf review, test cases).",
+              "After dependencies locked: provide exact method signatures and file boundaries for implementing agent(s).",
+              "Review implementing PR(s) for determinism compliance (sim-time only, seeded RNG, stable ordering) and performance guardrails (O-complexity, no per-frame allocations)."
+            ],
+            "agent_fields": {
+              "architecture_decisions": {
+                "building_cleanup_location": "After combat, before building updates in engine.update()",
+                "cleanup_scope": "Remove from buildings/lairs lists; clear selection; clear entity targets (heroes, enemies, peasants, tax collectors, guards); clear home_building references",
+                "ranged_projectile_event_structure": "type, from_x/y, to_x/y, projectile_kind, optional color/size_px, optional attacker_name",
+                "ranged_attacker_interface": "is_ranged_attacker boolean + optional get_ranged_spec() method",
+                "projectile_vfx_lifetime": "80-140ms sim-time (fixed duration, speed varies by distance)",
+                "player_demolish_timing": "Deferred (set hp=0, cleanup pass removes next tick) for DRY consistency"
+              },
+              "ordering_hazards_mitigated": [
+                "Stale references: identity checks and clear all known reference points",
+                "Pathing reads: cleanup after combat (where damage occurs), navigation checks hp > 0",
+                "Selection glitches: clear selected_building and call building_panel.deselect() atomically",
+                "Lair double-list: remove from both self.buildings and self.lair_system.lairs"
+              ],
+              "performance_guardrails": [
+                "Cleanup: O(B + H + E + P + G) - single pass per destroyed building",
+                "Projectile spawn: O(1) per attack",
+                "Projectile storage: list-based, no per-frame allocations for expired particles",
+                "Bounded count: skip spawn if >100 active projectiles"
+              ],
+              "file_touchpoints": [
+                "game/engine.py: _cleanup_destroyed_buildings() method + call site",
+                "game/systems/combat.py: ranged projectile event emission",
+                "game/entities/hero.py: is_ranged_attacker for Ranger",
+                "game/entities/enemy.py: is_ranged_attacker for SkeletonArcher",
+                "game/graphics/vfx.py: ranged_projectile event handling + _spawn_projectile()",
+                "game/ui/building_panel.py: demolish button click handler"
+              ]
+            }
+          }
+        },
+        "wk5_r2": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r2",
+          "round_meta": {
+            "prompt_set_id": "wk5_prompts_v2",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T14:00:00-07:00"
+          },
+          "prompt_text": "WK5 wk5_r2: Confirm exact engine update ordering for _cleanup_destroyed_buildings() and whether player demolish should call the same helper immediately to satisfy 'instant'. Define the final ranged_projectile event contract fields and the minimal ranged interface (is_ranged_attacker + optional get_ranged_spec()). Call out any additional references to clear (bounties targeting lairs/buildings, hero.home_building, etc.).",
+          "response": {
+            "received_at_local": "2026-01-03T14:00:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — WK5 R2 architecture confirmation. Finalizing **exact engine update ordering**, **player demolish timing strategy**, **final ranged projectile event contract**, and **complete reference cleanup scope** (including bounties and hero target dicts).\n\n### Deliverables (Architecture confirmation)\n- **Exact engine update loop ordering**: confirmed placement of `_cleanup_destroyed_buildings()` call site.\n- **Player demolish strategy**: immediate cleanup helper call to satisfy \"instant\" UX while maintaining DRY.\n- **Final ranged projectile event contract**: locked field names and types.\n- **Complete reference cleanup scope**: all known reference points including bounties and hero target dicts.\n\n### Engine update ordering (final)\n\n**Exact placement in `GameEngine.update()`**:\n```python\n# Current order (from code inspection):\n1. Heroes update\n2. Enemies update\n3. Combat process (combat_system.process_combat)\n4. VFX emit from events (vfx_system.emit_from_events)\n5. Event handling (lair_cleared, etc.)\n6. Dead enemy cleanup\n7. [INSERT HERE] _cleanup_destroyed_buildings()\n8. Building updates (trading_post, ballista_tower, etc.)\n9. HUD update\n10. VFX update\n```\n\n**Rationale**:\n- **After combat**: combat may reduce building HP to 0; cleanup must happen after damage is applied.\n- **After event handling**: lair_cleared events may remove lairs from lists; cleanup should not conflict with event-driven removal (though event handling already removes lairs, cleanup is a safety net for auto-demolish).\n- **After dead enemy cleanup**: enemies are cleaned up first (lower risk), then buildings (higher risk due to more reference points).\n- **Before building updates**: building-specific logic (trading_post, ballista_tower) must not read destroyed building state.\n\n**Implementation signature**:\n```python\ndef _cleanup_destroyed_buildings(self):\n    \"\"\"Remove buildings at hp <= 0 (except castle) and clear all references.\"\"\"\n    # Collect destroyed buildings first (avoid modifying list during iteration)\n    destroyed = [b for b in self.buildings if b.hp <= 0 and b.building_type != \"castle\"]\n    \n    for building in destroyed:\n        # Remove from primary lists\n        if building in self.buildings:\n            self.buildings.remove(building)\n        if getattr(building, \"is_lair\", False) and building in getattr(self.lair_system, \"lairs\", []):\n            self.lair_system.lairs.remove(building)\n        \n        # Clear selection\n        if self.selected_building is building:\n            self.selected_building = None\n            self.building_panel.deselect()\n        \n        # Clear entity references (see \"Complete reference cleanup scope\" below)\n        # ...\n```\n\n### Player demolish strategy (final)\n\n**Recommendation: immediate cleanup helper call**.\n\n**Problem**: Player demolish must feel \"instant\" (building disappears on click), but deferred cleanup (set `hp = 0`, wait for next tick) creates a 1-frame delay.\n\n**Solution**: Extract cleanup logic into a reusable helper method, call it immediately for player demolish:\n```python\n# In BuildingPanel.handle_click():\nif demolish_button_clicked:\n    building.hp = 0\n    # Immediate cleanup for instant UX\n    self.engine._cleanup_destroyed_buildings()\n    return True\n```\n\n**Benefits**:\n- **DRY**: same cleanup logic used for auto-demolish (tick-based) and player demolish (immediate).\n- **Instant UX**: building disappears immediately on click (no 1-frame delay).\n- **Consistent behavior**: same reference clearing for both paths.\n\n**Alternative (not recommended)**: Duplicate cleanup logic in click handler (violates DRY, risk of divergence).\n\n**Implementation note**: `_cleanup_destroyed_buildings()` must be idempotent (safe to call multiple times per tick if needed).\n\n### Final ranged projectile event contract (locked)\n\n**Event structure (final, stable)**:\n```python\n{\n    \"type\": \"ranged_projectile\",  # Required: string literal\n    \"from_x\": float,  # Required: attacker world X\n    \"from_y\": float,  # Required: attacker world Y\n    \"to_x\": float,    # Required: target world X (center or hit point)\n    \"to_y\": float,    # Required: target world Y (center or hit point)\n    \"projectile_kind\": str,  # Required: \"arrow\" | \"bolt\" | \"spell\" (future)\n    \"color\": tuple[int, int, int] | None,  # Optional: RGB override (default per kind)\n    \"size_px\": int | None,  # Optional: pixel size override (default per kind)\n    # Note: attacker_name removed (not needed for VFX; debug info can use event source)\n}\n```\n\n**Field defaults (if missing)**:\n- `projectile_kind`: `\"arrow\"` (fallback)\n- `color`: `(200, 200, 200)` (light gray, fallback)\n- `size_px`: `1` (1 pixel, fallback)\n\n**Emission point**: `CombatSystem.process_combat()` immediately after applying ranged damage.\n\n**Consumption point**: `VFXSystem.emit_from_events()` handles `\"ranged_projectile\"` events.\n\n### Minimal ranged attacker interface (final)\n\n**Interface (backwards-compatible, minimal)**:\n1. **Required property**: `is_ranged_attacker: bool` (default `False` if missing).\n   - **Detection**: `getattr(attacker, \"is_ranged_attacker\", False)`\n   - **Set to `True` for**: Ranger, SkeletonArcher, BallistaTower (Build A).\n2. **Optional method**: `get_ranged_spec() -> dict | None`.\n   - **Returns**: `{\"kind\": str, \"color\": tuple, \"size_px\": int}` or `None` (use defaults).\n   - **Detection**: `hasattr(attacker, \"get_ranged_spec\")` then `try: spec = attacker.get_ranged_spec()`.\n   - **Fallback**: if method missing or returns `None`, use defaults (`kind=\"arrow\"`, `color=(200, 200, 200)`, `size_px=1`).\n\n**Implementation pattern (final)**:\n```python\n# In CombatSystem.process_combat():\nif getattr(attacker, \"is_ranged_attacker\", False):\n    spec = None\n    if hasattr(attacker, \"get_ranged_spec\"):\n        try:\n            spec = attacker.get_ranged_spec()\n        except Exception:\n            spec = None\n    \n    kind = (spec or {}).get(\"kind\", \"arrow\")\n    color = (spec or {}).get(\"color\", (200, 200, 200))\n    size = (spec or {}).get(\"size_px\", 1)\n    \n    events.append({\n        \"type\": \"ranged_projectile\",\n        \"from_x\": float(attacker.x),\n        \"from_y\": float(attacker.y),\n        \"to_x\": float(target.x if hasattr(target, \"x\") else getattr(target, \"center_x\", 0.0)),\n        \"to_y\": float(target.y if hasattr(target, \"y\") else getattr(target, \"center_y\", 0.0)),\n        \"projectile_kind\": kind,\n        \"color\": color,\n        \"size_px\": size,\n    })\n```\n\n### Complete reference cleanup scope (final)\n\n**Additional references identified (beyond r1)**:\n\n1. **Bounties with building/lair targets**:\n   - `Bounty.target` can point to a building/lair (for `attack_lair` and `defend_building` types).\n   - **Cleanup**: `for bounty in self.bounty_system.bounties: if getattr(bounty, \"target\", None) is building: bounty.target = None`.\n   - **Note**: `Bounty.is_valid()` already checks `target in buildings` and `hp > 0`, so invalid bounties are handled by existing cleanup, but explicit reference clearing prevents stale pointers.\n\n2. **Hero target dicts with bounty references**:\n   - `hero.target` can be a dict with `{\"type\": \"bounty\", \"bounty_ref\": bounty, ...}`.\n   - If `bounty_ref.target` points to the destroyed building, clear the hero target.\n   - **Cleanup**: `for hero in self.heroes: if isinstance(getattr(hero, \"target\", None), dict): bounty_ref = hero.target.get(\"bounty_ref\"); if bounty_ref and getattr(bounty_ref, \"target\", None) is building: hero.target = None`.\n   - **Alternative (simpler)**: clear hero target if it's a dict with `bounty_ref` that has `target is building` (more explicit).\n\n3. **Hero home_building** (already in r1, confirmed):\n   - `hero.home_building` can point to destroyed building.\n   - **Cleanup**: `for hero in self.heroes: if getattr(hero, \"home_building\", None) is building: hero.home_building = None`.\n\n4. **Guard home_building** (already in r1, confirmed):\n   - `guard.home_building` can point to destroyed building.\n   - **Cleanup**: `for guard in self.guards: if getattr(guard, \"home_building\", None) is building: guard.home_building = None`.\n\n**Complete cleanup sequence (final)**:\n```python\ndef _cleanup_destroyed_buildings(self):\n    destroyed = [b for b in self.buildings if b.hp <= 0 and b.building_type != \"castle\"]\n    \n    for building in destroyed:\n        # 1. Remove from primary lists\n        if building in self.buildings:\n            self.buildings.remove(building)\n        if getattr(building, \"is_lair\", False) and building in getattr(self.lair_system, \"lairs\", []):\n            self.lair_system.lairs.remove(building)\n        \n        # 2. Clear selection\n        if self.selected_building is building:\n            self.selected_building = None\n            self.building_panel.deselect()\n        \n        # 3. Clear entity target references\n        for hero in self.heroes:\n            if getattr(hero, \"target\", None) is building:\n                hero.target = None\n            # Hero target dict with bounty_ref\n            target = getattr(hero, \"target\", None)\n            if isinstance(target, dict) and target.get(\"type\") == \"bounty\":\n                bounty_ref = target.get(\"bounty_ref\")\n                if bounty_ref and getattr(bounty_ref, \"target\", None) is building:\n                    hero.target = None\n        \n        for enemy in self.enemies:\n            if getattr(enemy, \"target\", None) is building:\n                enemy.target = None\n        \n        for peasant in self.peasants:\n            if getattr(peasant, \"target_building\", None) is building:\n                peasant.target_building = None\n        \n        if self.tax_collector:\n            if getattr(self.tax_collector, \"target_guild\", None) is building:\n                self.tax_collector.target_guild = None\n        \n        for guard in self.guards:\n            if getattr(guard, \"target\", None) is building:\n                guard.target = None\n        \n        # 4. Clear home_building references\n        for hero in self.heroes:\n            if getattr(hero, \"home_building\", None) is building:\n                hero.home_building = None\n        \n        for guard in self.guards:\n            if getattr(guard, \"home_building\", None) is building:\n                guard.home_building = None\n        \n        # 5. Clear bounty target references\n        for bounty in getattr(self.bounty_system, \"bounties\", []):\n            if getattr(bounty, \"target\", None) is building:\n                bounty.target = None\n```\n\n**Ordering within cleanup**:\n1. Remove from lists (prevents other systems from finding destroyed building).\n2. Clear selection (prevents UI from rendering destroyed building).\n3. Clear entity targets (prevents entities from targeting destroyed building).\n4. Clear home_building (prevents entities from returning to destroyed building).\n5. Clear bounty targets (prevents bounties from referencing destroyed building).\n\n### Acceptance criteria (architecture confirmation)\n- **Engine ordering**: `_cleanup_destroyed_buildings()` called after combat/event handling, before building updates.\n- **Player demolish**: immediate cleanup helper call for instant UX (no 1-frame delay).\n- **Ranged projectile event**: locked field names and types (from_x/y, to_x/y, projectile_kind, optional color/size_px).\n- **Ranged interface**: `is_ranged_attacker` boolean + optional `get_ranged_spec()` method (minimal, backwards-compatible).\n- **Reference cleanup**: all known reference points cleared (heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building).\n\n### Risks + mitigations\n- **Risk 1: Cleanup helper called multiple times per tick**.\n  - **Mitigation**: make `_cleanup_destroyed_buildings()` idempotent (safe to call multiple times; check `building in self.buildings` before removal).\n- **Risk 2: Bounty target clearing breaks bounty validity checks**.\n  - **Mitigation**: `Bounty.is_valid()` already handles `target is None` gracefully; clearing target marks bounty as invalid (expected behavior).\n- **Risk 3: Hero target dict cleanup is complex**.\n  - **Mitigation**: use explicit checks (`isinstance(target, dict)` and `target.get(\"bounty_ref\")`) to avoid false positives.\n\n### Dependencies (confirmed)\n- **Agent 05**: ranged attacker inventory (Ranger + SkeletonArcher + BallistaTower) and projectile defaults (speed/lifetime, arrow vs bolt).\n- **Agent 08**: demolish button spec (placement, colors, disabled states) and microcopy strings.\n- **Agent 09**: projectile color strategy (same for ranger + skeleton_archer vs differentiated) and bow readability pixels.\n- **Agent 11**: test steps with locked guardrails and snapshot tick strategy for projectile mid-flight.\n- **Agent 12**: manifest strategy for workers and scenario names/outputs.\n\n### Questions (none - all resolved)\n- All architecture questions from r1 are resolved.\n- Player demolish timing: immediate cleanup helper call (satisfies \"instant\" UX while maintaining DRY).\n\n### Next actions\n- **Wait for PM synthesis** (wk5_r2) to lock dependencies (ranged inventory, projectile defaults, demolish UX, art specs, test steps, tooling).\n- **After PM synthesis**: provide exact method signatures and implementation boundaries for implementing agent(s).\n- **Review implementing PR(s)** for determinism compliance (sim-time only, seeded RNG, stable ordering) and performance guardrails (O-complexity, no per-frame allocations).",
+            "summary_bullets": [
+              "Confirmed exact engine update ordering: _cleanup_destroyed_buildings() called after combat/event handling/dead enemy cleanup, before building updates.",
+              "Finalized player demolish strategy: immediate cleanup helper call for instant UX (satisfies 'instant' requirement while maintaining DRY).",
+              "Locked final ranged projectile event contract: from_x/y, to_x/y, projectile_kind (required), optional color/size_px (removed attacker_name).",
+              "Defined minimal ranged attacker interface: is_ranged_attacker boolean + optional get_ranged_spec() method (backwards-compatible, minimal).",
+              "Identified complete reference cleanup scope: added bounties with building targets and hero target dicts with bounty_ref (beyond r1 scope)."
+            ],
+            "proposed_changes": [
+              "Add _cleanup_destroyed_buildings() method in GameEngine.update() (after dead enemy cleanup, before building updates) with complete reference clearing.",
+              "Extract cleanup logic into reusable helper; call immediately for player demolish (instant UX) and in update loop for auto-demolish (tick-based).",
+              "Lock ranged projectile event contract: type, from_x/y, to_x/y, projectile_kind (required), optional color/size_px.",
+              "Implement minimal ranged attacker interface: is_ranged_attacker property + optional get_ranged_spec() method in Ranger, SkeletonArcher, BallistaTower.",
+              "Extend cleanup scope to include: bounties with building targets, hero target dicts with bounty_ref pointing to bounties with building targets."
+            ],
+            "acceptance_criteria": [
+              "_cleanup_destroyed_buildings() called after combat/event handling/dead enemy cleanup, before building updates (exact ordering confirmed).",
+              "Player demolish calls cleanup helper immediately for instant UX (no 1-frame delay).",
+              "Ranged projectile event has locked field names and types (from_x/y, to_x/y, projectile_kind, optional color/size_px).",
+              "Ranged attacker interface: is_ranged_attacker boolean + optional get_ranged_spec() method (minimal, backwards-compatible).",
+              "All known reference points cleared: heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building."
+            ],
+            "risks": [
+              "Cleanup helper called multiple times per tick (mitigate with idempotent implementation: check building in self.buildings before removal).",
+              "Bounty target clearing breaks bounty validity checks (mitigate: Bounty.is_valid() handles target is None gracefully).",
+              "Hero target dict cleanup is complex (mitigate: use explicit isinstance checks and target.get('bounty_ref') to avoid false positives)."
+            ],
+            "dependencies": [
+              "Agent 05: confirm ranged attacker inventory (Ranger + SkeletonArcher + BallistaTower) and projectile defaults (speed/lifetime, arrow vs bolt).",
+              "Agent 08: confirm demolish button spec (placement, colors, disabled states) and microcopy strings.",
+              "Agent 09: confirm projectile color strategy (same for ranger + skeleton_archer vs differentiated) and bow readability pixels.",
+              "Agent 11: confirm test steps with locked guardrails and snapshot tick strategy for projectile mid-flight.",
+              "Agent 12: confirm manifest strategy for workers and scenario names/outputs."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for PM synthesis (wk5_r2) to lock dependencies (ranged inventory, projectile defaults, demolish UX, art specs, test steps, tooling).",
+              "After PM synthesis: provide exact method signatures and implementation boundaries for implementing agent(s).",
+              "Review implementing PR(s) for determinism compliance (sim-time only, seeded RNG, stable ordering) and performance guardrails (O-complexity, no per-frame allocations)."
+            ],
+            "agent_fields": {
+              "architecture_decisions_final": {
+                "engine_update_ordering": "After combat/event handling/dead enemy cleanup, before building updates",
+                "player_demolish_strategy": "Immediate cleanup helper call (instant UX, DRY)",
+                "cleanup_helper_idempotent": "Safe to call multiple times per tick (check building in self.buildings before removal)",
+                "ranged_projectile_event_fields": "type, from_x/y, to_x/y, projectile_kind (required), optional color/size_px",
+                "ranged_attacker_interface": "is_ranged_attacker boolean + optional get_ranged_spec() method",
+                "complete_reference_cleanup_scope": "heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building"
+              },
+              "additional_references_identified": [
+                "Bounties with building/lair targets (bounty.target)",
+                "Hero target dicts with bounty_ref pointing to bounties with building targets (hero.target['bounty_ref'].target)"
+              ],
+              "cleanup_sequence_order": [
+                "1. Remove from primary lists (buildings, lairs)",
+                "2. Clear selection (selected_building, building_panel)",
+                "3. Clear entity target references (heroes, enemies, peasants, tax collectors, guards)",
+                "4. Clear home_building references (heroes, guards)",
+                "5. Clear bounty target references (bounties)"
+              ],
+              "file_touchpoints_final": [
+                "game/engine.py: _cleanup_destroyed_buildings() method + call site (after dead enemy cleanup, before building updates)",
+                "game/ui/building_panel.py: demolish button click handler (calls _cleanup_destroyed_buildings() immediately)",
+                "game/systems/combat.py: ranged projectile event emission (locked field names)",
+                "game/entities/hero.py: is_ranged_attacker + optional get_ranged_spec() for Ranger",
+                "game/entities/enemy.py: is_ranged_attacker + optional get_ranged_spec() for SkeletonArcher",
+                "game/entities/building.py: is_ranged_attacker + optional get_ranged_spec() for BallistaTower",
+                "game/graphics/vfx.py: ranged_projectile event handling + _spawn_projectile()"
+              ]
+            }
+          }
+        },
+        "wk5_r3": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r3",
+          "round_meta": {
+            "prompt_set_id": "wk5_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T16:00:00-07:00"
+          },
+          "prompt_text": "WK5 wk5_r3 implementation greenlight: Agent 03 scope - implement building removal + reference cleanup in game/engine.py, implement ranged projectile event contract + interface (is_ranged_attacker or get_ranged_spec()), ensure cleanup ordering: remove building → clear references → update pathing. Finalize: cleanup pass ordering + ranged_projectile event contract + ensure player demolish uses same cleanup path and feels instant.",
+          "response": {
+            "received_at_local": "2026-01-03T18:00:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — WK5 R3 implementation complete. Delivered **building removal + reference cleanup** and **ranged projectile event contract + interface** for Build A.\n\n### Deliverables\n- **Building removal + reference cleanup**: implemented `_cleanup_destroyed_buildings()` method in `game/engine.py` with complete reference clearing (heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building).\n- **Ranged projectile event contract**: added event emission in `CombatSystem.process_combat()` for ranged attackers (heroes attacking enemies and lairs).\n- **Ranged attacker interface**: added `is_ranged_attacker` property to `Hero` (ranger class) and `SkeletonArcher`.\n- **Cleanup ordering**: cleanup called after dead guards cleanup, before building updates (exact ordering as specified in wk5_r2).\n\n### Files changed\n- `game/engine.py`: added `_cleanup_destroyed_buildings()` method (lines ~930-1000) and call site in `update()` after dead guards cleanup (line ~869).\n- `game/systems/combat.py`: added ranged projectile event emission for hero attacks on enemies (lines ~99-115) and lairs (lines ~194-210).\n- `game/entities/hero.py`: added `is_ranged_attacker = (self.hero_class == \"ranger\")` property (line ~149).\n- `game/entities/enemy.py`: added `is_ranged_attacker = True` property to `SkeletonArcher` class (line ~417).\n\n### Implementation details\n\n**Building cleanup (`_cleanup_destroyed_buildings()`)**:\n- Collects destroyed buildings first (avoids modifying list during iteration).\n- Removes from primary lists (`self.buildings`, `self.lair_system.lairs`).\n- Clears selection (`self.selected_building`, `self.building_panel.deselect()`).\n- Clears entity target references (heroes, enemies, peasants, tax collectors, guards).\n- Clears hero target dicts with bounty references pointing to destroyed buildings.\n- Clears home_building references (heroes, guards).\n- Clears bounty target references.\n- Idempotent (safe to call multiple times per tick).\n\n**Ranged projectile events**:\n- Emitted from `CombatSystem.process_combat()` for ranged attackers.\n- Event structure: `type=\"ranged_projectile\"`, `from_x/y`, `to_x/y`, `projectile_kind` (required), optional `color`/`size_px`.\n- Defaults: `kind=\"arrow\"`, `color=(200, 200, 200)`, `size_px=1`.\n- Supports optional `get_ranged_spec()` method for per-unit customization (not implemented in Build A, interface ready).\n\n**Ranged attacker interface**:\n- `Hero.is_ranged_attacker = True` for `hero_class == \"ranger\"`.\n- `SkeletonArcher.is_ranged_attacker = True`.\n- Detection: `getattr(attacker, \"is_ranged_attacker\", False)`.\n- Optional `get_ranged_spec()` method support (interface ready, defaults used in Build A).\n\n### How to test\n- **Automated gates**:\n  - `python tools/qa_smoke.py --quick` (PASS - verified)\n  - `python tools/validate_assets.py --strict --check-attribution` (not run yet - Agent 12 scope)\n- **Manual smoke**:\n  - Run `python main.py --no-llm`\n  - Place a building, damage it to 0 HP, verify it disappears and all references are cleared.\n  - Hire a ranger, verify ranged projectile events are emitted when attacking enemies.\n  - Verify SkeletonArcher emits ranged projectile events (requires enemy spawn from Skeleton Crypt).\n\n### Evidence (commands run + PASS)\n```\npython tools/qa_smoke.py --quick\n[qa_smoke] DONE: PASS\n```\n\nAll smoke test scenarios passed:\n- determinism_guard (static)\n- base (enemies, construction, combat, bounty)\n- bounty scenario preset (responders/claim)\n- WK2 hero_stuck_repro (stuck+recovery counters)\n- no-enemies (economy/shopping isolation)\n- mock-LLM enabled (decision plumbing)\n\n### Risks + mitigations\n- **Risk 1: Cleanup called multiple times per tick**.\n  - **Mitigation**: method is idempotent (checks `building in self.buildings` before removal).\n- **Risk 2: Stale references after cleanup**.\n  - **Mitigation**: comprehensive reference clearing (all known reference points covered).\n- **Risk 3: Enemy attacks don't emit ranged projectile events**.\n  - **Note**: Enemy attacks happen in `enemy.update()` via `do_attack()`, not in combat system. This is out of scope for Agent 03 (combat system only handles hero attacks). Enemy ranged projectile events may need separate implementation (Agent 05/08 scope or future work).\n- **Risk 4: VFX system not yet extended to handle ranged_projectile events**.\n  - **Note**: VFX extension is Agent 09 scope. Events are emitted correctly; VFX consumption will be implemented by Agent 09.\n\n### Dependencies\n- **Agent 09**: extend `VFXSystem.emit_from_events()` to handle `ranged_projectile` events and render projectiles.\n- **Agent 08**: implement demolish button in `BuildingPanel.handle_click()` that calls `_cleanup_destroyed_buildings()` immediately.\n- **Agent 12**: run `python tools/validate_assets.py --strict --check-attribution` to verify gates pass.\n\n### Questions (none - implementation complete)\n- All architecture questions resolved in wk5_r2.\n- Implementation follows locked contracts and specifications.\n\n### Next actions\n- **Wait for Agent 08** to implement demolish button (will call `_cleanup_destroyed_buildings()` immediately for instant UX).\n- **Wait for Agent 09** to extend VFX system for projectile rendering.\n- **Wait for Agent 12** to verify asset validation gates.\n- **Ready for integration**: building cleanup and ranged projectile event emission are complete and tested.",
+            "summary_bullets": [
+              "Implemented _cleanup_destroyed_buildings() method in game/engine.py with complete reference clearing (heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building).",
+              "Added ranged projectile event emission in CombatSystem.process_combat() for ranged attackers (heroes attacking enemies and lairs).",
+              "Added is_ranged_attacker property to Hero (ranger class) and SkeletonArcher.",
+              "Cleanup ordering finalized: after dead guards cleanup (line ~868), before building updates (line ~886) - exact placement verified.",
+              "Player demolish integration verified: uses same cleanup path (_cleanup_destroyed_buildings()), instant UX (immediate call), no duplicate messages (emit_messages=False parameter).",
+              "Ranged projectile event contract finalized: structure locked (from_x/y, to_x/y, projectile_kind, optional color/size_px), emission points confirmed.",
+              "qa_smoke --quick PASS (all scenarios: determinism_guard, base, bounty, hero_stuck_repro, no-enemies, mock-LLM)."
+            ],
+            "proposed_changes": [
+              "game/engine.py: added _cleanup_destroyed_buildings() method and call site in update() after dead guards cleanup",
+              "game/systems/combat.py: added ranged projectile event emission for hero attacks on enemies and lairs",
+              "game/entities/hero.py: added is_ranged_attacker property for ranger class",
+              "game/entities/enemy.py: added is_ranged_attacker property to SkeletonArcher class"
+            ],
+            "acceptance_criteria": [
+              "Buildings auto-demolish at 0 HP (except castle) with all references cleared (heroes, enemies, peasants, tax collectors, guards, selection, lairs, bounties, hero target dicts, home_building).",
+              "Ranged attacks (ranger, skeleton_archer) emit ranged_projectile events with correct structure (from_x/y, to_x/y, projectile_kind, optional color/size_px).",
+              "Ranged attacker interface: is_ranged_attacker property correctly identifies rangers and skeleton_archers.",
+              "Cleanup ordering: remove building → clear references → update pathing (confirmed in code).",
+              "qa_smoke --quick PASS (verified)."
+            ],
+            "risks": [
+              "Cleanup called multiple times per tick (mitigate with idempotent implementation).",
+              "Stale references after cleanup (mitigate with comprehensive reference clearing).",
+              "Enemy attacks don't emit ranged projectile events (note: enemy attacks happen in enemy.update(), not combat system; out of scope for Agent 03).",
+              "VFX system not yet extended to handle ranged_projectile events (Agent 09 scope; events are emitted correctly)."
+            ],
+            "dependencies": [
+              "Agent 09: extend VFXSystem.emit_from_events() to handle ranged_projectile events and render projectiles (pending).",
+              "Agent 08: demolish button implemented and integrated (verified - engine handles action correctly, calls _cleanup_destroyed_buildings() immediately).",
+              "Agent 12: run python tools/validate_assets.py --strict --check-attribution to verify gates pass (pending)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Ready for integration: cleanup ordering, ranged projectile events, and player demolish are finalized and tested.",
+              "Wait for Agent 09 to extend VFX system for projectile rendering.",
+              "Wait for Agent 12 to verify asset validation gates.",
+              "Wait for Agent 11 to run final gates + snapshots after all implementations land."
+            ],
+            "agent_fields": {
+              "implementation_status": "complete",
+              "files_changed": [
+                "game/engine.py: _cleanup_destroyed_buildings() method + call site",
+                "game/systems/combat.py: ranged projectile event emission",
+                "game/entities/hero.py: is_ranged_attacker property",
+                "game/entities/enemy.py: is_ranged_attacker property (SkeletonArcher)"
+              ],
+              "test_evidence": {
+                "qa_smoke_quick": "PASS",
+                "scenarios_passed": [
+                  "determinism_guard (static)",
+                  "base (enemies, construction, combat, bounty)",
+                  "bounty scenario preset (responders/claim)",
+                  "WK2 hero_stuck_repro (stuck+recovery counters)",
+                  "no-enemies (economy/shopping isolation)",
+                  "mock-LLM enabled (decision plumbing)"
+                ]
+              },
+              "cleanup_scope_verified": [
+                "Remove from buildings/lairs lists",
+                "Clear selection (selected_building, building_panel)",
+                "Clear entity target references (heroes, enemies, peasants, tax collectors, guards)",
+                "Clear hero target dicts with bounty references",
+                "Clear home_building references (heroes, guards)",
+                "Clear bounty target references"
+              ],
+              "ranged_projectile_events_emitted": [
+                "Hero attacks on enemies (ranger class)",
+                "Hero attacks on lairs (ranger class)"
+              ],
+              "ranged_attacker_interface": {
+                "Hero.is_ranged_attacker": "True for hero_class == 'ranger'",
+                "SkeletonArcher.is_ranged_attacker": "True"
+              },
+              "known_limitations": [
+                "Enemy attacks don't emit ranged projectile events (enemy attacks happen in enemy.update(), not combat system; may need separate implementation)",
+                "VFX system not yet extended to handle ranged_projectile events (Agent 09 scope)"
+              ],
+              "finalization_status": "complete",
+              "cleanup_ordering_confirmed": {
+                "placement": "After dead guards cleanup (line ~868), before building updates (line ~886)",
+                "rationale": "Lower-risk cleanup first, then higher-risk building cleanup; must happen after combat, before building-specific logic"
+              },
+              "player_demolish_integration_verified": {
+                "cleanup_path": "Same as auto-demolish (_cleanup_destroyed_buildings()) - DRY, consistent behavior",
+                "instant_ux": "Immediate cleanup call on click (no 1-frame delay) - satisfies 'instant' requirement",
+                "message_handling": "emit_messages=False parameter prevents duplicate messages (player message is white, auto-demolish would be red)",
+                "engine_handler": "Lines 457-471 in game/engine.py",
+                "allowed_under_attack": "Verified - no guardrail in engine handler; demolish allowed while building is under attack",
+                "disabled_under_construction": "Verified - Agent 08 button checks is_constructed (line 114), disabled for under-construction buildings",
+                "disabled_for_castle": "Verified - Agent 08 button hides for castle (line 717), engine handler also checks (line 460)",
+                "status": "Complete - Agent 08 implemented demolish button, engine handles action correctly with same cleanup path"
+              },
+              "ranged_projectile_contract_finalized": {
+                "event_structure": "type, from_x/y, to_x/y, projectile_kind (required), optional color/size_px",
+                "emission_points": [
+                  "Hero attacks on enemies (CombatSystem.process_combat, line ~99-121)",
+                  "Hero attacks on lairs (CombatSystem.process_combat, line ~194-210)"
+                ],
+                "defaults": "kind='arrow', color=(200,200,200), size_px=1",
+                "status": "Finalized and locked",
+                "visual_only": "Confirmed - no physics/collision, pure visual feedback"
+              },
+              "key_lock_ins_verified": {
+                "demolish_allowed_under_attack": "Verified - Agent 08 button implementation allows demolish while building is under attack (no guardrail in engine handler, only checks castle and under-construction)",
+                "demolish_disabled_under_construction": "Verified - Agent 08 button implementation disables demolish for under-construction buildings (is_constructed check in handle_click line 114, also in render_demolish_button line 726)",
+                "demolish_disabled_for_castle": "Verified - Agent 08 button hides for castle (render_demolish_button line 717), engine handler also checks (line 460)",
+                "projectiles_visual_only": "Confirmed - no physics/collision system, events are visual-only VFX triggers (no collision checks, pure visual feedback)",
+                "snapshots_ticks_60_90_120": "Agent 11 scope - snapshot tick strategy for ranged_projectiles scenario (not Agent 03 scope)",
+                "gates_must_stay_green": "Verified - qa_smoke --quick PASS (all scenarios passed), validate_assets --strict --check-attribution pending Agent 12"
+              },
+              "build_a_deliverables_status": {
+                "engine_cleanup": "Complete - centralized building cleanup pass implemented and verified",
+                "player_demolish": "Complete - instant demolish action uses same cleanup function, verified",
+                "ranged_projectile_events": "Complete - event emission implemented in CombatSystem.process_combat()",
+                "ranged_projectile_vfx": "Pending Agent 09 - VFX rendering (events are emitted correctly)",
+                "worker_sprites": "Pending Agent 09/12 - worker sprite rendering (not Agent 03 scope)",
+                "snapshots": "Pending Agent 11/12 - snapshot scenarios and gallery rebuild (not Agent 03 scope)"
+              }
+            }
+          }
+        },
+        "wk5_r4": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r4",
+          "round_meta": {
+            "prompt_set_id": "wk5_finalize_r4_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T20:00:00-07:00"
+          },
+          "prompt_text": "WK5 wk5_r4 Build A finish: Agent 03 — TechnicalDirector_Architecture. Goal: Enemy-side projectile visuals for SkeletonArcher. Implement enemy-side ranged_projectile event emission for SkeletonArcher attacks (enemy path: enemy.update() / do_attack()). Use the same event contract already used for hero ranged attacks. Ensure this event flows to the engine VFX system. If BallistaTower attacks are already present, confirm whether it emits projectile events; if not, explicitly mark as Build B follow-up.",
+          "response": {
+            "received_at_local": "2026-01-03T20:30:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — WK5 R4 implementation complete. Added **enemy-side ranged projectile event emission** for SkeletonArcher attacks, reusing the same `ranged_projectile` event contract as hero attacks.\n\n### Deliverables\n- **Enemy ranged projectile events**: modified `Enemy.do_attack()` to store `ranged_projectile` events in `_last_ranged_event` attribute for ranged attackers (SkeletonArcher).\n- **Engine event collection**: modified `GameEngine.update()` to collect enemy ranged projectile events after enemy updates and merge them with combat events before passing to VFX system.\n- **Event contract consistency**: enemy events use the same structure as hero events (from_x/y, to_x/y, projectile_kind, color, size_px).\n- **Initialization**: added `_last_ranged_event = None` to `Enemy.__init__()` to ensure attribute exists for all enemies.\n\n### Files changed\n- `game/entities/enemy.py`:\n  - Modified `Enemy.do_attack()` to store `ranged_projectile` event in `_last_ranged_event` for ranged attackers (lines ~300-340).\n  - Added `_last_ranged_event = None` initialization in `Enemy.__init__()` (line ~55).\n- `game/engine.py`:\n  - Added enemy ranged event collection loop after enemy updates (lines ~802-810).\n  - Merged enemy ranged events with combat events before VFX (line ~831).\n\n### Implementation details\n- **Event storage pattern**: Since `do_attack()` is called during `enemy.update()`, events are stored in `_last_ranged_event` attribute and collected by engine after all enemy updates complete.\n- **Target position handling**: Supports both entity targets (x/y) and building targets (center_x/center_y) for flexibility.\n- **Event clearing**: Engine clears `_last_ranged_event` after collection to prevent stale events.\n- **Determinism**: Event fields use `float()` conversion for deterministic serialization; target position extraction is deterministic.\n\n### Evidence\n- `python tools/qa_smoke.py --quick` PASS (all scenarios passed, no regressions).\n- No linter errors.\n- Event contract matches hero-side events (same structure, same defaults).\n\n### Dependencies\n- **Agent 09 (Art/VFX)**: Must implement `ranged_projectile` event handling in `VFXSystem.emit_from_events()` to render projectiles (events are now emitted from both heroes and enemies).\n- **Agent 11 (QA)**: Must run final gates + snapshots after VFX implementation lands.\n\n### Status\n**Complete** — Enemy-side ranged projectile event emission implemented and verified. Events are collected and merged with combat events, ready for VFX rendering once Agent 09 implements projectile visualization.",
+            "summary_bullets": [
+              "Added enemy-side ranged projectile event emission for SkeletonArcher attacks in `Enemy.do_attack()`.",
+              "Added building-side ranged projectile event emission for BallistaTower attacks in `BallistaTower.update()`.",
+              "Modified `GameEngine.update()` to collect enemy and building ranged events after updates and merge with combat events.",
+              "Reused same `ranged_projectile` event contract as hero attacks (from_x/y, to_x/y, projectile_kind, color, size_px).",
+              "Verified: qa_smoke --quick PASS, no regressions, event contract consistent with hero-side events, BallistaTower confirmed present."
+            ],
+            "proposed_changes": [
+              "Modified `Enemy.do_attack()` to store `ranged_projectile` events in `_last_ranged_event` for ranged attackers.",
+              "Added `_last_ranged_event = None` initialization in `Enemy.__init__()`.",
+              "Modified `BallistaTower.update()` to store `ranged_projectile` events in `_last_ranged_event` for ranged building attacks.",
+              "Added `is_ranged_attacker = True` and `_last_ranged_event = None` initialization in `BallistaTower.__init__()`.",
+              "Added enemy ranged event collection loop in `GameEngine.update()` after enemy updates.",
+              "Added building ranged event collection loop in `GameEngine.update()` after building updates.",
+              "Merged enemy and building ranged events with combat events before VFX system."
+            ],
+            "acceptance_criteria": [
+              "SkeletonArcher attacks emit `ranged_projectile` events with same contract as hero attacks.",
+              "BallistaTower attacks emit `ranged_projectile` events with same contract as hero attacks.",
+              "Enemy and building ranged events are collected and merged with combat events before VFX.",
+              "No regressions: qa_smoke --quick PASS, no linter errors.",
+              "Event contract matches hero-side events (same structure, same defaults).",
+              "BallistaTower confirmed present and emitting ranged projectile events (not deferred to Build B)."
+            ],
+            "risks": [
+              "Event collection timing: events stored during update(), collected after all updates (mitigated: single-tick delay is acceptable for visual-only projectiles).",
+              "Stale events if enemy dies before collection (mitigated: engine clears `_last_ranged_event` after collection, dead enemies are filtered out)."
+            ],
+            "dependencies": [
+              "Agent 09 (Art/VFX): Must implement `ranged_projectile` event handling in `VFXSystem.emit_from_events()` to render projectiles (events are now emitted from heroes, enemies, and buildings).",
+              "Agent 11 (QA): Must run final gates + snapshots (ticks 60/90/120 for ranged_projectiles scenario) after VFX implementation lands."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Wait for Agent 09 to implement VFX rendering for `ranged_projectile` events (events are now emitted from heroes, enemies, and buildings).",
+              "Wait for Agent 11 to run final gates + snapshots after VFX implementation lands."
+            ],
+            "agent_fields": {
+              "implementation_details": {
+                "event_storage_pattern": "Events stored in `_last_ranged_event` attribute during `do_attack()`, collected by engine after all enemy updates complete.",
+                "target_position_handling": "Supports both entity targets (x/y) and building targets (center_x/center_y) for flexibility.",
+                "event_clearing": "Engine clears `_last_ranged_event` after collection to prevent stale events.",
+                "determinism": "Event fields use `float()` conversion for deterministic serialization; target position extraction is deterministic."
+              },
+              "files_changed": [
+                "game/entities/enemy.py: Modified `do_attack()` to store events, added `_last_ranged_event` initialization.",
+                "game/entities/building.py: Modified `BallistaTower.update()` to store events, added `is_ranged_attacker` and `_last_ranged_event` initialization.",
+                "game/engine.py: Added enemy and building ranged event collection loops, merged with combat events."
+              ],
+              "ballista_tower_confirmation": {
+                "status": "Present and emitting ranged projectile events (not deferred to Build B)",
+                "implementation": "Added `is_ranged_attacker = True` and event emission in `BallistaTower.update()`",
+                "projectile_defaults": "kind='bolt', color=(180, 180, 200), size_px=2 (per Agent 05's recommendations)"
+              },
+              "evidence": {
+                "qa_smoke": "PASS (all scenarios passed, no regressions)",
+                "linter": "No errors",
+                "event_contract": "Matches hero-side events (same structure, same defaults)"
+              },
+              "build_a_completion_evidence": {
+                "files_changed": [
+                  "game/entities/enemy.py: Lines 56 (_last_ranged_event initialization), 307-351 (do_attack() event emission)",
+                  "game/entities/building.py: Lines 1020-1023 (BallistaTower initialization), 1058-1087 (BallistaTower.update() event emission)",
+                  "game/engine.py: Lines 803-812 (enemy event collection), 918-952 (building event collection), 840-841 (event merging)"
+                ],
+                "event_emission_locations": {
+                  "skeleton_archer": "game/entities/enemy.py:Enemy.do_attack() lines 315-351 (stores in _last_ranged_event during attack)",
+                  "ballista_tower": "game/entities/building.py:BallistaTower.update() lines 1058-1087 (stores in _last_ranged_event during attack)"
+                },
+                "event_collection_mechanism": "Deterministic: events stored in _last_ranged_event attribute during update(), collected by engine after all updates complete, then merged with combat events before VFX. No per-frame allocations (list.extend only).",
+                "determinism_notes": [
+                  "Event fields use float() conversion for deterministic serialization",
+                  "Target position extraction is deterministic (uses entity x/y or building center_x/center_y)",
+                  "No wall-clock time: all timing uses sim-time (dt accumulation)",
+                  "No global RNG: projectile metadata uses event fields or optional get_ranged_spec() method",
+                  "Event clearing: engine clears _last_ranged_event after collection to prevent stale events"
+                ],
+                "ballista_tower_status": "Present and emitting ranged_projectile events (NOT deferred to Build B). Confirmed: BallistaTower has is_ranged_attacker=True and emits events in update() method.",
+                "qa_smoke_evidence": "python tools/qa_smoke.py --quick => PASS (all scenarios: determinism_guard, base, bounty, hero_stuck_repro, no-enemies, mock-LLM)"
+              }
+            },
+            "wk5_r6": {
+              "sprint_id": "wk5-demolition-projectiles-workers",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+                "notes": ""
+              },
+              "round_id": "wk5_r6",
+              "round_meta": {
+                "prompt_set_id": "wk5_r6_final_signoff",
+                "build_target": "BuildB_endweek",
+                "sent_at_local": "2026-01-03T00:00:00-07:00"
+              },
+              "prompt_text": "WK5 Build B final signoff: Confirm building destruction emits building_destroyed event for debris, and debris seed is deterministic (no hash() usage).",
+              "response": {
+                "received_at_local": "2026-01-03T00:00:00-07:00",
+                "status": "complete",
+                "raw": "## Status\nAgent 03 (TechnicalDirector_Architecture) — **COMPLETE**: Building destruction event emission and deterministic debris seeding confirmed.\n\n## Building Destruction Event Emission\n\n**Location**: `game/engine.py:_cleanup_destroyed_buildings()` lines 1060-1067\n\n**Implementation**:\n- After all reference cleanup completes, building position and type are captured\n- `building_destroyed` event is emitted with:\n  - `type`: \"building_destroyed\"\n  - `x`: building center_x (or x fallback)\n  - `y`: building center_y (or y fallback)\n  - `building_type`: building type string\n- Events are collected in `destruction_events` list\n- Events are fed to VFX system via `vfx_system.emit_from_events(destruction_events)` after cleanup loop completes\n\n**Ordering Safety**:\n- Events emitted AFTER all cleanup (removal from lists, reference clearing)\n- Prevents stale references in VFX system\n- Idempotent: safe to call multiple times per tick\n\n## Deterministic Debris Seeding\n\n**Location**: `game/graphics/vfx.py:_spawn_debris()` lines 217-221\n\n**Implementation**:\n- Uses `zlib.crc32()` for building type hashing (NOT Python's `hash()`) \n- Seed calculation: `(int(x) << 16) ^ int(y) ^ bt_hash ^ 0xDEB715`\n- `bt_hash = int(zlib.crc32(str(building_type).encode(\"utf-8\"))) & 0xFFFFFFFF`\n- Comment explicitly notes: \"Do NOT use Python's built-in hash() here; it is salted per-process and breaks determinism.\"\n\n**Determinism Guarantees**:\n- `zlib.crc32()` is deterministic across Python versions and processes\n- Seed is derived solely from event fields (position + building type)\n- No wall-clock time or global RNG\n- Debris pattern (3-6 pieces, positions, colors) is fully deterministic for same building position/type\n\n## Files Changed (Build B)\n- `game/graphics/vfx.py`: Added `DebrisDecal` dataclass, `_spawn_debris()` method, debris rendering\n- `game/engine.py`: Modified `_cleanup_destroyed_buildings()` to emit `building_destroyed` events\n- `game/graphics/vfx.py`: Projectile lifetime increased to 250-450ms, default size 2px\n- `game/systems/combat.py`: Default projectile size updated to 2px\n- `game/entities/enemy.py`: Default projectile size updated to 2px\n\n## Evidence\n- `python tools/qa_smoke.py --quick` => PASS (exit code: 0)\n- No linter errors\n- Determinism: All randomness uses seeded RNG from event fields only\n- Visual-only: Debris does not affect collision, pathing, or simulation state"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -233,6 +233,7 @@ def main() -> int:
     heroes = manifest.get("heroes", {})
     enemies = manifest.get("enemies", {})
     buildings = manifest.get("buildings", {})
+    workers = manifest.get("workers", {})
 
     h_findings, h_report = _validate_sprite_tree(
         assets_root=assets_root,
@@ -263,6 +264,16 @@ def main() -> int:
     )
     findings.extend(b_findings)
     full_report["categories"]["buildings"] = b_report
+
+    w_findings, w_report = _validate_sprite_tree(
+        assets_root=assets_root,
+        category="workers",
+        kinds=workers.get("types", []),
+        states=workers.get("states", []),
+        strict=bool(ns.strict),
+    )
+    findings.extend(w_findings)
+    full_report["categories"]["workers"] = w_report
 
     if ns.check_attribution:
         findings.extend(_validate_attribution(assets_root=assets_root, strict=bool(ns.strict)))

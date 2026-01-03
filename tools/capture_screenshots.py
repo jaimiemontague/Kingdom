@@ -125,8 +125,13 @@ def main() -> int:
 
     outputs = []
     for idx, shot in enumerate(shots):
-        # Advance sim time deterministically (paused updates) so timers/animations can settle without spawning.
-        engine.paused = True
+        # Advance sim time deterministically so timers/animations/VFX can settle.
+        #
+        # IMPORTANT: We must NOT rely on engine.paused updates here, because `GameEngine.update()`
+        # early-returns when paused. That would prevent scenarios like `ranged_projectiles` from
+        # ever emitting VFX. We still drive sim time deterministically via set_sim_now_ms(...).
+        was_paused = bool(getattr(engine, "paused", False))
+        engine.paused = False
         for t in range(int(ns.ticks) + int(getattr(shot, "ticks", 0))):
             set_sim_now_ms(int((t * float(ns.dt)) * 1000.0))
             try:
@@ -134,15 +139,16 @@ def main() -> int:
             except Exception:
                 # Update should not be required for screenshotting; don't crash capture on non-critical issues.
                 pass
-
-        engine.paused = False
+        # Restore pause state (best-effort) so we don't leak state across shots.
+        engine.paused = was_paused
         engine.zoom = float(getattr(shot, "zoom", 1.0) or 1.0)
         _set_camera_center(engine, float(shot.center_x), float(shot.center_y))
 
         # Reset per-shot UI/selection state to avoid cross-shot contamination.
         # Scenarios can override via Shot.apply().
+        # For captures, hide UI by default (world-space visuals like VFX/debris are the focus).
         try:
-            engine.screenshot_hide_ui = False
+            engine.screenshot_hide_ui = True
         except Exception:
             pass
         try:

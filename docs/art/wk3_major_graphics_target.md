@@ -74,3 +74,5 @@ All visual changes must keep:
 - `python tools/build_gallery.py --shots <run> --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` working
 
 
+
+

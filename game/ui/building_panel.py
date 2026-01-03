@@ -37,6 +37,10 @@ class BuildingPanel:
         self.upgrade_button_rect = None
         self.upgrade_button_hovered = False
         
+        # Button for demolish
+        self.demolish_button_rect = None
+        self.demolish_button_hovered = False
+        
         # Hero portrait colors (simple colored circles as placeholders)
         self.portrait_colors = [
             (70, 130, 180),   # Steel blue
@@ -90,8 +94,8 @@ class BuildingPanel:
         
         return result
     
-    def handle_click(self, mouse_pos: tuple, economy, game_state: dict) -> bool:
-        """Handle mouse click on the panel. Returns True if click was handled."""
+    def handle_click(self, mouse_pos: tuple, economy, game_state: dict) -> bool | dict:
+        """Handle mouse click on the panel. Returns True if click was handled, or action dict for demolish."""
         if not self.visible or not self.selected_building:
             return False
         
@@ -99,6 +103,18 @@ class BuildingPanel:
         if not (self.panel_x <= mouse_pos[0] <= self.panel_x + self.panel_width and
                 self.panel_y <= mouse_pos[1] <= self.panel_y + self.panel_height):
             return False
+        
+        # Check demolish button (check first, before other buttons)
+        if self.demolish_button_rect and self.demolish_button_rect.collidepoint(mouse_pos):
+            building = self.selected_building
+            # Disabled for castle (should not appear, but defensive check)
+            if building.building_type == "castle":
+                return True
+            # Disabled for under-construction buildings
+            if hasattr(building, "is_constructed") and not building.is_constructed:
+                return True
+            # Return demolish action dict for engine to consume
+            return {"type": "demolish_building", "building": building}
         
         # Check research button for marketplace
         if self.research_button_rect and self.selected_building.building_type == "marketplace":
@@ -136,6 +152,11 @@ class BuildingPanel:
         """Update hover state for buttons."""
         if self.research_button_rect:
             self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
+
+        if self.demolish_button_rect:
+            self.demolish_button_hovered = self.demolish_button_rect.collidepoint(mouse_pos)
+        else:
+            self.demolish_button_hovered = False
 
         self.library_research_hovered = None
         if self.visible and self.selected_building and self.selected_building.building_type == "library":
@@ -204,6 +225,9 @@ class BuildingPanel:
             y = self.render_royal_gardens(panel_surf, building, heroes, y)
         else:
             y = self.render_generic_building(panel_surf, building, y)
+        
+        # Render demolish button at bottom (after all building-specific content)
+        y = self.render_demolish_button(panel_surf, building, y)
         
         surface.blit(panel_surf, (self.panel_x, self.panel_y))
 
@@ -684,6 +708,65 @@ class BuildingPanel:
             y += 40
         else:
             self.upgrade_button_rect = None
+        
+        return y
+    
+    def render_demolish_button(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render demolish button at bottom of panel. Returns updated y position."""
+        # Hide demolish button for castle
+        if building.building_type == "castle":
+            self.demolish_button_rect = None
+            return y
+        
+        # Add separator line before demolish section
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+        
+        # Check if building is under construction (disabled state)
+        is_under_construction = hasattr(building, "is_constructed") and not building.is_constructed
+        
+        # Button dimensions (consistent with existing buttons)
+        button_width = 200
+        button_height = 30
+        button_x = 10
+        button_y = y
+        
+        # Button colors based on state
+        if is_under_construction:
+            # Disabled state: gray
+            button_color = (80, 80, 80)
+            text_color = (120, 120, 120)
+        elif self.demolish_button_hovered:
+            # Hover state: lighter red
+            button_color = (160, 60, 60)
+            text_color = COLOR_WHITE
+        else:
+            # Default state: dark red
+            button_color = (120, 40, 40)
+            text_color = COLOR_WHITE
+        
+        # Draw button background
+        pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
+        # Draw button border (white, 1px)
+        pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
+        
+        # Button text
+        btn_text = "Demolish"
+        if is_under_construction:
+            btn_text = "Demolish (Under Construction)"
+        btn_render = self.font_small.render(btn_text, True, text_color)
+        btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+        surface.blit(btn_render, btn_rect)
+        
+        # Store button rect for click detection (in screen coordinates)
+        self.demolish_button_rect = pygame.Rect(
+            self.panel_x + button_x,
+            self.panel_y + button_y,
+            button_width,
+            button_height
+        )
+        
+        y += button_height + 10  # Add spacing after button
         
         return y
 

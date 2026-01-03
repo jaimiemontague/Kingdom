@@ -52,6 +52,9 @@ class Enemy:
         self._approach_pos = None  # (x, y) world-space
         self._next_replan_ms = 0  # backoff timer for pathfinding (prevents A* spam on no-path)
         
+        # WK5: Ranged projectile event storage (for engine collection)
+        self._last_ranged_event = None
+        
         # Combat
         self.attack_cooldown = 0
         self.attack_cooldown_max = 1500  # ms between attacks
@@ -298,10 +301,54 @@ class Enemy:
         self._last_pos = (float(self.x), float(self.y))
     
     def do_attack(self):
-        """Perform an attack on the current target."""
+        """
+        Perform an attack on the current target.
+        
+        WK5: For ranged attackers, stores ranged projectile event in _last_ranged_event
+        for collection by engine.
+        """
         if self.target and hasattr(self.target, 'take_damage'):
             self._play_one_shot("attack")
             self.target.take_damage(self.attack_power)
+            
+            # WK5: Emit ranged projectile event for ranged attackers
+            if getattr(self, "is_ranged_attacker", False):
+                spec = None
+                if hasattr(self, "get_ranged_spec"):
+                    try:
+                        spec = self.get_ranged_spec()
+                    except Exception:
+                        spec = None
+                
+                kind = (spec or {}).get("kind", "arrow")
+                color = (spec or {}).get("color", (200, 200, 200))
+                size = (spec or {}).get("size_px", 2)  # Build B: default 2px for readability
+                
+                # Get target position (handle both entities and buildings)
+                if hasattr(self.target, "x") and hasattr(self.target, "y"):
+                    to_x = float(self.target.x)
+                    to_y = float(self.target.y)
+                elif hasattr(self.target, "center_x") and hasattr(self.target, "center_y"):
+                    to_x = float(self.target.center_x)
+                    to_y = float(self.target.center_y)
+                else:
+                    to_x = float(getattr(self.target, "x", 0.0))
+                    to_y = float(getattr(self.target, "y", 0.0))
+                
+                # Store event for engine collection (WK5: enemy attacks happen in update(), not combat system)
+                self._last_ranged_event = {
+                    "type": "ranged_projectile",
+                    "from_x": float(self.x),
+                    "from_y": float(self.y),
+                    "to_x": to_x,
+                    "to_y": to_y,
+                    "projectile_kind": kind,
+                    "color": color,
+                    "size_px": size,
+                }
+            else:
+                # Clear any stale event for non-ranged attackers
+                self._last_ranged_event = None
     
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         """Render the enemy."""
@@ -410,6 +457,9 @@ class SkeletonArcher(Enemy):
         self.attack_range = SKELETON_ARCHER_ATTACK_RANGE_TILES * TILE_SIZE
         self.min_range = SKELETON_ARCHER_MIN_RANGE_TILES * TILE_SIZE
         self.attack_cooldown_max = SKELETON_ARCHER_ATTACK_COOLDOWN_MS
+        
+        # WK5: Ranged attacker interface
+        self.is_ranged_attacker = True
         
         # Kiting behavior state (deterministic, sim-time based)
         self._kite_commit_until_ms = 0  # Hysteresis: commit to current kite decision

@@ -96,6 +96,30 @@ class CombatSystem:
                     "y": closest_enemy.y,
                 })
                 
+                # WK5: Emit ranged projectile event for ranged attackers
+                if getattr(hero, "is_ranged_attacker", False):
+                    spec = None
+                    if hasattr(hero, "get_ranged_spec"):
+                        try:
+                            spec = hero.get_ranged_spec()
+                        except Exception:
+                            spec = None
+                    
+                    kind = (spec or {}).get("kind", "arrow")
+                    color = (spec or {}).get("color", (200, 200, 200))
+                    size = (spec or {}).get("size_px", 2)  # Build B: default 2px for readability
+                    
+                    events.append({
+                        "type": "ranged_projectile",
+                        "from_x": float(hero.x),
+                        "from_y": float(hero.y),
+                        "to_x": float(closest_enemy.x),
+                        "to_y": float(closest_enemy.y),
+                        "projectile_kind": kind,
+                        "color": color,
+                        "size_px": size,
+                    })
+                
                 if killed:
                     # Distribute gold among all heroes who participated or are nearby
                     gold_recipients = self.get_gold_recipients(
@@ -173,6 +197,30 @@ class CombatSystem:
                 "target": getattr(lair, "building_type", "lair"),
                 "damage": damage,
             })
+            
+            # WK5: Emit ranged projectile event for ranged attackers attacking lairs
+            if getattr(hero, "is_ranged_attacker", False):
+                spec = None
+                if hasattr(hero, "get_ranged_spec"):
+                    try:
+                        spec = hero.get_ranged_spec()
+                    except Exception:
+                        spec = None
+                
+                kind = (spec or {}).get("kind", "arrow")
+                color = (spec or {}).get("color", (200, 200, 200))
+                size = (spec or {}).get("size_px", 1)
+                
+                events.append({
+                    "type": "ranged_projectile",
+                    "from_x": float(hero.x),
+                    "from_y": float(hero.y),
+                    "to_x": float(lair.center_x),
+                    "to_y": float(lair.center_y),
+                    "projectile_kind": kind,
+                    "color": color,
+                    "size_px": size,
+                })
 
             if killed and not getattr(lair, "_cleared_emitted", False):
                 setattr(lair, "_cleared_emitted", True)

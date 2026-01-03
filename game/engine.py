@@ -6,7 +6,7 @@ import os
 import pygame
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, GAME_TITLE, TILE_SIZE,
-    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
+    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK, COLOR_WHITE, COLOR_RED,
     CAMERA_SPEED_PX_PER_SEC, CAMERA_EDGE_MARGIN_PX,
     ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
     MAX_ALIVE_ENEMIES,
@@ -453,7 +453,23 @@ class GameEngine:
 
             # Check if clicking on building panel first
             if self.building_panel.visible:
-                if self.building_panel.handle_click(event.pos, self.economy, self.get_game_state()):
+                result = self.building_panel.handle_click(event.pos, self.economy, self.get_game_state())
+                if isinstance(result, dict) and result.get("type") == "demolish_building":
+                    # Handle player demolish action
+                    building = result.get("building")
+                    if building and building in self.buildings and building.building_type != "castle":
+                        # Set HP to 0 to trigger cleanup
+                        building.hp = 0
+                        # Immediate cleanup (instant UX) - suppress auto-demolish message
+                        self._cleanup_destroyed_buildings(emit_messages=False)
+                        # Emit HUD message (player demolish: white)
+                        building_name = building.building_type.replace("_", " ").title()
+                        self.hud.add_message(f"Demolished: {building_name}", COLOR_WHITE)
+                        # Deselect building (panel will close)
+                        self.building_panel.deselect()
+                        self.selected_building = None
+                    return
+                elif result:  # Other panel clicks (True)
                     return
             
             if self.building_menu.selected_building:
@@ -783,9 +799,17 @@ class GameEngine:
         for peasant in self.peasants:
             peasant.update(dt, game_state)
         
-        # Update enemies
+        # Update enemies and collect ranged projectile events
+        enemy_ranged_events = []
         for enemy in self.enemies:
             enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards, world=self.world)
+        
+        # WK5: Collect ranged projectile events from enemies that just attacked
+        # (do_attack() stores event in _last_ranged_event during update())
+        for enemy in self.enemies:
+            if hasattr(enemy, "_last_ranged_event") and enemy._last_ranged_event is not None:
+                enemy_ranged_events.append(enemy._last_ranged_event)
+                enemy._last_ranged_event = None  # Clear after collection
 
         # Update guards
         for guard in self.guards:
@@ -811,8 +835,13 @@ class GameEngine:
         events = self.combat_system.process_combat(
             self.heroes, self.enemies, self.buildings
         )
+        
+        # WK5: Merge enemy ranged projectile events with combat events.
+        # Building projectile events are collected later in the tick (after building updates)
+        # and emitted to VFX separately to avoid ordering hazards.
+        events.extend(enemy_ranged_events)
 
-        # Feed combat events into optional VFX system (non-blocking, best-effort).
+        # Feed combat/enemy events into optional VFX system (non-blocking, best-effort).
         if self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
             try:
                 self.vfx_system.emit_from_events(events)
@@ -867,6 +896,9 @@ class GameEngine:
         # Clean up dead guards
         self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
         
+        # Clean up destroyed buildings (WK5: auto-demolish at 0 HP + reference cleanup)
+        self._cleanup_destroyed_buildings()
+        
         # Process bounties
         claimed = self.bounty_system.check_claims(self.heroes)
         for bounty, hero in claimed:
@@ -883,7 +915,8 @@ class GameEngine:
         if self.tax_collector:
             self.tax_collector.update(dt, self.buildings, self.economy, world=self.world)
         
-        # Update buildings that need periodic updates
+        # Update buildings that need periodic updates and collect ranged projectile events
+        building_ranged_events = []
         for building in self.buildings:
             if building.building_type == "trading_post" and hasattr(building, "update"):
                 building.update(dt, self.economy)
@@ -912,6 +945,20 @@ class GameEngine:
                         g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
                         self.guards.append(g)
         
+        # WK5: Collect ranged projectile events from buildings that just attacked
+        # (update() stores event in _last_ranged_event during building updates)
+        for building in self.buildings:
+            if hasattr(building, "_last_ranged_event") and building._last_ranged_event is not None:
+                building_ranged_events.append(building._last_ranged_event)
+                building._last_ranged_event = None  # Clear after collection
+
+        # WK5: Feed building projectile events into VFX after building updates.
+        if building_ranged_events and self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
+            try:
+                self.vfx_system.emit_from_events(building_ranged_events)
+            except Exception:
+                pass
+        
         # Update HUD
         self.hud.update()
 
@@ -923,6 +970,109 @@ class GameEngine:
                 pass
         
         # Camera already updated at top of update()
+    
+    def _cleanup_destroyed_buildings(self, emit_messages: bool = True):
+        """
+        WK5: Remove buildings at hp <= 0 (except castle) and clear all references.
+        
+        WK5 Build B: Also emits building_destroyed events for debris spawning.
+        
+        This method is idempotent (safe to call multiple times per tick).
+        Called in update loop after combat/event handling, before building updates.
+        Also called immediately for player demolish (instant UX).
+        
+        Args:
+            emit_messages: If True, emit auto-demolish HUD messages. Set to False if caller
+                          handles messages (e.g., player demolish).
+        """
+        # Collect destroyed buildings first (avoid modifying list during iteration)
+        destroyed = [b for b in self.buildings if b.hp <= 0 and getattr(b, "building_type", None) != "castle"]
+        
+        if not destroyed:
+            return
+        
+        # WK5 Build B: Collect building destruction events for debris spawning
+        destruction_events = []
+        
+        for building in destroyed:
+            # WK5 Build B: Capture building position/type for debris before removal
+            building_x = getattr(building, "center_x", getattr(building, "x", 0.0))
+            building_y = getattr(building, "center_y", getattr(building, "y", 0.0))
+            building_type = getattr(building, "building_type", "unknown")
+            
+            # Emit auto-demolish message (red, warning) unless suppressed
+            if emit_messages:
+                building_name = building_type.replace("_", " ").title()
+                self.hud.add_message(f"{building_name} destroyed", COLOR_RED)
+            
+            # 1. Remove from primary lists
+            if building in self.buildings:
+                self.buildings.remove(building)
+            if getattr(building, "is_lair", False) and building in getattr(self.lair_system, "lairs", []):
+                self.lair_system.lairs.remove(building)
+            
+            # 2. Clear selection
+            if self.selected_building is building:
+                self.selected_building = None
+                self.building_panel.deselect()
+            
+            # 3. Clear entity target references
+            for hero in self.heroes:
+                if getattr(hero, "target", None) is building:
+                    hero.target = None
+                # Hero target dict with bounty_ref
+                target = getattr(hero, "target", None)
+                if isinstance(target, dict) and target.get("type") == "bounty":
+                    bounty_ref = target.get("bounty_ref")
+                    if bounty_ref and getattr(bounty_ref, "target", None) is building:
+                        hero.target = None
+            
+            for enemy in self.enemies:
+                if getattr(enemy, "target", None) is building:
+                    enemy.target = None
+            
+            for peasant in self.peasants:
+                if getattr(peasant, "target_building", None) is building:
+                    peasant.target_building = None
+            
+            if self.tax_collector:
+                if getattr(self.tax_collector, "target_guild", None) is building:
+                    self.tax_collector.target_guild = None
+            
+            for guard in self.guards:
+                if getattr(guard, "target", None) is building:
+                    guard.target = None
+            
+            # 4. Clear home_building references
+            for hero in self.heroes:
+                if getattr(hero, "home_building", None) is building:
+                    hero.home_building = None
+            
+            for guard in self.guards:
+                if getattr(guard, "home_building", None) is building:
+                    guard.home_building = None
+            
+            # 5. Clear bounty target references
+            for bounty in getattr(self.bounty_system, "bounties", []):
+                if getattr(bounty, "target", None) is building:
+                    bounty.target = None
+            
+            # WK5 Build B: Emit building destruction event for debris spawning
+            # (after all cleanup to avoid stale references)
+            destruction_events.append({
+                "type": "building_destroyed",
+                "x": float(building_x),
+                "y": float(building_y),
+                "building_type": building_type,
+            })
+        
+        # WK5 Build B: Feed building destruction events to VFX system for debris
+        if destruction_events and self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
+            try:
+                self.vfx_system.emit_from_events(destruction_events)
+            except Exception:
+                # VFX should never crash the simulation
+                pass
     
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
         """Convert screen-space pixels to world-space pixels, accounting for zoom."""

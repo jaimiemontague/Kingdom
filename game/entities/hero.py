@@ -145,6 +145,9 @@ class Hero:
         self._unstuck_attempts_for_target: int = 0
         self._unstuck_target_key: tuple | None = None
 
+        # WK5: Ranged attacker interface
+        self.is_ranged_attacker = (self.hero_class == "ranger")
+        
         # Anti-oscillation commitment windows (sim-time based; controlled by AI)
         self._target_commit_until_ms: int = 0
         self._bounty_commit_until_ms: int = 0

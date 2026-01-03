@@ -491,6 +491,163 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def _place_worker(engine, worker_type: str, x: float, y: float):
+    """Place a worker (peasant or tax_collector) at the given coordinates."""
+    if worker_type == "peasant":
+        from game.entities.peasant import Peasant
+        w = Peasant(float(x), float(y))
+        engine.peasants.append(w)
+        return w
+    elif worker_type == "tax_collector":
+        from game.entities.tax_collector import TaxCollector
+        # TaxCollector needs a castle reference; use the first castle found
+        castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+        if castle is None:
+            # Create a dummy castle if none exists
+            gx = MAP_WIDTH // 2 - 1
+            gy = MAP_HEIGHT // 2 - 1
+            castle = _place_building(engine, "castle", gx, gy)
+        w = TaxCollector(castle)
+        w.x = float(x)
+        w.y = float(y)
+        engine.tax_collector = w
+        return w
+    else:
+        raise ValueError(f"Unknown worker type: {worker_type}")
+
+
+def scenario_worker_catalog(engine, *, seed: int, asset_manifest_path: Path = DEFAULT_MANIFEST) -> list[Shot]:
+    """
+    Spawn one instance of each worker type (peasant, tax_collector) near the castle.
+    Capture:
+    - overview (both workers visible)
+    - one close-up per worker type
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    asset_manifest = _load_asset_manifest(asset_manifest_path)
+    worker_types: list[str] = list(asset_manifest.get("workers", {}).get("types", []))
+
+    # Anchor near the castle
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    placed: dict[str, object] = {}
+    for i, wt in enumerate(worker_types):
+        gx = cgx + 4 + i * 3
+        gy = cgy + 2
+        x, y = _tile_center_px(gx, gy)
+        placed[wt] = _place_worker(engine, wt, x, y)
+
+    # Overview: center on the midpoint between workers
+    if worker_types:
+        mid = worker_types[len(worker_types) // 2]
+        w = placed.get(mid)
+        if w is not None:
+            mx, my = float(getattr(w, "x", 0.0)), float(getattr(w, "y", 0.0))
+        else:
+            mx, my = float(getattr(castle, "center_x", 0.0)), float(getattr(castle, "center_y", 0.0))
+    else:
+        mx, my = float(getattr(castle, "center_x", 0.0)), float(getattr(castle, "center_y", 0.0))
+
+    shots: list[Shot] = [
+        Shot(
+            filename="worker_catalog_overview.png",
+            label="Worker Catalog (Overview)",
+            center_x=mx,
+            center_y=my,
+            zoom=2.0,
+            meta={"scenario": "worker_catalog", "seed": int(seed)},
+        )
+    ]
+
+    for wt in worker_types:
+        w = placed.get(wt)
+        if w is None:
+            continue
+        shots.append(
+            Shot(
+                filename=f"worker_{wt}_closeup.png",
+                label=f"Worker: {wt}",
+                center_x=float(getattr(w, "x", 0.0)),
+                center_y=float(getattr(w, "y", 0.0)),
+                zoom=3.0,
+                meta={"worker_type": wt},
+            )
+        )
+
+    return shots
+
+
+def scenario_ranged_projectiles(engine, *, seed: int) -> list[Shot]:
+    """
+    Capture ranged projectiles mid-flight.
+    Places a ranged attacker (ranger or skeleton_archer) and a target, then advances
+    sim ticks to trigger an attack and capture when projectile is visible.
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    # Place castle as anchor
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+
+    # Place a ranged attacker (ranger) and a target (enemy)
+    attacker_x, attacker_y = _tile_center_px(cgx - 5, cgy)
+    target_x, target_y = _tile_center_px(cgx + 5, cgy)
+
+    attacker = _place_hero(engine, "ranger", attacker_x, attacker_y)
+    target = _place_enemy(engine, "goblin", target_x, target_y)
+
+    # Set up attack state (attacker targets the enemy)
+    if hasattr(attacker, "target"):
+        attacker.target = target
+    if hasattr(attacker, "state"):
+        attacker.state = "attack"  # or whatever the attack state constant is
+
+    # Center point between attacker and target (where projectile should be mid-flight)
+    mid_x = (attacker_x + target_x) / 2.0
+    mid_y = (attacker_y + target_y) / 2.0
+
+    shots: list[Shot] = [
+        Shot(
+            filename="ranged_projectiles_overview.png",
+            label="Ranged Projectiles (Overview)",
+            center_x=mid_x,
+            center_y=mid_y,
+            zoom=2.0,
+            ticks=20,  # WK5 Build B: Updated for slower projectiles (250-450ms = 15-27 ticks at 60 FPS). 20 ticks = mid-flight.
+            meta={"scenario": "ranged_projectiles", "seed": int(seed), "attacker": "ranger", "target": "goblin"},
+        ),
+        Shot(
+            filename="ranged_projectiles_closeup.png",
+            label="Ranged Projectiles (Close-up)",
+            center_x=mid_x,
+            center_y=mid_y,
+            zoom=3.5,
+            ticks=25,  # WK5 Build B: Updated for slower projectiles. 25 ticks = later in flight, still visible.
+            meta={"scenario": "ranged_projectiles", "seed": int(seed), "zoom": "closeup"},
+        ),
+    ]
+
+    return shots
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -501,6 +658,10 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_base_overview(engine, seed=int(seed))
     if scenario_name == "ui_panels":
         return scenario_ui_panels(engine, seed=int(seed))
+    if scenario_name == "worker_catalog":
+        return scenario_worker_catalog(engine, seed=int(seed))
+    if scenario_name == "ranged_projectiles":
+        return scenario_ranged_projectiles(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

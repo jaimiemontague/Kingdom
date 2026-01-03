@@ -152,3 +152,5 @@ The reference folder includes “Majesty”, “Settlers”, “Warcraft”, “
 - **Top-down map legibility** (fog/minimap)
 
 
+
+

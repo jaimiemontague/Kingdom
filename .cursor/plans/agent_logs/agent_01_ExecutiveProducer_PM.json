@@ -1382,6 +1382,275 @@
         }
       }
     }
+    ,
+    "wk5-demolition-projectiles-workers": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+        "notes": "WK5 focus: building lifecycle cleanup (auto-demolish at 0 HP) + player demolish button, visible ranged projectiles (generic pipeline), and replacing peasant/tax-collector glyph renders with pixel sprites. Maintain determinism + tooling + Visual Snapshot System."
+      },
+      "rounds": {
+        "wk5_r2": {
+          "round_meta": {
+            "prompt_set_id": "wk5_r2_pm_synthesis_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "visibility": "All agents should treat this round entry as the source of truth for locked WK5 Build A decisions."
+          },
+          "pm_decisions": {
+            "buildA_locked": {
+              "building_auto_demolish": {
+                "rule": "Any non-castle building at hp<=0 is removed from the world/buildings list.",
+                "castle_exception": "Castle is NOT auto-removed; game-over behavior remains as-is.",
+                "lair_cleanup": "If demolished building is a lair, remove it from lair_system.lairs and clear any entity references."
+              },
+              "player_demolish": {
+                "enabled": true,
+                "refund_policy": "No refund (instant removal).",
+                "allowed_while_under_attack": true,
+                "disabled_for_castle": true,
+                "disabled_for_under_construction": true
+              },
+              "ranged_projectiles": {
+                "scope": "All ranged units now and in future (generic pipeline).",
+                "first_pass": "Visual-only projectiles (no collision/physics).",
+                "event_contract": "Combat emits a ranged_projectile event (from_x/y, to_x/y, projectile_kind, optional color/size). VFX consumes it.",
+                "timing_defaults": "Approx 3000 px/s speed with 80–140ms clamp (distance-based).",
+                "palette_defaults": "Arrow = high-contrast warm/wood + bright tip pixel; Bolt = cool/steel variant (as needed)."
+              },
+              "ranger_bow_readability": "Ranger attack pose must read as bow shot at 32x32 (strong C-curve bow silhouette + release pose cue).",
+              "workers_pixel_sprites": {
+                "replace_glyphs": true,
+                "types": ["peasant", "tax_collector"],
+                "states_manifest_strategy": "Build A uses flat state list in assets_manifest (per Agent 12); permissive subset per type is acceptable for strict validator."
+              },
+              "snapshot_tick_strategy": {
+                "ranged_projectiles": [60, 90, 120],
+                "rationale": "Fixed ticks for deterministic mid-flight coverage (per QA)."
+              },
+              "required_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution"
+              ]
+            },
+            "integration_order_buildA": [
+              "Tooling/manifest/validator/placeholder generation + snapshot scenario scaffolding (Agent 12 already reports complete).",
+              "Gameplay: building auto-demolish cleanup pass + player demolish action and reference cleanup.",
+              "Gameplay: ranged projectile event emission + VFX rendering path.",
+              "Rendering: peasant + tax collector use worker sprites (no glyphs).",
+              "Visual Snapshot System: capture worker_catalog + ranged_projectiles at ticks 60/90/120; rebuild gallery."
+            ]
+          },
+          "pm_responses_by_agent": {
+            "03": {
+              "status": "accepted",
+              "pm_reply": [
+                "Accepted: centralize building removal + reference cleanup in a single engine cleanup pass (collect destroyed first, then remove; identity checks).",
+                "Accepted: ranged_projectile event contract emitted from combat and consumed by VFX; visual-only, deterministic.",
+                "Decision: player demolish should use the same cleanup path (set hp=0 and run cleanup immediately in that tick) so it feels instant without duplicating logic."
+              ],
+              "asks": [
+                "Provide the exact ordering and list of references to clear (selected_building, building_panel selection, hero/enemy targets, peasant targets, tax collector target_guild, lair_system.lairs).",
+                "Confirm whether we also clear bounties targeting demolished lairs/buildings (if applicable) as part of cleanup."
+              ]
+            },
+            "05": {
+              "status": "accepted",
+              "pm_reply": [
+                "Accepted: demolish guardrails locked for Build A: allowed while under attack; disabled for under-construction; castle excluded; no refunds.",
+                "Accepted: projectile tuning defaults (≈3000 px/s, 80–140ms clamp) and arrow/bolt color language as v0."
+              ],
+              "asks": [
+                "Confirm current ranged attackers inventory for Build A (at minimum Ranger, SkeletonArcher, BallistaTower) and any other ranged unit present in code.",
+                "Confirm whether projectile_kind defaults to 'arrow' unless overridden by get_ranged_spec()."
+              ]
+            },
+            "08": {
+              "status": "accepted",
+              "pm_reply": [
+                "Accepted: demolish button spec (bottom-of-panel placement with red color language; disabled/hidden appropriately).",
+                "Accepted: microcopy split: player action 'Demolished: X' vs damage outcome 'X destroyed'."
+              ],
+              "asks": [
+                "Keep Build A to no-confirm (per plan); if misclicks show up, propose Build B confirm/hold-to-demolish."
+              ]
+            },
+            "09": {
+              "status": "accepted_with_art_notes",
+              "pm_reply": [
+                "Accepted: bow readability requirements for Ranger (strong C-curve silhouette + release pose cues at 32x32).",
+                "Accepted: projectile spec (1–2 px arrow/bolt, bright tip pixel, trailing-edge outline, deterministic).",
+                "Accepted: worker silhouettes: peasant reads via tool; tax collector reads via coin bag/trim."
+              ],
+              "asks": [
+                "Confirm Build A arrow color policy: same arrow color for ranger and skeleton_archer recommended; differentiate only if readability demands it.",
+                "Confirm whether tax_collector needs hurt/dead frames in gameplay; tooling may still generate them to satisfy strict validator."
+              ]
+            },
+            "11": {
+              "status": "accepted",
+              "pm_reply": [
+                "Accepted: Build A test steps and snapshot tick strategy: ranged_projectiles captured at fixed ticks 60/90/120 for deterministic coverage.",
+                "Accepted: verification scope: gates + Visual Snapshot evidence after implementation lands."
+              ],
+              "asks": [
+                "After implementation, run: qa_smoke --quick, validate_assets --strict --check-attribution, capture_screenshots for worker_catalog + ranged_projectiles (ticks 60/90/120), then rebuild gallery and report PASS/FAIL evidence."
+              ]
+            },
+            "12": {
+              "status": "accepted_complete",
+              "pm_reply": [
+                "Accepted: Build A manifest strategy is flat worker states list; permissive subsets per type are fine for strict gate.",
+                "Accepted: scenario names: worker_catalog + ranged_projectiles.",
+                "Noted: Agent 12 reports tooling implementation complete and gates PASS; treat as ready-for-integration."
+              ],
+              "asks": [
+                "Post the commit/diff reference for the tooling changes once merged, and any integration notes for gameplay implementers (tick count defaults, scenario setup assumptions)."
+              ]
+            },
+            "10": {
+              "status": "consult_optional_not_pinged",
+              "pm_reply": [
+                "Perf consult is optional for WK5. If pinged, please sanity-check projectile VFX for per-frame allocation and add a bounded active-projectile cap if needed."
+              ],
+              "asks": []
+            }
+          },
+          "status": "ready_for_wk5_r3_execution"
+        },
+        "wk5_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk5_r3_execution_greenlight_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "notes": "Execution/greenlight prompt for implementing agents; keep this round as the active build thread."
+          },
+          "pm_execution_prompt": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "write_replies_to": "sprints[\"wk5-demolition-projectiles-workers\"].rounds[\"wk5_r3\"]",
+            "global_constraints": [
+              "Determinism: no wall-clock time in sim logic; avoid non-seeded RNG in sim paths.",
+              "Projectiles are visual-only (no collision/physics).",
+              "Auto-demolish all non-castle buildings at hp<=0; castle remains game-over.",
+              "Player demolish: instant, no refund, allowed while under attack, disabled for castle and under-construction.",
+              "Gates must remain green: qa_smoke --quick and validate_assets --strict --check-attribution."
+            ],
+            "agent_tasks": {
+              "03": [
+                "Confirm final engine ordering for cleanup pass (after combat, before building updates).",
+                "Finalize ranged_projectile event contract fields and minimal ranged interface surface.",
+                "Confirm player demolish uses the same cleanup path and feels instant."
+              ],
+              "05": [
+                "Confirm ranged attacker inventory (Ranger, SkeletonArcher, BallistaTower at minimum).",
+                "Confirm projectile defaults (speed/lifetime clamp; arrow vs bolt kinds)."
+              ],
+              "08": [
+                "Confirm demolish button spec + microcopy finalized for Build A (no confirm)."
+              ],
+              "09": [
+                "Confirm arrow/bolt palette defaults and ranger bow silhouette cues for Build A.",
+                "Confirm whether tax_collector needs hurt/dead in gameplay (tooling may still generate)."
+              ],
+              "11": [
+                "After implementation lands, run gates + snapshots; capture ranged_projectiles at ticks 60/90/120 and report evidence."
+              ],
+              "12": [
+                "If not already merged, land tooling changes; otherwise provide merge reference and integration notes for gameplay implementers."
+              ]
+            }
+          },
+          "pm_round3_progress": {
+            "build_mode": "BuildA_midweek+BuildB_endweek",
+            "what_landed": [
+              "Engine: centralized building auto-demolish + reference cleanup via `_cleanup_destroyed_buildings()` (Agent 03).",
+              "UI: building panel demolish button + engine action handling + microcopy split (Agent 08).",
+              "Gameplay: combat emits `ranged_projectile` events for ranged hero attacks (Agent 03).",
+              "Tooling: workers manifest/validator/placeholder generation + snapshot scenarios implemented; tooling gates reported PASS (Agent 12)."
+            ],
+            "carried_forward_to_wk5_r4": [
+              "Enemy-side and building-side ranged projectile event emission (SkeletonArcher + BallistaTower).",
+              "VFX rendering for ranged_projectile.",
+              "QA snapshot + gallery evidence."
+            ]
+          },
+          "status": "complete_buildA_core_landed"
+        },
+        "wk5_r4": {
+          "round_meta": {
+            "prompt_set_id": "wk5_r4_buildA_finish_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "notes": "Finish Build A: visible projectiles for ALL ranged attackers (including enemy SkeletonArcher), worker runtime sprites (no glyphs), then snapshots + gate evidence."
+          },
+          "pm_execution_prompt": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "write_replies_to": "sprints[\"wk5-demolition-projectiles-workers\"].rounds[\"wk5_r4\"]",
+            "locked_buildA_decision": "Enemy projectiles are REQUIRED for Build A (not deferred to Build B).",
+            "global_constraints": [
+              "Determinism: no wall-clock time in sim logic; avoid non-seeded RNG in sim paths.",
+              "Projectiles are visual-only (no collision/physics) but MUST be visible for all ranged attackers.",
+              "Gates must remain green: qa_smoke --quick and validate_assets --strict --check-attribution."
+            ],
+            "agent_tasks": {
+              "03": [
+                "Implement enemy-side ranged projectile event emission for SkeletonArcher attacks (enemy.update()/do_attack path) using the same `ranged_projectile` event contract (from_x/y, to_x/y, projectile_kind, optional color/size_px).",
+                "Confirm BallistaTower ranged attacks (if present) also emit ranged_projectile; otherwise document as Build B follow-up."
+              ],
+              "09": [
+                "Implement VFX rendering for `ranged_projectile` in `game/graphics/vfx.py` (1–2 px arrow/bolt with bright tip pixel, deterministic).",
+                "Verify ranger bow cue + projectile readability at Z2; confirm single arrow color policy for Build A."
+              ],
+              "12": [
+                "If tooling changes are not merged, land them; otherwise provide merge reference and confirm scenarios: worker_catalog + ranged_projectiles."
+              ],
+              "11": [
+                "After the above lands, run and post evidence: qa_smoke --quick; validate_assets --strict --check-attribution; capture_screenshots worker_catalog ticks 0; ranged_projectiles ticks 60/90/120; build_gallery."
+              ]
+            }
+          },
+          "pm_round4_results": {
+            "high_level_status": "buildA_complete_verified",
+            "what_landed": [
+              "Enemy-side ranged_projectile event emission for SkeletonArcher (Agent 03).",
+              "Building-side ranged_projectile event emission for BallistaTower (Agent 03).",
+              "Engine collection/merge of ranged_projectile events from enemies/buildings into the VFX feed (Agent 03).",
+              "VFX rendering for ranged_projectile (1–2 px, bright tip, deterministic; Build A enforces wood-brown) (Agent 09).",
+              "QA verification: qa_smoke --quick PASS; validate_assets --strict --check-attribution PASS; worker_catalog snapshot PASS; ranged_projectiles snapshots PASS at ticks 60/90/120; gallery build PASS (Agent 11)."
+            ],
+            "evidence": [
+              "Agent 11 wk5_r3: ran qa_smoke --quick (PASS), validate_assets --strict --check-attribution (PASS), capture_screenshots worker_catalog (PASS), capture_screenshots ranged_projectiles ticks 60/90/120 (PASS), build_gallery (PASS)."
+            ],
+            "ready_to_ship_buildA": true
+          },
+          "status": "complete_buildA_ready_to_ship"
+        }
+        ,
+        "wk5_r5": {
+          "round_meta": {
+            "prompt_set_id": "wk5_r5_buildB_polish_v1",
+            "build_target": "BuildB_endweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "notes": "Build B polish: improve readability and tighten validator/specs without breaking determinism or pipelines."
+          },
+          "pm_execution_prompt": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "write_replies_to": "sprints[\"wk5-demolition-projectiles-workers\"].rounds[\"wk5_r5\"]",
+            "buildB_targets": [
+              "Projectile polish: allow bolt vs arrow color/kind differentiation (Ballista bolt cool/steel; arrows wood-brown) while remaining deterministic.",
+              "Ranger bow polish: adjust placeholder bow cue toward the diagonal C-curve silhouette per art contract (if still vertical).",
+              "Workers: optional validator tightening to be per-type-aware (so tax_collector doesn't require hurt/dead, peasant doesn't require collect/return) without breaking strict gate.",
+              "UX safety: only if misclicks observed, add optional confirm/hold-to-demolish (default off)."
+            ],
+            "required_gates": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "Visual Snapshot System: worker_catalog + ranged_projectiles and gallery rebuild remain PASS"
+            ]
+          },
+          "status": "ready_for_buildB_kickoff"
+        }
+      }
+    }
   }
 }
 

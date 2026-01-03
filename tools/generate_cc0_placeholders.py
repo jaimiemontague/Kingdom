@@ -122,8 +122,16 @@ def _hero_frame(hero_class: str, state: str) -> pygame.Surface:
 
     # State hint pixels
     st = (state or "idle").lower()
+    hc_lower = (hero_class or "").lower()
     if st == "attack":
-        pygame.draw.line(s, (255, 235, 160), (20, 12), (30, 6), 2)
+        if hc_lower == "ranger":
+            # Bow cue: C-curve vertical arc + string (coordinated with projectile VFX)
+            pygame.draw.line(s, (20, 20, 25), (22, 10), (26, 22), 2)  # bow limb
+            pygame.draw.line(s, (200, 200, 210), (24, 10), (24, 22), 1)  # string
+            # Arrow cue (minimal, matches skeleton_archer style)
+            pygame.draw.line(s, (255, 245, 220), (26, 14), (31, 12), 2)
+        else:
+            pygame.draw.line(s, (255, 235, 160), (20, 12), (30, 6), 2)
     elif st == "hurt":
         overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
         overlay.fill((255, 60, 60, 55))
@@ -419,6 +427,80 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
     return s
 
 
+def _worker_frame(worker_type: str, state: str) -> pygame.Surface:
+    """Generate placeholder sprite for workers (peasant, tax_collector)."""
+    s = _mk32()
+    s.fill((0, 0, 0, 0))
+    wt = (worker_type or "peasant").lower()
+    st = (state or "idle").lower()
+
+    dark = (20, 20, 25)
+    # Peasant: simple brown/beige worker colors
+    # Tax collector: slightly richer colors with hat/coat cue
+    if wt == "peasant":
+        base = (140, 110, 80)  # brown worker
+        mid = base
+        hi = _shade(base, 35)
+        sh = _shade(base, -25)
+    elif wt == "tax_collector":
+        base = (160, 130, 100)  # richer brown
+        mid = base
+        hi = _shade(base, 35)
+        sh = _shade(base, -25)
+    else:
+        base = (150, 120, 90)
+        mid = base
+        hi = _shade(base, 35)
+        sh = _shade(base, -25)
+
+    # Body + head (simple humanoid silhouette, consistent with hero placeholder style)
+    _outline_rect(s, pygame.Rect(11, 10, 10, 14), (60, 60, 70))
+    _outline_rect(s, pygame.Rect(12, 6, 8, 6), (90, 90, 100))
+    # Torso
+    pygame.draw.rect(s, mid, pygame.Rect(11, 16, 10, 8))
+    pygame.draw.rect(s, dark, pygame.Rect(11, 16, 10, 8), 1)
+
+    # Type-specific cues
+    if wt == "tax_collector":
+        # Hat cue (top of head)
+        pygame.draw.rect(s, (80, 60, 40), pygame.Rect(11, 4, 10, 4))
+        pygame.draw.rect(s, dark, pygame.Rect(11, 4, 10, 4), 1)
+        # Coat cue (slightly longer torso)
+        pygame.draw.rect(s, _shade(base, -15), pygame.Rect(9, 18, 14, 6))
+        pygame.draw.rect(s, dark, pygame.Rect(9, 18, 14, 6), 1)
+
+    # State-specific cues
+    if st == "walk":
+        # Legs offset (walking animation hint)
+        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(10, 26, 4, 2))
+        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(18, 26, 4, 2))
+    elif st == "work" and wt == "peasant":
+        # Tool/hammer cue (distinctive for peasant)
+        pygame.draw.line(s, dark, (20, 18), (28, 14), 2)
+        pygame.draw.rect(s, (100, 80, 60), pygame.Rect(26, 13, 4, 3))
+    elif st == "collect" and wt == "tax_collector":
+        # Coin bag visible (distinctive for tax_collector)
+        pygame.draw.circle(s, (255, 215, 0), (22, 20), 4)
+        pygame.draw.circle(s, dark, (22, 20), 4, 1)
+        pygame.draw.line(s, dark, (20, 18), (24, 18), 1)
+    elif st == "return" and wt == "tax_collector":
+        # Walking back (similar to walk, maybe slight variation)
+        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(10, 26, 4, 2))
+        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(18, 26, 4, 2))
+    elif st == "hurt":
+        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
+        overlay.fill((255, 60, 60, 55))
+        s.blit(overlay, (0, 0))
+    elif st == "dead":
+        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 110))
+        s.blit(overlay, (0, 0))
+        # Collapse hint
+        pygame.draw.line(s, (10, 10, 12), (10, 26), (24, 24), 2)
+
+    return s
+
+
 def main() -> int:
     pygame.init()
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -429,6 +511,8 @@ def main() -> int:
     enemy_states = data["enemies"]["states"]
     buildings = data["buildings"]["types"]
     building_states = data["buildings"]["states"]
+    workers = data.get("workers", {}).get("types", [])
+    worker_states = data.get("workers", {}).get("states", [])
 
     out = ASSETS / "sprites"
 
@@ -451,10 +535,20 @@ def main() -> int:
             surf = _building_frame_sized(bt, st, size_px=size_px)
             _save(surf, out / "buildings" / bt / st / "frame_000.png")
 
+    # Generate worker frames (generate all states for all types to satisfy validator)
+    # Note: Some states are type-specific (peasant: work; tax_collector: collect/return),
+    # but we generate all frames to pass strict validation.
+    for wt in workers:
+        for st in worker_states:
+            surf = _worker_frame(wt, st)
+            _save(surf, out / "workers" / wt / st / "frame_000.png")
+
     print("[generate_cc0_placeholders] wrote sprites for:")
     print(f"  heroes: {len(heroes)} classes × {len(hero_states)} states")
     print(f"  enemies: {len(enemies)} types × {len(enemy_states)} states")
     print(f"  buildings: {len(buildings)} types × {len(building_states)} states")
+    if workers:
+        print(f"  workers: {len(workers)} types × {len(worker_states)} states (permissive subset)")
     return 0
 
 

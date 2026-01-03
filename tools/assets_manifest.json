@@ -42,6 +42,10 @@
       "food_stand"
     ],
     "states": ["built", "construction", "damaged"]
+  },
+  "workers": {
+    "types": ["peasant", "tax_collector"],
+    "states": ["idle", "walk", "work", "collect", "return", "hurt", "dead"]
   }
 }
 

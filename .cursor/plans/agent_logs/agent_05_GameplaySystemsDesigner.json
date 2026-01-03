@@ -513,6 +513,373 @@
         }
       }
     }
+    ,
+    "wk5-demolition-projectiles-workers": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+        "notes": "WK5 adds building demolition (auto + player), visible ranged projectiles (generic pipeline), and worker pixel sprites (peasant + tax collector). Agent 05 defines ranged attacker classification, projectile tuning knobs, and demolish gameplay guardrails."
+      },
+      "rounds": {
+        "wk5_r1": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r1",
+          "round_meta": {
+            "prompt_set_id": "wk5_planning_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T09:25:58-07:00"
+          },
+          "prompt_text": "WK5 planning: Define 'ranged attacker' classification rules for all current and future ranged units. Recommend first-pass projectile tuning knobs (lifetime, speed, color, size) for readability. Clarify demolish gameplay guardrails: allowed while under attack? allowed for under-construction buildings?",
+          "response": {
+            "received_at_local": "2026-01-03T09:25:58-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — WK5 R1 planning recommendations for ranged attacker classification, projectile tuning, and demolish gameplay guardrails.\\n\\n### Deliverables\\n- **Ranged attacker classification rules**: Clear, extensible definition for heroes, enemies, and buildings (present + future).\\n- **Projectile tuning knobs (v0)**: Lifetime, speed, color, size recommendations for readability at 32×32 pixel scale.\\n- **Demolish gameplay guardrails**: Rules for when player demolish is allowed (under attack? under construction?) and UX considerations.\\n\\n### Ranged Attacker Classification Rules\\n\\n**Core definition**: An entity is a \"ranged attacker\" if it meets ALL of the following criteria:\\n1. **Attack range > melee threshold**: `attack_range > TILE_SIZE * 1.8` (melee is typically TILE_SIZE * 1.2 to 1.5)\\n2. **No melee fallback required**: The entity does not require physical contact to deal damage (instant-hit or projectile-based)\\n3. **Explicit ranged flag OR class-based**: Either `is_ranged_attacker = True` OR `hero_class == \"ranger\"` OR `enemy_type in [\"skeleton_archer\", ...]` OR building has `attack_range` property set > melee threshold\\n\\n**Current ranged attackers (Build A scope)**:\\n- **Heroes**: `hero_class == \"ranger\"` (rangers from RangerGuild)\\n- **Enemies**: `enemy_type == \"skeleton_archer\"` (from WK4)\\n- **Buildings**: `BallistaTower` (has `attack_range = 200` pixels, which is > TILE_SIZE * 1.8 = ~57.6 pixels)\\n\\n**Future-proofing interface recommendation**:\\n- Prefer `is_ranged_attacker` boolean property (explicit, no ambiguity)\\n- Fallback to `get_ranged_spec()` method if metadata is needed (returns `None` for melee, `{\"projectile_kind\": \"arrow\", \"color\": (r,g,b), \"size_px\": 2}` for ranged)\\n- For heroes: check `hero_class == \"ranger\"` OR `is_ranged_attacker == True`\\n- For enemies: check `enemy_type in RANGED_ENEMY_TYPES` OR `is_ranged_attacker == True`\\n- For buildings: check `hasattr(building, \"attack_range\") and building.attack_range > TILE_SIZE * 1.8` OR `is_ranged_attacker == True`\\n\\n**Implementation note**: The `get_ranged_spec()` method should return projectile metadata (kind, color, size) for VFX system, but the boolean `is_ranged_attacker` is sufficient for combat event emission.\\n\\n### Projectile Tuning Knobs (v0 — Build A)\\n\\n**Goal**: Readable at 32×32 pixel scale, visible but not overwhelming, deterministic (no wall-clock dependencies).\\n\\n**Lifetime (travel time)**:\\n- **Arrow/bolt (rangers, skeleton_archer)**: 80–120ms (fast enough to feel instant but visible)\\n- **Ballista bolt (towers)**: 100–140ms (slightly slower for larger projectile)\\n- Rationale: Too fast (<60ms) = invisible; too slow (>200ms) = feels laggy. 80–140ms is the sweet spot for 32×32 readability.\\n\\n**Speed (pixels per second)**:\\n- Calculate from distance and lifetime: `speed = distance / (lifetime_ms / 1000.0)`\\n- For typical ranges (6 tiles = 192px), 80ms lifetime = 2400 px/s (feels snappy)\\n- For longer ranges (12 tiles = 384px), 120ms lifetime = 3200 px/s (still readable)\\n- **Recommendation**: Use constant speed (e.g., 3000 px/s) and derive lifetime from distance: `lifetime_ms = (distance_px / 3000.0) * 1000`, clamped to 80–140ms.\\n\\n**Color (palette + contrast)**:\\n- **Arrow (ranger, skeleton_archer)**: `(200, 200, 50)` yellow-amber with outline `(100, 100, 20)` for contrast\\n- **Ballista bolt (tower)**: `(180, 180, 200)` light gray-blue with outline `(80, 80, 100)`\\n- Rationale: Yellow-amber reads as \"arrow\" at 32×32; gray-blue reads as \"mechanical bolt\". Both have sufficient contrast against grass/water/trees.\\n\\n**Size (pixels)**:\\n- **Arrow**: 1–2 px (thin line, reads as arrow shaft)\\n- **Ballista bolt**: 2–3 px (thicker, reads as heavy projectile)\\n- Rationale: 1–2 px is readable at 32×32 without overwhelming the sprite; 2–3 px for towers feels \"heavier\".\\n\\n**Determinism requirement**: All projectile parameters (lifetime, speed, color, size) must be derived from event fields (attacker type, target position) or seeded RNG (not wall-clock time).\\n\\n### Demolish Gameplay Guardrails\\n\\n**Player demolish rules (Build A)**:\\n- **Allowed**:\\n  - Any non-castle building that is constructed (`is_constructed == True`)\\n  - Buildings under attack (no restriction — player can demolish to save resources if building is doomed)\\n  - Buildings with heroes inside (demolish clears heroes out, but warn player if heroes are resting inside)\\n- **Not allowed (disabled button)**:\\n  - Castle (game over trigger, must stay)\\n  - Under-construction buildings (`is_constructed == False` or `construction_started == False`)\\n  - Rationale: Under-construction buildings are \"not yet built\" — player should cancel placement instead (if that feature exists) or wait for construction to complete.\\n\\n**Auto-demolish rules (0 HP)**:\\n- **Auto-demolish**: All buildings except castle when `hp <= 0`\\n- **No refund**: Auto-demolish does not refund gold (same as player demolish)\\n- **Reference cleanup**: Engine must clear all references (hero.target, enemy.target, peasant.target_building, selected_building, etc.) before removal\\n- **Lair special case**: If destroyed building is a lair (`is_lair == True`), remove from `lair_system.lairs` list and clear any bounties targeting it\\n\\n**UX considerations (Build A vs Build B)**:\\n- **Build A**: Instant demolish, no confirmation (fast iteration, low friction)\\n- **Build B (if misclicks observed)**: Optional confirmation dialog OR hold-to-demolish (e.g., hold button for 500ms) for non-critical buildings\\n- **Warning message (Build A)**: If demolishing a building with heroes inside, show HUD message: \"Demolished: [Building Name]. Heroes inside have been ejected.\"\\n\\n**Edge cases**:\\n- **Demolish while building is being repaired**: Allowed (player can stop repair by demolishing)\\n- **Demolish while peasant is working on it**: Allowed (peasant will lose target and return to idle)\\n- **Demolish while enemy is attacking it**: Allowed (enemy will retarget to nearest valid target)\\n- **Demolish lair while heroes are attacking it**: Allowed (heroes will lose target, may retarget to nearest enemy or return to patrol)\\n\\n### Acceptance Criteria\\n- Ranged attackers are correctly identified via `is_ranged_attacker` boolean OR class/type checks (ranger, skeleton_archer, BallistaTower).\\n- Projectiles are visible and readable at 32×32 scale (80–140ms lifetime, 1–3 px size, high contrast colors).\\n- Player demolish is instant and works for all constructed non-castle buildings (including under attack).\\n- Player demolish is disabled for castle and under-construction buildings.\\n- Auto-demolish triggers at 0 HP for all non-castle buildings with proper reference cleanup.\\n- No refunds on demolish (player or auto).\\n\\n### Risks + Mitigations\\n- **Risk: Projectile readability at 32×32**: Mitigate with high-contrast colors (yellow-amber with dark outline) and 1–2 px size (thin but visible).\\n- **Risk: Projectile feels laggy if too slow**: Mitigate with constant speed (3000 px/s) and distance-based lifetime (80–140ms clamp).\\n- **Risk: Player accidentally demolishes important building**: Mitigate with Build A instant (low friction) + Build B optional confirmation if misclicks observed.\\n- **Risk: Demolish while under attack feels unfair**: Mitigate by allowing it (player can save resources if building is doomed) but warn if heroes inside.\\n- **Risk: Under-construction demolish confusion**: Mitigate by disabling demolish button for under-construction buildings (player must wait or cancel placement).\\n- **Risk: Reference cleanup misses edge cases**: Mitigate with centralized cleanup pass in engine (check all known reference types: hero.target, enemy.target, peasant.target_building, selected_building, lair_system.lairs).\\n\\n### Dependencies\\n- **Agent 03**: Architecture for `is_ranged_attacker` interface and `get_ranged_spec()` method signature.\\n- **Agent 08**: UX specification for demolish button placement, label, color, and disabled states.\\n- **Agent 09**: Art briefs for projectile colors/sizes and ranger bow readability.\\n- **Agent 11**: QA checklist for demolish edge cases and projectile visibility tests.\\n\\n### Questions (blockers only)\\n- None.\\n\\n### Recommended Next Actions\\n- Agent 03: Implement `is_ranged_attacker` boolean property and `get_ranged_spec()` method for heroes, enemies, and buildings.\\n- Agent 08: Design demolish button UX (placement, label, color, disabled states) and microcopy.\\n- Agent 09: Provide art briefs for projectile colors/sizes and ranger bow sprite cues.\\n- Implementation: Wire ranged attacker detection in combat system and emit projectile events.\\n- Implementation: Add demolish button to building panel and engine action handler.\\n- QA: Test demolish edge cases (under attack, heroes inside, under construction) and projectile visibility at 32×32 scale.",
+            "summary_bullets": [
+              "Defined ranged attacker classification: attack_range > TILE_SIZE * 1.8, no melee fallback, explicit flag OR class-based (ranger, skeleton_archer, BallistaTower).",
+              "Recommended projectile tuning v0: lifetime 80–140ms (distance-based), speed 3000 px/s constant, color yellow-amber (arrow) / gray-blue (bolt), size 1–3 px.",
+              "Clarified demolish guardrails: allowed for constructed buildings (including under attack), disabled for castle and under-construction buildings, no refunds, proper reference cleanup."
+            ],
+            "proposed_changes": [
+              "Add `is_ranged_attacker` boolean property to heroes, enemies, and buildings (explicit flag for ranged classification).",
+              "Add `get_ranged_spec()` method (optional) returning projectile metadata (kind, color, size) for VFX system.",
+              "Implement projectile event emission in combat system when `is_ranged_attacker == True`.",
+              "Add demolish button to building panel (disabled for castle and under-construction buildings).",
+              "Implement auto-demolish cleanup pass in engine (0 HP removal with reference cleanup)."
+            ],
+            "acceptance_criteria": [
+              "Ranged attackers correctly identified via `is_ranged_attacker` boolean OR class/type checks (ranger, skeleton_archer, BallistaTower).",
+              "Projectiles visible and readable at 32×32 scale (80–140ms lifetime, 1–3 px size, high contrast colors).",
+              "Player demolish instant for all constructed non-castle buildings (including under attack).",
+              "Player demolish disabled for castle and under-construction buildings.",
+              "Auto-demolish triggers at 0 HP for all non-castle buildings with proper reference cleanup.",
+              "No refunds on demolish (player or auto)."
+            ],
+            "risks": [
+              "Projectile readability at 32×32 scale (mitigate with high-contrast colors and 1–2 px size).",
+              "Projectile feels laggy if too slow (mitigate with constant speed 3000 px/s and distance-based lifetime).",
+              "Player accidentally demolishes important building (mitigate with Build A instant + Build B optional confirmation if misclicks observed).",
+              "Demolish while under attack feels unfair (mitigate by allowing it but warn if heroes inside).",
+              "Reference cleanup misses edge cases (mitigate with centralized cleanup pass checking all known reference types)."
+            ],
+            "dependencies": [
+              "Agent 03: Architecture for `is_ranged_attacker` interface and `get_ranged_spec()` method signature.",
+              "Agent 08: UX specification for demolish button placement, label, color, and disabled states.",
+              "Agent 09: Art briefs for projectile colors/sizes and ranger bow readability.",
+              "Agent 11: QA checklist for demolish edge cases and projectile visibility tests."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 03: Implement `is_ranged_attacker` boolean property and `get_ranged_spec()` method for heroes, enemies, and buildings.",
+              "Agent 08: Design demolish button UX (placement, label, color, disabled states) and microcopy.",
+              "Agent 09: Provide art briefs for projectile colors/sizes and ranger bow sprite cues.",
+              "Implementation: Wire ranged attacker detection in combat system and emit projectile events.",
+              "Implementation: Add demolish button to building panel and engine action handler.",
+              "QA: Test demolish edge cases (under attack, heroes inside, under construction) and projectile visibility at 32×32 scale."
+            ],
+            "agent_fields": {
+              "ranged_attacker_classification": {
+                "core_definition": "attack_range > TILE_SIZE * 1.8, no melee fallback, explicit flag OR class-based",
+                "current_ranged": {
+                  "heroes": ["ranger"],
+                  "enemies": ["skeleton_archer"],
+                  "buildings": ["BallistaTower"]
+                },
+                "interface_recommendation": "is_ranged_attacker boolean OR get_ranged_spec() method"
+              },
+              "projectile_tuning_v0": {
+                "lifetime_ms": "80–140ms (distance-based, clamped)",
+                "speed_px_per_s": "3000 (constant)",
+                "colors": {
+                  "arrow": "(200, 200, 50) yellow-amber with outline (100, 100, 20)",
+                  "bolt": "(180, 180, 200) light gray-blue with outline (80, 80, 100)"
+                },
+                "size_px": {
+                  "arrow": "1–2 px",
+                  "bolt": "2–3 px"
+                }
+              },
+              "demolish_guardrails": {
+                "player_demolish_allowed": ["constructed buildings", "buildings under attack", "buildings with heroes inside (with warning)"],
+                "player_demolish_disabled": ["castle", "under-construction buildings"],
+                "auto_demolish": "all non-castle buildings at 0 HP, no refund, proper reference cleanup",
+                "ux_build_a": "instant demolish, no confirmation",
+                "ux_build_b": "optional confirmation or hold-to-demolish if misclicks observed"
+              }
+            }
+          }
+        }
+        ,
+        "wk5_r2": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r2",
+          "round_meta": {
+            "prompt_set_id": "wk5_pm_synthesis_r2_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T09:39:12-07:00"
+          },
+          "prompt_text": "WK5 R2: Confirm ranged attacker inventory for 'generic pipeline' (at minimum: Ranger + SkeletonArcher + BallistaTower). Lock projectile defaults (speed/lifetime clamp, arrow vs bolt defaults). Confirm demolish guardrails locked: allow under attack, disable under construction.",
+          "response": {
+            "received_at_local": "2026-01-03T09:39:12-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — WK5 R2 confirmation and lock decisions for ranged attacker inventory, projectile defaults, and demolish guardrails. All decisions are locked for Build A implementation.\\n\\n### Deliverables\\n- **Ranged attacker inventory (locked)**: Confirmed minimum set for generic pipeline (Ranger + SkeletonArcher + BallistaTower).\\n- **Projectile defaults (locked)**: Speed, lifetime clamp, arrow vs bolt defaults finalized for Build A.\\n- **Demolish guardrails (locked)**: Confirmed allow under attack, disable under construction.\\n\\n### Ranged Attacker Inventory (Locked for Build A)\\n\\n**Confirmed minimum set for generic pipeline**:\\n- **Ranger** (hero class): `hero_class == \"ranger\"` OR `is_ranged_attacker == True`\\n- **SkeletonArcher** (enemy type): `enemy_type == \"skeleton_archer\"` OR `is_ranged_attacker == True`\\n- **BallistaTower** (building): `building_type == \"ballista_tower\"` OR `is_ranged_attacker == True`\\n\\n**Implementation contract**: All three must emit `ranged_projectile` events when attacking. The generic pipeline should handle any future ranged attackers that set `is_ranged_attacker == True` or match class/type checks.\\n\\n**Future-proofing**: The pipeline is designed to scale to additional ranged attackers (e.g., wizard spells, future enemy types) without requiring combat system changes—only the attacker needs to set `is_ranged_attacker == True` and optionally implement `get_ranged_spec()`.\\n\\n### Projectile Defaults (Locked for Build A)\\n\\n**Speed (constant)**:\\n- **3000 px/s** (locked)\\n- Rationale: Fast enough to feel responsive, slow enough to be visible at 32×32 scale.\\n\\n**Lifetime (distance-based, clamped)**:\\n- **Formula**: `lifetime_ms = (distance_px / 3000.0) * 1000`\\n- **Clamp**: `min(80ms, max(140ms, lifetime_ms))`\\n- **Rationale**: Ensures projectiles are always visible (≥80ms) but never feel laggy (≤140ms).\\n\\n**Arrow defaults (Ranger + SkeletonArcher)**:\\n- **Projectile kind**: `\"arrow\"`\\n- **Color**: `(200, 200, 50)` yellow-amber (locked)\\n- **Outline**: `(100, 100, 20)` dark amber (locked)\\n- **Size**: `2 px` (locked)\\n- **Rationale**: Yellow-amber reads as \"arrow\" at 32×32; 2 px is visible without overwhelming sprites.\\n\\n**Bolt defaults (BallistaTower)**:\\n- **Projectile kind**: `\"bolt\"`\\n- **Color**: `(180, 180, 200)` light gray-blue (locked)\\n- **Outline**: `(80, 80, 100)` dark gray-blue (locked)\\n- **Size**: `3 px` (locked)\\n- **Rationale**: Gray-blue reads as \"mechanical bolt\"; 3 px feels heavier than arrows.\\n\\n**Determinism requirement (locked)**: All projectile parameters must be derived from event fields (attacker type, from/to positions) or seeded RNG (never wall-clock time).\\n\\n### Demolish Guardrails (Locked for Build A)\\n\\n**Player demolish (locked)**:\\n- **Allowed**: Constructed buildings (`is_constructed == True`) including:\\n  - Buildings under attack (no restriction)\\n  - Buildings with heroes inside (with warning message)\\n- **Disabled**:\\n  - Castle (`building_type == \"castle\"`)\\n  - Under-construction buildings (`is_constructed == False` OR `construction_started == False`)\\n\\n**Auto-demolish (locked)**:\\n- **Triggers**: All non-castle buildings when `hp <= 0`\\n- **No refund**: Auto-demolish does not refund gold (same as player demolish)\\n- **Reference cleanup**: Engine must clear all references before removal (hero.target, enemy.target, peasant.target_building, selected_building, lair_system.lairs, bounties targeting lairs/buildings, hero.home_building)\\n\\n**UX (locked for Build A)**:\\n- **Instant demolish**: No confirmation dialog (fast iteration, low friction)\\n- **Warning message**: If demolishing building with heroes inside: \"Demolished: [Building Name]. Heroes inside have been ejected.\"\\n- **Build B consideration**: Optional confirmation or hold-to-demolish if misclicks observed during playtest\\n\\n### Acceptance Criteria (Locked)\\n- Generic pipeline handles Ranger + SkeletonArcher + BallistaTower (minimum set).\\n- Projectiles use locked defaults: speed 3000 px/s, lifetime 80–140ms clamp, arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px).\\n- Player demolish works for all constructed non-castle buildings (including under attack).\\n- Player demolish disabled for castle and under-construction buildings.\\n- Auto-demolish triggers at 0 HP for all non-castle buildings with proper reference cleanup.\\n- No refunds on demolish (player or auto).\\n\\n### Risks + Mitigations (No Changes)\\n- **Projectile readability**: High-contrast colors (yellow-amber with dark outline) and 2–3 px size (locked).\\n- **Projectile lag**: Constant speed 3000 px/s + distance-based lifetime with 80–140ms clamp (locked).\\n- **Accidental demolish**: Build A instant (low friction) + Build B optional confirmation if misclicks observed (locked).\\n- **Reference cleanup**: Centralized cleanup pass checking all known reference types (locked).\\n\\n### Dependencies (No Blockers)\\n- **Agent 03**: Architecture for `is_ranged_attacker` interface and `get_ranged_spec()` method signature (expected in wk5_r2).\\n- **Agent 08**: Final demolish button UX spec and microcopy (expected in wk5_r2).\\n- **Agent 09**: Art confirmation for arrow color (ranger + skeleton_archer same vs different) and bow readability pixels (expected in wk5_r2).\\n- **Agent 11**: Build A test steps with locked guardrails (expected in wk5_r2).\\n\\n### Questions (Blockers Only)\\n- None. All decisions are locked and ready for Build A implementation.\\n\\n### Recommended Next Actions\\n- Agent 03: Finalize `is_ranged_attacker` interface and `get_ranged_spec()` method signature.\\n- Agent 08: Confirm final demolish button UX spec and microcopy strings.\\n- Agent 09: Confirm arrow color (same for ranger + skeleton_archer recommended) and bow readability pixels.\\n- Implementation: Wire ranged attacker detection in combat system and emit `ranged_projectile` events for Ranger + SkeletonArcher + BallistaTower.\\n- Implementation: Add demolish button to building panel and engine action handler with locked guardrails.\\n- QA: Execute Build A test steps with locked guardrails (demolish edge cases, projectile visibility).",
+            "summary_bullets": [
+              "Confirmed ranged attacker inventory (locked): Ranger + SkeletonArcher + BallistaTower minimum set for generic pipeline.",
+              "Locked projectile defaults: speed 3000 px/s constant, lifetime 80–140ms clamp (distance-based), arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px).",
+              "Confirmed demolish guardrails (locked): allow under attack, disable under construction, no refunds, proper reference cleanup."
+            ],
+            "proposed_changes": [
+              "Implement `is_ranged_attacker` boolean property for Ranger, SkeletonArcher, and BallistaTower.",
+              "Implement `get_ranged_spec()` method returning projectile metadata (kind, color, size) for VFX system.",
+              "Emit `ranged_projectile` events in combat system when `is_ranged_attacker == True` (Ranger + SkeletonArcher + BallistaTower).",
+              "Add demolish button to building panel (disabled for castle and under-construction buildings).",
+              "Implement auto-demolish cleanup pass in engine (0 HP removal with reference cleanup for all known reference types)."
+            ],
+            "acceptance_criteria": [
+              "Generic pipeline handles Ranger + SkeletonArcher + BallistaTower (minimum set).",
+              "Projectiles use locked defaults: speed 3000 px/s, lifetime 80–140ms clamp, arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px).",
+              "Player demolish works for all constructed non-castle buildings (including under attack).",
+              "Player demolish disabled for castle and under-construction buildings.",
+              "Auto-demolish triggers at 0 HP for all non-castle buildings with proper reference cleanup.",
+              "No refunds on demolish (player or auto)."
+            ],
+            "risks": [
+              "Projectile readability at 32×32 scale (mitigated with high-contrast colors and 2–3 px size, locked).",
+              "Projectile feels laggy if too slow (mitigated with constant speed 3000 px/s and distance-based lifetime with 80–140ms clamp, locked).",
+              "Player accidentally demolishes important building (mitigated with Build A instant + Build B optional confirmation if misclicks observed, locked).",
+              "Reference cleanup misses edge cases (mitigated with centralized cleanup pass checking all known reference types, locked)."
+            ],
+            "dependencies": [
+              "Agent 03: Finalize `is_ranged_attacker` interface and `get_ranged_spec()` method signature (expected in wk5_r2).",
+              "Agent 08: Confirm final demolish button UX spec and microcopy strings (expected in wk5_r2).",
+              "Agent 09: Confirm arrow color (same for ranger + skeleton_archer recommended) and bow readability pixels (expected in wk5_r2).",
+              "Agent 11: Build A test steps with locked guardrails (expected in wk5_r2)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 03: Finalize `is_ranged_attacker` interface and `get_ranged_spec()` method signature.",
+              "Agent 08: Confirm final demolish button UX spec and microcopy strings.",
+              "Agent 09: Confirm arrow color (same for ranger + skeleton_archer recommended) and bow readability pixels.",
+              "Implementation: Wire ranged attacker detection in combat system and emit `ranged_projectile` events for Ranger + SkeletonArcher + BallistaTower.",
+              "Implementation: Add demolish button to building panel and engine action handler with locked guardrails.",
+              "QA: Execute Build A test steps with locked guardrails (demolish edge cases, projectile visibility)."
+            ],
+            "agent_fields": {
+              "ranged_attacker_inventory_locked": {
+                "minimum_set": ["Ranger", "SkeletonArcher", "BallistaTower"],
+                "implementation_contract": "All three must emit ranged_projectile events when attacking",
+                "future_proofing": "Pipeline scales to additional ranged attackers via is_ranged_attacker flag"
+              },
+              "projectile_defaults_locked": {
+                "speed_px_per_s": 3000,
+                "lifetime_formula": "lifetime_ms = (distance_px / 3000.0) * 1000",
+                "lifetime_clamp": "min(80ms, max(140ms, lifetime_ms))",
+                "arrow_defaults": {
+                  "projectile_kind": "arrow",
+                  "color": "(200, 200, 50)",
+                  "outline": "(100, 100, 20)",
+                  "size_px": 2
+                },
+                "bolt_defaults": {
+                  "projectile_kind": "bolt",
+                  "color": "(180, 180, 200)",
+                  "outline": "(80, 80, 100)",
+                  "size_px": 3
+                },
+                "determinism": "All parameters derived from event fields or seeded RNG (never wall-clock)"
+              },
+              "demolish_guardrails_locked": {
+                "player_demolish_allowed": ["constructed buildings", "buildings under attack", "buildings with heroes inside (with warning)"],
+                "player_demolish_disabled": ["castle", "under-construction buildings"],
+                "auto_demolish": "all non-castle buildings at 0 HP, no refund, proper reference cleanup",
+                "reference_cleanup_required": ["hero.target", "enemy.target", "peasant.target_building", "selected_building", "lair_system.lairs", "bounties targeting lairs/buildings", "hero.home_building"],
+                "ux_build_a": "instant demolish, no confirmation",
+                "warning_message": "Demolished: [Building Name]. Heroes inside have been ejected."
+              },
+              "build_a_decisions_locked": true
+            }
+          }
+        }
+        ,
+        "wk5_r3": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk5_r3",
+          "round_meta": {
+            "prompt_set_id": "wk5_implementation_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T09:53:04-07:00"
+          },
+            "prompt_text": "WK5 R3 Implementation greenlight: Confirm ranged attacker inventory (Ranger, SkeletonArcher, BallistaTower), lock projectile defaults (speed/lifetime clamp, arrow vs bolt), confirm demolish guardrails (allow under attack, disable under construction). Final confirmation: confirm ranged attacker inventory (min: Ranger, SkeletonArcher, BallistaTower) + projectile defaults (speed/lifetime clamp; kinds).",
+          "response": {
+            "received_at_local": "2026-01-03T09:53:04-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — WK5 R3 implementation greenlight signoff. All gameplay systems decisions are locked and confirmed from wk5_r2. No code changes from Agent 05; providing final confirmation and tuning guidance only.\\n\\n### Deliverables\\n- **Ranged attacker inventory (confirmed)**: Ranger + SkeletonArcher + BallistaTower minimum set for generic pipeline (locked from wk5_r2).\\n- **Projectile defaults (confirmed)**: Speed 3000 px/s, lifetime 80–140ms clamp, arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px) (locked from wk5_r2).\\n- **Demolish guardrails (confirmed)**: Allow under attack, disable under construction, no refunds, proper reference cleanup (locked from wk5_r2).\\n\\n### Ranged Attacker Inventory (Confirmed for Build A)\\n\\n**Minimum set for generic pipeline (locked)**:\\n- **Ranger** (hero class): `hero_class == \"ranger\"` OR `is_ranged_attacker == True`\\n- **SkeletonArcher** (enemy type): `enemy_type == \"skeleton_archer\"` OR `is_ranged_attacker == True`\\n- **BallistaTower** (building): `building_type == \"ballista_tower\"` OR `is_ranged_attacker == True`\\n\\n**Implementation contract**: All three must emit `ranged_projectile` events when attacking. The generic pipeline should handle any future ranged attackers that set `is_ranged_attacker == True` or match class/type checks.\\n\\n**Note**: BallistaTower is listed as \"future\" in the prompt, but it's part of the locked minimum set from wk5_r2. If BallistaTower is not implemented in Build A, that's acceptable (the pipeline will still work for Ranger + SkeletonArcher).\\n\\n### Projectile Defaults (Confirmed for Build A)\\n\\n**Speed (constant, locked)**:\\n- **3000 px/s**\\n- Rationale: Fast enough to feel responsive, slow enough to be visible at 32×32 scale.\\n\\n**Lifetime (distance-based, clamped, locked)**:\\n- **Formula**: `lifetime_ms = (distance_px / 3000.0) * 1000`\\n- **Clamp**: `min(80ms, max(140ms, lifetime_ms))`\\n- **Rationale**: Ensures projectiles are always visible (≥80ms) but never feel laggy (≤140ms).\\n\\n**Arrow defaults (Ranger + SkeletonArcher, locked)**:\\n- **Projectile kind**: `\"arrow\"`\\n- **Color**: `(200, 200, 50)` yellow-amber\\n- **Outline**: `(100, 100, 20)` dark amber\\n- **Size**: `2 px`\\n- **Rationale**: Yellow-amber reads as \"arrow\" at 32×32; 2 px is visible without overwhelming sprites.\\n\\n**Bolt defaults (BallistaTower, locked)**:\\n- **Projectile kind**: `\"bolt\"`\\n- **Color**: `(180, 180, 200)` light gray-blue\\n- **Outline**: `(80, 80, 100)` dark gray-blue\\n- **Size**: `3 px`\\n- **Rationale**: Gray-blue reads as \"mechanical bolt\"; 3 px feels heavier than arrows.\\n\\n**Determinism requirement (locked)**: All projectile parameters must be derived from event fields (attacker type, from/to positions) or seeded RNG (never wall-clock time).\\n\\n**Projectile cap (new from prompt)**: `MAX_ACTIVE_PROJECTILES=50` (configurable in config.py). This is acceptable for Build A; if performance issues arise, we can tune in Build B.\\n\\n### Demolish Guardrails (Confirmed for Build A)\\n\\n**Player demolish (locked)**:\\n- **Allowed**: Constructed buildings (`is_constructed == True`) including:\\n  - Buildings under attack (no restriction)\\n  - Buildings with heroes inside (with warning message)\\n- **Disabled**:\\n  - Castle (`building_type == \"castle\"`)\\n  - Under-construction buildings (`is_constructed == False` OR `construction_started == False`)\\n\\n**Auto-demolish (locked)**:\\n- **Triggers**: All non-castle buildings when `hp <= 0`\\n- **No refund**: Auto-demolish does not refund gold (same as player demolish)\\n- **Reference cleanup**: Engine must clear all references before removal (hero.target, enemy.target, peasant.target_building, selected_building, lair_system.lairs, bounties targeting lairs/buildings, hero.home_building)\\n\\n**UX (locked for Build A)**:\\n- **Instant demolish**: No confirmation dialog (fast iteration, low friction)\\n- **Warning message**: If demolishing building with heroes inside: \"Demolished: [Building Name]. Heroes inside have been ejected.\"\\n- **Build B consideration**: Optional confirmation or hold-to-demolish if misclicks observed during playtest\\n\\n### Files I Will Touch (None — No Code Changes from Agent 05)\\n- No code changes from Agent 05 in wk5_r3. This is a confirmation/signoff round only.\\n- Implementation owners: Agent 03 (architecture/cleanup), Agent 08 (UI), Agent 09 (art), Agent 11 (QA), Agent 12 (tools).\\n\\n### How I Will Test (Review Only)\\n- **Review implementation PRs** for adherence to locked gameplay decisions:\\n  - Ranged attacker detection correctly identifies Ranger + SkeletonArcher (and BallistaTower if implemented)\\n  - Projectile defaults match locked values (speed 3000 px/s, lifetime 80–140ms clamp, arrow vs bolt specs)\\n  - Demolish guardrails match locked rules (allow under attack, disable under construction)\\n- **Manual smoke test** (after implementation):\\n  - Verify projectiles are visible and readable at 32×32 scale\\n  - Verify demolish works for constructed buildings (including under attack)\\n  - Verify demolish is disabled for castle and under-construction buildings\\n  - Verify auto-demolish triggers at 0 HP with proper reference cleanup\\n\\n### Evidence (Commands Run)\\n- **No commands run by Agent 05 in wk5_r3** (review/signoff only).\\n- **Expected evidence from implementation owners**:\\n  - `python tools/qa_smoke.py --quick` (must PASS)\\n  - `python tools/validate_assets.py --strict --check-attribution` (must PASS)\\n  - Visual Snapshot System: `worker_catalog` and `ranged_projectiles` scenarios produce valid snapshots + gallery builds\\n\\n### Risks + Mitigations (No Changes from wk5_r2)\\n- **Projectile readability**: High-contrast colors (yellow-amber with dark outline) and 2–3 px size (locked).\\n- **Projectile lag**: Constant speed 3000 px/s + distance-based lifetime with 80–140ms clamp (locked).\\n- **Accidental demolish**: Build A instant (low friction) + Build B optional confirmation if misclicks observed (locked).\\n- **Reference cleanup**: Centralized cleanup pass checking all known reference types (locked).\\n- **Projectile cap**: MAX_ACTIVE_PROJECTILES=50 is acceptable for Build A; if performance issues arise, tune in Build B.\\n\\n### Dependencies (No Blockers)\\n- **Agent 03**: Architecture for `is_ranged_attacker` interface and `get_ranged_spec()` method signature (expected in wk5_r3).\\n- **Agent 08**: Final demolish button UX spec and microcopy strings (expected in wk5_r3).\\n- **Agent 09**: Art confirmation for arrow color (ranger + skeleton_archer same vs different) and bow readability pixels (expected in wk5_r3).\\n- **Agent 11**: Build A test steps with locked guardrails (expected in wk5_r3).\\n- **Agent 12**: Tools updates (manifest, validator, placeholder generator, snapshot scenarios) (expected in wk5_r3).\\n\\n### Questions (Blockers Only)\\n- None. All decisions are locked and ready for Build A implementation.\\n\\n### Recommended Next Actions\\n- **Agent 03**: Implement building removal + reference cleanup and ranged projectile event contract.\\n- **Agent 08**: Implement demolish button in building panel with locked UX spec.\\n- **Agent 09**: Generate/verify worker placeholder sprites and ensure ranger attack pose includes bow cue.\\n- **Agent 11**: Execute Build A test steps with locked guardrails.\\n- **Agent 12**: Update tools (manifest, validator, placeholder generator, snapshot scenarios).\\n- **After implementation**: Run `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution` to verify gates pass.\\n- **After implementation**: Run Visual Snapshot System scenarios (`worker_catalog` and `ranged_projectiles`) and rebuild gallery.\\n\\n### Signoff\\nAll gameplay systems decisions are locked and confirmed from wk5_r2. No blockers from Agent 05. Ready for Build A implementation.",
+            "summary_bullets": [
+              "Confirmed ranged attacker inventory (locked): Ranger + SkeletonArcher + BallistaTower minimum set for generic pipeline.",
+              "Confirmed projectile defaults (locked): speed 3000 px/s, lifetime 80–140ms clamp, arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px).",
+              "Confirmed demolish guardrails (locked): allow under attack, disable under construction, no refunds, proper reference cleanup.",
+              "No code changes from Agent 05 in wk5_r3; this is a confirmation/signoff round only."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 05 in wk5_r3; providing final confirmation and tuning guidance only.",
+              "Implementation owners: Agent 03 (architecture/cleanup), Agent 08 (UI), Agent 09 (art), Agent 11 (QA), Agent 12 (tools)."
+            ],
+            "acceptance_criteria": [
+              "Generic pipeline handles Ranger + SkeletonArcher + BallistaTower (minimum set).",
+              "Projectiles use locked defaults: speed 3000 px/s, lifetime 80–140ms clamp, arrow (yellow-amber, 2px) vs bolt (gray-blue, 3px).",
+              "Player demolish works for all constructed non-castle buildings (including under attack).",
+              "Player demolish disabled for castle and under-construction buildings.",
+              "Auto-demolish triggers at 0 HP for all non-castle buildings with proper reference cleanup.",
+              "No refunds on demolish (player or auto).",
+              "Gates PASS: python tools/qa_smoke.py --quick and python tools/validate_assets.py --strict --check-attribution.",
+              "Visual Snapshot System: worker_catalog and ranged_projectiles scenarios produce valid snapshots + gallery builds."
+            ],
+            "risks": [
+              "Projectile readability at 32×32 scale (mitigated with high-contrast colors and 2–3 px size, locked).",
+              "Projectile feels laggy if too slow (mitigated with constant speed 3000 px/s and distance-based lifetime with 80–140ms clamp, locked).",
+              "Player accidentally demolishes important building (mitigated with Build A instant + Build B optional confirmation if misclicks observed, locked).",
+              "Reference cleanup misses edge cases (mitigated with centralized cleanup pass checking all known reference types, locked).",
+              "Projectile cap performance (MAX_ACTIVE_PROJECTILES=50 acceptable for Build A; tune in Build B if needed)."
+            ],
+            "dependencies": [
+              "Agent 03: Architecture for `is_ranged_attacker` interface and `get_ranged_spec()` method signature (expected in wk5_r3).",
+              "Agent 08: Final demolish button UX spec and microcopy strings (expected in wk5_r3).",
+              "Agent 09: Art confirmation for arrow color (ranger + skeleton_archer same vs different) and bow readability pixels (expected in wk5_r3).",
+              "Agent 11: Build A test steps with locked guardrails (expected in wk5_r3).",
+              "Agent 12: Tools updates (manifest, validator, placeholder generator, snapshot scenarios) (expected in wk5_r3)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 03: Implement building removal + reference cleanup and ranged projectile event contract.",
+              "Agent 08: Implement demolish button in building panel with locked UX spec.",
+              "Agent 09: Generate/verify worker placeholder sprites and ensure ranger attack pose includes bow cue.",
+              "Agent 11: Execute Build A test steps with locked guardrails.",
+              "Agent 12: Update tools (manifest, validator, placeholder generator, snapshot scenarios).",
+              "After implementation: Run `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution` to verify gates pass.",
+              "After implementation: Run Visual Snapshot System scenarios (`worker_catalog` and `ranged_projectiles`) and rebuild gallery."
+            ],
+            "agent_fields": {
+              "role_in_wk5_r3": "confirmation_signoff_only",
+              "code_changes": "none",
+              "ranged_attacker_inventory_confirmed": {
+                "minimum_set": ["Ranger", "SkeletonArcher", "BallistaTower"],
+                "note": "BallistaTower listed as 'future' in prompt but part of locked minimum set from wk5_r2"
+              },
+              "projectile_defaults_confirmed": {
+                "speed_px_per_s": 3000,
+                "lifetime_formula": "lifetime_ms = (distance_px / 3000.0) * 1000",
+                "lifetime_clamp": "min(80ms, max(140ms, lifetime_ms))",
+                "arrow_defaults": {
+                  "projectile_kind": "arrow",
+                  "color": "(200, 200, 50)",
+                  "outline": "(100, 100, 20)",
+                  "size_px": 2
+                },
+                "bolt_defaults": {
+                  "projectile_kind": "bolt",
+                  "color": "(180, 180, 200)",
+                  "outline": "(80, 80, 100)",
+                  "size_px": 3
+                },
+                "max_active_projectiles": 50,
+                "determinism": "All parameters derived from event fields or seeded RNG (never wall-clock)"
+              },
+              "demolish_guardrails_confirmed": {
+                "player_demolish_allowed": ["constructed buildings", "buildings under attack", "buildings with heroes inside (with warning)"],
+                "player_demolish_disabled": ["castle", "under-construction buildings"],
+                "auto_demolish": "all non-castle buildings at 0 HP, no refund, proper reference cleanup",
+                "reference_cleanup_required": ["hero.target", "enemy.target", "peasant.target_building", "selected_building", "lair_system.lairs", "bounties targeting lairs/buildings", "hero.home_building"],
+                "ux_build_a": "instant demolish, no confirmation",
+                "warning_message": "Demolished: [Building Name]. Heroes inside have been ejected."
+              },
+              "ready_for_implementation": true,
+              "no_blockers": true
+            }
+          }
+        }
+        ,
+        "wk5_r5": {
+          "sprint_id": "wk5-demolition-projectiles-workers",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
+            "notes": "WK5 R5: Post-ship fix - Replace glyph rendering with pixel sprite rendering for peasants and tax collectors."
+          },
+          "round_id": "wk5_r5",
+          "round_meta": {
+            "prompt_set_id": "wk5_worker_sprite_fix_r5_v1",
+            "build_target": "BuildA_fix",
+            "sent_at_local": "2026-01-03T12:22:17-07:00"
+          },
+          "prompt_text": "WK5 R5: Replace glyph rendering with pixel sprite rendering for peasants (circle + 'P') and tax collectors (diamond + '$'). Create WorkerSpriteLibrary similar to HeroSpriteLibrary/EnemySpriteLibrary. Load frames from assets/sprites/workers/<worker_type>/<action>/frame_*.png. Map actions: Peasant (idle, walk, work, hurt, dead), TaxCollector (idle, walk, collect, return). Fallback to glyph if frames missing.",
+          "response": {
+            "received_at_local": "2026-01-03T12:22:17-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — WK5 R5 worker sprite rendering implementation complete. Replaced glyph rendering (circle + 'P' for peasants, diamond + '$' for tax collectors) with pixel sprite rendering using new WorkerSpriteLibrary. All gates pass.\\n\\n### Deliverables\\n- **Created WorkerSpriteLibrary**: New `game/graphics/worker_sprites.py` mirroring HeroSpriteLibrary/EnemySpriteLibrary pattern.\\n- **Updated Peasant rendering**: Replaced circle + 'P' glyph with sprite animation (idle, walk, work, hurt, dead).\\n- **Updated TaxCollector rendering**: Replaced diamond + '$' glyph with sprite animation (idle, walk, collect, return).\\n- **Fallback policy**: If frames are missing, falls back to old glyph render (but prefers sprites when present).\\n\\n### Files Changed\\n- **NEW**: `game/graphics/worker_sprites.py` (WorkerSpriteLibrary class with procedural fallback)\\n- **MODIFIED**: `game/entities/peasant.py` (added sprite animation initialization, update logic, and render path)\\n- **MODIFIED**: `game/entities/tax_collector.py` (added sprite animation update logic and render path)\\n\\n### Before/After\\n- **Before**: Peasants rendered as white-outlined circles with 'P' glyph; tax collectors as white-outlined diamonds with '$' glyph.\\n- **After**: Peasants and tax collectors render as 32×32 pixel sprites (procedural fallback until art assets exist). Sprites animate based on state (idle, walk, work/collect, hurt, dead). Health bar and gold text overlays remain unchanged.\\n\\n### Implementation Details\\n- **WorkerSpriteLibrary**:\\n  - Loads frames from `assets/sprites/workers/<worker_type>/<action>/frame_*.png`\\n  - Falls back to procedural frames (simple circle + head sprites) if assets missing\\n  - Supports peasant (idle, walk, work, hurt, dead) and tax_collector (idle, walk, collect, return)\\n  - Uses same caching pattern as hero/enemy sprite libraries\\n- **Peasant updates**:\\n  - Initialize `_anim` in `__init__` using `WorkerSpriteLibrary.create_player(\"peasant\", size=32)`\\n  - Added `_update_animation(dt)` method that maps `PeasantState` to animation clips (MOVING→walk, WORKING→work, DEAD→dead, etc.)\\n  - Updated `render()` to blit sprite frame instead of drawing circle + 'P' glyph\\n  - Added hurt animation trigger in `take_damage()`\\n- **TaxCollector updates**:\\n  - Initialize `_anim` in `__init__` using `WorkerSpriteLibrary.create_player(\"tax_collector\", size=32)`\\n  - Added `_update_animation(dt)` method that maps `CollectorState` to animation clips (MOVING_TO_GUILD→walk, COLLECTING→collect, RETURNING→return, WAITING→idle)\\n  - Updated `render()` to blit sprite frame instead of drawing diamond + '$' glyph\\n  - Gold text overlay and state indicator text remain unchanged (per requirements)\\n\\n### How to Test\\n- **Manual**: Launch game (`python main.py --no-llm`) and observe peasants/tax collectors render as sprites (not glyphs)\\n- **Gates**:\\n  - `python tools/qa_smoke.py --quick` → PASS (exit_code=0)\\n  - `python tools/validate_assets.py --strict --check-attribution` → PASS (exit_code=0)\\n- **Visual Snapshot**: Run `worker_catalog` scenario to verify sprites are visible (not glyphs)\\n\\n### Evidence (Commands Run)\\n- **qa_smoke --quick**: PASS\\n  - determinism_guard: PASS (no violations)\\n  - All scenarios: PASS (default, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM)\\n  - Exit code: 0\\n- **validate_assets --strict --check-attribution**: PASS\\n  - Exit code: 0\\n  - No errors reported\\n\\n### Risks + Mitigations\\n- **Risk: Missing sprite frames cause crashes**: Mitigated with fallback to glyph render if `_anim` is None or frame() fails.\\n- **Risk: Animation state mapping incorrect**: Mitigated by testing state transitions (MOVING→walk, WORKING→work, etc.) and verifying animation clips exist.\\n- **Risk: Performance regression**: Mitigated by using same caching pattern as hero/enemy sprite libraries (frames cached per worker_type + size).\\n\\n### Dependencies (No Blockers)\\n- **Agent 12**: Worker sprites should exist at `assets/sprites/workers/peasant/` and `assets/sprites/workers/tax_collector/` (placeholder generator should create them).\\n- **Agent 11**: Visual Snapshot System `worker_catalog` scenario should verify sprites are visible (not glyphs).\\n\\n### Questions (Blockers Only)\\n- None.\\n\\n### Recommended Next Actions\\n- **Agent 12**: Verify placeholder generator creates worker sprite frames at expected paths.\\n- **Agent 11**: Run `worker_catalog` snapshot scenario to verify sprites are visible (not glyphs).\\n- **Manual smoke**: Launch game and verify peasants/tax collectors render as sprites (procedural fallback is acceptable until art assets exist).",
+            "summary_bullets": [
+              "Created WorkerSpriteLibrary (game/graphics/worker_sprites.py) mirroring HeroSpriteLibrary/EnemySpriteLibrary pattern.",
+              "Updated Peasant rendering: replaced circle + 'P' glyph with sprite animation (idle, walk, work, hurt, dead).",
+              "Updated TaxCollector rendering: replaced diamond + '$' glyph with sprite animation (idle, walk, collect, return).",
+              "Fallback policy: if frames missing, falls back to old glyph render (but prefers sprites when present).",
+              "All gates pass: qa_smoke --quick PASS, validate_assets --strict --check-attribution PASS."
+            ],
+            "proposed_changes": [
+              "NEW: game/graphics/worker_sprites.py (WorkerSpriteLibrary class with procedural fallback for peasant and tax_collector).",
+              "MODIFIED: game/entities/peasant.py (added sprite animation initialization, _update_animation() method, and updated render() to use sprites).",
+              "MODIFIED: game/entities/tax_collector.py (added sprite animation initialization, _update_animation() method, and updated render() to use sprites)."
+            ],
+            "acceptance_criteria": [
+              "Peasants no longer show 'P' circles; render as pixel sprites (procedural fallback acceptable until art assets exist).",
+              "Tax collectors no longer show '$' diamonds; render as pixel sprites (procedural fallback acceptable until art assets exist).",
+              "python tools/qa_smoke.py --quick stays PASS.",
+              "python tools/validate_assets.py --strict --check-attribution stays PASS.",
+              "worker_catalog snapshot clearly shows sprite workers, not glyphs (when available)."
+            ],
+            "risks": [
+              "Missing sprite frames cause crashes (mitigated with fallback to glyph render if _anim is None or frame() fails).",
+              "Animation state mapping incorrect (mitigated by testing state transitions and verifying animation clips exist).",
+              "Performance regression (mitigated by using same caching pattern as hero/enemy sprite libraries)."
+            ],
+            "dependencies": [
+              "Agent 12: Worker sprites should exist at assets/sprites/workers/peasant/ and assets/sprites/workers/tax_collector/ (placeholder generator should create them).",
+              "Agent 11: Visual Snapshot System worker_catalog scenario should verify sprites are visible (not glyphs)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12: Verify placeholder generator creates worker sprite frames at expected paths.",
+              "Agent 11: Run worker_catalog snapshot scenario to verify sprites are visible (not glyphs).",
+              "Manual smoke: Launch game and verify peasants/tax collectors render as sprites (procedural fallback is acceptable until art assets exist)."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "game/graphics/worker_sprites.py (NEW)",
+                "game/entities/peasant.py (MODIFIED)",
+                "game/entities/tax_collector.py (MODIFIED)"
+              ],
+              "before_after": {
+                "before": "Peasants: white-outlined circles with 'P' glyph. Tax collectors: white-outlined diamonds with '$' glyph.",
+                "after": "Peasants and tax collectors render as 32×32 pixel sprites (procedural fallback until art assets exist). Sprites animate based on state."
+              },
+              "qa_smoke_quick": "PASS",
+              "qa_smoke_exit_code": 0,
+              "validate_assets": "PASS",
+              "validate_assets_exit_code": 0,
+              "implementation_complete": true,
+              "ready_for_integration": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

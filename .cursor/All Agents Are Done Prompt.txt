@@ -1,0 +1,26 @@
+WK5 sprint status (final)
+
+Status (confirmed via agent logs)
+- Agent 11 posted `wk5_r6`: ✅ all required gates PASS; ✅ snapshots captured; ✅ gallery rebuilt; ✅ Build B polish verified ready for signoff.
+- Agent 03 posted `wk5_r6`: ✅ debris event emission + deterministic debris seeding confirmed (no Python hash()).
+
+Sprint status
+- WK5 is effectively **DONE**. The only remaining “work” is a **human manual live-play sanity check** (can’t be automated):
+  - Watch Ranger/SkeletonArcher/Ballista fire and confirm projectiles are readable.
+  - Destroy/demolish a building and confirm rubble remains.
+
+Next prompt: NOT NEEDED (unless you want a final “manual signoff” log entry)
+If you want it, send to Agent 11 only.
+
+PROMPT START
+WK5 Manual signoff log (optional)
+
+Write your reply under:
+`sprints["wk5-demolition-projectiles-workers"].rounds["wk5_r7"]`
+
+Run `python main.py --no-llm` and do a 5-minute manual check:
+- Confirm ranged projectiles are readable in live play (Ranger + SkeletonArcher + Ballista).
+- Confirm debris appears after destroying/demolishing a building and persists.
+
+Reply with: PASS/FAIL + any issues observed + minimal repro steps.
+PROMPT END
