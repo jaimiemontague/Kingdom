@@ -1304,6 +1304,84 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 Build A: add new enemy type skeleton_archer (ranged kiter), ensure it is testable quickly, and keep strict validator + snapshot system green."
+      },
+      "rounds": {
+        "wk4_r2": {
+          "round_meta": {
+            "prompt_set_id": "wk4_r2_pm_synthesis_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "visibility": "All agents should treat this as the source of truth for WK4 decisions."
+          },
+          "pm_decisions": {
+            "buildA_locked": {
+              "enemy_type": "skeleton_archer",
+              "ranged_only": true,
+              "instant_hit_ranged": true,
+              "no_projectile_system": true,
+              "spawn_source": "skeleton_crypt (lair)",
+              "spawn_mix": "80/20 skeleton/skeleton_archer (deterministic via lair RNG)",
+              "pipeline_complete": [
+                "tools/assets_manifest.json includes skeleton_archer",
+                "assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png exist"
+              ],
+              "testing_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ],
+              "clarity_safeguard_allowed": "Tiny deterministic readability cue is allowed (pose + minimal impact flash) but no new systems."
+            },
+            "tunables_v0": {
+              "hp": 40,
+              "attack": 4,
+              "speed": 1.35,
+              "attack_range_tiles": 6.0,
+              "min_range_tiles": 2.0,
+              "attack_cooldown_ms": 1400
+            },
+            "determinism_perf_guardrails": [
+              "Sim-time/ticks only for cooldowns/ages; no wall-clock in sim logic.",
+              "Seeded RNG streams only; no global random.*",
+              "Stable ordering/tie-breaks for targeting decisions (no set/dict iteration dependence).",
+              "Avoid per-frame pathing churn; rate-limit reposition decisions; avoid O(N_enemies*N_heroes) scans and per-tick allocations."
+            ]
+          },
+          "status": "complete"
+        },
+        "wk4_r3": {
+          "round_meta": {
+            "prompt_set_id": "wk4_r3_exec_closeout_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-03T00:00:00",
+            "notes": "Implementation + verification closeout summary; keep audit trail and evidence in one place."
+          },
+          "pm_round3_results": {
+            "high_level_status": "buildA_shippable",
+            "what_landed": [
+              "Implemented SkeletonArcher enemy (ranged-only, instant-hit) with kite band + hysteresis/commitment + bounded attempts fallback.",
+              "SkeletonCrypt spawns deterministic 80/20 skeleton/skeleton_archer mix via lair RNG.",
+              "Tools/pipeline: tools/assets_manifest.json updated; CC0 placeholder frames generated for skeleton_archer; runtime fallback recognizes skeleton_archer.",
+              "Wave testability: first enemy wave now guarantees a skeleton_archer spawn near the map center for quick validation."
+            ],
+            "evidence": [
+              "python tools/qa_smoke.py --quick => PASS",
+              "python tools/validate_assets.py --strict --check-attribution => PASS"
+            ],
+            "manual_spot_check": [
+              "Recommended: run `python main.py --no-llm` and confirm a Skeleton Archer appears as the first wave enemy within ~10–15s and engages near the castle."
+            ]
+          },
+          "status": "ready_to_ship"
+        }
+      }
+    }
   }
 }
 

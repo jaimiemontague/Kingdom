@@ -294,6 +294,129 @@
           }
         }
       }
+    },
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "PLAN-ONLY: specs/contracts/risks before greenlight."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "PLAN-ONLY: specs/contracts/risks before greenlight."
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_plan_only_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:26:10.4062243-07:00"
+          },
+          "prompt_text": "WK4 plan-only kickoff: add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt, with procedural CC0 placeholders, determinism/perf guardrails, validate_assets + Visual Snapshot System coverage. Instant-hit ranged damage preferred for Build A (no projectile system) unless strongly recommended otherwise.",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:10.4062243-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 06 (AIBehaviorDirector_LLM) — contributing **plan-only** guidance for WK4 `wk4-new-enemy-skeleton-archer` (no code changes). Goal: ship a new ranged kiting enemy (`skeleton_archer`) end-to-end in Build A without breaking determinism, perf, or tooling gates.\n\n### Context gaps / contradictions noticed\n- WK4 plan roster lists Agent 06 as **consult-only**, but this universal prompt asked **all agents** to write `wk4_r1` entries. I’m logging this plan-only response anyway per instruction, but PM should treat my involvement as consult-only unless explicitly activated.\n- Prior weeks had multiple logging formats (JSONL shared file → per-agent JSON). Current process is per-agent logs under `.cursor/plans/agent_logs/` (followed here).\n\n### Deliverables\n- Proposed behavior spec for `skeleton_archer` (kiting + instant-hit ranged) with low-risk, deterministic-friendly implementation notes.\n- Acceptance criteria for AI behavior quality and failure modes (no infinite kite oscillation; no stuck thrash), phrased as observable outcomes.\n- Expected file touchpoints (paths only) for implementing agent(s).\n\n### Proposed scope split (WK4 Build A vs Build B)\n- **Build A (midweek)**\n  - New enemy type `skeleton_archer` spawns from Skeleton Crypt.\n  - Instant-hit ranged attack (no projectile system).\n  - Basic deterministic kite behavior: maintain distance band (min_range/max_range), step away when too close.\n  - CC0 placeholder visuals integrated via existing generator + enemy sprite pipeline.\n  - Tooling gates: `validate_assets --strict --check-attribution` + Visual Snapshot System enemy catalog includes `skeleton_archer`.\n- **Build B (endweek)**\n  - Tuning polish + readability pass (attack windup cue; hit feedback).\n  - Optional lightweight projectile/VFX line ONLY if Build A instant-hit is unclear (player readability), otherwise keep instant-hit.\n  - Perf sanity if large numbers of archers appear (avoid per-frame allocations, keep target selection stable).\n\n### Acceptance criteria to lock (AI behavior slice)\n- `skeleton_archer` attacks from range (instant-hit) and **does not close into melee** unless pathing forces it.\n- Kiting is **stable**:\n  - Archer maintains a distance band (e.g., prefers to be >= min_range away).\n  - Archer does not thrash directions multiple times per second in open ground.\n  - If cornered/unreachable retreat path, it falls back to a simple behavior (e.g., hold position + keep shooting).\n- Determinism guardrails honored:\n  - No wall-clock time usage for behavior; use sim-time.\n  - No global `random.*` in sim; use seeded sim RNG if needed.\n\n### Risks + mitigations\n- **Kite oscillation / stutter**: common when range checks use tight thresholds.\n  - Mitigation: hysteresis band (min_range < desired_range < max_range) + small commitment window (sim-time) for movement goals.\n- **Pathfinding churn**: per-tick replans while kiting can be expensive.\n  - Mitigation: reuse existing path following; replan only on goal change or after a timeout.\n- **Determinism drift**: float comparisons can cause borderline behavior differences.\n  - Mitigation: compare squared distances and use tile-based thresholds where possible; stable ordering when multiple targets exist.\n- **Readability of instant-hit**: players may not perceive ranged attack without projectile.\n  - Mitigation: add a clear attack windup animation frame and a small hit flash on target (Build B polish if needed).\n\n### Concrete file touchpoints (paths only; no implementation)\n- `config.py` (tunables: range, cooldown, move speed, min_range band)\n- `game/entities/enemy.py` (new enemy class + kite logic)\n- `game/entities/lair.py` (Skeleton Crypt spawn mix)\n- `game/graphics/enemy_sprites.py` (ensure type recognized / placeholder hookup)\n- `tools/assets_manifest.json` (add `skeleton_archer` to enemies.types)\n- `tools/generate_cc0_placeholders.py` (placeholder generation for archer frames)\n- `tools/screenshot_scenarios.py` (enemy_catalog includes new enemy via manifest)\n- `tools/validate_assets.py` (ensure new type is validated via manifest)\n\n### Questions (blockers only)\n- None.\n\n### Next actions\n- Wait for PM to confirm whether Agent 06 remains consult-only for WK4; otherwise I’ll stay hands-off unless pinged for a specific AI behavior review.\n- If activated: review the implementing agent’s kite logic for stability (hysteresis/commitment) and determinism pitfalls before Build A merge.\n",
+            "summary_bullets": [
+              "Plan-only: define low-risk kiting behavior for skeleton_archer using instant-hit ranged attacks (no projectile in Build A).",
+              "Recommend hysteresis + small commitment windows to prevent kite oscillation/thrash (sim-time based).",
+              "Tooling gates must include validate_assets strict + Visual Snapshot System enemy catalog coverage."
+            ],
+            "proposed_changes": [
+              "Add skeleton_archer enemy type with min/max range band and simple retreat step when too close (Build A).",
+              "Spawn skeleton_archer from Skeleton Crypt via deterministic spawn mix (Build A).",
+              "Add CC0 placeholder frames and register enemy type in assets manifest + snapshot scenarios (Build A).",
+              "Optional Build B: readability polish (windup/hit feedback) or projectile only if instant-hit is unclear."
+            ],
+            "acceptance_criteria": [
+              "Skeleton Crypt can spawn skeleton_archer and it deals instant-hit ranged damage from a defined range.",
+              "Kiting is stable (no rapid oscillation) via hysteresis/commitment; fallback behavior when cornered.",
+              "Determinism guardrails: sim-time only; no random.* in sim; stable target ordering.",
+              "Gates pass when implemented: python tools/qa_smoke.py --quick; python tools/validate_assets.py --strict --check-attribution; Visual Snapshot System enemy_catalog includes skeleton_archer and gallery builds."
+            ],
+            "risks": [
+              "Oscillating kite movement if range thresholds are too tight (mitigate with hysteresis + commitment).",
+              "Perf issues from frequent replans while kiting (mitigate with replan throttling and path reuse).",
+              "Instant-hit readability may be unclear without projectile (mitigate with attack windup + hit feedback; Build B if needed)."
+            ],
+            "dependencies": [
+              "Agent 03: determinism-safe contracts for target selection and movement thresholds (stable ordering + timebase).",
+              "Agent 05: initial tunables + spawn mix that won’t spike difficulty.",
+              "Agent 11/12: QA assertions + tooling/snapshot coverage updates."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: confirm roster intent for Agent 06 (consult-only per plan vs active per broadcast); otherwise proceed with implementing roster (03/05/09/11/12).",
+              "Lock a minimal ranged/kite behavior spec (range band + hysteresis + fallback) before greenlight to avoid thrash during implementation."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "role": "consult_only_recommended",
+              "behavior_notes": [
+                "Prefer squared-distance checks and tile-based thresholds to reduce float edge behavior.",
+                "Add hysteresis band (min_range/max_range) and a short movement-goal commitment window to reduce oscillation.",
+                "Avoid per-tick path replans; replan only on goal change or timeout."
+              ]
+            }
+          }
+        },
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context refresh before implementation greenlight (wk4_r3)."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T08:07:54.0233413-07:00"
+          },
+          "prompt_text": "WK4 context refresh: confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates), list role-specific deliverables, blockers, and expected file touchpoints. If any locked decisions are risky, propose mitigations without scope creep.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:54.0233413-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 06 (AIBehaviorDirector_LLM) — context refresh ACK for WK4 `wk4-new-enemy-skeleton-archer`. I am **consult-only** per the original plan roster, so I will provide review criteria/signoff rather than implementation work. I have reviewed my wk4_r1 plan-only response and the locked Build A decisions.\n\n### Locked Build A decisions (confirmed understanding)\n- **Ranged-only in Build A**: `skeleton_archer` has no melee fallback; it attacks from range only.\n- **Instant-hit ranged in Build A**: no projectile system required; damage applies immediately at range.\n- **Kiting behavior**: maintain a distance band with hysteresis/commitment to avoid jitter (sim-time based).\n- **Deterministic spawn mix from Skeleton Crypt**: 80/20 skeleton / skeleton_archer (use lair RNG; deterministic).\n- **Pipeline completeness mandatory**:\n  - Add `skeleton_archer` to `tools/assets_manifest.json` so strict validator + enemy_catalog snapshots include it.\n  - Generate placeholder PNGs: `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n- **Gates required (must stay PASS)**:\n  - `python tools/qa_smoke.py --quick`\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - Visual Snapshot System: `enemy_catalog` includes `skeleton_archer` and gallery builds.\n- **Allowed clarity safeguard (Build A)**: tiny deterministic cue (attack pose + minimal impact flash) is allowed only if needed for readability, but no new systems.\n\n### Role-specific deliverables (Agent 06 as consult-only)\nSince I am consult-only, I will **not implement code** but will provide:\n- **Review criteria for kite behavior stability**:\n  - Check that range band uses hysteresis (min_range < desired_range < max_range) to prevent oscillation.\n  - Verify that movement goal commitment window is sim-time based (not wall-clock).\n  - Confirm that pathfinding replans are throttled (not per-tick) to avoid perf churn.\n- **Determinism signoff checklist**:\n  - No `time.time()` or wall-clock usage in enemy behavior logic.\n  - No global `random.*` in sim; use seeded sim RNG if needed.\n  - Stable target ordering when multiple targets exist (deterministic tie-breaks).\n  - Squared-distance checks and tile-based thresholds to reduce float edge behavior.\n- **Behavior quality acceptance criteria**:\n  - `skeleton_archer` does not close into melee unless pathing forces it.\n  - Kiting is stable (no rapid oscillation/thrash in open ground).\n  - Fallback behavior when cornered (hold position + keep shooting).\n\n### Blockers (none)\n- No blockers identified. The locked decisions are reasonable and align with my wk4_r1 recommendations.\n- The instant-hit approach is appropriate for Build A; readability can be addressed in Build B if needed.\n\n### Expected file touchpoints (paths only; no implementation)\nSince I am consult-only, I will **not touch these files**, but I expect the implementing agent(s) to modify:\n- `config.py` (tunables: `SKELETON_ARCHER_*` for range, cooldown, move speed, min_range band)\n- `game/entities/enemy.py` (new `SkeletonArcher` class + kite logic)\n- `game/entities/lair.py` (Skeleton Crypt spawn mix: 80/20 skeleton / skeleton_archer)\n- `game/graphics/enemy_sprites.py` (ensure type recognized / placeholder hookup)\n- `tools/assets_manifest.json` (add `skeleton_archer` to `enemies.types`)\n- `tools/generate_cc0_placeholders.py` (placeholder generation for archer frames)\n- `tools/screenshot_scenarios.py` (enemy_catalog includes new enemy via manifest)\n- `tools/validate_assets.py` (ensure new type is validated via manifest)\n\n### Risk assessment + mitigations (no scope creep)\nThe locked decisions are **low-risk** and align with my wk4_r1 recommendations:\n- **Instant-hit readability risk**: players may not perceive ranged attack without projectile.\n  - **Mitigation (Build A)**: allowed clarity safeguard (attack pose + minimal impact flash) is sufficient.\n  - **Mitigation (Build B)**: if unclear, add lightweight projectile/VFX line (already scoped for Build B).\n- **Kite oscillation risk**: range checks with tight thresholds can cause stutter.\n  - **Mitigation**: hysteresis band + commitment window (already recommended in wk4_r1; implementing agent should follow).\n- **Pathfinding churn risk**: per-tick replans while kiting can be expensive.\n  - **Mitigation**: replan throttling + path reuse (already recommended in wk4_r1; implementing agent should follow).\n\n### Review criteria for implementation PR (when greenlit)\nWhen the implementing agent(s) submit code, I will review for:\n1. **Kite stability**: range band uses hysteresis; commitment window prevents rapid direction flips.\n2. **Determinism compliance**: sim-time only; no wall-clock; seeded RNG; stable ordering.\n3. **Perf safety**: no per-tick path replans; no per-frame allocations in kiting logic.\n4. **Fallback behavior**: cornered archer has a simple hold+shoot fallback (no infinite loop).\n\n### Next actions\n- **Stand by for implementation greenlight (wk4_r3)**.\n- If PM activates me for review: review implementing agent's kite logic PR for stability + determinism before Build A merge.\n- If not activated: remain consult-only and provide signoff only if pinged for a specific blocker.",
+            "summary_bullets": [
+              "Context refresh ACK: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates).",
+              "Role: consult-only (no implementation); will provide review criteria/signoff for kite behavior stability + determinism compliance.",
+              "No blockers identified; locked decisions align with wk4_r1 recommendations and are low-risk.",
+              "Review checklist ready: hysteresis/commitment, sim-time only, stable ordering, replan throttling, fallback behavior."
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "skeleton_archer attacks from range (instant-hit) and does not close into melee unless pathing forces it.",
+              "Kiting is stable (no rapid oscillation) via hysteresis/commitment; fallback behavior when cornered.",
+              "Determinism guardrails: sim-time only; no random.* in sim; stable target ordering.",
+              "Gates pass: python tools/qa_smoke.py --quick; python tools/validate_assets.py --strict --check-attribution; Visual Snapshot System enemy_catalog includes skeleton_archer and gallery builds."
+            ],
+            "risks": [
+              "Instant-hit readability may be unclear without projectile (mitigated by allowed clarity safeguard in Build A; Build B can add projectile if needed).",
+              "Kite oscillation if range thresholds are too tight (mitigated by hysteresis + commitment; implementing agent should follow wk4_r1 recommendations).",
+              "Pathfinding churn from frequent replans (mitigated by replan throttling + path reuse; implementing agent should follow wk4_r1 recommendations)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Stand by for implementation greenlight (wk4_r3).",
+              "If activated for review: review implementing agent's kite logic PR for stability + determinism before Build A merge.",
+              "If not activated: remain consult-only and provide signoff only if pinged for a specific blocker."
+            ],
+            "agent_fields": {
+              "role": "consult_only",
+              "review_criteria": [
+                "Kite stability: range band uses hysteresis (min_range < desired_range < max_range); commitment window prevents rapid direction flips.",
+                "Determinism compliance: sim-time only; no wall-clock; seeded RNG; stable target ordering.",
+                "Perf safety: no per-tick path replans; no per-frame allocations in kiting logic.",
+                "Fallback behavior: cornered archer has a simple hold+shoot fallback (no infinite loop)."
+              ],
+              "locked_decisions_ack": true,
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

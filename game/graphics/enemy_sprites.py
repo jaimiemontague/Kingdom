@@ -73,7 +73,7 @@ class EnemySpriteLibrary:
         et = (enemy_type or "").lower()
         if et == "wolf":
             return (160, 160, 160)
-        if et == "skeleton":
+        if et in ("skeleton", "skeleton_archer"):
             return (220, 220, 240)
         if et == "spider":
             return (40, 40, 40)
@@ -120,6 +120,11 @@ class EnemySpriteLibrary:
                 pygame.draw.ellipse(surf, col, pygame.Rect(center[0] - r, center[1] - r // 2, r * 2, r))
             elif et == "skeleton":
                 pygame.draw.rect(surf, col, pygame.Rect(center[0] - r // 2, center[1] - r, r, r * 2))
+            elif et == "skeleton_archer":
+                # skeleton-like body, plus a simple bow cue so it reads as ranged
+                pygame.draw.rect(surf, col, pygame.Rect(center[0] - r // 2, center[1] - r, r, r * 2))
+                pygame.draw.line(surf, (30, 30, 35), (center[0] + r // 2, center[1] - r // 2), (center[0] + r + 4, center[1] + r // 2), 2)
+                pygame.draw.line(surf, (200, 200, 210), (center[0] + r // 2 + 1, center[1] - r // 2), (center[0] + r // 2 + 1, center[1] + r // 2), 1)
             elif et == "spider":
                 pygame.draw.circle(surf, col, center, r - 2)
                 # legs
@@ -187,6 +192,8 @@ class EnemySpriteLibrary:
         surf.blit(overlay, (0, 0))
         frames.append(surf)
         return frames
+
+
 
 
 

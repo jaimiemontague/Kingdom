@@ -1,5 +1,11 @@
 # Changelog
 
+## Prototype v1.2.5
+
+- New enemy: **Skeleton Archer** (`skeleton_archer`) — ranged-only instant-hit attacks with kiting behavior.
+- Spawns from **Skeleton Crypt** (deterministic 80/20 mix) and is now **guaranteed in Wave 1** near the castle for easy testing.
+- Pipeline: strict asset validation and Visual Snapshot System enemy catalog cover the new enemy type.
+
 ## Prototype v1.2.4
 
 - WK3 UI polish + UX manageability: 1080p borderless default, Quit button, and closeable panels (X).

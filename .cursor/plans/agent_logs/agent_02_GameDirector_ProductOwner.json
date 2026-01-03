@@ -487,6 +487,240 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 is plan-only (no code changes until greenlight). This Agent 02 entry focuses on gameplay feel, pacing, and player clarity for the new ranged/kiting enemy `skeleton_archer`."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_kickoff_r1_v1",
+            "build_target": "PlanOnly_pre-greenlight",
+            "sent_at_local": "2025-12-25T15:25:35.4777623-07:00"
+          },
+          "prompt_text": "WK4 plan-only: add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt, instant-hit ranged damage first pass, with determinism/perf guardrails and coverage in asset validation + Visual Snapshot System.",
+          "response": {
+            "received_at_local": "2025-12-25T15:25:35.4777623-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 02 (GameDirector_ProductOwner) for WK4 Round 1: define player-facing goals and acceptance criteria for adding `skeleton_archer` (a ranged/kiting enemy) without breaking the Majesty-like readability/fairness of combat.\\n\\nMy understanding of the goal: introduce a **new pressure shape** (ranged kite threat) that creates meaningful counterplay and improves encounter variety, while remaining deterministic, performant, and shippable with placeholder visuals/tools coverage.\\n\\n### Deliverables\\n- Build A vs Build B scope split recommendation (tight, low-risk).\\n- Locked acceptance criteria for gameplay feel + clarity (esp. instant-hit ranged).\\n- Risks + mitigations (feel, UX/readability, determinism/perf, pipeline).\\n- Expected file touchpoints (paths only; no implementation).\\n\\n### Questions (blockers only, max 3)\\n- None. (Note: WK4 sprint plan roster marks Agent 02 as consult-only, but this prompt explicitly requests I respond/log; treating this as an intentional override.)\\n\\n### Next actions\\n- Await Agent 03/05/09/11/12 plan-only replies and PM synthesis in wk4_r2 before any implementation greenlight.\\n- If PM wants a sharper ‘feel contract’, I can provide a 1-page micro-spec for kite behavior counterplay and readability (still plan-only).",
+            "summary_bullets": [
+              "Goal: add a ranged/kiting enemy that changes combat pacing without feeling unfair or unreadable",
+              "Prefer Build A: instant-hit ranged with clear wind-up/telegraph + deterministic kite band; no projectile system yet",
+              "Ship with placeholder art + validator/snapshots coverage so pipelines stay consistent"
+            ],
+            "proposed_changes": [
+              "Build A (midweek): implement skeleton_archer end-to-end (spawn from Skeleton Crypt, ranged attack, kite behavior, placeholder visuals, validator + snapshots coverage) with minimal new mechanics",
+              "Build B (endweek): tuning + readability polish (VFX/telegraph refinement), optional projectile line ONLY if instant-hit feels too opaque/unfair; perf sanity on larger waves",
+              "Keep player clarity: ranged damage must be attributable (who shot me?) via animation cue + small VFX line or hit marker (visual-only; no physics)"
+            ],
+            "acceptance_criteria": [
+              "Gameplay feel: skeleton_archer reads as ‘ranged threat’ at gameplay zoom (distinct silhouette + attack cue) and does not feel like unavoidable chip damage",
+              "Fairness: skeleton_archer has a clear attack cadence (wind-up/animation) and does not fire while moving every tick; there is a predictable window for heroes to close distance",
+              "Kiting: skeleton_archer attempts to maintain a distance band (prefers backing away when target is within min_range) but does not stutter/oscillate infinitely (has commitment window / backoff caps)",
+              "Spawn: Skeleton Crypt can spawn skeleton_archer with a conservative mix so difficulty doesn’t spike abruptly (exact mix/tunables from Agent 05)",
+              "No regressions: `python tools/qa_smoke.py --quick` remains PASS and does not become flaky due to new enemy logic",
+              "Pipeline: `python tools/validate_assets.py --strict --check-attribution` remains PASS after the new enemy is added to manifests/placeholders",
+              "Snapshots: enemy catalog scenario includes skeleton_archer and gallery builds without manual intervention"
+            ],
+            "risks": [
+              "Readability risk (instant-hit feels ‘invisible’): mitigate with a strong attack wind-up + small, deterministic VFX line/hit flash (visual-only)",
+              "Balance risk (kiting causes long fights / attrition): mitigate with conservative range/damage and a speed that allows melee heroes to eventually catch, plus cooldown constraints",
+              "UX risk (heroes ignore archer or chase forever): mitigate by keeping kite rules bounded and ensuring heroes can retarget or disengage via existing AI priorities",
+              "Determinism risk (target selection/tie-breaks): mitigate by stable ordering and avoiding wall-clock/float nondeterminism (handled by Agent 03 constraints)",
+              "Perf risk (per-tick scanning for best range position): mitigate by simple heuristics and cadenced decisions (no expensive searches)"
+            ],
+            "dependencies": [
+              "Agent 05: initial tunables + spawn mix proposal (HP/attack/range/cooldown/speed/min_range) so it’s fair at current pacing",
+              "Agent 03: determinism/perf guardrails and safe file boundaries for ranged/kiting logic",
+              "Agent 09: minimum silhouette/animation cue requirements for readable ranged skeleton at 32×32",
+              "Agent 11/12: QA + tooling updates so validator + snapshots cover the new enemy deterministically"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: in wk4_r2 synthesis, lock ‘instant-hit with wind-up + tiny VFX’ as Build A default unless Agents 05/11 identify fairness issues",
+              "PM: ensure spawn mix is conservative (introduce archer gradually) and document it as part of acceptance criteria",
+              "Once greenlit: implement in smallest steps (spawn + placeholder + snapshot first, then kite+attack) to keep gates green"
+            ],
+            "agent_fields": {
+              "build_split_recommendation": {
+                "build_a": [
+                  "Instant-hit ranged attack with clear wind-up/telegraph (no projectile physics)",
+                  "Basic kite behavior (distance band) with bounded oscillation",
+                  "Spawn from Skeleton Crypt + placeholder visuals + manifest/validator/snapshots coverage"
+                ],
+                "build_b": [
+                  "Tuning + readability polish; optional projectile line only if instant-hit fails clarity/fairness",
+                  "Perf sanity at higher enemy counts; refine counters (e.g., guards/towers effectiveness) if needed"
+                ]
+              },
+              "expected_file_touchpoints": [
+                "config.py",
+                "game/entities/enemy.py",
+                "game/entities/lair.py",
+                "game/graphics/enemy_sprites.py",
+                "tools/assets_manifest.json",
+                "tools/generate_cc0_placeholders.py",
+                "tools/validate_assets.py",
+                "tools/screenshot_scenarios.py",
+                "tools/capture_screenshots.py",
+                "tools/build_gallery.py"
+              ],
+              "player_clarity_notes": [
+                "Instant-hit is acceptable only if the archer’s attack is strongly signaled (wind-up + distinct pose) and the hit is attributed (small VFX line/hit flash).",
+                "Avoid ‘silent chip damage’ that feels unfair; if clarity can’t be achieved, escalate to a minimal projectile in Build B."
+              ],
+              "pm_acknowledged": false
+            }
+          }
+        }
+        ,
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Consult-only response: logging a blocker because PM synthesis referenced by the greenlight prompt is not present in Agent 01 hub."
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T15:41:05.0041458-07:00"
+          },
+          "prompt_text": "WK4 greenlight round: read PM synthesis in Agent 01 under wk4_r2 and treat as source-of-truth; then proceed with locked Build A decisions for skeleton_archer implementation.",
+          "response": {
+            "received_at_local": "2025-12-25T15:41:05.0041458-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 02 (consult-only for wk4_r3 unless blocker). I attempted to follow the greenlight instructions and read PM synthesis.\n\n### Deliverables\n- Blocker report: PM synthesis referenced in the prompt is missing from Agent 01 hub, so the studio has no single source of truth for locked tunables/constraints/DoD.\n\n### Questions (blockers only)\n- Blocker: PM synthesis entry `agent_01` → `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2\"]` is not found (no matches in the PM hub file).\n\n### Next actions\n- PM: publish the locked wk4_r2 synthesis under `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` before expecting agents to proceed.\n- Once present, I will re-check for any product/feel risks (instant-hit readability) and then stand down again unless asked.",
+            "summary_bullets": [
+              "BLOCKER: wk4_r2 PM synthesis referenced by the greenlight prompt is not present in Agent 01 hub file",
+              "Without that source-of-truth, proceeding risks conflicting tunables/DoD and breaks the studio workflow",
+              "No code actions taken by Agent 02"
+            ],
+            "proposed_changes": [
+              "PM: add the missing `wk4-new-enemy-skeleton-archer` → `wk4_r2` synthesis entry to Agent 01 hub (locked tunables, determinism constraints, DoD, integration order)."
+            ],
+            "acceptance_criteria": [
+              "Agent 01 hub contains `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2\"]` with locked decisions",
+              "All implementers can reference that single source of truth before merging code"
+            ],
+            "risks": [
+              "If teams proceed without the PM hub synthesis, we’ll likely get contract/tunables drift and non-deterministic behavior changes that are hard to triage"
+            ],
+            "dependencies": [
+              "Agent 01 (PM): publish wk4_r2 synthesis entry in the PM hub"
+            ],
+            "questions_back_to_pm": [
+              "Can you confirm whether wk4_r2 synthesis was written elsewhere or if it’s simply not committed to `agent_01` yet?"
+            ],
+            "recommended_next_actions": [
+              "PM: publish wk4_r2 synthesis in `agent_01` as instructed by the greenlight prompt, then re-broadcast to active agents",
+              "After publication, proceed with the stated integration order and keep gates green"
+            ],
+            "agent_fields": {
+              "pm_hub_search_result": "grep for wk4-new-enemy-skeleton-archer/wk4_r2/wk4_r3 returned no matches in agent_01 file",
+              "files_changed": [],
+              "pm_acknowledged": false
+            }
+          }
+        }
+        ,
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context re-ACK: confirming understanding of locked Build A decisions before implementation greenlight."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T08:07:45.0872487-07:00"
+          },
+          "prompt_text": "WK4 context refresh + re-ACK: review your own log, confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates), list role-specific deliverables, blockers, and expected file touchpoints.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:45.0872487-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 02 (GameDirector_ProductOwner) — context re-ACK for WK4 Build A. I've reviewed my wk4_r1 plan entry and the locked Build A decisions. My role is consult-only (gameplay feel, pacing, scenario coverage, player clarity), but I'm confirming understanding and flagging any product risks before implementation proceeds.\n\n### Deliverables\n- Confirmation of locked Build A decisions (no scope drift).\n- Product/feel acceptance criteria for ranged kiting enemy (readability, fairness, pacing).\n- Expected file touchpoints (paths only; no implementation).\n- Blocker assessment (if any).\n\n### Questions (blockers only, max 3)\n- None. The locked Build A decisions align with my wk4_r1 recommendations (instant-hit with wind-up + tiny VFX safeguard, conservative spawn mix, pipeline completeness).\n\n### Next actions\n- Stand by for implementation greenlight (wk4_r3). If instant-hit clarity becomes an issue during implementation, I'll flag it as a Build B escalation (projectile line only if needed).\n- Review implementation PRs for player-facing feel regressions (kiting oscillation, unfair chip damage, spawn mix spikes).",
+            "summary_bullets": [
+              "ACK: Locked Build A decisions align with my wk4_r1 plan (instant-hit ranged, kite behavior, 80/20 spawn, manifest+placeholders, gates)",
+              "Product focus: ensure skeleton_archer reads as ranged threat, feels fair (wind-up + VFX safeguard), and doesn't break pacing",
+              "Consult-only role: review for feel regressions; no code changes unless blocker appears"
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 02 in Build A (consult-only).",
+              "If instant-hit clarity fails during implementation, escalate to Build B: minimal projectile line (visual-only, no physics)."
+            ],
+            "acceptance_criteria": [
+              "Gameplay feel: skeleton_archer reads as 'ranged threat' at gameplay zoom (distinct silhouette + attack wind-up) and does not feel like unavoidable chip damage",
+              "Fairness: skeleton_archer has a clear attack cadence (wind-up/animation) and does not fire while moving every tick; predictable window for heroes to close distance",
+              "Kiting: skeleton_archer maintains distance band with hysteresis/commitment to avoid jitter oscillation (bounded behavior, not infinite stutter)",
+              "Spawn: Skeleton Crypt spawns 80/20 skeleton / skeleton_archer deterministically (via lair RNG); difficulty doesn't spike abruptly",
+              "Readability safeguard: if instant-hit feels unclear, Build A may include tiny deterministic cue (strong attack pose + minimal impact flash) without new systems",
+              "No regressions: `python tools/qa_smoke.py --quick` remains PASS; `python tools/validate_assets.py --strict --check-attribution` remains PASS",
+              "Snapshots: enemy_catalog includes skeleton_archer and gallery builds without manual intervention"
+            ],
+            "risks": [
+              "Readability risk (instant-hit feels 'invisible'): mitigated by allowed Build A safeguard (wind-up + tiny VFX) and escalation path to Build B projectile line if needed",
+              "Balance risk (kiting causes long fights / attrition): mitigated by conservative tunables (Agent 05) and bounded kite behavior (commitment/hysteresis)",
+              "UX risk (heroes ignore archer or chase forever): mitigated by keeping kite rules bounded and ensuring heroes can retarget/disengage via existing AI priorities",
+              "Spawn mix risk (80/20 may spike difficulty if archer is too strong): mitigated by conservative initial tunables and deterministic spawn (predictable, not random spike)"
+            ],
+            "dependencies": [
+              "Agent 05: confirm v0 tunables are acceptable for Build A (HP/attack/range/cooldown/speed/min_range) and spawn mix (80/20) doesn't spike difficulty",
+              "Agent 03: determinism/perf review signoff (sim-time only, seeded RNG only, stable ordering tie-breaks, avoid N×M scans)",
+              "Agent 09: validate skeleton_archer reads as ranged at 32×32 (bow/quiver cues, distinct attack pose) especially in enemy_catalog shots",
+              "Agent 11: confirm DoD commands and non-flaky verification steps (assets+snapshots+qa_smoke)",
+              "Agent 12: confirm manifest-driven snapshot inclusion and atomic manifest+placeholder changes so strict validator doesn't break"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: proceed to wk4_r3 greenlight once all active agents (03/05/09/11/12) confirm their wk4_r2_ack entries",
+              "Implementation: follow integration order (manifest → placeholders → enemy class → spawn → snapshots) and keep gates green",
+              "If instant-hit clarity fails during playtest, escalate to Build B: minimal projectile line (visual-only, no physics system)"
+            ],
+            "agent_fields": {
+              "locked_build_a_decisions_ack": [
+                "Ranged-only in Build A (no melee fallback)",
+                "Instant-hit ranged in Build A (no projectile system)",
+                "Kiting behavior: maintain distance band with hysteresis/commitment to avoid jitter",
+                "Deterministic spawn mix: 80/20 skeleton / skeleton_archer from Skeleton Crypt (via lair RNG)",
+                "Pipeline completeness mandatory: manifest + placeholder PNGs (idle/walk/attack/hurt/dead/frame_000.png)",
+                "Gates required: qa_smoke --quick, validate_assets --strict --check-attribution, enemy_catalog snapshots + gallery",
+                "Allowed clarity safeguard: tiny deterministic cue (attack pose + minimal impact flash) if needed, no new systems"
+              ],
+              "role_specific_deliverables": [
+                "Gameplay feel acceptance: skeleton_archer reads as ranged threat, feels fair (wind-up + VFX safeguard), doesn't break pacing",
+                "Pacing assessment: spawn mix (80/20) doesn't spike difficulty; kite behavior doesn't cause infinite chases",
+                "Scenario coverage: enemy_catalog snapshot includes skeleton_archer and reads clearly at 32×32",
+                "Player clarity: instant-hit is acceptable only with wind-up + tiny VFX; if unclear, escalate to Build B projectile line"
+              ],
+              "expected_file_touchpoints": [
+                "config.py (SKELETON_ARCHER_* tunables)",
+                "game/entities/enemy.py (SkeletonArcher class + kite logic)",
+                "game/entities/lair.py (Skeleton Crypt spawn mix 80/20)",
+                "game/graphics/enemy_sprites.py (runtime fallback recognition)",
+                "tools/assets_manifest.json (add skeleton_archer to enemies.types)",
+                "tools/generate_cc0_placeholders.py (generate placeholder frames)",
+                "tools/validate_assets.py (coverage for skeleton_archer)",
+                "tools/screenshot_scenarios.py (enemy_catalog reads manifest)",
+                "tools/capture_screenshots.py (enemy_catalog includes skeleton_archer)",
+                "tools/build_gallery.py (gallery includes skeleton_archer shots)"
+              ],
+              "blockers": [],
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
+    }
   }
 }
 

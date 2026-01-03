@@ -938,6 +938,196 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "Plan-only sprint kickoff; no code changes in wk4_r1."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_r1_universal_prompt_v1",
+            "build_target": "PlanOnly",
+            "sent_at_local": "2025-12-25T15:27:09.121993-07:00"
+          },
+          "prompt_text": "WK4 plan-only: add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt with procedural CC0 placeholder art; determinism/perf guardrails; coverage in asset validation + Visual Snapshot System. Provide scope split Build A vs Build B, acceptance criteria, risks/mitigations, file touchpoints. Write under sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r1\"].",
+          "response": {
+            "received_at_local": "2025-12-25T15:27:09.121993-07:00",
+            "status": "complete",
+            "raw": "### Status\n**Role:** Agent 08 (UX/UI Director). The WK4 plan lists me as **consult-only**, but this universal prompt asks all agents to respond; I’m providing **plan-only UX/clarity constraints** (no implementation).\n\n**Understanding (goal):** Add a new enemy type **`skeleton_archer`** (ranged kiter) that spawns from **Skeleton Crypt**, ships with **procedural CC0 placeholder art**, stays deterministic/perf-safe, and is covered by **asset validation** + **Visual Snapshot System**.\n\n### Deliverables\n- **Player clarity contract** for a ranged/kiting enemy with instant-hit ranged damage.\n- **Build A vs Build B** scope recommendations focused on readability (not new UI features).\n- **Acceptance criteria** for clarity + snapshot coverage.\n- **Risks + mitigations** (UX/readability + pipeline impacts).\n- **Concrete file touchpoints** I expect may need a quick sanity check for UI naming/labels.\n\n### Build A vs Build B (scope split)\n- **Build A (midweek)**\n  - **Instant-hit ranged** is acceptable **only if** we have a clear “this enemy shot you” read:\n    - Attack animation cue (bow raise / draw) + a visible impact cue on the target (even minimal).\n  - Ensure existing right-panel/inspect UI renders the new enemy name/type without fallback junk (e.g., `Skeleton Archer`).\n  - Ensure **enemy_catalog** snapshot includes `skeleton_archer` in a readable close-up.\n\n- **Build B (endweek / polish)**\n  - If instant-hit still feels unfair/confusing: add **non-physics VFX** (e.g., a thin 1–2 frame tracer line or muzzle flash) and/or a short SFX. No full projectile system required.\n  - Optional UX: add a compact tag in inspect panel like `Ranged` and/or show `Range: N` if the data is available.\n  - Add an extra snapshot/shot to validate the **attack pose** (not just idle).\n\n### Acceptance criteria I want locked (UX/clarity)\n- **Silhouette clarity**: At 32×32, `skeleton_archer` is distinguishable from melee skeletons at a glance (bow silhouette + stance).\n- **Attack readability**: A player can tell when the archer attacks (pose change) and can attribute incoming damage to it (impact cue or other minimal feedback).\n- **Kiting clarity**: The kiting behavior reads as “maintain distance,” not random jitter (no rapid flip-flop at the edge of range).\n- **UI compatibility**: Selecting/inspecting the enemy shows a stable label/name (no KeyError/None/blank), and doesn’t break panel layout.\n- **Snapshot coverage**: `tools/capture_screenshots.py --scenario enemy_catalog` includes the new enemy in the manifest + PNG set and gallery remains buildable.\n\n### Risks + mitigations\n- **Instant-hit feels unfair / unreadable** (highest UX risk)\n  - Mitigation: require a visible attack pose + a minimal impact cue (even a brief flash on the target) in Build A; tracer/VFX in Build B if needed.\n- **Placeholder art ambiguity** (archer looks like generic skeleton)\n  - Mitigation: lock silhouette cues with Agent 09: bow shape, posture, and 1-frame “draw” pose distinct from melee.\n- **Overlapping combat readability** (multiple enemies)\n  - Mitigation: keep archer attack cadence readable; avoid tiny single-pixel cues; prefer high-contrast 2–3 px shapes.\n- **Pipeline drift** (enemy exists but snapshots/validator don’t include it)\n  - Mitigation: treat `enemy_catalog` + manifest inclusion as a DoD item; keep naming consistent across manifest/type keys.\n\n### Concrete file touchpoints (paths only; no implementation)\n- `game/entities/enemy.py` (new behavior impacts: kite/readability)\n- `game/graphics/enemy_sprites.py` (procedural placeholder mapping for new type)\n- `tools/assets_manifest.json` (ensure new enemy type is enumerated)\n- `tools/generate_cc0_placeholders.py` (frames for idle/walk/attack/hurt/dead)\n- `tools/screenshot_scenarios.py` (confirm enemy catalog scenario captures are adequate for readability review)\n- *Potential UI sanity checks only if needed*: `game/ui/hud.py`, `game/ui/building_panel.py` (ensure inspect labels don’t assume a closed enum)\n\n### Questions (blockers only, max 3)\n1) **Roster contradiction**: should Agent 08 remain **consult-only** for wk4_r1 as the plan states, or treat this as an explicit activation?\n2) For Build A, are we allowed to add a **tiny non-projectile VFX cue** (e.g., 1–2 frame tracer/flash) if playtests show instant-hit is unreadable, or must Build A be strictly “no new effects?”\n3) Snapshot contract: do we want `enemy_catalog` to include an **attack-frame** shot (ticks > 0 / forced state) for ranged enemies to verify readability, or is idle-only acceptable for Build A?\n\n### Next actions\n- After Agents 03/05/09/11/12 post, I’ll review the locked behavior/tunables and sanity-check the clarity contract against those constraints.\n- When implementation lands, I’ll do a quick **snapshot-based readability review**: `enemy_catalog_seed3` close-up for `skeleton_archer` + one manual 60s fight check to ensure damage attribution is obvious.\n- If the inspect UI needs a tiny label mapping tweak, I’ll propose the smallest safe patch (only after PM greenlight).\n\n(Confirmed: wrote this entry under `sprints[\\\"wk4-new-enemy-skeleton-archer\\\"].rounds[\\\"wk4_r1\\\"]` in my own agent log.)\n",
+            "summary_bullets": [
+              "Consult-only role noted; providing plan-only UX constraints for skeleton_archer clarity.",
+              "Instant-hit ranged is OK for Build A only if attack + impact are readable; VFX tracer can be Build B polish if needed.",
+              "Lock snapshot coverage: enemy_catalog must include skeleton_archer in manifest/PNGs; gallery must remain buildable."
+            ],
+            "proposed_changes": [
+              "Define a clarity contract: distinct 32×32 silhouette, readable attack pose, and minimal damage attribution cue for instant-hit ranged.",
+              "Ensure existing inspect UI gracefully displays new enemy name/type without assumptions about a closed enum.",
+              "Consider adding an attack-frame snapshot (ticks/state) in enemy_catalog if needed for review."
+            ],
+            "acceptance_criteria": [
+              "Skeleton archer is visually distinguishable from melee skeletons at 32×32 (bow silhouette + stance).",
+              "Player can tell when the archer attacks and attribute incoming damage to it (attack pose + minimal impact cue).",
+              "Kiting behavior reads as intentional distance-keeping (no jittery flip-flop).",
+              "Existing UI panels render the new enemy label without errors or layout breakage.",
+              "`python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 ...` includes skeleton_archer in manifest + PNGs; gallery builds."
+            ],
+            "risks": [
+              "Instant-hit ranged damage can feel unfair if damage source is unclear; mitigate with strong telegraph + minimal impact cue (or tracer in Build B).",
+              "Procedural placeholder art may be ambiguous; mitigate by locking silhouette cues with Agent 09.",
+              "Pipeline drift (enemy added but not enumerated in manifest/snapshots); mitigate by making manifest + enemy_catalog inclusion a DoD item."
+            ],
+            "dependencies": [
+              "Agent 09: silhouette/animation cues for archer readability at 32×32.",
+              "Agent 05: tunables/cooldown/range that support readability (avoid too-fast cadence).",
+              "Agents 11/12: snapshot/validator assertions and non-flaky tooling coverage."
+            ],
+            "questions_back_to_pm": [
+              "Roster contradiction: should Agent 08 be treated as consult-only (per plan) or explicitly active for wk4_r1?",
+              "If instant-hit is unclear, is a tiny non-projectile VFX cue allowed in Build A, or must it wait for Build B?",
+              "Should enemy_catalog scenario capture include an attack-frame shot to validate ranged readability?"
+            ],
+            "recommended_next_actions": [
+              "PM to lock whether Build A allows a minimal non-projectile VFX cue for ranged attacks (clarity safeguard).",
+              "Tools/QA to confirm whether enemy_catalog will include an attack-frame capture (or keep Build A idle-only).",
+              "After implementation, run snapshot review for skeleton_archer and do a short manual fight to validate damage attribution."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "notes": [
+                "Plan-only response; no code changes requested/required in wk4_r1.",
+                "Consult-only per sprint plan, but responded due to universal prompt."
+              ]
+            }
+          }
+        },
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context refresh + ACK of locked Build A decisions before implementation greenlight."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_r2_context_refresh_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T08:07:54.157564-07:00"
+          },
+          "prompt_text": "WK4 context refresh: review your own log, re-read required docs, and write a context re-ACK entry under wk4_r2_ack. Confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates). List role-specific deliverables, blockers, expected files. If locked decisions are risky, propose mitigations without scope creep.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:54.157564-07:00",
+            "status": "complete",
+            "raw": "### Status\n**Role:** Agent 08 (UX/UI Director) — **consult-only** for WK4 per sprint plan. I have reviewed my own agent log (wk4_r1 entry) and the required docs. This is a **context re-ACK** confirming understanding of locked Build A decisions and providing signoff criteria.\n\n**Understanding of locked Build A decisions:**\n- **Ranged-only** in Build A (no melee fallback).\n- **Instant-hit ranged** in Build A (no projectile system).\n- **Kiting behavior** with hysteresis/commitment to avoid jitter.\n- **Deterministic spawn mix** from Skeleton Crypt: 80/20 skeleton / skeleton_archer (using lair RNG).\n- **Pipeline completeness** mandatory: skeleton_archer added to `tools/assets_manifest.json`, placeholder PNGs generated for all required states (idle/walk/attack/hurt/dead).\n- **Gates required:** `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --strict --check-attribution`, Visual Snapshot System `enemy_catalog` includes skeleton_archer and gallery builds.\n- **Allowed clarity safeguard:** tiny deterministic cue (attack pose + minimal impact flash) is allowed only if needed for readability, but no new systems.\n\n### Deliverables (consult-only role)\n- **No code changes** (not implementing; consult-only).\n- **Snapshot-based readability signoff** once integrator produces `docs/screenshots/wk4_after/enemy_catalog_seed3` and rebuilds `docs/art/compare_gallery.html`.\n- **UI compatibility check** (only if needed): verify existing inspect/right-panel UI renders the new enemy name/type without errors or layout breakage.\n- **Clarity contract enforcement:** confirm skeleton_archer reads as ranged at 32×32 (bow/quiver silhouette + distinct attack pose) and damage attribution is clear.\n\n### Questions (blockers only, max 3)\n1) **PM hub synthesis location:** The wk4_r3 prompt referenced PM synthesis at `agent_01 ... wk4_r2`, but I could not locate it in the current workspace. Is the synthesis published, or should I proceed with the decisions stated in the context refresh prompt?\n2) **Clarity safeguard confirmation:** For the allowed Build A clarity safeguard, should I assume the preferred approach is **(A)** strong attack pose only, or **(B)** pose + minimal deterministic impact flash? This affects my signoff criteria.\n3) **Snapshot coverage:** Will `enemy_catalog` scenario include an attack-frame capture (ticks > 0 / forced state) for ranged readability validation, or is idle-only acceptable for Build A?\n\n### Next actions\n- **Wait for implementation artifacts:** Once the integrator produces `docs/screenshots/wk4_after/enemy_catalog_seed3` and rebuilds `docs/art/compare_gallery.html`, I will:\n  - Review `enemy_catalog_seed3` close-ups for skeleton_archer to confirm ranged readability (bow silhouette + attack pose).\n  - Scan `compare_gallery.html` for side-by-side comparison.\n  - Verify UI label/inspect path (only if needed) for missing-name/blank label regressions.\n- **If clarity issues found:** File a minimal UX bug ticket (repro + screenshot filename) to integrator/PM; no drive-by code.\n- **Signoff criteria:** Mark ready-for-integration once snapshot review confirms silhouette clarity, attack readability, and damage attribution.\n\n### Expected files (paths only; no implementation)\n- **Review-only (snapshots):**\n  - `docs/screenshots/wk4_after/enemy_catalog_seed3/*.png`\n  - `docs/art/compare_gallery.html`\n- **Potential UI sanity checks (only if needed):**\n  - `game/ui/hud.py` (inspect panel label rendering)\n  - `game/ui/building_panel.py` (if enemy selection uses this)\n- **Not touching (implementation files):**\n  - `game/entities/enemy.py`\n  - `game/entities/lair.py`\n  - `config.py`\n  - `tools/assets_manifest.json`\n  - `tools/generate_cc0_placeholders.py`\n\n### Risks + mitigations (if locked decisions are risky)\n- **Risk:** Instant-hit ranged damage can feel unfair if damage source is unclear.\n  - **Mitigation (Build A):** Require the allowed deterministic clarity safeguard (strong attack pose + minimal impact flash) if playtests show unreadability. Do not ship unreadable instant-hit.\n- **Risk:** Procedural placeholder art may be ambiguous (archer looks like generic skeleton).\n  - **Mitigation:** Lock silhouette cues with Agent 09 (bow C-curve + quiver strap + distinct attack pose) and enforce via snapshot review.\n- **Risk:** Pipeline drift (enemy exists but snapshots/validator don't include it).\n  - **Mitigation:** Treat `enemy_catalog` + manifest inclusion as a DoD item; verify via `python tools/validate_assets.py --strict --check-attribution` and snapshot manifest.\n\n### How I will test (when artifacts exist)\n- `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` (verify gallery builds)\n- Visual scan of `enemy_catalog_seed3` images for ranged cues (bow silhouette, attack pose, distinct from melee skeletons).\n- Manual 60s fight check (if PM requests) to validate damage attribution clarity.\n\n### Stop condition\nOnce PM hub synthesis is accessible (or I proceed with prompt-stated decisions) and the wk4_after enemy_catalog shots are present, I'll mark **ready-for-integration signoff** with specific screenshot filenames reviewed and any UX concerns (or clear pass).\n\n(Confirmed: wrote this entry under `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2_ack\"]` in my own agent log.)",
+            "summary_bullets": [
+              "Consult-only role confirmed; reviewed own log (wk4_r1) and required docs.",
+              "ACK of locked Build A decisions: ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates.",
+              "Snapshot-based readability signoff criteria defined; will review enemy_catalog shots once integrator produces artifacts."
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "Skeleton archer reads as ranged at 32×32 (bow/quiver silhouette + distinct attack frames).",
+              "Player can attribute incoming damage to the archer (attack pose + minimal impact cue if needed).",
+              "Existing UI panels render the new enemy label without errors or layout breakage.",
+              "`docs/screenshots/wk4_after/enemy_catalog_seed3` includes skeleton_archer close-up; gallery builds successfully.",
+              "`python tools/validate_assets.py --strict --check-attribution` PASS (manifest includes skeleton_archer)."
+            ],
+            "risks": [
+              "Instant-hit ranged can feel unfair if damage source is unclear; mitigate with allowed deterministic clarity safeguard (attack pose + impact flash) if needed.",
+              "Procedural placeholder art may be ambiguous; mitigate by enforcing silhouette cues via snapshot review.",
+              "Pipeline drift risk; mitigate by treating manifest + enemy_catalog inclusion as DoD item."
+            ],
+            "dependencies": [
+              "Integrator to produce `docs/screenshots/wk4_after/enemy_catalog_seed3` and rebuild `docs/art/compare_gallery.html`.",
+              "Agent 09: silhouette/animation cues for archer readability at 32×32 (bow C-curve + quiver strap + distinct attack pose).",
+              "PM/integrator: confirm PM hub synthesis location or proceed with prompt-stated decisions."
+            ],
+            "questions_back_to_pm": [
+              "PM hub synthesis location: wk4_r2 referenced in wk4_r3 prompt not found in current workspace; should I proceed with prompt-stated decisions?",
+              "Clarity safeguard confirmation: preferred approach is (A) attack pose only or (B) pose + minimal impact flash?",
+              "Snapshot coverage: will enemy_catalog include attack-frame capture for ranged readability, or idle-only for Build A?"
+            ],
+            "recommended_next_actions": [
+              "PM/integrator: confirm PM hub synthesis location or proceed with prompt-stated decisions.",
+              "Integrator: once snapshots are generated, request consult signoff on enemy_catalog ranged readability.",
+              "After implementation, run snapshot review and mark ready-for-integration signoff with specific evidence."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "role": "consult_only",
+              "signoff_criteria": [
+                "Silhouette clarity: bow/quiver reads at 32×32 without zoom.",
+                "Attack readability: attack frame set clearly differs from idle/walk.",
+                "Damage attribution: if instant-hit is confusing, require minimal allowed deterministic cue (impact flash) before Build A done.",
+                "UI compatibility: inspect panel renders stable label/name without errors."
+              ],
+              "review_files": [
+                "docs/screenshots/wk4_after/enemy_catalog_seed3/*.png",
+                "docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        },
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_r3_greenlight_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T15:40:19.222313-07:00"
+          },
+          "prompt_text": "WK4 wk4_r3 implementation greenlight: implement new enemy skeleton_archer (ranged kiter) spawned from Skeleton Crypt, instant-hit ranged, 80/20 spawn mix, pipeline complete (manifest + generated placeholders), gates green, enemy_catalog snapshot + gallery build. Consult-only agents respond only if a blocker; read PM synthesis in Agent 01 wk4_r2 first (source of truth).",
+          "response": {
+            "received_at_local": "2025-12-25T15:40:19.222313-07:00",
+            "status": "blocked",
+            "raw": "### Status\n**Role:** Agent 08 (UX/UI Director) — **consult-only** for WK4 per the sprint plan; responding because I see a **process blocker**.\n\n**Blocker / contradiction:** The greenlight prompt says PM synthesis is locked in Agent 01 under `sprints[\\\"wk4-new-enemy-skeleton-archer\\\"].rounds[\\\"wk4_r2\\\"]`, but the current `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` in this workspace contains **no WK4 entries** (no `wk4` / `skeleton_archer` mentions). I cannot confirm the locked tunables/behavior notes beyond what’s in the prompt itself.\n\n### Deliverables\n- **No code changes** (not an IC owner).\n- Provide **UI/clarity review criteria** for Build A once the integrator produces the required snapshots.\n- Call out the missing PM-hub synthesis entry as a coordination blocker.\n\n### Questions (blockers only, max 3)\n1) Can PM/integrator **publish the wk4_r2 synthesis** to `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` as referenced, or confirm the correct location/path?\n2) Who is the **single implementation owner/integrator** for the gameplay code path (`game/entities/enemy.py`, `game/entities/lair.py`, `config.py`), so UI signoff feedback routes to one person?\n3) For the allowed Build A clarity safeguard: confirm whether the preferred approach is **(A)** strong attack pose only, or **(B)** pose + minimal impact flash (still deterministic), so we don’t ship unreadable instant-hit.\n\n### Next actions\n- Once wk4_r2 synthesis is accessible and the integrator has generated artifacts, I will review:\n  - `docs/screenshots/wk4_after/enemy_catalog_seed3/*` close-ups for `skeleton_archer` to confirm **ranged readability** (bow silhouette + attack pose).\n  - `docs/art/compare_gallery.html` for side-by-side scan of the new enemy entry.\n  - UI label/inspect path *only if needed*: verify no missing-name/blank label regressions when selecting the new enemy.\n- If I find a clarity issue, I’ll file a **minimal UX bug ticket** (repro + screenshot filename) to the integrator/PM; no drive-by code.\n\n### Review / signoff criteria (what ‘good’ looks like)\n- **Silhouette:** bow/quiver reads at 32×32 without zoom.\n- **Attack readability:** the `attack` frame set clearly differs from `idle/walk`.\n- **Damage attribution:** if instant-hit is confusing in play, require the minimal allowed deterministic cue (impact flash) before calling Build A done.\n\n### How I will test (when artifacts exist)\n- `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` (verify gallery builds)\n- Visual scan of `enemy_catalog_seed3` images for ranged cues.\n\n### Files I expect to review (not touch)\n- `docs/screenshots/wk4_after/enemy_catalog_seed3/*`\n- `docs/art/compare_gallery.html`\n\nStop condition: once the PM hub synthesis exists and the wk4_after enemy_catalog shots are present, I’ll mark **ready-for-integration signoff** with specific screenshot filenames reviewed.\n\n(Confirmed: wrote this entry under `sprints[\\\"wk4-new-enemy-skeleton-archer\\\"].rounds[\\\"wk4_r3\\\"]` in my own agent log.)\n",
+            "summary_bullets": [
+              "Consult-only; flagged missing PM synthesis location (wk4_r2 not present in current agent_01 PM hub file).",
+              "No code changes; provided clear snapshot-based readability signoff criteria for skeleton_archer.",
+              "Will sign off once wk4_after enemy_catalog shots + gallery exist and PM hub synthesis is accessible."
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "PM hub wk4_r2 synthesis is accessible at the referenced path OR PM provides the correct location.",
+              "wk4_after enemy_catalog shots include skeleton_archer close-up; gallery builds successfully.",
+              "Skeleton archer reads as ranged at 32×32 (silhouette + distinct attack frames)."
+            ],
+            "risks": [
+              "Coordination risk: if wk4_r2 synthesis location is wrong/missing, agents may implement against different assumptions.",
+              "UX risk: instant-hit ranged can feel unfair if damage attribution is unclear; mitigate with allowed deterministic impact cue if needed."
+            ],
+            "dependencies": [
+              "PM/integrator to publish or point to the locked wk4_r2 synthesis entry in Agent 01 hub.",
+              "Integrator to produce `docs/screenshots/wk4_after/enemy_catalog_seed3` and rebuild `docs/art/compare_gallery.html`."
+            ],
+            "questions_back_to_pm": [
+              "wk4_r2 synthesis referenced in prompt is missing from current `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` in this workspace—please confirm the correct location or publish it."
+            ],
+            "recommended_next_actions": [
+              "PM/integrator: ensure Agent 01 hub contains wk4_r2 synthesis at the referenced sprint/round key to avoid drift.",
+              "Integrator: once snapshots are generated, request consult signoff on enemy_catalog ranged readability."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "files_changed": [],
+              "blocker_type": "missing_pm_hub_entry"
+            }
+          }
+        }
+      }
+    }
   }
 }
 

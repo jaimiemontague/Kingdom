@@ -826,6 +826,201 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "PLAN-ONLY: no code changes in wk4_r1. Specs/contracts/gates only."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "PLAN-ONLY: no code changes in wk4_r1. Specs/contracts/gates only."
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_planonly_r1_v1",
+            "build_target": "PLAN_ONLY",
+            "sent_at_local": "2025-12-25T15:26:56-07:00"
+          },
+          "prompt_text": "WK4 plan-only (wk4-new-enemy-skeleton-archer / wk4_r1): Add new enemy type skeleton_archer (ranged kiter), spawned from Skeleton Crypt, using procedural CC0 placeholder art; maintain determinism/perf guardrails; ensure asset validation + Visual Snapshot System coverage. Provide Build A/B scope split, acceptance criteria, risks/mitigations, and expected file touchpoints. ToolsDevEx must comment on determinism/perf/testing/tooling gates.",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:56-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — PLAN-ONLY for WK4: ensure the tooling + gates can absorb a new enemy type (`skeleton_archer`) with minimal risk. My focus is keeping release gates deterministic and non-flaky: `validate_assets` strict coverage, snapshot capture scenarios/galleries, and (optionally) a tiny automation helper to regenerate placeholders.\n\nMy understanding of the goal: Add a new enemy type `skeleton_archer` (ranged kiter) that spawns from Skeleton Crypt, ships with CC0 placeholder visuals, and remains deterministic/perf-safe while being visible in the Visual Snapshot System and enforced by the strict asset validator.\n\n### Deliverables (R1 spec outputs)\n- Lock a minimal tooling contract so `skeleton_archer` is automatically covered by:\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - `python tools/capture_screenshots.py --scenario enemy_catalog ...` + `python tools/build_gallery.py ...`\n- Propose the smallest file touchpoints/tools changes needed (paths only, no implementation yet).\n- Define acceptance criteria for “tooling is ready” once implementation is greenlit.\n\n### Proposed scope split (Build A vs Build B)\n- Build A (midweek) — minimum viable, low-risk tooling coverage:\n  - Add `skeleton_archer` to `tools/assets_manifest.json` so BOTH strict validation and snapshot scenarios pick it up (enemy_catalog reads the manifest).\n  - Ensure placeholder generation can produce `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n    - NOTE: We already have two placeholder pathways today:\n      - Pre-generated CC0 PNGs via `tools/generate_cc0_placeholders.py` (required to satisfy strict validator).\n      - Runtime procedural fallback in `game/graphics/enemy_sprites.py` (useful safety net but does not satisfy strict validator).\n    - Build A should treat the PNG generation path as the “source of truth” so `validate_assets --strict` can pass.\n  - Visual snapshot system: enemy catalog run should emit `enemy_skeleton_archer_closeup.png` and include it in manifest (schema v1.1 machine-independent relpaths).\n- Build B (endweek) — optional tooling polish only if needed:\n  - Add an extra snapshot scenario ONLY if review needs it (e.g., a deterministic ‘kite demo’ shot/state), but avoid adding flaky sim-behavior assertions.\n  - Optional: a one-command helper to regenerate placeholders after manifest changes (thin wrapper around `tools/generate_cc0_placeholders.py`).\n\n### Acceptance criteria I want locked (tooling/gates)\n- Asset gate coverage:\n  - After `skeleton_archer` lands (and its placeholder frames exist), strict gate must PASS:\n    - `python tools/validate_assets.py --strict --check-attribution --report`\n  - For `skeleton_archer`, validator expects required dirs + at least one `frame_000.png` per required action.\n  - Attribution: no new third_party packs are required for CC0 placeholders, so no new attribution dependencies beyond existing rules.\n- Snapshot gate coverage:\n  - `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0` produces a manifest that includes an output with `filename: enemy_skeleton_archer_closeup.png`.\n  - `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` remains buildable.\n- Determinism guardrails (tooling-level, low risk):\n  - Tools must remain sim-tick driven (no wall-clock) and must not invoke LLMs.\n  - Manifests must not contain absolute paths (schema v1.1 `relpath` + `run_dir`).\n\n### Risks + mitigations (determinism/perf/testing/tooling)\n- Determinism risk: if `skeleton_archer` AI introduces RNG/time usage that leaks into capture tools.\n  - Mitigation: keep snapshot scenarios at `--ticks 0` (pure render) unless we explicitly need motion; keep all capture code using seeded sim-time as today.\n- Perf risk: ranged behavior might tempt per-frame image scaling or allocations.\n  - Mitigation: placeholder assets should be pre-sized to 32×32; no runtime scaling in render; keep caching patterns unchanged.\n- Tooling gate risk: `validate_assets --strict` will start failing immediately once the manifest includes `skeleton_archer` unless placeholder PNGs exist.\n  - Mitigation: treat “manifest update + placeholder generation” as an atomic change set in implementation rounds.\n- Testing risk: adding behavior assertions for kiting could become flaky.\n  - Mitigation: keep Build A automated gates focused on filesystem assets + snapshot artifact generation. Leave behavior assertions to QA/Gameplay only if they can be made deterministic and low-noise.\n\n### Concrete file touchpoints expected (paths only; no implementation yet)\n- Required:\n  - `tools/assets_manifest.json` (add `skeleton_archer` under `enemies.types`)\n  - `tools/generate_cc0_placeholders.py` (teach `_enemy_frame` a distinct, readable `skeleton_archer` silhouette cue; output paths already match conventions)\n- Likely (only if needed):\n  - `tools/screenshot_scenarios.py` (should be no-op if enemy catalog reads manifest; touch only if scenario needs to special-case framing)\n  - `tools/capture_screenshots.py` / `tools/build_gallery.py` (no changes expected; only if a regression is found)\n- Downstream artifacts (generated, not hand-edited in plan-only):\n  - `docs/screenshots/<wk4_run>/enemy_catalog_seed3/*`\n  - `docs/art/compare_gallery.html`\n\n### Questions (blockers only; max 3)\n1) For Build A, do we want the CC0 placeholder PNGs to be committed to repo (recommended for strict validator + consistent review), or generated as a local/pre-release step? The current strict gate implies they must exist on disk for everyone.\n2) Should we treat the runtime procedural fallback in `game/graphics/enemy_sprites.py` as a purely emergency safety net (OK), or do we want to require that strict mode can pass without relying on any runtime fallback (recommended)?\n3) Confirm the required enemy action set for `skeleton_archer` is exactly `{idle, walk, attack, hurt, dead}` (matches current validator manifest schema), even if gameplay will later add e.g. `shoot`.\n\n### Next actions\n- Wait for PM/Agent 03 to lock any naming/contracts that affect enemy type strings.\n- Once greenlit, implement the minimal tooling changes in one small PR: update `tools/assets_manifest.json` + extend `tools/generate_cc0_placeholders.py` enemy frame mapping.\n- Coordinate with Agent 11 so WK4 DoD includes rerunning: strict validator + enemy_catalog snapshot + gallery build (no pixel-compare gate).",
+            "summary_bullets": [
+              "Plan-only: tooling/gates for new enemy `skeleton_archer` (strict validator + visual snapshot coverage) without adding flaky behavior assertions",
+              "Build A recommendation: treat CC0 placeholder PNG generation as source of truth so validate_assets --strict can PASS",
+              "Enemy catalog snapshots should auto-include skeleton_archer via tools/assets_manifest.json; gallery remains buildable and manifests stay machine-independent"
+            ],
+            "proposed_changes": [
+              "tools/assets_manifest.json: add enemies.types entry 'skeleton_archer' (drives validator + enemy_catalog snapshot scenario)",
+              "tools/generate_cc0_placeholders.py: add a distinct skeleton_archer placeholder silhouette (bow cue) and emit required action frames to assets/sprites/enemies/skeleton_archer/*/frame_000.png"
+            ],
+            "acceptance_criteria": [
+              "python tools/validate_assets.py --strict --check-attribution --report => PASS after skeleton_archer placeholders exist",
+              "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0 produces enemy_skeleton_archer_closeup.png and includes it in manifest.json",
+              "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html => PASS",
+              "Snapshot manifests remain machine-independent (no absolute paths; schema v1.1 relpath/run_dir)"
+            ],
+            "risks": [
+              "Strict validator will fail immediately once manifest includes skeleton_archer unless placeholder PNGs are generated/committed atomically",
+              "Adding kiting behavior assertions to automated gates risks flakiness; prefer tooling gates around assets + snapshot generation first",
+              "Potential perf regressions if new enemy art requires runtime scaling/allocations; keep assets pre-sized and rendering cached"
+            ],
+            "dependencies": [
+              "Agent 03: confirm determinism-safe constraints for ranged/kiting logic and any naming contract impacts on enemy type strings",
+              "Agent 11: confirm WK4 DoD gate commands (validator + snapshot + gallery) and keep qa_smoke --quick green",
+              "Agent 09: confirm silhouette/readability cues for a 32×32 ranged skeleton (bow cue) for placeholder art direction"
+            ],
+            "questions_back_to_pm": [
+              "Do we want CC0 placeholder PNGs committed (recommended for strict validator), or generated as a required pre-release step?",
+              "Confirm we are not adding any new third_party pack for Build A placeholders (so attribution rules remain unchanged).",
+              "Confirm skeleton_archer required action set is exactly idle/walk/attack/hurt/dead for Build A."
+            ],
+            "recommended_next_actions": [
+              "PM/Agent 03: lock enemy type naming + determinism constraints for kiting/ranged behavior",
+              "Implementation round: land manifest update + placeholder PNG generation together to keep strict gate green",
+              "QA/Tools: add a WK4 snapshot run directory (e.g., docs/screenshots/wk4_after) and use enemy_catalog closeup presence as the non-flaky visual coverage"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "determinism_guardrails": [
+                "Tools must be sim-tick driven (no wall-clock) and must not invoke LLMs",
+                "Snapshot manifests must remain machine-independent (no absolute paths; schema v1.1 relpath/run_dir)"
+              ],
+              "tooling_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution --report",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        }
+        ,
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T15:40:00-07:00"
+          },
+          "prompt_text": "WK4 wk4_r3 implementation: implement skeleton_archer pipeline coverage + gates. Agent 12 scope: tooling/pipeline changes only (tools/assets_manifest.json, tools/generate_cc0_placeholders.py, runtime fallback safety in game/graphics/enemy_sprites.py). Required commands: qa_smoke --quick; validate_assets --strict --check-attribution; capture_screenshots enemy_catalog to docs/screenshots/wk4_after; build_gallery.",
+          "response": {
+            "received_at_local": "2025-12-25T15:40:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — **COMPLETE**: executed scoped WK4 tooling/pipeline deliverables. `skeleton_archer` is now covered by strict asset validation, placeholder PNG generation, and Visual Snapshot System `enemy_catalog` captures + gallery rebuild. All required gates PASS.\n\n### Deliverables\n- **Manifest update**: Added `skeleton_archer` to `tools/assets_manifest.json` under `enemies.types` so strict validator + `enemy_catalog` snapshot scenario include it automatically (manifest-driven, no special casing).\n- **Placeholder generation**: Updated `tools/generate_cc0_placeholders.py` to generate distinct ranged-readable placeholder for `skeleton_archer` with bow/quiver silhouette cue (C-curve bow, quiver strap visible).\n- **Runtime fallback safety**: Updated `game/graphics/enemy_sprites.py` to recognize `skeleton_archer` in `_type_color` and procedural silhouette (skeleton-like color + ranged cue) as emergency safety net.\n- **Generated placeholder PNGs**: Created required frames on disk: `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n- **Snapshot artifacts**: Produced `enemy_catalog` snapshot set including `enemy_skeleton_archer_closeup.png` and rebuilt gallery.\n\n### Questions (blockers only; max 3)\n- **None**.\n\n### Next actions\n- **Ready-for-integration**: no further Tools changes needed unless QA/Art reports readability issues in `enemy_skeleton_archer_closeup.png` or a regression is found.\n- **Follow-ups for Build B** (optional): none required; tooling is complete. If gameplay implementation adds new enemy states/actions, update manifest + regenerate placeholders.\n\n### Files changed\n- `tools/assets_manifest.json` (added `\"skeleton_archer\"` to `enemies.types` array)\n- `tools/generate_cc0_placeholders.py` (added `skeleton_archer` case in `_enemy_frame` with bow/quiver silhouette)\n- `game/graphics/enemy_sprites.py` (added `skeleton_archer` recognition in `_type_color` and procedural `draw_body` silhouette)\n\n### Generated artifacts (not hand-edited)\n- `assets/sprites/enemies/skeleton_archer/idle/frame_000.png`\n- `assets/sprites/enemies/skeleton_archer/walk/frame_000.png`\n- `assets/sprites/enemies/skeleton_archer/attack/frame_000.png`\n- `assets/sprites/enemies/skeleton_archer/hurt/frame_000.png`\n- `assets/sprites/enemies/skeleton_archer/dead/frame_000.png`\n- `docs/screenshots/wk4_after/enemy_catalog_seed3/manifest.json`\n- `docs/screenshots/wk4_after/enemy_catalog_seed3/enemy_skeleton_archer_closeup.png`\n- `docs/screenshots/wk4_after/enemy_catalog_seed3/enemy_catalog_overview.png`\n- `docs/art/compare_gallery.html` (rebuilt)\n\n### Exact commands run + evidence (PASS)\n\n**Command 1**: `python tools/qa_smoke.py --quick`\n- **Exit code**: 0\n- **Evidence**: `[determinism_guard] PASS: no violations found`; tool completes successfully with no errors.\n\n**Command 2**: `python tools/validate_assets.py --strict --check-attribution`\n- **Exit code**: 0\n- **Evidence**: `[validate_assets] OK: no findings` / `SUMMARY errors=0 warns=0`\n- **Also ran with `--report`**: confirmed no findings for skeleton_archer (all required frames present).\n\n**Command 3**: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- **Exit code**: 0\n- **Evidence**: `[capture] Wrote 7 PNG(s) to ...`; manifest.json includes entry with `\"filename\": \"enemy_skeleton_archer_closeup.png\"` and `\"meta\": {\"enemy_type\": \"skeleton_archer\"}`; schema_version 1.1 (machine-independent relpaths).\n\n**Command 4**: `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n- **Exit code**: 0\n- **Evidence**: `[gallery] Wrote docs\\art\\compare_gallery.html`; gallery is buildable and browsable.\n\n**Command 5** (placeholder generation): `python tools/generate_cc0_placeholders.py`\n- **Exit code**: 0\n- **Evidence**: `[generate_cc0_placeholders] wrote sprites for: enemies: 6 types × 5 states` (includes skeleton_archer).\n\n### Risks + mitigations\n- **Risk**: Adding `skeleton_archer` to manifest would break strict validation if PNGs weren't generated atomically.\n  - **Mitigation**: Generated required PNGs immediately in same change set; validated strict PASS before marking complete.\n- **Risk**: Placeholder generator run rewrites many existing PNGs; reviewers might miss new `skeleton_archer` outputs.\n  - **Mitigation**: Generator is deterministic; focus review on new `assets/sprites/enemies/skeleton_archer/` folders only.\n- **Risk**: Snapshot manifests must remain machine-independent (no absolute paths).\n  - **Mitigation**: Using schema v1.1 (`relpath` + `run_dir`); confirmed in manifest output (no absolute paths present).",
+            "summary_bullets": [
+              "Added skeleton_archer to tools/assets_manifest.json so validator + snapshot enemy_catalog include it automatically",
+              "Generated required placeholder PNGs under assets/sprites/enemies/skeleton_archer/*/frame_000.png",
+              "Runtime fallback updated so skeleton_archer renders with skeleton-like color/silhouette (safety net)",
+              "All required gates PASS; enemy_catalog manifest includes enemy_skeleton_archer_closeup.png"
+            ],
+            "proposed_changes": [
+              "tools/assets_manifest.json: add enemies.types entry 'skeleton_archer'",
+              "tools/generate_cc0_placeholders.py: add skeleton_archer placeholder silhouette cue (bow/quiver) and generate frames via existing loop",
+              "game/graphics/enemy_sprites.py: recognize skeleton_archer in _type_color and procedural silhouette"
+            ],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick => PASS",
+              "python tools/validate_assets.py --strict --check-attribution => PASS",
+              "assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png exist on disk",
+              "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0 => PASS and manifest includes enemy_skeleton_archer_closeup.png",
+              "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html => PASS"
+            ],
+            "risks": [
+              "PM hub gap: Agent 01 log currently lacks wk4_r2 entry despite prompt; risks audit-trail/conflicting source-of-truth",
+              "Re-running placeholder generator can rewrite many PNGs; reviewers should focus on the new skeleton_archer outputs"
+            ],
+            "dependencies": [
+              "Integrator/IC: implement SkeletonArcher behavior + spawn mix in gameplay code (outside Agent 12 scope)",
+              "Agent 09: confirm placeholder reads as ranged at 32×32 in enemy_catalog shots",
+              "Agent 11: confirm gates remain non-flaky and record PASS evidence for release"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: add the missing wk4_r2 synthesis entry to agent_01 log for source-of-truth continuity",
+              "Proceed with gameplay implementation steps (config tunables, enemy behavior, lair spawn mix) and re-run the same gates + snapshots"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "ready_for_integration": true,
+              "gates_passed": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ],
+              "wk4_visual_outputs": [
+                "docs/screenshots/wk4_after/enemy_catalog_seed3/enemy_skeleton_archer_closeup.png",
+                "docs/screenshots/wk4_after/enemy_catalog_seed3/enemy_catalog_overview.png"
+              ]
+            }
+          }
+        }
+        ,
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context refresh/acknowledgment before implementation greenlight"
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T16:00:00-07:00"
+          },
+          "prompt_text": "Context refresh + acknowledgment: confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates) and list role-specific deliverables + blockers + expected file touchpoints for WK4 skeleton_archer implementation.",
+          "response": {
+            "received_at_local": "2025-12-25T16:00:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 12 (ToolsDevEx_Lead) — context refreshed and locked Build A decisions acknowledged. My tooling/pipeline scope for WK4 is complete (already implemented in wk4_r3), but I'm confirming understanding of requirements and role-specific deliverables.\n\n**Note**: I already completed my scoped implementation work in wk4_r3 (manifest update, placeholder generation, runtime fallback, gates PASS). This ack entry serves as a context refresh to confirm alignment with locked decisions.\n\n### Locked Build A decisions (acknowledged)\n- **Ranged-only in Build A**: no melee fallback required.\n- **Instant-hit ranged**: no projectile system in Build A.\n- **Kiting behavior**: maintain distance band with hysteresis/commitment to avoid jitter (gameplay implementation; outside my scope).\n- **Deterministic spawn mix**: Skeleton Crypt spawns 80/20 skeleton / skeleton_archer (uses lair RNG; deterministic).\n- **Pipeline completeness mandatory**:\n  - `skeleton_archer` must be in `tools/assets_manifest.json` so strict validator + `enemy_catalog` snapshots include it automatically.\n  - Required placeholder PNGs: `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n- **Gates must stay PASS**:\n  - `python tools/qa_smoke.py --quick`\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - Visual Snapshot System: `enemy_catalog` includes `skeleton_archer` and gallery builds.\n- **Allowed clarity safeguard**: tiny deterministic cue (attack pose + minimal impact flash) allowed only if needed for readability, but no new systems.\n\n### Role-specific deliverables (Agent 12 / ToolsDevEx_Lead)\n- **Manifest-driven snapshot inclusion**: confirm `enemy_catalog` scenario reads `tools/assets_manifest.json` and auto-includes `skeleton_archer` (no manual scenario edits needed).\n- **Atomic manifest+placeholder changes**: ensure strict validator doesn't break by generating placeholder PNGs in the same change set as manifest update.\n- **Strict validator coverage**: `python tools/validate_assets.py --strict --check-attribution` must PASS after `skeleton_archer` lands.\n- **Snapshot artifact generation**: `enemy_catalog` run must produce `enemy_skeleton_archer_closeup.png` and include it in manifest.json (schema v1.1 machine-independent relpaths).\n- **Gallery buildability**: `python tools/build_gallery.py` must remain buildable using the new snapshot run directory.\n\n### Questions (blockers only; max 3)\n- **None** (all tooling questions from wk4_r1 were resolved; implementation completed in wk4_r3).\n\n### Next actions\n- **No further tooling changes needed** unless QA/Art reports readability issues in `enemy_skeleton_archer_closeup.png` or a regression is found in snapshot/gallery tooling.\n- **Stand by for integration**: gameplay implementation (config tunables, enemy behavior, lair spawn mix) is outside my scope; I'll re-run gates after integration if needed.\n\n### Expected file touchpoints (paths only; already completed in wk4_r3)\n- **Required (completed)**:\n  - `tools/assets_manifest.json` (added `skeleton_archer` under `enemies.types`)\n  - `tools/generate_cc0_placeholders.py` (added `skeleton_archer` placeholder silhouette with bow/quiver cue)\n  - `game/graphics/enemy_sprites.py` (runtime fallback recognizes `skeleton_archer` for safety)\n- **Generated artifacts (expected)**:\n  - `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`\n  - `docs/screenshots/wk4_after/enemy_catalog_seed3/*` (includes `enemy_skeleton_archer_closeup.png`)\n  - `docs/art/compare_gallery.html` (rebuildable)\n- **No changes expected**:\n  - `tools/screenshot_scenarios.py` (enemy_catalog reads manifest; no manual edits needed)\n  - `tools/capture_screenshots.py` / `tools/build_gallery.py` (no changes unless regression found)\n\n### Risks + mitigations (tooling-specific)\n- **Risk**: Adding `skeleton_archer` to manifest would break strict validation if PNGs weren't generated atomically.\n  - **Mitigation**: Already completed in wk4_r3 — manifest update + placeholder generation landed together; strict validator PASS confirmed.\n- **Risk**: Placeholder generator run can rewrite many existing PNGs; reviewers might miss the new `skeleton_archer` outputs.\n  - **Mitigation**: Generator is deterministic; focus review on new `assets/sprites/enemies/skeleton_archer/` folders.\n- **Risk**: Snapshot manifests must remain machine-independent (no absolute paths).\n  - **Mitigation**: Already using schema v1.1 (`relpath` + `run_dir`); confirmed in wk4_r3 manifest output.\n\n### Context drift notes (acknowledged)\n- **Visual snapshot system plan doc**: `visual_snapshot_system_a76d3697.plan.md` shows some todos as pending, but tooling is already implemented/used in repo. For WK4, we're extending existing snapshot tooling (manifest-driven inclusion), which aligns with current reality.\n- **PM hub gap**: Agent 01 log currently lacks `wk4_r2` synthesis entry (noted in wk4_r3). This ack entry serves as my confirmation of locked decisions from the greenlight prompt.\n\n### Confirmation checklist\n- ✅ Read required docs: `studio-agent-cards_c3880ea5.plan.md`, `ai_studio_infrastructure_progress.md`, `wk4-new-enemy-skeleton-archer_0feaab3a.plan.md`, `visual_snapshot_system_a76d3697.plan.md`\n- ✅ Reviewed own log: `agent_12_ToolsDevEx_Lead.json` (wk4_r1 plan + wk4_r3 implementation)\n- ✅ Wrote wk4_r2_ack entry in correct location: `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2_ack\"]`",
+            "summary_bullets": [
+              "Context refreshed: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates)",
+              "Role-specific deliverables: manifest-driven snapshot inclusion, atomic manifest+placeholder changes, strict validator coverage, snapshot artifacts, gallery buildability",
+              "No blockers: tooling implementation already completed in wk4_r3; all gates PASS"
+            ],
+            "proposed_changes": [],
+            "acceptance_criteria": [
+              "python tools/qa_smoke.py --quick => PASS (already confirmed in wk4_r3)",
+              "python tools/validate_assets.py --strict --check-attribution => PASS (already confirmed in wk4_r3)",
+              "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0 => PASS and manifest includes enemy_skeleton_archer_closeup.png (already confirmed in wk4_r3)",
+              "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html => PASS (already confirmed in wk4_r3)"
+            ],
+            "risks": [
+              "No new risks identified; tooling implementation already complete and gates PASS"
+            ],
+            "dependencies": [
+              "Gameplay implementation (config tunables, enemy behavior, lair spawn mix) is outside Agent 12 scope; will re-run gates after integration if needed"
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with gameplay implementation steps (Agent 05/03/others); Agent 12 tooling is ready-for-integration"
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "locked_decisions_confirmed": [
+                "Ranged-only in Build A (no melee fallback)",
+                "Instant-hit ranged (no projectile system)",
+                "Deterministic spawn mix: 80/20 skeleton / skeleton_archer from Skeleton Crypt",
+                "Pipeline completeness: manifest + placeholder PNGs + gates PASS"
+              ],
+              "tooling_scope_complete": true,
+              "implementation_status": "wk4_r3 completed; all gates PASS; ready-for-integration"
+            }
+          }
+        }
+      }
+    }
   }
 }
 

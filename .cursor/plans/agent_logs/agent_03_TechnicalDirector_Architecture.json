@@ -484,6 +484,237 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 plan-only kickoff: add new enemy type skeleton_archer with determinism/perf guardrails and tooling/snapshot coverage."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_kickoff_r1_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:26:00"
+          },
+          "prompt_text": "WK4 plan-only: add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt. First pass should be instant-hit ranged damage (no projectile system required in Build A) unless strongly recommended otherwise. Must keep determinism/perf guardrails and cover qa_smoke, validate_assets, and Visual Snapshot System enemy catalog/gallery.",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture). WK4 is **plan-only** right now; my output is the **architecture contract + guardrails** to keep `skeleton_archer` low-risk (deterministic, perf-safe) and fully covered by our existing gates (qa_smoke, validate_assets, visual snapshots).\n\n### Context gaps / contradictions noticed\n- The `visual_snapshot_system_a76d3697.plan.md` still shows early todos as pending, but WK3 closeout indicates the snapshot tooling (`tools/capture_screenshots.py`, `tools/build_gallery.py`, deterministic manifests) is already implemented and used for `wk3_baseline_v2`. I’m assuming WK4 should **extend the existing implementation**, not start from scratch.\n\n### Deliverables (this round)\n- **Determinism contract** for a ranged/kiting enemy (no wall-clock, no unseeded RNG, stable ordering).\n- **Safe behavioral contract** for kiting + instant-hit ranged damage (Build A).\n- **Perf guardrails** for perception/target selection (avoid N^2 scans and avoid per-tick allocations).\n- **Test/tooling gates** to lock for PM synthesis (qa_smoke + validate_assets strict + snapshot inclusion).\n\n### Proposed scope split (WK4)\n- **Build A (midweek)**: ship `skeleton_archer` end-to-end with instant-hit ranged attacks (no projectile system), basic kiting, placeholder procedural/CC0-compatible visuals, spawn from Skeleton Crypt, validator + snapshot coverage.\n- **Build B (endweek)**: optional polish only (tuning pass, readability/VFX cues, optional projectile line *only if* instant-hit feels too unreadable/unfair, perf sanity under higher counts).\n\n### Contracts / guardrails to lock\n- **Time source**: use sim-time (`game.sim.timebase.now_ms`) and/or tick-based cooldowns; no wall-clock.\n- **RNG**: if any randomness is used (spawn mix, behavior jitter), it must use seeded streams (`game.sim.determinism.get_rng(tag)` or existing lair RNG), and never Python `random` global.\n- **Stable ordering**: when selecting targets, tie-break deterministically (e.g., distance then stable id/index; never set iteration).\n- **Kiting behavior** (deterministic + cheap):\n  - Maintain a preferred distance band \n    - If target too close: move away along a deterministic direction (e.g., opposite vector snapped to nearest tile/8-way).\n    - If target too far: move toward until in range.\n  - Avoid oscillation by using a small commitment window (re-use the existing tunables pattern from WK2/WK3: one module, constants only).\n- **Instant-hit attack** (Build A):\n  - Compute attack validity from squared distance and line-of-sight only if LoS is already available cheaply; otherwise defer LoS.\n  - Apply damage via existing combat/damage pathways to keep event semantics consistent.\n\n### Acceptance criteria I want locked (WK4)\n- **Gameplay/behavior**:\n  - `skeleton_archer` spawns from Skeleton Crypt with a deterministic spawn mix.\n  - It performs ranged attacks at a non-trivial range and attempts to maintain distance (no permanent melee face-tanking).\n- **Determinism/stability**:\n  - `python tools/qa_smoke.py --quick` PASS.\n  - No new determinism_guard violations.\n- **Tooling/pipeline**:\n  - `python tools/validate_assets.py --strict --check-attribution` PASS.\n  - Visual Snapshot System: enemy catalog scenario includes `skeleton_archer`, and gallery builds (plan says enemy catalog reads manifest).\n\n### Risks + mitigations\n- **Determinism drift**: kiting can introduce per-frame float drift and tie-break nondeterminism.\n  - Mitigation: snap movement/retreat directions to grid/limited directions; stable sort tie-breaks.\n- **Perf**: naive target selection can become O(N_enemies * N_heroes).\n  - Mitigation: reuse existing nearby selection patterns; cap scans by radius and prefiltered lists; avoid allocations.\n- **UX/readability**: instant-hit ranged attacks may feel unfair if there’s no telegraph.\n  - Mitigation: add a minimal, deterministic attack cue (sound/VFX/animation) in Build B if needed; keep Build A minimal.\n\n### Concrete file touchpoints (paths only; no implementation yet)\n- `config.py` (add `SKELETON_ARCHER_*` tunables)\n- `game/entities/enemy.py` (new `SkeletonArcher` type + ranged/kite behavior)\n- `game/entities/lair.py` (Skeleton Crypt spawn mix includes `skeleton_archer`)\n- `game/systems/combat.py` (if needed to support ranged instant-hit attack semantics cleanly)\n- `game/graphics/enemy_sprites.py` (procedural/placeholder recognition for `skeleton_archer`)\n- `tools/assets_manifest.json` (add enemy type for validator + snapshots)\n- `tools/generate_cc0_placeholders.py` (generate placeholder frames if this is the existing pipeline)\n- `tools/screenshot_scenarios.py` (enemy catalog should pick it up via manifest; only touch if not)\n\n### Questions (blockers only)\n1) Does `Skeleton Crypt` currently have a stable type key in `game/entities/lair.py` (e.g., `skeleton_crypt`), and is its spawn selection already centralized enough to add one more type without refactoring?\n2) Do we already have a stable \"entity id\" or deterministic ordering for heroes/enemies used in target selection (for tie-breaks), or should we introduce a minimal deterministic index in `Enemy`/`Hero`?\n3) Confirm the placeholder art path: do we want `skeleton_archer` to rely purely on `enemy_sprites.py` procedural fallback for Build A, or must we generate CC0-style placeholders via `tools/generate_cc0_placeholders.py` as part of definition-of-done?\n\n### Next actions\n- Wait for PM to synthesize wk4_r1 replies into locked tunables + spawn policy + integration order.\n- If PM greenlights (wk4_r3), I will review the implementation PRs for determinism/perf compliance (time source, RNG usage, stable ordering, scan complexity) before merge.\n\nCONFIRMATION: I wrote this reply under `sprints[\\\"wk4-new-enemy-skeleton-archer\\\"].rounds[\\\"wk4_r1\\\"]` in my agent log file.",
+            "summary_bullets": [
+              "WK4 plan-only: defined determinism/perf guardrails for a ranged/kiting `skeleton_archer` with instant-hit ranged damage (Build A).",
+              "Identified a doc-state contradiction: snapshot system plan lists todos as pending, but tooling appears already implemented and used in WK3; WK4 should extend existing tooling.",
+              "Locked proposed acceptance gates: qa_smoke PASS, validate_assets strict+attribution PASS, enemy catalog snapshot/gallery includes skeleton_archer."
+            ],
+            "proposed_changes": [
+              "Build A: add `skeleton_archer` enemy type + spawn mix in Skeleton Crypt + procedural/placeholder visuals + validator + snapshot inclusion; no projectile system.",
+              "Build B: optional polish (tuning/readability/VFX; projectile only if required for clarity).",
+              "Enforce determinism: sim-time only, seeded RNG streams, stable tie-break ordering for target selection."
+            ],
+            "acceptance_criteria": [
+              "Enemy spawns: Skeleton Crypt can spawn `skeleton_archer` deterministically.",
+              "Behavior: performs ranged attacks and attempts to maintain distance (kiting) without oscillation loops.",
+              "Gates: `python tools/qa_smoke.py --quick` PASS; `python tools/validate_assets.py --strict --check-attribution` PASS.",
+              "Snapshots: enemy catalog capture includes `skeleton_archer` and gallery builds."
+            ],
+            "risks": [
+              "Determinism drift from float-based kiting and unstable tie-breaks; mitigate with snapped directions and stable sorting.",
+              "Perf regression from naive target selection scans; mitigate with capped radius scans and no per-tick allocations.",
+              "UX fairness: instant-hit ranged may feel unfair without cue; mitigate with minimal deterministic cue (Build B if needed)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [
+              "Confirm Skeleton Crypt lair type key + spawn selection location in `game/entities/lair.py`.",
+              "Confirm preferred deterministic tie-break strategy for target selection (existing stable ids vs add minimal deterministic index).",
+              "Confirm placeholder art approach for Build A: procedural fallback vs generated CC0-style placeholder frames."
+            ],
+            "recommended_next_actions": [
+              "PM: synthesize wk4_r1 replies into locked tunables (range, cooldown, speed), spawn mix, and acceptance tests.",
+              "Tools/QA: ensure manifest/validator/snapshot enemy catalog picks up the new enemy type deterministically.",
+              "Implementation phase: keep changes localized to enemy/lair/combat/graphics/manifest; avoid new projectile system in Build A."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "determinism_guardrails": [
+                "Sim-time only for cooldowns/ages; no wall-clock.",
+                "Seeded RNG streams only (no global random.*).",
+                "Stable ordering/tie-breaks for target selection."
+              ],
+              "perf_guardrails": [
+                "Avoid O(N_enemies*N_heroes) scans; cap by radius and reuse filtered lists.",
+                "Avoid per-tick allocations; cache where needed."
+              ],
+              "testing_tooling_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "Visual Snapshot System enemy_catalog includes skeleton_archer and gallery builds"
+              ],
+              "expected_file_touchpoints": [
+                "config.py",
+                "game/entities/enemy.py",
+                "game/entities/lair.py",
+                "game/systems/combat.py",
+                "game/graphics/enemy_sprites.py",
+                "tools/assets_manifest.json",
+                "tools/generate_cc0_placeholders.py",
+                "tools/screenshot_scenarios.py"
+              ]
+            }
+          }
+        },
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2025-12-25T15:40:04"
+          },
+          "prompt_text": "WK4 wk4_r3 greenlight: implement skeleton_archer (ranged-only, instant-hit, 80/20 spawn mix from Skeleton Crypt) with pipeline coverage (manifest + placeholders + validator + enemy_catalog snapshots). Agent 03 scope: determinism/perf review signoff + guardrails.",
+          "response": {
+            "received_at_local": "2025-12-25T15:40:04",
+            "status": "complete",
+            "raw": "Status: Agent 03 ACTIVE for wk4_r3 as determinism/perf reviewer. I am NOT the implementing IC for this feature; my deliverable is review criteria + signoff guardrails.\n\nImportant contradiction/blocker: The prompt says PM synthesis is locked in Agent 01 under wk4_r2, but in this workspace `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` currently contains NO `wk4-new-enemy-skeleton-archer` or `wk4_r2` entries (search for `wk4`/`skeleton_archer` returns none). I cannot verify the locked tunables/spawn details from PM hub as instructed. I will proceed using the greenlight prompt constraints provided here, but PM should ensure wk4_r2 is present in the repo for auditability.\n\nDeliverables (review/signoff):\n- Determinism guardrails checklist for the implementing PR(s):\n  - No wall-clock (`time.time`, `pygame.time.get_ticks`) for sim logic; cooldowns/timeouts use sim-time or tick accumulation.\n  - No `random.*` globals; any RNG uses seeded streams (`game.sim.determinism.get_rng(tag)` or existing lair RNG).\n  - Stable ordering for target selection and spawn choice; tie-break deterministically (distance then stable id/index).\n- Perf guardrails checklist:\n  - Avoid O(N_enemies*N_heroes) scans; cap by radius and avoid per-tick allocations.\n  - Use squared distances where possible.\n- API/contract checks:\n  - Spawn mix enforced deterministically in `game/entities/lair.py` (Skeleton Crypt 80/20).\n  - Ranged-only + instant-hit: apply damage via existing combat/damage pathway; no projectile system.\n  - Placeholder PNG frames exist at `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n  - Manifest updated: `tools/assets_manifest.json` includes `skeleton_archer`.\n  - Visual snapshot: `enemy_catalog` includes `skeleton_archer` and gallery builds.\n\nHow I will test (post-integration, or locally after the implementing PR lands):\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n- `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n- `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n\nRisks + mitigations:\n- Determinism: kiting movement and target selection can become order-dependent.\n  - Mitigate with stable sorting + snapped direction decisions.\n- UX fairness: instant-hit may feel unclear.\n  - Allowed mitigation in Build A: minimal deterministic readability cue (attack pose + tiny impact flash) without new systems.\n\nStop condition / ready-for-integration:\n- I’m ready to sign off once the implementing PR shows: stable ordering + seeded RNG + sim-time usage, and the required gates/snapshot commands run cleanly by the integrator.\n",
+            "summary_bullets": [
+              "Agent 03 is review/signoff only for wk4_r3 (no implementation).",
+              "Noted a contradiction: PM hub wk4_r2 referenced by prompt is missing in local Agent 01 log; requested PM to ensure it lands for auditability.",
+              "Provided determinism/perf review checklist and the exact required gate commands to run post-integration."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 03 in wk4_r3; review criteria only."
+            ],
+            "acceptance_criteria": [
+              "Implementer runs and passes: python tools/qa_smoke.py --quick",
+              "Implementer runs and passes: python tools/validate_assets.py --strict --check-attribution",
+              "Enemy catalog snapshot includes skeleton_archer and gallery builds successfully."
+            ],
+            "risks": [
+              "Order-dependent target selection or float drift in kiting could break determinism; mitigate with stable tie-breaks and snapped movement decisions.",
+              "Perf regression from naive scans; mitigate with caps and no per-tick allocations."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [
+              "PM blocker: please ensure Agent 01 log contains the locked wk4_r2 synthesis in-repo (currently missing in this workspace), so implementers can cite it as source of truth."
+            ],
+            "recommended_next_actions": [
+              "Implementer/PM: land wk4_r2 synthesis into Agent 01 hub in the repo for audit trail.",
+              "Integrator: run the required gates + snapshot/gallery commands and attach evidence for signoff.",
+              "Ping Agent 03 for final determinism/perf review once PR is ready."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "review_only": true,
+              "files_expected_to_change_by_implementer": [
+                "tools/assets_manifest.json",
+                "tools/generate_cc0_placeholders.py",
+                "game/graphics/enemy_sprites.py",
+                "config.py",
+                "game/entities/enemy.py",
+                "game/entities/lair.py"
+              ],
+              "required_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        },
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context re-ACK: confirming understanding of locked Build A decisions and role-specific deliverables."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T08:07:13"
+          },
+          "prompt_text": "Context refresh + next steps: Review your own agent log, re-read wk4_r1, and write a short 'context re-ACK' entry under wk4_r2_ack. Confirm you understand locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates). List role-specific deliverables, blockers, and expected file touchpoints.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:13",
+            "status": "complete",
+            "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — **context re-ACK for WK4 Build A**. I have reviewed my `wk4_r1` entry and the locked Build A decisions. My role is **determinism/perf review signoff + guardrails** (not implementation IC).\n\n### Locked Build A decisions (confirmed understanding)\n- **Ranged-only**: `skeleton_archer` attacks from range only; no melee fallback in Build A.\n- **Instant-hit ranged**: no projectile system; damage applies immediately on attack validity check.\n- **Kiting behavior**: maintain distance band with hysteresis/commitment to avoid jitter oscillation.\n- **Deterministic spawn mix**: Skeleton Crypt spawns 80/20 skeleton / skeleton_archer using lair RNG (deterministic).\n- **Pipeline completeness**:\n  - `tools/assets_manifest.json` includes `skeleton_archer`.\n  - Placeholder PNGs exist at `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n- **Required gates (must stay PASS)**:\n  - `python tools/qa_smoke.py --quick`\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - Visual Snapshot System: `enemy_catalog` includes `skeleton_archer` and gallery builds.\n- **Allowed clarity safeguard**: minimal deterministic cue (attack pose + tiny impact flash) allowed only if needed for readability; no new systems.\n\n### Role-specific deliverables (Agent 03)\n- **Determinism review checklist** for implementing PR(s):\n  - No wall-clock (`time.time`, `pygame.time.get_ticks`) in sim logic; use sim-time/ticks.\n  - No global `random.*`; use seeded streams (`game.sim.determinism.get_rng(tag)` or existing lair RNG).\n  - Stable ordering/tie-breaks for target selection and spawn choice (distance then stable id/index).\n- **Perf review checklist**:\n  - Avoid O(N_enemies*N_heroes) scans; cap by radius; no per-tick allocations.\n  - Prefer squared distances; reuse cached lists.\n- **Post-integration signoff**:\n  - Review evidence from required gate commands (qa_smoke, validate_assets, snapshot/gallery).\n  - Confirm determinism/perf compliance before merge.\n\n### Questions (blockers only; max 3)\n1. **Tie-break strategy for target selection**: Current `Enemy.find_target()` in `game/entities/enemy.py` uses simple \"best_dist\" iteration with no explicit tie-break for equal distances. For `skeleton_archer` kiting, should we add a stable tie-break (e.g., distance then entity id/index) to ensure deterministic target selection, or is the current approach sufficient if input lists are stable-ordered?\n2. **Spawn mix implementation location**: `SkeletonCrypt.spawn_enemies()` in `game/entities/lair.py` currently returns `[Skeleton(world_x, world_y)]`. The 80/20 mix should use the lair's RNG (already available via `get_rng(\"lair_system\")` or per-lair RNG). Should the mix be implemented directly in `SkeletonCrypt.spawn_enemies()`, or is there a centralized spawn selection pattern I should reference?\n3. **Kiting direction snapping**: To avoid float drift in kiting movement, should retreat directions be snapped to grid/8-way, or is the existing `move_towards()` pattern sufficient if we use squared distances and stable vector math?\n\n### Expected file touchpoints (paths only; no code yet)\n- `config.py` (add `SKELETON_ARCHER_*` tunables: range, min_range, cooldown, speed, HP, attack_damage)\n- `game/entities/enemy.py` (new `SkeletonArcher` class + ranged/kite behavior; may need tie-break enhancement in `find_target()`)\n- `game/entities/lair.py` (`SkeletonCrypt.spawn_enemies()`: add 80/20 mix using lair RNG)\n- `game/systems/combat.py` (if needed to support ranged instant-hit attack semantics cleanly; verify no wall-clock dependencies)\n- `game/graphics/enemy_sprites.py` (procedural/placeholder recognition for `skeleton_archer`)\n- `tools/assets_manifest.json` (add `skeleton_archer` to `enemies.types`)\n- `tools/generate_cc0_placeholders.py` (generate placeholder frames)\n- `tools/screenshot_scenarios.py` (enemy catalog should auto-include via manifest; only touch if not)\n\n### Risks + mitigations (without scope creep)\n- **Determinism drift from kiting**: float-based movement and target selection can become order-dependent.\n  - Mitigation: stable sorting + snapped direction decisions (8-way or grid-aligned retreat vectors).\n- **Perf regression from naive target selection**: O(N_enemies*N_heroes) scans.\n  - Mitigation: reuse existing nearby selection patterns; cap scans by radius; avoid allocations.\n- **Tie-break nondeterminism**: if multiple targets at equal distance, current code picks first-found (order-dependent).\n  - Mitigation: add stable tie-break (distance then stable id/index) if needed for determinism compliance.\n\n### Next actions\n- Wait for PM synthesis (`wk4_r2`) to lock tunables, spawn policy details, and integration order.\n- After implementation PR lands, review for determinism/perf compliance using the checklists above.\n- Sign off once required gates pass and evidence is attached.\n\n### Confirmation\n- ✅ Read required docs (agent cards, infrastructure progress, WK4 plan, visual snapshot system).\n- ✅ Reviewed own log (`wk4_r1` and `wk4_r3` entries).\n- ✅ Wrote `wk4_r2_ack` entry in correct location: `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2_ack\"]`.",
+            "summary_bullets": [
+              "Context re-ACK: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates).",
+              "Role-specific deliverables: determinism/perf review checklists (sim-time only, seeded RNG only, stable ordering, avoid N×M scans) and post-integration signoff.",
+              "Identified 3 questions about tie-break strategy, spawn mix implementation location, and kiting direction snapping (blockers only)."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 03 in wk4_r2_ack; review criteria and guardrails only."
+            ],
+            "acceptance_criteria": [
+              "Implementer follows determinism guardrails: sim-time only, seeded RNG only, stable ordering/tie-breaks.",
+              "Implementer follows perf guardrails: avoid O(N×M) scans, cap by radius, no per-tick allocations.",
+              "Required gates pass: qa_smoke --quick, validate_assets --strict --check-attribution, enemy_catalog snapshot includes skeleton_archer."
+            ],
+            "risks": [
+              "Determinism drift from float-based kiting and unstable tie-breaks; mitigate with stable sorting + snapped directions.",
+              "Perf regression from naive target selection scans; mitigate with capped radius scans and no per-tick allocations.",
+              "Tie-break nondeterminism if multiple targets at equal distance; mitigate with stable tie-break (distance then stable id/index) if needed."
+            ],
+            "dependencies": [
+              "PM synthesis (wk4_r2) to lock tunables, spawn policy details, and integration order.",
+              "Implementer to follow determinism/perf guardrails and provide evidence from required gates."
+            ],
+            "questions_back_to_pm": [
+              "Tie-break strategy: should we add stable tie-break (distance then entity id/index) for deterministic target selection, or is current approach sufficient?",
+              "Spawn mix implementation: should 80/20 mix be in SkeletonCrypt.spawn_enemies() directly, or is there a centralized pattern to reference?",
+              "Kiting direction snapping: should retreat directions be snapped to grid/8-way to avoid float drift, or is existing move_towards() pattern sufficient?"
+            ],
+            "recommended_next_actions": [
+              "PM: synthesize wk4_r1 replies into locked tunables, spawn policy details, and integration order (wk4_r2).",
+              "Implementer: follow determinism/perf guardrails and run required gates before requesting signoff.",
+              "Agent 03: review implementation PR for determinism/perf compliance and sign off once gates pass."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "review_only": true,
+              "determinism_guardrails": [
+                "Sim-time only for cooldowns/ages; no wall-clock.",
+                "Seeded RNG streams only (no global random.*).",
+                "Stable ordering/tie-breaks for target selection and spawn choice."
+              ],
+              "perf_guardrails": [
+                "Avoid O(N_enemies*N_heroes) scans; cap by radius and reuse filtered lists.",
+                "Avoid per-tick allocations; cache where needed.",
+                "Use squared distances where possible."
+              ],
+              "expected_file_touchpoints": [
+                "config.py",
+                "game/entities/enemy.py",
+                "game/entities/lair.py",
+                "game/systems/combat.py",
+                "game/graphics/enemy_sprites.py",
+                "tools/assets_manifest.json",
+                "tools/generate_cc0_placeholders.py",
+                "tools/screenshot_scenarios.py"
+              ],
+              "required_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+              ]
+            }
+          }
+        }
+      }
+    }
   }
 }
 

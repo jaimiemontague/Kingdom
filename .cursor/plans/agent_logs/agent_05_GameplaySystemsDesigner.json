@@ -202,6 +202,317 @@
         }
       }
     }
+    ,
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 is plan-only in wk4_r1. Agent 05 delivers initial gameplay tunables + balance risks/mitigations for skeleton_archer (ranged kiter) and spawn mix from SkeletonCrypt."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:26:09-07:00"
+          },
+          "prompt_text": "WK4 plan-only kickoff: propose initial tunables for skeleton_archer (HP, attack, speed, attack range, min range, cooldown), propose SkeletonCrypt spawn mix, list balance failure modes + mitigations; include scope split A vs B, acceptance criteria, risks/mitigations, and expected file touchpoints (paths only).",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:09-07:00",
+            "status": "complete",
+            "raw": "### Status\\nPlan-only (WK4 R1). As Agent 05, I’m proposing initial gameplay numbers + spawn policy so `skeleton_archer` feels meaningfully different (ranged kiter) without spiking difficulty or breaking the bounty-driven loop.\\n\\nI’m noticing one context gap: parts of this thread show timestamps around 2025-12-20, while the workspace header says 2025-12-25. I’m assuming the sprint plan’s `sprint_id`/`round_id` are the source of truth and the timestamps are just when logs were written.\\n\\n### Deliverables\\n- Initial tunables for `skeleton_archer` (v0) + rationale.\\n- Initial `SkeletonCrypt` spawn mix recommendation (v0) + difficulty-risk notes.\\n- Acceptance criteria for gameplay feel (kite behavior) and “no-scope-creep” Build A baseline (instant-hit ranged).\\n\\n### Proposed scope split (WK4)\\n- **Build A (midweek)**: instant-hit ranged damage + simple kiting behavior (maintain distance band), spawns from SkeletonCrypt, CC0 procedural placeholder art, validator + snapshot coverage, deterministic-safe logic.\\n- **Build B (endweek)**: tuning pass + readability polish (sound/flash cue), optional *simple* projectile/VFX line only if needed for clarity (no physics); perf sanity + additional QA assertions.\\n\\n### Proposed initial tunables (v0)\\nGoal: “annoying pressure” unit that punishes overextending heroes and forces fights to stretch out, but is still killable and not an infinite kite.\\n- **HP**: 40\\n- **Attack (ranged)**: 4\\n- **Speed**: 1.35\\n- **Attack range (tiles)**: 6.0\\n- **Min range (tiles)**: 2.0 (will attempt to kite if hero is closer)\\n- **Attack cooldown (ms)**: 1400\\n- **Gold reward**: same as Skeleton baseline initially (avoid economy spike); can tune later.\\n\\nWhy these numbers: slightly sturdier than goblin but lower DPS than a melee skeleton; longer engagement time; kiting creates indirect pressure without burst-killing peasants instantly.\\n\\n### Spawn mix (SkeletonCrypt)\\n- Start with **80/20** split: `skeleton` / `skeleton_archer`.\\n- If threat feels too low, move to **70/30** in Build B.\\n\\nRationale: crypt already signals “tougher”; archers should be present often enough to be learned, but not so frequent that early parties stall forever.\\n\\n### Acceptance criteria (lock these for implementation)\\n- **Behavior**: `skeleton_archer` attempts to maintain a distance band (min range respected) and attacks from range; it should not stand still and trade in melee unless cornered.\\n- **No infinite kiting**: if kiting fails N times (blocked) it should fall back to a simpler behavior (keep attacking or reposition slightly) to avoid CPU churn.\\n- **No projectile system required for Build A**: instant-hit ranged damage is acceptable as long as there is a readable cue (animation/VFX/audio).\\n- **Determinism**: decisions based on sim-time + seeded RNG only; no wall-clock; stable target selection order.\\n- **Gates**: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution` pass; Visual Snapshot System `enemy_catalog` includes the new enemy and gallery builds.\\n\\n### Risks + mitigations\\n- **Balance risk: ‘softlock by kiting’** (heroes chase forever, never kill): mitigate with min-range band + bounded repath attempts + occasional “stand-and-shoot” fallback when stuck.\\n- **Balance risk: peasant wipe** (ranged picks off workers): mitigate by using same targeting priorities as other enemies (likely heroes first) and keeping per-hit damage low.\\n- **UX risk: instant-hit feels unfair**: mitigate with clear wind-up animation + small muzzle-flash/beam/arrow-swish VFX (non-projectile) and combat log/HUD message if needed.\\n- **Perf risk: per-frame pathing for kiting**: mitigate with cooldowned repositioning (only re-evaluate every ~0.5–1.0s sim-time) + reuse existing navigation patterns.\\n- **Determinism risk: tie-break drift**: mitigate with stable sorting (entity id/order) and deterministic RNG stream usage.\\n\\n### Concrete file touchpoints (paths only; no implementation yet)\\n- `config.py` (add `SKELETON_ARCHER_*` tunables)\\n- `game/entities/enemy.py` (add enemy class + ranged/kite logic)\\n- `game/entities/lair.py` (SkeletonCrypt spawn mix)\\n- `tools/assets_manifest.json` (add enemy type)\\n- `tools/generate_cc0_placeholders.py` (procedural placeholder frames entry)\\n- `game/graphics/enemy_sprites.py` (ensure fallback recognizes new type)\\n- `tools/screenshot_scenarios.py` (verify enemy_catalog reads manifest; should auto-include)\\n\\n### Questions (blockers only)\\n- None.\\n\\n### Next actions\\n- Wait for PM (wk4_r2) to lock the tunables + spawn mix.\\n- If PM requests tighter numbers, I’ll provide a 2nd pass tuned around observed TTK and chase behavior once a headless repro scenario exists.",
+            "summary_bullets": [
+              "Proposed v0 skeleton_archer stats (HP/ATK/speed/range/min-range/cooldown) tuned for ‘ranged pressure’ without burst lethality.",
+              "Recommended SkeletonCrypt spawn mix 80/20 skeleton/skeleton_archer for Build A; consider 70/30 in Build B if too subtle.",
+              "Outlined acceptance criteria + key risks/mitigations (infinite kite, unfair instant-hit feel, determinism/perf guardrails) and expected file touchpoints."
+            ],
+            "proposed_changes": [
+              "Build A: add new enemy type skeleton_archer (instant-hit ranged) + kite distance-band behavior; spawn from SkeletonCrypt; CC0 placeholders; validator + snapshot coverage.",
+              "Build B: tuning + readability polish; optional lightweight VFX line for ranged cue (no full projectile system) if needed."
+            ],
+            "acceptance_criteria": [
+              "skeleton_archer spawns from SkeletonCrypt with the locked mix and attacks from range while attempting to maintain a min-range band.",
+              "No infinite kiting: bounded reposition attempts and cooldowned reevaluation prevent pathological chase loops.",
+              "Determinism guardrails respected (sim-time, seeded RNG streams, stable target ordering).",
+              "Release gates pass: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --strict --check-attribution`, and Visual Snapshot System enemy catalog includes skeleton_archer and gallery builds."
+            ],
+            "risks": [
+              "If kite logic causes long chases, it can feel like a softlock (mitigate with bounded attempts + fallback).",
+              "Instant-hit ranged can feel unfair if cues are weak (mitigate with readable wind-up/VFX/audio).",
+              "Reposition pathing could become expensive if evaluated too frequently (mitigate with cooldowned updates)."
+            ],
+            "dependencies": [
+              "Agent 03: lock determinism-safe patterns for target selection + kite movement evaluation cadence (so we don’t introduce non-deterministic drift).",
+              "Agent 11/12: ensure smoke + snapshot scenarios include skeleton_archer deterministically (enemy_catalog) and validator covers placeholder assets."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM (wk4_r2): lock v0 tunables + spawn mix and assign implementing agent(s).",
+              "After implementation: run a short headless scenario + manual smoke to validate TTK/chase behavior; adjust tunables only (no new systems) for Build B if needed."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "role_notes": "Gameplay feel + pacing/balance focus; avoid scope creep; Build A stays instant-hit ranged unless PM greenlights extra work.",
+              "initial_tunables_v0": {
+                "hp": 40,
+                "attack": 4,
+                "speed": 1.35,
+                "attack_range_tiles": 6.0,
+                "min_range_tiles": 2.0,
+                "attack_cooldown_ms": 1400
+              },
+              "spawn_mix_v0": {
+                "SkeletonCrypt": {
+                  "skeleton": 0.8,
+                  "skeleton_archer": 0.2
+                }
+              }
+            }
+          }
+        }
+        ,
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T08:06:40-07:00"
+          },
+          "prompt_text": "WK4 context refresh + wk4_r2_ack: Review your own agent log, re-read wk4_r1, confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates), list role-specific deliverables, blockers, expected files, and risks/mitigations. Use Status/Deliverables/Questions/Next actions format.",
+          "response": {
+            "received_at_local": "2026-01-03T08:06:40-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — Context re-ACK for wk4_r2. I've reviewed my wk4_r1 tunables proposal and the locked Build A decisions. My role is tuning/spawn-policy confirmation and Build B-only adjustment guidance (no implementation code changes).\\n\\n### Deliverables (role-specific for WK4)\\n- **Build A tuning signoff**: Confirm v0 tunables (HP40/ATK4/speed1.35/range6/min2/cd1400ms) + crypt spawn mix 80/20 are acceptable under locked constraints.\\n- **Build B-only tuning knobs**: Provide adjustment directions if unit is too lethal/too softlocky/too weak (numbers only; no new systems).\\n- **Review criteria**: Pacing fairness (no infinite kiting, no peasant wipes, readable instant-hit cue).\\n- **Failure mode identification**: Balance risks (softlock-by-kite, unfair instant-hit feel, difficulty spike) + mitigations.\\n\\n### Locked Build A decisions (confirmed understanding)\\n- **Ranged-only**: No melee fallback in Build A.\\n- **Instant-hit ranged**: No projectile system required; minimal deterministic cue (attack pose + impact flash) allowed only if needed for readability.\\n- **Kiting behavior**: Maintain distance band with hysteresis/commitment to avoid jitter oscillation.\\n- **Spawn mix**: SkeletonCrypt spawns 80/20 skeleton/skeleton_archer (deterministic via lair RNG).\\n- **Pipeline completeness**: skeleton_archer added to tools/assets_manifest.json; placeholder PNGs generated (idle/walk/attack/hurt/dead/frame_000.png); validator + enemy_catalog snapshots include it.\\n- **Gates must pass**: python tools/qa_smoke.py --quick, python tools/validate_assets.py --strict --check-attribution, Visual Snapshot System enemy_catalog includes skeleton_archer and gallery builds.\\n\\n### Expected file touchpoints (paths only; no code from Agent 05)\\n- `config.py` (SKELETON_ARCHER_* tunables — implementation owner will add)\\n- `game/entities/enemy.py` (SkeletonArcher class + kite logic — implementation owner)\\n- `game/entities/lair.py` (SkeletonCrypt spawn mix 80/20 — implementation owner)\\n- `tools/assets_manifest.json` (add skeleton_archer — Agent 12)\\n- `tools/generate_cc0_placeholders.py` (generate placeholder frames — Agent 12)\\n- `game/graphics/enemy_sprites.py` (runtime fallback recognition — implementation owner)\\n- `tools/capture_screenshots.py` / `tools/screenshot_scenarios.py` (enemy_catalog scenario — Agent 12)\\n\\n### Risks + mitigations (no scope creep)\\n- **Balance risk: softlock-by-kite** (heroes chase forever): Mitigate with bounded reposition attempt count (e.g., max 3–5 attempts per target) + cooldowned reevaluation (every ~0.5–1.0s sim-time) + fallback to \"stand-and-shoot\" when kite band cannot be maintained.\\n- **Balance risk: peasant wipe** (ranged picks off workers): Mitigate by using same targeting priorities as other enemies (heroes first) and keeping per-hit damage low (ATK 4 is acceptable).\\n- **UX risk: instant-hit feels unfair**: Mitigate with clear wind-up animation + minimal deterministic impact flash (allowed safeguard) and avoid silent damage.\\n- **Perf risk: per-frame pathing for kiting**: Mitigate with cooldowned repositioning (only re-evaluate every ~0.5–1.0s sim-time) + reuse existing navigation patterns (no new pathfinding systems).\\n- **Determinism risk: tie-break drift**: Mitigate with stable sorting (entity id/order) and deterministic RNG stream usage (no wall-clock, no global random.*).\\n- **Difficulty spike risk**: Mitigate via spawn mix (keep 80/20 initially) and low per-hit damage (ATK 4); can adjust to 90/10 or 70/30 in Build B if needed.\\n\\n### Blockers (none currently)\\n- No blockers preventing proceeding to implementation.\\n- Note: I previously flagged an audit trail gap (PM hub wk4_r2 synthesis not found in agent_01 log), but I'm proceeding using the locked decisions from the context refresh prompt as source of truth.\\n\\n### Questions (max 3, blockers only)\\n- None.\\n\\n### Next actions\\n- Wait for implementation owner/integrator to land Build A code changes.\\n- After first playable run (or headless scenario): collect observed TTK/chase behavior issues, then provide Build B-only tuning adjustments (numbers only; no new systems).\\n- If PM requests tighter numbers before implementation: I can provide a 2nd-pass tuning recommendation based on my wk4_r1 proposal + any additional constraints.",
+            "summary_bullets": [
+              "Context re-ACK: Confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, pipeline completeness, gates).",
+              "Role deliverables: Build A tuning signoff (v0 tunables acceptable), Build B-only adjustment knobs, review criteria for pacing fairness, failure mode identification + mitigations.",
+              "No blockers; ready to proceed to implementation. Expected file touchpoints listed (paths only; no code changes from Agent 05)."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 05 in wk4_r2_ack; this is a context acknowledgment and signoff confirmation only.",
+              "After implementation: provide Build B-only tuning adjustments if needed (numbers only; no new systems)."
+            ],
+            "acceptance_criteria": [
+              "Build A uses locked decisions: ranged-only, instant-hit, crypt mix 80/20, pipeline complete (manifest + placeholders + validator + snapshots).",
+              "Gameplay: skeleton_archer pressures via range and attempts to maintain distance without infinite kite loops (bounded attempts + fallback).",
+              "No projectile system introduced in Build A; only minimal deterministic readability cue if needed (attack pose + impact flash).",
+              "Release gates pass: qa_smoke --quick, validate_assets --strict --check-attribution, enemy_catalog snapshots include skeleton_archer."
+            ],
+            "risks": [
+              "If kite logic is too effective, fights can drag into softlocky chases (mitigate with bounded attempts + cooldowned reevaluation + fallback).",
+              "Instant-hit can feel unfair without a readable cue (mitigate with attack pose + minimal deterministic impact flash).",
+              "Difficulty spike if spawn mix is too high or damage too high (mitigate via 80/20 mix + low ATK 4; adjust in Build B if needed)."
+            ],
+            "dependencies": [
+              "Agent 03: determinism-safe patterns for target selection + kite movement evaluation cadence (so we don't introduce non-deterministic drift).",
+              "Agent 12: ensure manifest + placeholder generation + snapshot scenarios include skeleton_archer deterministically.",
+              "Implementation owner: keep Build A strictly within locked constraints; wire minimal cue only if instant-hit reads unclear."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Implementation owner/integrator: proceed with Build A implementation using locked decisions and v0 tunables.",
+              "After first run: collect observed TTK/chase behavior; apply Build B-only tuning knobs if needed (no new systems).",
+              "PM: if wk4_r2 synthesis exists elsewhere, consider adding it to agent_01 log for audit consistency (non-blocking)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "context_refresh_complete": true,
+              "build_a_decisions_confirmed": {
+                "ranged_only": true,
+                "instant_hit": true,
+                "spawn_mix_80_20": true,
+                "pipeline_complete": true,
+                "gates_required": [
+                  "qa_smoke --quick",
+                  "validate_assets --strict --check-attribution",
+                  "enemy_catalog snapshots"
+                ]
+              },
+              "v0_tunables_signed_off": {
+                "hp": 40,
+                "attack": 4,
+                "speed": 1.35,
+                "attack_range_tiles": 6.0,
+                "min_range_tiles": 2.0,
+                "attack_cooldown_ms": 1400,
+                "spawn_mix_skeletoncrypt": {
+                  "skeleton": 0.8,
+                  "skeleton_archer": 0.2
+                }
+              },
+              "build_b_adjustment_knobs": {
+                "if_too_lethal": "reduce attack to 3, increase cooldown to 1600-1800ms, or reduce spawn mix to 90/10",
+                "if_too_softlocky": "reduce speed to 1.2, reduce max range to 5.0, or add stronger stand-and-shoot fallback",
+                "if_too_weak": "increase spawn mix to 70/30 (Build B only) or slightly increase range to 6.5 while keeping DPS flat"
+              }
+            }
+          }
+        }
+        ,
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_greenlight_r3_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:40:30-07:00"
+          },
+          "prompt_text": "WK4 wk4_r3 implementation greenlight: as Agent 05, confirm v0 tunables are acceptable for Build A (no debate), recommend Build B adjustments only, list review/signoff criteria for pacing and difficulty, and note any blockers. Include file touchpoints (paths only), how to test, and risks/mitigations. PM synthesis claimed in agent_01 wk4_r2 should be source of truth.",
+          "response": {
+            "received_at_local": "2025-12-25T15:40:30-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — ACTIVE for wk4_r3, but I am **not** the implementation owner/IC. My deliverable is tuning/spawn-policy signoff + Build B-only tuning suggestions.\\n\\n### Gaps/contradictions noticed\\n- The prompt states PM synthesis is already locked in `agent_01` under wk4_r2, but I cannot locate any `wk4-new-enemy-skeleton-archer` entries in `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` (no matches for `wk4`/`skeleton_archer`). For this round, I’m treating the **greenlight prompt’s locked decisions** as the current source of truth and flagging this for PM to fix the audit trail.\\n\\n### Deliverables\\n- Confirm Build A v0 tunables are acceptable for an initial ship (ranged-only, instant-hit, 80/20 crypt mix).\\n- Provide Build B-only tuning knobs if the unit is too oppressive/too weak (numbers + direction).\\n- Provide review criteria for pacing fairness (avoid softlocks, avoid peasant wipes, avoid infinite kiting).\\n\\n### Build A tuning signoff (OK to ship)\\nGiven the locked constraints (ranged-only, instant-hit, crypt mix 80/20), my v0 tunables from wk4_r1 are acceptable as a first pass:\\n- HP 40\\n- Attack 4\\n- Speed 1.35\\n- Attack range 6.0 tiles\\n- Min range 2.0 tiles\\n- Attack cooldown 1400ms\\n- Spawn mix: SkeletonCrypt 80/20 skeleton/skeleton_archer (deterministic via lair RNG)\\n\\n### Build B adjustments (only if needed)\\n- If **too lethal** (peasants dying fast / heroes can’t stabilize): reduce attack to 3, increase cooldown to 1600–1800ms, or reduce spawn mix to 90/10.\\n- If **too annoying/softlocky** (endless chase): reduce speed to 1.2, reduce max range to 5.0, or add stronger ‘stand-and-shoot’ fallback when kite band can’t be maintained (bounded attempts).\\n- If **too weak/unnoticeable**: increase spawn mix to 70/30 (Build B only) or slightly increase range to 6.5 while keeping DPS flat.\\n\\n### Review criteria / acceptance (gameplay feel)\\n- Skeleton archer pressures heroes via range + repositioning but does not create infinite kite loops.\\n- Combat remains readable even with instant-hit (clear attack pose + minimal impact cue is sufficient; no projectile system).\\n- Spawn mix does not spike difficulty: early crypt encounters remain winnable with reasonable hero group.\\n\\n### Files I expect to be touched (by implementation owner; I will not edit)\\n- `config.py` (SKELETON_ARCHER_* tunables)\\n- `game/entities/enemy.py` (SkeletonArcher behavior: kite band + instant-hit ranged)\\n- `game/entities/lair.py` (SkeletonCrypt spawn mix 80/20)\\n- `tools/assets_manifest.json` (add skeleton_archer)\\n- `tools/generate_cc0_placeholders.py` (generate placeholder frames)\\n- `game/graphics/enemy_sprites.py` (runtime fallback recognition)\\n- `tools/capture_screenshots.py` / `tools/screenshot_scenarios.py` (enemy_catalog run)\\n\\n### How to test (for integrator/PM)\\n- Gates: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`\\n- Snapshots: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\\n- Gallery: `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\\n- Manual sanity: run `python main.py --no-llm` and observe a crypt spawn engages heroes with ranged attacks and attempts to maintain distance (no jitter oscillation).\\n\\n### Risks + mitigations\\n- **Softlock-by-kite**: mitigate with bounded reposition attempt count + cooldowned reevaluation + fallback behavior.\\n- **Unfair instant-hit**: mitigate with strong attack pose + minimal deterministic impact flash (allowed safeguard) and avoid silent damage.\\n- **Difficulty spike**: mitigate via spawn mix (keep 80/20) and low per-hit damage initially.\\n\\n### Ready-for-integration criteria (my signoff)\\n- Config tunables match the v0 values above for Build A.\\n- Spawn mix is exactly 80/20 from SkeletonCrypt, deterministic via lair RNG.\\n- No changes that introduce new systems (no projectile sim) in Build A.",
+            "summary_bullets": [
+              "Build A tuning signoff: v0 skeleton_archer tunables (HP40/ATK4/speed1.35/range6/min2/cd1400ms) + crypt mix 80/20 are acceptable for initial ship under locked constraints.",
+              "Build B-only adjustment knobs provided (reduce DPS/spawn mix if lethal; reduce speed/range if softlocky; increase mix if too subtle).",
+              "Flagged audit trail gap: PM hub wk4_r2 synthesis referenced by prompt not present in agent_01 log; proceeding using this prompt’s locked decisions."
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 05 in wk4_r3; provide tuning signoff + review criteria only.",
+              "If needed in Build B: adjust attack/cooldown/speed/range/spawn mix as per guidance (no new systems)."
+            ],
+            "acceptance_criteria": [
+              "Build A uses locked decisions: ranged-only, instant-hit, crypt mix 80/20, pipeline complete (manifest + placeholders + validator + snapshots).",
+              "Gameplay: skeleton_archer pressures via range and attempts to maintain distance without infinite kite loops.",
+              "No projectile system introduced in Build A; only minimal deterministic readability cue if needed."
+            ],
+            "risks": [
+              "If kite logic is too effective, fights can drag into softlocky chases (mitigate with bounded attempts + fallback).",
+              "Instant-hit can feel unfair without a readable cue (mitigate with attack pose + minimal impact flash).",
+              "Audit trail gap: PM synthesis location referenced but missing (mitigate by PM adding the wk4_r2 entry for consistency)."
+            ],
+            "dependencies": [
+              "PM: add/fix `wk4_r2` synthesis entry in agent_01 log so all agents have a single source of truth."
+            ],
+            "questions_back_to_pm": [
+              "Blocker (process/audit): can you confirm where the locked `wk4_r2` PM synthesis is recorded? I could not find it in agent_01; I proceeded using the greenlight prompt’s locked decisions."
+            ],
+            "recommended_next_actions": [
+              "Implementation owner/integrator: keep Build A strictly within locked constraints; wire minimal cue only if instant-hit reads unclear.",
+              "PM: publish/restore wk4_r2 synthesis in agent_01 log for audit consistency.",
+              "After first run: collect observed TTK/chase issues, then apply Build B-only tuning knobs (no new systems)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "ready_for_integration": true,
+              "role": "tuning_signoff_only",
+              "build_a_tuning_signed_off": true,
+              "signed_off_values_build_a": {
+                "hp": 40,
+                "attack": 4,
+                "speed": 1.35,
+                "attack_range_tiles": 6.0,
+                "min_range_tiles": 2.0,
+                "attack_cooldown_ms": 1400,
+                "spawn_mix_skeletoncrypt": {
+                  "skeleton": 0.8,
+                  "skeleton_archer": 0.2
+                }
+              }
+            }
+          }
+        }
+        ,
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_implementation_greenlight_r3_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T08:21:34-07:00"
+          },
+          "prompt_text": "WK4 wk4_r3 implementation: As Agent 05 (IMPLEMENT owner), implement gameplay code changes: config.py (SKELETON_ARCHER_* tunables), game/entities/enemy.py (SkeletonArcher class with ranged kiting), game/entities/lair.py (80/20 crypt spawn mix). Keep determinism/perf guardrails. Run gates and provide evidence.",
+          "response": {
+            "received_at_local": "2026-01-03T08:21:34-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 05 (GameplaySystemsDesigner) — IMPLEMENT owner for WK4 Build A gameplay code. Implemented skeleton_archer enemy class with ranged kiting behavior, added config tunables, and updated SkeletonCrypt spawn mix to 80/20. All determinism/perf guardrails respected (sim-time only, seeded RNG, stable ordering, rate-limited reposition).\\n\\n### Deliverables\\n- **config.py**: Added SKELETON_ARCHER_* tunables (HP=40, ATK=4, speed=1.35, range=6.0 tiles, min_range=2.0 tiles, cooldown=1400ms).\\n- **game/entities/enemy.py**: Implemented SkeletonArcher class with:\\n  - Ranged-only instant-hit attack (no projectile system)\\n  - Kiting behavior: maintains distance band (min_range to attack_range)\\n  - Hysteresis/commitment: 500ms commitment window to avoid jitter\\n  - Cooldowned repositioning: re-evaluates every 800ms (sim-time)\\n  - Bounded attempts: max 5 kite attempts per target, then fallback to stand-and-shoot\\n  - Deterministic: uses now_ms() for all timing, stable target key tracking\\n- **game/entities/lair.py**: Updated SkeletonCrypt.spawn_enemies to use deterministic 80/20 mix (skeleton/skeleton_archer) via lair RNG.\\n\\n### Files changed\\n- `config.py`: Added SKELETON_ARCHER_HP, SKELETON_ARCHER_ATTACK, SKELETON_ARCHER_SPEED, SKELETON_ARCHER_ATTACK_RANGE_TILES, SKELETON_ARCHER_MIN_RANGE_TILES, SKELETON_ARCHER_ATTACK_COOLDOWN_MS\\n- `game/entities/enemy.py`: Added SkeletonArcher class (396-556 lines) with kiting update() override; updated imports to include new config constants\\n- `game/entities/lair.py`: Updated SkeletonCrypt.spawn_enemies() to use 80/20 mix; added SkeletonArcher to imports\\n\\n### How to test\\n- **Gate 1**: `python tools/qa_smoke.py --quick` → PASS (exit_code=0)\\n- **Gate 2**: `python tools/validate_assets.py --strict --check-attribution` → Pending Agent 12 (manifest + placeholders)\\n- **Gate 3**: `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0` → Pending Agent 12 (manifest update)\\n- **Gate 4**: `python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html` → Pending Agent 12\\n- **Manual smoke**: Run `python main.py --no-llm` and observe SkeletonCrypt spawns include skeleton_archer (80/20 mix); verify archer attacks from range and attempts to maintain distance (no jitter oscillation).\\n\\n### Evidence (commands + outputs)\\n- **qa_smoke --quick**: PASS\\n  - determinism_guard: PASS (no violations)\\n  - All scenarios: PASS (default, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM)\\n  - Exit code: 0\\n  - Full output: see terminal output above (determinism_guard PASS, all observe_sync scenarios PASS)\\n\\n### Risks + mitigations (implemented)\\n- **Softlock-by-kite**: Mitigated with bounded attempts (max 5) + fallback to stand-and-shoot when attempts exceeded.\\n- **Jitter oscillation**: Mitigated with hysteresis/commitment window (500ms) + cooldowned repositioning (800ms interval).\\n- **Perf risk**: Mitigated with rate-limited reposition evaluations (only every ~0.8s sim-time) + reuse existing navigation patterns.\\n- **Determinism risk**: Mitigated with sim-time only (now_ms()), stable target key tracking (id/position tuple), deterministic lair RNG for spawn mix.\\n\\n### Dependencies (blockers resolved)\\n- **Agent 12**: Must add skeleton_archer to tools/assets_manifest.json and generate placeholder PNGs before validate_assets + snapshot gates can pass. This is expected and non-blocking for gameplay code implementation.\\n- **Agent 09**: Visual signoff on placeholder silhouette (bow/quiver cues) — expected after Agent 12 generates placeholders.\\n\\n### Ready-for-integration criteria (met)\\n- Config tunables match v0 values (HP40/ATK4/speed1.35/range6/min2/cd1400ms).\\n- Spawn mix is exactly 80/20 from SkeletonCrypt, deterministic via lair RNG.\\n- No new systems introduced (no projectile sim); only minimal deterministic readability cues (attack pose via animation system).\\n- Determinism guardrails respected: sim-time only, seeded RNG streams, stable ordering.\\n- qa_smoke --quick PASS.\\n\\n### Follow-ups (Build B only)\\n- If unit is too lethal: reduce attack to 3, increase cooldown to 1600-1800ms, or reduce spawn mix to 90/10.\\n- If too softlocky: reduce speed to 1.2, reduce max range to 5.0, or strengthen stand-and-shoot fallback.\\n- If too weak: increase spawn mix to 70/30 or slightly increase range to 6.5 while keeping DPS flat.",
+            "summary_bullets": [
+              "Implemented skeleton_archer enemy class with ranged kiting behavior (maintains distance band, hysteresis/commitment, bounded attempts, fallback to stand-and-shoot).",
+              "Added SKELETON_ARCHER_* tunables to config.py (HP40/ATK4/speed1.35/range6/min2/cd1400ms) matching v0 signoff.",
+              "Updated SkeletonCrypt spawn mix to deterministic 80/20 (skeleton/skeleton_archer) via lair RNG.",
+              "All determinism/perf guardrails respected (sim-time only, seeded RNG, stable ordering, rate-limited reposition).",
+              "qa_smoke --quick PASS; validate_assets + snapshot gates pending Agent 12 (manifest + placeholders)."
+            ],
+            "proposed_changes": [
+              "config.py: Added SKELETON_ARCHER_* tunables (HP, attack, speed, attack_range_tiles, min_range_tiles, attack_cooldown_ms).",
+              "game/entities/enemy.py: Added SkeletonArcher class with ranged kiting behavior (override update() method with distance band logic, hysteresis/commitment, bounded attempts, fallback).",
+              "game/entities/lair.py: Updated SkeletonCrypt.spawn_enemies() to use deterministic 80/20 mix (skeleton/skeleton_archer) via lair RNG."
+            ],
+            "acceptance_criteria": [
+              "skeleton_archer spawns from SkeletonCrypt with 80/20 mix deterministically.",
+              "skeleton_archer attacks from range (6.0 tiles) and attempts to maintain distance band (min_range 2.0 tiles) without infinite kite loops.",
+              "Kiting behavior uses hysteresis/commitment (500ms window) and cooldowned repositioning (800ms interval) to avoid jitter oscillation.",
+              "Bounded attempts (max 5) with fallback to stand-and-shoot prevents softlock-by-kite.",
+              "Determinism guardrails respected: sim-time only (now_ms()), seeded RNG streams, stable target ordering.",
+              "qa_smoke --quick PASS; validate_assets + snapshot gates pending Agent 12 (manifest + placeholders)."
+            ],
+            "risks": [
+              "If kite logic is too effective, fights can drag into softlocky chases (mitigated with bounded attempts + fallback).",
+              "Jitter oscillation if repositioning evaluated too frequently (mitigated with hysteresis/commitment + cooldowned repositioning).",
+              "Perf risk if repositioning triggers A* too often (mitigated with rate-limited evaluations + reuse existing navigation patterns)."
+            ],
+            "dependencies": [
+              "Agent 12: Must add skeleton_archer to tools/assets_manifest.json and generate placeholder PNGs before validate_assets + snapshot gates can pass (expected, non-blocking for gameplay code).",
+              "Agent 09: Visual signoff on placeholder silhouette (bow/quiver cues) — expected after Agent 12 generates placeholders."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12: Add skeleton_archer to tools/assets_manifest.json and generate placeholder PNGs (idle/walk/attack/hurt/dead/frame_000.png).",
+              "After Agent 12: Run validate_assets --strict --check-attribution and enemy_catalog snapshot commands to complete pipeline gates.",
+              "Manual smoke: Run python main.py --no-llm and observe SkeletonCrypt spawns include skeleton_archer (80/20 mix); verify archer attacks from range and maintains distance.",
+              "Build B: Collect observed TTK/chase behavior; apply tuning adjustments if needed (numbers only; no new systems)."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": true,
+              "ready_for_integration": true,
+              "implementation_complete": true,
+              "files_changed": [
+                "config.py",
+                "game/entities/enemy.py",
+                "game/entities/lair.py"
+              ],
+              "qa_smoke_quick": "PASS",
+              "qa_smoke_exit_code": 0,
+              "determinism_guard": "PASS",
+              "gates_pending_agent_12": [
+                "validate_assets --strict --check-attribution",
+                "enemy_catalog snapshot",
+                "gallery build"
+              ],
+              "implementation_details": {
+                "skeleton_archer_class": "Added SkeletonArcher class (lines 396-556) with ranged kiting behavior",
+                "kiting_features": [
+                  "Distance band maintenance (min_range to attack_range)",
+                  "Hysteresis/commitment window (500ms)",
+                  "Cooldowned repositioning (800ms interval)",
+                  "Bounded attempts (max 5) with fallback to stand-and-shoot",
+                  "Deterministic: sim-time only, stable target key tracking"
+                ],
+                "spawn_mix": "SkeletonCrypt: 80/20 skeleton/skeleton_archer (deterministic via lair RNG)"
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 

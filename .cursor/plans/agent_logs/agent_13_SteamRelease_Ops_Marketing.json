@@ -533,6 +533,145 @@
           }
         }
       }
+    },
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 is plan-only at wk4_r1; no implementation work should land until PM greenlight round."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "WK4 is plan-only at wk4_r1; no implementation work should land until PM greenlight round."
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:26:12.6362801-07:00"
+          },
+          "prompt_text": "WK4 plan-only: add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt with procedural CC0 placeholder art; Build A should ship end-to-end (enemy+spawn+placeholders+validator+snapshots), Build B optional polish. Provide scope split, acceptance criteria, risks/mitigations, file touchpoints. Log under wk4_r1 in your agent file.",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:12.6362801-07:00",
+            "status": "complete",
+            "raw": "### Status\\nAgent 13 (SteamRelease_Ops_Marketing) — WK4 is plan-only. My focus is release hygiene: keep attribution/asset validation and the Visual Snapshot System updated so the new enemy can ship without breaking gates, and so patch notes/credits stay accurate.\\n\\nNote on process: the WK4 plan lists Agent 13 as consult-only for wk4_r1, but the universal prompt explicitly requests all agents to log wk4_r1. I’m complying with the prompt, and keeping this strictly plan/spec (no code).\\n\\n### Deliverables\\n- Define the release-facing acceptance criteria for this feature slice (what we can claim in patch notes, what must be validated first).\\n- Define attribution/asset validation expectations for the new enemy’s placeholder sprite folders (CC0 placeholder set) so `validate_assets --strict --check-attribution` remains green.\\n- Define Visual Snapshot System expectations: `enemy_catalog` must include `skeleton_archer` and gallery remains buildable.\\n\\n### Proposed scope split (Build A vs Build B)\\n- **Build A (midweek)**: ship `skeleton_archer` end-to-end (spawn + behavior + CC0 placeholder sprites + validator + enemy_catalog snapshot coverage). Ranged damage can be **instant-hit** (no projectile system) to keep risk low.\\n- **Build B (endweek)**: optional polish only if stable: tuning, readability cues (VFX/sound), optional simple projectile/VFX line *only if it stays deterministic and low-risk*.\\n\\n### Acceptance criteria (release-facing; must be lockable)\\n- Gates:\\n  - `python tools/qa_smoke.py --quick` => PASS\\n  - `python tools/validate_assets.py --strict --check-attribution` => PASS\\n- Attribution/compliance:\\n  - If any new third-party pack directory is added under `assets/third_party/`, `assets/ATTRIBUTION.md` must include that pack (author/license/source/retrieved/modifications/used-for/file locations).\\n  - If the new enemy uses only the existing in-repo CC0 placeholder set, no new third-party pack is required, but the validator must still see required `frame_000.png` coverage for `skeleton_archer`.\\n- Visual Snapshot System:\\n  - `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 ...` includes a `skeleton_archer` shot (or equivalent manifest entry) and `python tools/build_gallery.py ...` remains buildable.\\n- Patch notes:\\n  - We only claim “new ranged enemy: Skeleton Archer (kiting)” once QA confirms spawn + behavior in `--no-llm` and `--provider mock` manual smoke (or equivalent deterministic scenario evidence).\\n\\n### Risks + mitigations (release hygiene)\\n- **Determinism risk**: kiting/retreat loops can thrash if tied to wall-clock or unstable ordering. Mitigation: insist on sim-time/ticks + stable tie-break rules; keep instant-hit first pass (no projectile sim).\\n- **Pipeline risk**: strict validator fails when new enemy is added to manifest but placeholder frames aren’t generated in all required action folders. Mitigation: update placeholder generator/manifest in the same PR as the new enemy type; keep required states aligned to validator manifest.\\n- **Readability risk**: ranged damage feels “unfair” without a cue. Mitigation: minimum VFX/sound cue in Build B if needed, but keep it deterministic and non-spammy.\\n- **Repo bloat risk**: avoid importing full packs for a single enemy in Build A; prefer procedural/in-repo placeholders.\\n\\n### Concrete file touchpoints (paths only; no implementation yet)\\n- `tools/assets_manifest.json` (add `skeleton_archer` under enemies.types)\\n- `tools/validate_assets.py` (only if manifest/state requirements need adjustment; avoid loosening strictness)\\n- `tools/capture_screenshots.py` / `tools/screenshot_scenarios.py` (ensure enemy_catalog scenario includes new type, ideally via manifest auto-read)\\n- `docs/sprint/wk4_*_patch_notes_draft.md` (or the sprint’s patch-notes doc once created)\\n- `assets/ATTRIBUTION.md` (only if introducing any new third-party pack)\\n- `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png` (expected output of CC0 placeholder generator)\\n\\n### Questions (blockers only)\\n1) Confirm the exact `enemy_type` string is **`skeleton_archer`** everywhere (spawn system + manifest + folder name).\\n2) Confirm whether Build A uses **only** the existing in-repo CC0 placeholder set (preferred) vs adding any new third-party pack this sprint.\\n3) Does the current Visual Snapshot System enemy catalog auto-read `tools/assets_manifest.json`? If not, which file is the single source of truth for the enemy list so we can avoid drift?\\n\\n### Next actions\\n- Wait for PM synthesis (wk4_r2) to lock tunables and determinism constraints; then I’ll draft Build A/Build B patch note skeletons with precise, gated claims and credits rules.\\n- Once Agent 12 confirms manifest + snapshot auto-inclusion, align the release checklist wording so the required commands remain: qa_smoke, validate_assets strict, and enemy_catalog snapshot regeneration.",
+            "summary_bullets": [
+              "WK4 is plan-only; Agent 13 focuses on release hygiene: keep gates (qa_smoke, validate_assets strict) and snapshot/gallery coverage aligned with the new enemy.",
+              "Build A should ship skeleton_archer end-to-end with in-repo CC0 placeholders; Build B optional polish (readability cues) only if stable.",
+              "Key risk is pipeline drift: adding enemy to manifest without generating required placeholder frames will break strict validator."
+            ],
+            "proposed_changes": [
+              "Keep Build A instant-hit ranged behavior (no projectile system) to reduce risk and keep determinism straightforward.",
+              "Ensure validator and snapshot systems include skeleton_archer via manifest-driven lists to avoid hardcoded drift.",
+              "Only add third-party packs if absolutely necessary; if added, enforce full attribution (ATTRIBUTION.md + per-pack LICENSE/README)."
+            ],
+            "acceptance_criteria": [
+              "Gates pass: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`.",
+              "Enemy catalog snapshot includes skeleton_archer and gallery remains buildable (`tools/build_gallery.py`).",
+              "Release notes only claim behavior once verified by QA/manual smoke (mock/no-LLM)."
+            ],
+            "risks": [
+              "Strict validator failure if skeleton_archer is added to the manifest without placeholder frames in all required action folders.",
+              "Ranged instant-hit can feel unfair without a cue (may require a minimal deterministic VFX/sound cue in Build B).",
+              "Determinism drift if kiting logic introduces unstable ordering or wall-clock dependencies."
+            ],
+            "dependencies": [
+              "PM wk4_r2 synthesis to lock tunables and final scope split.",
+              "Agent 12 confirmation: whether enemy_catalog snapshot list is manifest-driven and which file is authoritative."
+            ],
+            "questions_back_to_pm": [
+              "Confirm `enemy_type`/folder name is exactly `skeleton_archer` everywhere (no aliases).",
+              "Confirm Build A uses only in-repo CC0 placeholders (preferred) vs introducing a third-party pack.",
+              "Confirm which list the Visual Snapshot System uses for enemy_catalog (manifest-driven vs hardcoded list)."
+            ],
+            "recommended_next_actions": [
+              "After PM synthesis, draft wk4 Build A/B patch notes skeleton with gated claims and credits rules.",
+              "Ensure any implementation PR that adds skeleton_archer also updates manifest + placeholder frames so strict validator stays green."
+            ],
+            "agent_fields": {
+              "build_split_recommendation": {
+                "build_a": "Ship skeleton_archer end-to-end with CC0 placeholders + validator + enemy_catalog snapshot coverage; instant-hit ranged damage.",
+                "build_b": "Optional polish: tuning + readability cue (deterministic) + optional projectile/VFX line only if low-risk."
+              },
+              "release_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution"
+              ],
+              "snapshot_expectations": [
+                "enemy_catalog includes skeleton_archer",
+                "compare_gallery remains buildable"
+              ],
+              "pm_acknowledged": true
+            }
+          }
+        },
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context re-ACK round: acknowledging locked Build A decisions before implementation greenlight."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2026-01-03T08:07:57.9139619-07:00"
+          },
+          "prompt_text": "Context refresh + next steps: Review your own agent log, re-read wk4_r1, confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates), list role-specific deliverables, blockers, and expected file touchpoints. Write wk4_r2_ack entry.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:57.9139619-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 13 (SteamRelease_Ops_Marketing) — Context re-ACK for WK4: confirming understanding of locked Build A decisions and readiness to proceed with release hygiene deliverables.\n\n### Context review\n- Reviewed my own agent log: wk4_r1 entry confirms plan-only scope (release hygiene focus: gates, attribution, snapshot coverage).\n- Read required docs: studio-agent-cards, infrastructure progress, WK4 sprint plan, visual snapshot system plan.\n- Noted context drift: visual_snapshot_system_a76d3697.plan.md shows some todos as pending, but snapshot tooling appears implemented/used in repo. For WK4, assume we extend existing snapshot tooling (manifest-driven inclusion).\n\n### Locked Build A decisions (confirmed understanding)\n- **Ranged-only in Build A** (no melee fallback).\n- **Instant-hit ranged in Build A** (no projectile system).\n- **Kiting behavior**: maintain a distance band with hysteresis/commitment to avoid jitter.\n- **Deterministic spawn mix from Skeleton Crypt**: 80/20 skeleton / skeleton_archer (use lair RNG; deterministic).\n- **Pipeline completeness is mandatory**:\n  - Add skeleton_archer to `tools/assets_manifest.json` so strict validator + enemy_catalog snapshots include it.\n  - Generate placeholder PNGs: `assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png`.\n- **Gates required (must stay PASS)**:\n  - `python tools/qa_smoke.py --quick`\n  - `python tools/validate_assets.py --strict --check-attribution`\n  - Visual Snapshot System: enemy_catalog includes skeleton_archer and gallery builds.\n- **Allowed clarity safeguard (Build A)**: a tiny deterministic cue (attack pose + minimal impact flash) is allowed only if needed for readability, but no new systems.\n\n### Role-specific deliverables for WK4\n- **Patch notes drafts**: Create `docs/sprint/wk4_buildA_patch_notes_draft.md` (and Build B if applicable) with precise, gated claims:\n  - Only claim \"new ranged enemy: Skeleton Archer (kiting)\" after QA confirms spawn + behavior in `--no-llm` and `--provider mock` manual smoke.\n  - Include required test commands (qa_smoke, validate_assets strict, enemy_catalog snapshot regeneration).\n  - Include standard \"No API keys required\" section.\n- **Attribution compliance**: If any new third-party pack is introduced (unlikely for Build A if using in-repo CC0 placeholders), ensure `assets/ATTRIBUTION.md` and per-pack LICENSE/README files are complete.\n- **Release checklist alignment**: Ensure release-facing acceptance criteria match the locked gates and snapshot expectations.\n\n### Blockers (none)\n- No blockers from Agent 13 perspective. Ready to proceed once implementation greenlight is given.\n- Note: Multiple agents (02, 04, 05) flagged that PM synthesis wk4_r2 is missing from Agent 01 hub. I'm proceeding using the locked decisions stated in the context refresh prompt as the source of truth.\n\n### Expected file touchpoints (paths only; no code yet)\n- `docs/sprint/wk4_buildA_patch_notes_draft.md` (create when implementation is ready for release)\n- `docs/sprint/wk4_buildB_patch_notes_draft.md` (create if Build B scope is locked)\n- `assets/ATTRIBUTION.md` (only if a new third-party pack is introduced; unlikely for Build A if using in-repo CC0 placeholders)\n- No code changes from Agent 13 (docs-only deliverables).\n\n### Risks + mitigations (release hygiene)\n- **Pipeline risk**: If skeleton_archer is added to manifest but placeholder frames aren't generated, strict validator will fail. Mitigation: coordinate with Agent 12 to ensure manifest + placeholder generator updates land atomically.\n- **Claim accuracy risk**: Overstating behavior (e.g., \"kiting works perfectly\") before QA verification. Mitigation: keep patch notes gated by QA confirmation; use precise language (\"attempts to maintain distance\" vs \"maintains optimal range\").\n- **Snapshot drift risk**: If enemy_catalog scenario doesn't auto-read manifest, skeleton_archer may be missing from snapshots. Mitigation: verify with Agent 12 that snapshot scenarios are manifest-driven before claiming snapshot coverage in patch notes.\n\n### Next actions\n- Stand by for implementation greenlight (wk4_r3).\n- Once implementation lands and QA confirms behavior: draft Build A patch notes with verified bullets only.\n- Ensure patch notes include required test commands and snapshot/gallery regeneration steps.\n- If Build B scope is locked: prepare Build B patch notes draft with optional polish highlights (tuning, readability cues) only if stable.",
+            "summary_bullets": [
+              "Context re-ACK complete: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, pipeline completeness, gates).",
+              "Role-specific deliverables: patch notes drafts (gated by QA), attribution compliance (if needed), release checklist alignment.",
+              "No blockers from Agent 13; ready to proceed once implementation greenlight is given."
+            ],
+            "proposed_changes": [
+              "Create `docs/sprint/wk4_buildA_patch_notes_draft.md` once implementation is ready (docs-only, no code changes).",
+              "Keep patch notes precise and gated: only claim behavior after QA confirms spawn + behavior in mock/no-LLM smoke.",
+              "Ensure patch notes include required test commands (qa_smoke, validate_assets strict, enemy_catalog snapshot regeneration)."
+            ],
+            "acceptance_criteria": [
+              "Build A patch notes only claim \"new ranged enemy: Skeleton Archer (kiting)\" after QA confirms spawn + behavior in `--no-llm` and `--provider mock` manual smoke.",
+              "Patch notes include required test commands: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --strict --check-attribution`, and enemy_catalog snapshot regeneration.",
+              "If any new third-party pack is introduced, `assets/ATTRIBUTION.md` and per-pack LICENSE/README files are complete before claiming attribution compliance."
+            ],
+            "risks": [
+              "Pipeline drift: adding enemy to manifest without generating placeholder frames will break strict validator (coordinate with Agent 12 for atomic updates).",
+              "Claim accuracy: overstating behavior before QA verification (mitigate by keeping patch notes gated and using precise language).",
+              "Snapshot drift: if enemy_catalog doesn't auto-read manifest, skeleton_archer may be missing from snapshots (verify manifest-driven inclusion with Agent 12)."
+            ],
+            "dependencies": [
+              "Implementation greenlight (wk4_r3) before drafting patch notes.",
+              "QA confirmation of spawn + behavior in mock/no-LLM smoke before claiming behavior in patch notes.",
+              "Agent 12 confirmation that snapshot scenarios are manifest-driven (to avoid snapshot drift)."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Stand by for implementation greenlight (wk4_r3).",
+              "Once implementation lands and QA confirms: draft Build A patch notes with verified bullets only.",
+              "Ensure patch notes include required test commands and snapshot/gallery regeneration steps."
+            ],
+            "agent_fields": {
+              "locked_build_a_decisions_confirmed": true,
+              "role_deliverables": [
+                "Patch notes drafts (gated by QA)",
+                "Attribution compliance (if new pack introduced)",
+                "Release checklist alignment"
+              ],
+              "expected_files": [
+                "docs/sprint/wk4_buildA_patch_notes_draft.md",
+                "docs/sprint/wk4_buildB_patch_notes_draft.md (if Build B scope locked)",
+                "assets/ATTRIBUTION.md (only if new third-party pack introduced)"
+              ],
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
     }
   }
 }

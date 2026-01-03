@@ -146,6 +146,7 @@ def _enemy_frame(enemy_type: str, state: str) -> pygame.Surface:
         "goblin": (90, 170, 90),
         "wolf": (160, 160, 160),
         "skeleton": (220, 220, 240),
+        "skeleton_archer": (220, 220, 240),
         "spider": (50, 50, 55),
         "bandit": (140, 100, 65),
     }.get(et, (150, 150, 150))
@@ -202,6 +203,29 @@ def _enemy_frame(enemy_type: str, state: str) -> pygame.Surface:
         if (state or "").lower() == "attack":
             pygame.draw.line(s, dark, (19, 18), (29, 14), 2)
             pygame.draw.line(s, (200, 200, 210), (27, 13), (31, 11), 2)
+    elif et == "skeleton_archer":
+        # skeleton base, but with a persistent bow cue so it reads as ranged at 32x32
+        pygame.draw.circle(s, dark, (16, 11), 6)
+        pygame.draw.circle(s, mid, (16, 11), 5)
+        pygame.draw.rect(s, dark, pygame.Rect(14, 10, 2, 2))
+        pygame.draw.rect(s, dark, pygame.Rect(17, 10, 2, 2))
+        _outline_rect(s, pygame.Rect(12, 16, 8, 10), mid)
+        for i in range(3):
+            pygame.draw.line(s, sh, (13, 18 + i * 2), (19, 18 + i * 2), 1)
+
+        st = (state or "").lower()
+        # Bow: a curved-ish vertical arc plus string (simple but readable)
+        if st == "attack":
+            # raise the bow, add a small "impact" streak
+            pygame.draw.line(s, dark, (22, 10), (26, 22), 2)  # bow limb
+            pygame.draw.line(s, (200, 200, 210), (24, 10), (24, 22), 1)  # string
+            pygame.draw.line(s, (255, 245, 220), (26, 14), (31, 12), 2)  # shot cue
+        else:
+            pygame.draw.line(s, dark, (22, 12), (25, 23), 2)  # bow limb
+            pygame.draw.line(s, (200, 200, 210), (23, 12), (23, 23), 1)  # string
+            # quiver hint on back
+            pygame.draw.rect(s, (120, 75, 55), pygame.Rect(9, 16, 3, 8))
+            pygame.draw.rect(s, dark, pygame.Rect(9, 16, 3, 8), 1)
     elif et == "spider":
         pygame.draw.circle(s, dark, (16, 18), 8)
         pygame.draw.circle(s, mid, (16, 18), 6)

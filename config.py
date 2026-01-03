@@ -11,7 +11,7 @@ load_dotenv()
 WINDOW_WIDTH = 1920
 WINDOW_HEIGHT = 1080
 FPS = 60
-PROTOTYPE_VERSION = "1.2.4"
+PROTOTYPE_VERSION = "1.2.5"
 GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION})"
 
 # Display behavior (Build A): borderless default, with safe fallback to display resolution if smaller.
@@ -208,6 +208,14 @@ WOLF_SPEED = 2.3
 SKELETON_HP = 55
 SKELETON_ATTACK = 7
 SKELETON_SPEED = 1.1
+
+# Skeleton Archer (ranged kiter)
+SKELETON_ARCHER_HP = 40
+SKELETON_ARCHER_ATTACK = 4
+SKELETON_ARCHER_SPEED = 1.35
+SKELETON_ARCHER_ATTACK_RANGE_TILES = 6.0
+SKELETON_ARCHER_MIN_RANGE_TILES = 2.0
+SKELETON_ARCHER_ATTACK_COOLDOWN_MS = 1400
 
 # Lair settings (release tuning)
 # (~2/3 reduction from 6 -> 2)

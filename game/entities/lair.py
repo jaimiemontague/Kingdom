@@ -14,7 +14,7 @@ from config import (
     LAIR_STASH_GROWTH_PER_SPAWN,
 )
 from game.entities.building import Building
-from game.entities.enemy import Goblin, Wolf, Skeleton, Spider, Bandit
+from game.entities.enemy import Goblin, Wolf, Skeleton, SkeletonArcher, Spider, Bandit
 from game.graphics.font_cache import get_font
 from game.sim.determinism import get_rng
 
@@ -232,8 +232,12 @@ class SkeletonCrypt(MonsterLair):
         self.color = (70, 60, 90)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        # Slower, tougher spawns.
-        return [Skeleton(world_x, world_y)]
+        # Deterministic 80/20 mix: skeleton / skeleton_archer
+        # Use lair RNG for deterministic spawn selection
+        if self.rng.random() < 0.8:
+            return [Skeleton(world_x, world_y)]
+        else:
+            return [SkeletonArcher(world_x, world_y)]
 
 
 class SpiderNest(MonsterLair):

@@ -9,6 +9,9 @@ from config import (
     TILE_SIZE, GOBLIN_HP, GOBLIN_ATTACK, GOBLIN_SPEED,
     WOLF_HP, WOLF_ATTACK, WOLF_SPEED,
     SKELETON_HP, SKELETON_ATTACK, SKELETON_SPEED,
+    SKELETON_ARCHER_HP, SKELETON_ARCHER_ATTACK, SKELETON_ARCHER_SPEED,
+    SKELETON_ARCHER_ATTACK_RANGE_TILES, SKELETON_ARCHER_MIN_RANGE_TILES,
+    SKELETON_ARCHER_ATTACK_COOLDOWN_MS,
     COLOR_RED, COLOR_WHITE, COLOR_GREEN
 )
 from game.graphics.enemy_sprites import EnemySpriteLibrary
@@ -388,6 +391,169 @@ class Skeleton(Enemy):
         self.xp_reward = 35
         self.gold_reward = 14
         self.color = (220, 220, 240)
+
+
+class SkeletonArcher(Enemy):
+    """Ranged kiter enemy spawned from Skeleton Crypts. Maintains distance and attacks from range."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "skeleton_archer")
+        self.hp = SKELETON_ARCHER_HP
+        self.max_hp = SKELETON_ARCHER_HP
+        self.attack_power = SKELETON_ARCHER_ATTACK
+        self.speed = SKELETON_ARCHER_SPEED
+        self.xp_reward = 35  # Same as skeleton
+        self.gold_reward = 14  # Same as skeleton
+        self.color = (200, 200, 220)
+        
+        # Ranged attack settings
+        self.attack_range = SKELETON_ARCHER_ATTACK_RANGE_TILES * TILE_SIZE
+        self.min_range = SKELETON_ARCHER_MIN_RANGE_TILES * TILE_SIZE
+        self.attack_cooldown_max = SKELETON_ARCHER_ATTACK_COOLDOWN_MS
+        
+        # Kiting behavior state (deterministic, sim-time based)
+        self._kite_commit_until_ms = 0  # Hysteresis: commit to current kite decision
+        self._kite_reposition_cooldown_ms = 0  # Rate-limit reposition evaluations
+        self._kite_reposition_interval_ms = 800  # Re-evaluate kite position every ~0.8s
+        self._kite_attempts = 0  # Bounded attempts per target to avoid infinite loops
+        self._max_kite_attempts = 5  # Fallback to stand-and-shoot after N attempts
+        self._kite_target_key = None  # Track target for attempt counting
+    
+    def update(self, dt: float, heroes: list, peasants: list, buildings: list, guards: list = None, world=None):
+        """Override to add kiting behavior: maintain distance band with hysteresis/commitment."""
+        if not self.is_alive:
+            return
+
+        prev_x, prev_y = self.x, self.y
+        now_ms_val = now_ms()
+        
+        # Update attack cooldown
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= dt * 1000
+        
+        # Update kite reposition cooldown
+        if self._kite_reposition_cooldown_ms > 0:
+            self._kite_reposition_cooldown_ms -= dt * 1000
+        
+        # Find target if we don't have one
+        if self.target is None or (hasattr(self.target, 'is_alive') and not self.target.is_alive):
+            self.find_target(heroes, peasants, buildings, guards=guards)
+            # Reset kite state on new target
+            if self.target is not None:
+                target_key = id(self.target) if hasattr(self.target, 'x') else (getattr(self.target, 'center_x', 0), getattr(self.target, 'center_y', 0))
+                if self._kite_target_key != target_key:
+                    self._kite_target_key = target_key
+                    self._kite_attempts = 0
+                    self._kite_commit_until_ms = now_ms_val + 500  # Initial commitment window
+        
+        if self.target is None:
+            self.state = EnemyState.IDLE
+            return
+
+        # Get target position
+        if hasattr(self.target, 'x'):
+            target_x, target_y = self.target.x, self.target.y
+        else:
+            target_x, target_y = self.target.center_x, self.target.center_y
+        
+        dist = self.distance_to(target_x, target_y)
+        
+        # Kiting logic: maintain distance band (min_range to attack_range)
+        # Use hysteresis/commitment to avoid jitter oscillation
+        in_attack_range = dist <= self.attack_range
+        too_close = dist < self.min_range
+        can_reposition = (self._kite_reposition_cooldown_ms <= 0 and 
+                         now_ms_val >= self._kite_commit_until_ms)
+        
+        # If too many kite attempts, fallback to stand-and-shoot
+        if self._kite_attempts >= self._max_kite_attempts:
+            # Stand and shoot: attack if in range, otherwise move closer
+            if in_attack_range:
+                self.state = EnemyState.ATTACKING
+                if self.attack_cooldown <= 0:
+                    self.do_attack()
+                    self.attack_cooldown = self.attack_cooldown_max
+            else:
+                self.state = EnemyState.MOVING
+                self.move_towards(target_x, target_y, dt)
+        # Normal kiting behavior
+        elif too_close and can_reposition:
+            # Too close: kite away
+            self._kite_attempts += 1
+            self._kite_reposition_cooldown_ms = self._kite_reposition_interval_ms
+            self._kite_commit_until_ms = now_ms_val + 500  # Commit to this decision
+            
+            # Calculate kite-away direction (away from target)
+            dx = self.x - target_x
+            dy = self.y - target_y
+            kite_dist = math.sqrt(dx * dx + dy * dy)
+            if kite_dist > 0:
+                # Move away from target
+                kite_x = self.x + (dx / kite_dist) * (self.min_range * 0.5)
+                kite_y = self.y + (dy / kite_dist) * (self.min_range * 0.5)
+                if world is not None:
+                    from game.systems.navigation import compute_path_worldpoints, follow_path
+                    if not hasattr(self, "path"):
+                        self.path = []
+                        self._path_goal = None
+                    goal_key = (int(kite_x), int(kite_y))
+                    if getattr(self, "_path_goal", None) != goal_key:
+                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, kite_x, kite_y)
+                        self._path_goal = goal_key
+                    if self.path:
+                        follow_path(self, dt)
+                    else:
+                        self.move_towards(kite_x, kite_y, dt)
+                else:
+                    self.move_towards(kite_x, kite_y, dt)
+                self.state = EnemyState.MOVING
+        elif in_attack_range:
+            # In attack range: attack
+            self.state = EnemyState.ATTACKING
+            if self.attack_cooldown <= 0:
+                self.do_attack()
+                self.attack_cooldown = self.attack_cooldown_max
+        else:
+            # Too far: move closer (but respect min_range)
+            self.state = EnemyState.MOVING
+            # Move to optimal range (midpoint of min_range and attack_range)
+            optimal_range = (self.min_range + self.attack_range) * 0.5
+            if dist > optimal_range:
+                # Move towards target
+                if world is not None:
+                    from game.systems.navigation import compute_path_worldpoints, follow_path
+                    if not hasattr(self, "path"):
+                        self.path = []
+                        self._path_goal = None
+                    goal_key = (int(target_x), int(target_y))
+                    want_replan = (not self.path) or (getattr(self, "_path_goal", None) != goal_key)
+                    if want_replan and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0):
+                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
+                        self._path_goal = goal_key
+                        if not self.path:
+                            self._next_replan_ms = now_ms_val + 800
+                        else:
+                            self._next_replan_ms = now_ms_val + 150
+                    if self.path:
+                        follow_path(self, dt)
+                    else:
+                        self.move_towards(target_x, target_y, dt)
+                else:
+                    self.move_towards(target_x, target_y, dt)
+
+        # Facing (based on motion)
+        dx = self.x - prev_x
+        if abs(dx) > 0.01:
+            self.facing = 1 if dx >= 0 else -1
+
+        # Base animation selection (one-shots can override)
+        if self.state == EnemyState.MOVING:
+            self._anim_base = "walk"
+        else:
+            self._anim_base = "idle"
+        self._update_animation(dt)
+
+        self._last_pos = (float(self.x), float(self.y))
 
 
 class Spider(Enemy):

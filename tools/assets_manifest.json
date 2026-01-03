@@ -6,7 +6,7 @@
     "states": ["idle", "walk", "attack", "hurt", "inside"]
   },
   "enemies": {
-    "types": ["goblin", "wolf", "skeleton", "spider", "bandit"],
+    "types": ["goblin", "wolf", "skeleton", "skeleton_archer", "spider", "bandit"],
     "states": ["idle", "walk", "attack", "hurt", "dead"]
   },
   "buildings": {
@@ -44,6 +44,8 @@
     "states": ["built", "construction", "damaged"]
   }
 }
+
+
 
 
 
