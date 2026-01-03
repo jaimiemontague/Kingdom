@@ -125,22 +125,21 @@ def _validate_sprite_tree(
 def _validate_audio_tree(
     *,
     assets_root: Path,
-    sfx_files: dict[str, list[str]] | list[str] | None,
+    sfx_files: list[str] | None,
     ambient_files: Iterable[str],
     strict: bool,
 ) -> tuple[list[Finding], dict[str, Any]]:
     """
-    Validate audio file structure (WK6 nested structure):
-      assets/audio/sfx/<category>/<name>.wav (or .ogg)
+    Validate audio file structure (WK6 flat structure):
+      assets/audio/sfx/<name>.wav (or .ogg)
       assets/audio/ambient/<name>.ogg (or .wav)
     
-    WK6 Final: Matches Agent 14's nested structure (sfx/build/place.wav, etc.).
-    Supports both nested dict structure and flat list (backward compatibility).
+    WK6 Final: Flat contract keys (building_place, building_destroy, etc.).
     """
     findings: list[Finding] = []
     report: dict[str, Any] = {"category": "audio", "sfx": {}, "ambient": {}}
 
-    # Validate SFX files (nested structure: sfx/<category>/<name>.wav)
+    # Validate SFX files (flat structure: sfx/<name>.wav or .ogg)
     sfx_dir = assets_root / "audio" / "sfx"
     if not sfx_dir.exists():
         findings.append(
@@ -153,42 +152,7 @@ def _validate_audio_tree(
         )
         # Continue to check ambient even if SFX dir is missing
     else:
-        # Handle nested dict structure (new format)
-        if isinstance(sfx_files, dict):
-            for category, file_list in sfx_files.items():
-                category_dir = sfx_dir / category
-                if not category_dir.exists():
-                    findings.append(
-                        Finding(
-                            "error" if strict else "warn",
-                            "missing_audio_sfx_category_dir",
-                            f"Missing audio SFX category directory: assets/audio/sfx/{category}",
-                            str(category_dir),
-                        )
-                    )
-                    continue
-                
-                for sfx_name in file_list:
-                    # Check for .wav or .ogg in nested path
-                    wav_path = category_dir / f"{sfx_name}.wav"
-                    ogg_path = category_dir / f"{sfx_name}.ogg"
-                    full_path = f"{category}/{sfx_name}"
-                    if wav_path.exists():
-                        report["sfx"][full_path] = {"file": wav_path.name, "ok": True}
-                    elif ogg_path.exists():
-                        report["sfx"][full_path] = {"file": ogg_path.name, "ok": True}
-                    else:
-                        report["sfx"][full_path] = {"file": None, "ok": False}
-                        findings.append(
-                            Finding(
-                                "error" if strict else "warn",
-                                "missing_audio_sfx",
-                                f"Missing audio SFX file: sfx/{category}/{sfx_name}.wav or .ogg",
-                                str(category_dir),
-                            )
-                        )
-        # Handle flat list structure (backward compatibility)
-        elif isinstance(sfx_files, list):
+        if sfx_files:
             for sfx_name in sfx_files:
                 # Check for .wav or .ogg (flat structure, no subdirectories)
                 wav_path = sfx_dir / f"{sfx_name}.wav"

@@ -11,33 +11,33 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 import pygame
 
-# WK6: Canonical event name → sound file path mapping
+# WK6: Canonical event name → sound key mapping (flat contract)
 # This is the contract that Agent 14 and Agent 12 must align with.
-# Uses nested paths: sfx/build/place.wav, sfx/bounty/placed.wav, etc.
+# Uses flat keys: building_place, building_destroy, bounty_place, bow_release, ui_click
+# Files are located at: assets/audio/sfx/{sound_key}.wav or .ogg
 AUDIO_EVENT_MAP = {
     # Building events
-    "building_placed": "sfx/build/place",
-    "building_destroyed": "sfx/build/destroyed",
+    "building_placed": "building_place",
+    "building_destroyed": "building_destroy",
     
     # Bounty events
-    "bounty_placed": "sfx/bounty/placed",
+    "bounty_placed": "bounty_place",
     
-    # Combat events (ranged projectiles - handled specially in emit_from_events)
-    # "ranged_projectile" is handled dynamically based on projectile_kind/source
+    # Combat events (ranged projectiles)
+    "ranged_projectile": "bow_release",  # Default for all ranged projectiles
     
     # UI events (optional)
-    "ui_click": "sfx/ui/click",
+    "ui_click": "ui_click",
 }
 
 # Sound cooldowns (milliseconds) to prevent spam
 # Agent 14 will provide final values; these are Build A defaults
 SOUND_COOLDOWNS_MS = {
-    "sfx/build/place": 200,
-    "sfx/build/destroyed": 500,
-    "sfx/bounty/placed": 200,
-    "sfx/weapons/ranger_shot": 150,
-    "sfx/weapons/skeleton_archer_shot": 150,
-    "sfx/ui/click": 100,
+    "building_place": 200,
+    "building_destroy": 500,
+    "bounty_place": 200,
+    "bow_release": 150,
+    "ui_click": 100,
 }
 
 
@@ -72,7 +72,7 @@ class AudioSystem:
         self._load_sfx()
     
     def _load_sfx(self):
-        """Preload all SFX files from assets/audio/sfx/ (nested structure)."""
+        """Preload all SFX files from assets/audio/sfx/ (flat structure, supports .wav and .ogg)."""
         if not self.enabled:
             return
         
@@ -81,33 +81,27 @@ class AudioSystem:
             # No audio assets yet; continue with no-op behavior
             return
         
-        # Load sounds from nested paths (sfx/build/place.wav, etc.)
-        for event_name, sound_path in AUDIO_EVENT_MAP.items():
-            # sound_path is like "sfx/build/place" (without extension)
-            sound_file = self._assets_dir() / f"{sound_path}.wav"
-            if sound_file.exists():
+        # Load sounds from flat paths (sfx/building_place.wav or .ogg, etc.)
+        for event_name, sound_key in AUDIO_EVENT_MAP.items():
+            # Try .wav first, then .ogg
+            wav_file = sfx_dir / f"{sound_key}.wav"
+            ogg_file = sfx_dir / f"{sound_key}.ogg"
+            
+            sound_file = None
+            if wav_file.exists():
+                sound_file = wav_file
+            elif ogg_file.exists():
+                sound_file = ogg_file
+            
+            if sound_file:
                 try:
-                    self._sfx_cache[sound_path] = pygame.mixer.Sound(str(sound_file))
+                    self._sfx_cache[sound_key] = pygame.mixer.Sound(str(sound_file))
                 except Exception:
                     # File exists but failed to load; continue without this sound
-                    self._sfx_cache[sound_path] = None
+                    self._sfx_cache[sound_key] = None
             else:
                 # File missing; cache None (will be no-op on play)
-                self._sfx_cache[sound_path] = None
-        
-        # Also preload weapon sounds (ranger_shot, skeleton_archer_shot)
-        weapons_dir = sfx_dir / "weapons"
-        if weapons_dir.exists():
-            for weapon_file in ["ranger_shot.wav", "skeleton_archer_shot.wav"]:
-                sound_path = f"sfx/weapons/{weapon_file[:-4]}"  # Remove .wav
-                sound_file = weapons_dir / weapon_file
-                if sound_file.exists():
-                    try:
-                        self._sfx_cache[sound_path] = pygame.mixer.Sound(str(sound_file))
-                    except Exception:
-                        self._sfx_cache[sound_path] = None
-                else:
-                    self._sfx_cache[sound_path] = None
+                self._sfx_cache[sound_key] = None
     
     @staticmethod
     def _assets_dir() -> Path:
@@ -135,49 +129,33 @@ class AudioSystem:
             if not event_type:
                 continue
             
-            # Special handling for ranged_projectile (determine weapon sound)
-            if event_type == "ranged_projectile":
-                projectile_kind = event.get("projectile_kind", "arrow")
-                # For Build A: use ranger_shot for arrows, skeleton_archer_shot if explicitly marked
-                # Default to ranger_shot for arrows (Ranger, SkeletonArcher both use arrows)
-                # Future: could inspect event source or projectile_kind to differentiate
-                if projectile_kind == "arrow":
-                    # Try to determine source from context (if available)
-                    # For now, default to ranger_shot (can be refined in Build B)
-                    sound_path = "sfx/weapons/ranger_shot"
-                elif projectile_kind == "bolt":
-                    # Ballista uses bolts; for Build A, use ranger_shot as fallback
-                    sound_path = "sfx/weapons/ranger_shot"
-                else:
-                    sound_path = "sfx/weapons/ranger_shot"  # Default fallback
-            else:
-                # Map event type to sound path
-                sound_path = AUDIO_EVENT_MAP.get(event_type)
-                if not sound_path:
-                    continue
+            # Map event type to sound key (flat contract)
+            sound_key = AUDIO_EVENT_MAP.get(event_type)
+            if not sound_key:
+                continue
             
             # Check cooldown
-            cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_path, 0)
-            last_play = self._cooldowns.get(sound_path, 0.0)
+            cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_key, 0)
+            last_play = self._cooldowns.get(sound_key, 0.0)
             if (now_ms - last_play) < cooldown_ms:
                 continue  # Still on cooldown
             
             # Play sound
-            self.play_sfx(sound_path, volume=1.0)
-            self._cooldowns[sound_path] = now_ms
+            self.play_sfx(sound_key, volume=1.0)
+            self._cooldowns[sound_key] = now_ms
     
-    def play_sfx(self, sound_path: str, volume: float = 1.0):
+    def play_sfx(self, sound_key: str, volume: float = 1.0):
         """
         Play a one-shot sound effect.
         
         Args:
-            sound_path: Sound path (e.g., "sfx/build/place", "sfx/weapons/ranger_shot")
+            sound_key: Sound key (e.g., "building_place", "bow_release")
             volume: Volume 0.0 to 1.0
         """
         if not self.enabled:
             return
         
-        sound = self._sfx_cache.get(sound_path)
+        sound = self._sfx_cache.get(sound_key)
         if sound is None:
             # Sound not loaded or missing; no-op
             return
@@ -189,12 +167,12 @@ class AudioSystem:
             # Playback failed; no-op (audio should never crash sim)
             pass
     
-    def set_ambient(self, track_name: str = "day_loop", volume: float = 0.4):
+    def set_ambient(self, track_name: str = "ambient_loop", volume: float = 0.4):
         """
         Play/loop an ambient track.
         
         Args:
-            track_name: Track filename (without extension), default "day_loop" for Build A
+            track_name: Track filename (without extension), default "ambient_loop" for Build A
             volume: Volume 0.0 to 1.0, default 0.4 for Build A (cozy/peaceful tone)
         """
         if not self.enabled:
@@ -204,9 +182,9 @@ class AudioSystem:
         self.stop_ambient()
         
         ambient_dir = self._assets_dir() / "ambient"
+        # Try .ogg first, then .wav
         track_file = ambient_dir / f"{track_name}.ogg"
         if not track_file.exists():
-            # Try .wav as fallback
             track_file = ambient_dir / f"{track_name}.wav"
         
         if not track_file.exists():

@@ -120,28 +120,47 @@ PM decisions (LOCKED)
 - Variants: **Build B only** (multiple variants with deterministic selection)
 
 Agent 03 — Architecture (required)
-1) Resolve audio naming contract mismatch (pick ONE and make it consistent)
-- Option A (preferred): adopt SoundDirector/Attribution structure:
-  - `assets/audio/sfx/build/place.wav`
-  - `assets/audio/sfx/build/destroyed.wav`
-  - `assets/audio/sfx/bounty/placed.wav`
-  - `assets/audio/sfx/weapons/ranger_shot.wav` (and optionally `skeleton_archer_shot.wav`)
-  - `assets/audio/ambient/day_loop.ogg`
-  - Update `game/audio/audio_system.py` + `game/audio/EVENT_CONTRACT.md` accordingly.
-- Coordinate with Agent 12 so validator matches whatever you lock.
+1) Wire in human-provided audio pack (KEEP current flat contract unless you have a strong reason to change it)
+- Human-provided audio is in: `.cursor/human_provided/`
+- Keep the current contract keys (from `game/audio/EVENT_CONTRACT.md` / `tools/assets_manifest.json`):
+  - SFX: `building_place`, `building_destroy`, `bounty_place`, `bow_release`, `ui_click`
+  - Ambient: `ambient_loop`
+- IMPORTANT: most provided SFX are `.ogg`. Current `AudioSystem._load_sfx()` only tries `.wav`.
+  - Update `AudioSystem` to load `.wav` OR `.ogg` for SFX (same behavior as validator).
+  - Do NOT use wall-clock time; keep sim-time cooldown logic.
 
 2) Ensure ambient actually plays (Build A)
 - Pick a simple rule: start ambient loop on game start (or first tick) when audio enabled.
 
 Agent 14 — SoundDirector_Audio (required)
-1) Provide the actual audio files (CC0/permissive) into `assets/audio/**`
-- Place files to exactly match the final locked contract (after Agent 03 aligns it).
-- Ensure third_party proof files remain present and attribution stays accurate.
+0) Source of truth for the files
+- Use the files already downloaded by the human in: `.cursor/human_provided/`
+
+1) Pick initial SFX + ambient from `.cursor/human_provided/` and place into `assets/audio/**`
+- Goal is “good enough to start”; we can iterate after playtest feedback.
+- Put files here (flat contract):
+  - `assets/audio/sfx/building_place.(ogg|wav)`
+  - `assets/audio/sfx/building_destroy.(ogg|wav)`
+  - `assets/audio/sfx/bounty_place.(ogg|wav)`
+  - `assets/audio/sfx/bow_release.(ogg|wav)`
+  - `assets/audio/sfx/ui_click.(ogg|wav)` (optional but recommended to eliminate validator warnings)
+  - `assets/audio/ambient/ambient_loop.(ogg|wav)` (we already have a human-provided ambient `.wav`)
+- Suggested starting picks (feel free to choose better ones):
+  - `ui_click` = `kenney_ui-audio/Audio/click1.ogg` (or `mouseclick1.ogg`)
+  - `building_place` = `open game art/wooden_01.ogg` (or a “switch” from Kenney)
+  - `building_destroy` = `open game art/slam_07.ogg` (or `explosion.ogg` if you prefer louder)
+  - `bounty_place` = `open game art/bell_01.ogg` (or `gong_01.ogg`)
+  - `bow_release` = `open game art/spring_01.ogg` (twang-like) OR `shot_01.ogg` (placeholder)
+  - `ambient_loop` = `game_ambient_loop/676787__neartheatmoshphere__blinking-forest-acoustic.wav`
+
+2) Update attribution to match what we actually ship
+- Update `assets/ATTRIBUTION.md` Audio Assets section so **file locations match the flat contract paths** above.
+- Ensure `assets/audio/third_party/**` README notes reflect these sources (Kenney + OGA + Freesound file id for the ambient).
 
 Agent 12 — Tools/DevEx (required)
 1) Align `tools/assets_manifest.json` + `tools/validate_assets.py` with the final audio contract
-- If the contract uses nested paths (e.g., `sfx/build/place.wav`), validator must support that.
-- Keep Build A policy: warn-only is acceptable, but once files exist, aim for **no warnings**.
+- We are keeping the flat contract keys (building_place, building_destroy, bounty_place, bow_release, ui_click, ambient_loop).
+- Once Agent 14 places files in `assets/audio/**`, `validate_assets --report` should go to **0 warns**.
 
 2) Fix `building_menu_open` scenario apply-hook to open the new Build list panel
 - Ensure it opens the correct panel (`building_list_panel`) implemented in WK6.

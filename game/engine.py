@@ -197,7 +197,7 @@ class GameEngine:
         
         # WK6: Start ambient loop on game start (Build A: single neutral loop)
         if self.audio_system is not None:
-            self.audio_system.set_ambient("day_loop", volume=0.4)
+            self.audio_system.set_ambient("ambient_loop", volume=0.4)
 
     def _update_fog_of_war(self):
         """Update fog-of-war visibility around the castle and living heroes."""

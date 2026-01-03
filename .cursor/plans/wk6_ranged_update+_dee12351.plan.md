@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: wk6-snapshots-qa
     content: Add/adjust snapshot scenarios + QA checklist; keep qa_smoke and validate_assets green
-    status: in_progress
+    status: completed
     dependencies:
       - wk6-audio-system
       - wk6-build-menu
