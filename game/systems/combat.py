@@ -191,11 +191,17 @@ class CombatSystem:
 
             hero.attack_cooldown = hero.attack_cooldown_max
 
+            # WK6 Mid-Sprint: Add position for visibility-gated audio
+            lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
+            lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
+            
             events.append({
                 "type": "hero_attack_lair",
                 "attacker": hero.name,
                 "target": getattr(lair, "building_type", "lair"),
                 "damage": damage,
+                "x": lair_x,  # WK6 Mid-Sprint: Position for visibility gating
+                "y": lair_y,  # WK6 Mid-Sprint: Position for visibility gating
             })
             
             # WK5: Emit ranged projectile event for ranged attackers attacking lairs
@@ -228,6 +234,10 @@ class CombatSystem:
                 if hasattr(lair, "on_cleared"):
                     summary = lair.on_cleared(hero)
 
+                # WK6 Mid-Sprint: Add position for visibility-gated audio
+                lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
+                lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
+                
                 events.append({
                     "type": "lair_cleared",
                     "hero": hero.name,
@@ -235,6 +245,8 @@ class CombatSystem:
                     "gold": summary.get("gold", 0),
                     "threat_level": summary.get("threat_level", 1),
                     "lair_obj": lair,
+                    "x": lair_x,  # WK6 Mid-Sprint: Position for visibility gating
+                    "y": lair_y,  # WK6 Mid-Sprint: Position for visibility gating
                 })
         
         # Enemies attacking (handled in enemy update, but we track deaths here)

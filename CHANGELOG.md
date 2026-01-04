@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.2.7 — The Audio Update
+
+- Audio: Added **ambient loop** + expanded SFX coverage (building place/destroy, bounty place/claim, melee hit, enemy death, lair cleared).
+- Audio rule (feel): **You can only hear world sounds for actions that are visible on screen** (inside camera viewport **and** `Visibility.VISIBLE`).
+- Build UX: Clicking **Build** now opens a **clickable building list** (click-to-select behaves like hotkeys and enables mouse placement).
+- Fog-of-war: Bounties can appear in **black fog**, and Rangers will pursue those bounties even if far away/unrevealed.
+- Rangers: Baseline AI is more prone to **exploring black fog**, and Rangers earn a small amount of **XP for revealing new tiles**.
+
 ## Prototype v1.2.6 — The Ranged Update
 
 - Combat readability: **visible ranged projectiles** for ranged attackers (heroes/enemies/towers), tuned for readability (slower + larger pixels).

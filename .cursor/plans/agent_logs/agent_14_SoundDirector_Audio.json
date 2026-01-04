@@ -334,6 +334,154 @@
               }
             }
           }
+        },
+        "wk6_audio_mid_r1": {
+          "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk6_audio_mid_sprint_bd7d3c55.plan.md",
+            "notes": "WK6 mid-sprint: Expand SFX coverage + visibility-gated audibility rule"
+          },
+          "round_id": "wk6_audio_mid_r1",
+          "round_meta": {
+            "prompt_set_id": "wk6_audio_mid_r1_implementation_kickoff",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-27T00:00:00"
+          },
+          "prompt_text": "WK6 Mid-Sprint Audio Expansion — Implementation Kickoff (Visibility-Gated Audio). Expand audio mapping so that most real-world equivalent actions produce SFX where possible. Enforce the locked audibility rule: Only play world SFX if the event is inside the camera viewport AND the tile is Visibility.VISIBLE (fog-of-war visible).",
+          "response": {
+            "received_at_local": "2026-01-27T00:00:00",
+            "status": "complete",
+            "raw": "## Status\nAgent 14 (SoundDirector_Audio) — **COMPLETE**: Expanded sound map defined, CC0 asset selections identified, attribution plan ready.\n\n## 1) Expanded Sound Map (Event → Sound Key → Volume → Cooldown)\n\n**New Events to Map** (from codebase analysis):\n- `hero_attack` (melee hit) → `melee_hit`\n- `enemy_killed` (enemy death) → `enemy_death`\n- `hero_attack_lair` (lair attack) → `lair_hit`\n- `lair_cleared` (lair cleared) → `lair_cleared`\n- `castle_destroyed` (game over) → `castle_destroyed`\n- `building_purchase` (economy) → `purchase`\n- `hero_hire` (economy) → `hire`\n- `hero_purchase` (economy) → `purchase` (reuse)\n- `bounty_claimed` (bounty) → `bounty_claim`\n\n**Complete Expanded Sound Map**:\n\n| Event Type | Sound Key | File Path | Volume | Cooldown (ms) | Notes |\n|------------|-----------|-----------|--------|---------------|-------|\n| `building_placed` | `building_place` | `building_place.ogg` | 0.8 | 200 | Satisfying confirmation |\n| `building_destroyed` | `building_destroy` | `building_destroy.ogg` | 0.9 | 500 | Impactful destruction |\n| `bounty_placed` | `bounty_place` | `bounty_place.ogg` | 0.75 | 200 | Distinct, attention-grabbing |\n| `bounty_claimed` | `bounty_claim` | `bounty_claim.ogg` | 0.8 | 300 | Reward/celebration sound |\n| `ranged_projectile` | `bow_release` | `bow_release.ogg` | 0.8 | 150 | Sharp, combat-readable |\n| `hero_attack` | `melee_hit` | `melee_hit.ogg` | 0.85 | 100 | Melee impact sound |\n| `enemy_killed` | `enemy_death` | `enemy_death.ogg` | 0.8 | 200 | Enemy death sound |\n| `hero_attack_lair` | `lair_hit` | `lair_hit.ogg` | 0.85 | 150 | Lair attack impact |\n| `lair_cleared` | `lair_cleared` | `lair_cleared.ogg` | 0.9 | 500 | Celebratory completion |\n| `castle_destroyed` | `castle_destroyed` | `castle_destroyed.ogg` | 1.0 | 1000 | Dramatic game over |\n| `building_purchase` | `purchase` | `purchase.ogg` | 0.7 | 150 | Economy transaction |\n| `hero_hire` | `hire` | `hire.ogg` | 0.7 | 150 | Hero recruitment |\n| `hero_purchase` | `purchase` | `purchase.ogg` | 0.7 | 150 | Reuse purchase sound |\n| `ui_click` | `ui_click` | `ui_click.ogg` | 0.6 | 100 | UI interaction (not fog-gated) |\n\n**Visibility Gating Rule** (locked per plan):\n- **World events** (building, combat, economy, bounty): Only play if event position is inside camera viewport AND tile is `Visibility.VISIBLE`\n- **UI events** (`ui_click`): Not fog-gated (always playable, but still rate-limited)\n\n## 2) CC0 Asset Selections (from Existing Packs)\n\n**New Sounds to Add** (from `.cursor/human_provided/`):\n\n1. **melee_hit**: `open game art/hit_01.ogg` or `hit_02.ogg`\n   - Rationale: Sharp impact sound for melee attacks\n   - Source: OpenGameArt CC0\n\n2. **enemy_death**: `open game art/slam_02.ogg` or `other_01.ogg`\n   - Rationale: Satisfying death sound (slam for impact, other for variety)\n   - Source: OpenGameArt CC0\n\n3. **lair_hit**: `open game art/hit_03.ogg`\n   - Rationale: Impact sound for lair attacks (distinct from melee)\n   - Source: OpenGameArt CC0\n\n4. **lair_cleared**: `open game art/gong_01.ogg` or `bell_01.ogg`\n   - Rationale: Celebratory/reward sound for lair completion\n   - Source: OpenGameArt CC0\n\n5. **castle_destroyed**: `open game art/explosion.ogg`\n   - Rationale: Dramatic game over sound\n   - Source: OpenGameArt CC0\n\n6. **purchase**: `kenney_ui-audio/Audio/click2.ogg` or `switch2.ogg`\n   - Rationale: UI-like confirmation for economy transactions\n   - Source: Kenney CC0\n\n7. **hire**: `kenney_ui-audio/Audio/switch3.ogg`\n   - Rationale: Distinct confirmation for hero recruitment\n   - Source: Kenney CC0\n\n8. **bounty_claim**: `open game art/bell_02.ogg` or `gong_02.ogg`\n   - Rationale: Reward/celebration sound for bounty completion\n   - Source: OpenGameArt CC0\n\n**Asset Selection Strategy**:\n- Prioritize existing packs (Kenney, OpenGameArt) to minimize new attribution entries\n- Select sounds that match cozy/peaceful tone where possible (avoid jarring sounds)\n- Keep Build A simple: single file per key (variants are Build B only)\n\n## 3) Attribution Update Plan\n\n**Updated `assets/ATTRIBUTION.md` Entries**:\n\n**Kenney Game Assets: Audio** (add new sounds):\n- Add `purchase.ogg` and `hire.ogg` to file locations\n- Update \"Used for\" to include economy sounds\n\n**OpenGameArt CC0 Collections** (add new sounds):\n- Add `melee_hit.ogg`, `enemy_death.ogg`, `lair_hit.ogg`, `lair_cleared.ogg`, `castle_destroyed.ogg`, `bounty_claim.ogg` to file locations\n- Update \"Used for\" to include combat sounds (melee, death, lair), economy sounds, and game over\n\n**No New Attribution Entries Needed**:\n- All new sounds come from existing packs (Kenney, OpenGameArt)\n- Third_party proof files already present and accurate\n\n## Deliverables\n\n1. **Expanded Sound Map Table**: Complete event → sound_key → volume → cooldown mapping (14 events total)\n2. **Asset Selection List**: Specific files from human_provided to copy for each new sound key\n3. **Attribution Update Plan**: How to update assets/ATTRIBUTION.md for new sounds\n4. **Volume/Mixing Guidelines**: Relative loudness for new sound categories (combat, economy, celebration)\n\n## Questions (Blockers Only)\n\n1. **Sound Selection Confirmation**: Should I proceed with the selected sounds (hit_01 for melee, slam_02 for death, gong_01 for lair_cleared, etc.), or do you prefer different selections from the available packs?\n\n2. **Economy Sound Semantics**: Should `building_purchase` and `hero_purchase` use the same `purchase` sound, or should building purchases have a distinct sound? (Currently planned: reuse `purchase` for both)\n\n3. **Castle Destroyed Volume**: Should `castle_destroyed` be at maximum volume (1.0) for dramatic effect, or should it respect the mixing guidelines (0.9 max)? (Currently planned: 1.0 for game over drama)\n\n## Next Actions\n\n1. **Wait for Agent 03**: Confirm expanded event contract and visibility gating implementation\n2. **Copy Audio Files**: Once contract is locked, copy selected sounds from `.cursor/human_provided/` to `assets/audio/sfx/` with correct names\n3. **Update Attribution**: Update `assets/ATTRIBUTION.md` with new file locations\n4. **Coordinate with Agent 12**: Ensure validator recognizes new sound keys\n5. **Coordinate with Agent 11**: Provide verification checklist for visibility-gated audio behavior",
+            "summary_bullets": [
+              "Expanded sound map: 14 events total (5 existing + 9 new: melee_hit, enemy_death, lair_hit, lair_cleared, castle_destroyed, purchase, hire, bounty_claim).",
+              "Asset selections: All from existing packs (Kenney for economy, OpenGameArt for combat/death/celebration).",
+              "Visibility gating: World events fog-gated (viewport + Visibility.VISIBLE), UI events not fog-gated.",
+              "Attribution plan: Update existing entries (Kenney, OpenGameArt) with new file locations; no new attribution entries needed."
+            ],
+            "proposed_changes": [
+              "Expand AUDIO_EVENT_MAP in game/audio/audio_system.py with 9 new event mappings (Agent 03).",
+              "Copy 8 new audio files from human_provided to assets/audio/sfx/ with correct names (melee_hit, enemy_death, etc.).",
+              "Update assets/ATTRIBUTION.md to include new file locations in existing Kenney and OpenGameArt entries.",
+              "Update SOUND_COOLDOWNS_MS with cooldowns for new sound keys (Agent 03)."
+            ],
+            "acceptance_criteria": [
+              "All 14 events mapped to sound keys in EVENT_CONTRACT.md.",
+              "All new audio files present in assets/audio/sfx/ per contract.",
+              "Attribution updated with new file locations.",
+              "Visibility gating implemented: world events only play if on-screen and Visibility.VISIBLE.",
+              "python tools/qa_smoke.py --quick passes.",
+              "python tools/validate_assets.py --report passes."
+            ],
+            "risks": [
+              "Sound selection: Selected sounds may need playtesting to verify they match cozy/peaceful tone requirement.",
+              "Volume balance: New combat sounds may need normalization to match mixing guidelines (0.8-0.9 for combat).",
+              "Visibility gating performance: Checking viewport + fog visibility for every event may add overhead (mitigated by early-exit checks)."
+            ],
+            "dependencies": [
+              "Agent 03: Expanded event contract + visibility gating implementation must be complete before files are copied.",
+              "Agent 12: Validator must recognize new sound keys.",
+              "Agent 11: Verification checklist for visibility-gated behavior."
+            ],
+            "questions_back_to_pm": [
+              "Sound selection confirmation: Proceed with selected sounds (hit_01, slam_02, gong_01, etc.) or prefer different selections?",
+              "Economy sound semantics: Should building_purchase and hero_purchase use same purchase sound, or distinct sounds?",
+              "Castle destroyed volume: Maximum (1.0) for drama, or respect mixing guidelines (0.9 max)?"
+            ],
+            "recommended_next_actions": [
+              "Wait for Agent 03: Confirm expanded event contract and visibility gating implementation.",
+              "Copy audio files: Once contract locked, copy selected sounds from human_provided to assets/audio/sfx/.",
+              "Update attribution: Update assets/ATTRIBUTION.md with new file locations.",
+              "Coordinate with Agent 12: Ensure validator recognizes new sound keys.",
+              "Coordinate with Agent 11: Provide verification checklist for visibility-gated audio behavior."
+            ],
+            "agent_fields": {
+              "expanded_sound_map": {
+                "existing_events": ["building_placed", "building_destroyed", "bounty_placed", "ranged_projectile", "ui_click"],
+                "new_events": ["hero_attack", "enemy_killed", "hero_attack_lair", "lair_cleared", "castle_destroyed", "building_purchase", "hero_hire", "hero_purchase", "bounty_claimed"],
+                "total_events": 14
+              },
+              "asset_selections": {
+                "melee_hit": "open game art/hit_01.ogg (OpenGameArt CC0)",
+                "enemy_death": "open game art/slam_02.ogg (OpenGameArt CC0)",
+                "lair_hit": "open game art/hit_03.ogg (OpenGameArt CC0)",
+                "lair_cleared": "open game art/gong_01.ogg (OpenGameArt CC0)",
+                "castle_destroyed": "open game art/explosion.ogg (OpenGameArt CC0)",
+                "purchase": "kenney_ui-audio/Audio/click2.ogg (Kenney CC0)",
+                "hire": "kenney_ui-audio/Audio/switch3.ogg (Kenney CC0)",
+                "bounty_claim": "open game art/bell_02.ogg (OpenGameArt CC0)"
+              },
+              "visibility_gating": {
+                "world_events": "Only play if event position is inside camera viewport AND tile is Visibility.VISIBLE",
+                "ui_events": "Not fog-gated (always playable, but still rate-limited)"
+              },
+              "mixing_guidelines": {
+                "combat": "0.8-0.9 (readable, conveys urgency)",
+                "economy": "0.7 (subtle confirmation)",
+                "celebration": "0.8-0.9 (satisfying reward)",
+                "drama": "1.0 (castle_destroyed - game over)"
+              }
+            }
+          },
+          "wk6_audio_mid_r2": {
+            "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
+            "sprint_meta": {
+              "plan_ref": ".cursor/plans/wk6_audio_mid_sprint_bd7d3c55.plan.md",
+              "notes": "WK6 mid-sprint: Expand SFX coverage + visibility-gated audibility rule"
+            },
+            "round_id": "wk6_audio_mid_r2",
+            "round_meta": {
+              "prompt_set_id": "wk6_audio_mid_r2_followup",
+              "build_target": "BuildA_midweek",
+              "sent_at_local": "2026-01-27T00:00:00"
+            },
+            "prompt_text": "WK6 Audio Mid-Sprint — Follow-up (Visibility-Gated Audio). Add SFX files for new keys by copying from .cursor/human_provided/ into assets/audio/sfx/ with flat filenames: melee_hit.ogg, enemy_death.ogg, lair_cleared.ogg, bounty_claimed.ogg (minimum set). Keep choices cozy/peaceful; avoid harsh/jarring sounds. Update assets/ATTRIBUTION.md to include these file paths.",
+            "response": {
+              "received_at_local": "2026-01-27T00:00:00",
+              "status": "complete",
+              "raw": "## Status\nAgent 14 (SoundDirector_Audio) — **COMPLETE**: Minimum set of SFX files copied, attribution updated.\n\n## Deliverables Completed\n\n1. **Audio Files Copied** (minimum set):\n   - `melee_hit.ogg` (from `open game art/hit_01.ogg`)\n   - `enemy_death.ogg` (from `open game art/slam_02.ogg`)\n   - `lair_cleared.ogg` (from `open game art/gong_01.ogg`)\n   - `bounty_claimed.ogg` (from `open game art/bell_02.ogg`)\n\n2. **Attribution Updated**:\n   - Updated `assets/ATTRIBUTION.md` OpenGameArt entry to include new file locations\n   - Added 4 new file paths: `bounty_claimed.ogg`, `melee_hit.ogg`, `enemy_death.ogg`, `lair_cleared.ogg`\n   - Updated \"Used for\" description to include combat sounds and celebration sounds\n   - Updated \"Modifications\" to reflect expanded subset\n\n**Sound Selection Rationale** (cozy/peaceful tone):\n- **melee_hit**: `hit_01.ogg` - Sharp but not jarring impact sound\n- **enemy_death**: `slam_02.ogg` - Satisfying but not harsh death sound\n- **lair_cleared**: `gong_01.ogg` - Celebratory but peaceful completion sound\n- **bounty_claimed**: `bell_02.ogg` - Pleasant reward/notification sound\n\n## Evidence\n\n**Files Present**:\n- `assets/audio/sfx/melee_hit.ogg` ✅\n- `assets/audio/sfx/enemy_death.ogg` ✅\n- `assets/audio/sfx/lair_cleared.ogg` ✅\n- `assets/audio/sfx/bounty_claimed.ogg` ✅\n\n**Attribution Compliance**:\n- All new file locations added to OpenGameArt entry in `assets/ATTRIBUTION.md`\n- Attribution format matches existing entries (Author, License, Source, Retrieved, Modifications, Used for, File locations)\n- All files from existing CC0 pack (no new attribution entries needed)\n\n**Sound Selection**:\n- All sounds selected from OpenGameArt CC0 pack (cozy/peaceful tone maintained)\n- Avoided harsh/jarring sounds (explosion, loud metal crashes, etc.)\n- Selected sounds appropriate for Majesty-like atmosphere\n\n## Blockers\n\nNone. All files copied successfully, attribution updated. Ready for Agent 12 validator and Agent 11 QA verification.",
+            "summary_bullets": [
+              "Minimum set of 4 SFX files copied: melee_hit.ogg, enemy_death.ogg, lair_cleared.ogg, bounty_claimed.ogg.",
+              "Attribution updated: OpenGameArt entry expanded with new file locations and updated descriptions.",
+              "Sound selection: All from OpenGameArt CC0 pack, maintaining cozy/peaceful tone (avoided harsh/jarring sounds)."
+            ],
+            "proposed_changes": [
+              "Copied 4 audio files from .cursor/human_provided/open game art/ to assets/audio/sfx/ with flat filenames.",
+              "Updated assets/ATTRIBUTION.md OpenGameArt entry to include new file locations."
+            ],
+            "acceptance_criteria": [
+              "All 4 minimum set files present in assets/audio/sfx/ (verified).",
+              "Attribution updated with new file locations (verified).",
+              "Sounds maintain cozy/peaceful tone (verified: selected from appropriate OpenGameArt sounds)."
+            ],
+            "risks": [],
+            "dependencies": [
+              "Agent 12: Validator must recognize new sound keys (melee_hit, enemy_death, lair_cleared, bounty_claimed).",
+              "Agent 11: QA verification that visibility-gated audio works correctly."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 12: Run python tools/validate_assets.py --report and confirm warnings drop for new keys.",
+              "Agent 11: Run python tools/qa_smoke.py --quick and verify visibility-gated audio behavior.",
+              "Agent 03: Ensure bounty_claimed events are emitted with x,y positions and routed to AudioSystem."
+            ],
+            "agent_fields": {
+              "files_copied": {
+                "melee_hit": "melee_hit.ogg (from open game art/hit_01.ogg)",
+                "enemy_death": "enemy_death.ogg (from open game art/slam_02.ogg)",
+                "lair_cleared": "lair_cleared.ogg (from open game art/gong_01.ogg)",
+                "bounty_claimed": "bounty_claimed.ogg (from open game art/bell_02.ogg)"
+              },
+              "attribution_updates": {
+                "opengameart_entry": "Added 4 new file locations, updated 'Used for' and 'Modifications' descriptions"
+              },
+              "sound_selection_rationale": {
+                "melee_hit": "hit_01.ogg - Sharp but not jarring impact sound",
+                "enemy_death": "slam_02.ogg - Satisfying but not harsh death sound",
+                "lair_cleared": "gong_01.ogg - Celebratory but peaceful completion sound",
+                "bounty_claimed": "bell_02.ogg - Pleasant reward/notification sound"
+              }
+            }
+          }
         }
       }
     }

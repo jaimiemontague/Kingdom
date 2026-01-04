@@ -678,10 +678,24 @@ class GameEngine:
         self.building_menu.cancel_selection()
         self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
         
-        # WK6: Emit building_placed event for audio
+        # WK6 Mid-Sprint: Emit building_placed event for audio (with position for visibility gating)
         if self.audio_system is not None:
             try:
-                self.audio_system.emit_from_events([{"type": "building_placed"}])
+                # Calculate world position from grid
+                world_x = float(grid_x * TILE_SIZE)
+                world_y = float(grid_y * TILE_SIZE)
+                # Update viewport context
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
+                self.audio_system.emit_from_events([{
+                    "type": "building_placed",
+                    "x": world_x,
+                    "y": world_y,
+                }])
             except Exception:
                 pass  # Audio should never crash simulation
     
@@ -706,10 +720,21 @@ class GameEngine:
         self.bounty_system.place_bounty(world_x, world_y, reward, "explore")
         self.hud.add_message(f"Bounty placed (${reward}). Heroes will respond.", (255, 215, 0))
         
-        # WK6: Emit bounty_placed event for audio
+        # WK6 Mid-Sprint: Emit bounty_placed event for audio (with position for visibility gating)
         if self.audio_system is not None:
             try:
-                self.audio_system.emit_from_events([{"type": "bounty_placed"}])
+                # Update viewport context
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
+                self.audio_system.emit_from_events([{
+                    "type": "bounty_placed",
+                    "x": world_x,
+                    "y": world_y,
+                }])
             except Exception:
                 pass  # Audio should never crash simulation
 
@@ -889,9 +914,16 @@ class GameEngine:
                 # VFX should never crash the simulation.
                 pass
         
-        # WK6: Feed combat/enemy events into AudioSystem (for ranged projectile sounds).
+        # WK6 Mid-Sprint: Feed combat/enemy events into AudioSystem (visibility-gated).
         if self.audio_system is not None:
             try:
+                # Update viewport context for visibility gating
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
                 self.audio_system.emit_from_events(events)
             except Exception:
                 # Audio should never crash the simulation.
@@ -919,6 +951,7 @@ class GameEngine:
 
                 # Completion-based lair bounty payout (do NOT allow proximity-claim).
                 # If there is an active attack_lair bounty targeting this lair, pay it to the clearing hero now.
+                bounty_claimed_events = []
                 try:
                     hero_obj = next((h for h in self.heroes if getattr(h, "name", None) == hero_name), None)
                     if hero_obj is not None and lair_obj is not None:
@@ -928,10 +961,32 @@ class GameEngine:
                             if getattr(b, "bounty_type", None) != "attack_lair":
                                 continue
                             if getattr(b, "target", None) is lair_obj:
-                                b.claim(hero_obj)
+                                if b.claim(hero_obj):
+                                    # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
+                                    bounty_claimed_events.append({
+                                        "type": "bounty_claimed",
+                                        "x": float(b.x),
+                                        "y": float(b.y),
+                                        "reward": b.reward,
+                                        "hero": hero_name,
+                                    })
                 except Exception:
                     # Bounty payout should never crash the sim.
                     pass
+                
+                # WK6 Mid-Sprint: Route bounty_claimed events to AudioSystem (visibility-gated)
+                if bounty_claimed_events and self.audio_system is not None:
+                    try:
+                        win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                        win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                        self.audio_system.set_listener_view(
+                            self.camera_x, self.camera_y, self.zoom,
+                            win_w, win_h, self.world
+                        )
+                        self.audio_system.emit_from_events(bounty_claimed_events)
+                    except Exception:
+                        # Audio should never crash the simulation
+                        pass
 
                 if lair_obj in self.buildings:
                     self.buildings.remove(lair_obj)
@@ -949,11 +1004,35 @@ class GameEngine:
         
         # Process bounties
         claimed = self.bounty_system.check_claims(self.heroes)
+        bounty_claimed_events = []
         for bounty, hero in claimed:
             self.hud.add_message(
                 f"{hero.name} claimed bounty: +${bounty.reward}!",
                 (255, 215, 0)
             )
+            # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
+            bounty_claimed_events.append({
+                "type": "bounty_claimed",
+                "x": float(bounty.x),
+                "y": float(bounty.y),
+                "reward": bounty.reward,
+                "hero": hero.name,
+            })
+        
+        # WK6 Mid-Sprint: Route bounty_claimed events to AudioSystem (visibility-gated)
+        if bounty_claimed_events and self.audio_system is not None:
+            try:
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
+                self.audio_system.emit_from_events(bounty_claimed_events)
+            except Exception:
+                # Audio should never crash the simulation
+                pass
+        
         self.bounty_system.cleanup()
 
         # Neutral buildings: auto-spawn + passive tax
@@ -1007,9 +1086,16 @@ class GameEngine:
             except Exception:
                 pass
         
-        # WK6: Feed building projectile events into AudioSystem (for bow release sounds).
-        if building_ranged_events and self.audio_system is not None and hasattr(self.audio_system, "emit_from_events"):
+        # WK6 Mid-Sprint: Feed building projectile events into AudioSystem (visibility-gated).
+        if building_ranged_events and self.audio_system is not None:
             try:
+                # Update viewport context for visibility gating
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
                 self.audio_system.emit_from_events(building_ranged_events)
             except Exception:
                 pass
@@ -1134,9 +1220,16 @@ class GameEngine:
                 # VFX should never crash the simulation
                 pass
         
-        # WK6: Feed building destruction events to AudioSystem
+        # WK6 Mid-Sprint: Feed building destruction events to AudioSystem (visibility-gated)
         if destruction_events and self.audio_system is not None:
             try:
+                # Update viewport context for visibility gating
+                win_w = int(getattr(self, "window_width", self.screen.get_width()))
+                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                self.audio_system.set_listener_view(
+                    self.camera_x, self.camera_y, self.zoom,
+                    win_w, win_h, self.world
+                )
                 self.audio_system.emit_from_events(destruction_events)
             except Exception:
                 # Audio should never crash the simulation

@@ -3,6 +3,8 @@ Event-driven audio system (non-authoritative, pure consumer).
 
 WK6: AudioSystem consumes events from simulation and plays sounds.
 Never affects simulation state; safe to disable or fail.
+
+WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen and Visibility.VISIBLE.
 """
 from __future__ import annotations
 
@@ -12,22 +14,33 @@ from typing import Dict, Optional, Tuple
 import pygame
 
 # WK6: Canonical event name → sound key mapping (flat contract)
+# WK6 Mid-Sprint: Expanded to cover more real-world actions
 # This is the contract that Agent 14 and Agent 12 must align with.
-# Uses flat keys: building_place, building_destroy, bounty_place, bow_release, ui_click
+# Uses flat keys: building_place, building_destroy, bounty_place, bow_release, ui_click, etc.
 # Files are located at: assets/audio/sfx/{sound_key}.wav or .ogg
 AUDIO_EVENT_MAP = {
     # Building events
     "building_placed": "building_place",
     "building_destroyed": "building_destroy",
     
+    # Combat events
+    "hero_attack": "melee_hit",
+    "ranged_projectile": "bow_release",
+    "enemy_killed": "enemy_death",
+    "lair_cleared": "lair_cleared",
+    
     # Bounty events
     "bounty_placed": "bounty_place",
+    "bounty_claimed": "bounty_claimed",
     
-    # Combat events (ranged projectiles)
-    "ranged_projectile": "bow_release",  # Default for all ranged projectiles
+    # Economy/Shop events
+    "hero_hired": "hero_hired",
+    "purchase_made": "purchase",
     
-    # UI events (optional)
+    # UI events (optional, not visibility-gated)
     "ui_click": "ui_click",
+    "ui_confirm": "ui_confirm",
+    "ui_error": "ui_error",
 }
 
 # Sound cooldowns (milliseconds) to prevent spam
@@ -36,8 +49,16 @@ SOUND_COOLDOWNS_MS = {
     "building_place": 200,
     "building_destroy": 500,
     "bounty_place": 200,
+    "bounty_claimed": 300,
     "bow_release": 150,
+    "melee_hit": 100,
+    "enemy_death": 200,
+    "lair_cleared": 500,
+    "hero_hired": 300,
+    "purchase": 150,
     "ui_click": 100,
+    "ui_confirm": 150,
+    "ui_error": 200,
 }
 
 
@@ -55,6 +76,14 @@ class AudioSystem:
         self._cooldowns: Dict[str, float] = {}  # sound_key -> last_play_time_ms
         self._ambient_channel: Optional[pygame.mixer.Channel] = None
         self._ambient_sound: Optional[pygame.mixer.Sound] = None
+        
+        # WK6 Mid-Sprint: Viewport and world context for visibility gating
+        self._camera_x: float = 0.0
+        self._camera_y: float = 0.0
+        self._zoom: float = 1.0
+        self._window_width: int = 1920
+        self._window_height: int = 1080
+        self._world: Optional[object] = None  # World instance for visibility checks
         
         if not self.enabled:
             return
@@ -108,12 +137,104 @@ class AudioSystem:
         """Get assets directory path."""
         return Path(__file__).resolve().parents[2] / "assets" / "audio"
     
+    def set_listener_view(self, camera_x: float, camera_y: float, zoom: float, window_width: int, window_height: int, world: Optional[object] = None):
+        """
+        Update viewport context for visibility gating.
+        
+        Called each frame from engine to provide camera and world state.
+        
+        Args:
+            camera_x: Camera world X position
+            camera_y: Camera world Y position
+            zoom: Current zoom level
+            window_width: Window width in pixels
+            window_height: Window height in pixels
+            world: World instance for visibility checks (optional)
+        """
+        self._camera_x = float(camera_x)
+        self._camera_y = float(camera_y)
+        self._zoom = float(zoom) if zoom else 1.0
+        self._window_width = int(window_width)
+        self._window_height = int(window_height)
+        self._world = world
+    
+    def _is_audible_world_event(self, event: dict) -> bool:
+        """
+        Check if a world event should be audible (on-screen + Visibility.VISIBLE).
+        
+        UI events (ui_click, etc.) are always audible (not gated by visibility).
+        
+        Args:
+            event: Event dictionary
+            
+        Returns:
+            True if event should produce sound, False otherwise
+        """
+        event_type = event.get("type", "")
+        
+        # UI events are always audible (not gated by world visibility)
+        if event_type.startswith("ui_"):
+            return True
+        
+        # Extract world position from event
+        # Try x,y first, then from_x/from_y, then to_x/to_y
+        world_x = event.get("x")
+        world_y = event.get("y")
+        
+        if world_x is None or world_y is None:
+            # Try from_x/from_y (for projectiles, use source position)
+            world_x = event.get("from_x")
+            world_y = event.get("from_y")
+        
+        if world_x is None or world_y is None:
+            # Try to_x/to_y (for projectiles, use target position)
+            world_x = event.get("to_x")
+            world_y = event.get("to_y")
+        
+        if world_x is None or world_y is None:
+            # No position found - default to audible (better to play than miss)
+            return True
+        
+        world_x = float(world_x)
+        world_y = float(world_y)
+        
+        # Check viewport: is position within camera view?
+        view_w = max(1, int(self._window_width / self._zoom))
+        view_h = max(1, int(self._window_height / self._zoom))
+        
+        # World position relative to camera
+        rel_x = world_x - self._camera_x
+        rel_y = world_y - self._camera_y
+        
+        # Check if within viewport bounds (with small margin for edge cases)
+        margin = 50  # pixels margin for sounds near edge
+        if rel_x < -margin or rel_x > view_w + margin:
+            return False
+        if rel_y < -margin or rel_y > view_h + margin:
+            return False
+        
+        # Check fog-of-war visibility (if world is available)
+        if self._world is not None:
+            try:
+                from game.world import Visibility
+                if hasattr(self._world, "world_to_grid") and hasattr(self._world, "visibility"):
+                    grid_x, grid_y = self._world.world_to_grid(world_x, world_y)
+                    if 0 <= grid_x < self._world.width and 0 <= grid_y < self._world.height:
+                        if self._world.visibility[grid_y][grid_x] != Visibility.VISIBLE:
+                            return False
+            except Exception:
+                # If visibility check fails, default to audible (better to play than miss)
+                pass
+        
+        return True
+    
     def emit_from_events(self, events: list[dict]):
         """
         Consume events and trigger sounds.
         
         Non-blocking: never crashes simulation.
         Respects cooldowns to prevent spam.
+        WK6 Mid-Sprint: Only plays world SFX if event is on-screen and Visibility.VISIBLE.
         """
         if not self.enabled:
             return
@@ -133,6 +254,10 @@ class AudioSystem:
             sound_key = AUDIO_EVENT_MAP.get(event_type)
             if not sound_key:
                 continue
+            
+            # WK6 Mid-Sprint: Check visibility gating (viewport + fog-of-war)
+            if not self._is_audible_world_event(event):
+                continue  # Event is off-screen or not visible - skip sound
             
             # Check cooldown
             cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_key, 0)

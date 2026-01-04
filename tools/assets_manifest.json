@@ -52,8 +52,16 @@
       "building_place",
       "building_destroy",
       "bounty_place",
+      "bounty_claimed",
       "bow_release",
-      "ui_click"
+      "melee_hit",
+      "enemy_death",
+      "lair_cleared",
+      "hero_hired",
+      "purchase",
+      "ui_click",
+      "ui_confirm",
+      "ui_error"
     ],
     "ambient": [
       "ambient_loop"

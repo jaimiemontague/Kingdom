@@ -1474,6 +1474,62 @@
               ]
             }
           }
+        },
+        "wk6_audio_mid_r1": {
+          "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk6_audio_mid_sprint_bd7d3c55.plan.md",
+            "notes": "Mid-sprint audio expansion: visibility-gated world SFX + expanded event coverage"
+          },
+          "round_id": "wk6_audio_mid_r1",
+          "round_meta": {
+            "prompt_set_id": "wk6_audio_mid_sprint_r1",
+            "build_target": "BuildA",
+            "sent_at_local": "2025-01-XX"
+          },
+          "prompt_text": "WK6 Mid-Sprint Audio Expansion — Implementation Kickoff (Visibility-Gated Audio). Agent 08 (UX/UI Director) is consult-only: UI click/error/confirm sound semantics and any UI affordances.",
+          "response": {
+            "received_at_local": "2025-01-XX",
+            "status": "COMPLETE",
+            "raw": "### Status: COMPLETE (Consult-Only)\n**Agent 08 (UX/UI Director)** — Consult-only review of UI sound semantics for WK6 mid-sprint audio expansion.\n\n### Deliverables\n\n**UI Sound Semantics Review:**\n- **UI click sounds**: Acceptable for Build A (optional, Build B priority)\n  - Current contract: `ui_click` event → `ui_click` sound key\n  - Cooldown: 100ms (prevents spam)\n  - **Semantic**: Subtle, non-intrusive feedback for button/panel clicks\n  - **Recommendation**: Keep optional for Build A; prioritize world SFX first\n\n- **UI confirm/error sounds**: Not yet in contract, acceptable to defer to Build B\n  - **Confirm sound**: Could map to successful actions (building selected, bounty placed via UI)\n  - **Error sound**: Could map to invalid actions (cannot afford, prerequisites not met)\n  - **Recommendation**: Defer to Build B unless Agent 14 has assets ready\n\n**UI Affordances:**\n- **No UI changes needed** for Build A:\n  - No audio settings UI (volume/mute) required for Build A\n  - No visual indicators for audio state needed\n  - UI sounds are exempt from visibility gating (as planned)\n  - World SFX visibility gating is transparent to player (no UI feedback needed)\n\n**Visibility Gating Rule (Acknowledged):**\n- UI sounds (`ui_click`, `ui_confirm`, `ui_error`) are **exempt from viewport + Visibility.VISIBLE gating**\n- UI sounds should still be **rate-limited** (cooldowns) to prevent spam\n- World SFX (building, combat, bounty) are subject to visibility gating (correct behavior)\n\n### Questions\n\nNone. UI sound semantics are clear and acceptable. No blockers.\n\n### Next Actions\n\n- **No action required** from Agent 08 for Build A\n- Agent 03/14: Proceed with visibility-gated world SFX implementation\n- Agent 14: UI sounds (`ui_click`) are optional for Build A; prioritize world SFX coverage\n- **Build B consideration**: If UI sounds are added, ensure they remain exempt from visibility gating and are subtle/non-intrusive",
+            "summary_bullets": [
+              "UI sound semantics reviewed: ui_click acceptable (optional Build A, Build B priority)",
+              "UI sounds exempt from visibility gating (correct behavior)",
+              "No UI affordances needed for Build A (no audio settings UI)",
+              "UI confirm/error sounds can defer to Build B",
+              "No blockers; consult-only review complete"
+            ],
+            "proposed_changes": [
+              "No code changes from Agent 08",
+              "UI sounds remain optional for Build A (Agent 14 decision)"
+            ],
+            "acceptance_criteria": [
+              "UI sounds (if implemented) are exempt from visibility gating",
+              "UI sounds are rate-limited (cooldowns) to prevent spam",
+              "No UI changes needed for audio system (no settings/mute UI)"
+            ],
+            "risks": [],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "No action required from Agent 08",
+              "Agent 03/14: Proceed with visibility-gated world SFX",
+              "Agent 14: UI sounds optional for Build A"
+            ],
+            "agent_fields": {
+              "ui_sound_semantics": {
+                "ui_click": "Optional Build A, Build B priority; subtle, non-intrusive; 100ms cooldown",
+                "ui_confirm": "Defer to Build B (not in contract yet)",
+                "ui_error": "Defer to Build B (not in contract yet)"
+              },
+              "ui_affordances": {
+                "audio_settings_ui": "Not needed for Build A",
+                "visual_audio_indicators": "Not needed for Build A",
+                "visibility_gating_exemption": "UI sounds exempt from viewport + Visibility.VISIBLE gating (correct)"
+              },
+              "consult_only": true
+            }
+          }
         }
       }
     }

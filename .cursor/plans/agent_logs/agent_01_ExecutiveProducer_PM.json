@@ -79,6 +79,112 @@
             "do_not_send": ["06", "08"],
             "rationale": "AI + UI implementations are complete and passing qa_smoke; remaining work is audio asset alignment/files + tooling scenario hook + QA verification."
           }
+        },
+        "wk6_audio_mid_r1": {
+          "round_meta": {
+            "prompt_set_id": "wk6_audio_mid_r1_followup_v1",
+            "build_target": "BuildA_mid_sprint",
+            "pm_authored_at_local": "2026-01-04T00:00:00",
+            "visibility": "Send only to agents with remaining work for WK6 audio mid-sprint plan."
+          },
+          "pm_status_summary": {
+            "overall_status": "Mid-sprint audio expansion IN PROGRESS (plumbing done; assets + a few event emissions + QA remain).",
+            "plan_ref": ".cursor/plans/wk6_audio_mid_sprint_bd7d3c55.plan.md",
+            "what_is_done": [
+              "Audio visibility gate implemented (viewport + Visibility.VISIBLE) and wired from engine (Agent 03).",
+              "Expanded audio contract + AudioSystem mapping/cooldowns landed (Agent 03).",
+              "Tooling updated: tools/assets_manifest.json expanded to include new SFX keys; validator supports .wav/.ogg (Agent 12).",
+              "Base audio files for the original flat contract are present under assets/audio/ (building_place/building_destroy/bounty_place/bow_release/ui_click + ambient_loop)."
+            ],
+            "remaining_work": [
+              "Emit a real bounty-claim event for AudioSystem: currently bounties are claimed but no `bounty_claimed` event is emitted with a position, so the new sound key never triggers.",
+              "Add SFX files for newly mapped keys (at minimum: melee_hit, enemy_death, lair_cleared, bounty_claimed; optional: ui_confirm/ui_error/purchase/hero_hired).",
+              "Update assets/ATTRIBUTION.md to include any newly added audio files in the existing Kenney/OpenGameArt entries.",
+              "QA verification pass focused on audibility rule (on-screen+VISIBLE only) + gates."
+            ],
+            "gates": {
+              "qa_smoke_quick": "PASS (per Agent 12 evidence in wk6_audio_mid_r1; re-run after remaining changes)",
+              "validate_assets_report": "PASS w/ WARN until all new SFX keys have files present"
+            },
+            "locked_decisions": {
+              "audibility_rule": "World SFX only if inside camera viewport AND tile is Visibility.VISIBLE (LOCKED). UI events are not fog-gated.",
+              "tone": "cozy/peaceful (Majesty-like) (LOCKED)",
+              "ambient_build_a": "single neutral loop (LOCKED)",
+              "variants_build_b": "multiple variants with deterministic selection (LOCKED; Build A ships single files per key)"
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "needs_followup",
+              "asks": [
+                "Add `bounty_claimed` event emission when bounties are claimed (both explore proximity-claim and attack_lair completion payout). Include `x,y` (world coords) for visibility gating.",
+                "Keep the audibility rule locked: world sounds require viewport+Visibility.VISIBLE. Do not loosen gating for combat/building/bounty world events.",
+                "After emitting bounty_claimed, ensure AudioSystem receives those events (same pattern as combat events) with set_listener_view() before emit_from_events()."
+              ]
+            },
+            "14": {
+              "status": "needs_followup",
+              "asks": [
+                "Pick and copy/rename CC0 assets from `.cursor/human_provided/` into `assets/audio/sfx/` for the expanded keys (minimum: melee_hit, enemy_death, lair_cleared, bounty_claimed). Use flat filenames matching sound keys (e.g., `melee_hit.ogg`).",
+                "Keep selections cozy/peaceful where possible (avoid jarring SFX).",
+                "Update `assets/ATTRIBUTION.md` to include the new file locations under the existing Kenney/OpenGameArt entries (no new license families expected)."
+              ]
+            },
+            "12": {
+              "status": "needs_verification_only",
+              "asks": [
+                "After Agent 14 adds the new SFX files, re-run `python tools/validate_assets.py --report` and confirm warnings drop accordingly.",
+                "If any naming mismatch occurs, update `tools/assets_manifest.json` (source-of-truth for validator) to match the locked EVENT_CONTRACT sound keys."
+              ]
+            },
+            "11": {
+              "status": "needs_followup",
+              "asks": [
+                "Run gates after changes: `python tools/qa_smoke.py --quick` (must PASS) and `python tools/validate_assets.py --report` (0 errors; warns ideally 0 for new keys once files are present).",
+                "Manual 5-minute acceptance focused on audibility rule: verify a visible on-screen melee hit plays; off-screen or in fog does not; bounty claim plays only if the claim happens on-screen+VISIBLE.",
+                "If any sound plays from off-screen actions, treat as a release blocker for this mid-sprint."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "14", "11", "12"],
+            "do_not_send": ["06", "08", "09", "10", "13", "02", "04", "05", "07"],
+            "rationale": "Only remaining work is audio asset mapping + one missing bounty_claimed emission + verification/tooling confirmation. No AI/UI/art/perf changes required right now."
+          }
+        },
+        "wk6_audio_mid_r2_closeout": {
+          "round_meta": {
+            "prompt_set_id": "wk6_audio_mid_r2_closeout_v1",
+            "build_target": "BuildA_mid_sprint",
+            "pm_authored_at_local": "2026-01-04T00:00:00",
+            "visibility": "Closeout: no further agent action required unless we choose to expand to optional Build B sound keys."
+          },
+          "pm_status_summary": {
+            "overall_status": "WK6 audio mid-sprint COMPLETE (Build A).",
+            "plan_ref": ".cursor/plans/wk6_audio_mid_sprint_bd7d3c55.plan.md",
+            "done": [
+              "Visibility-gated audio is implemented (viewport + Visibility.VISIBLE).",
+              "bounty_claimed events are emitted with x,y and routed to AudioSystem (visibility-gated).",
+              "Minimum new SFX files exist: melee_hit.ogg, enemy_death.ogg, lair_cleared.ogg, bounty_claimed.ogg.",
+              "Attribution updated to include new audio files under OpenGameArt entry.",
+              "QA reports qa_smoke --quick PASS and validate_assets --report PASS (remaining 4 warnings are optional Build B keys)."
+            ],
+            "remaining_optional_polish": [
+              "Add optional SFX files for: hero_hired, purchase, ui_confirm, ui_error (would drop validate_assets warnings from 4 to 0).",
+              "Human 5-minute interactive playtest to confirm 'if you can't see it, you can't hear it' feels correct in practice (code + QA already indicate correctness)."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "none_required": {
+              "status": "complete",
+              "notes": "No further agent assignments needed for Build A closeout."
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [],
+            "do_not_send": ["03", "11", "12", "14", "06", "08", "09", "10", "13", "02", "04", "05", "07"],
+            "rationale": "Closeout entry only. Optional polishing can be scheduled as Build B later."
+          }
         }
       }
     },

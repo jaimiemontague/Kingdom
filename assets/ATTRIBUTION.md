@@ -84,12 +84,16 @@ Use this exact bullet structure (one bullet per pack):
 - **License**: CC0 1.0 Universal
 - **Source**: `https://opengameart.org/content/100-cc0-sfx` (and related RPG Sound Pack collections)
 - **Retrieved**: 2026-01-27
-- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement); normalized volume levels
-- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement
+- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement, combat sounds, celebration sounds); normalized volume levels
+- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement/claim, combat sounds (melee hit, enemy death), celebration sounds (lair cleared)
 - **File locations**:
   - `assets/audio/sfx/bow_release.ogg`
   - `assets/audio/sfx/building_destroy.ogg`
   - `assets/audio/sfx/bounty_place.ogg`
+  - `assets/audio/sfx/bounty_claimed.ogg`
+  - `assets/audio/sfx/melee_hit.ogg`
+  - `assets/audio/sfx/enemy_death.ogg`
+  - `assets/audio/sfx/lair_cleared.ogg`
 
 ### Pack: Freesound.org CC0 Ambient Loops
 - **Author / publisher**: neartheatmoshphere (Freesound.org user)

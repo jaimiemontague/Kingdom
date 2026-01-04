@@ -317,3 +317,5 @@ class BuildingListPanel:
             hotkey_h = hotkey_surf.get_height()
             surface.blit(hotkey_surf, (badge_x + (35 - hotkey_w) // 2, badge_y + (20 - hotkey_h) // 2))
 
+
+
