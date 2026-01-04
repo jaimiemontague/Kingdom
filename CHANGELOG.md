@@ -1,5 +1,9 @@
 # Changelog
 
+## Prototype v1.2.8 — The Audio Update (Hotfix)
+
+- Fix: Bounty flags now render **on top of black fog** (UNSEEN), so they’re visible even in solid-black fog-of-war.
+
 ## Prototype v1.2.7 — The Audio Update
 
 - Audio: Added **ambient loop** + expanded SFX coverage (building place/destroy, bounty place/claim, melee hit, enemy death, lair cleared).

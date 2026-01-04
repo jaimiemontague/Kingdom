@@ -1417,15 +1417,6 @@ class GameEngine:
         if self.tax_collector:
             self.tax_collector.render(view_surface, camera_offset)
 
-        # Render bounties
-        # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
-        if hasattr(self.bounty_system, "update_ui_metrics"):
-            try:
-                self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
-            except Exception:
-                pass
-        self.bounty_system.render(view_surface, camera_offset)
-
         # Render building preview
         self.building_menu.render(view_surface, camera_offset)
         
@@ -1445,6 +1436,16 @@ class GameEngine:
         # Draw AFTER world/entities/VFX so hidden areas remain hidden.
         if hasattr(self.world, "render_fog"):
             self.world.render_fog(view_surface, camera_offset)
+
+        # Hotfix: Bounties must be visible even in black fog (UNSEEN). Render AFTER fog overlay so
+        # the solid-black fog pass does not hide bounty flags.
+        # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
+        if hasattr(self.bounty_system, "update_ui_metrics"):
+            try:
+                self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
+            except Exception:
+                pass
+        self.bounty_system.render(view_surface, camera_offset)
 
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:
