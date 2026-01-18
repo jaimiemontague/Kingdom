@@ -63,13 +63,13 @@ Core attributes of the plan:
 
 The sprint plan also included:
 
-- **Workstreams mapped to the 13 agents**
+- **Workstreams mapped to the 14 agents**
 - **Integration order** to reduce merge conflicts
 - **Release notes templates** references
 
 ---
 
-### 4) The “13 agent replies problem” (what failed and why)
+### 4) The “14 agent replies problem” (what failed and why)
 
 #### The initial attempt
 We tried collecting replies by having agents update a shared log file (JSONL).
@@ -189,7 +189,7 @@ After agents submitted their logs, we created a **PM synthesis & response hub** 
 #### What we changed in Agent 01’s file
 We extended Agent 01’s log to include a sprint+round entry that:
 
-- Responds to all 13 agents in one place
+- Responds to all 14 agents in one place
 - Records PM decisions (so the studio doesn’t thrash)
 - Captures integration order
 
@@ -213,7 +213,7 @@ The PM round entry includes:
   - a list of questions explicitly closed so they don’t reopen repeatedly
 
 #### Why this is useful
-Agents no longer need to hunt through 13 files or ambiguous chat history:
+Agents no longer need to hunt through 14 files or ambiguous chat history:
 
 - They can read a single PM decision source and proceed with confidence.
 
