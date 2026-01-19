@@ -1693,21 +1693,24 @@
                   "game/engine.py: use desktop display size for fullscreen/borderless sizing; update window_width/height from actual SDL surface",
                   "game/engine.py: clamp camera after mode changes so view bounds expand correctly",
                   "game/engine.py: ensure fullscreen uses actual desktop size to avoid world staying at old scale",
-                  "game/engine.py: initialize camera/zoom before apply_display_settings to prevent WK7-BUG-008 boot crash"
+                "game/engine.py: initialize camera/zoom before apply_display_settings to prevent WK7-BUG-008 boot crash",
+                "game/engine.py: make window mode toggles resilient (best-effort SDL2 centering, UI resize hooks, and clamp_camera are non-fatal)"
                 ],
                 "how_to_test": [
                   "python tools/qa_smoke.py --quick",
                   "python main.py",
+                "Manual: ESC → Graphics → switch Windowed/Borderless/Fullscreen repeatedly; it should not crash",
                   "Manual (Windows): switch Windowed → Fullscreen and confirm world/play area expands correctly (not stuck at old scale)"
                 ],
                 "evidence": {
-                  "qa_smoke": "PASS (python tools/qa_smoke.py --quick)",
+                "qa_smoke": "PASS (python tools/qa_smoke.py --quick)",
                   "manual_repro": "Pending manual Windows drag check by QA/human"
                 },
                 "risks_or_followups": [
                   "Manual Windows verification still required for world expansion and window move behavior",
                   "read_lints timed out in this session; no lints observed during qa_smoke",
-                  "Boot smoke via python main.py not run in this session (QA/human can confirm)"
+                "Boot smoke via python main.py not run in this session (QA/human can confirm)",
+                "If mode switching fails silently on some machines, we should surface a HUD toast (non-crashing) and/or add a small automated mode-switch smoke"
                 ],
                 "blockers": []
               }

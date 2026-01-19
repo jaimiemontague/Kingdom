@@ -406,19 +406,9 @@ class HUD:
         if self._placing_surf is not None:
             surface.blit(self._placing_surf, (int(self.theme.margin), bottom.y - self._placing_surf.get_height() - 2))
 
-        # Help/controls overlay (toggle via F3) + panel hint
+        # Help/controls overlay (toggle via F3)
         if self.show_help:
             self._render_help(surface, origin=(self.screen_width - 310, 5))
-        hint_x = self.screen_width - 12
-        if not self.right_panel_visible:
-            panel_hint = self._panel_hint_cache
-            hint_x -= panel_hint.get_width()
-            surface.blit(panel_hint, (hint_x, 12))
-            hint_x -= 12
-        if not self.show_help:
-            help_hint = self._help_hint_cache
-            hint_x -= help_hint.get_width()
-            surface.blit(help_hint, (hint_x, 12))
 
         # Early, non-spammy bounty hint (addresses WK1-BUG-002 discoverability).
         # Show until the player places their first bounty, and only for the first ~90s.

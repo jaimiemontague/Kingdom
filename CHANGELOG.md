@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.2.9 — UI-v2 Update
+
+- UI: Full-screen **(exclusive)**, **borderless fullscreen-windowed**, and **windowed** modes (Graphics menu) with safer resizing behavior.
+- UI: ESC now opens a centered **pause/settings** menu (Graphics/Audio/Controls).
+- UI: Castle → **Build buildings** opens a centered build catalog with icons/tiles and click-to-place.
+- UI: Major visual uplift — cohesive CC0 UI skin (9-slice panels/buttons/icons), tighter spacing, and Tab-toggleable right panel.
+
 ## Prototype v1.2.8 — The Audio Update (Hotfix)
 
 - Fix: Bounty flags now render **on top of black fog** (UNSEEN), so they’re visible even in solid-black fog-of-war.

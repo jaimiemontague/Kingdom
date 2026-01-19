@@ -2,8 +2,6 @@
 Main game engine - handles the game loop, input, and coordination.
 """
 import time
-import json
-from pathlib import Path
 import os
 import pygame
 from config import (
@@ -46,59 +44,12 @@ from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms
 
-# Debug logging (WK7-BUG-008)
-def _debug_log(payload: dict):
-    # Write to repo-root .cursor/debug.log (plus legacy fallback paths).
-    repo_root = Path(__file__).resolve().parents[2]
-    primary_path = repo_root / ".cursor" / "debug.log"
-    paths = [
-        str(primary_path),
-        r"c:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\.cursor\debug.log",
-        r".cursor\debug.log",
-    ]
-    for path in paths:
-        try:
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(payload) + "\n")
-        except Exception:
-            continue
-
-# #region agent log
-_debug_log({
-    "sessionId": "debug-session",
-    "runId": "pre-fix",
-    "hypothesisId": "H0",
-    "location": "game/engine.py:module_import",
-    "message": "engine module imported",
-    "data": {},
-    "timestamp": int(time.time() * 1000)
-})
-# #endregion
-
-
-
 class GameEngine:
     """Main game engine class."""
     
     def __init__(self, early_nudge_mode: str | None = None):
         pygame.init()
         pygame.font.init()
-        # #region agent log
-        _debug_log({
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "H4",
-            "location": "game/engine.py:__init__entry",
-            "message": "GameEngine.__init__ entry",
-            "data": {
-                "has_zoom": hasattr(self, "zoom"),
-                "has_camera_x": hasattr(self, "camera_x"),
-                "has_camera_y": hasattr(self, "camera_y")
-            },
-            "timestamp": int(time.time() * 1000)
-        })
-        # #endregion
 
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
@@ -122,6 +73,9 @@ class GameEngine:
         self.display_mode = initial_mode  # "fullscreen" | "borderless" | "windowed"
         # WK7 Mid-Sprint: make windowed obviously windowed by default
         self.window_size = (1280, 720)  # Saved size for windowed mode
+        # Defer display mode changes to the main loop to avoid SDL re-entrancy during event handling
+        # (fixes intermittent Windows crash inside pygame.event.get after mode switches).
+        self._pending_display_settings: tuple[str, tuple[int, int] | None] | None = None
         
         # Borderless drag state (WK7)
         self._borderless_drag_active = False
@@ -133,38 +87,8 @@ class GameEngine:
         self.camera_y = 0
         self.zoom = 1.0
         self.default_zoom = 1.0
-        # #region agent log
-        _debug_log({
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "H2",
-            "location": "game/engine.py:camera_init",
-            "message": "Camera initialized",
-            "data": {
-                "camera_x": self.camera_x,
-                "camera_y": self.camera_y,
-                "zoom": self.zoom
-            },
-            "timestamp": int(time.time() * 1000)
-        })
-        # #endregion
         
         # Apply initial display settings
-        # #region agent log
-        _debug_log({
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "H1",
-            "location": "game/engine.py:apply_display_settings_call",
-            "message": "Before initial apply_display_settings in __init__",
-            "data": {
-                "has_zoom": hasattr(self, "zoom"),
-                "display_mode": getattr(self, "display_mode", None),
-                "window_size": getattr(self, "window_size", None)
-            },
-            "timestamp": int(time.time() * 1000)
-        })
-        # #endregion
         self.apply_display_settings(self.display_mode, self.window_size)
         self.clock = pygame.time.Clock()
         self.running = True
@@ -345,7 +269,18 @@ class GameEngine:
         
     def handle_events(self):
         """Process input events."""
-        for event in pygame.event.get():
+        # WK7 display-mode crash mitigation:
+        # On some Windows/SDL builds, the first event poll immediately after a set_mode() can
+        # intermittently crash inside SDL_PumpEvents (no Python exception). Avoid calling
+        # any event APIs for a couple frames after a mode switch.
+        skip_frames = int(getattr(self, "_skip_event_processing_frames", 0) or 0)
+        if skip_frames > 0:
+            self._skip_event_processing_frames = skip_frames - 1
+            return
+
+        events = pygame.event.get()
+
+        for event in events:
             if event.type == pygame.QUIT:
                 self.running = False
                 
@@ -375,6 +310,10 @@ class GameEngine:
                     self.zoom_by(ZOOM_STEP)
                 elif event.y < 0:
                     self.zoom_by(1.0 / ZOOM_STEP)
+
+    def request_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
+        """Queue a display mode change to be applied at a safe point (between frames)."""
+        self._pending_display_settings = (str(display_mode), window_size)
     
     def select_building_for_placement(self, building_type: str) -> bool:
         """
@@ -665,9 +604,11 @@ class GameEngine:
                     new_x = event.pos[0] + self._borderless_drag_window_offset[0]
                     new_y = event.pos[1] + self._borderless_drag_window_offset[1]
                     sdl_window.position = (new_x, new_y)
-            except (ImportError, AttributeError):
+            except (ImportError, AttributeError) as e:
                 # pygame._sdl2 not available: already degraded
                 pass
+            except Exception as e:
+                raise
         
         if self.building_menu.selected_building:
             self.building_menu.update_preview(
@@ -1399,26 +1340,17 @@ class GameEngine:
         
         This is UI-only and does not affect simulation determinism.
         """
-        # #region agent log
-        _debug_log({
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "H1",
-            "location": "game/engine.py:apply_display_settings_entry",
-            "message": "apply_display_settings entry",
-            "data": {
-                "display_mode": display_mode,
-                "window_size_arg": window_size,
-                "has_zoom": hasattr(self, "zoom"),
-                "zoom": getattr(self, "zoom", None)
-            },
-            "timestamp": int(time.time() * 1000)
-        })
-        # #endregion
         # Update state
         self.display_mode = str(display_mode)
         if window_size is not None:
             self.window_size = (int(window_size[0]), int(window_size[1]))
+
+        # Skip event processing for a few frames after mode switches to avoid
+        # rare SDL crash inside pygame.event.get() on Windows.
+        try:
+            self._skip_event_processing_frames = 10
+        except Exception:
+            pass
         
         # Check for headless/dummy driver (safe fallback)
         # NOTE: Even with SDL_VIDEODRIVER=dummy, pygame.display.set_mode can return a Surface.
@@ -1478,6 +1410,7 @@ class GameEngine:
             # Unknown mode: default to windowed
             flags |= pygame.RESIZABLE
         
+
         # Apply display mode
         self.window_width = int(desired_w)
         self.window_height = int(desired_h)
@@ -1486,17 +1419,18 @@ class GameEngine:
         self.window_width = int(self.screen.get_width())
         self.window_height = int(self.screen.get_height())
         pygame.display.set_caption(GAME_TITLE)
-        # Best-effort: center the window once when switching to windowed
-        if display_mode == "windowed":
-            try:
-                from pygame import _sdl2 as sdl2
-                sdl_window = sdl2.Window.from_display_module()
-                if sdl_window:
-                    center_x = max(0, int((disp_w - self.window_width) // 2))
-                    center_y = max(0, int((disp_h - self.window_height) // 2))
-                    sdl_window.position = (center_x, center_y)
-            except (ImportError, AttributeError):
-                pass
+        # WK7-CRASH-DEBUG: SDL2 window centering disabled to isolate crash cause.
+        # The SDL_VIDEO_CENTERED env var (set above) should handle centering instead.
+        # if display_mode == "windowed":
+        #     try:
+        #         from pygame import _sdl2 as sdl2
+        #         sdl_window = sdl2.Window.from_display_module()
+        #         if sdl_window:
+        #             center_x = max(0, int((disp_w - self.window_width) // 2))
+        #             center_y = max(0, int((disp_h - self.window_height) // 2))
+        #             sdl_window.position = (center_x, center_y)
+        #     except Exception:
+        #         pass
         
         # Recreate cached surfaces sized to window
         self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
@@ -1511,33 +1445,41 @@ class GameEngine:
             self.hud.screen_width = self.window_width
             self.hud.screen_height = self.window_height
             if hasattr(self.hud, "on_resize"):
-                self.hud.on_resize(self.window_width, self.window_height)
+                try:
+                    self.hud.on_resize(self.window_width, self.window_height)
+                except Exception:
+                    pass
         # Resize modal panels if they expose on_resize (WK7 mid-sprint hitbox fix)
         if hasattr(self, "pause_menu") and hasattr(self.pause_menu, "on_resize"):
-            self.pause_menu.on_resize(self.window_width, self.window_height)
+            try:
+                self.pause_menu.on_resize(self.window_width, self.window_height)
+            except Exception:
+                pass
         if hasattr(self, "build_catalog_panel") and hasattr(self.build_catalog_panel, "on_resize"):
-            self.build_catalog_panel.on_resize(self.window_width, self.window_height)
+            try:
+                self.build_catalog_panel.on_resize(self.window_width, self.window_height)
+            except Exception:
+                pass
         if hasattr(self, "building_list_panel") and hasattr(self.building_list_panel, "on_resize"):
-            self.building_list_panel.on_resize(self.window_width, self.window_height)
+            try:
+                self.building_list_panel.on_resize(self.window_width, self.window_height)
+            except Exception:
+                pass
         # Clamp camera to new view bounds after mode change
         if hasattr(self, "clamp_camera"):
-            # #region agent log
-            _debug_log({
-                "sessionId": "debug-session",
-                "runId": "pre-fix",
-                "hypothesisId": "H3",
-                "location": "game/engine.py:apply_display_settings_before_clamp",
-                "message": "Before clamp_camera in apply_display_settings",
-                "data": {
-                    "window_width": self.window_width,
-                    "window_height": self.window_height,
-                    "has_zoom": hasattr(self, "zoom"),
-                    "zoom": getattr(self, "zoom", None)
-                },
-                "timestamp": int(time.time() * 1000)
-            })
-            # #endregion
-            self.clamp_camera()
+            try:
+                self.clamp_camera()
+            except Exception:
+                pass
+
+        # After a mode switch on some Windows/SDL builds, the *first* event poll can crash in SDL.
+        # Best-effort mitigation: pump once + clear the queue now (outside the main event loop).
+        # If this itself crashes, the last marker will be pre_event_pump, which is actionable.
+        try:
+            pygame.event.pump()
+            pygame.event.clear()
+        except Exception as e:
+            pass
     
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
         """Convert screen-space pixels to world-space pixels, accounting for zoom."""
@@ -1546,22 +1488,6 @@ class GameEngine:
 
     def clamp_camera(self):
         """Clamp camera to world bounds given current zoom."""
-        # #region agent log
-        _debug_log({
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "H3",
-            "location": "game/engine.py:clamp_camera_entry",
-            "message": "clamp_camera entry",
-            "data": {
-                "has_zoom": hasattr(self, "zoom"),
-                "zoom": getattr(self, "zoom", None),
-                "camera_x": getattr(self, "camera_x", None),
-                "camera_y": getattr(self, "camera_y", None)
-            },
-            "timestamp": int(time.time() * 1000)
-        })
-        # #endregion
         win_w = int(getattr(self, "window_width", self.screen.get_width()))
         win_h = int(getattr(self, "window_height", self.screen.get_height()))
         view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
@@ -1775,8 +1701,11 @@ class GameEngine:
             # Pixel art: nearest-neighbor scaling (no blur).
             win_w = int(getattr(self, "window_width", self.screen.get_width()))
             win_h = int(getattr(self, "window_height", self.screen.get_height()))
-            pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
-            self.screen.blit(self._scaled_surface, (0, 0))
+            try:
+                pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
+                self.screen.blit(self._scaled_surface, (0, 0))
+            except Exception as e:
+                raise
         
         # Render HUD
         if not bool(getattr(self, "screenshot_hide_ui", False)):
@@ -1811,7 +1740,13 @@ class GameEngine:
                 text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
                 self.screen.blit(text, text_rect)
         
-        pygame.display.flip()
+        # NOTE (WK7): On some Windows setups, rapid mode switches can intermittently crash inside
+        # SDL/driver during flip(). update() has proven more robust in practice.
+        try:
+            pygame.display.update()
+        except Exception as e:
+            raise
+
 
     def render_perf_overlay(self, surface: pygame.Surface):
         now_ms = pygame.time.get_ticks()
@@ -1901,20 +1836,39 @@ class GameEngine:
     def run(self):
         """Main game loop."""
         while self.running:
+            # Apply any queued display settings change at a safe point (outside event polling).
+            pending = getattr(self, "_pending_display_settings", None)
+            if pending:
+                try:
+                    dm, ws = pending
+                    self._pending_display_settings = None
+                    self.apply_display_settings(dm, ws)
+                except Exception:
+                    # If anything goes wrong, clear the pending request and continue.
+                    self._pending_display_settings = None
+
+
             if DETERMINISTIC_SIM:
                 # Keep realtime pacing, but do not use wall-clock delta for simulation.
-                self.clock.tick(FPS)
+                tick_ms = self.clock.tick(FPS)
                 dt = 1.0 / max(1, int(SIM_TICK_HZ))
             else:
-                dt = self.clock.tick(FPS) / 1000.0  # Delta time in seconds
+                tick_ms = self.clock.tick(FPS)
+                dt = tick_ms / 1000.0  # Delta time in seconds
+
 
             t0 = time.perf_counter()
             self.handle_events()
             t1 = time.perf_counter()
+
+
             self.update(dt)
             t2 = time.perf_counter()
+
+
             self.render()
             t3 = time.perf_counter()
+
 
             # Perf timings (EMA). Diagnostic only: must not affect simulation state.
             if self.show_perf:

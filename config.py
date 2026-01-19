@@ -11,8 +11,8 @@ load_dotenv()
 WINDOW_WIDTH = 1920
 WINDOW_HEIGHT = 1080
 FPS = 60
-PROTOTYPE_VERSION = "1.2.8"
-GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION}) — The Audio Update"
+PROTOTYPE_VERSION = "1.2.9"
+GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION}) — UI-v2 Update"
 
 # Display behavior (Build A): borderless default, with safe fallback to display resolution if smaller.
 # Note: pygame flags are applied in `game/engine.py` where we can query display size.

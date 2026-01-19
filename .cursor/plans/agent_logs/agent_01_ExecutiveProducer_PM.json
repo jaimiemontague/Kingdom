@@ -825,6 +825,10 @@
               "close_x_text_overlap": "Grey text overlays the 'X' close button in the top right; remove/avoid the overlap.",
               "selected_building_panel_grey": "The selected-building info panel is still grey/unskinned compared to the new UI."
             },
+            "agent_updates_claimed": {
+              "03": "Reported DONE: fixed WK7-BUG-008 (zoom init boot crash) + addressed WK7-BUG-005 by using actual desktop size for fullscreen/borderless sizing and re-clamping camera after mode changes; qa_smoke PASS. Manual Windows confirmation still needed.",
+              "08": "Reported DONE: fixed WK7-BUG-006 (close X overlap) via padding and fixed WK7-BUG-007 by applying textured skin to selected-building panel; qa_smoke PASS."
+            },
             "gates": {
               "automated": "python tools/qa_smoke.py --quick PASS",
               "manual_windows": [
@@ -1000,9 +1004,9 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03"],
+            "send_to_agents": ["11"],
             "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
-            "rationale": "Immediate release blocker: boot crash in GameEngine init (zoom not initialized). Assign to Agent 03 first; other fixes can proceed after boot is stable."
+            "rationale": "Engineering fixes are reported done (03/08). Next step is QA final signoff: re-run qa_smoke + manual Windows verification + screenshots, and file any late bugs."
           }
         }
       }

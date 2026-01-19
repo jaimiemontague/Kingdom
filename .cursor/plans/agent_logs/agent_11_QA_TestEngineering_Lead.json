@@ -2879,9 +2879,9 @@
           ,
           "wk7_r7_production_readiness_bugfixes_and_QA": {
             "round_id": "wk7_r7_production_readiness_bugfixes_and_QA",
-            "status": "blocked",
+            "status": "in_progress",
             "what_i_changed": [
-              "None (QA-only round; awaiting Agent 03/08 bugfixes per integration order)."
+              "None (QA-only round; ran automated gate)."
             ],
             "how_to_test": [
               "python tools/qa_smoke.py --quick",
@@ -2891,26 +2891,25 @@
               "Capture final screenshots for PM signoff."
             ],
             "evidence": {
-              "qa_smoke": "NOT RUN (blocked pending Agent 03/08 fixes).",
-              "manual_verification": "NOT RUN (blocked pending Agent 03/08 fixes).",
-              "screenshots": "NOT CAPTURED (blocked pending Agent 03/08 fixes)."
+              "qa_smoke": "PASS (exit code 0).",
+              "manual_verification": "NOT RUN (requires human Windows verification).",
+              "screenshots": "NOT CAPTURED (requires human Windows screenshots).",
+              "qa_smoke_command": "python tools/qa_smoke.py --quick",
+              "qa_smoke_output": "[qa_smoke] DONE: PASS"
             },
             "blockers": [
               {
-                "summary": "Awaiting upstream fixes for WK7-BUG-005/006/007 per PM hub.",
+                "summary": "Manual Windows verification and screenshots required for final signoff.",
                 "needs": [
-                  "Agent 03: fix WK7-BUG-005 (world expansion after windowed → fullscreen).",
-                  "Agent 08: fix WK7-BUG-006 (close X overlap) and WK7-BUG-007 (selected panel skin)."
+                  "Human operator to run manual Windows checklist and capture 2–4 screenshots."
                 ],
                 "who": [
-                  "03_TechnicalDirector_Architecture",
-                  "08_UX_UI_Director"
+                  "human_operator"
                 ]
               }
             ],
             "risks_or_followups": [
-              "Follow-up: run qa_smoke and manual checklist immediately after fixes land.",
-              "Follow-up: capture final screenshots for signoff."
+              "Follow-up: complete manual checklist and capture final screenshots for PM signoff."
             ]
           }
         }

@@ -189,11 +189,15 @@ class PauseMenu:
             radio_w = panel_rect.width - 160
             selected = self.graphics_radio.hit_test(pos, radio_x, radio_y, radio_w)
             if selected and self.engine:
-                # WK7: Apply display mode change immediately
+                # WK7: Queue display mode change (apply between frames to avoid SDL re-entrancy crash)
                 self.graphics_radio.selected_value = selected
                 game_state = self.engine.get_game_state()
                 window_size = game_state.get("window_size", None)
-                self.engine.apply_display_settings(selected, window_size)
+                if hasattr(self.engine, "request_display_settings"):
+                    self.engine.request_display_settings(selected, window_size)
+                else:
+                    # Fallback for older engines (should not happen): apply immediately.
+                    self.engine.apply_display_settings(selected, window_size)
                 return f"graphics_select_{selected}"
         
         elif self.current_page == "audio":
