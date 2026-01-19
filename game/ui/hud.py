@@ -4,7 +4,7 @@ Heads-up display for game information.
 import pygame
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.theme import UITheme
-from game.ui.widgets import Panel, Tooltip, IconButton
+from game.ui.widgets import Panel, Tooltip, IconButton, NineSlice, load_image_cached
 from config import (
     COLOR_UI_BG, COLOR_UI_BORDER, COLOR_GOLD,
     COLOR_WHITE, COLOR_RED, COLOR_GREEN, BUILDING_COSTS, HERO_HIRE_COST
@@ -46,6 +46,10 @@ class HUD:
         self._help_panel_cache = None  # pygame.Surface built once (avoid per-frame allocations)
         self._help_hint_cache = self.font_small.render("F3: Help", True, (180, 180, 180))
 
+        # WK7 mid-sprint: right panel toggle (Tab)
+        self.right_panel_visible = False
+        self._panel_hint_cache = self.font_small.render("Tab: Panel", True, (180, 180, 180))
+
         # Session start (sim-time) for one-time / early hints.
         self._session_start_ms = int(sim_now_ms())
         self._bounty_hint_cache = None
@@ -59,6 +63,17 @@ class HUD:
         self._placing_surf = None
 
         # UI panels (cached surfaces)
+        # CC0 UI pack textures (WK7_R6)
+        self._panel_tex_top = "assets/ui/kingdomsim_ui_cc0/panels/panel_top.png"
+        self._panel_tex_bottom = "assets/ui/kingdomsim_ui_cc0/panels/panel_bottom.png"
+        self._panel_tex_right = "assets/ui/kingdomsim_ui_cc0/panels/panel_right.png"
+        self._panel_tex_modal = "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png"
+        self._button_tex_normal = "assets/ui/kingdomsim_ui_cc0/buttons/button_normal.png"
+        self._button_tex_hover = "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png"
+        self._button_tex_pressed = "assets/ui/kingdomsim_ui_cc0/buttons/button_pressed.png"
+        self._panel_slice_border = 8
+        self._button_slice_border = 6
+
         self._panel_top = Panel(
             pygame.Rect(0, 0, 1, 1),
             self.theme.panel_bg,
@@ -69,6 +84,8 @@ class HUD:
             inner_border_w=1,
             highlight_rgb=self._frame_highlight,
             highlight_w=1,
+            texture_path=self._panel_tex_top,
+            slice_border=self._panel_slice_border,
         )
         self._panel_bottom = Panel(
             pygame.Rect(0, 0, 1, 1),
@@ -80,6 +97,8 @@ class HUD:
             inner_border_w=1,
             highlight_rgb=self._frame_highlight,
             highlight_w=1,
+            texture_path=self._panel_tex_bottom,
+            slice_border=self._panel_slice_border,
         )
         self._panel_right = Panel(
             pygame.Rect(0, 0, 1, 1),
@@ -91,6 +110,8 @@ class HUD:
             inner_border_w=1,
             highlight_rgb=self._frame_highlight,
             highlight_w=1,
+            texture_path=self._panel_tex_right,
+            slice_border=self._panel_slice_border,
         )
         self._panel_minimap = Panel(
             pygame.Rect(0, 0, 1, 1),
@@ -102,9 +123,15 @@ class HUD:
             inner_border_w=1,
             highlight_rgb=self._frame_highlight,
             highlight_w=1,
+            texture_path=self._panel_tex_bottom,
+            slice_border=self._panel_slice_border,
         )
         self._tooltip = Tooltip(COLOR_UI_BG, COLOR_UI_BORDER, alpha=240)
         self._buttons = []  # list[IconButton]
+        # Command bar icons (cached)
+        self._icon_build = load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_build.png", (16, 16))
+        self._icon_hire = load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_hire.png", (16, 16))
+        self._icon_bounty = load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_bounty.png", (16, 16))
 
         # Click targets (computed during render; read by engine input handler)
         self.quit_rect: pygame.Rect | None = None
@@ -155,6 +182,8 @@ class HUD:
 
         right_w = int(max(getattr(self.theme, "right_panel_min_w", 320), min(getattr(self.theme, "right_panel_max_w", 420), int(w * 0.24))))
         right_w = int(max(280, min(right_w, w - 2 * margin)))  # clamp for small screens
+        if not self.right_panel_visible:
+            right_w = 0
         self.side_panel_width = right_w
 
         top = pygame.Rect(0, 0, w, top_h)
@@ -196,6 +225,15 @@ class HUD:
         """Toggle help/controls visibility."""
         self.show_help = not self.show_help
         # Nothing else to do; cached help panel surface is re-used.
+
+    def toggle_right_panel(self):
+        """Toggle the right-side panel visibility."""
+        self.right_panel_visible = not self.right_panel_visible
+
+    def on_resize(self, screen_width: int, screen_height: int):
+        """Update cached screen dimensions after a resize."""
+        self.screen_width = int(screen_width)
+        self.screen_height = int(screen_height)
 
     def _compute_hero_intent(self, hero) -> str:
         """
@@ -325,7 +363,8 @@ class HUD:
         self._panel_minimap.set_rect(minimap)
         self._panel_top.render(surface)
         self._panel_bottom.render(surface)
-        self._panel_right.render(surface)
+        if self.right_panel_visible:
+            self._panel_right.render(surface)
         self._panel_minimap.render(surface)
 
         # Quit button (top-right; player-manageable UI)
@@ -367,12 +406,19 @@ class HUD:
         if self._placing_surf is not None:
             surface.blit(self._placing_surf, (int(self.theme.margin), bottom.y - self._placing_surf.get_height() - 2))
 
-        # Help/controls overlay (toggle via F3)
+        # Help/controls overlay (toggle via F3) + panel hint
         if self.show_help:
             self._render_help(surface, origin=(self.screen_width - 310, 5))
-        else:
-            hint = self._help_hint_cache
-            surface.blit(hint, (self.screen_width - hint.get_width() - 12, 12))
+        hint_x = self.screen_width - 12
+        if not self.right_panel_visible:
+            panel_hint = self._panel_hint_cache
+            hint_x -= panel_hint.get_width()
+            surface.blit(panel_hint, (hint_x, 12))
+            hint_x -= 12
+        if not self.show_help:
+            help_hint = self._help_hint_cache
+            hint_x -= help_hint.get_width()
+            surface.blit(help_hint, (hint_x, 12))
 
         # Early, non-spammy bounty hint (addresses WK1-BUG-002 discoverability).
         # Show until the player places their first bounty, and only for the first ~90s.
@@ -403,16 +449,18 @@ class HUD:
 
         # Right panel close button (only when something is selected)
         self.right_close_rect = None
-        if selected_hero is not None or selected_building is not None:
-            self._render_right_close_button(surface, right_rect=right)
+        if self.right_panel_visible:
+            if selected_hero is not None or selected_building is not None:
+                self._render_right_close_button(surface, right_rect=right)
 
-        if selected_hero:
-            self.render_hero_panel(surface, selected_hero, debug_ui=bool(game_state.get("debug_ui", False)), rect=right)
-        elif selected_building is not None:
-            self._render_building_summary(surface, selected_building, rect=right)
-        else:
-            empty = self._cached_value_text("right_none", 1, "Select a hero or building", self.theme.font_body, (180, 180, 180))
-            surface.blit(empty, (right.x + int(self.theme.margin), right.y + int(self.theme.margin)))
+            if selected_hero:
+                self.render_hero_panel(surface, selected_hero, debug_ui=bool(game_state.get("debug_ui", False)), rect=right)
+            elif selected_building is not None:
+                self._render_building_summary(surface, selected_building, rect=right)
+            else:
+                empty = self._cached_value_text("right_none", 1, "Select a hero or building", self.theme.font_body, (180, 180, 180))
+                pad = self._right_panel_top_pad(right)
+                surface.blit(empty, (right.x + int(self.theme.margin), right.y + pad))
 
         # Minimap placeholder label (Build A skeleton; real minimap in later iteration)
         mm_label = self._cached_value_text("minimap_lbl", 1, "Minimap", self.theme.font_small, (200, 200, 200))
@@ -456,7 +504,7 @@ class HUD:
         mouse = pygame.mouse.get_pos()
         hover = rect.collidepoint(mouse)
         bg = (70, 45, 45) if hover else (55, 40, 40)
-        self._draw_button_frame(surface, rect, bg_rgb=bg)
+        self._draw_button_frame(surface, rect, bg_rgb=bg, hovered=hover)
         surface.blit(label, (rect.x + pad_x, rect.y + pad_y))
 
     def _render_right_close_button(self, surface: pygame.Surface, right_rect: pygame.Rect):
@@ -469,11 +517,14 @@ class HUD:
         mouse = pygame.mouse.get_pos()
         hover = rect.collidepoint(mouse)
         bg = (60, 60, 70) if hover else (45, 45, 55)
-        self._draw_button_frame(surface, rect, bg_rgb=bg)
+        self._draw_button_frame(surface, rect, bg_rgb=bg, hovered=hover)
         surface.blit(x_surf, (rect.centerx - x_surf.get_width() // 2, rect.centery - x_surf.get_height() // 2))
 
-    def _draw_button_frame(self, surface: pygame.Surface, rect: pygame.Rect, bg_rgb: tuple[int, int, int]):
+    def _draw_button_frame(self, surface: pygame.Surface, rect: pygame.Rect, bg_rgb: tuple[int, int, int], hovered: bool = False):
         """Shared button frame styling (Quit / X / command buttons)."""
+        tex = self._button_tex_hover if hovered else self._button_tex_normal
+        if NineSlice.render(surface, rect, tex, border=self._button_slice_border):
+            return
         pygame.draw.rect(surface, bg_rgb, rect)
         # Outer near-black outline
         pygame.draw.rect(surface, self._frame_outer, rect, 2)
@@ -532,15 +583,31 @@ class HUD:
             is_hover = btn.hit_test(mouse)
             if is_hover:
                 hovered = btn
-            # Button frame (opaque to avoid per-frame alpha surfaces)
-            bg = (55, 55, 70) if is_hover else (45, 45, 60)
-            self._draw_button_frame(surface, btn.rect, bg_rgb=bg)
+            # Button frame (textured nine-slice, cached)
+            bg = (70, 80, 100) if is_hover else (45, 45, 60)
+            self._draw_button_frame(surface, btn.rect, bg_rgb=bg, hovered=is_hover)
 
             # Label (cached by title)
-            title_surf = self._cached_value_text(("btn_t", btn.title), 1, btn.title, self.theme.font_body, COLOR_WHITE)
-            hk_surf = self._cached_value_text(("btn_hk", btn.hotkey), 1, btn.hotkey, self.theme.font_small, (180, 180, 180))
-            surface.blit(title_surf, (btn.rect.x + 10, btn.rect.y + 10))
-            surface.blit(hk_surf, (btn.rect.x + 10, btn.rect.y + 10 + title_surf.get_height() + 2))
+            # WK7: Better button text spacing and positioning
+            title_surf = self._cached_value_text(("btn_t", btn.title), 1, btn.title, self.theme.font_body, COLOR_WHITE if not is_hover else (240, 240, 255))
+            hk_surf = self._cached_value_text(("btn_hk", btn.hotkey), 1, btn.hotkey, self.theme.font_small, (200, 200, 200) if is_hover else (180, 180, 180))
+            icon = None
+            if btn.title == "Build":
+                icon = self._icon_build
+            elif btn.title == "Hire":
+                icon = self._icon_hire
+            elif btn.title == "Bounty":
+                icon = self._icon_bounty
+            text_pad = 12
+            icon_pad = 0
+            if icon is not None:
+                icon_x = btn.rect.x + text_pad
+                icon_y = btn.rect.y + (btn.rect.height - icon.get_height()) // 2
+                surface.blit(icon, (icon_x, icon_y))
+                icon_pad = icon.get_width() + 6
+            text_x = btn.rect.x + text_pad + icon_pad
+            surface.blit(title_surf, (text_x, btn.rect.y + 10))
+            surface.blit(hk_surf, (text_x, btn.rect.y + 10 + title_surf.get_height() + 4))
 
         # Tooltip (cached; built only when hovered text changes)
         if hovered is not None:
@@ -549,14 +616,21 @@ class HUD:
         else:
             self._tooltip.set_text(self.theme.font_small, "", (230, 230, 230))
 
+    def _right_panel_top_pad(self, rect: pygame.Rect) -> int:
+        pad = int(self.theme.margin)
+        if self.right_close_rect is not None and self.right_close_rect.colliderect(rect):
+            pad = max(pad, int(self.right_close_rect.height) + 10)
+        return pad
+
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect):
         """Minimal right-panel building summary for Build A."""
+        # WK7: Better internal padding for readability
         x = rect.x + int(self.theme.margin)
-        y = rect.y + int(self.theme.margin)
+        y = rect.y + self._right_panel_top_pad(rect)
         btype = str(getattr(building, "building_type", building.__class__.__name__) or "")
         title = self._cached_value_text(("bsel", btype), 1, btype.replace("_", " ").title(), self.theme.font_title, COLOR_WHITE)
         surface.blit(title, (x, y))
-        y += title.get_height() + 6
+        y += title.get_height() + 10  # Increased from 6 for better spacing
         hp = int(getattr(building, "hp", 0) or 0)
         mhp = int(getattr(building, "max_hp", 0) or 0)
         hp_surf = self._cached_value_text(("bhp", id(building), hp, mhp), 1, f"HP: {hp}/{mhp}", self.theme.font_body, (200, 200, 200))
@@ -631,41 +705,44 @@ class HUD:
         
         # Panel background is already drawn by the right panel; do not redraw to avoid allocations.
         
-        # Hero info
-        y = panel_y + 10
+        # Hero info (WK7: Use theme margin for consistent spacing)
+        pad = int(self.theme.margin)
+        if self.right_close_rect is not None and self.right_close_rect.colliderect(rect):
+            pad = max(pad, int(self.right_close_rect.height) + 10)
+        y = panel_y + pad
         
         # Name
         name_text = self.font_medium.render(hero.name, True, COLOR_WHITE)
-        surface.blit(name_text, (panel_x + 10, y))
-        y += 25
+        surface.blit(name_text, (panel_x + pad, y))
+        y += name_text.get_height() + 8  # Better spacing
         
         # Class and level
         class_text = self.font_small.render(
             f"{hero.hero_class.title()} Lv.{hero.level}", True, COLOR_WHITE
         )
-        surface.blit(class_text, (panel_x + 10, y))
-        y += 20
+        surface.blit(class_text, (panel_x + pad, y))
+        y += class_text.get_height() + 8  # Better spacing
         
         # HP bar
         hp_text = self.font_small.render(
             f"HP: {hero.hp}/{hero.max_hp}", True, COLOR_WHITE
         )
-        surface.blit(hp_text, (panel_x + 10, y))
-        y += 15
+        surface.blit(hp_text, (panel_x + pad, y))
+        y += hp_text.get_height() + 6
         
-        bar_width = panel_width - 20
+        bar_width = panel_width - (pad * 2)
         bar_height = 8
-        pygame.draw.rect(surface, (60, 60, 60), (panel_x + 10, y, bar_width, bar_height))
+        pygame.draw.rect(surface, (60, 60, 60), (panel_x + pad, y, bar_width, bar_height))
         hp_pct = hero.hp / hero.max_hp
         hp_color = COLOR_GREEN if hp_pct > 0.5 else COLOR_RED
-        pygame.draw.rect(surface, hp_color, (panel_x + 10, y, bar_width * hp_pct, bar_height))
-        y += 15
+        pygame.draw.rect(surface, hp_color, (panel_x + pad, y, bar_width * hp_pct, bar_height))
+        y += bar_height + 8  # Better spacing
         
         # Stats
         stats_text = self.font_small.render(
             f"ATK: {hero.attack}  DEF: {hero.defense}", True, COLOR_WHITE
         )
-        surface.blit(stats_text, (panel_x + 10, y))
+        surface.blit(stats_text, (panel_x + pad, y))
         y += 20
         
         # Gold (spendable + taxed)

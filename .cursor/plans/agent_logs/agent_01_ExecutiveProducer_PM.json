@@ -7,6 +7,1006 @@
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
   "sprints": {
+    "wk7-ui-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
+        "notes": "WK7: UI overhaul — window/display modes, ESC menu, castle build catalog, and Majesty-quality UI benchmark pass."
+      },
+      "rounds": {
+        "wk7_r0_kickoff": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r0_kickoff_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "WK7 kickoff: only send to active agents. Consult-only agents stand down unless pinged."
+          },
+          "pm_status_summary": {
+            "overall_status": "Kickoff",
+            "wk7_focus": [
+              "UI polish to Majesty standard (quality uplift, not a clone).",
+              "Window/display mode options (fullscreen/borderless/windowed) exposed in ESC menu → Graphics.",
+              "ESC opens a centered pause/settings menu; world input is blocked while open.",
+              "Castle-driven Build Catalog window with building thumbnails + click-to-place."
+            ],
+            "locked_decisions": {
+              "bottom_bar_scope": "Keep a slim always-visible bottom bar for core actions; ESC menu is primarily settings/options.",
+              "borderless_drag_behavior": "In fullscreen windowed (borderless), click+hold+drag on the top bar switches to windowed and live-drags with the cursor (best-effort).",
+              "drag_degradation_policy": "If live-drag cannot be implemented on the platform/runtime, degrade to switching to windowed at drag start and show a brief HUD message explaining the limitation."
+            },
+            "gates": {
+              "qa_smoke_quick": "Must remain PASS",
+              "manual_smoke": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "pm_integration_order": [
+            "Agent 03: add/solidify runtime display-mode switching API in engine (apply_display_settings + settings model) + best-effort borderless top-bar drag → windowed live-drag.",
+            "Agent 08: implement ESC menu modal + Graphics/Audio/Controls pages using Agent 03 API; block world input while menu is open; wire ESC behavior to show menu.",
+            "Agent 14: define audio settings semantics (master volume; optional split) and ensure UI hooks do not violate the visibility-gated audibility rule.",
+            "Agent 08: implement castle-driven Build Catalog panel (center screen) + click-to-place; add thumbnails/fallback visuals.",
+            "Agent 08: run UI benchmark vs Majesty reference and propose/implement highest-value polish deltas that fit sprint scope.",
+            "Agent 11: verify gates + manual checklist for window modes + ESC menu + build catalog; file bugs as needed."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement runtime display switching: fullscreen, borderless (NOFRAME), windowed (RESIZABLE) and persist user prefs (UI-only, non-sim).",
+                "Add a single engine entrypoint like apply_display_settings() so UI can request a mode change safely.",
+                "Implement borderless top-bar click+drag to switch to windowed and live-drag with cursor using pygame._sdl2 if available; otherwise degrade per policy with a HUD message.",
+                "Expose the active display mode + window size in game_state so Agent 08 can render correct labels in the ESC Graphics menu.",
+                "Keep determinism unaffected: settings are UI-only; do not introduce wall-clock time into sim paths."
+              ],
+              "acceptance_criteria": [
+                "User can switch among fullscreen/borderless/windowed via ESC → Graphics and see changes apply immediately.",
+                "In borderless: click+hold+drag in top bar switches to windowed; window follows cursor (best-effort).",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "suggested_files": [
+                "game/engine.py",
+                "config.py (defaults only; no UI state stored here long-term)"
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement ESC menu modal (center screen): Resume, Graphics, Audio, Controls, Quit.",
+                "Route Esc to open/close the menu (not just pause). While menu open, block world input; game is paused.",
+                "Graphics page: show display mode options (fullscreen/borderless/windowed), call Agent 03 apply_display_settings().",
+                "Audio page: master volume slider (coordinate with Agent 14).",
+                "Controls page: read-only list of keybinds (rebinding UI is optional if time permits).",
+                "Castle-driven Build Catalog: selecting castle shows a Build buildings action; clicking opens centered catalog with thumbnails/name/cost/hotkey + disabled reasons; clicking a building closes panel and enters placement (must call engine.select_building_for_placement()).",
+                "UI benchmark vs Majesty reference: capture screenshots, list deltas, then implement the top-impact improvements that fit the sprint."
+              ],
+              "acceptance_criteria": [
+                "Esc opens centered menu; Resume closes; world input is blocked while open; game is paused while menu is open.",
+                "Graphics/Audio/Controls pages render without clutter and remain readable at 1920x1080.",
+                "Castle → Build buildings opens the catalog; clicking an item enters placement and closes the catalog.",
+                "Before/after screenshot set + delta list recorded in Agent 08 log.",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "suggested_files": [
+                "game/ui/hud.py",
+                "game/ui/widgets.py",
+                "game/ui/theme.py",
+                "game/ui/building_list_panel.py (replace/augment)",
+                "game/ui/building_panel.py",
+                "game/engine.py"
+              ]
+            },
+            "14": {
+              "status": "assigned_active",
+              "asks": [
+                "Define audio settings semantics for WK7: master volume slider behavior (and optional split: SFX vs ambient) that is simple and safe.",
+                "Work with Agent 08 to define UI labels/ranges and persistence expectations.",
+                "Verify/guard: audibility rule remains locked (world SFX only if on-screen + fog-visible). UI sounds are exempt."
+              ],
+              "acceptance_criteria": [
+                "Master volume control works and does not impact simulation state.",
+                "No regression in audibility gating behavior.",
+                "Document the chosen semantics in Agent 14 log so QA can test it."
+              ],
+              "suggested_files": [
+                "game/audio/audio_system.py",
+                "game/audio/EVENT_CONTRACT.md",
+                "assets/ATTRIBUTION.md (only if new assets are added)"
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "Create/refresh a WK7 manual smoke checklist focused on: (1) window mode switching, (2) borderless drag-to-windowed behavior, (3) ESC menu input blocking and pause semantics, (4) castle build catalog click-to-place.",
+                "Run gates after major merges: python tools/qa_smoke.py --quick must PASS.",
+                "File WK7 bug tickets in PM hub if regressions appear (repro + expected/actual + suspected owner)."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke quick remains PASS throughout",
+                "Manual smoke confirms expected behaviors on Windows"
+              ]
+            },
+            "10": {
+              "status": "consult_only",
+              "asks": [
+                "If pinged: review ESC menu/build catalog UI code for per-frame allocations and obvious FPS regressions; propose caching/rate-limit fixes."
+              ]
+            },
+            "09": {
+              "status": "consult_only",
+              "asks": [
+                "If pinged: advise on building thumbnail sourcing strategy (use existing building sprites if present; otherwise specify clean placeholder thumbnails) consistent with pixel-art constraints."
+              ]
+            },
+            "12": {
+              "status": "consult_only",
+              "asks": [
+                "If pinged: confirm any new UI/audio assets keep validate_assets clean; advise on manifest/attribution updates if needed."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "14", "11"],
+            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "rationale": "WK7 is primarily UI + display system work with audio settings integration and QA validation. Art/tools/perf are consult-only unless blockers appear."
+          }
+        },
+        "wk7_r1_execution_sync": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r1_execution_sync_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "WK7 execution: active agents only. Consult-only agents stand down unless pinged."
+          },
+          "pm_status_summary": {
+            "overall_status": "In progress: agents have acknowledged kickoff; execution requires concrete integration contracts + sequencing.",
+            "agent_updates_received": {
+              "03": "ACK plan posted; implementing apply_display_settings + borderless drag behavior; will expose display state in game_state.",
+              "08": "ACK plan posted; will stub ESC menu framework + start UI benchmark; blocking dependencies for Graphics (03 API) + Audio semantics (14).",
+              "14": "IN_PROGRESS; proposes master volume API and documentation; needs UI label/range/persistence decisions.",
+              "11": "IN_PROGRESS; manual smoke checklist drafted; will run qa_smoke after merges and file bug tickets."
+            },
+            "current_blockers": [
+              "Graphics page is blocked until Agent 03 lands apply_display_settings() + exposes display state in game_state.",
+              "Audio page is blocked until Agent 14 finalizes master volume semantics and the callable API surface exists (or is confirmed existing)."
+            ],
+            "gates": {
+              "qa_smoke_quick": "Must remain PASS after each major merge",
+              "manual_smoke": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "pm_decisions": {
+            "wk7_ui_settings_persistence": {
+              "scope": "BuildA",
+              "decision": "In-memory persistence is acceptable for WK7 BuildA. If adding a settings file is quick and low-risk, do it; otherwise defer to BuildB.",
+              "constraints": [
+                "Settings are UI-only and must not affect sim determinism.",
+                "Headless/SDL_VIDEODRIVER=dummy runs must not crash if settings exist."
+              ]
+            },
+            "audio_slider_units": {
+              "decision": "UI displays 0–100%, API uses 0.0–1.0 floats internally.",
+              "default_master_volume": 80
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "in_progress",
+              "asks": [
+                "Land apply_display_settings() + in-engine display_mode/window_size state, and expose these in get_game_state().",
+                "Implement borderless top-bar drag: switch to windowed and live-drag if pygame._sdl2 is available; otherwise switch-to-windowed + HUD message.",
+                "After landing, paste the exact method signature + expected game_state keys into your agent log so Agent 08 can integrate without guesswork.",
+                "Run: python tools/qa_smoke.py --quick and record PASS evidence."
+              ],
+              "acceptance_criteria": [
+                "apply_display_settings exists and is callable from UI without import cycles.",
+                "game_state includes keys for display_mode and window_size (or equivalent) so UI can render current selection.",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "14": {
+              "status": "in_progress",
+              "asks": [
+                "Finalize the Audio settings API surface for master volume.\n- Preferred: AudioSystem exposes set_master_volume(vol_0_to_1) + get_master_volume().\n- If you choose an alternate shape, document it precisely and keep it UI-only / non-authoritative.",
+                "Implement or coordinate implementation of the API (depending on your role boundaries) and update EVENT_CONTRACT.md with the semantics.",
+                "Confirm: master volume scales both SFX and ambient (master * per-sound volume).",
+                "Run: python tools/qa_smoke.py --quick and record PASS evidence."
+              ],
+              "acceptance_criteria": [
+                "Master volume semantics are fully documented in your agent log (range, default, what it affects).",
+                "Audibility gating is unchanged (volume does not bypass on-screen+VISIBLE checks).",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "08": {
+              "status": "in_progress",
+              "asks": [
+                "Proceed NOW with non-dependent UI work:\n- ESC menu framework (modal/backdrop/input blocking/pause semantics)\n- Resume/Quit/Controls (read-only) pages\n- Start Majesty UI benchmark: capture current screenshots and draft delta list",
+                "WAIT to implement Graphics page wiring until Agent 03 posts the exact apply_display_settings signature + game_state keys.",
+                "WAIT to implement Audio page wiring until Agent 14 confirms the master volume API signature/semantics.",
+                "Once unblocked, wire:\n- Graphics page -> Agent 03 apply_display_settings\n- Audio page -> Agent 14 master volume API\n- Then implement castle-driven Build Catalog + click-to-place, and complete top 3 UI benchmark deltas.",
+                "After each major feature lands, coordinate with Agent 11 to run qa_smoke and perform a short manual check."
+              ],
+              "acceptance_criteria": [
+                "ESC opens centered menu; game paused; world input blocked; Resume returns to game.",
+                "Controls page displays keybinds clearly (read-only).",
+                "Benchmark before/after screenshots + delta list captured in Agent 08 log.",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "11": {
+              "status": "in_progress",
+              "asks": [
+                "After Agent 03 lands display-mode changes: run python tools/qa_smoke.py --quick and log PASS/FAIL.",
+                "After Agent 08 lands ESC menu framework: run python tools/qa_smoke.py --quick and log PASS/FAIL; then do a 5-minute manual check of ESC input blocking/pause semantics.",
+                "After Agent 14 lands master volume API/semantics: run python tools/qa_smoke.py --quick and log PASS/FAIL; then do a 5-minute audio UI check once Agent 08 wires the slider.",
+                "File WK7 bug tickets here in PM hub if regressions appear (use the standard template)."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "14", "11"],
+            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "rationale": "All four active agents have ongoing work; next leg is execution sequencing and unblocking UI wiring via explicit API signatures."
+          }
+        },
+        "wk7_r2_integration_and_polish": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r2_integration_and_polish_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "WK7 integration/polish: only send to agents with remaining work. Others stand down unless pinged."
+          },
+          "pm_status_summary": {
+            "overall_status": "Core plumbing is landed; now integrate UI wiring + build catalog + benchmark polish + QA verification.",
+            "what_is_done": [
+              "Agent 03 landed display mode switching API in engine: apply_display_settings(display_mode, window_size=None) and exposed game_state keys display_mode/window_size; includes borderless top-bar drag best-effort live-drag; qa_smoke PASS.",
+              "Agent 08 landed ESC menu framework: PauseMenu modal + input blocking/pause semantics + Controls/Resume/Quit pages; qa_smoke PASS.",
+              "Agent 14 landed AudioSystem master volume API: set_master_volume(vol_0_to_1) + get_master_volume(); master volume scales SFX+ambient and preserves audibility gating; documented in EVENT_CONTRACT; code is in place."
+            ],
+            "what_is_not_done_yet": [
+              "Agent 08: Wire Graphics page to call engine.apply_display_settings() using game_state['display_mode']/['window_size'].",
+              "Agent 08: Wire Audio page to call audio_system.set_master_volume() and reflect current audio_system.get_master_volume() (UI shows 0–100%).",
+              "Agent 08: Implement castle-driven Build Catalog panel (center screen) with thumbnails/fallbacks and click-to-place; close menu on selection.",
+              "Agent 08: Complete Majesty UI benchmark (before/after screenshots + delta list) and implement the top 3 high-impact deltas that fit scope.",
+              "Agent 11: Run qa_smoke --quick after each integration step and perform manual checks (window switching + borderless drag + ESC input blocking + build catalog + audio slider). File bugs if needed."
+            ],
+            "gates": {
+              "qa_smoke_quick": "Must remain PASS",
+              "manual_smoke": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Integrate Graphics page now that Agent 03 API is landed:\n- Read current selection from game_state['display_mode'] and game_state['window_size'].\n- On selection change, call engine.apply_display_settings(display_mode, window_size_if_needed).",
+                "Integrate Audio page now that Agent 14 API is landed:\n- Read current from audio_system.get_master_volume().\n- On slider change, call audio_system.set_master_volume(vol_0_to_1).\n- UI displays percent (0–100) but converts to 0.0–1.0 internally.",
+                "Implement Castle Build Catalog (centered modal):\n- Castle selection offers 'Build buildings'.\n- Catalog shows thumbnail (building sprite if available; else swatch), name, cost, hotkey, disabled reasons.\n- Click selects building -> closes catalog and enters placement via engine.select_building_for_placement().",
+                "Complete Majesty benchmark:\n- Capture current screenshots in a similar state to reference.\n- Produce a delta list.\n- Implement top 3 deltas (highest impact, lowest risk) this round.",
+                "After each major integration (Graphics wiring, Audio wiring, Build Catalog, top 3 deltas), run qa_smoke or coordinate with Agent 11 to confirm it stays green."
+              ],
+              "acceptance_criteria": [
+                "ESC menu Graphics page actually changes modes; current mode is reflected correctly.",
+                "ESC menu Audio page changes master volume immediately; value persists during session.",
+                "Castle → Build buildings opens centered catalog; clicking a building exits catalog and enters placement.",
+                "Benchmark before/after screenshots + delta list recorded in Agent 08 log; top 3 deltas shipped.",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "notes": [
+                "Prefer in-memory settings persistence for BuildA. If you add a settings file, keep it UI-only and safe under SDL dummy."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "Re-run python tools/qa_smoke.py --quick now that display/mode + menu + audio API changes exist, and record PASS/FAIL evidence.",
+                "Manual verification (Windows):\n- Window mode switching in Graphics page\n- Borderless drag-to-windowed behavior\n- ESC menu input blocking/pause semantics\n- Audio slider changes volume and does not bypass audibility gating\n- Castle build catalog click-to-place",
+                "If any regression appears, file WK7 bug tickets in PM hub under this round."
+              ]
+            },
+            "03": {
+              "status": "stand_down_consult_only",
+              "asks": [
+                "Stand by. If Agent 08 hits an edge-case in apply_display_settings/window_size UX, provide a quick follow-up patch and document it."
+              ]
+            },
+            "14": {
+              "status": "stand_down_consult_only",
+              "asks": [
+                "Stand by. If Agent 08 needs help wiring the slider or if QA finds an audibility gating regression, investigate and propose the minimal fix."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["08", "11"],
+            "do_not_send": ["03", "14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "rationale": "03 and 14 delivered their core APIs; remaining work is UI wiring + build catalog + benchmark polish (08) and verification (11). Ping 03/14 only if integration issues appear."
+          }
+        },
+        "wk7_r3_closeout_benchmark_and_final_QA": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r3_closeout_benchmark_and_final_QA_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "WK7 closeout: send only to agents with remaining tasks (08 + 11)."
+          },
+          "pm_status_summary": {
+            "overall_status": "Near complete: functional requirements appear implemented; remaining tasks are Majesty benchmark + final QA/manual verification + any bugfixes found.",
+            "reconciled_state": [
+              "Codebase check confirms Agent 08 has now wired Graphics and Audio pages AND implemented Build Catalog (castle button -> catalog -> click-to-place).",
+              "Engine confirms apply_display_settings exists, PauseMenu exists, and AudioSystem set_master_volume/get_master_volume exists.",
+              "Agent 11's earlier note that wiring/catalog were missing is now stale; they should re-verify on current code state."
+            ],
+            "done_in_code": [
+              "Window mode switching API (apply_display_settings) is present.",
+              "ESC menu modal is present and blocks world input while open.",
+              "Audio master volume API exists.",
+              "Castle-driven Build Catalog exists (Build buildings button + centered catalog + click-to-place)."
+            ],
+            "remaining": [
+              "Majesty benchmark (before/after screenshots + delta list + top 3 polish deltas) — Agent 08.",
+              "QA re-run on latest code + manual verification (graphics mode switching, borderless drag, ESC input blocking, audio slider volume change, build catalog) — Agent 11.",
+              "If any regression is found, file WK7 bug tickets and assign owner."
+            ],
+            "gates": {
+              "qa_smoke_quick": "Must remain PASS",
+              "manual_smoke": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Complete Majesty benchmark now:\n- Use `.cursor/human_provided/Original Majesty UI Example.JPG` as the reference.\n- Capture current game screenshots in a comparable state (1920x1080 if possible).\n- Write a concise delta list (what looks clumpy vs Majesty; spacing, typography hierarchy, panel framing, minimap framing, command bar density, button affordances).\n- Implement the top 3 deltas that are high-impact and low-risk (no big refactors).",
+                "After implementing the top 3 deltas, run `python tools/qa_smoke.py --quick` and record PASS evidence in your agent log."
+              ],
+              "acceptance_criteria": [
+                "Before/after screenshots + delta list exist in Agent 08 log.",
+                "Top 3 deltas are implemented without breaking core UI behaviors.",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "Re-run `python tools/qa_smoke.py --quick` on the latest workspace and record PASS/FAIL evidence.",
+                "Manual verification (Windows):\n- ESC menu open/close + input blocking + pause semantics\n- Graphics page changes modes (fullscreen/borderless/windowed) and reflects current mode\n- Borderless drag-to-windowed behavior (best-effort; confirm degrade message if live-drag unavailable)\n- Audio page slider changes master volume (confirm it audibly changes SFX/ambient)\n- Castle Build Catalog: open, close, disabled reasons, click-to-place",
+                "If any issues are found, file WK7 bug tickets under this round with repro+owner+acceptance tests."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick PASS",
+                "Manual checklist PASS or bug tickets filed for any failures"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["08", "11"],
+            "do_not_send": ["03", "14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "rationale": "Only remaining work is UI benchmark/polish (08) and verification/manual QA (11)."
+          }
+        },
+        "wk7_r4_release_candidate_human_manual_smoke": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r4_release_candidate_human_manual_smoke_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "WK7 final gate: human manual smoke + any last bug tickets only."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK7-BUG-001",
+              "title": "Boot crash: PauseMenu constructed before audio_system (AttributeError: GameEngine has no attribute audio_system)",
+              "severity": "blocker",
+              "build_target": "BuildA",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py (or python main.py --no-llm / --provider mock)",
+                "Observe crash during GameEngine.__init__"
+              ],
+              "expected": "Game boots successfully; ESC menu can reference AudioSystem safely.",
+              "actual": "Crash: AttributeError: 'GameEngine' object has no attribute 'audio_system' when constructing PauseMenu.",
+              "evidence": [
+                "Trace shows: game/engine.py calls PauseMenu(... audio_system=self.audio_system) before self.audio_system exists."
+              ],
+              "suspected_area": [
+                "game/engine.py (GameEngine.__init__ initialization order)",
+                "game/ui/pause_menu.py (expects audio_system reference)"
+              ],
+              "constraints": [
+                "Keep settings/UI non-authoritative (no sim-state changes).",
+                "Keep determinism unchanged.",
+                "Avoid headless/dummy driver regressions if possible."
+              ],
+              "proposed_fix": [
+                "Reorder GameEngine initialization so self.audio_system is created before PauseMenu is constructed.",
+                "If any UI construction needs window_width/height, ensure those are set before allocating surfaces (avoid init-order crashes).",
+                "Keep the change minimal and localized to engine init ordering."
+              ],
+              "acceptance_test": [
+                "python main.py --no-llm boots to a running window (no crash)",
+                "python main.py --provider mock boots to a running window (no crash)",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "integration_notes": {
+                "risk_notes": [
+                  "This is a constructor-order bug; fixing it should not change gameplay behavior, but it is a blocker for any manual smoke.",
+                  "If additional headless boot issues exist (SDL dummy), handle them without changing sim determinism."
+                ],
+                "consult": [
+                  "08_UX_UI_Director for any PauseMenu signature expectations",
+                  "11_QA_TestEngineering_Lead to re-run qa_smoke and confirm boot"
+                ]
+              },
+              "status": "assigned"
+            }
+          ],
+          "pm_status_summary": {
+            "overall_status": "Release candidate: all engineering + automated gates are green; only human manual smoke remains.",
+            "done": [
+              "Window mode switching API + best-effort borderless drag implementation landed (Agent 03).",
+              "ESC menu modal + Graphics/Audio wiring + Controls + Castle Build Catalog landed (Agent 08).",
+              "Audio master volume API landed and documented; audibility gating preserved (Agent 14).",
+              "Majesty benchmark polish complete (top 3 deltas) + qa_smoke PASS (Agent 08).",
+              "QA re-verified latest workspace: qa_smoke PASS and code review confirms wiring and catalog (Agent 11)."
+            ],
+            "remaining_blockers": [
+              "Human manual smoke on Windows (10 minutes each mode) with special attention to borderless drag-to-windowed behavior."
+            ],
+            "gates": {
+              "automated": "python tools/qa_smoke.py --quick PASS (already reported)",
+              "human_manual": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "human_manual_smoke_checklist": [
+            "ESC menu: opens centered, blocks world input, pauses; Resume closes and resumes.",
+            "Graphics: switch fullscreen/borderless/windowed; confirm current selection reflects reality.",
+            "Borderless drag: click+hold+drag on top bar switches to windowed and drags; if live-drag not supported, confirm it switches to windowed + shows HUD message.",
+            "Audio: master volume slider changes ambient + SFX volume audibly; UI sounds still audible; world audibility gating still respected (off-screen/fog events remain silent).",
+            "Castle: click castle -> Build buildings -> catalog opens; disabled reasons show; click-to-place works; cancel works.",
+            "No obvious layout clipping at your resolution; new padding/typography feels less clumpy."
+          ],
+          "pm_next_actions_by_agent": {
+            "11": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by for bug tickets arising from human manual smoke; if any are filed, help define minimal acceptance tests and verify qa_smoke remains PASS after fixes."
+              ]
+            },
+            "08": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by for any UI bug tickets from human manual smoke; if any are filed, implement minimal fixes and keep qa_smoke PASS."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "11"],
+            "do_not_send": ["14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "rationale": "Boot crash is a release blocker. Assign to Agent 03 (engine init order), consult Agent 08 (PauseMenu expectations), and have Agent 11 verify qa_smoke and boot."
+          }
+        },
+        "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "Mid-sprint corrective: fix UI hitbox/mode switching issues and overhaul visuals (CC0 UI art + layout)."
+          },
+          "pm_status_summary": {
+            "overall_status": "Core WK7 UI exists (ESC menu, build catalog, mode toggles), but human playtest reports major usability + aesthetic issues requiring a mid-sprint corrective push.",
+            "human_reports": {
+              "click_offset_build_menu": "Build-related UI requires clicking ~100–200px above the visible control to register.",
+              "display_mode_switching": "Graphics menu attempts mode changes but ends up staying fullscreen regardless of selection.",
+              "ui_look": "UI still looks clunky/grey/empty; no art skin; wasted space; massive always-present right sidebar.",
+              "windowed_position_locked": "After switching to windowed mode, the window is stuck at the top-left and cannot be moved around the desktop."
+            },
+            "evidence_assets": [
+              ".cursor/human_provided/week6-7 UI.JPG",
+              ".cursor/human_provided/Original Majesty UI Example.JPG"
+            ],
+            "locked_mid_sprint_decisions": {
+              "ui_look_approach": "Import a cohesive CC0 UI art pack (9-slice panels/buttons + icons).",
+              "right_panel_behavior": "Right panel becomes toggleable via Tab (not always visible)."
+            },
+            "gates": {
+              "automated": "python tools/qa_smoke.py --quick PASS required after each integration step",
+              "human_manual": [
+                "python main.py --no-llm (10 min)",
+                "python main.py --provider mock (10 min)"
+              ]
+            }
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK7-BUG-002",
+              "title": "UI click hitboxes are vertically offset (need to click above control)",
+              "severity": "major",
+              "build_target": "BuildA",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py",
+                "Try clicking the Build Buildings / build catalog controls (and other UI controls)",
+                "Observe click registers only when clicking significantly above the visible control"
+              ],
+              "expected": "Click target matches the visible control bounds.",
+              "actual": "Click registers offset upward by ~100–200px.",
+              "suspected_area": [
+                "Coordinate space mismatch between panel-local drawing and screen-space Rect hit-tests",
+                "Modal panels caching stale screen sizes after display mode changes"
+              ],
+              "constraints": [
+                "UI-only; do not change sim determinism.",
+                "Avoid per-frame allocations; preserve caching where possible."
+              ],
+              "proposed_fix": [
+                "Audit clickable rects in build-related UI and enforce consistent coordinate-space rules (panel-local vs screen-space).",
+                "Add explicit on_resize(w,h) hooks for PauseMenu / BuildCatalogPanel / HUD (as needed) and call them from apply_display_settings() after pygame.set_mode."
+              ],
+              "acceptance_test": [
+                "Manual: click targets align in fullscreen/borderless/windowed",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK7-BUG-003",
+              "title": "Graphics menu display mode switching appears to do nothing (stays fullscreen)",
+              "severity": "major",
+              "build_target": "BuildA",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py",
+                "ESC → Graphics → choose Windowed or Borderless",
+                "Observe screen flicker/attempt but ends up fullscreen anyway"
+              ],
+              "expected": "Windowed is obviously windowed (decorated/resizable); borderless is fullscreen-windowed; fullscreen is exclusive fullscreen.",
+              "actual": "Remains fullscreen regardless of selection (or looks fullscreen).",
+              "suspected_area": [
+                "Windowed defaults to desktop size so it looks fullscreen",
+                "SDL/pygame flags not clearing properly between modes on Windows",
+                "UI not receiving resized screen_w/h after mode change (layout/hitboxes stale)"
+              ],
+              "constraints": [
+                "UI/system-only; do not change sim determinism.",
+                "Avoid new persistent settings storage in BuildA unless trivial."
+              ],
+              "proposed_fix": [
+                "Make windowed mode default clearly smaller (e.g., 1280×720) unless prior windowed size exists.",
+                "Ensure mode switching clears/sets flags appropriately on Windows and triggers UI resize propagation.",
+                "Optional: minimal HUD toast showing the active mode + resolution after switching."
+              ],
+              "acceptance_test": [
+                "Manual: each mode is distinct and stable on Windows",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "status": "assigned"
+            }
+            ,
+            {
+              "id": "WK7-BUG-004",
+              "title": "Windowed mode window is stuck top-left and cannot be moved",
+              "severity": "major",
+              "build_target": "BuildA",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py",
+                "ESC → Graphics → switch to Windowed",
+                "Try dragging the window by the title bar around the desktop"
+              ],
+              "expected": "In windowed mode, the OS-decorated window can be dragged/moved normally.",
+              "actual": "Window appears locked to the top-left corner and cannot be moved.",
+              "suspected_area": [
+                "pygame/SDL window position handling when switching modes",
+                "Mode switch code may be forcing position (0,0) or reapplying a fixed position each frame",
+                "Possible use of borderless flags or SDL2 window APIs even in windowed mode"
+              ],
+              "constraints": [
+                "UI/system-only; do not change sim determinism.",
+                "Avoid brittle platform-specific hacks; prefer SDL/pygame-supported window positioning."
+              ],
+              "proposed_fix": [
+                "Ensure windowed mode uses RESIZABLE with OS decorations (no NOFRAME) and does not forcibly set window position after switching.",
+                "If we intentionally set a position during mode switch, set it ONCE (centered) and then stop touching it.",
+                "If using pygame._sdl2 Window, verify we are not pinning the position or recreating the window each frame."
+              ],
+              "acceptance_test": [
+                "Manual (Windows): after switching to windowed, user can drag/move the window anywhere.",
+                "Switching between modes preserves move-ability in windowed.",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_integration_order": [
+            "A) Agent 08: Fix click hitbox alignment + implement resize propagation hooks (unblocks reliable interaction).",
+            "B) Agent 03: Harden display mode switching and make windowed mode obviously windowed; ensure resize hooks are invoked.",
+            "C) Agent 09 + Agent 12: Import one cohesive CC0 UI art pack + attribution proof (Tools owns license/validator cleanliness).",
+            "D) Agent 08: Implement 9-slice skin + Tab-toggle right panel + reduce wasted space using the new art pack.",
+            "E) Agent 11: QA checklist + before/after screenshots; file bugs as needed."
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Fix WK7-BUG-002: audit build-related UI click targets and correct coordinate-space mismatches (panel-local draw vs screen-space hit-test).",
+                "Add `on_resize(w,h)` to PauseMenu and BuildCatalogPanel (and HUD if needed); ensure engine calls these after apply_display_settings() so modal rects and hitboxes match the new screen size.",
+                "Implement Tab toggling for the right-side panel; when hidden, reclaim space (HUD layout recompute) and show a small hint in top bar (e.g., 'Tab: Panel').",
+                "After UI pack lands: implement 9-slice skinning for panels/buttons in widgets, swap in textures for core frames/buttons, and tighten layout spacing to remove empty wasted areas."
+              ],
+              "acceptance_criteria": [
+                "No click offset in any display mode (fullscreen/borderless/windowed).",
+                "Right panel not always present; Tab toggles reliably; no input bleed.",
+                "UI looks materially less grey/black and closer to Majesty-level framing/affordances.",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "suggested_files": [
+                "game/ui/building_panel.py",
+                "game/ui/build_catalog_panel.py",
+                "game/ui/pause_menu.py",
+                "game/ui/hud.py",
+                "game/ui/widgets.py",
+                "game/engine.py"
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Fix WK7-BUG-003: ensure mode switching truly switches modes on Windows and that 'windowed' is obviously windowed (default to 1280×720 if needed).",
+                "Ensure apply_display_settings() triggers UI resize propagation (call HUD/PauseMenu/BuildCatalogPanel on_resize).",
+                "Fix WK7-BUG-004: in windowed mode, the OS window must be draggable/movable (not pinned top-left).",
+                "Optional: add a minimal confirmation UI (toast) after switching modes with mode+resolution."
+              ],
+              "acceptance_criteria": [
+                "Fullscreen/borderless/windowed are distinct and stable on Windows.",
+                "Switching to windowed yields a decorated resizable window (obvious).",
+                "Windowed mode window can be moved around the desktop (not pinned top-left).",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "suggested_files": [
+                "game/engine.py",
+                "config.py (defaults only, if needed)"
+              ]
+            },
+            "09": {
+              "status": "assigned_active",
+              "asks": [
+                "Pick ONE cohesive CC0 UI pack (panels/buttons/icons) and import a minimal curated subset.",
+                "Define a small texture contract for 9-slice panels (top/bottom/right/modal) and button states (normal/hover/pressed), plus a few key icons (Build/Hire/Bounty + menu tabs).",
+                "Ensure nearest-neighbor scaling (pixel crisp) and avoid bloat."
+              ],
+              "acceptance_criteria": [
+                "Assets live under assets/ui/<pack>/ and render crisply.",
+                "Coordinate with Agent 12 so license proof files are included under assets/third_party/<pack>/ (verbatim).",
+                "No missing paths; minimal subset imported."
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "asks": [
+                "Own attribution + license proof for the chosen CC0 UI pack:\n- Add assets/third_party/<pack>/{LICENSE,README} (verbatim)\n- Update assets/ATTRIBUTION.md with exact source + license proof\n- If validate_assets needs to include UI assets, update tooling carefully (no false positives).",
+                "Coordinate with Agent 09 on the 'UI texture contract' paths so UI code can load assets deterministically and safely."
+              ],
+              "acceptance_criteria": [
+                "Attribution is complete and consistent; license proof exists in-repo.",
+                "No tooling regressions; keep validator/qa_smoke clean."
+              ]
+            },
+            "13": {
+              "status": "consult_only",
+              "asks": [
+                "Optional: once UI pack is chosen, record a concise credit blurb suitable for future patch notes / store copy (no file changes required unless PM asks)."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "After each integration step (A–D), run `python tools/qa_smoke.py --quick` and log PASS/FAIL evidence.",
+                "Manual verify: click-hitbox alignment, display-mode switching on Windows, Tab toggle behavior, no startup crashes.",
+                "Capture before/after screenshots comparing against .cursor/human_provided/week6-7 UI.JPG and the Majesty reference."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick PASS",
+                "Manual checklist PASS or bug tickets filed"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "09", "11", "12"],
+            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "rationale": "Reactivated Agent 03 for WK7-BUG-004 (windowed window pinned top-left). Continue: UI pack (09) + attribution/tooling (12) + UI skin/layout (08) + QA (11)."
+          }
+        },
+        "wk7_r6_ui_skinning_layout_tightening_and_final_QA": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r6_ui_skinning_layout_tightening_and_final_QA_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "Closeout: UI visual overhaul integration + final QA/manual verification."
+          },
+          "pm_status_summary": {
+            "overall_status": "Blockers cleared: windowed mode is visually distinct and should be movable (Agent 03 fix), and CC0 UI pack + attribution are landed (Agent 09). Next step is UI skin integration + final QA proof.",
+            "done_claimed_by_agents": [
+              "Agent 08: click hitbox offset fix + Tab-toggle right panel + on_resize hooks (qa_smoke PASS)",
+              "Agent 03: windowed default 1280x720 + resize propagation calls + window pinned top-left fix (qa_smoke PASS)",
+              "Agent 09: CC0 UI pack delivered under assets/ui/kingdomsim_ui_cc0/ + license proof + ATTRIBUTION update (qa_smoke PASS)"
+            ],
+            "remaining_work": [
+              "Agent 08 must integrate 9-slice skin + icons and tighten layout to remove grey/black clunkiness.",
+              "Agent 11 must re-run qa_smoke + manual verification + before/after screenshots (including window drag/move check)."
+            ],
+            "gates": {
+              "automated": "python tools/qa_smoke.py --quick PASS",
+              "manual_windows": [
+                "Switch to windowed and drag/move the window freely",
+                "ESC menu + Build Catalog interaction correctness",
+                "Tab toggles right panel, no input bleed"
+              ],
+              "visual_proof": "Before/after screenshots compared to .cursor/human_provided/week6-7 UI.JPG and Majesty reference"
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Integrate the CC0 UI pack into UI rendering:\n- Use assets/ui/kingdomsim_ui_cc0/panels/* and buttons/* for Panel/ModalPanel frames and primary buttons.\n- Add icons (build/hire/bounty/graphics/audio/controls) to improve affordances.\n- Implement 9-slice rendering in game/ui/widgets.py with caching (no per-frame scaling).",
+                "Tighten layout to reduce wasted space:\n- Reduce oversized modal padding; compact rows/spacing.\n- Ensure right panel being hidden truly reclaims world space.\n- Keep color language warm (avoid grey/black dominance).",
+                "After changes: run `python tools/qa_smoke.py --quick` and capture 2–4 screenshots (ESC menu, build catalog, normal HUD with right panel hidden+shown)."
+              ],
+              "acceptance_criteria": [
+                "UI visibly improved (less grey/black, better framed, icons present, less wasted space).",
+                "No regressions in click hitboxes across display modes.",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "After Agent 08 lands skin/layout work, run:\n- `python tools/qa_smoke.py --quick`\nThen manual verify on Windows:\n- Switch to windowed and drag/move window freely (WK7-BUG-004 regression check)\n- ESC menu + Graphics switching + Audio slider\n- Build Catalog click-to-place\n- Tab toggles right panel; no input bleed\nCapture before/after screenshots."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick PASS",
+                "Manual checklist PASS (or file new WK7 bugs with repro + owner)",
+                "Screenshots captured for comparison"
+              ]
+            },
+            "03": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by in case Agent 11/human smoke finds remaining Windows window-position issues. If WK7-BUG-004 persists, iterate on a minimal fix without sim changes."
+              ]
+            },
+            "09": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by if Agent 08 needs additional icons or button states; extend the UI pack with the same palette and sizing."
+              ]
+            },
+            "12": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by if any tooling/validator adjustments are needed for the new UI assets; keep validate_assets and qa_smoke clean."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["08", "11"],
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
+            "rationale": "Closeout work is UI skin/layout integration (08) and QA proof (11). Others are stand-by unless QA finds regressions."
+          }
+        },
+        "wk7_r7_production_readiness_bugfixes_and_QA": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r7_production_readiness_bugfixes_and_QA_v1",
+            "build_target": "BuildA_release_candidate",
+            "pm_authored_at_local": "2026-01-18T00:00:00",
+            "visibility": "Final polish + production readiness: fix remaining fullscreen-resize + UI skin gaps; then final QA proof."
+          },
+          "pm_status_summary": {
+            "overall_status": "UI is now MUCH better per human playtest, but 3 issues remain before production: fullscreen expansion regression after windowed shrink, close X label overlap, and selected-building panel still grey/unskinned.",
+            "human_reports": {
+              "fullscreen_expand_regression": "After switching from windowed (shrunk) back to fullscreen, the play area/world does not expand back to fullscreen correctly; UI expands but world/play area stays shrunk.",
+              "close_x_text_overlap": "Grey text overlays the 'X' close button in the top right; remove/avoid the overlap.",
+              "selected_building_panel_grey": "The selected-building info panel is still grey/unskinned compared to the new UI."
+            },
+            "gates": {
+              "automated": "python tools/qa_smoke.py --quick PASS",
+              "manual_windows": [
+                "Windowed → Fullscreen transition: world/play area must expand and match UI",
+                "Close X is clean (no overlapping text)",
+                "Selected building panel uses the new textured skin"
+              ]
+            }
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK7-BUG-005",
+              "title": "World/play area does not re-expand when switching Windowed → Fullscreen",
+              "severity": "blocker",
+              "build_target": "BuildA_release_candidate",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py",
+                "ESC → Graphics → Windowed (choose a smaller window)",
+                "ESC → Graphics → Fullscreen",
+                "Observe UI expands but world/play area remains shrunk/incorrectly scaled"
+              ],
+              "expected": "After switching to fullscreen/borderless, world/play area and camera viewport use the new display size.",
+              "actual": "World/play area stays at the previous smaller size despite UI expanding.",
+              "suspected_area": [
+                "game/engine.py render pipeline: scaled surface/view surface sizing not recomputed on set_mode",
+                "Camera/viewport clamping uses stale window_width/height",
+                "Cached surfaces tied to old size not invalidated on display mode switch"
+              ],
+              "constraints": [
+                "UI/system-only; no sim determinism changes.",
+                "Keep perf-safe: recompute only on mode change, not per-frame."
+              ],
+              "proposed_fix": [
+                "On apply_display_settings: recompute any world-render target surfaces and scaling factors for the new screen size.",
+                "Ensure window_width/height and any HUD-reserved margins are updated before rendering/world viewport calculations.",
+                "If any cached surfaces depend on size, invalidate/rebuild them on resize."
+              ],
+              "acceptance_test": [
+                "Manual (Windows): windowed→fullscreen expands world correctly",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK7-BUG-006",
+              "title": "Grey label text overlaps the top-right close 'X' button",
+              "severity": "minor",
+              "build_target": "BuildA_release_candidate",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "expected": "Close button is clean and readable; no overlapping text.",
+              "actual": "Grey text overlays the X in the top right.",
+              "suspected_area": [
+                "game/ui/hud.py close button label rendering",
+                "Button widget draws both icon and label in same rect"
+              ],
+              "proposed_fix": [
+                "Remove the label for the X close button (icon-only), or move label away from the button rect.",
+                "Ensure hitbox remains correct and no text draws atop icon."
+              ],
+              "acceptance_test": [
+                "Manual: close X has no label overlap",
+                "qa_smoke --quick PASS"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK7-BUG-007",
+              "title": "Selected-building panel still grey/unskinned",
+              "severity": "major",
+              "build_target": "BuildA_release_candidate",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "expected": "Selected-building panel uses the same textured/9-slice skin as the rest of the UI.",
+              "actual": "Selected-building panel remains grey.",
+              "suspected_area": [
+                "game/ui/hud.py right panel selection rendering path for buildings",
+                "Panel style defaults not using textures for building summary panel"
+              ],
+              "proposed_fix": [
+                "Ensure building selection panel uses textured Panel/ModalPanel style.",
+                "If building summary uses a legacy path, route it through the new themed panel renderer."
+              ],
+              "acceptance_test": [
+                "Manual: selecting a building shows a skinned panel",
+                "qa_smoke --quick PASS"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK7-BUG-008",
+              "title": "Boot crash: apply_display_settings -> clamp_camera uses self.zoom before initialization (AttributeError: zoom)",
+              "severity": "blocker",
+              "build_target": "BuildA_release_candidate",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "evidence": [
+                "Trace: game/engine.py __init__ calls apply_display_settings(); apply_display_settings calls clamp_camera(); clamp_camera reads self.zoom but GameEngine has no attribute zoom yet."
+              ],
+              "repro_steps": [
+                "Run: python main.py",
+                "Observe crash during GameEngine.__init__ with AttributeError: 'GameEngine' object has no attribute 'zoom'"
+              ],
+              "expected": "Game boots successfully in all display modes; clamp_camera can always read zoom safely.",
+              "actual": "Crash on boot: AttributeError for self.zoom.",
+              "suspected_area": [
+                "game/engine.py initialization order for zoom/window sizing/camera",
+                "apply_display_settings called too early in __init__ before zoom is set"
+              ],
+              "constraints": [
+                "No simulation determinism changes; UI/system-only.",
+                "Keep fix minimal and robust (no reliance on optional attributes)."
+              ],
+              "proposed_fix": [
+                "Initialize self.zoom (and any related camera vars used by clamp_camera) before calling apply_display_settings in __init__.",
+                "Alternatively, make clamp_camera resilient: treat missing zoom as 1.0 and avoid AttributeError.",
+                "Re-run headless safety if applicable and ensure qa_smoke remains PASS."
+              ],
+              "acceptance_test": [
+                "python main.py boots (no crash)",
+                "python tools/qa_smoke.py --quick PASS"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_integration_order": [
+            "A) Agent 03 fixes WK7-BUG-008 (boot crash zoom init) immediately (release blocker).",
+            "B) Agent 03 fixes WK7-BUG-005 (world not expanding on fullscreen switch).",
+            "B) Agent 08 fixes WK7-BUG-006 and WK7-BUG-007 (close X overlap and building panel skin).",
+            "C) Agent 11 runs final QA proof + screenshots and files any remaining bugs."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Fix WK7-BUG-008: ensure GameEngine initializes self.zoom (and any camera vars clamp_camera needs) before apply_display_settings() calls clamp_camera; boot must not crash.",
+                "Fix WK7-BUG-005: ensure world/play area expands correctly when switching windowed→fullscreen/borderless (resize all world render targets + viewport/camera sizing).",
+                "After fix: run `python tools/qa_smoke.py --quick` and perform a quick manual repro on Windows."
+              ],
+              "acceptance_criteria": [
+                "Boot does not crash (no AttributeError on zoom)",
+                "Windowed→Fullscreen expands world correctly",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Fix WK7-BUG-006: remove/move any label text overlapping the close X (icon-only preferred).",
+                "Fix WK7-BUG-007: ensure selected-building panel uses the new textured skin (no grey legacy panel).",
+                "After fixes: run `python tools/qa_smoke.py --quick` and capture updated screenshots if visuals changed."
+              ],
+              "acceptance_criteria": [
+                "No close X overlap",
+                "Selected-building panel is skinned",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "After 03 and 08 land fixes, run `python tools/qa_smoke.py --quick`.",
+                "Manual (Windows): verify windowed→fullscreen expansion, close X looks clean, selected-building panel skinned, and no interaction regressions.",
+                "Capture final before/after screenshots for PM signoff."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick PASS",
+                "Manual checklist PASS or bug tickets filed",
+                "Screenshots captured"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03"],
+            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
+            "rationale": "Immediate release blocker: boot crash in GameEngine init (zoom not initialized). Assign to Agent 03 first; other fixes can proceed after boot is stable."
+          }
+        }
+      }
+    },
     "wk6-audio-buildmenu-fogbounties-explorexp": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",

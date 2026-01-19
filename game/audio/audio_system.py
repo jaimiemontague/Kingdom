@@ -76,6 +76,12 @@ class AudioSystem:
         self._cooldowns: Dict[str, float] = {}  # sound_key -> last_play_time_ms
         self._ambient_channel: Optional[pygame.mixer.Channel] = None
         self._ambient_sound: Optional[pygame.mixer.Sound] = None
+        self._ambient_base_volume: float = 0.4  # Base ambient volume (before master volume scaling)
+        
+        # WK7: Master volume control (UI-only, non-authoritative)
+        # Range: 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
+        # Default: 0.8 (80% per PM decision)
+        self._master_volume: float = 0.8
         
         # WK6 Mid-Sprint: Viewport and world context for visibility gating
         self._camera_x: float = 0.0
@@ -273,9 +279,12 @@ class AudioSystem:
         """
         Play a one-shot sound effect.
         
+        WK7: Master volume is applied automatically (master_volume * volume).
+        Volume changes are post-processing and do not affect simulation state.
+        
         Args:
             sound_key: Sound key (e.g., "building_place", "bow_release")
-            volume: Volume 0.0 to 1.0
+            volume: Per-sound volume 0.0 to 1.0 (will be multiplied by master volume)
         """
         if not self.enabled:
             return
@@ -286,7 +295,9 @@ class AudioSystem:
             return
         
         try:
-            sound.set_volume(float(volume))
+            # WK7: Apply master volume (multiplies per-sound volume)
+            final_volume = float(volume) * self._master_volume
+            sound.set_volume(max(0.0, min(1.0, final_volume)))  # Clamp to 0.0-1.0
             sound.play()
         except Exception:
             # Playback failed; no-op (audio should never crash sim)
@@ -296,9 +307,12 @@ class AudioSystem:
         """
         Play/loop an ambient track.
         
+        WK7: Master volume is applied automatically (master_volume * volume).
+        Volume changes are post-processing and do not affect simulation state.
+        
         Args:
             track_name: Track filename (without extension), default "ambient_loop" for Build A
-            volume: Volume 0.0 to 1.0, default 0.4 for Build A (cozy/peaceful tone)
+            volume: Per-track volume 0.0 to 1.0, default 0.4 for Build A (will be multiplied by master volume)
         """
         if not self.enabled:
             return
@@ -317,13 +331,18 @@ class AudioSystem:
         
         try:
             self._ambient_sound = pygame.mixer.Sound(str(track_file))
-            self._ambient_sound.set_volume(float(volume))
+            # Store base ambient volume (before master volume scaling)
+            self._ambient_base_volume = float(volume)
+            # WK7: Apply master volume (multiplies per-track volume)
+            final_volume = self._ambient_base_volume * self._master_volume
+            self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))  # Clamp to 0.0-1.0
             # Loop ambient (loops=-1 means infinite loop)
             self._ambient_channel = self._ambient_sound.play(loops=-1)
         except Exception:
             # Failed to load/play; no-op
             self._ambient_sound = None
             self._ambient_channel = None
+            self._ambient_base_volume = 0.4  # Reset to default
     
     def stop_ambient(self):
         """Stop ambient playback."""
@@ -337,4 +356,42 @@ class AudioSystem:
                 pass
         self._ambient_channel = None
         self._ambient_sound = None
+    
+    # WK7: Master volume control API (UI-only, non-authoritative)
+    
+    def set_master_volume(self, volume_0_to_1: float):
+        """
+        Set master volume (affects all SFX and ambient).
+        
+        WK7: This is the API surface for ESC menu → Audio page.
+        Volume is UI-only state and never affects simulation.
+        
+        Args:
+            volume_0_to_1: Master volume from 0.0 (mute) to 1.0 (full volume)
+                           UI should convert 0-100% slider to 0.0-1.0 range
+        """
+        # Clamp to valid range
+        self._master_volume = max(0.0, min(1.0, float(volume_0_to_1)))
+        
+        # Update ambient volume if playing (apply master volume to base ambient volume)
+        if self._ambient_sound is not None and self._ambient_channel is not None:
+            try:
+                # Apply master volume to stored base ambient volume
+                final_volume = self._ambient_base_volume * self._master_volume
+                self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))
+            except Exception:
+                # Failed to update; no-op (audio should never crash sim)
+                pass
+    
+    def get_master_volume(self) -> float:
+        """
+        Get current master volume.
+        
+        WK7: This is the API surface for ESC menu → Audio page.
+        
+        Returns:
+            Master volume from 0.0 (mute) to 1.0 (full volume)
+            UI should convert to 0-100% for display
+        """
+        return self._master_volume
 

@@ -4,15 +4,15 @@ overview: A 1-week, low-bug-risk broad-sweep sprint that advances clarity, incen
 todos:
   - id: lock-scope
     content: Lock sprint scope (P0/P1) and definition of done; confirm Build A vs Build B contents
-    status: pending
+    status: completed
   - id: assign-workstreams
     content: Assign tasks to each director with acceptance criteria and low-conflict file boundaries
-    status: pending
+    status: completed
     dependencies:
       - lock-scope
   - id: integration-order
     content: Define merge/integration order and midweek/endweek release gates (QA + determinism + perf)
-    status: pending
+    status: completed
     dependencies:
       - assign-workstreams
   - id: director-prompts
@@ -22,7 +22,7 @@ todos:
       - assign-workstreams
   - id: release-notes
     content: Draft patch notes outlines for Build A and Build B using template
-    status: pending
+    status: completed
     dependencies:
       - integration-order
 ---

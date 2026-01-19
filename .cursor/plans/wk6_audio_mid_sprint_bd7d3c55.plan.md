@@ -4,30 +4,30 @@ overview: Expand SFX coverage across gameplay actions and enforce on-screen + fo
 todos:
   - id: audio-visibility
     content: Add viewport+Visibility.VISIBLE audibility gate and wire camera/world context into AudioSystem
-    status: pending
+    status: completed
   - id: event-payloads
     content: Ensure sound-worthy events carry world positions (x/y or from/to) consistently across systems
-    status: pending
+    status: completed
     dependencies:
       - audio-visibility
   - id: expanded-contract
     content: Expand EVENT_CONTRACT.md and AudioSystem mapping/cooldowns to cover more real-world actions
-    status: pending
+    status: completed
     dependencies:
       - event-payloads
   - id: assets-attribution
     content: Add CC0 audio files for new sound keys; update assets/ATTRIBUTION.md and third_party proof files
-    status: pending
+    status: completed
     dependencies:
       - expanded-contract
   - id: tools-validate
     content: Update tools/assets_manifest.json + tools/validate_assets.py to validate new sound keys
-    status: pending
+    status: completed
     dependencies:
       - expanded-contract
   - id: qa-verify
     content: Run qa_smoke + validate_assets; add/adjust screenshot scenarios/checklists for audibility rule
-    status: pending
+    status: completed
     dependencies:
       - assets-attribution
       - tools-validate

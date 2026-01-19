@@ -2,6 +2,8 @@
 Main game engine - handles the game loop, input, and coordination.
 """
 import time
+import json
+from pathlib import Path
 import os
 import pygame
 from config import (
@@ -37,11 +39,42 @@ from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem
 from game.systems.buffs import BuffSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 from game.ui.building_list_panel import BuildingListPanel
-from game.ui.building_list_panel import BuildingListPanel
+from game.ui.pause_menu import PauseMenu
+from game.ui.build_catalog_panel import BuildCatalogPanel
 from game.graphics.font_cache import get_font
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms
+
+# Debug logging (WK7-BUG-008)
+def _debug_log(payload: dict):
+    # Write to repo-root .cursor/debug.log (plus legacy fallback paths).
+    repo_root = Path(__file__).resolve().parents[2]
+    primary_path = repo_root / ".cursor" / "debug.log"
+    paths = [
+        str(primary_path),
+        r"c:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\.cursor\debug.log",
+        r".cursor\debug.log",
+    ]
+    for path in paths:
+        try:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload) + "\n")
+        except Exception:
+            continue
+
+# #region agent log
+_debug_log({
+    "sessionId": "debug-session",
+    "runId": "pre-fix",
+    "hypothesisId": "H0",
+    "location": "game/engine.py:module_import",
+    "message": "engine module imported",
+    "data": {},
+    "timestamp": int(time.time() * 1000)
+})
+# #endregion
 
 
 
@@ -51,6 +84,21 @@ class GameEngine:
     def __init__(self, early_nudge_mode: str | None = None):
         pygame.init()
         pygame.font.init()
+        # #region agent log
+        _debug_log({
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "H4",
+            "location": "game/engine.py:__init__entry",
+            "message": "GameEngine.__init__ entry",
+            "data": {
+                "has_zoom": hasattr(self, "zoom"),
+                "has_camera_x": hasattr(self, "camera_x"),
+                "has_camera_y": hasattr(self, "camera_y")
+            },
+            "timestamp": int(time.time() * 1000)
+        })
+        # #endregion
 
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
@@ -66,34 +114,58 @@ class GameEngine:
         self._early_nudge_mode = (early_nudge_mode or EARLY_PACING_NUDGE_MODE or "auto").strip().lower()
         
         # -----------------------------
-        # Display / window mode (WK3)
+        # Display / window mode (WK7: runtime switching)
         # -----------------------------
-        # Default: borderless 1920x1080. Fallback: if display is smaller, use display resolution.
-        # NOTE: For headless smoke runs, SDL_VIDEODRIVER is often "dummy" and size/flags are ignored.
-        driver = str(os.environ.get("SDL_VIDEODRIVER", "")).lower()
-        info = pygame.display.Info()
-        disp_w = int(getattr(info, "current_w", WINDOW_WIDTH) or WINDOW_WIDTH)
-        disp_h = int(getattr(info, "current_h", WINDOW_HEIGHT) or WINDOW_HEIGHT)
+        # WK7: User settings model (UI-only, non-sim)
+        # Initialize with default (borderless if DEFAULT_BORDERLESS, else windowed)
+        initial_mode = "borderless" if DEFAULT_BORDERLESS else "windowed"
+        self.display_mode = initial_mode  # "fullscreen" | "borderless" | "windowed"
+        # WK7 Mid-Sprint: make windowed obviously windowed by default
+        self.window_size = (1280, 720)  # Saved size for windowed mode
+        
+        # Borderless drag state (WK7)
+        self._borderless_drag_active = False
+        self._borderless_drag_start_pos = None
+        self._borderless_drag_window_offset = None
 
-        desired_w = int(WINDOW_WIDTH)
-        desired_h = int(WINDOW_HEIGHT)
-        if disp_w < desired_w or disp_h < desired_h:
-            desired_w = max(1, disp_w)
-            desired_h = max(1, disp_h)
-
-        flags = 0
-        if DEFAULT_BORDERLESS and driver != "dummy":
-            flags |= pygame.NOFRAME
-            # Center on larger displays; pin to origin when matching display resolution.
-            if desired_w == disp_w and desired_h == disp_h:
-                os.environ.setdefault("SDL_VIDEO_WINDOW_POS", "0,0")
-            else:
-                os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
-
-        self.window_width = int(desired_w)
-        self.window_height = int(desired_h)
-        self.screen = pygame.display.set_mode((self.window_width, self.window_height), flags)
-        pygame.display.set_caption(GAME_TITLE)
+        # Camera (initialize before display settings for clamp safety)
+        self.camera_x = 0
+        self.camera_y = 0
+        self.zoom = 1.0
+        self.default_zoom = 1.0
+        # #region agent log
+        _debug_log({
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "H2",
+            "location": "game/engine.py:camera_init",
+            "message": "Camera initialized",
+            "data": {
+                "camera_x": self.camera_x,
+                "camera_y": self.camera_y,
+                "zoom": self.zoom
+            },
+            "timestamp": int(time.time() * 1000)
+        })
+        # #endregion
+        
+        # Apply initial display settings
+        # #region agent log
+        _debug_log({
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "H1",
+            "location": "game/engine.py:apply_display_settings_call",
+            "message": "Before initial apply_display_settings in __init__",
+            "data": {
+                "has_zoom": hasattr(self, "zoom"),
+                "display_mode": getattr(self, "display_mode", None),
+                "window_size": getattr(self, "window_size", None)
+            },
+            "timestamp": int(time.time() * 1000)
+        })
+        # #endregion
+        self.apply_display_settings(self.display_mode, self.window_size)
         self.clock = pygame.time.Clock()
         self.running = True
         self.paused = False
@@ -126,12 +198,6 @@ class GameEngine:
         
         # Initialize game world
         self.world = World()
-        
-        # Camera
-        self.camera_x = 0
-        self.camera_y = 0
-        self.zoom = 1.0
-        self.default_zoom = 1.0
 
         # Render surfaces (avoid per-frame allocations).
         self._view_surface = None
@@ -157,12 +223,23 @@ class GameEngine:
         self.neutral_building_system = NeutralBuildingSystem(self.world)
         self.buff_system = BuffSystem()
         
-        # UI
+        # WK7-BUG-001 FIX: Audio system MUST be initialized before PauseMenu
+        # (PauseMenu constructor requires audio_system parameter)
+        # Audio system (WK6: non-authoritative, event-driven sound effects and ambient music).
+        # Expected interface:
+        # - emit_from_events(events: list[dict]) -> None
+        # - set_ambient(track_name: str, volume: float) -> None
+        self.audio_system = AudioSystem(enabled=True)
+
+        # UI (must be initialized after audio_system - see WK7-BUG-001)
         self.hud = HUD(self.window_width, self.window_height)
         self.building_menu = BuildingMenu()
         self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
         self.debug_panel = DebugPanel(self.window_width, self.window_height)
         self.building_panel = BuildingPanel(self.window_width, self.window_height)
+        # WK7-BUG-001: PauseMenu requires audio_system, so it must be initialized after audio_system
+        self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
+        self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
         
         # Selection
         self.selected_building = None
@@ -182,12 +259,6 @@ class GameEngine:
         # - render(surface: pygame.Surface, camera_offset: tuple[int,int]) -> None
         # - emit_from_events(events: list[dict]) -> None
         self.vfx_system = VFXSystem()
-        
-        # Audio system (WK6: non-authoritative, event-driven sound effects and ambient music).
-        # Expected interface:
-        # - emit_from_events(events: list[dict]) -> None
-        # - set_ambient(track_name: str, volume: float) -> None
-        self.audio_system = AudioSystem(enabled=True)
         
         # Tax collector (created after castle is placed)
         self.tax_collector = None
@@ -283,6 +354,16 @@ class GameEngine:
                 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_mousedown(event)
+            
+            elif event.type == pygame.MOUSEBUTTONUP:
+                # WK7: Menu slider drag end
+                if self.pause_menu.visible and event.button == 1:
+                    self.pause_menu.handle_mouseup(event.pos)
+                # WK7: End borderless drag
+                if event.button == 1 and getattr(self, "_borderless_drag_active", False):
+                    self._borderless_drag_active = False
+                    self._borderless_drag_start_pos = None
+                    self._borderless_drag_window_offset = None
                 
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mousemove(event)
@@ -339,15 +420,34 @@ class GameEngine:
     
     def handle_keydown(self, event):
         """Handle keyboard input."""
+        # WK7: ESC menu takes priority
         if event.key == pygame.K_ESCAPE:
-            if self.building_list_panel.visible:
-                self.building_list_panel.close()
-                self.building_menu.cancel_selection()
-            elif self.building_menu.selected_building:
-                self.building_menu.cancel_selection()
+            if self.pause_menu.visible:
+                # Close menu (resume game)
+                self.pause_menu.close()
+                self.paused = False
             else:
-                self.paused = not self.paused
+                # Open menu (pause game)
+                self.pause_menu.open()
+                self.paused = True
+                # Also close building panels when opening menu
+                if self.building_list_panel.visible:
+                    self.building_list_panel.close()
+                    self.building_menu.cancel_selection()
+                if self.building_menu.selected_building:
+                    self.building_menu.cancel_selection()
+            return  # Consume ESC when menu is involved
+        
+        # Block world input when menu is open
+        if self.pause_menu.visible:
+            return
                 
+        elif event.key == pygame.K_TAB:
+            # WK7 mid-sprint: Toggle right-side panel
+            if hasattr(self.hud, "toggle_right_panel"):
+                self.hud.toggle_right_panel()
+            return
+
         elif event.key == pygame.K_1:
             self.select_building_for_placement("warrior_guild")
         elif event.key == pygame.K_2:
@@ -422,6 +522,23 @@ class GameEngine:
     
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
+        # WK7: Menu input handling (takes priority)
+        if self.pause_menu.visible:
+            if event.button == 1:  # Left click
+                action = self.pause_menu.handle_click(event.pos)
+                if action == "resume":
+                    self.pause_menu.close()
+                    self.paused = False
+                elif action == "quit":
+                    self.running = False
+                elif action and action.startswith("graphics_select_"):
+                    # Graphics page selection (already handled in PauseMenu.handle_click)
+                    pass
+                elif action == "audio_slider_drag":
+                    # Audio slider drag (already handled in PauseMenu.handle_mousemove)
+                    pass
+            return  # Consume all input when menu is open
+        
         # Mouse wheel zoom (older pygame uses buttons 4/5)
         if event.button == 4:
             self.zoom_by(ZOOM_STEP)
@@ -473,10 +590,24 @@ class GameEngine:
                 self.building_list_panel.close()
                 return
             
+            # Check if clicking on build catalog panel (WK7: castle-driven)
+            if self.build_catalog_panel.visible:
+                building_type = self.build_catalog_panel.handle_click(event.pos, self.economy, self.buildings)
+                if building_type:
+                    self.select_building_for_placement(building_type)
+                    return
+                # Click outside catalog - close it
+                self.build_catalog_panel.close()
+                return
+            
             # Check if clicking on building panel
             if self.building_panel.visible:
                 result = self.building_panel.handle_click(event.pos, self.economy, self.get_game_state())
-                if isinstance(result, dict) and result.get("type") == "demolish_building":
+                if isinstance(result, dict) and result.get("type") == "open_build_catalog":
+                    # WK7: Open build catalog from castle
+                    self.build_catalog_panel.open()
+                    return
+                elif isinstance(result, dict) and result.get("type") == "demolish_building":
                     # Handle player demolish action
                     building = result.get("building")
                     if building and building in self.buildings and building.building_type != "castle":
@@ -519,6 +650,25 @@ class GameEngine:
     
     def handle_mousemove(self, event):
         """Handle mouse movement."""
+        # WK7: Menu slider dragging
+        if self.pause_menu.visible:
+            self.pause_menu.handle_mousemove(event.pos)
+            return  # Consume mouse movement when menu is open
+        
+        # WK7: Borderless drag live-drag handling
+        if self._borderless_drag_active and self._borderless_drag_window_offset is not None:
+            try:
+                import pygame._sdl2
+                sdl_window = pygame._sdl2.Window.from_display_module()
+                if sdl_window:
+                    # Calculate new window position based on mouse position
+                    new_x = event.pos[0] + self._borderless_drag_window_offset[0]
+                    new_y = event.pos[1] + self._borderless_drag_window_offset[1]
+                    sdl_window.position = (new_x, new_y)
+            except (ImportError, AttributeError):
+                # pygame._sdl2 not available: already degraded
+                pass
+        
         if self.building_menu.selected_building:
             self.building_menu.update_preview(
                 event.pos, 
@@ -534,6 +684,10 @@ class GameEngine:
         
         # Update building panel hover state
         self.building_panel.update_hover(event.pos)
+        
+        # WK7: Update build catalog panel hover state
+        if self.build_catalog_panel.visible:
+            self.build_catalog_panel.update_hover(event.pos)
     
     def try_select_hero(self, screen_pos: tuple) -> bool:
         """Try to select a hero at the given screen position. Returns True if selected."""
@@ -1235,6 +1389,156 @@ class GameEngine:
                 # Audio should never crash the simulation
                 pass
     
+    def apply_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
+        """
+        WK7: Apply display mode settings (fullscreen/borderless/windowed).
+        
+        Args:
+            display_mode: "fullscreen" | "borderless" | "windowed"
+            window_size: (width, height) tuple for windowed mode. If None, uses current window_size.
+        
+        This is UI-only and does not affect simulation determinism.
+        """
+        # #region agent log
+        _debug_log({
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "H1",
+            "location": "game/engine.py:apply_display_settings_entry",
+            "message": "apply_display_settings entry",
+            "data": {
+                "display_mode": display_mode,
+                "window_size_arg": window_size,
+                "has_zoom": hasattr(self, "zoom"),
+                "zoom": getattr(self, "zoom", None)
+            },
+            "timestamp": int(time.time() * 1000)
+        })
+        # #endregion
+        # Update state
+        self.display_mode = str(display_mode)
+        if window_size is not None:
+            self.window_size = (int(window_size[0]), int(window_size[1]))
+        
+        # Check for headless/dummy driver (safe fallback)
+        # NOTE: Even with SDL_VIDEODRIVER=dummy, pygame.display.set_mode can return a Surface.
+        # We must still set window_width/window_height (and preferably screen) so the engine can boot.
+        driver = str(os.environ.get("SDL_VIDEODRIVER", "")).lower()
+
+        # Get display info (dummy driver may report 0; fall back to configured defaults)
+        info = pygame.display.Info()
+        disp_w = int(getattr(info, "current_w", WINDOW_WIDTH) or WINDOW_WIDTH)
+        disp_h = int(getattr(info, "current_h", WINDOW_HEIGHT) or WINDOW_HEIGHT)
+        # Use desktop sizes when possible (avoids fullscreen staying at old window size)
+        try:
+            desktop_sizes = pygame.display.get_desktop_sizes()
+            if desktop_sizes:
+                disp_w, disp_h = int(desktop_sizes[0][0]), int(desktop_sizes[0][1])
+        except Exception:
+            pass
+        
+        # Clear forced window position when leaving borderless
+        if display_mode != "borderless":
+            os.environ.pop("SDL_VIDEO_WINDOW_POS", None)
+            os.environ.pop("SDL_VIDEO_CENTERED", None)
+
+        # Determine size and flags based on mode
+        flags = 0
+        desired_w = self.window_size[0]
+        desired_h = self.window_size[1]
+        
+        if driver == "dummy":
+            # Headless mode: keep it simple and deterministic-safe.
+            # We still create a display surface so downstream code can query sizes.
+            flags = 0
+            display_mode = "windowed"
+
+        if display_mode == "fullscreen":
+            flags |= pygame.FULLSCREEN
+            desired_w = disp_w
+            desired_h = disp_h
+        elif display_mode == "borderless":
+            flags |= pygame.NOFRAME
+            # Borderless uses desktop resolution
+            desired_w = disp_w
+            desired_h = disp_h
+            # Center on larger displays; pin to origin when matching display resolution
+            if desired_w == disp_w and desired_h == disp_h:
+                os.environ.setdefault("SDL_VIDEO_WINDOW_POS", "0,0")
+            else:
+                os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
+        elif display_mode == "windowed":
+            flags |= pygame.RESIZABLE
+            # Use saved window_size
+            desired_w = max(1, min(desired_w, disp_w))
+            desired_h = max(1, min(desired_h, disp_h))
+            # Center once to avoid pinned top-left on mode switch
+            os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
+        else:
+            # Unknown mode: default to windowed
+            flags |= pygame.RESIZABLE
+        
+        # Apply display mode
+        self.window_width = int(desired_w)
+        self.window_height = int(desired_h)
+        self.screen = pygame.display.set_mode((self.window_width, self.window_height), flags)
+        # Ensure dimensions reflect the actual mode applied by SDL
+        self.window_width = int(self.screen.get_width())
+        self.window_height = int(self.screen.get_height())
+        pygame.display.set_caption(GAME_TITLE)
+        # Best-effort: center the window once when switching to windowed
+        if display_mode == "windowed":
+            try:
+                from pygame import _sdl2 as sdl2
+                sdl_window = sdl2.Window.from_display_module()
+                if sdl_window:
+                    center_x = max(0, int((disp_w - self.window_width) // 2))
+                    center_y = max(0, int((disp_h - self.window_height) // 2))
+                    sdl_window.position = (center_x, center_y)
+            except (ImportError, AttributeError):
+                pass
+        
+        # Recreate cached surfaces sized to window
+        self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
+        self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+        self._pause_overlay.fill((0, 0, 0, 128))
+        # Reset view surface so it gets resized on demand
+        self._view_surface = None
+        self._view_surface_size = (0, 0)
+        
+        # Update HUD size
+        if hasattr(self, "hud"):
+            self.hud.screen_width = self.window_width
+            self.hud.screen_height = self.window_height
+            if hasattr(self.hud, "on_resize"):
+                self.hud.on_resize(self.window_width, self.window_height)
+        # Resize modal panels if they expose on_resize (WK7 mid-sprint hitbox fix)
+        if hasattr(self, "pause_menu") and hasattr(self.pause_menu, "on_resize"):
+            self.pause_menu.on_resize(self.window_width, self.window_height)
+        if hasattr(self, "build_catalog_panel") and hasattr(self.build_catalog_panel, "on_resize"):
+            self.build_catalog_panel.on_resize(self.window_width, self.window_height)
+        if hasattr(self, "building_list_panel") and hasattr(self.building_list_panel, "on_resize"):
+            self.building_list_panel.on_resize(self.window_width, self.window_height)
+        # Clamp camera to new view bounds after mode change
+        if hasattr(self, "clamp_camera"):
+            # #region agent log
+            _debug_log({
+                "sessionId": "debug-session",
+                "runId": "pre-fix",
+                "hypothesisId": "H3",
+                "location": "game/engine.py:apply_display_settings_before_clamp",
+                "message": "Before clamp_camera in apply_display_settings",
+                "data": {
+                    "window_width": self.window_width,
+                    "window_height": self.window_height,
+                    "has_zoom": hasattr(self, "zoom"),
+                    "zoom": getattr(self, "zoom", None)
+                },
+                "timestamp": int(time.time() * 1000)
+            })
+            # #endregion
+            self.clamp_camera()
+    
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
         """Convert screen-space pixels to world-space pixels, accounting for zoom."""
         z = self.zoom if self.zoom else 1.0
@@ -1242,6 +1546,22 @@ class GameEngine:
 
     def clamp_camera(self):
         """Clamp camera to world bounds given current zoom."""
+        # #region agent log
+        _debug_log({
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "H3",
+            "location": "game/engine.py:clamp_camera_entry",
+            "message": "clamp_camera entry",
+            "data": {
+                "has_zoom": hasattr(self, "zoom"),
+                "zoom": getattr(self, "zoom", None),
+                "camera_x": getattr(self, "camera_x", None),
+                "camera_y": getattr(self, "camera_y", None)
+            },
+            "timestamp": int(time.time() * 1000)
+        })
+        # #endregion
         win_w = int(getattr(self, "window_width", self.screen.get_width()))
         win_h = int(getattr(self, "window_height", self.screen.get_height()))
         view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
@@ -1339,6 +1659,9 @@ class GameEngine:
         return {
             "screen_w": int(getattr(self, "window_width", self.screen.get_width())),
             "screen_h": int(getattr(self, "window_height", self.screen.get_height())),
+            # WK7: Display mode state for ESC Graphics menu
+            "display_mode": getattr(self, "display_mode", "windowed"),
+            "window_size": getattr(self, "window_size", (WINDOW_WIDTH, WINDOW_HEIGHT)),
             "gold": self.economy.player_gold,
             "heroes": self.heroes,
             "peasants": self.peasants,
@@ -1464,13 +1787,21 @@ class GameEngine:
             
             # Render building panel
             self.building_panel.render(self.screen, self.heroes, self.economy)
+            
+            # WK7: Render build catalog panel (castle-driven)
+            if self.build_catalog_panel.visible:
+                self.build_catalog_panel.render(self.screen, self.economy, self.buildings)
+
+            # WK7: Pause menu (rendered before pause overlay)
+            if self.pause_menu.visible:
+                self.pause_menu.render(self.screen)
 
             # Perf overlay (helps diagnose lag spikes)
             if self.show_perf:
                 self.render_perf_overlay(self.screen)
             
-            # Pause overlay
-            if self.paused:
+            # Pause overlay (only show if paused but menu not visible)
+            if self.paused and not self.pause_menu.visible:
                 self.screen.blit(self._pause_overlay, (0, 0))
                 
                 font = pygame.font.Font(None, 72)

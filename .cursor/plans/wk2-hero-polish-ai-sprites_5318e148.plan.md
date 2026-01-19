@@ -4,25 +4,25 @@ overview: A 1-week, two-build sprint to (1) eliminate janky hero behaviors (spaz
 todos:
   - id: wk2-scope-lock
     content: Lock sprint scope (P0/P1) and Build A vs Build B split for hero AI vs art deliverables
-    status: pending
+    status: completed
   - id: wk2-ai-jank
     content: "Hero AI jank fixes: anti-oscillation, stuck recovery, no-combat-inside gating, deterministic-safe logging"
-    status: pending
+    status: completed
     dependencies:
       - wk2-scope-lock
   - id: wk2-art-sprites
     content: Ship 4-class hero sprite set (idle/walk/attack/hurt/inside) with correct folder conventions and timing
-    status: pending
+    status: completed
     dependencies:
       - wk2-scope-lock
   - id: wk2-qa-tools
     content: Add deterministic repro scenarios + QA assertions for stuck recovery and inside-combat gating; keep qa_smoke green
-    status: pending
+    status: completed
     dependencies:
       - wk2-ai-jank
   - id: wk2-polish-release
     content: Finalize patch notes drafts for Build A and Build B and confirm release gate checklist
-    status: pending
+    status: completed
     dependencies:
       - wk2-qa-tools
       - wk2-art-sprites

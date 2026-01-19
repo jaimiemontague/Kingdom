@@ -21,9 +21,9 @@ class UITheme:
     right_panel_min_w: int = 320
     right_panel_max_w: int = 420
 
-    # Spacing
-    margin: int = 8
-    gutter: int = 8
+    # Spacing (WK7: Increased for better readability vs Majesty)
+    margin: int = 12  # Increased from 8 for better panel internal padding
+    gutter: int = 10  # Increased from 8 for better element spacing
 
     # Colors
     panel_bg: tuple[int, int, int] = COLOR_UI_BG
@@ -41,7 +41,8 @@ class UITheme:
     font_small: pygame.font.Font | None = field(init=False, default=None, repr=False, compare=False)
 
     def __post_init__(self):
-        self.font_title = pygame.font.Font(None, 24)
+        # WK7: Improved typography hierarchy (larger title for better readability)
+        self.font_title = pygame.font.Font(None, 28)  # Increased from 24
         self.font_body = pygame.font.Font(None, 20)
         self.font_small = pygame.font.Font(None, 16)
 

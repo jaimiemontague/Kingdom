@@ -1836,6 +1836,89 @@
             }
           }
         }
+      },
+      "wk7-ui-polish": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
+          "notes": "WK7 mid-sprint corrective: UI art pack import for 9-slice panels/buttons + icons."
+        },
+        "rounds": {
+          "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul": {
+            "sprint_id": "wk7-ui-polish",
+            "round_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul",
+            "status": "done",
+            "what_i_changed": {
+              "assets_added": [
+                "assets/ui/kingdomsim_ui_cc0/panels/panel_top.png",
+                "assets/ui/kingdomsim_ui_cc0/panels/panel_bottom.png",
+                "assets/ui/kingdomsim_ui_cc0/panels/panel_right.png",
+                "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png",
+                "assets/ui/kingdomsim_ui_cc0/buttons/button_normal.png",
+                "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png",
+                "assets/ui/kingdomsim_ui_cc0/buttons/button_pressed.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_build.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_hire.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_bounty.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_audio.png",
+                "assets/ui/kingdomsim_ui_cc0/icons/icon_controls.png",
+                "assets/ui/kingdomsim_ui_cc0/README.md"
+              ],
+              "license_proof": [
+                "assets/third_party/kingdomsim_ui_cc0/LICENSE_CC0-1.0.txt",
+                "assets/third_party/kingdomsim_ui_cc0/README.txt"
+              ],
+              "attribution_updates": [
+                "assets/ATTRIBUTION.md (added kingdomsim_ui_cc0 pack entry)"
+              ],
+              "summary": "Created a cohesive CC0 UI pack (9-slice panels, button states, UI icons) with contract docs and license proof for WK7 UI skinning."
+            },
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "qa_smoke": {
+                "status": "PASS",
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0
+              },
+              "notes": [
+                "UI assets are static; visual verification will occur after Agent 08 integrates 9-slice rendering."
+              ]
+            },
+            "risks_or_followups": [
+              "Agent 08 must use nearest-neighbor scaling and slice border=4px per README for crisp 9-slice panels.",
+              "If UI tinting is applied, ensure it does not wash out the warm palette and ink outlines.",
+              "If additional icons are needed, extend the pack using the same palette and 16x16 size."
+            ]
+          },
+          "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul_followup_01": {
+            "sprint_id": "wk7-ui-polish",
+            "round_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul",
+            "status": "done",
+            "what_i_changed": {
+              "summary": "No additional changes in this follow-up. CC0 UI pack + attribution were delivered in the prior entry and are ready for Agent 08's skinning integration.",
+              "files": []
+            },
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "qa_smoke": {
+                "status": "PASS (not re-run in this follow-up; no new changes)",
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0
+              },
+              "notes": [
+                "Awaiting Agent 08 integration to verify visual skinning; no new assets added in this follow-up."
+              ]
+            },
+            "blockers": [],
+            "risks_or_followups": [
+              "If Agent 08 needs additional icons or button states, I can extend the pack quickly using the same palette and sizing."
+            ]
+          }
+        }
       }
     }
   }

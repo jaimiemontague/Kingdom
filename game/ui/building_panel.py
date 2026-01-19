@@ -2,6 +2,7 @@
 Building detail panel for showing building information when clicked.
 """
 import pygame
+from game.ui.widgets import NineSlice
 from config import COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE, COLOR_GOLD, COLOR_GREEN, COLOR_RED
 
 
@@ -13,6 +14,10 @@ class BuildingPanel:
         self.screen_height = screen_height
         self.visible = False
         self.selected_building = None
+
+        # CC0 UI pack textures (WK7 R7)
+        self._panel_tex_modal = "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png"
+        self._panel_slice_border = 8
         
         # Panel dimensions
         self.panel_width = 300
@@ -40,6 +45,10 @@ class BuildingPanel:
         # Button for demolish
         self.demolish_button_rect = None
         self.demolish_button_hovered = False
+        
+        # WK7: Button for castle build catalog
+        self.build_catalog_button_rect = None
+        self.build_catalog_button_hovered = False
         
         # Hero portrait colors (simple colored circles as placeholders)
         self.portrait_colors = [
@@ -129,6 +138,11 @@ class BuildingPanel:
                         self.selected_building.potions_researched = True
                         return True
         
+        # WK7: Check build catalog button for castle
+        if self.build_catalog_button_rect and self.selected_building.building_type == "castle":
+            if self.build_catalog_button_rect.collidepoint(mouse_pos):
+                return {"type": "open_build_catalog"}
+        
         # Check upgrade button for palace
         if hasattr(self, "upgrade_button_rect") and self.upgrade_button_rect and self.selected_building.building_type == "palace":
             if self.upgrade_button_rect.collidepoint(mouse_pos):
@@ -157,6 +171,12 @@ class BuildingPanel:
             self.demolish_button_hovered = self.demolish_button_rect.collidepoint(mouse_pos)
         else:
             self.demolish_button_hovered = False
+        
+        # WK7: Build catalog button hover
+        if self.build_catalog_button_rect:
+            self.build_catalog_button_hovered = self.build_catalog_button_rect.collidepoint(mouse_pos)
+        else:
+            self.build_catalog_button_hovered = False
 
         self.library_research_hovered = None
         if self.visible and self.selected_building and self.selected_building.building_type == "library":
@@ -175,11 +195,17 @@ class BuildingPanel:
         # Reset per-frame clickable regions to avoid stale rects
         self.library_research_rects = {}
         
-        # Panel background
+        # Panel background (skinned)
         panel_surf = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
-        panel_surf.fill((*COLOR_UI_BG, 240))
-        pygame.draw.rect(panel_surf, COLOR_UI_BORDER, 
-                        (0, 0, self.panel_width, self.panel_height), 2)
+        if not NineSlice.render(
+            panel_surf,
+            pygame.Rect(0, 0, self.panel_width, self.panel_height),
+            self._panel_tex_modal,
+            border=self._panel_slice_border,
+        ):
+            panel_surf.fill((*COLOR_UI_BG, 240))
+            pygame.draw.rect(panel_surf, COLOR_UI_BORDER,
+                            (0, 0, self.panel_width, self.panel_height), 2)
         
         y = 10
         
@@ -420,6 +446,27 @@ class BuildingPanel:
         total_text = self.font_normal.render(f"Kingdom Heroes: {len(alive_heroes)}", True, COLOR_WHITE)
         surface.blit(total_text, (10, y))
         y += 25
+        
+        # WK7: Build buildings button (draw in panel-local coords, store screen-space rect)
+        button_w = self.panel_width - 20
+        button_h = 32
+        button_x = 10
+        button_y = y
+        local_rect = pygame.Rect(button_x, button_y, button_w, button_h)
+        self.build_catalog_button_rect = pygame.Rect(
+            self.panel_x + local_rect.x,
+            self.panel_y + local_rect.y,
+            local_rect.width,
+            local_rect.height,
+        )
+        bg_color = (70, 100, 120) if self.build_catalog_button_hovered else (60, 80, 100)
+        pygame.draw.rect(surface, bg_color, local_rect)
+        pygame.draw.rect(surface, COLOR_UI_BORDER, local_rect, 2)
+        button_text = self.font_normal.render("Build Buildings", True, COLOR_WHITE)
+        text_x = local_rect.centerx - button_text.get_width() // 2
+        text_y = local_rect.centery - button_text.get_height() // 2
+        surface.blit(button_text, (text_x, text_y))
+        y += button_h + 10
         
         return y
     

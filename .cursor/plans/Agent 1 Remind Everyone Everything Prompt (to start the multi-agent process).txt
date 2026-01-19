@@ -1,0 +1,9 @@
+Implement the plan as specified, it is attached for your reference. Do NOT edit the plan file itself.
+
+To-do's from the plan have already been created. Do not create them again. Mark them as in_progress as soon as you provide the prompt to all agents.
+
+@.cursor/plans/wk7-ui-polish_36a51780.plan.md will be shared with all relevant agents.  Please write your instructions to the other agents in this file: @.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json .  Then, provide me a prompt I can give to all agents that does the following:
+1. The agents need to regather their context from over a week ago.  Please have them review the necessary files like @.cursor/plans/studio-agent-cards_c3880ea5.plan.md to understand the system, and ask them to review the conversation (im using the same conversation i had with each agent from over a week ago) and their own logs to get caught up.
+2. ask them to reference the @.cursor/plans/wk7-ui-polish_36a51780.plan.md and @.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json to get their instructions on what to do.
+3. instruct them to reply to their agent logs (required), including any necessary instructions so that their responses will be captured in a way all agents can see so you can all work together.
+4.  Keep in mind it may take several rounds of agents working and replying, and you reviewing these replies and issuing additional plans, to complete the sprint.  Please go back and forth as much as necessary to make everything work together seemlessly (it may require some agents to wait a round or 2 if their steps require dependencies from other agents, for example.)  Please provide me the prompt to give to all agents and let me know which agents are involved / necessary to send the prompt to.

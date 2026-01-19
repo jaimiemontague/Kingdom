@@ -4,20 +4,20 @@ overview: Add a deterministic, scripted screenshot runner that can build represe
 todos:
   - id: shots-tool
     content: Add deterministic screenshot runner tool and scenario module (capture full + close-ups)
-    status: pending
+    status: completed
   - id: gallery-compare
     content: Generate simple HTML comparison gallery that includes our latest screenshots + images in `.cursor/plans/art_examples`
-    status: pending
+    status: completed
     dependencies:
       - shots-tool
   - id: qa-docs
     content: Document commands and add a checklist step; verify determinism and non-crash behavior
-    status: pending
+    status: completed
     dependencies:
       - shots-tool
   - id: ui-hooks-optional
     content: "(Optional) Add stable UI toggles for screenshot scenarios: force-open right panel/debug panel or hide UI layers for clean shots"
-    status: pending
+    status: completed
     dependencies:
       - shots-tool
 ---

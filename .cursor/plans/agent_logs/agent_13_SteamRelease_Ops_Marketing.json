@@ -672,6 +672,79 @@
           }
         }
       }
+    },
+    "wk7-ui-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
+        "notes": "WK7 mid-sprint corrective: UI hitbox/mode switching fixes + CC0 UI art pack integration + layout overhaul."
+      },
+      "rounds": {
+        "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul": {
+          "sprint_id": "wk7-ui-polish",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
+            "notes": "Mid-sprint corrective push; Agent 13 responsible for UI pack attribution proof."
+          },
+          "round_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul",
+          "round_meta": {
+            "prompt_set_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-18T17:32:19.2716143-07:00"
+          },
+          "prompt_text": "WK7 mid-sprint: fix UI hitbox offsets, make display mode switching obvious, and overhaul UI look with a cohesive CC0 UI pack. Agent 13: update attribution and license proof for the chosen UI pack.",
+          "response": {
+            "received_at_local": "2026-01-18T17:32:19.2716143-07:00",
+            "status": "blocked",
+            "raw": "### Status\nAgent 13 (SteamRelease_Ops_Marketing) — assigned to attribution proof for the chosen CC0 UI pack. Currently blocked awaiting the pack selection + source/license URLs from Agent 09.\n\n### Deliverables\n- Update `assets/ATTRIBUTION.md` for the chosen UI pack (exact source + license proof).\n- Add `assets/third_party/<pack_name>/{LICENSE,README}` with verbatim text and provenance notes.\n- Prepare credits bullets for patch notes readiness (pack name/author/license/source/used-for).\n\n### Blocker\n- **Blocked on Agent 09**: need the exact UI pack selection and canonical source/license URLs (plus which files are imported) before writing attribution and LICENSE/README files.\n\n### Next actions\n- Once Agent 09 posts the pack name + source URL(s), create the required attribution and license files and log the exact files changed.\n- After changes, run `python tools/qa_smoke.py --quick` and report PASS/FAIL.\n\n### Notes on scope\n- UI/system-only; no simulation determinism changes. No code changes planned from Agent 13 (attribution docs only).",
+            "summary_bullets": [
+              "Assigned to attribution proof for the CC0 UI art pack.",
+              "Blocked pending Agent 09's UI pack selection and source/license URLs.",
+              "No changes made yet; will update ATTRIBUTION + third_party license/readme once pack is confirmed."
+            ],
+            "proposed_changes": [
+              "Add `assets/third_party/<pack_name>/LICENSE*.txt` and `README.txt` (verbatim/provenance) once pack is selected.",
+              "Update `assets/ATTRIBUTION.md` with exact source, license, retrieved date, and used-for paths.",
+              "Provide patch-note credit bullets once attribution is complete."
+            ],
+            "acceptance_criteria": [
+              "Attribution is complete and consistent for the chosen UI pack.",
+              "License proof exists in-repo under `assets/third_party/<pack_name>/`.",
+              "`python tools/qa_smoke.py --quick` remains PASS after doc updates."
+            ],
+            "risks": [
+              "Attribution cannot be completed until a specific pack is selected.",
+              "Incorrect or missing license text could block release gates."
+            ],
+            "dependencies": [
+              "Agent 09: UI pack selection + canonical source/license URLs + list of imported files."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 09: post the final UI pack name + source/license URLs so attribution can proceed.",
+              "Agent 13: once received, add ATTRIBUTION + LICENSE/README files and re-run qa_smoke."
+            ],
+            "agent_fields": {
+              "what_i_changed": [],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "evidence": [
+                "BLOCKED: no changes yet; qa_smoke will be run after attribution files are added."
+              ],
+              "risks_or_followups": [
+                "Need pack selection from Agent 09 before attribution can be written.",
+                "Ensure LICENSE text is verbatim to avoid compliance issues."
+              ],
+              "blocker": {
+                "status": "blocked",
+                "needs": "UI pack selection + canonical source/license URLs + list of imported files",
+                "from": "09_ArtDirector_Pixel_Animation_VFX"
+              },
+              "pm_acknowledged": true
+            }
+          }
+        }
+      }
     }
   }
 }

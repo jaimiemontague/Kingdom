@@ -7,27 +7,27 @@ todos:
     status: completed
   - id: wk3-buildA-ui
     content: Implement borderless 1920x1080 default + new themed UI layout skeleton (top/bottom/right/minimap) with perf-safe widgets
-    status: pending
+    status: completed
     dependencies:
       - wk3-round1-lock
   - id: wk3-buildA-quit-button
     content: Add a clear, working Quit button in the HUD (top-left or top-right) so the player can exit reliably
-    status: pending
+    status: completed
     dependencies:
       - wk3-buildA-ui
   - id: wk3-buildA-closeable-panels
     content: "Make UI panels manageable: add an 'X' close button to hero details + debug/perf panels; move/reposition FPS/perf overlay to a less intrusive area"
-    status: pending
+    status: completed
     dependencies:
       - wk3-buildA-ui
   - id: wk3-buildB-assets
     content: Ingest CC0/open-license pixel art for all current heroes/enemies/buildings into existing sprite directories; add attribution files
-    status: pending
+    status: completed
     dependencies:
       - wk3-round1-lock
   - id: wk3-validation-qa
     content: Add asset presence validation + regression coverage; keep qa_smoke green
-    status: pending
+    status: completed
     dependencies:
       - wk3-buildA-ui
       - wk3-buildB-assets

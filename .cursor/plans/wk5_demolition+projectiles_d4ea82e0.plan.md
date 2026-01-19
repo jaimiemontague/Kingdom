@@ -20,7 +20,7 @@ todos:
       - wk5-projectile-events
   - id: wk5-ranger-bow
     content: Update ranger attack visuals to read as bow shooting (sprite cue + projectile coherence)
-    status: in_progress
+    status: completed
     dependencies:
       - wk5-vfx-arrows
   - id: wk5-workers-assets

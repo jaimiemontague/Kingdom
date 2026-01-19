@@ -442,21 +442,35 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
     def _apply_clear(engine2):
         engine2.selected_hero = None
         engine2.selected_building = None
+        try:
+            engine2.screenshot_hide_ui = False
+        except Exception:
+            pass
         if hasattr(engine2, "debug_panel"):
             engine2.debug_panel.visible = False
 
     def _apply_select_hero(engine2):
         _apply_clear(engine2)
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = True
         engine2.selected_hero = hero
 
     def _apply_select_building(engine2):
         _apply_clear(engine2)
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = True
         engine2.selected_building = inn
 
     def _apply_debug_open(engine2):
         _apply_select_hero(engine2)
         if hasattr(engine2, "debug_panel"):
             engine2.debug_panel.visible = True
+
+    def _apply_right_panel_hidden(engine2):
+        _apply_clear(engine2)
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = False
+        engine2.selected_hero = hero
 
     cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
     cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
@@ -469,6 +483,15 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             zoom=1.4,
             meta={"scenario": "ui_panels", "mode": "hero"},
             apply=_apply_select_hero,
+        ),
+        Shot(
+            filename="ui_panels_hidden.png",
+            label="UI Panels: Right Panel Hidden",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            meta={"scenario": "ui_panels", "mode": "hidden"},
+            apply=_apply_right_panel_hidden,
         ),
         Shot(
             filename="ui_panels_building.png",
@@ -487,6 +510,75 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             zoom=1.4,
             meta={"scenario": "ui_panels", "mode": "debug"},
             apply=_apply_debug_open,
+        ),
+    ]
+
+
+def scenario_ui_pause_menu(engine, *, seed: int) -> list[Shot]:
+    """Capture the ESC pause menu UI."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    def _apply_pause(engine2):
+        try:
+            engine2.screenshot_hide_ui = False
+        except Exception:
+            pass
+        if hasattr(engine2, "pause_menu"):
+            engine2.pause_menu.open()
+            engine2.pause_menu.current_page = "main"
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+    return [
+        Shot(
+            filename="ui_pause_menu.png",
+            label="UI: Pause Menu (ESC)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.2,
+            meta={"scenario": "ui_pause_menu", "seed": int(seed)},
+            apply=_apply_pause,
+        ),
+    ]
+
+
+def scenario_ui_build_catalog(engine, *, seed: int) -> list[Shot]:
+    """Capture the castle build catalog UI."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    def _apply_catalog(engine2):
+        try:
+            engine2.screenshot_hide_ui = False
+        except Exception:
+            pass
+        if hasattr(engine2, "build_catalog_panel"):
+            engine2.build_catalog_panel.open()
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+    return [
+        Shot(
+            filename="ui_build_catalog.png",
+            label="UI: Build Catalog",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.2,
+            meta={"scenario": "ui_build_catalog", "seed": int(seed)},
+            apply=_apply_catalog,
         ),
     ]
 
@@ -880,6 +972,10 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_base_overview(engine, seed=int(seed))
     if scenario_name == "ui_panels":
         return scenario_ui_panels(engine, seed=int(seed))
+    if scenario_name == "ui_pause_menu":
+        return scenario_ui_pause_menu(engine, seed=int(seed))
+    if scenario_name == "ui_build_catalog":
+        return scenario_ui_build_catalog(engine, seed=int(seed))
     if scenario_name == "worker_catalog":
         return scenario_worker_catalog(engine, seed=int(seed))
     if scenario_name == "ranged_projectiles":

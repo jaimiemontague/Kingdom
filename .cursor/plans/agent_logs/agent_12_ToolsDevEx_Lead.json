@@ -1706,6 +1706,73 @@
                   "blockers": []
                 }
               }
+            },
+            "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul": {
+              "sprint_id": "wk7-ui-polish",
+              "round_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk7-ui-mid-sprint-fixes_ee679127.plan.md",
+                "notes": "WK7 Mid-Sprint: UI Bugs + Display Modes + Visual Overhaul"
+              },
+              "round_meta": {
+                "prompt_set_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul_v1",
+                "build_target": "BuildA_midweek",
+                "sent_at_local": "2026-01-18T00:00:00"
+              },
+              "status": "done",
+              "what_i_changed": {
+                "files": [],
+                "summary": "Verified attribution and license proof completeness for kingdomsim_ui_cc0 UI pack (already imported by Agent 09). Confirmed UI texture contract paths are documented and tooling gates pass.",
+                "attribution_verification": [
+                  "assets/ATTRIBUTION.md: Verified kingdomsim_ui_cc0 entry exists with complete metadata (author, license, source, file locations)",
+                  "assets/third_party/kingdomsim_ui_cc0/LICENSE_CC0-1.0.txt: Verified CC0 1.0 Universal license proof exists (verbatim)",
+                  "assets/third_party/kingdomsim_ui_cc0/README.txt: Verified pack documentation exists with file inventory"
+                ],
+                "ui_texture_contract_verification": [
+                  "assets/ui/kingdomsim_ui_cc0/README.md: Verified UI texture contract documented (9-slice panels, button states, icons, scaling rules)",
+                  "Contract paths: assets/ui/kingdomsim_ui_cc0/panels/*.png, buttons/*.png, icons/*.png",
+                  "Contract details: 32x32 panels (4px slice border), 24x24 buttons, 16x16 icons, nearest-neighbor scaling"
+                ],
+                "tooling_verification": [
+                  "tools/validate_assets.py: No changes needed (UI assets not in manifest; validator focuses on sprites/audio)",
+                  "No tooling regressions: validator passes with expected audio warnings only"
+                ]
+              },
+              "how_to_test": [
+                "python tools/validate_assets.py --report (should show 0 errors, 4 warnings for missing audio SFX only)",
+                "python tools/qa_smoke.py --quick (should PASS all gates)"
+              ],
+              "evidence": {
+                "validate_assets": {
+                  "command": "python tools/validate_assets.py --report",
+                  "exit_code": 0,
+                  "output_summary": "errors=0 warns=4 (expected: missing audio SFX files hero_hired, purchase, ui_confirm, ui_error)",
+                  "status": "PASS"
+                },
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "output_summary": "All gates PASS: determinism_guard, base, bounty scenario, hero_stuck_repro, no-enemies, mock-LLM",
+                  "status": "PASS"
+                },
+                "attribution_completeness": {
+                  "attribution_file": "assets/ATTRIBUTION.md",
+                  "license_proof": "assets/third_party/kingdomsim_ui_cc0/LICENSE_CC0-1.0.txt",
+                  "pack_readme": "assets/third_party/kingdomsim_ui_cc0/README.txt",
+                  "ui_contract": "assets/ui/kingdomsim_ui_cc0/README.md",
+                  "status": "COMPLETE"
+                }
+              },
+              "blockers": [],
+              "dependencies": {
+                "agent_09_completed": "Agent 09 (ArtDirector) already imported kingdomsim_ui_cc0 pack and added attribution. Verification complete.",
+                "agent_08_coordination": "Agent 08 (UX_UI_Director) will use UI texture contract paths from assets/ui/kingdomsim_ui_cc0/README.md for 9-slice skinning implementation."
+              },
+              "notes": [
+                "Attribution and license proof were already complete from Agent 09's work. Agent 12 verified completeness and confirmed tooling gates pass.",
+                "UI texture contract is documented in assets/ui/kingdomsim_ui_cc0/README.md with clear paths and scaling rules for Agent 08's implementation.",
+                "No tooling changes required: validate_assets.py does not validate UI assets (focuses on sprites/audio), so no false positives or regressions."
+              ]
             }
           }
         }

@@ -66,6 +66,20 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: kingdomsim_ui_cc0
+- **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
+- **License**: CC0-1.0 (see `assets/third_party/kingdomsim_ui_cc0/LICENSE_CC0-1.0.txt`)
+- **Source**: Generated in-repo (see `assets/third_party/kingdomsim_ui_cc0/README.txt`)
+- **Retrieved**: 2026-01-18
+- **Modifications**: N/A (generated directly as pixel-aligned UI textures/icons)
+- **Used for**: UI panels, buttons, and icons
+- **File locations**:
+  - `assets/ui/kingdomsim_ui_cc0/panels/*.png`
+  - `assets/ui/kingdomsim_ui_cc0/buttons/*.png`
+  - `assets/ui/kingdomsim_ui_cc0/icons/*.png`
+
+---
+
 ## Audio Assets
 
 ### Pack: Kenney Game Assets: Audio
