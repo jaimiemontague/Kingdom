@@ -551,6 +551,17 @@ class BuildingPanel:
         if not building:
             return
         try:
+            # v1.3 extension: Blacksmith uses `research(research_name, economy, game_state)`
+            # where research_name is "Weapon Upgrades" / "Armor Upgrades".
+            if callable(getattr(building, "research", None)):
+                try:
+                    return building.research(key, economy, game_state)
+                except TypeError:
+                    try:
+                        return building.research(key, economy)
+                    except TypeError:
+                        return building.research(key)
+
             if hasattr(building, "research_upgrade"):
                 try:
                     return building.research_upgrade(key, economy, game_state)
@@ -592,35 +603,34 @@ class BuildingPanel:
         surface.blit(info_text, (10, y))
         y += 20
 
-        has_research_impl = any(
+        # v1.3 extension: Blacksmith exposes `available_research` list + `research(name, economy, game_state)`
+        # Keep backward-compat, but don't hide UI when the new API is present.
+        has_research_impl = callable(getattr(building, "research", None)) or any(
             callable(getattr(building, name, None))
             for name in ("research_upgrade", "research_weapon_upgrade", "research_armor_upgrade")
         )
-        has_cost_data = any(
-            hasattr(building, name)
-            for name in ("weapon_upgrade_cost", "armor_upgrade_cost", "weapon_research_cost", "armor_research_cost")
-        )
-        if not (has_research_impl or has_cost_data):
+        has_research_data = isinstance(getattr(building, "available_research", None), list)
+        if not (has_research_impl and has_research_data):
             return y
 
         # Separator
         pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
         y += 10
 
-        options = [
-            {
-                "key": "weapon",
-                "label": "Weapon Upgrade",
-                "cost": int(getattr(building, "weapon_upgrade_cost", getattr(building, "weapon_research_cost", 150))),
-                "done": bool(getattr(building, "weapon_upgrade_researched", getattr(building, "weapon_researched", False))),
-            },
-            {
-                "key": "armor",
-                "label": "Armor Upgrade",
-                "cost": int(getattr(building, "armor_upgrade_cost", getattr(building, "armor_research_cost", 150))),
-                "done": bool(getattr(building, "armor_upgrade_researched", getattr(building, "armor_researched", False))),
-            },
-        ]
+        # Use the building's declared research options.
+        options = []
+        for item in getattr(building, "available_research", []) or []:
+            name = str(item.get("name", "")).strip()
+            if not name:
+                continue
+            options.append(
+                {
+                    "key": name,  # key is the research name, passed back into building.research(...)
+                    "label": name,
+                    "cost": int(item.get("cost", 0) or 0),
+                    "done": bool(item.get("researched", False)),
+                }
+            )
 
         for opt in options:
             if opt["done"]:
