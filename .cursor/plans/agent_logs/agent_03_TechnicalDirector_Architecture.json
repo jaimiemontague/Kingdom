@@ -1716,6 +1716,73 @@
               }
             }
           }
+        },
+        "ai-studio-infrastructure": {
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/ai_studio_infrastructure_progress.md",
+            "notes": "Architecture review of AI Studio infra docs and agent card alignment."
+          },
+          "rounds": {
+            "infra_r1": {
+              "sprint_id": "ai-studio-infrastructure",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/ai_studio_infrastructure_progress.md",
+                "notes": ""
+              },
+              "round_id": "infra_r1",
+              "round_meta": {
+                "prompt_set_id": "ai_studio_infra_r1",
+                "build_target": "Infra",
+                "sent_at_local": "2026-01-21T18:00:00"
+              },
+              "prompt_text": "You are Agent 3. Review AI Studio structure + infra progress + agent cards and provide architecture-level guardrails, data contracts, and next-step recommendations.",
+              "response": {
+                "received_at_local": "2026-01-21T18:00:00",
+                "status": "complete",
+                "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — reviewed AI Studio infra docs and agent card set. Delivering **architecture-level guardrails + data contracts** for the agent logging system so it stays scalable, consistent, and low-risk to evolve.\n\n### Deliverables\n- **Data contract proposals** for agent-log indexing and schema validation.\n- **Consistency guardrails** for timestamps, round IDs, and PM hub references.\n- **Low-risk next steps** that can be implemented without touching gameplay code.\n\n### Questions (max 3)\n1) Do you want the infra changes to land as **docs-only** (contracts + checklist), or should Agent 12 implement tooling (`validate_agent_logs.py`) in the same sprint?\n2) Should we formalize an **index.json** as the single “current round” pointer (recommended), or keep it optional for now?\n\n### Next actions\n- Draft a small `agent_log_schema.json` + validation checklist.\n- Define `agent_logs/index.json` contract (current sprint/round, active agents, plan refs, PM hub ref).\n- Standardize timestamps to ISO8601 with local offset in all new entries.",
+                "summary_bullets": [
+                  "Reviewed AI Studio infra docs and identified low-risk architecture improvements for log consistency.",
+                  "Proposed an index contract to point to the current sprint/round + PM hub reference.",
+                  "Recommended lightweight schema validation to prevent drift across 14 agent logs."
+                ],
+                "proposed_changes": [
+                  "Add `agent_logs/index.json` with `current_sprint_id`, `current_round_id`, `active_agents`, `plan_ref`, `pm_hub_ref`, and `last_updated` (ISO8601).",
+                  "Add `agent_logs/agent_log_schema.json` (JSON schema) and optional `tools/validate_agent_logs.py` for CI/local validation.",
+                  "Standardize timestamp fields to ISO8601 with local offset; use `sent_at_local`/`received_at_local` consistently."
+                ],
+                "acceptance_criteria": [
+                  "Index contract is documented and adopted for the current sprint/round pointer.",
+                  "Agent logs validate against a common schema (manual checklist or tool), with no missing required fields.",
+                  "New entries use consistent ISO8601 timestamps with offset."
+                ],
+                "risks": [
+                  "Schema/tooling adds overhead if rolled out mid-sprint; keep optional and low-friction.",
+                  "Index file could drift if not updated; mitigate with a tiny update checklist in PM workflow."
+                ],
+                "dependencies": [
+                  "PM (Agent 01): decide whether index/schema changes should be adopted now or deferred.",
+                  "ToolsDevEx (Agent 12): implement validation tooling if approved."
+                ],
+                "questions_back_to_pm": [
+                  "Confirm whether you want the index/schema changes implemented now or documented as a future improvement."
+                ],
+                "recommended_next_actions": [
+                  "PM: decide on index/schema adoption timing; if yes, assign Agent 12 to implement tooling.",
+                  "PM: add a short update checklist in the sprint plan for `agent_logs/index.json`.",
+                  "Agent 03: provide a draft JSON schema + index contract text if greenlit."
+                ],
+                "agent_fields": {
+                  "proposed_contracts": [
+                    "agent_logs/index.json (current_sprint_id, current_round_id, active_agents, plan_ref, pm_hub_ref, last_updated)",
+                    "agent_logs/agent_log_schema.json (required fields: sprint_id, round_id, round_meta, response.status, summary/proposals/criteria/risks/dependencies)"
+                  ],
+                  "determinism_notes": [
+                    "Logging infrastructure is out-of-sim; no determinism impact if kept UI/ops-only."
+                  ]
+                }
+              }
+            }
+          }
         }
       }
     }

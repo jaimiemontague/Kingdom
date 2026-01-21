@@ -16,6 +16,9 @@
     - Department lead definitions (ExecutiveProducer_PM, GameDirector_ProductOwner, TechnicalDirector_Architecture, etc.)
     - Shared engagement rules: modular work, small increments, async coordination, multiplayer guardrails.
     - Required response format per agent (Status/Deliverables/Questions/Next actions).
+- **Legacy visual roster (historical)**:
+  - `.cursor/plans/AI Studio Structure - 13 Directors.JPG`
+  - This screenshot shows the original 13-director roster; the live source of truth is the agent cards doc (now 14 directors, including SoundDirector_Audio).
 
 - **Project QA scaffolding already present** (important because it becomes the “release gate” for lightweight builds):
   - `QA_TEST_PLAN.md`
@@ -340,12 +343,12 @@ These are not required, but will make future sprints smoother.
   - `.cursor/plans/agent_logs/index.json`
   - Records which sprint/round is “current,” plus links to plan files and key decisions.
 
-- **Add a tiny synthesis tool** (ToolsDevEx agent):
-  - A script that reads all 13 JSON files and prints:
-    - per-agent blockers
-    - aggregated risks
-    - dependency graph
-  - This is optional; manual PM synthesis is fine for now.
+- **Added a tiny synthesis tool** (ToolsDevEx agent):
+  - `tools/agent_log_synthesis.py`
+  - Reads agent JSON logs and prints:
+    - per-agent questions/risks/dependencies + next actions
+    - aggregated questions/risks/dependencies (for quick triage)
+  - Still optional; manual PM synthesis is fine for now.
 
 - **Standardize timestamps**:
   - Choose ISO8601 local (with offset) everywhere.

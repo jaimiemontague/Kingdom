@@ -76,6 +76,9 @@ class Hero:
         self.potions = 0
         self.max_potions = 5  # Can carry up to 5 potions
         self.potion_heal_amount = 50
+        # Shopping / purchase tracking (sim-time)
+        self.last_purchase_ms: int | None = None
+        self.last_purchase_type: str = ""
         
         # AI State
         self.state = HeroState.IDLE
@@ -410,7 +413,13 @@ class Hero:
             self.weapon = {"name": item["name"], "attack": item["attack"]}
         elif item["type"] == "armor":
             self.armor = {"name": item["name"], "defense": item["defense"]}
-        
+
+        # Track successful purchase for journey triggers (sim-time only).
+        try:
+            self.last_purchase_ms = int(sim_now_ms())
+        except Exception:
+            self.last_purchase_ms = None
+        self.last_purchase_type = str(item.get("type", "")) if item else ""
         return True
     
     def wants_to_shop(self, marketplace_has_potions: bool) -> bool:

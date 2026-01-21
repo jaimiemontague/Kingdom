@@ -64,6 +64,9 @@ class BasicAI:
         self.bounty_pick_cooldown_ms = 2500
         self.bounty_max_pursue_ms = 35000
         self.bounty_claim_radius_px = TILE_SIZE * 2
+        # Journey tuning (post-shopping exploration/assault)
+        self.journey_trigger_window_ms = 10000
+        self.journey_cooldown_ms = 45000
 
     # -----------------------
     # Intent + decision helpers
@@ -535,7 +538,9 @@ class BasicAI:
                     if marketplace:
                         # Briefly "enter" the building (Majesty-style) for clarity.
                         hero.enter_building_briefly(marketplace, duration_sec=0.5)
-                        self.do_shopping(hero, marketplace, game_state)
+                        started_journey = self.do_shopping(hero, marketplace, game_state)
+                        if started_journey:
+                            return
                     hero.target = None
                     hero.target_position = None
                     hero.state = HeroState.IDLE
@@ -642,20 +647,24 @@ class BasicAI:
         if not marketplace:
             hero.state = HeroState.IDLE
             return
-        
-        self.do_shopping(hero, marketplace, game_state)
+
+        started_journey = self.do_shopping(hero, marketplace, game_state)
+        if started_journey:
+            return
         hero.state = HeroState.IDLE
     
-    def do_shopping(self, hero, marketplace, game_state: dict):
+    def do_shopping(self, hero, marketplace, game_state: dict) -> bool:
         """Actually perform shopping at a marketplace."""
         economy = game_state.get("economy")
         items = marketplace.get_available_items()
+        purchased_types: set[str] = set()
         
         # Priority 1: Buy a potion if we have none
         if hero.potions == 0 and hero.gold >= 20:
             for item in items:
                 if item["type"] == "potion":
                     if hero.buy_item(item):
+                        purchased_types.add("potion")
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
@@ -665,6 +674,7 @@ class BasicAI:
             for item in items:
                 if item["type"] == "potion" and hero.gold >= item["price"]:
                     if hero.buy_item(item):
+                        purchased_types.add("potion")
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
@@ -675,6 +685,7 @@ class BasicAI:
                 current_attack = hero.weapon.get("attack", 0) if hero.weapon else 0
                 if item["attack"] > current_attack:
                     if hero.buy_item(item):
+                        purchased_types.add("weapon")
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
@@ -685,9 +696,13 @@ class BasicAI:
                 current_defense = hero.armor.get("defense", 0) if hero.armor else 0
                 if item["defense"] > current_defense:
                     if hero.buy_item(item):
+                        purchased_types.add("armor")
                         if economy:
                             economy.hero_purchase(hero.name, item["name"], item["price"])
                         break
+
+        # Post-shopping journey trigger (full health + recent purchase)
+        return self._maybe_start_journey(hero, game_state, purchased_types)
     
     def start_retreat(self, hero, game_state: dict):
         """Start retreating to safety."""
@@ -717,8 +732,168 @@ class BasicAI:
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "item": item_name}
                 break
+
+    # -----------------------
+    # Journey behavior (v1.3)
+    # -----------------------
+
+    def _maybe_start_journey(self, hero, game_state: dict, purchased_types: set[str] | None) -> bool:
+        """Start a post-shopping journey if conditions are met."""
+        if not purchased_types:
+            return False
+        if hero.hp < hero.max_hp:
+            return False
+        last_purchase_ms = getattr(hero, "last_purchase_ms", None)
+        if last_purchase_ms is None:
+            return False
+        now_ms = int(sim_now_ms())
+        if (now_ms - int(last_purchase_ms)) > int(self.journey_trigger_window_ms):
+            return False
+        cooldown_until = int(getattr(hero, "_journey_cooldown_until_ms", 0) or 0)
+        if now_ms < cooldown_until:
+            return False
+
+        hero_class = str(getattr(hero, "hero_class", "warrior") or "warrior")
+        chance = 0.75
+        if hero_class == "rogue":
+            chance = 0.7
+        elif hero_class == "warrior":
+            chance = 0.8
+        elif hero_class == "ranger":
+            chance = 0.85
+        if _AI_RNG.random() > float(chance):
+            return False
+
+        started = False
+        if hero_class == "warrior":
+            # Prefer fighting: attack lair more often, else explore deeper fog.
+            if _AI_RNG.random() < 0.65:
+                started = self._start_journey_attack_lair(hero, game_state)
+            if not started:
+                started = self._start_journey_explore(hero, game_state, min_tiles=10, max_tiles=30, prefer_far=True, scan_radius=30)
+        elif hero_class == "ranger":
+            # Prefer exploration: farther fog target, fallback to lair if none found.
+            started = self._start_journey_explore(hero, game_state, min_tiles=6, max_tiles=None, prefer_far=True, scan_radius=40)
+            if not started and _AI_RNG.random() < 0.25:
+                started = self._start_journey_attack_lair(hero, game_state)
+        else:
+            # Rogue: short, cautious fog step.
+            started = self._start_journey_explore(hero, game_state, min_tiles=2, max_tiles=6, prefer_far=False, scan_radius=6)
+
+        if started:
+            hero._journey_cooldown_until_ms = int(now_ms + int(self.journey_cooldown_ms))
+        return started
+
+    def _start_journey_explore(
+        self,
+        hero,
+        game_state: dict,
+        *,
+        min_tiles: float | None,
+        max_tiles: float | None,
+        prefer_far: bool,
+        scan_radius: int,
+    ) -> bool:
+        world = game_state.get("world")
+        if not world:
+            return False
+        candidates = self._find_black_fog_frontier_tiles(
+            world,
+            hero,
+            max_candidates=8,
+            scan_radius=int(scan_radius),
+            min_dist_tiles=min_tiles,
+            max_dist_tiles=max_tiles,
+        )
+        if not candidates:
+            return False
+
+        # Weighted pick: farther for warriors/rangers, closer for rogues.
+        weights = []
+        for _, _, dist in candidates:
+            if prefer_far:
+                weights.append(max(0.1, float(dist)))
+            else:
+                weights.append(1.0 / (float(dist) + 0.1))
+        total_weight = float(sum(weights))
+        if total_weight <= 0:
+            return False
+        r = _AI_RNG.uniform(0, total_weight)
+        cumsum = 0.0
+        selected = None
+        for i, w in enumerate(weights):
+            cumsum += w
+            if r <= cumsum:
+                selected = candidates[i]
+                break
+        if not selected:
+            selected = candidates[0]
+        gx, gy, _ = selected
+        target_x = gx * TILE_SIZE + TILE_SIZE / 2
+        target_y = gy * TILE_SIZE + TILE_SIZE / 2
+        hero.set_target_position(target_x, target_y)
+        hero.target = {"type": "journey_explore", "goal": "black_fog", "grid": (gx, gy)}
+        self.set_intent(hero, "idle")
+        self.record_decision(
+            hero,
+            action="journey_explore",
+            reason="Post-shopping journey: explore fog",
+            intent=getattr(hero, "intent", "idle") or "idle",
+            inputs_summary={"trigger": "post_shopping", "goal": "black_fog"},
+            source="system",
+        )
+        return True
+
+    def _start_journey_attack_lair(self, hero, game_state: dict) -> bool:
+        buildings = game_state.get("buildings", [])
+        world = game_state.get("world")
+        if not buildings:
+            return False
+        best = None
+        best_d2 = None
+        for b in buildings:
+            if not getattr(b, "is_lair", False):
+                continue
+            if getattr(b, "hp", 0) <= 0:
+                continue
+            dx = float(getattr(b, "center_x", getattr(b, "x", 0.0))) - float(hero.x)
+            dy = float(getattr(b, "center_y", getattr(b, "y", 0.0))) - float(hero.y)
+            d2 = dx * dx + dy * dy
+            if best is None or (best_d2 is not None and d2 < best_d2):
+                best = b
+                best_d2 = d2
+        if best is None:
+            return False
+
+        goal_x = float(getattr(best, "center_x", getattr(best, "x", hero.x)))
+        goal_y = float(getattr(best, "center_y", getattr(best, "y", hero.y)))
+        if world:
+            adj = best_adjacent_tile(world, buildings, best, hero.x, hero.y)
+            if adj:
+                goal_x = adj[0] * TILE_SIZE + TILE_SIZE / 2
+                goal_y = adj[1] * TILE_SIZE + TILE_SIZE / 2
+        hero.set_target_position(goal_x, goal_y)
+        hero.target = best
+        self.set_intent(hero, "attacking_lair")
+        self.record_decision(
+            hero,
+            action="journey_attack_lair",
+            reason="Post-shopping journey: attack lair",
+            intent=getattr(hero, "intent", "idle") or "idle",
+            inputs_summary={"trigger": "post_shopping", "goal": "attack_lair"},
+            source="system",
+        )
+        return True
     
-    def _find_black_fog_frontier_tiles(self, world, hero, max_candidates: int = 5):
+    def _find_black_fog_frontier_tiles(
+        self,
+        world,
+        hero,
+        max_candidates: int = 5,
+        scan_radius: int | None = None,
+        min_dist_tiles: float | None = None,
+        max_dist_tiles: float | None = None,
+    ):
         """
         Find UNSEEN tiles that are adjacent to SEEN or VISIBLE tiles (black fog frontier).
         Returns list of (grid_x, grid_y, distance_tiles) tuples, sorted by distance (closest first).
@@ -729,7 +904,8 @@ class BasicAI:
         
         hero_gx = int(hero.x // TILE_SIZE)
         hero_gy = int(hero.y // TILE_SIZE)
-        scan_radius = RANGER_FRONTIER_SCAN_RADIUS_TILES
+        if scan_radius is None:
+            scan_radius = RANGER_FRONTIER_SCAN_RADIUS_TILES
         
         candidates = []
         # Scan a square region around hero (bounded for perf)
@@ -765,7 +941,12 @@ class BasicAI:
                 if is_frontier:
                     # Calculate distance (squared for comparison, avoid sqrt until needed)
                     dist_sq = dx * dx + dy * dy
-                    candidates.append((gx, gy, math.sqrt(dist_sq)))
+                    dist_tiles = math.sqrt(dist_sq)
+                    if min_dist_tiles is not None and dist_tiles < float(min_dist_tiles):
+                        continue
+                    if max_dist_tiles is not None and dist_tiles > float(max_dist_tiles):
+                        continue
+                    candidates.append((gx, gy, dist_tiles))
         
         # Stable sort: by distance (closest first), then by grid coords (deterministic tie-break)
         candidates.sort(key=lambda c: (c[2], c[1], c[0]))
@@ -884,7 +1065,7 @@ class BasicAI:
                 best = b
 
         # Require some minimum attractiveness so heroes don't constantly wander to tiny bounties
-        if best is None or best_score < 0.5:
+        if best is None or best_score < 0.15:
             hero._last_bounty_pick_ms = now_ms
             return False
 

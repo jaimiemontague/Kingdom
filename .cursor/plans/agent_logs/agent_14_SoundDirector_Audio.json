@@ -684,6 +684,70 @@
               }
             }
           }
+        },
+        "post-wk7-audio-fix": {
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+            "notes": "POST-WK7-001: add missing required audio keys for strict asset validation."
+          },
+          "rounds": {
+            "post_wk7_001": {
+              "sprint_id": "post-wk7-audio-fix",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+                "notes": ""
+              },
+              "round_id": "post_wk7_001",
+              "round_meta": {
+                "prompt_set_id": "post-wk7-001",
+                "build_target": "Hotfix",
+                "sent_at_local": "2026-01-21T00:00:00"
+              },
+              "prompt_text": "POST-WK7-001: Add missing required audio keys (hero_hired, purchase, ui_confirm, ui_error) from CC0 sources in .cursor/human_provided/, update attribution, and confirm validate_assets --strict --check-attribution + qa_smoke --quick pass.",
+              "response": {
+                "received_at_local": "2026-01-21T00:00:00",
+                "status": "complete",
+                "raw": "## Status\nAgent 14 (SoundDirector_Audio) — **COMPLETE**: Added 4 required CC0 SFX files for validator strict mode and updated attribution. Gates confirmed PASS.\n\n## What I Changed\n- Copied CC0 files from `.cursor/human_provided/` into `assets/audio/sfx/`:\n  - `ui_confirm.ogg` ← Kenney `click3.ogg`\n  - `ui_error.ogg` ← Kenney `switch2.ogg`\n  - `hero_hired.ogg` ← OpenGameArt `bell_01.ogg`\n  - `purchase.ogg` ← OpenGameArt `gong_01.ogg`\n- Updated `assets/ATTRIBUTION.md`:\n  - Kenney audio entry now includes `ui_confirm.ogg` and `ui_error.ogg`\n  - OpenGameArt entry now includes `hero_hired.ogg` and `purchase.ogg`\n\n## Tests / Gates\n- `python tools/validate_assets.py --strict --check-attribution` → PASS\n- `python tools/qa_smoke.py --quick` → PASS\n\n## Notes\n- All sounds stay within CC0 sources already in use; no new license families.",
+                "summary_bullets": [
+                  "Added 4 required SFX files for strict validator: ui_confirm, ui_error, hero_hired, purchase.",
+                  "Updated attribution entries for Kenney and OpenGameArt packs to include new files.",
+                  "Gates confirmed: validate_assets --strict --check-attribution PASS; qa_smoke --quick PASS."
+                ],
+                "proposed_changes": [
+                  "Copy Kenney UI sounds for ui_confirm/ui_error into assets/audio/sfx/.",
+                  "Copy OpenGameArt bell/gong sounds for hero_hired/purchase into assets/audio/sfx/.",
+                  "Update assets/ATTRIBUTION.md to list new file locations."
+                ],
+                "acceptance_criteria": [
+                  "python tools/validate_assets.py --strict --check-attribution PASS.",
+                  "python tools/qa_smoke.py --quick PASS.",
+                  "Attribution updated for Kenney and OpenGameArt audio packs."
+                ],
+                "risks": [],
+                "dependencies": [],
+                "questions_back_to_pm": [],
+                "recommended_next_actions": [
+                  "None; follow-up only if new audio keys are added to the manifest."
+                ],
+                "agent_fields": {
+                  "files_copied": {
+                    "ui_confirm": "assets/audio/sfx/ui_confirm.ogg (from kenney_ui-audio/Audio/click3.ogg)",
+                    "ui_error": "assets/audio/sfx/ui_error.ogg (from kenney_ui-audio/Audio/switch2.ogg)",
+                    "hero_hired": "assets/audio/sfx/hero_hired.ogg (from open game art/bell_01.ogg)",
+                    "purchase": "assets/audio/sfx/purchase.ogg (from open game art/gong_01.ogg)"
+                  },
+                  "attribution_updates": {
+                    "kenney_audio": "Added ui_confirm.ogg and ui_error.ogg",
+                    "opengameart_audio": "Added hero_hired.ogg and purchase.ogg"
+                  },
+                  "test_results": {
+                    "validate_assets_strict": "PASS",
+                    "qa_smoke_quick": "PASS"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

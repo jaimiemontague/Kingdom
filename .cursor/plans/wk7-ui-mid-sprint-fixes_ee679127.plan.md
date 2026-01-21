@@ -21,7 +21,7 @@ todos:
       - wk7m_click_hitboxes
   - id: wk7m_qa_proof
     content: QA verification + before/after screenshots + bug tickets if needed
-    status: in_progress
+    status: completed
     dependencies:
       - wk7m_ui_skin_layout
       - wk7m_display_modes

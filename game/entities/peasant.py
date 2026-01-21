@@ -24,6 +24,18 @@ class PeasantState(Enum):
 
 
 class Peasant:
+    _spawn_counter = 0
+    _idle_offsets = [
+        (TILE_SIZE * 0.9, 0.0),
+        (-TILE_SIZE * 0.9, 0.0),
+        (0.0, TILE_SIZE * 0.9),
+        (0.0, -TILE_SIZE * 0.9),
+        (TILE_SIZE * 0.7, TILE_SIZE * 0.7),
+        (-TILE_SIZE * 0.7, TILE_SIZE * 0.7),
+        (TILE_SIZE * 0.7, -TILE_SIZE * 0.7),
+        (-TILE_SIZE * 0.7, -TILE_SIZE * 0.7),
+    ]
+
     def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
@@ -39,6 +51,12 @@ class Peasant:
         self.is_inside_castle = False
 
         self.color = (200, 180, 120)
+
+        # Deterministic idle slot so multiple peasants don't overlap.
+        slot = Peasant._spawn_counter % len(Peasant._idle_offsets)
+        Peasant._spawn_counter += 1
+        self._idle_offset = Peasant._idle_offsets[slot]
+        self._idle_outside = False
 
         # Animation / sprite rendering (pixel-art sprites; falls back procedurally if no assets exist)
         self._anim = WorkerSpriteLibrary.create_player("peasant", size=32)
@@ -146,21 +164,32 @@ class Peasant:
         if castle_repair:
             self.target_building = castle_repair
             self.target_position = (castle_repair.center_x, castle_repair.center_y)
+            self._idle_outside = False
         elif build_target:
             self.target_building = build_target
             tx, ty = build_target.center_x, build_target.center_y
             self.target_position = (tx, ty)
+            self._idle_outside = False
         elif repair_target:
             self.target_building = repair_target
             tx, ty = repair_target.center_x, repair_target.center_y
             self.target_position = (tx, ty)
+            self._idle_outside = False
         else:
-            # Priority 4: go inside the castle
+            # Priority 4: idle near the castle unless it's under attack.
             self.target_building = None
             if castle:
-                self.target_position = (castle.center_x, castle.center_y)
+                if getattr(castle, "is_under_attack", False):
+                    self._idle_outside = False
+                    self.target_position = (castle.center_x, castle.center_y)
+                else:
+                    self._idle_outside = True
+                    self.is_inside_castle = False
+                    ox, oy = self._idle_offset
+                    self.target_position = (castle.center_x + ox, castle.center_y + oy)
             else:
                 self.target_position = None
+                self._idle_outside = False
 
         # If no target position, idle
         if not self.target_position:
@@ -171,7 +200,7 @@ class Peasant:
         reached = self.move_towards(self.target_position[0], self.target_position[1], dt)
 
         # Handle inside-castle behavior
-        if castle and self.target_building is None:
+        if castle and self.target_building is None and not self._idle_outside:
             if reached or self.distance_to(castle.center_x, castle.center_y) < TILE_SIZE * 1.5:
                 self.is_inside_castle = True
                 self.state = PeasantState.IN_CASTLE

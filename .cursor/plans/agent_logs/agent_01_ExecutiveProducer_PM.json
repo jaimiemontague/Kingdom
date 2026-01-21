@@ -1008,6 +1008,226 @@
             "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
             "rationale": "Engineering fixes are reported done (03/08). Next step is QA final signoff: re-run qa_smoke + manual Windows verification + screenshots, and file any late bugs."
           }
+        },
+        "wk7_r8_closeout": {
+          "round_meta": {
+            "prompt_set_id": "wk7_r8_closeout_v1",
+            "build_target": "BuildA_shipped",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Closeout: WK7 sprint is CLOSED. This entry documents final state."
+          },
+          "pm_status_summary": {
+            "overall_status": "CLOSED — WK7 UI Overhaul shipped as v1.2.9",
+            "shipped_features": [
+              "Window mode switching: fullscreen/borderless/windowed via ESC → Graphics",
+              "ESC pause/settings menu (Graphics/Audio/Controls pages)",
+              "Castle-driven Build Catalog with click-to-place",
+              "CC0 UI skin (9-slice panels/buttons/icons)",
+              "Tab-toggleable right panel",
+              "Best-effort borderless drag-to-windowed"
+            ],
+            "bugs_resolved": [
+              "WK7-BUG-001: Boot crash PauseMenu before audio_system — VERIFIED FIXED",
+              "WK7-BUG-002: UI click hitboxes vertically offset — VERIFIED FIXED",
+              "WK7-BUG-003: Graphics menu display mode switching ineffective — VERIFIED FIXED",
+              "WK7-BUG-004: Windowed mode window stuck top-left — VERIFIED FIXED",
+              "WK7-BUG-005: World not re-expanding on windowed→fullscreen — VERIFIED FIXED",
+              "WK7-BUG-006: Close X label overlap — VERIFIED FIXED",
+              "WK7-BUG-007: Selected-building panel grey/unskinned — VERIFIED FIXED",
+              "WK7-BUG-008: Boot crash zoom init — VERIFIED FIXED"
+            ],
+            "gates_at_close": {
+              "qa_smoke_quick": "PASS",
+              "validate_assets_strict": "FAIL (4 optional SFX missing — carried forward to followup task)",
+              "manual_smoke": "PASS (human playtest confirmed)"
+            }
+          },
+          "pm_followup_tasks": [
+            {
+              "id": "POST-WK7-001",
+              "title": "Add missing optional SFX files or demote to warn-only in manifest",
+              "severity": "minor",
+              "owner_agents": ["14_SoundDirector_Audio", "12_ToolsDevEx_Lead"],
+              "description": "Asset validator (--strict) fails with 4 missing SFX: hero_hired, purchase, ui_confirm, ui_error. These were optional Build B keys from WK6 but are now listed as required in the manifest.",
+              "options": [
+                "Option A (preferred): Agent 14 adds the 4 SFX files from .cursor/human_provided/ sources (Kenney UI pack for ui_confirm/ui_error; OpenGameArt for hero_hired/purchase)",
+                "Option B: Agent 12 updates tools/assets_manifest.json to mark these 4 keys as optional/warn-only"
+              ],
+              "acceptance_test": "python tools/validate_assets.py --strict --check-attribution => PASS (0 errors)",
+              "status": "pending"
+            }
+          ],
+          "pm_send_list_minimal": {
+            "send_to_agents": [],
+            "do_not_send": "all",
+            "rationale": "WK7 is closed. Followup task POST-WK7-001 will be addressed in a separate prompt."
+          }
+        }
+      }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "v1.3: Visual polish (UI/pixel art/look-feel) + Journey AI behavior + critical bug fixes from v1.2.9 playtest"
+      },
+      "rounds": {
+        "v1.3_r0_kickoff": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r0_kickoff_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Sprint kickoff: bug fixes first, then features"
+          },
+          "pm_status_summary": {
+            "overall_status": "Kickoff",
+            "v1.3_focus": [
+              "Fix critical bugs from v1.2.9 playtest (hero selection, bounty pursuit, peasant stacking)",
+              "Visual polish: UI art, pixel art detail, overall look and feel upgrade",
+              "New AI feature: Journey behavior (heroes explore fog/attack lairs after shopping)"
+            ],
+            "baseline_screenshots": "docs/screenshots/manual/ (12 screenshots captured 2026-01-21)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "V1.3-BUG-001",
+              "title": "Heroes are not clickable/selectable",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": ["Run python main.py", "Click on any hero", "Nothing happens"],
+              "expected": "Clicking hero selects them; right panel shows info (when Tab panel visible)",
+              "actual": "Heroes cannot be selected by clicking",
+              "acceptance_test": ["Click hero → selected", "Tab panel shows hero info", "qa_smoke --quick PASS"],
+              "status": "assigned"
+            },
+            {
+              "id": "V1.3-BUG-002",
+              "title": "Heroes ignore bounty flags entirely",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": ["Run python main.py", "Place bounty flags with B", "Watch heroes for extended time"],
+              "expected": "Heroes occasionally pursue bounty flags",
+              "actual": "Heroes never pursue any bounty flags",
+              "acceptance_test": ["Place bounty → hero pursues within reasonable time", "qa_smoke bounty tests PASS"],
+              "status": "assigned"
+            },
+            {
+              "id": "V1.3-BUG-003",
+              "title": "Peasants overlap/stack (looks like only 1 peasant)",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": ["Run python main.py", "Observe peasants near castle"],
+              "expected": "2 peasants visible and distinguishable",
+              "actual": "Peasants stack on same pixel, appearing as 1",
+              "acceptance_test": ["2 peasants visible at game start", "They don't permanently overlap"],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "V1.3-FEAT-001",
+              "title": "Visual Polish Pass (UI + Pixel Art)",
+              "owner_agents": ["08_UX_UI_Director", "09_ArtDirector_Pixel_Animation_VFX"],
+              "description": "Upgrade overall look and feel: more detailed pixel art, improved UI art, better visual impression",
+              "baseline": "docs/screenshots/manual/ contains v1.2.9 before screenshots",
+              "status": "pending"
+            },
+            {
+              "id": "V1.3-FEAT-002",
+              "title": "Journey AI Behavior",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "description": "When hero is full health + recently purchased potions/equipment, high chance to trigger Journey script",
+              "journey_rules": {
+                "trigger": "Full health + recent purchase",
+                "destinations": {
+                  "explore_fog": "Move into unexplored fog of war",
+                  "attack_lair": "Go to a monster lair"
+                },
+                "class_behavior": {
+                  "rogue": "Explore only a few squares into fog",
+                  "warrior": "Explore 10-30 squares OR attack lair (more likely to fight)",
+                  "ranger": "Explore limitless distance (more likely to explore)"
+                }
+              },
+              "status": "pending"
+            }
+          ],
+          "pm_integration_order": [
+            "1. Fix V1.3-BUG-001 (hero selection) - Agent 03 - BLOCKER",
+            "2. Fix V1.3-BUG-002 (bounty pursuit) - Agent 06",
+            "3. Fix V1.3-BUG-003 (peasant stacking) - Agent 05",
+            "4. Implement Journey AI - Agent 06 (after bounty fix)",
+            "5. Visual polish pass - Agents 08 + 09 (can parallelize with AI work)"
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": ["Fix V1.3-BUG-001: Debug and fix hero click selection - this is a release blocker"],
+              "acceptance_criteria": ["Heroes can be clicked and selected", "qa_smoke --quick PASS"]
+            },
+            "05": {
+              "status": "assigned_active",
+              "priority": "P1",
+              "asks": ["Fix V1.3-BUG-003: Ensure 2 peasants spawn with distinct positions, don't stack"],
+              "acceptance_criteria": ["2 peasants visible at start", "They work independently without permanent overlap"]
+            },
+            "06": {
+              "status": "assigned_active",
+              "priority": "P1",
+              "asks": [
+                "Fix V1.3-BUG-002: Debug why heroes never pursue bounties",
+                "After fix: Implement V1.3-FEAT-002 Journey behavior"
+              ],
+              "acceptance_criteria": ["Heroes pursue bounties", "Journey triggers after shopping when healthy"]
+            },
+            "08": {
+              "status": "assigned_active",
+              "priority": "P2",
+              "asks": ["V1.3-FEAT-001: Plan UI visual polish improvements using baseline screenshots"],
+              "acceptance_criteria": ["Concrete proposal list", "Before/after comparison ready"]
+            },
+            "09": {
+              "status": "assigned_active",
+              "priority": "P2",
+              "asks": ["V1.3-FEAT-001: Plan pixel art detail improvements"],
+              "acceptance_criteria": ["Concrete proposal list for sprite/art upgrades"]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "05", "06", "08", "09"],
+            "do_not_send": ["02", "04", "07", "10", "11", "12", "13", "14"],
+            "rationale": "Bug fixes (03/05/06) are critical. Visual polish (08/09) can start planning in parallel."
+          },
+          "pm_agent_prompts": {
+            "03": {
+              "assignment": "V1.3-BUG-001",
+              "priority": "P0 BLOCKER",
+              "prompt": "Fix hero click selection. Heroes cannot be clicked/selected. Repro: run python main.py, click any hero — nothing happens. Suspected areas: game/engine.py handle_mousedown() and try_select_hero(), UI panels consuming clicks, screen_to_world() coordinate conversion. Acceptance: click hero → selected, Tab panel shows hero info, qa_smoke --quick PASS."
+            },
+            "05": {
+              "assignment": "V1.3-BUG-003",
+              "priority": "P1",
+              "prompt": "Fix peasant stacking. 2 peasants should spawn but they overlap on same pixel, appearing as 1. Suspected areas: peasant spawn positioning, movement/target selection causing convergence. Acceptance: 2 visually distinct peasants at game start, don't permanently overlap, qa_smoke --quick PASS."
+            },
+            "06": {
+              "assignment": "V1.3-BUG-002 + V1.3-FEAT-002",
+              "priority": "P1 + Feature",
+              "prompt": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior — when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy."
+            },
+            "08": {
+              "assignment": "V1.3-FEAT-001 (UI)",
+              "priority": "P2",
+              "prompt": "Plan UI visual polish improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to make UI look more polished and impressive. Deliver: proposal list with before/after comparison plan."
+            },
+            "09": {
+              "assignment": "V1.3-FEAT-001 (Pixel Art)",
+              "priority": "P2",
+              "prompt": "Plan pixel art detail improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to sprites and art to add more detail and visual appeal. Deliver: proposal list for sprite/art upgrades."
+            }
+          }
         }
       }
     },

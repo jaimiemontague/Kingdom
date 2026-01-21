@@ -443,6 +443,10 @@ class GameEngine:
             if hasattr(self.hud, "toggle_help"):
                 self.hud.toggle_help()
         
+        elif event.key == pygame.K_F12:
+            # Manual screenshot capture
+            self.capture_screenshot()
+        
         elif event.key == pygame.K_b:
             # Place a bounty at mouse position
             self.place_bounty()
@@ -637,6 +641,12 @@ class GameEngine:
         for hero in self.heroes:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
                 self.selected_hero = hero
+                # Ensure the right panel becomes visible on selection (Tab panel UX).
+                if hasattr(self, "hud"):
+                    try:
+                        self.hud.right_panel_visible = True
+                    except Exception:
+                        pass
                 return True
         
         return False
@@ -1519,6 +1529,28 @@ class GameEngine:
         self.camera_x = castle.center_x - win_w // 2
         self.camera_y = castle.center_y - win_h // 2
         self.clamp_camera()
+
+    def capture_screenshot(self):
+        """Capture a screenshot to docs/screenshots/manual/ with timestamp filename."""
+        from datetime import datetime
+        
+        # Ensure the manual screenshots folder exists
+        screenshot_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "screenshots", "manual")
+        os.makedirs(screenshot_dir, exist_ok=True)
+        
+        # Generate timestamp-based filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Trim to milliseconds
+        filename = f"screenshot_{timestamp}.png"
+        filepath = os.path.join(screenshot_dir, filename)
+        
+        # Save the current screen
+        try:
+            pygame.image.save(self.screen, filepath)
+            self.hud.add_message(f"Screenshot saved: {filename}", (100, 200, 255))
+            print(f"[screenshot] Saved: {filepath}")
+        except Exception as e:
+            self.hud.add_message(f"Screenshot failed: {e}", (255, 100, 100))
+            print(f"[screenshot] Failed: {e}")
 
     def set_zoom(self, new_zoom: float):
         """Set zoom with clamping."""

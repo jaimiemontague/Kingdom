@@ -2070,6 +2070,92 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "v1.3: Visual polish pass (UI focus) and baseline comparison"
+      },
+      "rounds": {
+        "v1.3_r0_kickoff": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r0_kickoff_v1",
+            "build_target": "v1.3.0",
+            "received_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "Plan UI visual polish improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to make UI look more polished and impressive. Deliver: proposal list with before/after comparison plan.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 08 (UX/UI Director) - v1.3 kickoff response complete. Delivering a concrete UI visual polish plan based on v1.2.9 baseline screenshots. No code changes in this round.\n\n### Baseline review (v1.2.9)\nReviewed: docs/screenshots/v1.2.9_baseline (see README + screenshots). Observations:\n- Top bar and bottom bar are flat and low-contrast; hierarchy is weak.\n- Button group at bottom looks uniform and heavy; affordances for Build/Hire/Bounty are not distinct.\n- Right panel sometimes hidden; when visible, text reads cramped against top-right close button.\n- Build catalog modal uses flat beige blocks; missing texture, depth, and header framing.\n- World labels (building names, taxes) sit on bright grass with minimal outline; legibility suffers at zoomed-in scenes.\n- Fog edge is hard; world feels like a hard circle with abrupt boundary.\n- Minimap has limited framing and low prominence.\n\n### Proposed UI visual polish improvements (v1.3)\nPriority is perceived polish with minimal gameplay risk.\n\n1) **Top bar hierarchy + icons**\n- Add small icons for Gold, Heroes, Enemies, Wave to break text monotony.\n- Increase contrast between header background and text (slightly darker bar + lighter text).\n- Add subtle separator ticks between metrics.\n\n2) **Bottom command bar structure**\n- Add distinct button framing for Build/Hire/Bounty (icon + label + hotkey chip).\n- Reduce bar heaviness: lighten base fill, add thin highlight at top edge.\n- Clarify active placement mode with a small banner strip above command bar.\n\n3) **Right panel readability**\n- Add top padding and section separators (Name, Stats, Actions) to improve scanability.\n- Ensure close button never overlaps text (already patched in WK7; keep margin rules).\n- Improve label value contrast (white label, gold value, subtle shadow for legibility).\n\n4) **Build catalog modal polish**\n- Keep 9-slice framing; add header strip with title and close button alignment.\n- Increase card spacing; add subtle hover state or highlight to grid cards.\n- Add cost badge placement consistency (bottom-right of card).\n\n5) **World-space label legibility**\n- Add a thin dark outline or drop shadow for building names and tax values.\n- Slightly reduce label density when zoomed out (optional if existing system supports).\n\n6) **Minimap framing**\n- Add a thicker frame and a small title or icon to visually anchor it.\n- Ensure minimap background contrast is distinct from bottom bar.\n\n7) **Fog edge softening**\n- Add a soft gradient or dithering on fog boundary if feasible (UI overlay or map shader). If not feasible, add a thin rim highlight to reduce the hard edge.\n\n### Before/after comparison plan\n- Capture an aligned set of screenshots into docs/screenshots/v1.3.0_after/:\n  - Full map zoomed-out (compare to screenshot_20260121_104922_339.png)\n  - Mid zoom gameplay (compare to screenshot_20260121_104934_566.png)\n  - Zoomed-in city core (compare to screenshot_20260121_105151_027.png)\n  - Build catalog modal (compare to screenshot_20260121_104837_642.png)\n  - Building panel open (compare to screenshot_20260121_105222_470.png)\n- Use same resolution and similar camera framing for visual A/B.\n\n### Deliverables for v1.3\n- UI polish checklist + before/after capture plan (this entry)\n- Candidate texture/icon set alignment notes for Agent 09 if art updates are needed\n\n### Tests\n- python tools/qa_smoke.py --quick (PASS)\n\n### Notes\n- No code changes in this round. Plan is ready for implementation once P0/P1 blockers are resolved.\n",
+            "summary_bullets": [
+              "Reviewed v1.2.9 baseline screenshots and identified UI readability and hierarchy gaps.",
+              "Proposed a concrete UI polish plan (top bar, command bar, right panel, build modal, labels, minimap, fog edge).",
+              "Defined a before/after screenshot comparison plan for v1.3.0.",
+              "No code changes in this round; qa_smoke PASS."
+            ],
+            "proposed_changes": [
+              "Add iconography + hierarchy separators to top bar metrics.",
+              "Improve bottom command bar with clearer button framing and placement-mode banner.",
+              "Refine right panel layout with padding, section separators, and stronger value contrast.",
+              "Polish build catalog modal with header strip, spacing, and hover cues.",
+              "Improve world-space label legibility via outline or shadow.",
+              "Enhance minimap framing and fog boundary softness."
+            ],
+            "acceptance_criteria": [
+              "UI feels more readable and visually layered in side-by-side screenshot comparison.",
+              "Top bar and command bar communicate hierarchy at a glance.",
+              "Build catalog and right panel text do not feel cramped or low-contrast.",
+              "Before/after screenshots captured in v1.3.0_after.",
+              "python tools/qa_smoke.py --quick PASS."
+            ],
+            "risks": [
+              "Visual changes could reduce clarity if contrast is not balanced; mitigate with A/B screenshot review.",
+              "Over-polish could add clutter; keep changes incremental and test against baseline shots."
+            ],
+            "dependencies": [
+              "Agent 09: Any new icon or texture assets needed for top bar and buttons.",
+              "Agent 03/05/06: Resolve blockers before heavy UI changes to avoid rework."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with P0/P1 blockers first; then implement the UI polish items in the listed order.",
+              "Capture the v1.3.0_after screenshot set using the baseline framing list."
+            ],
+            "agent_fields": {
+              "baseline_screenshots_reviewed": [
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104721_703.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104837_642.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104922_339.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104934_566.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_105151_027.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_105222_470.png"
+              ],
+              "files_changed": [],
+              "qa_smoke_evidence": [
+                "python tools/qa_smoke.py --quick => PASS"
+              ],
+              "before_after_plan": {
+                "before_folder": "docs/screenshots/v1.2.9_baseline",
+                "after_folder": "docs/screenshots/v1.3.0_after",
+                "pairing": [
+                  "104922_339: full map zoomed-out",
+                  "104934_566: mid zoom gameplay",
+                  "105151_027: zoomed-in city core",
+                  "104837_642: build catalog modal",
+                  "105222_470: building panel open"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
