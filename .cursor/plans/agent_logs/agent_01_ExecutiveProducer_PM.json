@@ -1768,6 +1768,61 @@
             "prompt": "You are resuming V1.3 mid-sprint extension work. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Read plan: `.cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]`\n\n1) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Respect constraints: determinism (seeded RNG, sim-time only), perf-safe (avoid per-frame allocations).\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r5_extension_mid_sprint`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + paths/screenshots), and `blockers` if any.\n"
           }
         }
+        ,
+        "v1.3_r6_integration_QA_and_ship_decision": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r6_integration_QA_and_ship_decision_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Integration round after all v1.3 extension work reports DONE: QA verifies on a fresh pull; decide if we keep extending or call it shippable."
+          },
+          "pm_status_summary": {
+            "overall_status": "Implementation reported DONE by agents 03/05/06/08/12/14; gates PASS locally. Need QA verification after pulling latest + manual checklist.",
+            "repo_integration_note": "A consolidated integration commit was pushed to main: `b8942a8` (v1.3 extension mid-sprint). QA should pull latest main before testing.",
+            "what_is_done": [
+              "AI: heroes buy potions more often; use potions before fleeing; blacksmith shopping consideration added (Agent 06).",
+              "Blacksmith: research weapon/armor upgrades; upgraded items gated by research; shopping path supports blacksmith; purchases update last_purchase_ms (Agent 05).",
+              "UI: ESC menu button label alignment unified; audio page has Master/Music/SFX sliders; demolish hidden for lairs/neutral; blacksmith research buttons added (Agent 08).",
+              "Audio: AudioSystem now supports master/music/sfx volume APIs and correct scaling; docs updated (Agent 14).",
+              "Pause: camera/zoom inputs gated while paused/ESC open (Agent 03).",
+              "Tooling: deterministic screenshot scenario for audio+blacksmith UI added (Agent 12)."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Pull latest main and verify the integrated extension is stable:",
+                "- `git pull`",
+                "- `python tools/qa_smoke.py --quick`",
+                "- `python tools/validate_assets.py --strict --check-attribution`",
+                "Manual Windows checklist (15–20 min):",
+                "- AI: after potions are researched, heroes buy potions regularly; in common fights heroes with potions use them before retreating.",
+                "- Pause: with ESC menu open, mouse wheel + edge scroll + WASD do NOT move camera/zoom.",
+                "- Audio: Master/Music/SFX sliders work independently (music changes ambient only; sfx changes sfx only; master scales both).",
+                "- Blacksmith: research weapon/armor upgrades; after research, heroes visit blacksmith and purchase upgrades; purchases count toward Journey trigger.",
+                "- Demolish: selecting a lair never shows demolish; selecting player buildings still shows demolish (castle exception unchanged).",
+                "Evidence capture (optional but preferred):",
+                "- Run: `python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0`",
+                "If anything fails: file V1.3-EXT-BUG-00X ticket with repro + expected/actual + screenshots."
+              ],
+              "acceptance_criteria": [
+                "Both gates PASS on a fresh pull",
+                "Manual checklist PASS, OR bug tickets filed with clear repro and evidence"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["11"],
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "rationale": "All implementation work is integrated and pushed; only QA verification + ship/extend decision remains."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["11"],
+            "prompt": "You are Agent 11. Run integration QA for v1.3 extension and report ship-readiness.\n\n0) Context\n- Pull latest `main`.\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r6_integration_QA_and_ship_decision\"]`\n\n1) Gates\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n2) Manual Windows checklist\n- Potions: heroes buy more often; use before fleeing.\n- Pause: no camera/zoom movement while ESC menu open.\n- Audio: Master/Music/SFX independent.\n- Blacksmith: research upgrades; heroes purchase; Journey purchase trigger still works.\n- Demolish: no demolish on lairs.\n\n3) Evidence (preferred)\n- `python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r6_integration_QA_and_ship_decision`\n- `status`: `done` OR `blocked`\n- `evidence`: PASS/FAIL (include screenshot paths) and any bug tickets filed.\n"
+          }
+        }
       }
     },
     "wk6-audio-buildmenu-fogbounties-explorexp": {
