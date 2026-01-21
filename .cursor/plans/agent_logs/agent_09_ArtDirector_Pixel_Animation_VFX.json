@@ -1920,6 +1920,67 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "V1.3 visual polish pass (pixel art detail + readability). Baseline: docs/screenshots/v1.2.9_baseline/"
+      },
+      "rounds": {
+        "v1.3_r0_kickoff": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "round_id": "v1.3_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r0_kickoff_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "Plan pixel art detail improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to sprites and art to add more detail and visual appeal. Deliver: proposal list for sprite/art upgrades.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "complete",
+            "raw": "## Status\nActive for V1.3 visual polish (pixel art). Providing a concrete proposal list based on v1.2.9 baseline screenshots.\n\n## Deliverables\n- Pixel art improvement proposal list (terrain, paths, buildings, units, VFX) with low-risk, deterministic-friendly changes.\n- Before/after comparison plan (v1.2.9 baseline → v1.3_after captures).\n\n## Proposal list (concrete, scoped)\n1) Terrain readability pass (P0)\n- Reduce grass speckle density; add subtle macro clumps and rare ground props (deterministic by tile coord).\n- Increase contrast between grass and path tiles (slightly darker path edges + lighter path interior).\n- Add 3–5 deterministic tree variants (small canopy shifts + tiny shadow) for less repetition.\n\n2) Path definition pass (P0)\n- Add 1px edge banding on paths to improve silhouette at Z2.\n- Add 2–3 path variants for straight segments and corners (still neighbor-agnostic to keep perf simple).\n\n3) Building silhouette + materials (P1)\n- Increase roof silhouette variety across core tier-1 buildings (castle/inn/market/blacksmith/guardhouse/house/farm/food_stand).\n- Add minimal material separation: stone base vs wood walls vs roof color, using 1–2 extra accent pixels per sprite.\n- Keep footprint and anchor identical to avoid engine changes.\n\n4) Unit readability (P1)\n- Improve hero/peasant/guard outlines and add tiny team-color accents (1–2 pixels) for quick glance reads.\n- Ensure enemy silhouettes are distinct at 32x32: add small weapon/ear/limb cues for goblin/wolf/skeleton/spider/bandit.\n\n5) Fog-of-war edge + reveal clarity (P2)\n- Add subtle halo/edge brightening on fog boundary (1px band) to make explored vs unexplored more readable.\n- Keep fog fully non-authoritative (pure render), deterministic (seeded by tile coord).\n\n6) Micro-VFX polish (P2)\n- Slightly longer projectile lifetime (if needed) and add 1–2 pixel trail; keep deterministic and cached.\n- Add tiny dust puffs for footsteps (optional, capped rate) to improve life/feel.\n\n## Before/after comparison plan\n- Capture after shots into: docs/screenshots/v1.3_after/\n- Use same scenarios/zoom as baseline (mirror v1.2.9 shots) for direct comparison.\n\n## Acceptance criteria\n- Terrain and paths read more clearly at Z2 without increasing visual noise.\n- Tier-1 buildings are distinguishable by silhouette/material at a glance.\n- Units (peasants/guards/heroes/enemies) are readable in motion without changing gameplay balance.\n\n## Risks\n- Over-detailing increases noise; must keep low-frequency texture and readable silhouettes.\n- Procedural changes must remain deterministic and cached (no per-frame allocations).\n\n## Dependencies\n- None blocking. UI polish handled by Agent 08 in parallel.\n\n## Recommended next actions\n- Start with terrain + paths (highest ROI, low risk) using procedural sprite tweaks.\n- Then update tier-1 building sprites in-place (no footprint change).\n- Finish with unit readability pass and optional fog edge polish.\n",
+            "summary_bullets": [
+              "Proposed concrete pixel art upgrades for terrain, paths, buildings, and units using deterministic procedural tweaks.",
+              "Outlined a minimal fog edge polish and micro-VFX improvements that remain render-only.",
+              "Defined before/after comparison plan using v1.2.9 baseline screenshots."
+            ],
+            "proposed_changes": [
+              "Tune terrain + path sprites for higher readability (contrast, variants, edge definition).",
+              "Improve tier-1 building silhouettes/material cues without changing footprints.",
+              "Enhance unit outlines and class/enemy readability with tiny accent pixels."
+            ],
+            "acceptance_criteria": [
+              "Terrain/path readability improves at Z2 with minimal added noise.",
+              "Tier-1 buildings are distinguishable by silhouette and material at a glance.",
+              "Units remain readable in motion; no gameplay logic changes."
+            ],
+            "risks": [
+              "Over-detailing could reduce readability; keep low-frequency texture and strong silhouettes.",
+              "Procedural sprite changes must be deterministic and cached to avoid perf regressions."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "If approved, proceed with a terrain+path procedural pass and capture v1.3_after comparison shots.",
+              "Follow with building silhouette/material tweaks and unit readability accents."
+            ],
+            "agent_fields": {
+              "baseline_refs": [
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104721_703.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104817_534.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_104922_339.png",
+                "docs/screenshots/v1.2.9_baseline/screenshot_20260121_105151_027.png"
+              ],
+              "proposal_scope": {
+                "p0": ["terrain_readability", "path_definition"],
+                "p1": ["building_silhouettes", "unit_readability"],
+                "p2": ["fog_edge_polish", "micro_vfx"]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
