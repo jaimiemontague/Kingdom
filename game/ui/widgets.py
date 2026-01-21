@@ -13,8 +13,23 @@ from pathlib import Path
 import pygame
 
 
-_IMAGE_CACHE: dict[tuple[str, tuple[int, int] | None], pygame.Surface] = {}
-_NINESLICE_CACHE: dict[tuple[str, int, int, int], pygame.Surface] = {}
+_IMAGE_CACHE: dict[tuple[str, tuple[int, int] | None], pygame.Surface | None] = {}
+_NINESLICE_CACHE: dict[tuple[str, int, int, int], pygame.Surface | None] = {}
+
+# Hard caps to prevent unbounded memory growth in long play sessions.
+# These caches are opportunistic performance optimizations; eviction is safe.
+_IMAGE_CACHE_MAX = 512
+_NINESLICE_CACHE_MAX = 512
+
+
+def _cache_put_bounded(cache: dict, key, value, *, max_items: int):
+    """Best-effort bounded cache (FIFO eviction)."""
+    cache[key] = value
+    if len(cache) > int(max_items):
+        try:
+            cache.pop(next(iter(cache)))
+        except Exception:
+            cache.clear()
 
 
 def load_image_cached(path: str, size: tuple[int, int] | None = None) -> pygame.Surface | None:
@@ -27,10 +42,11 @@ def load_image_cached(path: str, size: tuple[int, int] | None = None) -> pygame.
         img = pygame.image.load(str(path)).convert_alpha()
         if size is not None and img.get_size() != size:
             img = pygame.transform.scale(img, size)
-        _IMAGE_CACHE[key] = img
+        _cache_put_bounded(_IMAGE_CACHE, key, img, max_items=_IMAGE_CACHE_MAX)
         return img
     except Exception:
-        _IMAGE_CACHE[key] = None  # cache miss to avoid repeated IO
+        # Cache miss to avoid repeated IO; still bounded.
+        _cache_put_bounded(_IMAGE_CACHE, key, None, max_items=_IMAGE_CACHE_MAX)
         return None
 
 
@@ -93,7 +109,7 @@ class NineSlice:
             if d_center.width > 0 and d_center.height > 0:
                 dst.blit(pygame.transform.scale(base.subsurface(s_center), d_center.size), d_center)
 
-            _NINESLICE_CACHE[key] = dst
+            _cache_put_bounded(_NINESLICE_CACHE, key, dst, max_items=_NINESLICE_CACHE_MAX)
             cached = dst
 
         surface.blit(cached, (int(rect.x), int(rect.y)))
