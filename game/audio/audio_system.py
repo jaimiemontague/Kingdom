@@ -76,12 +76,14 @@ class AudioSystem:
         self._cooldowns: Dict[str, float] = {}  # sound_key -> last_play_time_ms
         self._ambient_channel: Optional[pygame.mixer.Channel] = None
         self._ambient_sound: Optional[pygame.mixer.Sound] = None
-        self._ambient_base_volume: float = 0.4  # Base ambient volume (before master volume scaling)
+        self._ambient_base_volume: float = 0.4  # Base ambient volume (before master/music scaling)
         
-        # WK7: Master volume control (UI-only, non-authoritative)
+        # WK7/V1.3: Volume controls (UI-only, non-authoritative)
         # Range: 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
         # Default: 0.8 (80% per PM decision)
         self._master_volume: float = 0.8
+        self._music_volume: float = 1.0  # Ambient/music slider (multiplies master)
+        self._sfx_volume: float = 1.0    # SFX slider (multiplies master)
         
         # WK6 Mid-Sprint: Viewport and world context for visibility gating
         self._camera_x: float = 0.0
@@ -296,7 +298,7 @@ class AudioSystem:
         
         try:
             # WK7: Apply master volume (multiplies per-sound volume)
-            final_volume = float(volume) * self._master_volume
+            final_volume = float(volume) * self._master_volume * self._sfx_volume
             sound.set_volume(max(0.0, min(1.0, final_volume)))  # Clamp to 0.0-1.0
             sound.play()
         except Exception:
@@ -331,13 +333,12 @@ class AudioSystem:
         
         try:
             self._ambient_sound = pygame.mixer.Sound(str(track_file))
-            # Store base ambient volume (before master volume scaling)
+            # Store base ambient volume (before master/music scaling)
             self._ambient_base_volume = float(volume)
-            # WK7: Apply master volume (multiplies per-track volume)
-            final_volume = self._ambient_base_volume * self._master_volume
-            self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))  # Clamp to 0.0-1.0
             # Loop ambient (loops=-1 means infinite loop)
             self._ambient_channel = self._ambient_sound.play(loops=-1)
+            # Apply master/music scaling after channel is created
+            self._apply_ambient_volume()
         except Exception:
             # Failed to load/play; no-op
             self._ambient_sound = None
@@ -357,7 +358,18 @@ class AudioSystem:
         self._ambient_channel = None
         self._ambient_sound = None
     
-    # WK7: Master volume control API (UI-only, non-authoritative)
+    def _apply_ambient_volume(self):
+        """Apply master/music volume to ambient if playing."""
+        if self._ambient_sound is None or self._ambient_channel is None:
+            return
+        try:
+            final_volume = self._ambient_base_volume * self._master_volume * self._music_volume
+            self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))
+        except Exception:
+            # Failed to update; no-op (audio should never crash sim)
+            pass
+
+    # WK7/V1.3: Volume control API (UI-only, non-authoritative)
     
     def set_master_volume(self, volume_0_to_1: float):
         """
@@ -373,15 +385,8 @@ class AudioSystem:
         # Clamp to valid range
         self._master_volume = max(0.0, min(1.0, float(volume_0_to_1)))
         
-        # Update ambient volume if playing (apply master volume to base ambient volume)
-        if self._ambient_sound is not None and self._ambient_channel is not None:
-            try:
-                # Apply master volume to stored base ambient volume
-                final_volume = self._ambient_base_volume * self._master_volume
-                self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))
-            except Exception:
-                # Failed to update; no-op (audio should never crash sim)
-                pass
+        # Update ambient volume if playing
+        self._apply_ambient_volume()
     
     def get_master_volume(self) -> float:
         """
@@ -394,4 +399,33 @@ class AudioSystem:
             UI should convert to 0-100% for display
         """
         return self._master_volume
+
+    def set_music_volume(self, volume_0_to_1: float):
+        """
+        Set music/ambient volume (affects ambient only).
+
+        Args:
+            volume_0_to_1: Music volume from 0.0 (mute) to 1.0 (full volume)
+                           UI should convert 0-100% slider to 0.0-1.0 range
+        """
+        self._music_volume = max(0.0, min(1.0, float(volume_0_to_1)))
+        self._apply_ambient_volume()
+
+    def get_music_volume(self) -> float:
+        """Get current music/ambient volume."""
+        return self._music_volume
+
+    def set_sfx_volume(self, volume_0_to_1: float):
+        """
+        Set SFX volume (affects SFX only).
+
+        Args:
+            volume_0_to_1: SFX volume from 0.0 (mute) to 1.0 (full volume)
+                           UI should convert 0-100% slider to 0.0-1.0 range
+        """
+        self._sfx_volume = max(0.0, min(1.0, float(volume_0_to_1)))
+
+    def get_sfx_volume(self) -> float:
+        """Get current SFX volume."""
+        return self._sfx_volume
 

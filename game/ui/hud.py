@@ -61,6 +61,8 @@ class HUD:
         self._value_text_cache = {}  # key -> (last_value, surf)
         self._last_placing = None
         self._placing_surf = None
+        self._placing_banner_cache = None
+        self._placing_banner_text = None
 
         # UI panels (cached surfaces)
         # CC0 UI pack textures (WK7_R6)
@@ -73,6 +75,7 @@ class HUD:
         self._button_tex_pressed = "assets/ui/kingdomsim_ui_cc0/buttons/button_pressed.png"
         self._panel_slice_border = 8
         self._button_slice_border = 6
+        self._topbar_sep_color = (70, 70, 90)
 
         self._panel_top = Panel(
             pygame.Rect(0, 0, 1, 1),
@@ -168,6 +171,45 @@ class HUD:
             self._value_text_cache.clear()
         self._value_text_cache[key] = (value, surf)
         return surf
+
+    def _build_placing_banner(self, text_surf: pygame.Surface) -> pygame.Surface:
+        """Build a cached placement banner surface with a framed background."""
+        pad_x = 14
+        pad_y = 8
+        w = text_surf.get_width() + pad_x * 2
+        h = text_surf.get_height() + pad_y * 2
+        banner = pygame.Surface((w, h), pygame.SRCALPHA)
+        rect = pygame.Rect(0, 0, w, h)
+        if not NineSlice.render(banner, rect, self._button_tex_hover, border=self._button_slice_border):
+            banner.fill((40, 40, 55, 220))
+            pygame.draw.rect(banner, self._frame_outer, rect, 2)
+            inner = rect.inflate(-4, -4)
+            if inner.width > 0 and inner.height > 0:
+                pygame.draw.rect(banner, self._frame_inner, inner, 1)
+        # Accent line to make placement mode obvious.
+        pygame.draw.line(banner, COLOR_GOLD, (4, 4), (w - 5, 4), 2)
+        banner.blit(text_surf, (pad_x, pad_y))
+        return banner
+
+    def _draw_section_divider(self, surface: pygame.Surface, x: int, y: int, width: int):
+        """Draw a subtle horizontal divider for right-panel sections."""
+        if width <= 0:
+            return
+        pygame.draw.line(surface, self._frame_inner, (x, y), (x + width, y), 1)
+        pygame.draw.line(surface, self._frame_highlight, (x, y + 1), (x + width, y + 1), 1)
+
+    def _blit_text_with_shadow(
+        self,
+        surface: pygame.Surface,
+        text_surf: pygame.Surface,
+        shadow_surf: pygame.Surface | None,
+        x: int,
+        y: int,
+    ):
+        """Blit text with a subtle shadow for readability."""
+        if shadow_surf is not None:
+            surface.blit(shadow_surf, (x + 1, y + 1))
+        surface.blit(text_surf, (x, y))
 
     def _compute_layout(self, surface: pygame.Surface):
         """Compute UI rects from the actual render surface size (no hardcoded 1920×1080)."""
@@ -366,6 +408,17 @@ class HUD:
         if self.right_panel_visible:
             self._panel_right.render(surface)
         self._panel_minimap.render(surface)
+        # Dark header strip for depth on the top bar
+        pygame.draw.rect(surface, (30, 30, 40), (top.x, top.y, top.width, 6))
+        if minimap.width > 0 and minimap.height > 0:
+            inner = minimap.inflate(-6, -6)
+            if inner.width > 0 and inner.height > 0:
+                pygame.draw.rect(surface, self._frame_inner, inner, 1)
+                pygame.draw.line(surface, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.right - 2, inner.top + 1), 1)
+                pygame.draw.line(surface, self._frame_highlight, (inner.left + 1, inner.top + 1), (inner.left + 1, inner.bottom - 2), 1)
+            # Separator between minimap and command bar
+            sep_x = minimap.right + int(self.theme.gutter // 2)
+            pygame.draw.line(surface, self._frame_outer, (sep_x, bottom.y + 8), (sep_x, bottom.bottom - 8), 2)
 
         # Quit button (top-right; player-manageable UI)
         self._render_quit_button(surface, top_rect=top)
@@ -382,16 +435,28 @@ class HUD:
         heroes_surf = self._cached_value_text("top_heroes", alive_heroes, f"Heroes: {alive_heroes}", self.theme.font_body, COLOR_WHITE)
         enemies_surf = self._cached_value_text("top_enemies", alive_enemies, f"Enemies: {alive_enemies}", self.theme.font_body, COLOR_RED)
         wave_surf = self._cached_value_text("top_wave", wave, f"Wave: {wave}", self.theme.font_body, COLOR_WHITE)
-
+        items = [
+            (gold_surf, COLOR_GOLD),
+            (heroes_surf, (230, 230, 230)),
+            (enemies_surf, COLOR_RED),
+            (wave_surf, (230, 230, 230)),
+        ]
         x = int(self.theme.margin)
         y = int((top.height - gold_surf.get_height()) // 2)
-        surface.blit(gold_surf, (x, y))
-        x += gold_surf.get_width() + int(self.theme.gutter) * 2
-        surface.blit(heroes_surf, (x, y + 2))
-        x += heroes_surf.get_width() + int(self.theme.gutter)
-        surface.blit(enemies_surf, (x, y + 2))
-        x += enemies_surf.get_width() + int(self.theme.gutter)
-        surface.blit(wave_surf, (x, y + 2))
+        icon_size = 6
+        icon_pad = 6
+        item_gap = int(self.theme.gutter) * 2
+        for idx, (surf, icon_color) in enumerate(items):
+            icon_y = y + (gold_surf.get_height() - icon_size) // 2
+            pygame.draw.rect(surface, icon_color, (x, icon_y, icon_size, icon_size))
+            text_x = x + icon_size + icon_pad
+            surface.blit(surf, (text_x, y + 1))
+            x = text_x + surf.get_width() + item_gap
+            if idx < len(items) - 1:
+                sep_x = x - (item_gap // 2)
+                pygame.draw.line(surface, self._topbar_sep_color, (sep_x, top.y + 10), (sep_x, top.bottom - 10), 1)
+        # Subtle bottom edge to separate top bar from world
+        pygame.draw.line(surface, self._frame_outer, (top.x, top.bottom - 1), (top.right, top.bottom - 1), 1)
         
         # Context banner: placement mode (rendered near the bottom bar, above command buttons)
         placing = game_state.get("placing_building_type")
@@ -401,10 +466,16 @@ class HUD:
                 placing_name = str(placing).replace("_", " ").title()
                 banner = f"Placing: {placing_name} (LMB: place, ESC: cancel)"
                 self._placing_surf = self.theme.font_body.render(banner, True, COLOR_WHITE)
+                self._placing_banner_cache = self._build_placing_banner(self._placing_surf)
+                self._placing_banner_text = banner
             else:
                 self._placing_surf = None
-        if self._placing_surf is not None:
-            surface.blit(self._placing_surf, (int(self.theme.margin), bottom.y - self._placing_surf.get_height() - 2))
+                self._placing_banner_cache = None
+                self._placing_banner_text = None
+        if self._placing_banner_cache is not None:
+            bx = int(cmd.x + (cmd.width - self._placing_banner_cache.get_width()) // 2) if cmd.width > 0 else int(self.theme.margin)
+            by = int(bottom.y - self._placing_banner_cache.get_height() - 6)
+            surface.blit(self._placing_banner_cache, (bx, by))
 
         # Help/controls overlay (toggle via F3)
         if self.show_help:
@@ -580,7 +651,8 @@ class HUD:
             # Label (cached by title)
             # WK7: Better button text spacing and positioning
             title_surf = self._cached_value_text(("btn_t", btn.title), 1, btn.title, self.theme.font_body, COLOR_WHITE if not is_hover else (240, 240, 255))
-            hk_surf = self._cached_value_text(("btn_hk", btn.hotkey), 1, btn.hotkey, self.theme.font_small, (200, 200, 200) if is_hover else (180, 180, 180))
+            chip_text = "1-8" if btn.title == "Build" else btn.hotkey
+            hk_surf = self._cached_value_text(("btn_hk", chip_text), 1, chip_text, self.theme.font_small, (200, 200, 200) if is_hover else (180, 180, 180))
             icon = None
             if btn.title == "Build":
                 icon = self._icon_build
@@ -597,7 +669,18 @@ class HUD:
                 icon_pad = icon.get_width() + 6
             text_x = btn.rect.x + text_pad + icon_pad
             surface.blit(title_surf, (text_x, btn.rect.y + 10))
-            surface.blit(hk_surf, (text_x, btn.rect.y + 10 + title_surf.get_height() + 4))
+            # Hotkey chip (bottom-right)
+            chip_pad_x = 6
+            chip_pad_y = 2
+            chip_w = hk_surf.get_width() + chip_pad_x * 2
+            chip_h = hk_surf.get_height() + chip_pad_y * 2
+            chip_x = btn.rect.right - chip_w - 10
+            chip_y = btn.rect.bottom - chip_h - 10
+            chip_rect = pygame.Rect(chip_x, chip_y, chip_w, chip_h)
+            chip_bg = (60, 60, 75) if is_hover else (45, 45, 60)
+            pygame.draw.rect(surface, chip_bg, chip_rect)
+            pygame.draw.rect(surface, self._frame_inner, chip_rect, 1)
+            surface.blit(hk_surf, (chip_rect.x + chip_pad_x, chip_rect.y + chip_pad_y))
 
         # Tooltip (cached; built only when hovered text changes)
         if hovered is not None:
@@ -609,7 +692,7 @@ class HUD:
     def _right_panel_top_pad(self, rect: pygame.Rect) -> int:
         pad = int(self.theme.margin)
         if self.right_close_rect is not None and self.right_close_rect.colliderect(rect):
-            pad = max(pad, int(self.right_close_rect.height) + 10)
+            pad = max(pad, int(self.right_close_rect.height) + int(self.theme.gutter))
         return pad
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect):
@@ -618,13 +701,29 @@ class HUD:
         x = rect.x + int(self.theme.margin)
         y = rect.y + self._right_panel_top_pad(rect)
         btype = str(getattr(building, "building_type", building.__class__.__name__) or "")
-        title = self._cached_value_text(("bsel", btype), 1, btype.replace("_", " ").title(), self.theme.font_title, COLOR_WHITE)
-        surface.blit(title, (x, y))
-        y += title.get_height() + 10  # Increased from 6 for better spacing
+        header_h = 28
+        header_rect = pygame.Rect(rect.x + 6, rect.y + int(self.theme.margin) - 4, rect.width - 12, header_h)
+        pygame.draw.rect(surface, (35, 35, 45), header_rect)
+        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
+        pygame.draw.line(surface, self._frame_highlight, (header_rect.left + 1, header_rect.top + 1), (header_rect.right - 2, header_rect.top + 1), 1)
+
+        title_text = btype.replace("_", " ").title()
+        title = self._cached_value_text(("bsel", btype), 1, title_text, self.theme.font_title, COLOR_WHITE)
+        title_shadow = self._cached_value_text(("bsel_sh", btype), 1, title_text, self.theme.font_title, (20, 20, 30))
+        self._blit_text_with_shadow(surface, title, title_shadow, x, header_rect.y + (header_rect.height - title.get_height()) // 2)
+        y = header_rect.bottom + 6
+        self._draw_section_divider(surface, x, y, int(rect.width - int(self.theme.margin) * 2))
+        y += 6
+        sec_b = self._cached_value_text(("sec_build", id(building)), 1, "Status", self.theme.font_small, (180, 180, 200))
+        sec_b_sh = self._cached_value_text(("sec_build_sh", id(building)), 1, "Status", self.theme.font_small, (20, 20, 30))
+        self._blit_text_with_shadow(surface, sec_b, sec_b_sh, x, y)
+        y += sec_b.get_height() + 4
         hp = int(getattr(building, "hp", 0) or 0)
         mhp = int(getattr(building, "max_hp", 0) or 0)
-        hp_surf = self._cached_value_text(("bhp", id(building), hp, mhp), 1, f"HP: {hp}/{mhp}", self.theme.font_body, (200, 200, 200))
-        surface.blit(hp_surf, (x, y))
+        hp_line = f"HP: {hp}/{mhp}"
+        hp_surf = self._cached_value_text(("bhp", id(building), hp, mhp), 1, hp_line, self.theme.font_body, (220, 220, 220))
+        hp_shadow = self._cached_value_text(("bhp_sh", id(building), hp, mhp), 1, hp_line, self.theme.font_body, (20, 20, 30))
+        self._blit_text_with_shadow(surface, hp_surf, hp_shadow, x, y)
 
     def _render_help(self, surface: pygame.Surface, origin: tuple[int, int]):
         """Render a compact controls/help panel."""
@@ -700,24 +799,31 @@ class HUD:
         if self.right_close_rect is not None and self.right_close_rect.colliderect(rect):
             pad = max(pad, int(self.right_close_rect.height) + 10)
         y = panel_y + pad
-        
-        # Name
-        name_text = self.font_medium.render(hero.name, True, COLOR_WHITE)
-        surface.blit(name_text, (panel_x + pad, y))
-        y += name_text.get_height() + 8  # Better spacing
+
+        # Header strip (name)
+        header_h = 28
+        header_rect = pygame.Rect(panel_x + 6, panel_y + pad - 4, panel_width - 12, header_h)
+        pygame.draw.rect(surface, (35, 35, 45), header_rect)
+        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
+        pygame.draw.line(surface, self._frame_highlight, (header_rect.left + 1, header_rect.top + 1), (header_rect.right - 2, header_rect.top + 1), 1)
+
+        name_text = self._cached_value_text(("hero_name", id(hero), hero.name), 1, hero.name, self.theme.font_title, COLOR_WHITE)
+        name_shadow = self._cached_value_text(("hero_name_sh", id(hero), hero.name), 1, hero.name, self.theme.font_title, (20, 20, 30))
+        self._blit_text_with_shadow(surface, name_text, name_shadow, panel_x + pad, header_rect.y + (header_rect.height - name_text.get_height()) // 2)
+        y = header_rect.bottom + 6
         
         # Class and level
-        class_text = self.font_small.render(
-            f"{hero.hero_class.title()} Lv.{hero.level}", True, COLOR_WHITE
-        )
-        surface.blit(class_text, (panel_x + pad, y))
-        y += class_text.get_height() + 8  # Better spacing
+        class_line = f"{hero.hero_class.title()} Lv.{hero.level}"
+        class_text = self._cached_value_text(("hero_class", id(hero), class_line), 1, class_line, self.theme.font_small, COLOR_WHITE)
+        class_shadow = self._cached_value_text(("hero_class_sh", id(hero), class_line), 1, class_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, class_text, class_shadow, panel_x + pad, y)
+        y += class_text.get_height() + 6
         
         # HP bar
-        hp_text = self.font_small.render(
-            f"HP: {hero.hp}/{hero.max_hp}", True, COLOR_WHITE
-        )
-        surface.blit(hp_text, (panel_x + pad, y))
+        hp_line = f"HP: {hero.hp}/{hero.max_hp}"
+        hp_text = self._cached_value_text(("hero_hp", id(hero), hero.hp, hero.max_hp), 1, hp_line, self.theme.font_small, COLOR_WHITE)
+        hp_shadow = self._cached_value_text(("hero_hp_sh", id(hero), hero.hp, hero.max_hp), 1, hp_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, hp_text, hp_shadow, panel_x + pad, y)
         y += hp_text.get_height() + 6
         
         bar_width = panel_width - (pad * 2)
@@ -726,57 +832,98 @@ class HUD:
         hp_pct = hero.hp / hero.max_hp
         hp_color = COLOR_GREEN if hp_pct > 0.5 else COLOR_RED
         pygame.draw.rect(surface, hp_color, (panel_x + pad, y, bar_width * hp_pct, bar_height))
-        y += bar_height + 8  # Better spacing
+        y += bar_height + 6
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        sec_v = self._cached_value_text(("sec_vitals", id(hero)), 1, "Vitals", self.theme.font_small, (180, 180, 200))
+        sec_v_sh = self._cached_value_text(("sec_vitals_sh", id(hero)), 1, "Vitals", self.theme.font_small, (20, 20, 30))
+        self._blit_text_with_shadow(surface, sec_v, sec_v_sh, panel_x + pad, y)
+        y += sec_v.get_height() + 4
         
         # Stats
-        stats_text = self.font_small.render(
-            f"ATK: {hero.attack}  DEF: {hero.defense}", True, COLOR_WHITE
-        )
-        surface.blit(stats_text, (panel_x + pad, y))
-        y += 20
+        stats_line = f"ATK: {hero.attack}  DEF: {hero.defense}"
+        stats_text = self._cached_value_text(("hero_stats", id(hero), hero.attack, hero.defense), 1, stats_line, self.theme.font_small, (220, 220, 220))
+        stats_shadow = self._cached_value_text(("hero_stats_sh", id(hero), hero.attack, hero.defense), 1, stats_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, stats_text, stats_shadow, panel_x + pad, y)
+        y += 16
         
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        sec_e = self._cached_value_text(("sec_econ", id(hero)), 1, "Economy", self.theme.font_small, (180, 180, 200))
+        sec_e_sh = self._cached_value_text(("sec_econ_sh", id(hero)), 1, "Economy", self.theme.font_small, (20, 20, 30))
+        self._blit_text_with_shadow(surface, sec_e, sec_e_sh, panel_x + pad, y)
+        y += sec_e.get_height() + 4
+
         # Gold (spendable + taxed)
-        gold_text = self.font_small.render(f"Gold: {hero.gold}", True, COLOR_GOLD)
-        surface.blit(gold_text, (panel_x + 10, y))
-        y += 15
+        gold_line = f"Gold: {hero.gold}"
+        gold_text = self._cached_value_text(("hero_gold", id(hero), hero.gold), 1, gold_line, self.theme.font_small, COLOR_GOLD)
+        gold_shadow = self._cached_value_text(("hero_gold_sh", id(hero), hero.gold), 1, gold_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, gold_text, gold_shadow, panel_x + pad, y)
+        y += 14
         
         # Taxed gold
-        tax_text = self.font_small.render(f"Taxed: {hero.taxed_gold}", True, (200, 150, 50))
-        surface.blit(tax_text, (panel_x + 10, y))
-        y += 20
+        tax_line = f"Taxed: {hero.taxed_gold}"
+        tax_text = self._cached_value_text(("hero_tax", id(hero), hero.taxed_gold), 1, tax_line, self.theme.font_small, (220, 180, 90))
+        tax_shadow = self._cached_value_text(("hero_tax_sh", id(hero), hero.taxed_gold), 1, tax_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, tax_text, tax_shadow, panel_x + pad, y)
+        y += 16
+
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        sec_eq = self._cached_value_text(("sec_equip", id(hero)), 1, "Equipment", self.theme.font_small, (180, 180, 200))
+        sec_eq_sh = self._cached_value_text(("sec_equip_sh", id(hero)), 1, "Equipment", self.theme.font_small, (20, 20, 30))
+        self._blit_text_with_shadow(surface, sec_eq, sec_eq_sh, panel_x + pad, y)
+        y += sec_eq.get_height() + 4
 
         # Potions
-        potions_text = self.font_small.render(f"Potions: {getattr(hero, 'potions', 0)}", True, COLOR_GREEN)
-        surface.blit(potions_text, (panel_x + 10, y))
-        y += 20
+        potions_line = f"Potions: {getattr(hero, 'potions', 0)}"
+        potions_text = self._cached_value_text(("hero_potions", id(hero), getattr(hero, "potions", 0)), 1, potions_line, self.theme.font_small, COLOR_GREEN)
+        potions_shadow = self._cached_value_text(("hero_potions_sh", id(hero), getattr(hero, "potions", 0)), 1, potions_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, potions_text, potions_shadow, panel_x + pad, y)
+        y += 16
         
         # Equipment
         weapon = hero.weapon["name"] if hero.weapon else "Fists"
         armor = hero.armor["name"] if hero.armor else "None"
-        equip_text = self.font_small.render(f"W: {weapon}", True, COLOR_WHITE)
-        surface.blit(equip_text, (panel_x + 10, y))
-        y += 15
-        armor_text = self.font_small.render(f"A: {armor}", True, COLOR_WHITE)
-        surface.blit(armor_text, (panel_x + 10, y))
-        y += 20
+        equip_line = f"W: {weapon}"
+        equip_text = self._cached_value_text(("hero_weapon", id(hero), weapon), 1, equip_line, self.theme.font_small, COLOR_WHITE)
+        equip_shadow = self._cached_value_text(("hero_weapon_sh", id(hero), weapon), 1, equip_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, equip_text, equip_shadow, panel_x + pad, y)
+        y += 14
+        armor_line = f"A: {armor}"
+        armor_text = self._cached_value_text(("hero_armor", id(hero), armor), 1, armor_line, self.theme.font_small, COLOR_WHITE)
+        armor_shadow = self._cached_value_text(("hero_armor_sh", id(hero), armor), 1, armor_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, armor_text, armor_shadow, panel_x + pad, y)
+        y += 16
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        sec_i = self._cached_value_text(("sec_intent", id(hero)), 1, "Intent", self.theme.font_small, (180, 180, 200))
+        sec_i_sh = self._cached_value_text(("sec_intent_sh", id(hero)), 1, "Intent", self.theme.font_small, (20, 20, 30))
+        self._blit_text_with_shadow(surface, sec_i, sec_i_sh, panel_x + pad, y)
+        y += sec_i.get_height() + 4
         
         # State / Intent / Decision
         intent = self._compute_hero_intent(hero)
-        intent_text = self.font_small.render(f"Intent: {intent}", True, (200, 200, 200))
-        surface.blit(intent_text, (panel_x + 10, y))
-        y += 16
+        intent_line = f"Intent: {intent}"
+        intent_text = self._cached_value_text(("hero_intent", id(hero), intent), 1, intent_line, self.theme.font_small, (220, 220, 220))
+        intent_shadow = self._cached_value_text(("hero_intent_sh", id(hero), intent), 1, intent_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, intent_text, intent_shadow, panel_x + pad, y)
+        y += 14
 
-        state_text = self.font_small.render(f"State: {hero.state.name}", True, (170, 170, 170))
-        surface.blit(state_text, (panel_x + 10, y))
-        y += 16
+        state_line = f"State: {hero.state.name}"
+        state_text = self._cached_value_text(("hero_state", id(hero), hero.state.name), 1, state_line, self.theme.font_small, (200, 200, 200))
+        state_shadow = self._cached_value_text(("hero_state_sh", id(hero), hero.state.name), 1, state_line, self.theme.font_small, (25, 25, 35))
+        self._blit_text_with_shadow(surface, state_text, state_shadow, panel_x + pad, y)
+        y += 14
 
         decision_line, decision_color = self._format_last_decision(hero)
         # Keep within panel width: simple truncation.
         max_chars = 48
         if len(decision_line) > max_chars:
             decision_line = decision_line[: max_chars - 3].rstrip() + "..."
-        decision_text = self.font_tiny.render(decision_line, True, decision_color)
-        surface.blit(decision_text, (panel_x + 10, y))
+        decision_text = self._cached_value_text(("hero_dec", id(hero), decision_line), 1, decision_line, self.font_tiny, decision_color)
+        decision_shadow = self._cached_value_text(("hero_dec_sh", id(hero), decision_line), 1, decision_line, self.font_tiny, (20, 20, 30))
+        self._blit_text_with_shadow(surface, decision_text, decision_shadow, panel_x + pad, y)
         y += 16
 
         # Inside-building visibility (PM: show if available; can be debug-only, but safe to show always when true)
@@ -788,7 +935,7 @@ class HUD:
                     bname = getattr(b, "building_type", None) or b.__class__.__name__
                 inside_line = f"Inside: {str(bname).replace('_',' ').title()}" if bname else "Inside: yes"
                 inside_surf = self._cached_line(("inside", id(hero)), inside_line, (220, 220, 255))
-                surface.blit(inside_surf, (panel_x + 10, y))
+                surface.blit(inside_surf, (panel_x + pad, y))
                 y += 14
         except Exception:
             pass
@@ -820,7 +967,7 @@ class HUD:
                         stuck_line = f"STUCK: {reason} ({stuck_s:.1f}s, attempts {attempts})"
 
                     stuck_surf = self._cached_line(("stuck", id(hero)), stuck_line, (255, 180, 100))
-                    surface.blit(stuck_surf, (panel_x + 10, y))
+                    surface.blit(stuck_surf, (panel_x + pad, y))
                     y += 14
             except Exception:
                 pass
@@ -832,7 +979,7 @@ class HUD:
                     reason = str(getattr(hero, "attack_blocked_reason", "") or "").strip()
                     line = f"ATK BLOCKED: {reason}" if reason else "ATK BLOCKED"
                     atk_surf = self._cached_line(("atk_block", id(hero)), line[:48], (255, 160, 160))
-                    surface.blit(atk_surf, (panel_x + 10, y))
+                    surface.blit(atk_surf, (panel_x + pad, y))
                     y += 14
             except Exception:
                 pass

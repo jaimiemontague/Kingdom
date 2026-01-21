@@ -120,25 +120,33 @@ Use flat filenames matching the sound keys:
 
 Validate that audio files match this flat structure in `tools/validate_assets.py`.
 
-## Audio Settings (WK7)
+## Audio Settings (WK7/V1.3 Extension)
 
-**Master Volume Control**:
-- **API**: `AudioSystem.set_master_volume(volume_0_to_1: float)` and `AudioSystem.get_master_volume() -> float`
-- **Range**: 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
-- **Default**: 0.8 (80% per PM decision)
-- **UI Display**: 0-100% slider (UI converts to 0.0-1.0 for API)
-- **Applies To**: All SFX and ambient (master volume multiplies individual sound volumes)
-- **Behavior**: 
-  - Volume changes are immediate (no restart required)
-  - Volume is post-processing (applied at playback time, not during event emission)
-  - Volume does not bypass visibility gating (world SFX still requires on-screen + Visibility.VISIBLE)
-  - UI sounds are exempt from fog gating but still respect master volume
-- **Persistence**: In-memory for Build A (defer to Build B if file persistence is needed)
+**Volume Controls (3 sliders)**:
+- **Master** (default 0.8): scales **everything**
+- **Music** (default 1.0): scales **ambient only**
+- **SFX** (default 1.0): scales **SFX only**
+
+**API**:
+- `AudioSystem.set_master_volume(volume_0_to_1: float)` / `get_master_volume() -> float`
+- `AudioSystem.set_music_volume(volume_0_to_1: float)` / `get_music_volume() -> float`
+- `AudioSystem.set_sfx_volume(volume_0_to_1: float)` / `get_sfx_volume() -> float`
+
+**Ranges**:
+- 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
+- **UI display**: 0–100% slider (UI converts to 0.0–1.0 for API)
+
+**Effective volume formulas**:
+- **SFX**: `final = master * sfx * per_sound_volume`
+- **Music/Ambient**: `final = master * music * ambient_base_volume`
+
+**Behavior**:
+- Volume changes are immediate (no restart required)
+- Volume is post-processing (applied at playback time, not during event emission)
+- Volume does not bypass visibility gating (world SFX still requires on-screen + Visibility.VISIBLE)
+- UI sounds are exempt from fog gating but still respect master and SFX volumes
+- **Persistence**: In-memory for Build A (per PM decision); file persistence may be Build B
 - **Non-authoritative**: Volume settings are UI-only state; never affect simulation state or determinism
-
-**Optional Split (Build B)**:
-- SFX volume and ambient volume can be split in future (separate sliders)
-- For Build A: master volume only (simple and safe)
 
 ## For Agent 03 (Architecture)
 

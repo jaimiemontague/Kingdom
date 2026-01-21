@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — v1.3 Extension (WIP)
+
+- AI: Heroes **buy potions more often** and **use potions before fleeing** (less early retreat).
+- UI: ESC menu buttons have **consistent label alignment**.
+- Audio: Separate volume controls: **Master**, **Music (ambient)**, and **SFX** (3 sliders).
+- Pause: World camera/zoom **does not scroll** while paused / ESC menu open.
+- Blacksmith: **Research weapon/armor upgrades**, then heroes can **purchase upgrades** (counts as a purchase for Journey triggers).
+- UX: Demolish is **player-owned buildings only** (not monster lairs).
+
 ## Prototype v1.2.9 — UI-v2 Update
 
 - UI: Full-screen **(exclusive)**, **borderless fullscreen-windowed**, and **windowed** modes (Graphics menu) with safer resizing behavior.

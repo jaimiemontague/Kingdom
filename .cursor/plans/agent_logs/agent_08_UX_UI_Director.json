@@ -2154,6 +2154,114 @@
               }
             }
           }
+        },
+        "v1.3_r1_execution_and_polish": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": "UI visual polish execution + after screenshots"
+          },
+          "round_id": "v1.3_r1_execution_and_polish",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r1_execution_and_polish_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T11:58:30.091135"
+          },
+          "prompt_text": "Execute P0 UI polish items and capture after screenshots.",
+          "response": {
+            "received_at_local": "2026-01-21T11:58:30.091135",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/hud.py: added top-bar icon dots + separators + contrast line; added framed placement-mode banner; added minimap inner frame + separator; improved command bar hotkey chips; added right-panel section dividers, spacing, and value contrast; hardened close X padding.",
+              "game/ui/build_catalog_panel.py: added header strip with aligned title/close button, adjusted grid offset, and improved hover highlight/border contrast.",
+              "docs/screenshots/v1.3.0_after/: captured deterministic after screenshots (base_overview, ui_panels, ui_pause_menu, ui_build_catalog)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/v1.3.0_after/base_overview_seed3 --size 1920x1080 --ticks 0",
+              "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/v1.3.0_after/ui_panels_seed3 --size 1920x1080 --ticks 0",
+              "python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/v1.3.0_after/ui_pause_menu_seed3 --size 1920x1080 --ticks 0",
+              "python tools/capture_screenshots.py --scenario ui_build_catalog --seed 3 --out docs/screenshots/v1.3.0_after/ui_build_catalog_seed3 --size 1920x1080 --ticks 0"
+            ],
+            "evidence": [
+              "qa_smoke PASS: python tools/qa_smoke.py --quick",
+              "validate_assets PASS: python tools/validate_assets.py --strict --check-attribution",
+              "Screenshots: docs/screenshots/v1.3.0_after/base_overview_seed3/ (4 PNGs + manifest.json)",
+              "Screenshots: docs/screenshots/v1.3.0_after/ui_panels_seed3/ (4 PNGs + manifest.json)",
+              "Screenshots: docs/screenshots/v1.3.0_after/ui_pause_menu_seed3/ui_pause_menu.png",
+              "Screenshots: docs/screenshots/v1.3.0_after/ui_build_catalog_seed3/ui_build_catalog.png"
+            ],
+            "blockers": []
+          }
+        },
+        "v1.3_r3_visual_polish_pass_2": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": "Visual polish pass 2 (UI hierarchy, spacing, thumbnails)"
+          },
+          "round_id": "v1.3_r3_visual_polish_pass_2",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r3_visual_polish_pass_2_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T12:19:21.634502"
+          },
+          "prompt_text": "UI hierarchy/depth pass + space tightening + build catalog thumbnails.",
+          "response": {
+            "received_at_local": "2026-01-21T12:19:21.634502",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/theme.py: tightened UI sizing (bottom bar height, right panel width, margins/gutters) to reduce wasted space.",
+              "game/ui/hud.py: added header strips + section labels/dividers, improved contrast and subtle text shadow for right panel; added top bar depth strip; tightened layout while preserving tips/debug overlays.",
+              "game/ui/build_catalog_panel.py: replaced color swatches with actual building sprite thumbnails; added header strip + shadowed title; improved hover contrast and card framing."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0"
+            ],
+            "evidence": [
+              "qa_smoke PASS: python tools/qa_smoke.py --quick",
+              "validate_assets PASS: python tools/validate_assets.py --strict --check-attribution",
+              "Screenshots: docs/screenshots/v1.3.0_after/ui_polish_after_seed3/ (10 PNGs + manifest.json)"
+            ],
+            "blockers": []
+          }
+        },
+        "v1.3_r5_extension_mid_sprint": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+            "notes": "Mid-sprint extension UI tasks (menu alignment, audio sliders, demolish gating, blacksmith UI)"
+          },
+          "round_id": "v1.3_r5_extension_mid_sprint",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T14:44:00.164120"
+          },
+          "prompt_text": "Execute UI tasks for v1.3 mid-sprint extension.",
+          "response": {
+            "received_at_local": "2026-01-21T14:44:00.164120",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/pause_menu.py: unified ESC menu button label alignment with a single left padding + icon slot policy; added three audio sliders (Master/Music/SFX) and wired to AudioSystem APIs when present.",
+              "game/ui/building_panel.py: added blacksmith research button UI (weapon/armor upgrades) with safe, best-effort calls into blacksmith research APIs; added demolish gating so lairs/neutral buildings never show demolish."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "Manual: ESC menu buttons show consistent label alignment; Audio page shows 3 sliders and adjusts master/music/sfx if AudioSystem exposes APIs.",
+              "Manual: select monster lair -> no Demolish button; select player building -> Demolish still visible (castle exception unchanged).",
+              "Manual: open Blacksmith panel -> research buttons visible when research API is available; clicking triggers research if affordable."
+            ],
+            "evidence": [
+              "qa_smoke PASS: python tools/qa_smoke.py --quick",
+              "validate_assets PASS: python tools/validate_assets.py --strict --check-attribution"
+            ],
+            "blockers": []
+          }
         }
       }
     }

@@ -7,7 +7,7 @@ Click-to-place functionality.
 from __future__ import annotations
 
 import pygame
-from game.ui.widgets import ModalPanel, NineSlice
+from game.ui.widgets import ModalPanel, NineSlice, load_image_cached
 from game.ui.theme import UITheme
 from game.graphics.font_cache import get_font
 from config import (
@@ -52,6 +52,8 @@ class BuildCatalogPanel:
         self._button_tex_normal = "assets/ui/kingdomsim_ui_cc0/buttons/button_normal.png"
         self._button_tex_hover = "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png"
         self._button_slice_border = 6
+        self._title_surf = self.theme.font_title.render("Build Buildings", True, self.theme.text)
+        self._title_shadow = self.theme.font_title.render("Build Buildings", True, (20, 20, 30))
         
         # Modal panel
         self.modal = ModalPanel(
@@ -77,6 +79,7 @@ class BuildCatalogPanel:
         self.thumbnail_size = 48
         self.row_height = 72
         self.padding = 10
+        self.header_height = 44
         
         # Track hovered building
         self.hovered_building = None
@@ -130,7 +133,7 @@ class BuildCatalogPanel:
         row = index // self.cols
         
         x = panel_rect.x + self.padding + col * (panel_rect.width // self.cols)
-        y = panel_rect.y + 52 + row * self.row_height
+        y = panel_rect.y + self.header_height + self.padding + row * self.row_height
         
         return pygame.Rect(x, y, panel_rect.width // self.cols - self.padding * 2, self.row_height - self.padding)
     
@@ -144,7 +147,8 @@ class BuildCatalogPanel:
         
         # Check close button (top-right)
         panel_rect = self.modal.get_panel_rect()
-        close_rect = pygame.Rect(panel_rect.right - 30, panel_rect.y + 10, 20, 20)
+        header_rect = pygame.Rect(panel_rect.x + 8, panel_rect.y + 8, panel_rect.width - 16, self.header_height)
+        close_rect = pygame.Rect(header_rect.right - 28, header_rect.y + (header_rect.height - 20) // 2, 20, 20)
         if close_rect.collidepoint(pos):
             self.close()
             return None
@@ -184,14 +188,20 @@ class BuildCatalogPanel:
         # Panel
         self.modal.render_panel(surface)
         panel_rect = self.modal.get_panel_rect()
+        header_rect = pygame.Rect(panel_rect.x + 8, panel_rect.y + 8, panel_rect.width - 16, self.header_height)
+        if not NineSlice.render(surface, header_rect, self._button_tex_normal, border=self._button_slice_border):
+            pygame.draw.rect(surface, (45, 45, 60), header_rect)
+            pygame.draw.rect(surface, self.theme.panel_border, header_rect, 1)
+        pygame.draw.line(surface, self.theme.panel_border, (header_rect.left, header_rect.bottom), (header_rect.right, header_rect.bottom), 1)
         
         # Title
-        title = self.theme.font_title.render("Build Buildings", True, self.theme.text)
-        title_x = panel_rect.centerx - title.get_width() // 2
-        surface.blit(title, (title_x, panel_rect.y + 16))
+        title_x = header_rect.x + 12
+        title_y = header_rect.y + (header_rect.height - self._title_surf.get_height()) // 2
+        surface.blit(self._title_shadow, (title_x + 1, title_y + 1))
+        surface.blit(self._title_surf, (title_x, title_y))
         
         # Close button (X)
-        close_rect = pygame.Rect(panel_rect.right - 30, panel_rect.y + 10, 20, 20)
+        close_rect = pygame.Rect(header_rect.right - 28, header_rect.y + (header_rect.height - 20) // 2, 20, 20)
         close_bg = (70, 70, 80) if close_rect.collidepoint(pygame.mouse.get_pos()) else (50, 50, 60)
         if not NineSlice.render(surface, close_rect, self._button_tex_hover if close_rect.collidepoint(pygame.mouse.get_pos()) else self._button_tex_normal, border=self._button_slice_border):
             pygame.draw.rect(surface, close_bg, close_rect)
@@ -206,20 +216,29 @@ class BuildCatalogPanel:
             is_hovered = (self.hovered_building and self.hovered_building[0] == i)
             
             # Row background
-            bg_color = (60, 60, 70) if is_hovered else (45, 45, 55)
+            bg_color = (70, 80, 100) if is_hovered else (50, 50, 65)
             if not available:
-                bg_color = (40, 30, 30)  # Darker red tint for unavailable
+                bg_color = (45, 35, 35)  # Darker red tint for unavailable
             pygame.draw.rect(surface, bg_color, rect)
-            pygame.draw.rect(surface, self.theme.panel_border, rect, 1)
+            border_color = (120, 130, 160) if (is_hovered and available) else self.theme.panel_border
+            pygame.draw.rect(surface, border_color, rect, 2 if is_hovered else 1)
             
-            # Thumbnail (colored swatch for now; can be replaced with sprite later)
+            # Thumbnail (prefer building sprite; fallback to color swatch)
             thumb_x = rect.x + 8
             thumb_y = rect.y + (rect.height - self.thumbnail_size) // 2
             thumb_rect = pygame.Rect(thumb_x, thumb_y, self.thumbnail_size, self.thumbnail_size)
-            building_color = BUILDING_COLORS.get(building_type, (100, 100, 100))
-            if not available:
-                building_color = tuple(c // 2 for c in building_color)  # Darken unavailable
-            pygame.draw.rect(surface, building_color, thumb_rect)
+            sprite_path = f"assets/sprites/buildings/{building_type}/built/frame_000.png"
+            sprite = load_image_cached(sprite_path, (self.thumbnail_size, self.thumbnail_size))
+            if sprite is not None:
+                if not available:
+                    sprite = sprite.copy()
+                    sprite.fill((120, 120, 120, 160), special_flags=pygame.BLEND_RGBA_MULT)
+                surface.blit(sprite, thumb_rect.topleft)
+            else:
+                building_color = BUILDING_COLORS.get(building_type, (100, 100, 100))
+                if not available:
+                    building_color = tuple(c // 2 for c in building_color)  # Darken unavailable
+                pygame.draw.rect(surface, building_color, thumb_rect)
             pygame.draw.rect(surface, (200, 200, 220), thumb_rect, 2)
             
             # Building name

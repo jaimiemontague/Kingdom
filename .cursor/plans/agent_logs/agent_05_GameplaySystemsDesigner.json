@@ -879,6 +879,126 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "V1.3: Fix peasant stacking so two peasants are visibly distinct near the castle at start."
+      },
+      "rounds": {
+        "v1.3_r0_kickoff": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r0_kickoff_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00",
+            "received_at_local": "2026-01-21T18:35:00-07:00"
+          },
+          "prompt_text": "Fix V1.3-BUG-003: Ensure 2 peasants spawn with distinct positions, don't stack.",
+          "response": {
+            "received_at_local": "2026-01-21T18:35:00-07:00",
+            "status": "complete",
+            "raw": "### Status\nAgent 05 (GameplaySystemsDesigner) — V1.3-BUG-003 fix complete. Peasants now idle at deterministic offsets around the castle (visible and distinct) unless the castle is under attack, in which case they retreat inside. This prevents permanent overlap while keeping safety behavior.\n\n### Deliverables\n- Distinct peasant idle positions near castle (deterministic, offset slots).\n- Preserve safety behavior: peasants move inside only when the castle is under attack.\n- QA gate run: qa_smoke --quick PASS.\n\n### Changes made\n- Added deterministic idle offsets and slot assignment in `game/entities/peasant.py`.\n- When no work is available, peasants idle outside the castle at their offset (visible), instead of snapping to the exact castle center.\n- When the castle is under attack, peasants still move inside for protection.\n\n### How to test\n- Run `python main.py` and observe two peasants are visible and not stacked at game start.\n- Run `python tools/qa_smoke.py --quick` (PASS).\n\n### Notes\n- This change is deterministic: idle slot assignment is based on spawn order with fixed offsets.",
+            "summary_bullets": [
+              "Peasants now idle at deterministic offset slots around the castle to avoid overlap.",
+              "Castle safety behavior preserved: peasants go inside only when the castle is under attack.",
+              "qa_smoke --quick PASS."
+            ],
+            "proposed_changes": [
+              "game/entities/peasant.py: add deterministic idle offsets and use them when no work is available."
+            ],
+            "acceptance_criteria": [
+              "2 peasants visible at game start and not stacked on the same pixel.",
+              "Peasants do not permanently overlap while idle.",
+              "qa_smoke --quick PASS."
+            ],
+            "risks": [
+              "If too many peasants spawn, some may still share offset slots (mitigated by rotating offsets)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "P0/P1 blockers can proceed; no further changes required from Agent 05 for V1.3-BUG-003."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "game/entities/peasant.py"
+              ],
+              "qa_smoke_quick": "PASS",
+              "qa_smoke_exit_code": 0
+            }
+          }
+        },
+        "v1.3_r5_extension_mid_sprint": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+            "notes": "V1.3 extended: add gameplay/AI + UI/audio + building-behavior features"
+          },
+          "round_id": "v1.3_r5_extension_mid_sprint",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "Blacksmith feature: add research options for weapon and armor upgrades; after research, heroes can purchase upgrades at Blacksmith. Ensure hero purchases go through existing purchase path so hero.last_purchase_ms updates (feeds Journey trigger).",
+          "response": {
+            "received_at_local": "2026-01-21T18:50:00-07:00",
+            "status": "done",
+            "raw": "### Status\nAgent 05 (GameplaySystemsDesigner) — V1.3 R5 Blacksmith research + purchase system complete. Blacksmith now supports research for weapon/armor upgrades, and heroes can purchase upgraded items. All purchases go through existing buy_item path, ensuring Journey trigger compatibility.\n\n### Deliverables\n- **Blacksmith research system**: Added \"Weapon Upgrades\" and \"Armor Upgrades\" research options (300 gold each), following Library pattern.\n- **Upgraded items**: Added upgraded weapons (Steel Sword, Mithril Blade) and armor (Chain Mail, Plate Armor) gated by research.\n- **Purchase integration**: Heroes can purchase Blacksmith items through existing do_shopping() path; purchases update hero.last_purchase_ms for Journey trigger.\n- **AI support**: Added find_blacksmith_with_upgrades() helper and updated do_shopping() to work with any building that has get_available_items().\n\n### Files Changed\n- **MODIFIED**: `game/entities/building.py`\n  - Added \"Weapon Upgrades\" and \"Armor Upgrades\" to RESEARCH_UNLOCKS\n  - Extended Blacksmith class with research system (can_research, research methods)\n  - Added base_items, upgraded_weapons, upgraded_armor lists\n  - Added get_available_items() method that gates upgraded items by research\n  - Added has_upgrades_available() helper method\n- **MODIFIED**: `ai/basic_ai.py`\n  - Updated do_shopping() to accept any building with get_available_items() (not just marketplace)\n  - Added find_blacksmith_with_upgrades() helper method\n  - Updated shopping target handling to support blacksmith\n\n### How to Test\n- **Manual**:\n  1. Build a Blacksmith\n  2. Select Blacksmith and research \"Weapon Upgrades\" (300 gold)\n  3. Research \"Armor Upgrades\" (300 gold)\n  4. Heroes with sufficient gold should visit Blacksmith and purchase upgrades\n  5. Verify purchases trigger Journey behavior (hero.last_purchase_ms updated)\n- **Gates**:\n  - `python tools/qa_smoke.py --quick` → PASS (exit_code=0)\n  - `python tools/validate_assets.py --strict --check-attribution` → PASS (exit_code=0)\n\n### Evidence\n- **qa_smoke --quick**: PASS\n  - determinism_guard: PASS (no violations)\n  - All scenarios: PASS (default, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM)\n  - Exit code: 0\n- **validate_assets --strict --check-attribution**: PASS\n  - Exit code: 0\n  - No errors reported\n\n### Implementation Details\n- **Research system**: Mirrors Library pattern with global RESEARCH_UNLOCKS dict and unlock_research/is_research_unlocked functions.\n- **Item gating**: Upgraded items only appear in get_available_items() after corresponding research is unlocked.\n- **Purchase path**: All purchases go through hero.buy_item(), which updates hero.last_purchase_ms (sim-time) for Journey trigger compatibility.\n- **AI coordination**: Added building-side support; Agent 06 will enhance hero shopping desire logic to consider Blacksmith when upgrades are available.\n\n### Dependencies\n- **Agent 06**: Will enhance hero shopping intent to route to Blacksmith when upgrades are researched and affordable.\n- **Agent 08**: Will add research buttons to Blacksmith UI panel (similar to Library research buttons).\n\n### Blockers\n- None. Building-side implementation complete; ready for Agent 06 AI routing and Agent 08 UI integration.\n\n### Next Actions\n- **Agent 06**: Update hero shopping logic to consider Blacksmith when upgrades are available.\n- **Agent 08**: Add research buttons to Blacksmith panel UI.\n- **Manual verification**: After Agent 06/08 complete, verify heroes visit Blacksmith and purchase upgrades.",
+            "summary_bullets": [
+              "Added Blacksmith research system: \"Weapon Upgrades\" and \"Armor Upgrades\" (300 gold each, following Library pattern).",
+              "Added upgraded items gated by research: Steel Sword, Mithril Blade (weapons); Chain Mail, Plate Armor (armor).",
+              "Updated do_shopping() to work with Blacksmith; all purchases go through existing buy_item path (Journey trigger compatible).",
+              "Added find_blacksmith_with_upgrades() helper for AI routing (Agent 06 will enhance shopping desire logic).",
+              "All gates PASS: qa_smoke --quick PASS, validate_assets --strict --check-attribution PASS."
+            ],
+            "proposed_changes": [
+              "game/entities/building.py: Added RESEARCH_UNLOCKS entries, Blacksmith research methods, item lists, get_available_items() gating.",
+              "ai/basic_ai.py: Updated do_shopping() to accept any building, added find_blacksmith_with_upgrades() helper."
+            ],
+            "acceptance_criteria": [
+              "Player can research weapon/armor upgrades at Blacksmith.",
+              "After research, heroes can enter Blacksmith and purchase upgrades.",
+              "Purchases trigger Journey purchase tracking (last_purchase_ms updated).",
+              "Gates PASS."
+            ],
+            "risks": [
+              "Heroes may not route to Blacksmith without Agent 06 AI enhancement (mitigated: building-side support complete, Agent 06 will add routing).",
+              "UI research buttons not yet added (mitigated: Agent 08 will add UI, building methods are ready)."
+            ],
+            "dependencies": [
+              "Agent 06: Enhance hero shopping intent to consider Blacksmith when upgrades are available.",
+              "Agent 08: Add research buttons to Blacksmith panel UI."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 06: Update hero shopping logic to route to Blacksmith when upgrades are researched and affordable.",
+              "Agent 08: Add research buttons to Blacksmith panel (similar to Library research buttons).",
+              "Manual verification: After Agent 06/08 complete, verify heroes visit Blacksmith and purchase upgrades."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "game/entities/building.py (MODIFIED)",
+                "ai/basic_ai.py (MODIFIED)"
+              ],
+              "what_i_changed": "Added Blacksmith research system (weapon/armor upgrades), upgraded items gated by research, purchase integration through existing buy_item path, AI helper methods for routing.",
+              "how_to_test": "Build Blacksmith, research upgrades, verify heroes purchase upgrades and Journey trigger works. Run qa_smoke --quick and validate_assets --strict --check-attribution.",
+              "evidence": "qa_smoke --quick: PASS (exit_code=0, all scenarios PASS). validate_assets --strict --check-attribution: PASS (exit_code=0).",
+              "blockers": [],
+              "qa_smoke_quick": "PASS",
+              "qa_smoke_exit_code": 0,
+              "validate_assets": "PASS",
+              "validate_assets_exit_code": 0
+            }
+          }
+        }
+      }
     }
   }
 }

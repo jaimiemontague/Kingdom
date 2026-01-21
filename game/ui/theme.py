@@ -17,13 +17,13 @@ from config import COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE, COLOR_GOLD
 class UITheme:
     # Layout constants (computed in HUD, but these are defaults)
     top_bar_h: int = 48
-    bottom_bar_h: int = 96
-    right_panel_min_w: int = 320
-    right_panel_max_w: int = 420
+    bottom_bar_h: int = 80
+    right_panel_min_w: int = 300
+    right_panel_max_w: int = 380
 
     # Spacing (WK7: Increased for better readability vs Majesty)
-    margin: int = 12  # Increased from 8 for better panel internal padding
-    gutter: int = 10  # Increased from 8 for better element spacing
+    margin: int = 10
+    gutter: int = 8
 
     # Colors
     panel_bg: tuple[int, int, int] = COLOR_UI_BG

@@ -40,6 +40,7 @@ from game.ui.building_list_panel import BuildingListPanel
 from game.ui.pause_menu import PauseMenu
 from game.ui.build_catalog_panel import BuildCatalogPanel
 from game.graphics.font_cache import get_font
+from game.graphics.render_context import set_render_zoom
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms
@@ -305,6 +306,9 @@ class GameEngine:
 
             # Pygame 2 mouse wheel event
             elif hasattr(pygame, "MOUSEWHEEL") and event.type == pygame.MOUSEWHEEL:
+                # V1.3-EXT-BUG-001: Do not zoom while paused / menu open.
+                if self.paused or self.pause_menu.visible:
+                    continue
                 # event.y: +1 scroll up, -1 scroll down
                 if event.y > 0:
                     self.zoom_by(ZOOM_STEP)
@@ -379,6 +383,10 @@ class GameEngine:
         
         # Block world input when menu is open
         if self.pause_menu.visible:
+            return
+
+        # V1.3-EXT-BUG-001: Block world camera/zoom input while paused (even if menu not visible).
+        if self.paused:
             return
                 
         elif event.key == pygame.K_TAB:
@@ -481,6 +489,10 @@ class GameEngine:
                     # Audio slider drag (already handled in PauseMenu.handle_mousemove)
                     pass
             return  # Consume all input when menu is open
+
+        # V1.3-EXT-BUG-001: While paused (without menu), do not allow world camera/zoom inputs.
+        if self.paused:
+            return
         
         # Mouse wheel zoom (older pygame uses buttons 4/5)
         if event.button == 4:
@@ -931,9 +943,10 @@ class GameEngine:
         else:
             set_sim_now_ms(None)
 
-        # Allow camera movement even while paused.
-        self.update_camera(dt)
-        if self.paused:
+        # V1.3-EXT-BUG-001: Do not move camera/zoom while paused/menu open.
+        if (not self.paused) and (not getattr(self.pause_menu, "visible", False)):
+            self.update_camera(dt)
+        else:
             return
         
         # Build game state for AI
@@ -1647,6 +1660,12 @@ class GameEngine:
 
         # Pixel art: quantize camera to integer pixels to reduce shimmer.
         camera_offset = (int(self.camera_x), int(self.camera_y))
+
+        # Render-only context (do not affect simulation determinism).
+        try:
+            set_render_zoom(self.zoom if self.zoom else 1.0)
+        except Exception:
+            pass
 
         # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
         if abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:

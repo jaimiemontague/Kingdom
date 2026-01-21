@@ -355,6 +355,7 @@ class BasicAI:
         
         # Check if hero wants to go shopping (full health, has gold, needs potions)
         if hero.hp >= hero.max_hp:
+            # V1.3 Extension: Check marketplace first, then Blacksmith
             marketplace = self.find_marketplace_with_potions(buildings)
             if marketplace and hero.wants_to_shop(marketplace.can_sell_potions()):
                 debug_log(f"{hero.name} -> going shopping")
@@ -369,6 +370,23 @@ class BasicAI:
                     hero.target_position = (marketplace.center_x, marketplace.center_y)
                 hero.state = HeroState.MOVING
                 hero.target = {"type": "shopping", "marketplace": marketplace}
+                return
+            
+            # V1.3 Extension: Check Blacksmith for upgrades (coordinate with Agent 05)
+            blacksmith = self.find_blacksmith_with_upgrades(buildings, hero)
+            if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold
+                debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
+                world = game_state.get("world")
+                if world:
+                    adj = best_adjacent_tile(world, buildings, blacksmith, hero.x, hero.y)
+                    if adj:
+                        hero.target_position = (adj[0] * TILE_SIZE + TILE_SIZE / 2, adj[1] * TILE_SIZE + TILE_SIZE / 2)
+                    else:
+                        hero.target_position = (blacksmith.center_x, blacksmith.center_y)
+                else:
+                    hero.target_position = (blacksmith.center_x, blacksmith.center_y)
+                hero.state = HeroState.MOVING
+                hero.target = {"type": "shopping", "blacksmith": blacksmith}
                 return
 
         # Get this hero's patrol zone
@@ -446,6 +464,30 @@ class BasicAI:
             if building.building_type == "marketplace":
                 if hasattr(building, 'potions_researched') and building.potions_researched:
                     return building
+        return None
+    
+    def find_blacksmith_with_upgrades(self, buildings: list, hero=None) -> object | None:
+        """V1.3 Extension: Find a Blacksmith with available upgrades for the hero."""
+        for building in buildings:
+            if building.building_type == "blacksmith":
+                # Check if upgrades are researched (Agent 05 will implement this)
+                # For now, assume upgrades are available if weapon/armor upgrades are researched
+                # This will be coordinated with Agent 05's implementation
+                if hero is not None:
+                    # Check if hero needs weapon upgrade
+                    if hasattr(building, 'weapon_upgrades_researched') and building.weapon_upgrades_researched:
+                        if not hero.weapon or (hasattr(building, 'has_better_weapon') and building.has_better_weapon(hero)):
+                            return building
+                    # Check if hero needs armor upgrade
+                    if hasattr(building, 'armor_upgrades_researched') and building.armor_upgrades_researched:
+                        if not hero.armor or (hasattr(building, 'has_better_armor') and building.has_better_armor(hero)):
+                            return building
+                else:
+                    # Legacy: just check if upgrades are researched (no hero check)
+                    if hasattr(building, 'weapon_upgrades_researched') and building.weapon_upgrades_researched:
+                        return building
+                    if hasattr(building, 'armor_upgrades_researched') and building.armor_upgrades_researched:
+                        return building
         return None
     
     def handle_moving(self, hero, game_state: dict):
@@ -534,11 +576,11 @@ class BasicAI:
                 
                 # Check if we were going shopping
                 if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
-                    marketplace = hero.target.get("marketplace")
-                    if marketplace:
+                    shop_building = hero.target.get("marketplace") or hero.target.get("blacksmith")
+                    if shop_building:
                         # Briefly "enter" the building (Majesty-style) for clarity.
-                        hero.enter_building_briefly(marketplace, duration_sec=0.5)
-                        started_journey = self.do_shopping(hero, marketplace, game_state)
+                        hero.enter_building_briefly(shop_building, duration_sec=0.5)
+                        started_journey = self.do_shopping(hero, shop_building, game_state)
                         if started_journey:
                             return
                     hero.target = None
@@ -581,6 +623,12 @@ class BasicAI:
         """Handle fighting state."""
         enemies = game_state.get("enemies", [])
         
+        # V1.3 Extension: Prefer using potions before health gets too low
+        # Use potion if health is below 60% and potions are available (before retreat threshold)
+        if hero.health_percent < 0.6 and hero.potions > 0:
+            hero.use_potion()
+            debug_log(f"{hero.name} -> using potion in combat (health={hero.health_percent:.1%})")
+        
         # Check if target is still valid
         if hero.target and hasattr(hero.target, 'is_alive'):
             if not hero.target.is_alive:
@@ -614,6 +662,11 @@ class BasicAI:
         """Handle retreating state - flee to safety."""
         buildings = game_state.get("buildings", [])
         
+        # V1.3 Extension: Use potion during retreat if available and health is low
+        if hero.health_percent < 0.7 and hero.potions > 0:
+            hero.use_potion()
+            debug_log(f"{hero.name} -> using potion while retreating (health={hero.health_percent:.1%})")
+        
         nearest_safe = None
         nearest_dist = float('inf')
         
@@ -627,8 +680,6 @@ class BasicAI:
         if nearest_safe:
             if nearest_dist < TILE_SIZE * 2:
                 hero.state = HeroState.IDLE
-                if hero.health_percent < 0.7 and hero.potions > 0:
-                    hero.use_potion()
             else:
                 hero.target_position = (nearest_safe.center_x, nearest_safe.center_y)
     
@@ -653,10 +704,13 @@ class BasicAI:
             return
         hero.state = HeroState.IDLE
     
-    def do_shopping(self, hero, marketplace, game_state: dict) -> bool:
-        """Actually perform shopping at a marketplace."""
+    def do_shopping(self, hero, building, game_state: dict) -> bool:
+        """Actually perform shopping at a marketplace or blacksmith."""
         economy = game_state.get("economy")
-        items = marketplace.get_available_items()
+        # Support both marketplace and blacksmith (both have get_available_items)
+        if not hasattr(building, "get_available_items"):
+            return False
+        items = building.get_available_items()
         purchased_types: set[str] = set()
         
         # Priority 1: Buy a potion if we have none

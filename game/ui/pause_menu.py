@@ -60,14 +60,28 @@ class PauseMenu:
         )
         
         # Audio page (stub until Agent 14 API)
-        self.audio_slider = Slider(
+        self.audio_master_slider = Slider(
             rect=pygame.Rect(0, 0, 300, 24),
             value=0.8,  # Default 80% (0.8)
             track_color=(60, 60, 70),
             fill_color=(100, 150, 200),
             thumb_color=(150, 200, 255)
         )
-        self.audio_slider_dragging = False
+        self.audio_music_slider = Slider(
+            rect=pygame.Rect(0, 0, 300, 24),
+            value=0.8,
+            track_color=(60, 60, 70),
+            fill_color=(100, 150, 200),
+            thumb_color=(150, 200, 255)
+        )
+        self.audio_sfx_slider = Slider(
+            rect=pygame.Rect(0, 0, 300, 24),
+            value=0.8,
+            track_color=(60, 60, 70),
+            fill_color=(100, 150, 200),
+            thumb_color=(150, 200, 255)
+        )
+        self.audio_slider_dragging = None  # "master" | "music" | "sfx" | None
     
     def _update_page_buttons(self):
         """Update page button rectangles based on current panel size."""
@@ -136,7 +150,7 @@ class PauseMenu:
         """Close the menu."""
         self.visible = False
         self.current_page = "main"
-        self.audio_slider_dragging = False
+        self.audio_slider_dragging = None
     
     def toggle(self):
         """Toggle menu visibility."""
@@ -144,6 +158,48 @@ class PauseMenu:
             self.close()
         else:
             self.open()
+
+    def _get_audio_volume(self, kind: str) -> float:
+        if not self.audio_system:
+            return 0.8
+        if kind == "master":
+            return float(self.audio_system.get_master_volume())
+        if kind == "music":
+            getter = getattr(self.audio_system, "get_music_volume", None)
+            if callable(getter):
+                return float(getter())
+        if kind == "sfx":
+            getter = getattr(self.audio_system, "get_sfx_volume", None)
+            if callable(getter):
+                return float(getter())
+        return float(self.audio_system.get_master_volume()) if self.audio_system else 0.8
+
+    def _set_audio_volume(self, kind: str, value: float):
+        if not self.audio_system:
+            return
+        if kind == "master":
+            self.audio_system.set_master_volume(value)
+            return
+        if kind == "music":
+            setter = getattr(self.audio_system, "set_music_volume", None)
+            if callable(setter):
+                setter(value)
+            return
+        if kind == "sfx":
+            setter = getattr(self.audio_system, "set_sfx_volume", None)
+            if callable(setter):
+                setter(value)
+            return
+
+    def _position_audio_sliders(self):
+        panel_rect = self.modal.get_panel_rect()
+        x = panel_rect.centerx - self.audio_master_slider.rect.width // 2
+        self.audio_master_slider.rect.x = x
+        self.audio_music_slider.rect.x = x
+        self.audio_sfx_slider.rect.x = x
+        self.audio_master_slider.rect.y = panel_rect.y + 190
+        self.audio_music_slider.rect.y = panel_rect.y + 260
+        self.audio_sfx_slider.rect.y = panel_rect.y + 330
     
     def handle_click(self, pos: tuple[int, int]) -> str | None:
         """
@@ -173,12 +229,11 @@ class PauseMenu:
                         elif page_name == "audio":
                             # WK7: Update slider from audio system state
                             if self.audio_system:
-                                current_volume = self.audio_system.get_master_volume()
-                                self.audio_slider.set_value(current_volume)
+                                self.audio_master_slider.set_value(self._get_audio_volume("master"))
+                                self.audio_music_slider.set_value(self._get_audio_volume("music"))
+                                self.audio_sfx_slider.set_value(self._get_audio_volume("sfx"))
                             # Position audio slider
-                            panel_rect = self.modal.get_panel_rect()
-                            self.audio_slider.rect.x = panel_rect.centerx - self.audio_slider.rect.width // 2
-                            self.audio_slider.rect.y = panel_rect.y + 190
+                            self._position_audio_sliders()
                         return None
         
         elif self.current_page == "graphics":
@@ -202,9 +257,20 @@ class PauseMenu:
         
         elif self.current_page == "audio":
             # Audio page: slider drag start
-            if self.audio_slider.hit_test_thumb(pos):
-                self.audio_slider_dragging = True
-                self.audio_slider.set_value_from_x(pos[0])
+            if self.audio_master_slider.hit_test_thumb(pos):
+                self.audio_slider_dragging = "master"
+                self.audio_master_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("master", self.audio_master_slider.value)
+                return "audio_slider_drag"
+            if self.audio_music_slider.hit_test_thumb(pos):
+                self.audio_slider_dragging = "music"
+                self.audio_music_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("music", self.audio_music_slider.value)
+                return "audio_slider_drag"
+            if self.audio_sfx_slider.hit_test_thumb(pos):
+                self.audio_slider_dragging = "sfx"
+                self.audio_sfx_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("sfx", self.audio_sfx_slider.value)
                 return "audio_slider_drag"
         
         # Back button (top-left corner)
@@ -222,10 +288,15 @@ class PauseMenu:
             return None
         
         if self.current_page == "audio":
-            self.audio_slider.set_value_from_x(pos[0])
-            # WK7: Update audio volume in real-time during drag
-            if self.audio_system:
-                self.audio_system.set_master_volume(self.audio_slider.value)
+            if self.audio_slider_dragging == "master":
+                self.audio_master_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("master", self.audio_master_slider.value)
+            elif self.audio_slider_dragging == "music":
+                self.audio_music_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("music", self.audio_music_slider.value)
+            elif self.audio_slider_dragging == "sfx":
+                self.audio_sfx_slider.set_value_from_x(pos[0])
+                self._set_audio_volume("sfx", self.audio_sfx_slider.value)
             return "audio_slider_drag"
         
         return None
@@ -233,11 +304,13 @@ class PauseMenu:
     def handle_mouseup(self, pos: tuple[int, int]):
         """Handle mouse release (end slider drag)."""
         if self.audio_slider_dragging:
-            self.audio_slider_dragging = False
+            self.audio_slider_dragging = None
             if self.current_page == "audio":
                 # WK7: Final volume update on release
                 if self.audio_system:
-                    self.audio_system.set_master_volume(self.audio_slider.value)
+                    self._set_audio_volume("master", self.audio_master_slider.value)
+                    self._set_audio_volume("music", self.audio_music_slider.value)
+                    self._set_audio_volume("sfx", self.audio_sfx_slider.value)
                 return "audio_slider_release"
         return None
     
@@ -273,13 +346,14 @@ class PauseMenu:
                 label = page_name.replace("_", " ").title()
                 text_surf = self.theme.font_body.render(label, True, self.theme.text)
                 icon = self._icon_map.get(page_name)
+                left_pad = 14
+                icon_slot = 16
+                icon_gap = 8
+                icon_x = rect.x + left_pad
+                icon_y = rect.centery - icon_slot // 2
                 if icon is not None:
-                    icon_x = rect.x + 12
-                    icon_y = rect.centery - icon.get_height() // 2
                     surface.blit(icon, (icon_x, icon_y))
-                    text_x = icon_x + icon.get_width() + 8
-                else:
-                    text_x = rect.centerx - text_surf.get_width() // 2
+                text_x = icon_x + icon_slot + icon_gap
                 text_y = rect.centery - text_surf.get_height() // 2
                 surface.blit(text_surf, (text_x, text_y))
         
@@ -314,17 +388,28 @@ class PauseMenu:
             title_x = panel_rect.centerx - title.get_width() // 2
             surface.blit(title, (title_x, panel_rect.y + 20))
             
-            # Master volume label
-            volume_label = self.theme.font_body.render("Master Volume:", True, self.theme.text)
-            surface.blit(volume_label, (panel_rect.x + 80, panel_rect.y + 140))
-            
-            # Volume percentage
-            volume_pct = int(self.audio_slider.value * 100)
-            volume_text = self.theme.font_body.render(f"{volume_pct}%", True, self.theme.text)
-            surface.blit(volume_text, (panel_rect.x + 80, panel_rect.y + 170))
-            
-            # Slider
-            self.audio_slider.render(surface)
+            # Labels + sliders
+            label_x = panel_rect.x + 80
+            master_label = self.theme.font_body.render("Master Volume:", True, self.theme.text)
+            music_label = self.theme.font_body.render("Music (Ambient):", True, self.theme.text)
+            sfx_label = self.theme.font_body.render("SFX Volume:", True, self.theme.text)
+            surface.blit(master_label, (label_x, panel_rect.y + 140))
+            surface.blit(music_label, (label_x, panel_rect.y + 210))
+            surface.blit(sfx_label, (label_x, panel_rect.y + 280))
+
+            master_pct = int(self.audio_master_slider.value * 100)
+            music_pct = int(self.audio_music_slider.value * 100)
+            sfx_pct = int(self.audio_sfx_slider.value * 100)
+            master_text = self.theme.font_body.render(f"{master_pct}%", True, self.theme.text)
+            music_text = self.theme.font_body.render(f"{music_pct}%", True, self.theme.text)
+            sfx_text = self.theme.font_body.render(f"{sfx_pct}%", True, self.theme.text)
+            surface.blit(master_text, (label_x, panel_rect.y + 166))
+            surface.blit(music_text, (label_x, panel_rect.y + 236))
+            surface.blit(sfx_text, (label_x, panel_rect.y + 306))
+
+            self.audio_master_slider.render(surface)
+            self.audio_music_slider.render(surface)
+            self.audio_sfx_slider.render(surface)
             
             # Back button
             back_text = self.theme.font_small.render("< Back", True, self.theme.text)

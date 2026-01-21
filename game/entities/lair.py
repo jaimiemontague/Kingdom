@@ -15,7 +15,8 @@ from config import (
 )
 from game.entities.building import Building
 from game.entities.enemy import Goblin, Wolf, Skeleton, SkeletonArcher, Spider, Bandit
-from game.graphics.font_cache import get_font
+from game.graphics.font_cache import render_text_shadowed_cached
+from game.graphics.render_context import get_render_zoom
 from game.sim.determinism import get_rng
 
 
@@ -169,16 +170,16 @@ class MonsterLair(Building):
         sx = self.world_x - cam_x
         sy = self.world_y - cam_y
 
-        font = get_font(16)
         label = self.building_type.replace("_", " ").upper()
-        txt = font.render(label, True, COLOR_WHITE)
+        txt = render_text_shadowed_cached(16, label, COLOR_WHITE)
         rect = txt.get_rect(center=(sx + self.width // 2, sy + self.height // 2))
         surface.blit(txt, rect)
 
-        small = get_font(14)
-        stash = small.render(f"${self.stash_gold}", True, (255, 215, 0))
-        stash_rect = stash.get_rect(center=(sx + self.width // 2, sy + self.height + 8))
-        surface.blit(stash, stash_rect)
+        # Reduce label clutter when zoomed out: only show stash value at normal zoom+.
+        if get_render_zoom() >= 1.0:
+            stash = render_text_shadowed_cached(14, f"${self.stash_gold}", (255, 215, 0))
+            stash_rect = stash.get_rect(center=(sx + self.width // 2, sy + self.height + 8))
+            surface.blit(stash, stash_rect)
 
 
 class GoblinCamp(MonsterLair):

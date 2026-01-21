@@ -108,18 +108,23 @@ class TileSpriteLibrary:
         if tile_type == 0:  # grass
             # Milestone 1 (terrain): reduce "debug speckle" and shift to low-noise, readable variation.
             # We use only 6 deterministic variants chosen by coord hash; each variant is cached.
-            speckle(pal.grass, pal.grass_dark, pal.grass_light, density=0.02 + 0.002 * variant)
-            # Add 1–2 subtle clumps (macro noise) rather than heavy pixel noise.
-            clumps = 1 if variant < 3 else 2
+            speckle(pal.grass, pal.grass_dark, pal.grass_light, density=0.012 + 0.001 * variant)
+            # Add 2–3 subtle clumps (macro noise) rather than heavy pixel noise.
+            clumps = 2 if variant < 4 else 3
             for _ in range(clumps):
-                cx = rnd.randrange(6, s - 6)
-                cy = rnd.randrange(6, s - 6)
+                cx = rnd.randrange(5, s - 5)
+                cy = rnd.randrange(5, s - 5)
                 col = pal.grass_dark if rnd.random() < 0.6 else pal.grass_light
-                blob(cx, cy, col, r=rnd.randrange(2, 4))
+                blob(cx, cy, col, r=rnd.randrange(3, 5))
+            # Low-frequency patch to add variety without extra speckle noise.
+            if variant in (2, 3, 5):
+                px = rnd.randrange(6, s - 6)
+                py = rnd.randrange(6, s - 6)
+                blob(px, py, pal.grass_light, r=rnd.randrange(5, 7))
             # Very occasional tiny prop hints per variant (kept subtle to avoid noise soup).
             if variant in (4, 5):
                 # small flower/rock pixels
-                for _ in range(3):
+                for _ in range(2):
                     px = rnd.randrange(3, s - 3)
                     py = rnd.randrange(3, s - 3)
                     surf.set_at((px, py), (235, 235, 235, 255))
@@ -138,15 +143,20 @@ class TileSpriteLibrary:
 
         if tile_type == 2:  # path
             # Path readability: clearer edge definition + less noisy interior.
-            speckle(pal.path, pal.path_dark, pal.path_light, density=0.04 + 0.01 * (variant % 3))
+            speckle(pal.path, pal.path_dark, pal.path_light, density=0.028 + 0.006 * (variant % 3))
 
             # Edge darkening (gives the path a crisp boundary even without neighbor context).
             edge = pal.path_dark
-            edge_w = 2
+            edge_w = 1
             pygame.draw.rect(surf, edge, pygame.Rect(0, 0, s, edge_w))
             pygame.draw.rect(surf, edge, pygame.Rect(0, s - edge_w, s, edge_w))
             pygame.draw.rect(surf, edge, pygame.Rect(0, 0, edge_w, s))
             pygame.draw.rect(surf, edge, pygame.Rect(s - edge_w, 0, edge_w, s))
+            # Subtle inner light trim on select variants to improve depth.
+            if variant in (0, 3):
+                trim = pal.path_light
+                pygame.draw.rect(surf, trim, pygame.Rect(1, 1, s - 2, 1))
+                pygame.draw.rect(surf, trim, pygame.Rect(1, s - 2, s - 2, 1))
 
             # Interior "track" variation (variants suggest straight/corner junctions visually).
             if variant in (1, 4):
@@ -159,6 +169,10 @@ class TileSpriteLibrary:
                     y = s - 1 - i
                     if 1 <= x < s - 1 and 1 <= y < s - 1:
                         surf.set_at((x, y), (*pal.path_light, 255))
+            else:
+                # faint midline to lift contrast without extra noise
+                for y in range(2, s - 2, 3):
+                    surf.set_at((s // 2, y), (*pal.path_light, 255))
 
             # Pebbles (kept moderate)
             for _ in range(4 + (variant % 3) * 2):
@@ -178,11 +192,25 @@ class TileSpriteLibrary:
             ty = s - trunk_h - 2
             pygame.draw.rect(surf, pal.tree_trunk, pygame.Rect(int(tx), int(ty), int(trunk_w), int(trunk_h)))
             # Canopy
-            canopy_r = max(6, s // 3)
+            canopy_r = max(6, s // 3) + (1 if variant in (2, 3) else 0)
             cx = s // 2 + (1 if (variant % 2) else -1)
             cy = s // 2 + (0 if variant < 2 else 1)
-            pygame.draw.circle(surf, pal.tree, (int(cx), int(cy)), int(canopy_r))
-            pygame.draw.circle(surf, pal.tree_dark, (int(cx - 2), int(cy - 2)), int(max(2, canopy_r - 4)))
+            # Palette nudges for variety (keep subtle)
+            if variant in (1, 3):
+                canopy = (min(255, pal.tree[0] + 8), min(255, pal.tree[1] + 10), min(255, pal.tree[2] + 6))
+                canopy_dark = (max(0, pal.tree_dark[0] - 6), max(0, pal.tree_dark[1] - 6), max(0, pal.tree_dark[2] - 6))
+            else:
+                canopy = pal.tree
+                canopy_dark = pal.tree_dark
+            pygame.draw.circle(surf, canopy, (int(cx), int(cy)), int(canopy_r))
+            pygame.draw.circle(surf, canopy_dark, (int(cx - 2), int(cy - 2)), int(max(2, canopy_r - 4)))
+            # Tiny highlight cluster for variety/readability
+            if variant in (2, 3):
+                for _ in range(4):
+                    hx = int(cx) + rnd.randrange(-2, 3)
+                    hy = int(cy) + rnd.randrange(-3, 1)
+                    if 1 <= hx < s - 1 and 1 <= hy < s - 1:
+                        surf.set_at((hx, hy), (min(255, canopy[0] + 12), min(255, canopy[1] + 12), min(255, canopy[2] + 12), 255))
             # Small ground shadow for readability
             shadow = pygame.Rect(0, 0, int(canopy_r * 1.6), int(canopy_r * 0.6))
             shadow.center = (s // 2, s - 6)

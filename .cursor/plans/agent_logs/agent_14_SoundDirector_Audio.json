@@ -750,6 +750,83 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "v1.3: Visual polish + Journey AI + critical bug fixes from v1.2.9 playtest"
+      },
+      "rounds": {
+        "v1.3_r5_extension_mid_sprint": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r5_extension_mid_sprint",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "V1.3 extension: implement separate Master/Music/SFX volume controls (AudioSystem APIs + scaling), update documentation, run gates.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "done",
+            "raw": "## Status\nAgent 14 (SoundDirector_Audio) — **DONE**: Implemented separate Master/Music/SFX volume controls and updated audio contract documentation.\n\n## What I Changed\n- `game/audio/audio_system.py`:\n  - Added `_music_volume` and `_sfx_volume` (defaults: 1.0)\n  - Added `set_music_volume()` / `get_music_volume()` and `set_sfx_volume()` / `get_sfx_volume()` APIs\n  - Updated `play_sfx()` to scale SFX volume by `master * sfx * per_sound_volume`\n  - Updated `set_ambient()` to scale ambient by `master * music * ambient_base_volume`\n  - Added `_apply_ambient_volume()` helper to update ambient in real time\n- `game/audio/EVENT_CONTRACT.md`:\n  - Documented 3-slider semantics (Master/Music/SFX), defaults, API signatures, and formulas\n\n## How to Test\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n## Evidence\n- `python tools/qa_smoke.py --quick` → PASS (see agent-tools log: `b1e55bc1-4acf-44cf-8925-833d300764e6.txt`)\n- `python tools/validate_assets.py --strict --check-attribution` → PASS (exit code 0)\n\n## Risks / Follow-ups\n- Ensure Agent 08 wires Audio page sliders to:\n  - `set_master_volume()`, `set_music_volume()`, `set_sfx_volume()`\n- UI should display 0–100% and convert to 0.0–1.0 for API\n",
+            "summary_bullets": [
+              "Added separate Master/Music/SFX volume controls in AudioSystem with new set/get APIs.",
+              "Updated SFX and ambient scaling formulas to match v1.3 requirements.",
+              "Updated EVENT_CONTRACT.md with 3-slider semantics and API signatures.",
+              "Gates PASS: qa_smoke --quick and validate_assets --strict --check-attribution."
+            ],
+            "proposed_changes": [
+              "Add set/get APIs for music and sfx volumes in AudioSystem.",
+              "Apply master*music scaling to ambient and master*sfx scaling to SFX.",
+              "Update EVENT_CONTRACT.md with 3-slider semantics."
+            ],
+            "acceptance_criteria": [
+              "Master scales both SFX and ambient.",
+              "Music slider affects ambient only.",
+              "SFX slider affects SFX only.",
+              "Gates PASS (qa_smoke --quick; validate_assets --strict --check-attribution)."
+            ],
+            "risks_or_followups": [
+              "Agent 08 must wire UI sliders to new AudioSystem APIs and use 0–100% display conversion."
+            ],
+            "dependencies": [
+              "Agent 08: Pause menu Audio page wiring for 3 sliders."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Agent 08: Wire Audio page sliders to set_master_volume/set_music_volume/set_sfx_volume.",
+              "Agent 11: Verify Master/Music/SFX independence in manual QA."
+            ],
+            "agent_fields": {
+              "what_i_changed": [
+                "game/audio/audio_system.py (added music/sfx volume APIs + scaling)",
+                "game/audio/EVENT_CONTRACT.md (documented 3-slider semantics)"
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution"
+              ],
+              "evidence": {
+                "qa_smoke_quick": "PASS (b1e55bc1-4acf-44cf-8925-833d300764e6.txt)",
+                "validate_assets_strict": "PASS (exit code 0)"
+              },
+              "api_signatures": {
+                "set_master_volume": "set_master_volume(volume_0_to_1: float) -> None",
+                "get_master_volume": "get_master_volume() -> float",
+                "set_music_volume": "set_music_volume(volume_0_to_1: float) -> None",
+                "get_music_volume": "get_music_volume() -> float",
+                "set_sfx_volume": "set_sfx_volume(volume_0_to_1: float) -> None",
+                "get_sfx_volume": "get_sfx_volume() -> float"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

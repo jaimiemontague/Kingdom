@@ -14,6 +14,11 @@ import pygame
 
 _FONT_CACHE: Dict[int, pygame.font.Font] = {}
 _TEXT_CACHE: Dict[Tuple[int, str, Tuple[int, int, int]], pygame.Surface] = {}
+_TEXT_SHADOW_CACHE: Dict[
+    Tuple[int, str, Tuple[int, int, int], Tuple[int, int, int], Tuple[int, int]],
+    pygame.Surface,
+] = {}
+_TEXT_SHADOW_CACHE_MAX = 512
 
 
 def get_font(size: int) -> pygame.font.Font:
@@ -42,6 +47,55 @@ def render_text_cached(
     if surf is None:
         surf = get_font(size).render(text, bool(antialias), color)
         _TEXT_CACHE[key] = surf
+    return surf
+
+
+def render_text_shadowed_cached(
+    size: int,
+    text: str,
+    color: Tuple[int, int, int],
+    *,
+    shadow_color: Tuple[int, int, int] = (0, 0, 0),
+    shadow_offset: Tuple[int, int] = (1, 1),
+    antialias: bool = True,
+) -> pygame.Surface:
+    """
+    Render a cached, shadowed text surface.
+
+    This is intended for world-space labels where background contrast varies.
+    Cache key includes the shadow styling so we avoid per-frame surface allocations.
+    """
+    key = (
+        int(size),
+        str(text),
+        (int(color[0]), int(color[1]), int(color[2])),
+        (int(shadow_color[0]), int(shadow_color[1]), int(shadow_color[2])),
+        (int(shadow_offset[0]), int(shadow_offset[1])),
+    )
+    surf = _TEXT_SHADOW_CACHE.get(key)
+    if surf is None:
+        # Best-effort cache bound (avoid unbounded growth for frequently-changing numeric labels).
+        if len(_TEXT_SHADOW_CACHE) >= _TEXT_SHADOW_CACHE_MAX:
+            try:
+                _TEXT_SHADOW_CACHE.pop(next(iter(_TEXT_SHADOW_CACHE)))
+            except Exception:
+                _TEXT_SHADOW_CACHE.clear()
+        font = get_font(size)
+        main = font.render(str(text), bool(antialias), color)
+        shadow = font.render(str(text), bool(antialias), shadow_color)
+        ox, oy = int(shadow_offset[0]), int(shadow_offset[1])
+        pad_x = max(0, ox)
+        pad_y = max(0, oy)
+        w = int(main.get_width() + pad_x)
+        h = int(main.get_height() + pad_y)
+        surf = pygame.Surface((max(1, w), max(1, h)), pygame.SRCALPHA)
+        if pad_x or pad_y:
+            surf.blit(shadow, (pad_x, pad_y))
+        else:
+            # Offset (0,0): still render shadow first for slight darkening.
+            surf.blit(shadow, (0, 0))
+        surf.blit(main, (0, 0))
+        _TEXT_SHADOW_CACHE[key] = surf
     return surf
 
 

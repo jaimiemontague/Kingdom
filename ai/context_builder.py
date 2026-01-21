@@ -270,4 +270,3 @@ Current State: {context['current_state']}
             f"in_combat={int(in_combat)} outnumbered={int(outnumbered)} can_shop={int(can_shop)}"
             f"{nearest}"
         )
-

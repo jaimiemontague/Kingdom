@@ -1054,7 +1054,8 @@
                 "Option B: Agent 12 updates tools/assets_manifest.json to mark these 4 keys as optional/warn-only"
               ],
               "acceptance_test": "python tools/validate_assets.py --strict --check-attribution => PASS (0 errors)",
-              "status": "pending"
+              "status": "complete",
+              "evidence": "Agent 14 reports POST-WK7-001 complete: added ui_confirm/ui_error/hero_hired/purchase SFX + updated assets/ATTRIBUTION.md; validate_assets --strict --check-attribution PASS; qa_smoke --quick PASS."
             }
           ],
           "pm_send_list_minimal": {
@@ -1227,6 +1228,544 @@
               "priority": "P2",
               "prompt": "Plan pixel art detail improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to sprites and art to add more detail and visual appeal. Deliver: proposal list for sprite/art upgrades."
             }
+          }
+        }
+        ,
+        "v1.3_r1_execution_and_polish": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r1_execution_and_polish_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Execution round: land bugfixes + implement visual polish + capture before/after evidence"
+          },
+          "pm_status_summary": {
+            "overall_status": "Execution largely complete — awaiting final manual QA + standardized screenshot evidence",
+            "what_landed_per_agent_logs": [
+              "Agent 03: verified hero selection fix remains (click hero forces HUD right panel visible); gates PASS (qa_smoke + validate_assets strict).",
+              "Agent 08: implemented P0 UI polish (top bar hierarchy, command bar hotkey chips + placement banner, right panel readability, build catalog header + hover) and captured deterministic after screenshots under `docs/screenshots/v1.3.0_after/`; gates PASS.",
+              "Agent 09: implemented P0 terrain + path readability tweaks in `game/graphics/tile_sprites.py`; gates PASS; blocked only on capturing matching after screenshots.",
+              "Agent 12: added a deterministic screenshot scenario `ui_polish_after` (aka v1.3_after) to standardize before/after comparisons; gates PASS.",
+              "Agent 11: ran automated gates PASS; manual Windows verification + screenshots still pending (human operator)."
+            ],
+            "definition_of_done_for_v1_3": [
+              "All P0/P1 bugfixes merged and verified by QA",
+              "At least P0 UI polish items landed (readability/hierarchy) and visually verified via before/after screenshot set",
+              "At least P0 pixel art polish items landed (terrain+paths readability) and visually verified via before/after screenshot set",
+              "Gates PASS: qa_smoke --quick and validate_assets --strict --check-attribution"
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "priority": "P1",
+              "asks": [
+                "Double-check V1.3-BUG-001 fix is merged cleanly (hero click selection must be visibly acknowledged). If right panel logic changed since WK7, adjust to keep this behavior.",
+                "Support UI/visual polish implementation with small enabling code changes only if needed (e.g., world-space label outline/shadow helper, fog-edge rim pass if low risk).",
+                "After integration, run: python tools/qa_smoke.py --quick"
+              ],
+              "acceptance_criteria": [
+                "Click hero → right panel opens + shows hero info (no ‘silent selection’)",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Implement the highest-ROI UI polish items from your v1.3 proposal (focus on hierarchy + readability, minimal gameplay risk):",
+                "- Top bar: icons/separators + contrast tweak (keep style consistent with UI-v2 skin).",
+                "- Bottom command bar: clearer button framing (icon + label + hotkey chip) and an obvious ‘placement mode’ banner/indicator.",
+                "- Right panel: section separators + spacing + value contrast; ensure close X never overlaps text (regression-proof).",
+                "- Build catalog modal: header strip with title + consistent close button alignment; add simple hover highlight on cards if possible.",
+                "- Minimap: stronger frame and separation from bottom bar.",
+                "Capture ‘after’ screenshots per your before/after pairing plan (same resolution/framing)."
+              ],
+              "acceptance_criteria": [
+                "Side-by-side vs v1.2.9 baseline: improved hierarchy/readability (top bar, command bar, right panel, build modal).",
+                "No UI hitbox regressions; qa_smoke --quick PASS."
+              ]
+            },
+            "09": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Implement P0 pixel art polish items (terrain + paths readability) using deterministic + cached procedural tweaks:",
+                "- Reduce grass speckle noise; add macro clumps; keep tile-coord deterministic.",
+                "- Improve path silhouette: 1px edge banding and contrast vs grass (no perf regressions).",
+                "Optionally (only if time): small fog boundary rim/soft edge render-only tweak.",
+                "Capture matching ‘after’ screenshots for the baseline comparisons."
+              ],
+              "acceptance_criteria": [
+                "Terrain/path readability improved at gameplay zoom (Z2) without added noise.",
+                "No perf regressions; qa_smoke --quick PASS."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "After 03/08/09 land changes, run gates and post evidence:",
+                "- python tools/qa_smoke.py --quick",
+                "- python tools/validate_assets.py --strict --check-attribution",
+                "Manual checklist (Windows):",
+                "- Click heroes: right panel opens and shows hero info",
+                "- Place a bounty: at least one hero pursues within ~30–60 seconds",
+                "- Trigger Journey: shop a hero at full health; confirm journey target change (explore fog or lair)",
+                "Capture before/after screenshots for v1.3 signoff (match v1.2.9 baseline framing as closely as possible)."
+              ],
+              "acceptance_criteria": [
+                "Gates PASS (qa_smoke + validate_assets strict)",
+                "Manual checklist PASS with screenshots",
+                "Any regressions filed as V1.3-BUG-00X tickets in PM hub"
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "priority": "P2",
+              "asks": [
+                "Support v1.3 before/after comparison workflow (tooling-only):",
+                "- If needed, add/update screenshot scenarios for ‘ui_polish_after’ and/or a ‘v1.3_after’ capture set to standardize comparisons.",
+                "- Ensure build_gallery can include the v1.3 before/after folders cleanly.",
+                "If any strict validation edge cases appear due to new art assets, assist with validator/attribution workflow (do not weaken strict gates without PM approval)."
+              ],
+              "acceptance_criteria": [
+                "Tooling makes it easy to reproduce the v1.3 after screenshot set deterministically.",
+                "No validator regressions; validate_assets strict remains PASS."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "09", "11", "12"],
+            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "rationale": "05/06 already delivered fixes; this leg is execution/polish + QA evidence + tooling support."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["03", "08", "09", "11", "12"],
+            "prompt": "You are resuming v1.3 execution. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r1_execution_and_polish\"]`\n\n1) Your assignments\n- Execute ONLY the tasks listed for your agent id under `pm_next_actions_by_agent`.\n- Maintain determinism constraints (sim-time only; seeded RNG only) and keep gates green.\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r1_execution_and_polish`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshots/paths), and `blockers` if any.\n"
+          }
+        }
+        ,
+        "v1.3_r2_final_QA_screenshots_and_closeout": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r2_final_QA_screenshots_and_closeout_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Final QA + evidence round: manual Windows verification + deterministic screenshot capture; close out sprint if PASS."
+          },
+          "pm_status_summary": {
+            "overall_status": "Waiting on QA evidence (manual + screenshots). Engineering/polish changes are already reported landed with gates PASS.",
+            "remaining_blockers": [
+              "Manual Windows checklist (hero select visibility, bounty pursuit, journey trigger).",
+              "Standardized after screenshots captured for v1.3 polish (including terrain/path changes)."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Run gates and post evidence:",
+                "- `python tools/qa_smoke.py --quick`",
+                "- `python tools/validate_assets.py --strict --check-attribution`",
+                "Manual Windows checklist:",
+                "- Click a hero → right panel opens and shows hero info (no silent selection).",
+                "- Place a bounty (B) → at least one hero pursues within ~30–60 seconds.",
+                "- Shop a hero at full health → journey target changes (explore fog or lair).",
+                "Capture deterministic after screenshots (this unblocks v1.3 visual signoff):",
+                "- Preferred (repeatable): `python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0`",
+                "- Also capture: `base_overview` if needed for terrain/path readability comparison (same out root under docs/screenshots/v1.3.0_after/).",
+                "If any step FAILs: file a V1.3-BUG-00X ticket in PM hub with repro + expected/actual."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke PASS + validate_assets strict PASS",
+                "Manual checklist PASS",
+                "After screenshots captured under `docs/screenshots/v1.3.0_after/` with paths listed in evidence"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["11"],
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "rationale": "Engineering + polish tasks are complete; only QA evidence + screenshots remain to close v1.3."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["11"],
+            "prompt": "You are Agent 11. Finalize v1.3 QA + evidence.\n\n0) Context\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r2_final_QA_screenshots_and_closeout\"]`\n\n1) Do the checklist exactly\n- Run gates: `python tools/qa_smoke.py --quick` AND `python tools/validate_assets.py --strict --check-attribution`\n- Manual Windows checks: hero select opens panel; bounty gets pursued; journey triggers after shopping.\n- Capture screenshots:\n  - `python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0`\n  - (Optional) `base_overview` for terrain/path comparison.\n\n2) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r2_final_QA_screenshots_and_closeout`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
+          }
+        }
+        ,
+        "v1.3_r3_visual_polish_pass_2": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r3_visual_polish_pass_2_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Follow-up polish round driven by screenshot review feedback. Explicitly NOT doing fog-edge softness or hiding debug/tip overlays in this round."
+          },
+          "pm_status_summary": {
+            "overall_status": "Execution complete per agent logs; QA manual spot-check remains for closeout.",
+            "explicit_non_goals_this_round": [
+              "Do NOT soften fog-of-war boundary/edge rendering (defer).",
+              "Do NOT hide/remove debug overlays or tip text (defer)."
+            ],
+            "primary_feedback_reasons": [
+              "UI reads as flat tan/brown rectangles → weak hierarchy/depth.",
+              "Bottom command bar and right panel feel too large for the information shown → wasted space.",
+              "Right panel has large empty areas/placeholder blocks → feels unfinished.",
+              "Build Catalog feels placeholder because entries are color swatches, not building art.",
+              "World labels (names/taxes) feel noisy and sometimes hard to read on grass.",
+              "World still feels repetitive/low variety; UI improvements outpace world art."
+            ],
+            "what_landed_per_agent_logs": [
+              "Agent 08: tightened UI sizing (bottom bar height, right panel width), improved hierarchy/depth, and replaced Build Catalog color swatches with building sprite thumbnails; captured deterministic screenshots under docs/screenshots/v1.3.0_after/ui_polish_after_seed3; gates PASS.",
+              "Agent 09: world variety pass in game/graphics/tile_sprites.py (grass macro patches, path trim variants, more tree canopy variation); gates PASS; suggests capturing base_overview/world_variation shots for comparison.",
+              "Agent 03: improved world-label readability via cached shadowed text + reduced zoomed-out clutter; captured a deterministic label-focused screenshot set; gates PASS.",
+              "Agent 12: added deterministic world_variation screenshot scenario and documented commands; gates PASS.",
+              "Agent 11: ran automated gates PASS and captured deterministic ui_polish_after screenshots, but manual Windows spot-check still pending."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Perceived polish pass (UI) focusing on hierarchy/depth and reclaiming space (keep changes safe; no input/hitbox regressions):",
+                "- Add stronger hierarchy cues: darker header strips, subtle bevel/highlight lines, clearer section headers, and improved spacing rhythm.",
+                "- Reduce wasted space: shrink bottom command bar height and tighten padding; ensure buttons remain readable/clickable.",
+                "- Right panel: replace placeholder-looking blocks with intentional structure (e.g., framed sections, compact stats rows, action area), and remove excessive empty vertical regions.",
+                "- Build Catalog: replace color-swatch tiles with actual building imagery. Use existing building sprites (or cropped thumbnails) as the icon art per card; keep name + price legible.",
+                "- Ensure typography remains consistent: improve contrast and add subtle text shadow/outline where needed for readability on the panel background.",
+                "Capture updated after screenshots (use the same deterministic capture commands/scenario where possible)."
+              ],
+              "acceptance_criteria": [
+                "UI no longer reads as flat blocks; hierarchy is obvious at a glance (top bar, command bar, right panel, modals).",
+                "Bottom command bar and right panel feel meaningfully tighter without usability loss.",
+                "Build Catalog looks shippable (building art thumbnails, consistent card layout).",
+                "qa_smoke --quick PASS; validate_assets strict PASS."
+              ]
+            },
+            "09": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "World visual variety pass (render-only, deterministic, cached; avoid perf regressions):",
+                "- Increase grass variation with low-frequency patterns/macro clumps and a few deterministic prop speckles (tile-coord deterministic).",
+                "- Add a few deterministic tree variants (small canopy/shape/palette shifts) to reduce repetition.",
+                "- Improve path readability further if needed (edge definition/contrast), but keep it subtle and consistent.",
+                "Do NOT work on fog-edge softness in this round.",
+                "Provide 2–3 suggested 'before/after' comparison shots to capture that best show the improvement (paths + open grass + trees)."
+              ],
+              "acceptance_criteria": [
+                "World looks less repetitive at Z2; grass/trees feel richer without extra noise.",
+                "qa_smoke --quick PASS; validate_assets strict PASS."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "priority": "P1",
+              "asks": [
+                "Improve world-label readability + reduce label noise (do not change fog edge; do not hide debug overlays):",
+                "- Add a simple outline or drop-shadow for world-space text (building names, tax values) to improve contrast on grass.",
+                "- Reduce label clutter rules at zoomed-out levels (e.g., hide tax values at Z2, or show fewer labels based on zoom/importance).",
+                "- Keep deterministic + cheap: no per-frame surface churn; use caching where appropriate.",
+                "Coordinate with Agent 08 so UI text styling remains consistent with panel styling."
+              ],
+              "acceptance_criteria": [
+                "Labels are readable on grass and feel less cluttered in overview shots.",
+                "qa_smoke --quick PASS."
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "priority": "P2",
+              "asks": [
+                "Tooling support for consistent before/after capture (no gameplay changes):",
+                "- Ensure the `ui_polish_after` scenario captures the key shots we need after this pass (overview + panels + build catalog + pause menu).",
+                "- If any new capture scenario is needed for terrain/tree variety focus, add it as a deterministic scenario (seeded) and document the command.",
+                "- Keep tooling gates green; do not weaken strict validation."
+              ],
+              "acceptance_criteria": [
+                "One deterministic command produces a complete v1.3 polish-after set (including the new improvements).",
+                "qa_smoke --quick PASS; validate_assets strict PASS."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "After 03/08/09 land changes, verify and capture evidence:",
+                "- Run: `python tools/qa_smoke.py --quick`",
+                "- Run: `python tools/validate_assets.py --strict --check-attribution`",
+                "- Capture deterministic screenshots for comparison (use `ui_polish_after` scenario; include any new terrain/overview scenario if added).",
+                "Manual spot-check (Windows):",
+                "- Build Catalog is readable and uses building art thumbnails (not color swatches).",
+                "- Right panel reads intentional (no 'placeholder blocks' feel) and does not waste space.",
+                "- Labels are readable on grass and not excessively cluttered when zoomed out."
+              ],
+              "acceptance_criteria": [
+                "Gates PASS and screenshot evidence captured under `docs/screenshots/v1.3.0_after/` (new subfolder).",
+                "If any regression is found: file V1.3-BUG-00X with repro + screenshot evidence."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "08", "09", "11", "12"],
+            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "rationale": "Polish pass requires UI (08), world art variety (09), small engine support for label readability (03), tooling capture consistency (12), and QA evidence (11). Agents 05/06 are not needed unless regressions are discovered."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["03", "08", "09", "11", "12"],
+            "prompt": "You are resuming v1.3 visual polish pass 2. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r3_visual_polish_pass_2\"]`\n\n1) Scope constraints (locked)\n- Do NOT work on fog-of-war edge softness.\n- Do NOT hide/remove debug overlays or tip text.\n\n2) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Maintain determinism constraints (seeded RNG only; sim-time only) and keep performance safe (avoid per-frame allocations).\n\n3) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r3_visual_polish_pass_2`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
+          }
+        }
+        ,
+        "v1.3_r4_final_manual_spotcheck_and_closeout": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r4_final_manual_spotcheck_and_closeout_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Closeout round: only remaining work is manual Windows spot-check + signoff logging."
+          },
+          "pm_status_summary": {
+            "overall_status": "READY TO CLOSE pending manual Windows spot-check",
+            "gates_status": {
+              "qa_smoke_quick": "PASS (per Agent 08/09/03/11 evidence)",
+              "validate_assets_strict": "PASS (per Agent 08/09/03/11 evidence)"
+            },
+            "evidence_locations": [
+              "UI polish after set: docs/screenshots/v1.3.0_after/ui_polish_after_seed3/",
+              "Label readability set: docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/",
+              "World variation scenario (if captured): docs/screenshots/v1.3.0_after/world_variation_seed3/"
+            ],
+            "remaining_blockers": [
+              "Manual Windows spot-check (10 minutes) and signoff entry in Agent 11 log."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Manual Windows spot-check (no code changes):",
+                "- Build Catalog uses building sprite thumbnails (not color swatches) and remains readable.",
+                "- Right panel reads intentional/compact (no placeholder blocks feel); no layout regressions.",
+                "- World labels are readable on grass and less cluttered when zoomed out (tax numbers hidden at overview is OK).",
+                "If PASS: mark v1.3 closeout as ready and include screenshot path evidence in your log entry.",
+                "If FAIL: file V1.3-BUG-00X ticket in PM hub with repro + screenshot evidence and mark status blocked."
+              ],
+              "acceptance_criteria": [
+                "Manual spot-check PASS with evidence paths, OR new bug ticket(s) filed with repro + screenshots."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["11"],
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "rationale": "All implementation work is complete; only manual Windows spot-check + signoff remains."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["11"],
+            "prompt": "You are Agent 11. Final manual spot-check + v1.3 closeout.\n\n0) Context\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r4_final_manual_spotcheck_and_closeout\"]`\n\n1) Manual Windows spot-check (required)\n- Build Catalog: thumbnails (not color swatches) + readable.\n- Right panel: intentional/compact; no placeholder blocks feel.\n- Labels: readable on grass; less cluttered when zoomed out.\n\n2) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r4_final_manual_spotcheck_and_closeout`\n- `status`: `done` OR `blocked`\n- `evidence`: PASS/FAIL and screenshot path references.\n"
+          }
+        }
+        ,
+        "v1.3_r5_extension_mid_sprint": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "V1.3 extended: add gameplay/AI + UI/audio + building-behavior features before calling this worthy of v1.3."
+          },
+          "pm_execution_prompt": {
+            "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+            "write_replies_to": "sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]",
+            "global_constraints": [
+              "Determinism: no wall-clock time in sim logic; seeded RNG only.",
+              "Keep perf safe: avoid per-frame allocations; cache UI text surfaces; no heavy new per-tick scans.",
+              "Gates must remain green: `python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution`."
+            ],
+            "explicit_non_goals": [
+              "Do NOT change fog-of-war edge softness rendering.",
+              "Do NOT hide/remove debug overlays or tip text."
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "V1.3-EXT-BUG-001",
+              "title": "Screen/camera scrolls while paused",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "repro_steps": ["Open ESC menu (paused)", "Move mouse to screen edge or use mouse wheel", "Observe camera/zoom changes"],
+              "expected": "World camera/zoom should not change while paused/menu open",
+              "actual": "Camera and/or zoom can change while paused",
+              "acceptance_test": ["ESC open: edge scroll disabled", "ESC open: mouse wheel zoom disabled", "Game unpaused: inputs work normally"]
+            },
+            {
+              "id": "V1.3-EXT-BUG-002",
+              "title": "Demolish option appears on non-player buildings (e.g., monster lairs)",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "repro_steps": ["Select a monster lair", "Observe building panel buttons"],
+              "expected": "Demolish is only available for player-owned buildings",
+              "actual": "Demolish can appear for lairs/neutral buildings",
+              "acceptance_test": ["Lair: no demolish button", "Player building: demolish button present (castle exception unchanged)"]
+            },
+            {
+              "id": "V1.3-EXT-BUG-003",
+              "title": "Menu button text alignment inconsistent",
+              "severity": "minor",
+              "owner_agent": "08_UX_UI_Director",
+              "repro_steps": ["Open ESC menu", "Compare alignment across buttons (Resume/Graphics/Audio/Controls/Quit)"],
+              "expected": "All button labels share a consistent alignment baseline/padding",
+              "actual": "Labels vary in vertical alignment/padding",
+              "acceptance_test": ["All menu buttons visually aligned consistently"]
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "V1.3-EXT-FEAT-001",
+              "title": "AI: heroes buy potions more often and flee less before using potions",
+              "owner_agents": ["06_AIBehaviorDirector_LLM"],
+              "status": "assigned"
+            },
+            {
+              "id": "V1.3-EXT-FEAT-002",
+              "title": "Audio: separate Master/Music/SFX volume controls (3 sliders)",
+              "owner_agents": ["14_SoundDirector_Audio", "08_UX_UI_Director"],
+              "status": "assigned"
+            },
+            {
+              "id": "V1.3-EXT-FEAT-003",
+              "title": "Blacksmith: research weapon/armor upgrades; heroes purchase upgrades; purchases feed Journey trigger",
+              "owner_agents": ["05_GameplaySystemsDesigner", "06_AIBehaviorDirector_LLM", "08_UX_UI_Director"],
+              "status": "assigned"
+            }
+          ],
+          "pm_integration_order": [
+            "1) Engine pause input gating (03) + demolish gating (08) (cheap regressions first)",
+            "2) Audio 3-slider API + wiring (14 + 08)",
+            "3) AI potion/flee tuning (06) and Blacksmith research/purchases (05 + 06 + 08)",
+            "4) QA verification + manual checks (11) + optional screenshot scenario updates (12)"
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Fix V1.3-EXT-BUG-001: prevent camera/zoom changes while paused (ESC menu visible or paused state).",
+                "Touchpoints: `game/engine.py` MOUSEWHEEL handler currently zooms even when paused; gate edge-scroll/WASD/mousewheel while paused, but keep UI interactions working.",
+                "Run gates: qa_smoke --quick, validate_assets --strict --check-attribution."
+              ],
+              "acceptance_criteria": [
+                "With ESC open: mouse wheel and edge scroll do nothing; UI still responds.",
+                "With game unpaused: camera/zoom inputs behave normally.",
+                "Gates PASS."
+              ]
+            },
+            "06": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "AI tuning: heroes should buy potions more often and flee less aggressively before using potions.",
+                "Touchpoints: `game/entities/hero.py` has `wants_to_shop()` with simple potion logic; journey uses `last_purchase_ms`. Adjust shopping desire to target >0 potions (not only when 0).",
+                "Flee tuning: adjust retreat thresholds in `ai/basic_ai.py` and/or hero decision logic so heroes prefer using potions before retreating when they have them.",
+                "Blacksmith synergy: coordinate with Agent 05 so heroes also consider Blacksmith shopping when upgrades are researched/available.",
+                "Run gates: qa_smoke --quick."
+              ],
+              "acceptance_criteria": [
+                "Manual: after potions researched, heroes regularly purchase potions when affordable (not only when at 0).",
+                "Manual: heroes with potions use them before retreating in typical fights.",
+                "qa_smoke --quick PASS."
+              ]
+            },
+            "05": {
+              "status": "assigned_active",
+              "priority": "P1",
+              "asks": [
+                "Blacksmith feature: add research options for weapon and armor upgrades; after research, heroes can purchase upgrades at Blacksmith.",
+                "Touchpoints: Blacksmith exists in `game/entities/building.py` with item lists; research system exists via `unlock_research()`/`is_research_unlocked()` and Library patterns.",
+                "Implement research gating so upgraded item set is locked until researched.",
+                "Ensure hero purchases go through existing purchase path so `hero.last_purchase_ms` updates (feeds Journey trigger).",
+                "Run gates: qa_smoke --quick, validate_assets --strict --check-attribution."
+              ],
+              "acceptance_criteria": [
+                "Player can research weapon/armor upgrades at Blacksmith.",
+                "After research, heroes can enter Blacksmith and purchase upgrades.",
+                "Purchases trigger Journey purchase tracking (last_purchase_ms updated).",
+                "Gates PASS."
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "UI: fix inconsistent menu button label alignment (ESC menu). Ensure a single alignment policy across buttons.",
+                "Audio UI: update ESC → Audio page to show 3 sliders: Master, Music, SFX; wire to AudioSystem APIs (Agent 14).",
+                "Demolish gating: fix V1.3-EXT-BUG-002 by hiding demolish for lairs/neutral buildings; only show for player-owned buildings (castle exception unchanged). Touchpoint: `game/ui/building_panel.py` currently hides only for castle.",
+                "Blacksmith UI: add research buttons to Blacksmith panel (weapon/armor upgrades) similar to existing research/upgrade patterns; ensure affordability + messaging.",
+                "Run gates: qa_smoke --quick."
+              ],
+              "acceptance_criteria": [
+                "Menu buttons: label alignment consistent across all buttons.",
+                "Audio page: 3 sliders work as expected once AudioSystem exposes APIs.",
+                "Demolish button never appears for lairs.",
+                "qa_smoke --quick PASS."
+              ]
+            },
+            "14": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "Audio: implement separate volume controls: master, music(ambient), sfx.",
+                "Touchpoints: `game/audio/audio_system.py` currently has master volume only; ambient is treated like music. Add set/get APIs for music and sfx and apply scaling: SFX uses master*sfx; ambient uses master*music*base_ambient.",
+                "Coordinate with Agent 08 so PauseMenu wires sliders correctly.",
+                "Run gates: qa_smoke --quick, validate_assets --strict --check-attribution."
+              ],
+              "acceptance_criteria": [
+                "Master scales both SFX and ambient.",
+                "Music slider affects ambient only.",
+                "SFX slider affects SFX only.",
+                "Gates PASS."
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "priority": "P2",
+              "asks": [
+                "Optional tooling support: if UI/audio changes need deterministic screenshot evidence, add/update a screenshot scenario that captures the Audio page with 3 sliders and the Blacksmith research panel.",
+                "Keep gates green; do not weaken strict validation."
+              ],
+              "acceptance_criteria": [
+                "If implemented: one deterministic command captures the new Audio page and Blacksmith research UI."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "priority": "P0",
+              "asks": [
+                "After 03/05/06/08/14 land changes: run gates and do manual Windows verification:",
+                "- `python tools/qa_smoke.py --quick`",
+                "- `python tools/validate_assets.py --strict --check-attribution`",
+                "Manual checks:",
+                "- Heroes buy potions more often; heroes use potions before fleeing in common fights.",
+                "- Pause: no scroll/zoom while paused/ESC menu open.",
+                "- Audio: Master/Music/SFX sliders work independently.",
+                "- Blacksmith: research weapon/armor upgrades; heroes purchase upgrades; purchase triggers Journey behavior more often when healthy.",
+                "- Demolish button does not appear on lairs."
+              ],
+              "acceptance_criteria": [
+                "Gates PASS",
+                "Manual checklist PASS or bug tickets filed with repro/evidence"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": ["03", "05", "06", "08", "11", "12", "14"],
+            "do_not_send": ["02", "04", "07", "09", "10", "13"],
+            "rationale": "This extension needs AI behavior tuning (06), gameplay/buildings (05), UI (08), audio (14), engine input gating (03), QA verification (11), and optional tooling support (12)."
+          },
+          "pm_universal_prompt_for_agents": {
+            "send_to": ["03", "05", "06", "08", "11", "12", "14"],
+            "prompt": "You are resuming V1.3 mid-sprint extension work. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Read plan: `.cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]`\n\n1) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Respect constraints: determinism (seeded RNG, sim-time only), perf-safe (avoid per-frame allocations).\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r5_extension_mid_sprint`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + paths/screenshots), and `blockers` if any.\n"
           }
         }
       }

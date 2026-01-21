@@ -2163,7 +2163,7 @@
           }
         }
       },
-      "wk7-ui-polish": {
+    "wk7-ui-polish": {
         "sprint_meta": {
           "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
           "notes": "WK7: UI overhaul — window/display modes, ESC menu, castle build catalog, and Majesty-quality UI benchmark pass."
@@ -2910,6 +2910,171 @@
             ],
             "risks_or_followups": [
               "Follow-up: complete manual checklist and capture final screenshots for PM signoff."
+            ]
+          }
+        }
+      }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "V1.3: visual polish + journey AI + QA evidence."
+      },
+      "rounds": {
+        "v1.3_r1_execution_and_polish": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r1_execution_and_polish",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r1_execution_and_polish_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "After 03/08/09 land changes, run gates, manual checks, and capture before/after screenshots for v1.3 signoff.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "in_progress",
+            "what_i_changed": [
+              "None (QA-only round; ran automated gates)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "Manual (Windows): click heroes → right panel opens and shows hero info.",
+              "Manual (Windows): place a bounty → at least one hero pursues within ~30–60 seconds.",
+              "Manual (Windows): shop a hero at full health → journey target changes (explore fog or lair).",
+              "Capture before/after screenshots matching v1.2.9 baseline framing."
+            ],
+            "evidence": {
+              "qa_smoke_quick": "PASS (exit code 0).",
+              "qa_smoke_command": "python tools/qa_smoke.py --quick",
+              "qa_smoke_output": "[qa_smoke] DONE: PASS",
+              "validate_assets_strict": "PASS (exit code 0; no output).",
+              "validate_assets_command": "python tools/validate_assets.py --strict --check-attribution",
+              "manual_verification": "NOT RUN (requires human Windows verification).",
+              "screenshots": "NOT CAPTURED (requires human operator)."
+            },
+            "blockers": [
+              {
+                "summary": "Manual Windows verification and screenshots required for v1.3 signoff.",
+                "needs": [
+                  "Human operator to run manual checklist and capture before/after screenshots."
+                ],
+                "who": [
+                  "human_operator"
+                ]
+              }
+            ]
+          }
+        }
+        ,
+        "v1.3_r3_visual_polish_pass_2": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r3_visual_polish_pass_2",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r3_visual_polish_pass_2_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "After 03/08/09 land changes, run gates, capture deterministic screenshots, and perform manual spot-checks.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "blocked",
+            "what_i_changed": [
+              "None (QA-only round; ran automated gates and captured deterministic screenshots)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0",
+              "Manual (Windows): Build Catalog uses building art thumbnails (not color swatches).",
+              "Manual (Windows): Right panel reads intentional and compact (no placeholder blocks feel).",
+              "Manual (Windows): Labels readable on grass; not excessively cluttered when zoomed out."
+            ],
+            "evidence": {
+              "qa_smoke_quick": "PASS (exit code 0).",
+              "qa_smoke_command": "python tools/qa_smoke.py --quick",
+              "qa_smoke_output": "[qa_smoke] DONE: PASS",
+              "validate_assets_strict": "PASS (exit code 0; no output).",
+              "validate_assets_command": "python tools/validate_assets.py --strict --check-attribution",
+              "screenshots": [
+                "docs/screenshots/v1.3.0_after/ui_polish_after_seed3/*.png",
+                "docs/screenshots/v1.3.0_after/ui_polish_after_seed3/manifest.json"
+              ],
+              "manual_spot_check": "NOT RUN (requires human Windows verification)."
+            },
+            "blockers": [
+              {
+                "summary": "Manual Windows spot-checks required for final signoff.",
+                "needs": [
+                  "Human operator to verify Build Catalog thumbnails, right panel compactness, and label readability."
+                ],
+                "who": [
+                  "human_operator"
+                ]
+              }
+            ]
+          }
+        }
+        ,
+        "v1.3_r5_extension_mid_sprint": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r5_extension_mid_sprint",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "Run gates and manual checks after 03/05/06/08/14 land mid-sprint extension changes.",
+          "response": {
+            "received_at_local": "2026-01-21T00:00:00",
+            "status": "blocked",
+            "what_i_changed": [
+              "None (QA-only round; awaiting upstream changes)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --strict --check-attribution",
+              "Manual (Windows): heroes buy potions more often; heroes use potions before fleeing.",
+              "Manual (Windows): pause menu open → no camera scroll/zoom.",
+              "Manual (Windows): Audio page Master/Music/SFX sliders work independently.",
+              "Manual (Windows): Blacksmith research weapon/armor upgrades; heroes purchase upgrades; Journey triggers after purchase.",
+              "Manual (Windows): Demolish button does not appear on lairs."
+            ],
+            "evidence": {
+              "qa_smoke_quick": "NOT RUN (blocked pending upstream changes).",
+              "validate_assets_strict": "NOT RUN (blocked pending upstream changes).",
+              "manual_verification": "NOT RUN (blocked pending upstream changes)."
+            },
+            "blockers": [
+              {
+                "summary": "Awaiting upstream changes for V1.3 mid-sprint extension (03/05/06/08/14).",
+                "needs": [
+                  "03: pause input gating fix landed",
+                  "05: Blacksmith research + purchase flow landed",
+                  "06: potion buying + flee tuning landed",
+                  "08: UI alignment + demolish gating + Blacksmith UI landed",
+                  "14: Master/Music/SFX audio sliders API landed"
+                ],
+                "who": [
+                  "03_TechnicalDirector_Architecture",
+                  "05_GameplaySystemsDesigner",
+                  "06_AIBehaviorDirector_LLM",
+                  "08_UX_UI_Director",
+                  "14_SoundDirector_Audio"
+                ]
+              }
             ]
           }
         }

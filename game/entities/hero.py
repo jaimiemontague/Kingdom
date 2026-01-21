@@ -432,8 +432,14 @@ class Hero:
         if self.gold < 30:
             return False
         
+        # V1.3 Extension: More aggressive potion buying
         # If no potions and gold >= 30, want to buy one potion
         if self.potions == 0 and marketplace_has_potions:
+            return True
+        
+        # V1.3 Extension: Buy potions even when potions > 0, but not at max
+        # Lower threshold: if potions < 2 and gold >= 30, want to stock up
+        if self.potions < 2 and marketplace_has_potions and self.gold >= 30:
             return True
         
         # If gold >= 50, might want to buy more potions (LLM decides)

@@ -18,6 +18,7 @@ from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
 from game.entities.building import Building
 from game.entities.hero import Hero
 from game.entities.enemy import Enemy
+from game.world import TileType
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +103,45 @@ def _place_enemy(engine, enemy_type: str, x: float, y: float) -> Enemy:
 
 def _tile_center_px(gx: int, gy: int) -> tuple[float, float]:
     return (gx * TILE_SIZE + TILE_SIZE / 2.0, gy * TILE_SIZE + TILE_SIZE / 2.0)
+
+
+def _find_terrain_focus(world, *, window: int = 12, step: int = 4) -> tuple[int, int]:
+    """
+    Find a deterministic terrain focus area with trees + paths and minimal water.
+    Returns a grid coordinate to center the camera.
+    """
+    width = int(getattr(world, "width", MAP_WIDTH))
+    height = int(getattr(world, "height", MAP_HEIGHT))
+    tiles = getattr(world, "tiles", None)
+    if tiles is None:
+        return (width // 2, height // 2)
+
+    best_score = None
+    best_pos = (width // 2, height // 2)
+    max_x = max(1, width - window - 1)
+    max_y = max(1, height - window - 1)
+
+    for gy in range(2, max_y, step):
+        for gx in range(2, max_x, step):
+            trees = 0
+            paths = 0
+            water = 0
+            for y in range(gy, gy + window):
+                row = tiles[y]
+                for x in range(gx, gx + window):
+                    tile = row[x]
+                    if tile == TileType.TREE:
+                        trees += 1
+                    elif tile == TileType.PATH:
+                        paths += 1
+                    elif tile == TileType.WATER:
+                        water += 1
+            score = trees * 2 + paths - water * 3
+            if best_score is None or score > best_score:
+                best_score = score
+                best_pos = (gx + window // 2, gy + window // 2)
+
+    return best_pos
 
 
 def _fit_grid_positions(
@@ -583,6 +623,124 @@ def scenario_ui_build_catalog(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_ui_audio_blacksmith(engine, *, seed: int) -> list[Shot]:
+    """
+    V1.3 extension capture set:
+    - Audio page (3 sliders)
+    - Blacksmith panel with research/purchase info
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    blacksmith = _place_building(engine, "blacksmith", cgx + 6, cgy - 2)
+
+    def _apply_audio(engine2):
+        if hasattr(engine2, "screenshot_hide_ui"):
+            engine2.screenshot_hide_ui = False
+        if hasattr(engine2, "pause_menu"):
+            engine2.pause_menu.open()
+            engine2.pause_menu.current_page = "audio"
+
+    def _apply_blacksmith(engine2):
+        if hasattr(engine2, "screenshot_hide_ui"):
+            engine2.screenshot_hide_ui = False
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = True
+        engine2.selected_hero = None
+        engine2.selected_building = blacksmith
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+    bx = float(getattr(blacksmith, "center_x", getattr(blacksmith, "x", 0.0)))
+    by = float(getattr(blacksmith, "center_y", getattr(blacksmith, "y", 0.0)))
+
+    return [
+        Shot(
+            filename="ui_audio_page.png",
+            label="UI: Audio Page (3 Sliders)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.2,
+            meta={"scenario": "ui_audio_blacksmith", "seed": int(seed), "page": "audio"},
+            apply=_apply_audio,
+        ),
+        Shot(
+            filename="ui_blacksmith_panel.png",
+            label="UI: Blacksmith Panel",
+            center_x=bx,
+            center_y=by,
+            zoom=1.6,
+            meta={"scenario": "ui_audio_blacksmith", "seed": int(seed), "panel": "blacksmith"},
+            apply=_apply_blacksmith,
+        ),
+    ]
+
+
+def scenario_ui_polish_after(engine, *, seed: int) -> list[Shot]:
+    """
+    V1.3 UI polish capture set:
+    - base overview (UI on)
+    - right panel states (hero/building + hidden + debug)
+    - pause menu
+    - build catalog
+    """
+    shots: list[Shot] = []
+    shots.extend(scenario_base_overview(engine, seed=int(seed)))
+    shots.extend(scenario_ui_panels(engine, seed=int(seed)))
+    shots.extend(scenario_ui_pause_menu(engine, seed=int(seed)))
+    shots.extend(scenario_ui_build_catalog(engine, seed=int(seed)))
+    return shots
+
+
+def scenario_world_variation(engine, *, seed: int) -> list[Shot]:
+    """
+    V1.3 terrain/trees variety capture set (UI visible).
+    Focuses on grass + trees + paths without fog edits.
+    """
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    focus_gx, focus_gy = _find_terrain_focus(engine.world)
+    focus_x, focus_y = _tile_center_px(focus_gx, focus_gy)
+
+    def _apply_ui_visible(engine2):
+        if hasattr(engine2, "screenshot_hide_ui"):
+            engine2.screenshot_hide_ui = False
+
+    return [
+        Shot(
+            filename="world_variation_overview.png",
+            label="World Variation (Overview)",
+            center_x=focus_x,
+            center_y=focus_y,
+            zoom=1.6,
+            ticks=0,
+            apply=_apply_ui_visible,
+            meta={"scenario": "world_variation", "seed": int(seed)},
+        ),
+        Shot(
+            filename="world_variation_closeup.png",
+            label="World Variation (Close-up)",
+            center_x=focus_x,
+            center_y=focus_y,
+            zoom=2.4,
+            ticks=0,
+            apply=_apply_ui_visible,
+            meta={"scenario": "world_variation", "seed": int(seed), "zoom": "closeup"},
+        ),
+    ]
+
+
 def _place_worker(engine, worker_type: str, x: float, y: float):
     """Place a worker (peasant or tax_collector) at the given coordinates."""
     if worker_type == "peasant":
@@ -976,6 +1134,12 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_ui_pause_menu(engine, seed=int(seed))
     if scenario_name == "ui_build_catalog":
         return scenario_ui_build_catalog(engine, seed=int(seed))
+    if scenario_name in ("ui_audio_blacksmith", "v1_3_audio_blacksmith"):
+        return scenario_ui_audio_blacksmith(engine, seed=int(seed))
+    if scenario_name in ("ui_polish_after", "v1_3_after", "v1.3_after"):
+        return scenario_ui_polish_after(engine, seed=int(seed))
+    if scenario_name in ("world_variation", "terrain_variety", "v1_3_world_variation"):
+        return scenario_world_variation(engine, seed=int(seed))
     if scenario_name == "worker_catalog":
         return scenario_worker_catalog(engine, seed=int(seed))
     if scenario_name == "ranged_projectiles":

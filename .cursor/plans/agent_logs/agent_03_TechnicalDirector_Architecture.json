@@ -138,6 +138,164 @@
               "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see run output; includes: bounty_responder_attr_present=True)"
             }
           }
+        },
+        "v1.3-visual-polish-journey-ai": {
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": "V1.3: bugfixes first; Agent 03 owns V1.3-BUG-001 hero selection."
+          },
+          "rounds": {
+            "v1.3_r0_kickoff": {
+              "sprint_id": "v1.3-visual-polish-journey-ai",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+                "notes": ""
+              },
+              "round_id": "v1.3_r0_kickoff",
+              "round_meta": {
+                "prompt_set_id": "v1.3_r0_kickoff_v1",
+                "build_target": "v1.3.0",
+                "sent_at_local": "2026-01-21T00:00:00"
+              },
+              "prompt_text": "Fix hero click selection. Heroes cannot be clicked/selected. Repro: run python main.py, click any hero — nothing happens. Suspected areas: game/engine.py handle_mousedown() and try_select_hero(), UI panels consuming clicks, screen_to_world() coordinate conversion. Acceptance: click hero → selected, Tab panel shows hero info, qa_smoke --quick PASS.",
+              "response": {
+                "received_at_local": "2026-01-21T18:40:00",
+                "status": "complete",
+                "raw": "### Status\nAgent 03 (TechnicalDirector_Architecture) — V1.3-BUG-001 complete. Root cause was UX visibility: hero selection had no visible feedback with the Tab panel hidden. Fix ensures selecting a hero forces the right info panel to open.\n\n### Changes\n- `game/engine.py`: when a hero is selected in `try_select_hero`, force `hud.right_panel_visible = True` so selection is immediately visible.\n\n### Tests\n- `python tools/qa_smoke.py --quick` => PASS\n\n### Manual verification (recommended)\n- Run `python main.py`, click a hero, confirm right panel opens and shows hero info.",
+                "summary_bullets": [
+                  "Hero selection now opens the right info panel so clicks are visibly acknowledged.",
+                  "No sim logic changes; UI-only behavior."
+                ],
+                "proposed_changes": [
+                  "Set `hud.right_panel_visible = True` when hero is selected in `GameEngine.try_select_hero`."
+                ],
+                "acceptance_criteria": [
+                  "Clicking a hero selects them and immediately shows hero info in the right panel.",
+                  "qa_smoke --quick PASS."
+                ],
+                "risks": [],
+                "dependencies": [],
+                "questions_back_to_pm": [],
+                "recommended_next_actions": [
+                  "Manual: click hero in `python main.py` to confirm panel visibility and info display."
+                ],
+                "agent_fields": {
+                  "files_changed": [
+                    "game/engine.py"
+                  ],
+                  "qa_smoke_evidence": "PASS (python tools/qa_smoke.py --quick)"
+                }
+              }
+            },
+            "v1.3_r1_execution_and_polish": {
+              "sprint_id": "v1.3-visual-polish-journey-ai",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+                "notes": ""
+              },
+              "round_id": "v1.3_r1_execution_and_polish",
+              "round_meta": {
+                "prompt_set_id": "v1.3_r1_execution_and_polish_v1",
+                "build_target": "v1.3.0",
+                "sent_at_local": "2026-01-21T00:00:00"
+              },
+              "prompt_text": "Execute ONLY Agent 03 tasks under pm_next_actions_by_agent for v1.3_r1_execution_and_polish: verify V1.3-BUG-001 hero selection remains visibly acknowledged (right panel opens), support polish enabling code only if needed, and keep gates green.",
+              "response": {
+                "received_at_local": "2026-01-21T00:00:00",
+                "status": "done",
+                "what_i_changed": [
+                  "No new code changes for v1.3_r1: verified the hero-selection visibility behavior is present (hero click selection forces HUD right panel visible).",
+                  "Confirmed HUD still supports `right_panel_visible` and renders the right panel accordingly."
+                ],
+                "how_to_test": [
+                  "Manual: run `python main.py`, click a hero; verify the right-side panel becomes visible and shows hero info (no silent selection).",
+                  "python tools/qa_smoke.py --quick",
+                  "python tools/validate_assets.py --strict --check-attribution"
+                ],
+                "evidence": {
+                  "qa_smoke_quick": "PASS (python tools/qa_smoke.py --quick)",
+                  "validate_assets_strict": "PASS (python tools/validate_assets.py --strict --check-attribution)"
+                },
+                "blockers": []
+              }
+            },
+            "v1.3_r3_visual_polish_pass_2": {
+              "sprint_id": "v1.3-visual-polish-journey-ai",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+                "notes": ""
+              },
+              "round_id": "v1.3_r3_visual_polish_pass_2",
+              "round_meta": {
+                "prompt_set_id": "v1.3_r3_visual_polish_pass_2_v1",
+                "build_target": "v1.3.0",
+                "sent_at_local": "2026-01-21T00:00:00"
+              },
+              "prompt_text": "Improve world-label readability + reduce label noise (do not change fog edge; do not hide/remove debug overlays/tip text): add shadow/outline for world-space labels (building names, tax values) and reduce clutter at zoomed-out levels; keep deterministic + cheap (avoid per-frame allocations; use caching).",
+              "response": {
+                "received_at_local": "2026-01-21T00:00:00",
+                "status": "done",
+                "what_i_changed": [
+                  "Added a render-only zoom context (`game/graphics/render_context.py`) and set it once per frame from `GameEngine.render()` (UI-only; determinism-safe).",
+                  "Added `render_text_shadowed_cached()` in `game/graphics/font_cache.py` with a bounded cache to avoid per-frame label allocations while preventing unbounded growth.",
+                  "Updated world-space label rendering to use shadowed cached text for better contrast on grass: `game/entities/building.py`, `game/entities/neutral_buildings.py`, `game/entities/lair.py`.",
+                  "Reduced label clutter when zoomed out by hiding dynamic tax/stash numbers unless zoom is >= 1.0 (building names remain visible)."
+                ],
+                "how_to_test": [
+                  "python tools/qa_smoke.py --quick",
+                  "python tools/validate_assets.py --strict --check-attribution",
+                  "Deterministic screenshots: python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3 --size 1920x1080 --ticks 0"
+                ],
+                "evidence": {
+                  "qa_smoke_quick": "PASS (python tools/qa_smoke.py --quick)",
+                  "validate_assets_strict": "PASS (python tools/validate_assets.py --strict --check-attribution)",
+                  "screenshots_dir": "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3",
+                  "screenshots": [
+                    "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/base_overview__Z1__world_clean.png",
+                    "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/base_overview__Z1__ui_default.png",
+                    "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/base_overview__Z2__world_clean.png",
+                    "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/base_overview__Z2__ui_default.png"
+                  ],
+                  "manifest": "docs/screenshots/v1.3.0_after/visual_polish_pass2_labels_seed3/manifest.json"
+                },
+                "blockers": []
+              }
+            },
+            "v1.3_r5_extension_mid_sprint": {
+              "sprint_id": "v1.3-visual-polish-journey-ai",
+              "sprint_meta": {
+                "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+                "notes": ""
+              },
+              "round_id": "v1.3_r5_extension_mid_sprint",
+              "round_meta": {
+                "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+                "build_target": "v1.3.0",
+                "sent_at_local": "2026-01-21T00:00:00"
+              },
+              "prompt_text": "Fix V1.3-EXT-BUG-001: prevent camera/zoom changes while paused (ESC menu visible or paused state). Gate mouse wheel zoom and camera movement inputs while paused, keep UI interactions working, and keep gates green.",
+              "response": {
+                "received_at_local": "2026-01-21T00:00:00",
+                "status": "done",
+                "what_i_changed": [
+                  "game/engine.py: Fixed V1.3-EXT-BUG-001 by gating camera movement and zoom inputs while paused (including when ESC menu is open).",
+                  "game/engine.py: Blocked mouse wheel zoom (pygame MOUSEWHEEL) while paused/menu visible.",
+                  "game/engine.py: Blocked key-based zoom and mouse-button wheel zoom while paused (menu-less paused state) while preserving ESC/menu UI behavior."
+                ],
+                "how_to_test": [
+                  "Manual: run `python main.py`, open ESC menu, scroll mouse wheel and move mouse to screen edge; camera/zoom should not change; menu UI should still respond.",
+                  "Manual: pause state without menu (if reachable): camera/zoom should not change.",
+                  "python tools/qa_smoke.py --quick",
+                  "python tools/validate_assets.py --strict --check-attribution"
+                ],
+                "evidence": {
+                  "qa_smoke_quick": "PASS (python tools/qa_smoke.py --quick)",
+                  "validate_assets_strict": "PASS (python tools/validate_assets.py --strict --check-attribution)"
+                },
+                "blockers": []
+              }
+            }
+          }
         }
       }
     },

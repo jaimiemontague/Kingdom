@@ -6,8 +6,9 @@ from config import (
     TILE_SIZE, BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS,
     COLOR_WHITE, COLOR_BLACK
 )
-from game.graphics.font_cache import get_font
+from game.graphics.font_cache import get_font, render_text_shadowed_cached
 from game.graphics.building_sprites import BuildingSpriteLibrary
+from game.graphics.render_context import get_render_zoom
 from game.sim.timebase import now_ms as sim_now_ms
 
 
@@ -22,6 +23,8 @@ RESEARCH_UNLOCKS = {
     "Advanced Healing": False,
     "Fire Magic": False,
     "Defensive Spells": False,
+    "Weapon Upgrades": False,
+    "Armor Upgrades": False,
 }
 
 
@@ -233,8 +236,7 @@ class Castle(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(20)
-        text = font.render("CASTLE", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(20, "CASTLE", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -275,8 +277,7 @@ class WarriorGuild(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(16)
-        text = font.render("WARRIORS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "WARRIORS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -284,9 +285,8 @@ class WarriorGuild(Building):
         surface.blit(text, text_rect)
         
         # Show stored tax gold
-        if self.stored_tax_gold > 0:
-            gold_font = get_font(14)
-            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+        if self.stored_tax_gold > 0 and get_render_zoom() >= 1.0:
+            gold_text = render_text_shadowed_cached(14, f"Tax: ${self.stored_tax_gold}", (255, 215, 0))
             gold_rect = gold_text.get_rect(center=(
                 screen_x + self.width // 2,
                 screen_y + self.height + 8
@@ -327,8 +327,7 @@ class RangerGuild(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
 
-        font = get_font(16)
-        text = font.render("RANGERS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "RANGERS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -336,9 +335,8 @@ class RangerGuild(Building):
         surface.blit(text, text_rect)
 
         # Show stored tax gold
-        if self.stored_tax_gold > 0:
-            gold_font = get_font(14)
-            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+        if self.stored_tax_gold > 0 and get_render_zoom() >= 1.0:
+            gold_text = render_text_shadowed_cached(14, f"Tax: ${self.stored_tax_gold}", (255, 215, 0))
             gold_rect = gold_text.get_rect(center=(
                 screen_x + self.width // 2,
                 screen_y + self.height + 8
@@ -375,17 +373,15 @@ class RogueGuild(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
 
-        font = get_font(16)
-        text = font.render("ROGUES", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "ROGUES", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
         ))
         surface.blit(text, text_rect)
 
-        if self.stored_tax_gold > 0:
-            gold_font = get_font(14)
-            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+        if self.stored_tax_gold > 0 and get_render_zoom() >= 1.0:
+            gold_text = render_text_shadowed_cached(14, f"Tax: ${self.stored_tax_gold}", (255, 215, 0))
             gold_rect = gold_text.get_rect(center=(
                 screen_x + self.width // 2,
                 screen_y + self.height + 8
@@ -422,17 +418,15 @@ class WizardGuild(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
 
-        font = get_font(16)
-        text = font.render("WIZARDS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "WIZARDS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
         ))
         surface.blit(text, text_rect)
 
-        if self.stored_tax_gold > 0:
-            gold_font = get_font(14)
-            gold_text = gold_font.render(f"Tax: ${self.stored_tax_gold}", True, (255, 215, 0))
+        if self.stored_tax_gold > 0 and get_render_zoom() >= 1.0:
+            gold_text = render_text_shadowed_cached(14, f"Tax: ${self.stored_tax_gold}", (255, 215, 0))
             gold_rect = gold_text.get_rect(center=(
                 screen_x + self.width // 2,
                 screen_y + self.height + 8
@@ -485,8 +479,7 @@ class Marketplace(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(16)
-        text = font.render("MARKET", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "MARKET", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -502,6 +495,78 @@ class Blacksmith(Building):
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, "blacksmith")
         self.upgrades_sold = 0
+        self.researched_items = []
+        
+        # Research options (similar to Library pattern)
+        self.available_research = [
+            {"name": "Weapon Upgrades", "cost": 300, "researched": is_research_unlocked("Weapon Upgrades")},
+            {"name": "Armor Upgrades", "cost": 300, "researched": is_research_unlocked("Armor Upgrades")},
+        ]
+        
+        # Mirror global unlocks into this instance for display/UX
+        for item in self.available_research:
+            if item["researched"]:
+                self.researched_items.append(item["name"])
+        
+        # Base items (always available)
+        self.base_items = [
+            {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
+            {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
+        ]
+        
+        # Upgraded items (gated by research)
+        self.upgraded_weapons = [
+            {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
+            {"name": "Mithril Blade", "type": "weapon", "price": 250, "attack": 15},
+        ]
+        
+        self.upgraded_armor = [
+            {"name": "Chain Mail", "type": "armor", "price": 120, "defense": 7},
+            {"name": "Plate Armor", "type": "armor", "price": 200, "defense": 12},
+        ]
+    
+    def can_research(self, research_name: str) -> bool:
+        """Check if a research can be performed."""
+        if is_research_unlocked(research_name):
+            return False
+        for item in self.available_research:
+            if item["name"] == research_name and not item["researched"]:
+                return True
+        return False
+    
+    def research(self, research_name: str, economy, game_state: dict | None = None) -> bool:
+        """Perform research if affordable."""
+        if hasattr(self, "is_constructed") and not self.is_constructed:
+            return False
+        if is_research_unlocked(research_name):
+            return False
+        for item in self.available_research:
+            if item["name"] == research_name and not item["researched"]:
+                if economy.player_gold >= item["cost"]:
+                    economy.player_gold -= item["cost"]
+                    item["researched"] = True
+                    self.researched_items.append(research_name)
+                    unlock_research(research_name)
+                    return True
+        return False
+    
+    def get_available_items(self) -> list:
+        """Get list of items available for purchase (gated by research)."""
+        items = self.base_items.copy()
+        
+        # Add upgraded weapons if researched
+        if is_research_unlocked("Weapon Upgrades"):
+            items.extend(self.upgraded_weapons)
+        
+        # Add upgraded armor if researched
+        if is_research_unlocked("Armor Upgrades"):
+            items.extend(self.upgraded_armor)
+        
+        return items
+    
+    def has_upgrades_available(self) -> bool:
+        """Check if any upgrades are available (researched and affordable for heroes)."""
+        return is_research_unlocked("Weapon Upgrades") or is_research_unlocked("Armor Upgrades")
         
     def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
         super().render(surface, camera_offset)
@@ -510,8 +575,7 @@ class Blacksmith(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(16)
-        text = font.render("SMITH", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "SMITH", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -534,8 +598,7 @@ class Inn(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(16)
-        text = font.render("INN", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "INN", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -571,8 +634,7 @@ class TradingPost(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(16)
-        text = font.render("TRADE", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(16, "TRADE", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -611,8 +673,7 @@ class TempleAgrela(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("AGRELA", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "AGRELA", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -649,8 +710,7 @@ class TempleDauros(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("DAUROS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "DAUROS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -687,8 +747,7 @@ class TempleFervus(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("FERVUS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "FERVUS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -725,8 +784,7 @@ class TempleKrypta(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("KRYPTA", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "KRYPTA", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -763,8 +821,7 @@ class TempleKrolm(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("KROLM", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "KROLM", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -801,8 +858,7 @@ class TempleHelia(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("HELIA", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "HELIA", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -839,8 +895,7 @@ class TempleLunord(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("LUNORD", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "LUNORD", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -879,8 +934,7 @@ class GnomeHovel(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("GNOMES", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "GNOMES", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -917,8 +971,7 @@ class ElvenBungalow(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("ELVES", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "ELVES", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -955,8 +1008,7 @@ class DwarvenSettlement(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("DWARVES", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "DWARVES", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -996,8 +1048,7 @@ class Guardhouse(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("GUARDS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "GUARDS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1093,8 +1144,7 @@ class BallistaTower(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("BALLISTA", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "BALLISTA", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1159,8 +1209,7 @@ class WizardTower(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("WIZ TOWER", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "WIZ TOWER", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1206,8 +1255,7 @@ class Fairgrounds(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("FAIR", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "FAIR", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1297,8 +1345,7 @@ class Library(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("LIBRARY", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "LIBRARY", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1334,8 +1381,7 @@ class RoyalGardens(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(14)
-        text = font.render("GARDENS", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(14, "GARDENS", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2
@@ -1403,8 +1449,7 @@ class Palace(Building):
         screen_x = self.world_x - cam_x
         screen_y = self.world_y - cam_y
         
-        font = get_font(20)
-        text = font.render(f"PALACE L{self.level}", True, COLOR_WHITE)
+        text = render_text_shadowed_cached(20, f"PALACE L{self.level}", COLOR_WHITE)
         text_rect = text.get_rect(center=(
             screen_x + self.width // 2,
             screen_y + self.height // 2

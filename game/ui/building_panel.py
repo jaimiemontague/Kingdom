@@ -49,6 +49,10 @@ class BuildingPanel:
         # WK7: Button for castle build catalog
         self.build_catalog_button_rect = None
         self.build_catalog_button_hovered = False
+
+        # Blacksmith research buttons
+        self.blacksmith_research_rects = {}
+        self.blacksmith_research_hovered = None
         
         # Hero portrait colors (simple colored circles as placeholders)
         self.portrait_colors = [
@@ -119,6 +123,9 @@ class BuildingPanel:
             # Disabled for castle (should not appear, but defensive check)
             if building.building_type == "castle":
                 return True
+            # Disabled for lairs/neutral buildings
+            if getattr(building, "is_lair", False):
+                return True
             # Disabled for under-construction buildings
             if hasattr(building, "is_constructed") and not building.is_constructed:
                 return True
@@ -159,6 +166,16 @@ class BuildingPanel:
                         return True
                     self.selected_building.research(research_name, economy, game_state)
                     return True
+
+        # Check blacksmith research buttons
+        if self.selected_building.building_type == "blacksmith" and self.blacksmith_research_rects:
+            for research_key, rect in self.blacksmith_research_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    # Cannot research while under construction
+                    if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
+                        return True
+                    self._apply_blacksmith_research(self.selected_building, research_key, economy, game_state)
+                    return True
         
         return True  # Click was in panel
     
@@ -184,6 +201,13 @@ class BuildingPanel:
                 if rect.collidepoint(mouse_pos):
                     self.library_research_hovered = research_name
                     break
+
+        self.blacksmith_research_hovered = None
+        if self.visible and self.selected_building and self.selected_building.building_type == "blacksmith":
+            for research_key, rect in self.blacksmith_research_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    self.blacksmith_research_hovered = research_key
+                    break
     
     def render(self, surface: pygame.Surface, heroes: list, economy):
         """Render the building panel."""
@@ -194,6 +218,7 @@ class BuildingPanel:
 
         # Reset per-frame clickable regions to avoid stale rects
         self.library_research_rects = {}
+        self.blacksmith_research_rects = {}
         
         # Panel background (skinned)
         panel_surf = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
@@ -232,7 +257,7 @@ class BuildingPanel:
         elif building.building_type == "palace":
             y = self.render_palace(panel_surf, building, heroes, y, economy)
         elif building.building_type == "blacksmith":
-            y = self.render_blacksmith(panel_surf, building, y)
+            y = self.render_blacksmith(panel_surf, building, y, economy)
         elif building.building_type == "inn":
             y = self.render_inn(panel_surf, building, heroes, y)
         elif building.building_type == "trading_post":
@@ -521,15 +546,115 @@ class BuildingPanel:
         }
         return status_colors.get(status.upper(), (150, 150, 150))
     
-    def render_blacksmith(self, surface: pygame.Surface, building, y: int) -> int:
-        """Render blacksmith details."""
-        upgrades_text = self.font_normal.render(f"Upgrades Sold: {building.upgrades_sold}", True, COLOR_WHITE)
+    def _apply_blacksmith_research(self, building, key: str, economy, game_state: dict):
+        """Best-effort call into blacksmith research API if available."""
+        if not building:
+            return
+        try:
+            if hasattr(building, "research_upgrade"):
+                try:
+                    return building.research_upgrade(key, economy, game_state)
+                except TypeError:
+                    try:
+                        return building.research_upgrade(key, economy)
+                    except TypeError:
+                        return building.research_upgrade(key)
+            if key == "weapon" and hasattr(building, "research_weapon_upgrade"):
+                try:
+                    return building.research_weapon_upgrade(economy, game_state)
+                except TypeError:
+                    return building.research_weapon_upgrade(economy)
+            if key == "armor" and hasattr(building, "research_armor_upgrade"):
+                try:
+                    return building.research_armor_upgrade(economy, game_state)
+                except TypeError:
+                    return building.research_armor_upgrade(economy)
+        except Exception:
+            return None
+        return None
+
+    def render_blacksmith(self, surface: pygame.Surface, building, y: int, economy) -> int:
+        """Render blacksmith details and research buttons (weapon/armor upgrades)."""
+        if hasattr(building, "is_constructed") and not building.is_constructed:
+            uc = self.font_normal.render("Status: UNDER CONSTRUCTION", True, (200, 200, 100))
+            surface.blit(uc, (10, y))
+            y += 25
+            note = self.font_small.render("Peasants must finish building it first.", True, (180, 180, 180))
+            surface.blit(note, (10, y))
+            y += 25
+            return y
+
+        upgrades_text = self.font_normal.render(f"Upgrades Sold: {getattr(building, 'upgrades_sold', 0)}", True, COLOR_WHITE)
         surface.blit(upgrades_text, (10, y))
         y += 25
-        
-        info_text = self.font_small.render("Heroes can upgrade equipment here", True, (180, 180, 180))
+
+        info_text = self.font_small.render("Research upgrades to unlock better gear", True, (180, 180, 180))
         surface.blit(info_text, (10, y))
         y += 20
+
+        has_research_impl = any(
+            callable(getattr(building, name, None))
+            for name in ("research_upgrade", "research_weapon_upgrade", "research_armor_upgrade")
+        )
+        has_cost_data = any(
+            hasattr(building, name)
+            for name in ("weapon_upgrade_cost", "armor_upgrade_cost", "weapon_research_cost", "armor_research_cost")
+        )
+        if not (has_research_impl or has_cost_data):
+            return y
+
+        # Separator
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+
+        options = [
+            {
+                "key": "weapon",
+                "label": "Weapon Upgrade",
+                "cost": int(getattr(building, "weapon_upgrade_cost", getattr(building, "weapon_research_cost", 150))),
+                "done": bool(getattr(building, "weapon_upgrade_researched", getattr(building, "weapon_researched", False))),
+            },
+            {
+                "key": "armor",
+                "label": "Armor Upgrade",
+                "cost": int(getattr(building, "armor_upgrade_cost", getattr(building, "armor_research_cost", 150))),
+                "done": bool(getattr(building, "armor_upgrade_researched", getattr(building, "armor_researched", False))),
+            },
+        ]
+
+        for opt in options:
+            if opt["done"]:
+                item_text = self.font_small.render(f"✓ {opt['label']}", True, COLOR_GREEN)
+                surface.blit(item_text, (15, y))
+                y += 18
+                continue
+
+            button_x = 10
+            button_y = y
+            button_width = self.panel_width - 20
+            button_height = 24
+
+            can_afford = bool(economy.player_gold >= opt["cost"])
+            button_color = (60, 120, 60) if can_afford else (80, 80, 80)
+            if self.blacksmith_research_hovered == opt["key"] and can_afford:
+                button_color = (80, 150, 80)
+
+            pygame.draw.rect(surface, button_color, (button_x, button_y, button_width, button_height))
+            pygame.draw.rect(surface, COLOR_WHITE, (button_x, button_y, button_width, button_height), 1)
+
+            btn_text = f"Research: {opt['label']} (${opt['cost']})" if can_afford else f"Research: {opt['label']} (Need ${opt['cost']})"
+            btn_render = self.font_small.render(btn_text, True, COLOR_WHITE)
+            btn_rect = btn_render.get_rect(center=(button_x + button_width // 2, button_y + button_height // 2))
+            surface.blit(btn_render, btn_rect)
+
+            self.blacksmith_research_rects[opt["key"]] = pygame.Rect(
+                self.panel_x + button_x,
+                self.panel_y + button_y,
+                button_width,
+                button_height
+            )
+
+            y += button_height + 8
         return y
     
     def render_inn(self, surface: pygame.Surface, building, heroes: list, y: int) -> int:
@@ -761,7 +886,7 @@ class BuildingPanel:
     def render_demolish_button(self, surface: pygame.Surface, building, y: int) -> int:
         """Render demolish button at bottom of panel. Returns updated y position."""
         # Hide demolish button for castle
-        if building.building_type == "castle":
+        if building.building_type == "castle" or getattr(building, "is_lair", False):
             self.demolish_button_rect = None
             return y
         

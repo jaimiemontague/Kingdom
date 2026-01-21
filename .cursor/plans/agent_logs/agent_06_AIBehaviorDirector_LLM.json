@@ -583,6 +583,104 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+        "notes": "v1.3: Visual polish + Journey AI behavior + critical bug fixes from v1.2.9 playtest"
+      },
+      "rounds": {
+        "v1.3_r0_kickoff": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/v1.3_visual_polish_journey_ai.plan.md",
+            "notes": ""
+          },
+          "round_id": "v1.3_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "v1.3_r0_kickoff_v1",
+            "build_target": "v1.3.0",
+            "sent_at_local": "2026-01-21T00:00:00"
+          },
+          "prompt_text": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior — when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy.",
+          "response": {
+            "received_at_local": "2026-01-21T18:30:00",
+            "status": "complete",
+            "raw": "### Status\nCompleted v1.3 assignment for Agent 06: bounty pursuit fix + Journey behavior.\n\n### What changed\n- Lowered bounty minimum score threshold so heroes will accept reasonable bounties again.\n- Added journey trigger after shopping when hero is full health + recent purchase:\n  - Rogue: short fog step.\n  - Warrior: prefers attack lair, else deeper fog explore.\n  - Ranger: prefers deeper fog explore, occasional lair fallback.\n- Added sim-time purchase tracking on Hero to support journey trigger.\n\n### Tests\n- python tools/qa_smoke.py --quick => PASS\n\n### Notes\n- Journey uses deterministic RNG + sim-time only.\n- No LLM changes; works in --no-llm and --provider mock.\n",
+            "summary_bullets": [
+              "Fixed bounty pursuit by reducing the minimum score gate so heroes accept bounties again.",
+              "Implemented Journey behavior triggered by recent shopping + full health, with class-specific routing.",
+              "Added sim-time purchase tracking to support journey trigger; no LLM changes."
+            ],
+            "proposed_changes": [
+              "Lower bounty min-score gate in ai/basic_ai.py to avoid rejecting all bounties.",
+              "Track recent purchases on Hero using sim-time fields for journey triggers.",
+              "Add journey routing: rogue short fog step, warrior lair-first, ranger exploration-first.",
+              "Ensure journey uses deterministic RNG and sim-time only."
+            ],
+            "acceptance_criteria": [
+              "Heroes pursue player bounties again within a reasonable time window.",
+              "Journey triggers after shopping when hero is full health (class rules applied).",
+              "qa_smoke --quick passes."
+            ],
+            "risks": [
+              "Bounty threshold may still be too conservative for low-reward bounties; monitor in playtest.",
+              "Journey could be starved if no frontier tiles are available; falls back to lair or idle.",
+              "Duplicate hero names remain a known non-blocker (QA warning)."
+            ],
+            "dependencies": [],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Manual playtest: place a bounty and confirm at least one hero pursues within ~30-60 seconds.",
+              "Manual playtest: shop a hero to confirm Journey triggers (watch target change)."
+            ],
+            "agent_fields": {
+              "files_changed": [
+                "ai/basic_ai.py (bounty threshold + journey behavior)",
+                "game/entities/hero.py (purchase tracking)"
+              ],
+              "qa_commands": [
+                "python tools/qa_smoke.py --quick"
+              ],
+              "qa_evidence": [
+                "qa_smoke: DONE: PASS (determinism_guard PASS)"
+              ]
+            }
+          }
+        }
+      },
+      "v1.3_r5_extension_mid_sprint": {
+        "sprint_id": "v1.3-visual-polish-journey-ai",
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md",
+          "notes": "V1.3 Extension: AI potion buying + flee tuning"
+        },
+        "round_id": "v1.3_r5_extension_mid_sprint",
+        "round_meta": {
+          "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
+          "build_target": "v1.3.0",
+          "sent_at_local": "2026-01-21T14:41:35.9504162-07:00"
+        },
+        "prompt_text": "AI tuning: heroes should buy potions more often and flee less aggressively before using potions. Adjust shopping desire to target >0 potions (not only when 0). Adjust retreat thresholds so heroes prefer using potions before retreating when they have them. Coordinate with Agent 05 so heroes also consider Blacksmith shopping when upgrades are researched/available.",
+        "response": {
+          "received_at_local": "2026-01-21T14:41:35.9504162-07:00",
+          "status": "done",
+          "what_i_changed": [
+            "Updated `game/entities/hero.py` `wants_to_shop()`: Lowered potion buying threshold from <2 to <3 (removed low_health requirement), and added early threshold: if potions < 2 and gold >= 30, want to stock up (not only when potions == 0).",
+            "Updated `ai/prompt_templates.py` fallback decision logic: Prefer using potions before retreating when potions are available (already in place, but clarified). Lowered potion buying threshold from <2 to <3 and removed low_health requirement for shopping.",
+            "Updated `ai/basic_ai.py`: Added proactive potion usage in `handle_fighting()` when health < 60% and potions available (before retreat threshold). Improved `handle_retreating()` to use potions earlier (health < 70%). Added `find_blacksmith_with_upgrades()` helper and Blacksmith shopping consideration in `handle_idle()` (coordinate with Agent 05)."
+          ],
+          "how_to_test": [
+            "Manual: After potions researched, heroes regularly purchase potions when affordable (not only when at 0).",
+            "Manual: Heroes with potions use them before retreating in typical fights.",
+            "Automated: `python tools/qa_smoke.py --quick` (must PASS)."
+          ],
+          "evidence": [
+            "qa_smoke --quick: PASS (all scenarios pass, determinism_guard PASS, no regressions)"
+          ],
+          "blockers": []
+        }
+      }
     }
   }
 }

@@ -1777,6 +1777,113 @@
           }
         }
       }
+    },
+    "v1.3-visual-polish-journey-ai": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+        "notes": "v1.3 execution: visual polish + Journey AI"
+      },
+      "rounds": {
+        "v1.3_r1_execution_and_polish": {
+          "round_id": "v1.3_r1_execution_and_polish",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "tools/screenshot_scenarios.py"
+            ],
+            "summary": "Added a v1.3 UI polish capture scenario (ui_polish_after / v1.3_after) that aggregates base overview, UI panels, pause menu, and build catalog shots for deterministic before/after comparisons."
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution",
+            "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "qa_smoke DONE: PASS (see agent-tools/5680da9e-abf2-42bb-99c2-b3649d5ed980.txt)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "No output (strict validation completed successfully)."
+            }
+          },
+          "blockers": []
+        },
+        "v1.3_r3_visual_polish_pass_2": {
+          "round_id": "v1.3_r3_visual_polish_pass_2",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "tools/screenshot_scenarios.py"
+            ],
+            "summary": "Added deterministic terrain/trees focus capture scenario (world_variation / terrain_variety) and kept ui_polish_after as the primary UI polish set for pass 2."
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution",
+            "python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0",
+            "python tools/capture_screenshots.py --scenario world_variation --seed 3 --out docs/screenshots/v1.3.0_after/world_variation_seed3 --size 1920x1080 --ticks 0"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "qa_smoke DONE: PASS (see agent-tools/9a48024b-ef20-47f1-a18c-126cc8a82977.txt)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "No output (strict validation completed successfully)."
+            },
+            "screenshots": {
+              "status": "not_captured",
+              "notes": "Scenario commands documented for QA/PM capture."
+            }
+          },
+          "blockers": []
+        },
+        "v1.3_r5_extension_mid_sprint": {
+          "round_id": "v1.3_r5_extension_mid_sprint",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "tools/screenshot_scenarios.py"
+            ],
+            "summary": "Added deterministic capture scenario for the Audio page (3 sliders) and Blacksmith panel: scenario `ui_audio_blacksmith` (alias `v1_3_audio_blacksmith`)."
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution",
+            "python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "qa_smoke DONE: PASS (see agent-tools/3269630a-47b4-49ef-acce-f1a4ba80ca61.txt)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "No output (strict validation completed successfully)."
+            },
+            "screenshots": {
+              "status": "not_captured",
+              "notes": "Scenario command documented for QA/PM capture."
+            }
+          },
+          "blockers": []
+        }
+      }
     }
   }
 }

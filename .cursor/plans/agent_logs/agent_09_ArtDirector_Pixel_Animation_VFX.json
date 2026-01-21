@@ -1977,8 +1977,87 @@
                 "p1": ["building_silhouettes", "unit_readability"],
                 "p2": ["fog_edge_polish", "micro_vfx"]
               }
+            },
+            "evidence": {
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "Ran after proposal entry; no code changes."
+              }
             }
           }
+        },
+        "v1.3_r1_execution_and_polish": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "round_id": "v1.3_r1_execution_and_polish",
+          "status": "blocked",
+          "what_i_changed": {
+            "summary": "Implemented P0 terrain + path readability tweaks (lower grass speckle noise, macro clumps; 1px path edge banding + reduced interior noise) with deterministic cached generation.",
+            "files": [
+              "game/graphics/tile_sprites.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0
+            },
+            "screenshots": {
+              "status": "NOT_CAPTURED",
+              "note": "Requires manual F12 captures into docs/screenshots/v1.3_after/ to match v1.2.9 baseline framing."
+            }
+          },
+          "blockers": [
+            "Manual screenshot capture needed (run python main.py on a GUI-capable machine and press F12 for v1.3_after set)."
+          ]
+        },
+        "v1.3_r3_visual_polish_pass_2": {
+          "sprint_id": "v1.3-visual-polish-journey-ai",
+          "round_id": "v1.3_r3_visual_polish_pass_2",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "World variety pass: added low-frequency grass patches, subtle path inner trim on select variants, and more tree canopy variation (shape + palette + highlights) while keeping deterministic cached generation.",
+            "files": [
+              "game/graphics/tile_sprites.py"
+            ],
+            "suggested_before_after_shots": [
+              "base_overview (same framing as v1.2.9 baseline) to show grass + paths",
+              "open grass area near map edges (to show macro clumps + prop speckles)",
+              "tree clusters around pond/edges to show canopy variation"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0
+            },
+            "screenshots": {
+              "status": "NOT_CAPTURED",
+              "note": "Needs deterministic after-capture under docs/screenshots/v1.3.0_after/ (coordinate with Agent 11)."
+            }
+          },
+          "blockers": []
         }
       }
     }

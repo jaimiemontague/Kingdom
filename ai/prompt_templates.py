@@ -148,15 +148,18 @@ def get_fallback_decision(context: dict) -> dict:
         else:
             return FALLBACK_DECISIONS["critical_health_no_potion"]
     
-    # Low health in combat
+    # V1.3 Extension: Prefer using potions before retreating
+    # Low health in combat - use potion if available, only retreat if no potions
     if sit["low_health"] and sit["in_combat"]:
         if inv["potions"] > 0:
+            # Use potion instead of retreating when available
             return FALLBACK_DECISIONS["critical_health_with_potion"]
         else:
             return FALLBACK_DECISIONS["low_health_in_combat"]
     
-    # Can shop and needs potions
-    if sit["can_shop"] and sit["low_health"] and inv["potions"] < 2:
+    # V1.3 Extension: More aggressive potion buying
+    # Can shop and needs potions (lowered threshold from <2 to <3, and removed low_health requirement)
+    if sit["can_shop"] and inv["potions"] < 3:
         for item in context["shop_items"]:
             if item["type"] == "potion" and item["can_afford"]:
                 return FALLBACK_DECISIONS["can_shop_needs_potion"]
