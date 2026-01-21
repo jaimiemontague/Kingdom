@@ -1823,6 +1823,40 @@
             "prompt": "You are Agent 11. Run integration QA for v1.3 extension and report ship-readiness.\n\n0) Context\n- Pull latest `main`.\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r6_integration_QA_and_ship_decision\"]`\n\n1) Gates\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n2) Manual Windows checklist\n- Potions: heroes buy more often; use before fleeing.\n- Pause: no camera/zoom movement while ESC menu open.\n- Audio: Master/Music/SFX independent.\n- Blacksmith: research upgrades; heroes purchase; Journey purchase trigger still works.\n- Demolish: no demolish on lairs.\n\n3) Evidence (preferred)\n- `python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r6_integration_QA_and_ship_decision`\n- `status`: `done` OR `blocked`\n- `evidence`: PASS/FAIL (include screenshot paths) and any bug tickets filed.\n"
           }
         }
+        ,
+        "v1.3_r7_closeout_human_acceptance": {
+          "round_meta": {
+            "prompt_set_id": "v1.3_r7_closeout_human_acceptance_v1",
+            "build_target": "v1.3.0",
+            "pm_authored_at_local": "2026-01-21T00:00:00",
+            "visibility": "Sprint wrap-up: engineering + automated gates are complete; remaining step is human acceptance checklist to decide ship vs extend."
+          },
+          "pm_status_summary": {
+            "overall_status": "WRAP-UP READY (pending human acceptance checklist)",
+            "what_is_done": [
+              "Integrated v1.3 extension changes into main (commit b8942a8).",
+              "Automated gates PASS (qa_smoke --quick; validate_assets --strict --check-attribution).",
+              "Deterministic evidence captured for new UI pages (ui_audio_blacksmith scenario)."
+            ],
+            "remaining_blockers": [
+              "Human/manual Windows acceptance checklist for the extension behaviors (AI potions + flee, pause scroll gating, audio sliders independence, blacksmith research/purchases, demolish gating)."
+            ],
+            "ship_decision_rule": "If all manual checks PASS with no new P0 bugs, we can declare the sprint leg complete and proceed toward v1.3 release candidate. If any FAIL, file V1.3-EXT-BUG-00X and reopen a targeted fix round."
+          },
+          "human_acceptance_checklist": [
+            "Potions: After potions are researched, heroes buy potions regularly (not only when at 0).",
+            "Flee: Heroes with potions use them before retreating in common fights.",
+            "Pause: With ESC menu open, mouse wheel + edge scroll + WASD do NOT move camera/zoom.",
+            "Audio sliders: Master/Music/SFX work independently (music affects ambient only; sfx affects sfx only; master scales both).",
+            "Blacksmith: Research weapon/armor upgrades; after research, heroes visit blacksmith and purchase upgrades; purchases still feed Journey trigger behavior.",
+            "Demolish: No demolish button appears for monster lairs; demolish remains for player-owned buildings (castle exception unchanged)."
+          ],
+          "pm_send_list_minimal": {
+            "send_to_agents": [],
+            "do_not_send": "all",
+            "rationale": "Wrap-up requires human verification. Agents are done; only re-engage if the human checklist finds regressions."
+          }
+        }
       }
     },
     "wk6-audio-buildmenu-fogbounties-explorexp": {
