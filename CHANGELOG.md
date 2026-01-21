@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — v1.3 Extension (WIP)
+## Prototype v1.3.0 — The Basics Are In Update
 
 - AI: Heroes **buy potions more often** and **use potions before fleeing** (less early retreat).
 - UI: ESC menu buttons have **consistent label alignment**.
