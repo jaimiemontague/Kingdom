@@ -55,3 +55,9 @@ docs/art/compare_gallery.json
 saves/
 *.save
 
+# Studio Gateway runtime state (generated)
+.studio_gateway/
+
+# Autonomous agent artifacts (generated)
+.cursor/plans/agent_logs/*_AUTO.json
+
