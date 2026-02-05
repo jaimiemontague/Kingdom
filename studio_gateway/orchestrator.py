@@ -14,6 +14,7 @@ from .queueing import LaneQueue
 from .state_store import StateStore
 from .gates import GateRunner
 from .git_ops import GitRunner
+from .hooks import HookEvent, HookRegistry
 
 
 @dataclass
@@ -56,6 +57,7 @@ class Agent01Orchestrator:
         self.agent_logs_dir = cfg.agent_logs_dir or _default_agent_logs_dir(cfg.repo_root)
         self.git = GitRunner(repo_root=cfg.repo_root)
         self.gates = GateRunner(repo_root=cfg.repo_root, artifacts_dir=self.store.paths.artifacts_root, bus=self.bus)
+        self.hooks = HookRegistry()
 
     def _load(self) -> None:
         self.store.load()
@@ -79,6 +81,7 @@ class Agent01Orchestrator:
         self._ensure_round_state(s, RoundId.R0_SETUP)
         self._save()
         self.bus.emit(EventKind.NOTE, "sprint started", sprint_id=sprint_id, data={"round": s.current_round.value})
+        self.hooks.emit(HookEvent.SPRINT_START, {"sprint_id": sprint_id, "round": s.current_round.value})
 
     def step(self, sprint_id: str) -> None:
         """
@@ -134,6 +137,7 @@ class Agent01Orchestrator:
         rs.status = RoundStatus.IN_PROGRESS
         rs.started_ts = rs.started_ts or utc_now_iso()
         self.bus.emit(EventKind.ROUND_STARTED, f"round started: {rid.value}", sprint_id=s.sprint_id, round_id=rid.value)
+        self.hooks.emit(HookEvent.ROUND_START, {"sprint_id": s.sprint_id, "round_id": rid.value})
 
         rd = self.cfg.contract.round(rid)
         # MVP: gather agent ACKs (mock LLM), write them into agent logs.
@@ -147,6 +151,7 @@ class Agent01Orchestrator:
         rs.status = RoundStatus.DONE
         rs.finished_ts = utc_now_iso()
         self.bus.emit(EventKind.ROUND_DONE, f"round done: {rid.value}", sprint_id=s.sprint_id, round_id=rid.value)
+        self.hooks.emit(HookEvent.ROUND_DONE, {"sprint_id": s.sprint_id, "round_id": rid.value})
 
         # Auto-merge policy (MVP): on successful R5 with gates passing, commit changes and push.
         # For now we only commit/push if the working tree is dirty; this is a scaffold for future “agents implement code” rounds.
@@ -170,6 +175,10 @@ class Agent01Orchestrator:
 
             gate = self.gates.run_gate(sprint_id=s.sprint_id, round_id=rid.value, gate=gate)
             s.gates[gd.gate_id] = gate
+            self.hooks.emit(
+                HookEvent.GATE_DONE,
+                {"sprint_id": s.sprint_id, "round_id": rid.value, "gate_id": gate.gate_id, "exit_code": gate.exit_code},
+            )
 
             if gate.required and (gate.exit_code or 0) != 0:
                 s.status = SprintStatus.FAILED
@@ -209,6 +218,7 @@ class Agent01Orchestrator:
             self.git.commit(f"studio_gateway: sprint {s.sprint_id} release candidate")
             self.git.merge_to_main_and_push(branch)
             self.bus.emit(EventKind.NOTE, "auto-merged and pushed to main", sprint_id=s.sprint_id, data={"branch": branch})
+            self.hooks.emit(HookEvent.RELEASE_READY, {"sprint_id": s.sprint_id, "branch": branch})
         except Exception as e:
             self.bus.emit(EventKind.ERROR, "auto-merge failed", sprint_id=s.sprint_id, data={"error": str(e), "branch": branch})
     def _collect_required_acks(self, s: SprintState, rid: RoundId, rd: RoundDefinition) -> Dict[str, str]:

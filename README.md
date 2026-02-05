@@ -152,6 +152,12 @@ kingdom/
 └── assets/              # Sprites and maps (placeholder)
 ```
 
+## Studio Gateway (Autonomous AI Studio)
+
+This repo includes a lightweight **Studio Gateway** that can run the AI Studio workflow as an autonomous multi-round sprint runner (Agent 01 orchestrates, runs QA gates, and can integrate/ship when configured).
+
+See: `docs/studio_gateway.md`
+
 ## QA / Regression Checks
 
 - **Bug template**: `BUG_REPORT_TEMPLATE.md`
