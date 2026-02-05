@@ -11,6 +11,8 @@ from .models import EventKind, SprintState, SprintStatus, utc_now_iso
 from .policy import default_contract, total_budget_minutes, validate_contract
 from .orchestrator import default_orchestrator
 from .state_store import StateStore
+from .config import load_or_create_config
+from .daemon import serve
 
 
 def _repo_root() -> Path:
@@ -123,6 +125,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_events = sp.add_parser("events", help="print recent events (json)")
     p_events.add_argument("--tail", default="200", help="max events to show")
     p_events.set_defaults(func=cmd_events)
+
+    p_serve = sp.add_parser("serve", help="run local web UI server (daemon)")
+    p_serve.add_argument("--host", default="127.0.0.1", help="bind host (default: 127.0.0.1)")
+    p_serve.add_argument("--port", type=int, default=18790, help="bind port (default: 18790)")
+    p_serve.set_defaults(
+        func=lambda ns: (serve(repo_root=_repo_root(), host=str(ns.host), port=int(ns.port)) or 0)  # blocks
+    )
 
     p_sprint = sp.add_parser("sprint", help="sprint operations")
     sps = p_sprint.add_subparsers(dest="sprint_cmd")

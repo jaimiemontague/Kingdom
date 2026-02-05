@@ -28,6 +28,10 @@ class OrchestratorConfig:
     # Logging integration with your existing studio artifacts
     agent_logs_dir: Optional[Path] = None  # defaults to .cursor/plans/agent_logs
 
+    # Release automation
+    enable_auto_merge: bool = False
+    automation_paused: bool = False
+
 
 def _default_agent_logs_dir(repo_root: Path) -> Path:
     return repo_root / ".cursor" / "plans" / "agent_logs"
@@ -193,6 +197,8 @@ class Agent01Orchestrator:
                 break
 
     def _attempt_release_merge(self, s: SprintState) -> None:
+        if not self.cfg.enable_auto_merge or self.cfg.automation_paused:
+            return
         # Only proceed if sprint still running/succeeded.
         if s.status == SprintStatus.FAILED:
             return
@@ -284,8 +290,8 @@ class Agent01Orchestrator:
         return order[idx + 1]
 
 
-def default_orchestrator(*, repo_root: Path) -> Agent01Orchestrator:
+def default_orchestrator(*, repo_root: Path, cfg_override: OrchestratorConfig | None = None) -> Agent01Orchestrator:
     contract = default_contract()
-    cfg = OrchestratorConfig(repo_root=repo_root, contract=contract)
+    cfg = cfg_override or OrchestratorConfig(repo_root=repo_root, contract=contract)
     return Agent01Orchestrator(cfg)
 
