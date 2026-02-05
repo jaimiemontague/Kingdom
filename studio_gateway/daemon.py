@@ -15,6 +15,7 @@ from .models import EventKind, SprintState, SprintStatus, utc_now_iso
 from .orchestrator import OrchestratorConfig, default_orchestrator
 from .policy import default_contract
 from .state_store import StateStore
+from .agents import build_default_agent_profiles
 
 
 def _json_bytes(obj: Any) -> bytes:
@@ -178,6 +179,12 @@ class Handler(BaseHTTPRequestHandler):
             sprints = {sid: s.title for sid, s in app.store.list_sprints().items()}
             return self._send_json(200, {"sprints": sprints})
 
+        if path == "/api/agents":
+            profiles = build_default_agent_profiles(repo_root=app.repo_root)
+            agents = [{"agent_id": p.agent_id, "label": p.label} for p in profiles.values()]
+            agents.sort(key=lambda a: a["agent_id"])
+            return self._send_json(200, {"agents": agents})
+
         if path.startswith("/api/sprints/"):
             app.store.load()
             sid = path.split("/", 3)[3]
@@ -238,6 +245,27 @@ class Handler(BaseHTTPRequestHandler):
             app.store.save()
             app.bus.emit(EventKind.SPRINT_CREATED, f"sprint created: {sprint_id}", sprint_id=sprint_id)
             return self._send_json(201, {"ok": True, "sprint_id": sprint_id})
+
+        if path.startswith("/api/sprints/") and not path.endswith(("/run", "/step", "/cancel")):
+            # POST /api/sprints/<sprint_id> { title?: str, meta?: { ... } }
+            sid = path.split("/", 3)[3]
+            body = self._parse_json_body()
+            app.store.load()
+            s = app.store.get_sprint(sid)
+            if s is None:
+                return self._send_json(404, {"error": "not found"})
+
+            new_title = body.get("title")
+            meta_patch = body.get("meta") or {}
+            if new_title is not None:
+                s.title = str(new_title)
+            if isinstance(meta_patch, dict):
+                s.meta = {**(s.meta or {}), **meta_patch}
+
+            app.store.upsert_sprint(s)
+            app.store.save()
+            app.bus.emit(EventKind.NOTE, "sprint updated", sprint_id=sid, data={"fields": sorted(list(body.keys()))})
+            return self._send_json(200, {"ok": True})
 
         if path.endswith("/run") and path.startswith("/api/sprints/"):
             sid = path.split("/")[3]

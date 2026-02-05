@@ -25,6 +25,17 @@ python -m studio_gateway serve --host 127.0.0.1 --port 18790
 
 Then open `http://127.0.0.1:18790/`.
 
+### Providing sprint instructions (the “Brief”)
+
+In the Web UI:
+
+- Pick a sprint in the dropdown
+- Fill out **Sprint brief / instructions**
+- (Optional) select **Active agents** and sprint overrides
+- Click **Save sprint instructions**
+
+Those values are saved into the sprint record under `meta` and are included in Agent 01’s Round 1 prompts.
+
 ## Storage / artifacts
 
 Runtime state is stored under `.studio_gateway/` (gitignored):
@@ -67,3 +78,10 @@ python -m studio_gateway events --tail 100
 - If a gate fails, check the recorded stdout/stderr in `.studio_gateway/artifacts/<sprint_id>/gates/<gate_id>/`.
 - To “reset” local Studio Gateway state, you can delete `.studio_gateway/` (it’s generated).
 - If you want to keep historical runs, archive `.studio_gateway/` somewhere else.
+
+### UI glossary
+
+- **Sprints dropdown**: your saved sprint records.
+- **Events**: the Studio Gateway event log (round start/end, gates, errors).
+- **Tail**: how many recent events to fetch.
+- **Poll**: fetch events now (use Auto-poll to refresh every ~2s).

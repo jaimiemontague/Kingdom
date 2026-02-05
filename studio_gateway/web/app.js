@@ -3,6 +3,7 @@ function $(id) { return document.getElementById(id); }
 const tokenInput = $("token");
 const saveTokenBtn = $("saveToken");
 const healthPill = $("health");
+let autoPollTimer = null;
 
 function getToken() {
   return localStorage.getItem("studioGatewayToken") || "";
@@ -71,6 +72,80 @@ async function loadSprintDetail() {
   if (!sid) { $("sprintDetail").textContent = ""; return; }
   const s = await apiFetch(`/api/sprints/${encodeURIComponent(sid)}`);
   $("sprintDetail").textContent = pretty(s);
+  await loadEditorFromSprint(s);
+}
+
+async function loadAgents() {
+  const data = await apiFetch("/api/agents");
+  const container = $("agents");
+  container.innerHTML = "";
+  for (const a of (data.agents || [])) {
+    const id = a.agent_id;
+    const label = a.label || id;
+    const row = document.createElement("label");
+    row.className = "agentCheck";
+    row.innerHTML = `<input type="checkbox" data-agent="${id}" /> <span>${label}</span>`;
+    container.appendChild(row);
+  }
+}
+
+function setSaveMsg(text, ok=true) {
+  const el = $("saveMsg");
+  el.textContent = text;
+  el.classList.toggle("ok", !!ok);
+  el.classList.toggle("bad", !ok);
+}
+
+async function loadEditorFromSprint(sprint) {
+  const meta = (sprint && sprint.meta) ? sprint.meta : {};
+  $("brief").value = (meta.brief || "").toString();
+  $("gateProfile").value = (meta.gate_profile || "quick").toString();
+
+  const am = meta.enable_auto_merge;
+  $("autoMergeOverride").value = (am === true) ? "on" : (am === false) ? "off" : "inherit";
+  const ap = meta.automation_paused;
+  $("pauseOverride").value = (ap === true) ? "on" : (ap === false) ? "off" : "inherit";
+
+  const active = Array.isArray(meta.active_agents) ? meta.active_agents : [];
+  const checks = document.querySelectorAll("#agents input[type=checkbox]");
+  for (const c of checks) {
+    const aid = c.getAttribute("data-agent");
+    c.checked = active.includes(aid);
+  }
+}
+
+async function saveSprintMeta() {
+  const sid = $("sprintSelect").value;
+  if (!sid) return;
+
+  const checks = document.querySelectorAll("#agents input[type=checkbox]");
+  const active_agents = [];
+  for (const c of checks) {
+    if (c.checked) active_agents.push(c.getAttribute("data-agent"));
+  }
+
+  const autoMergeOverride = $("autoMergeOverride").value;
+  const pauseOverride = $("pauseOverride").value;
+
+  const meta = {
+    brief: $("brief").value,
+    active_agents,
+    // used by orchestrator prompts (for now)
+    required_acks_by_round: {
+      "R1_CONTRACTS": active_agents,
+    },
+    gate_profile: $("gateProfile").value,
+    enable_auto_merge: autoMergeOverride === "inherit" ? null : (autoMergeOverride === "on"),
+    automation_paused: pauseOverride === "inherit" ? null : (pauseOverride === "on"),
+  };
+  // Strip nulls so we truly "inherit"
+  for (const k of Object.keys(meta)) {
+    if (meta[k] === null) delete meta[k];
+  }
+
+  await apiFetch(`/api/sprints/${encodeURIComponent(sid)}`, { method: "POST", body: JSON.stringify({ meta }) });
+  setSaveMsg("Saved", true);
+  await loadSprintDetail();
 }
 
 async function pollEvents() {
@@ -129,9 +204,26 @@ $("sprintSelect").addEventListener("change", async () => {
   await pollEvents();
 });
 $("pollEvents").addEventListener("click", pollEvents);
+$("saveBrief").addEventListener("click", async () => {
+  try {
+    setSaveMsg("Saving…", true);
+    await saveSprintMeta();
+  } catch (e) {
+    setSaveMsg(`Save failed: ${e.message}`, false);
+  }
+});
 $("fetchArtifact").addEventListener("click", fetchArtifact);
 $("openConfig").addEventListener("click", openConfig);
 $("saveConfig").addEventListener("click", saveConfig);
+$("autoPoll").addEventListener("change", async () => {
+  if ($("autoPoll").checked) {
+    if (autoPollTimer) clearInterval(autoPollTimer);
+    autoPollTimer = setInterval(() => { pollEvents().catch(() => {}); }, 2000);
+  } else {
+    if (autoPollTimer) clearInterval(autoPollTimer);
+    autoPollTimer = null;
+  }
+});
 
 $("createSprint").addEventListener("click", async () => {
   const sprint_id = $("newSprintId").value.trim();
@@ -166,5 +258,5 @@ $("cancelSprint").addEventListener("click", async () => {
 
 // boot
 tokenInput.value = getToken();
-refreshHealth().then(refreshStatus).then(pollEvents);
+loadAgents().then(() => refreshHealth().then(refreshStatus).then(pollEvents));
 

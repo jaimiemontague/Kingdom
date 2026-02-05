@@ -37,25 +37,73 @@
 
       <section class="card">
         <h2>Sprints</h2>
+        <p class="hint">
+          The dropdown is your list of saved sprints. Pick one, then edit the brief/instructions below and run it.
+        </p>
         <div class="row">
           <input id="newSprintId" placeholder="sprint_id (e.g. wk8_ui)" />
           <input id="newSprintTitle" placeholder="title (optional)" />
           <button id="createSprint">Create</button>
         </div>
         <div class="row">
-          <select id="sprintSelect"></select>
+          <select id="sprintSelect" title="Select sprint"></select>
           <button id="runSprint">Run R0–R5</button>
           <button id="stepSprint">Step</button>
           <button id="cancelSprint" class="danger">Cancel</button>
+        </div>
+        <div class="row">
+          <label style="flex: 1; min-width: 280px;">
+            Sprint brief / instructions
+            <textarea id="brief" rows="6" placeholder="Describe the features, acceptance criteria, constraints, and any notes for Agent 01."></textarea>
+          </label>
+        </div>
+        <div class="row">
+          <div class="miniCard">
+            <div class="miniTitle">Active agents (for Round 1 ACKs)</div>
+            <div id="agents" class="agentsGrid"></div>
+          </div>
+          <div class="miniCard">
+            <div class="miniTitle">Sprint settings</div>
+            <div class="row">
+              <label>Gate profile
+                <select id="gateProfile">
+                  <option value="quick">quick</option>
+                  <option value="full">full (not wired yet)</option>
+                </select>
+              </label>
+              <label>Auto-merge override
+                <select id="autoMergeOverride">
+                  <option value="inherit">inherit global</option>
+                  <option value="on">on</option>
+                  <option value="off">off</option>
+                </select>
+              </label>
+              <label>Automation pause override
+                <select id="pauseOverride">
+                  <option value="inherit">inherit global</option>
+                  <option value="on">paused</option>
+                  <option value="off">not paused</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="saveBrief">Save sprint instructions</button>
+          <span id="saveMsg" class="pill">—</span>
         </div>
         <pre id="sprintDetail" class="pre"></pre>
       </section>
 
       <section class="card">
         <h2>Events</h2>
+        <p class="hint">
+          Events are the Studio Gateway log (round starts/ends, gates, errors). Tail is “how many recent events” to fetch. Poll fetches them now.
+        </p>
         <div class="row">
           <label>Tail <input id="tail" type="number" value="150" min="10" max="2000" /></label>
           <button id="pollEvents">Poll</button>
+          <label><span>Auto-poll</span> <input id="autoPoll" type="checkbox" /></label>
         </div>
         <pre id="events" class="pre"></pre>
       </section>

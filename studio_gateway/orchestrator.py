@@ -197,7 +197,9 @@ class Agent01Orchestrator:
                 break
 
     def _attempt_release_merge(self, s: SprintState) -> None:
-        if not self.cfg.enable_auto_merge or self.cfg.automation_paused:
+        enable = bool(s.meta.get("enable_auto_merge", self.cfg.enable_auto_merge))
+        paused = bool(s.meta.get("automation_paused", self.cfg.automation_paused))
+        if not enable or paused:
             return
         # Only proceed if sprint still running/succeeded.
         if s.status == SprintStatus.FAILED:
@@ -229,7 +231,19 @@ class Agent01Orchestrator:
             self.bus.emit(EventKind.ERROR, "auto-merge failed", sprint_id=s.sprint_id, data={"error": str(e), "branch": branch})
     def _collect_required_acks(self, s: SprintState, rid: RoundId, rd: RoundDefinition) -> Dict[str, str]:
         acks: Dict[str, str] = {}
-        for agent_id in rd.required_acks:
+        ack_agents = list(rd.required_acks)
+        # Allow per-sprint overrides: meta.required_acks_by_round = { "R1_CONTRACTS": ["agent_02", ...] }
+        rab = s.meta.get("required_acks_by_round") or {}
+        if isinstance(rab, dict) and rid.value in rab and isinstance(rab[rid.value], list):
+            ack_agents = [str(a) for a in rab[rid.value]]
+
+        brief = str(s.meta.get("brief") or "").strip()
+        gates = str(s.meta.get("gate_profile") or "quick").strip()
+        active_agents = s.meta.get("active_agents") or []
+        if not isinstance(active_agents, list):
+            active_agents = []
+
+        for agent_id in ack_agents:
             # Lane: serialize per agent per sprint.
             lane = f"session:{agent_id}:{s.sprint_id}"
             system = f"You are {agent_id}. Follow your agent card. Reply in required format."
@@ -237,6 +251,9 @@ class Agent01Orchestrator:
                 f"Sprint: {s.sprint_id}\n"
                 f"Round: {rid.value} — {rd.title}\n"
                 f"Purpose: {rd.purpose}\n\n"
+                f"Gate profile: {gates}\n"
+                f"Active agents: {', '.join([str(a) for a in active_agents]) if active_agents else '(default)'}\n\n"
+                f"Sprint brief / instructions:\n{brief if brief else '(none provided)'}\n\n"
                 "Please ACK PM decisions for this round and list blockers (max 3).\n"
             )
 
