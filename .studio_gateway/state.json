@@ -1,0 +1,194 @@
+{
+  "sprints": {
+    "demo_gates": {
+      "artifacts_dir": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.studio_gateway\\artifacts\\demo_gates",
+      "created_ts": "2026-02-05T00:26:02Z",
+      "current_round": "R5_RELEASE_CANDIDATE",
+      "gates": {
+        "qa_smoke_quick": {
+          "command": [
+            "python",
+            "tools/qa_smoke.py",
+            "--quick"
+          ],
+          "exit_code": 1,
+          "finished_ts": "2026-02-05T00:26:03Z",
+          "gate_id": "qa_smoke_quick",
+          "required": true,
+          "started_ts": "2026-02-05T00:26:02Z",
+          "stderr_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.studio_gateway\\artifacts\\demo_gates\\gates\\qa_smoke_quick\\stderr.txt",
+          "stdout_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.studio_gateway\\artifacts\\demo_gates\\gates\\qa_smoke_quick\\stdout.txt",
+          "title": "QA smoke (quick)"
+        }
+      },
+      "last_error": "gate_failed:qa_smoke_quick exit_code=1",
+      "meta": {
+        "created_by": "cli"
+      },
+      "rounds": {
+        "R0_SETUP": {
+          "finished_ts": "2026-02-05T00:26:02Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R0_SETUP",
+          "started_ts": "2026-02-05T00:26:02Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Setup"
+        },
+        "R1_CONTRACTS": {
+          "finished_ts": "2026-02-05T00:26:02Z",
+          "notes": [
+            "acks_collected=['agent_02', 'agent_03', 'agent_11', 'agent_12']"
+          ],
+          "round_id": "R1_CONTRACTS",
+          "started_ts": "2026-02-05T00:26:02Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Contracts"
+        },
+        "R2_PLAN_CONFIRM": {
+          "finished_ts": "2026-02-05T00:26:02Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R2_PLAN_CONFIRM",
+          "started_ts": "2026-02-05T00:26:02Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Implementation plan confirmation"
+        },
+        "R3_BUILD_A_INTEGRATE": {
+          "finished_ts": "2026-02-05T00:26:03Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R3_BUILD_A_INTEGRATE",
+          "started_ts": "2026-02-05T00:26:02Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Build A: implementation + integration"
+        },
+        "R4_BUILD_B_POLISH": {
+          "finished_ts": "2026-02-05T00:27:01Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R4_BUILD_B_POLISH",
+          "started_ts": "2026-02-05T00:27:01Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Build B: polish / edge cases"
+        },
+        "R5_RELEASE_CANDIDATE": {
+          "finished_ts": null,
+          "notes": [],
+          "round_id": "R5_RELEASE_CANDIDATE",
+          "started_ts": null,
+          "status": "pending",
+          "tasks": {},
+          "title": "Release candidate"
+        }
+      },
+      "sprint_id": "demo_gates",
+      "status": "running",
+      "title": "Demo Gates"
+    },
+    "demo_run": {
+      "artifacts_dir": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.studio_gateway\\artifacts\\demo_run",
+      "created_ts": "2026-02-04T23:23:30Z",
+      "current_round": null,
+      "gates": {},
+      "last_error": null,
+      "meta": {
+        "created_by": "cli"
+      },
+      "rounds": {
+        "R0_SETUP": {
+          "finished_ts": "2026-02-04T23:23:30Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R0_SETUP",
+          "started_ts": "2026-02-04T23:23:30Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Setup"
+        },
+        "R1_CONTRACTS": {
+          "finished_ts": "2026-02-05T00:24:59Z",
+          "notes": [
+            "acks_collected=['agent_02', 'agent_03', 'agent_11', 'agent_12']"
+          ],
+          "round_id": "R1_CONTRACTS",
+          "started_ts": "2026-02-05T00:24:59Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Contracts"
+        },
+        "R2_PLAN_CONFIRM": {
+          "finished_ts": "2026-02-05T00:24:59Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R2_PLAN_CONFIRM",
+          "started_ts": "2026-02-05T00:24:59Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Implementation plan confirmation"
+        },
+        "R3_BUILD_A_INTEGRATE": {
+          "finished_ts": "2026-02-05T00:24:59Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R3_BUILD_A_INTEGRATE",
+          "started_ts": "2026-02-05T00:24:59Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Build A: implementation + integration"
+        },
+        "R4_BUILD_B_POLISH": {
+          "finished_ts": "2026-02-05T00:24:59Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R4_BUILD_B_POLISH",
+          "started_ts": "2026-02-05T00:24:59Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Build B: polish / edge cases"
+        },
+        "R5_RELEASE_CANDIDATE": {
+          "finished_ts": "2026-02-05T00:24:59Z",
+          "notes": [
+            "acks_collected=[]"
+          ],
+          "round_id": "R5_RELEASE_CANDIDATE",
+          "started_ts": "2026-02-05T00:24:59Z",
+          "status": "done",
+          "tasks": {},
+          "title": "Release candidate"
+        }
+      },
+      "sprint_id": "demo_run",
+      "status": "succeeded",
+      "title": "Demo Run"
+    },
+    "demo_sprint": {
+      "artifacts_dir": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.studio_gateway\\artifacts\\demo_sprint",
+      "created_ts": "2026-02-04T23:21:39Z",
+      "current_round": null,
+      "gates": {},
+      "last_error": null,
+      "meta": {
+        "created_by": "cli"
+      },
+      "rounds": {},
+      "sprint_id": "demo_sprint",
+      "status": "created",
+      "title": "Demo Sprint"
+    }
+  }
+}

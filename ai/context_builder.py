@@ -241,9 +241,7 @@ Current State: {context['current_state']}
     @staticmethod
     def build_inputs_summary(context: dict) -> str:
         """
-        Build a compact, stable one-liner summarizing the inputs that led to a decision.
-
-        This is intended for UI/debug logs (not for the LLM prompt).
+        Build a compact, stable one-liner summarizing the inputs that led to a decision.        This is intended for UI/debug logs (not for the LLM prompt).
         """
         hero = context.get("hero", {}) or {}
         inv = context.get("inventory", {}) or {}
@@ -264,7 +262,6 @@ Current State: {context['current_state']}
             et = nearest_enemy.get("type", "?")
             d = nearest_enemy.get("distance_tiles", "?")
             nearest = f" nearest_enemy={et}@{d}t"
-
         return (
             f"hp={hp_pct}% gold={gold} potions={potions} "
             f"in_combat={int(in_combat)} outnumbered={int(outnumbered)} can_shop={int(can_shop)}"

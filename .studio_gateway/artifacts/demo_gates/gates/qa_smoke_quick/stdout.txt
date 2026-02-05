@@ -1,0 +1,208 @@
+[determinism_guard] PASS: no violations found
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[observe] Duplicate hero names detected: {'Cedric': 2, 'Nova': 3, 'Brock': 2}
+[t=0000] avg_pairwise_dist=89.7  alive=11  potions_total=0 max=0  bounties_unclaimed=1/1 claimed=0 spent=140  castle_hp=500/500  new_building[hp=1/200 started=False built=False targetable=False]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.9,2527.3) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.0,2528.2) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2417.5,2415.6)
+  - GoblinAttacker target=hero:Brock
+[t=0240] avg_pairwise_dist=213.1  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=1 spent=140  castle_hp=449/500  new_building[hp=6/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2390.6,2480.0) tgt=enemy:goblin
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2528.5,2463.5) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2543.2,2590.0) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2543.2,2590.0) tgt=enemy:goblin
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2252.8,2547.0) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2543.2,2590.0) tgt=enemy:goblin
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2297.1,2416.0) tgt=enemy:goblin
+  - Brock        cls=warrior state=MOVING     gold=124  pots=0  pos=(2337.7,2273.7) tgt=enemy:goblin
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2603.2,2366.7)
+  - GoblinAttacker target=hero:Brock
+[t=0480] avg_pairwise_dist=151.4  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=1 spent=140  castle_hp=460/500  new_building[hp=6/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2145.6,2176.6) tgt=enemy:goblin
+  - Cedric       cls=warrior state=MOVING     gold=123  pots=0  pos=(2234.9,2122.9) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.3,2235.3) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.3,2235.3) tgt=enemy:goblin
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2004.2,2194.0) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.3,2235.3) tgt=enemy:goblin
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2047.3,2131.5) tgt=enemy:goblin
+  - Brock        cls=warrior state=MOVING     gold=126  pots=0  pos=(2070.4,2014.9) tgt=enemy:goblin
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2416.0,2416.0)
+  - GoblinAttacker target=hero:Brock
+[qa] PASS: bounty_exists=True bounty_has_responder=True bounty_responder_attr_present=True bounty_responder_explicit=False intent_attr_present=True
+[scenario] counters: scenario=default stuck_events=2 unstuck_attempts=3 inside_attack_blocks=0 max_stuck_ms=2550
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[observe] Duplicate hero names detected: {'Cedric': 2, 'Nova': 3, 'Brock': 2}
+[t=0000] avg_pairwise_dist=89.3  alive=11  potions_total=0 max=0  bounties_unclaimed=2/2 claimed=0 spent=150  castle_hp=500/500  new_building[hp=1/200 started=False built=False targetable=False]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.9,2527.3) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.0,2528.2) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2417.5,2415.6)
+[t=0240] avg_pairwise_dist=286.9  alive=11  potions_total=0 max=0  bounties_unclaimed=2/2 claimed=0 spent=150  castle_hp=500/500  new_building[hp=26/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2390.3,2467.1) tgt=bounty
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2448.0,2544.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2160.0,2576.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2192.0,2384.0) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2308.4,2243.5) tgt=bounty
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[t=0480] avg_pairwise_dist=257.0  alive=11  potions_total=0 max=0  bounties_unclaimed=2/2 claimed=0 spent=150  castle_hp=500/500  new_building[hp=106/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2420.1,2449.4) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2448.0,2544.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2160.0,2576.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Aldric       cls=warrior state=IDLE       gold=120  pots=0  pos=(2103.8,2408.1) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2442.9,2344.9) tgt=patrol
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[qa] PASS: bounty_exists=True bounty_has_responder=True bounty_responder_attr_present=True bounty_responder_explicit=True intent_attr_present=True
+[scenario] counters: scenario=intent_bounty stuck_events=14 unstuck_attempts=39 inside_attack_blocks=0 max_stuck_ms=7667
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[observe] Duplicate hero names detected: {'Cedric': 2, 'Nova': 3, 'Brock': 2}
+[t=0000] avg_pairwise_dist=89.2  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=1/200 started=False built=False targetable=False]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.9,2527.3) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.0,2528.2) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2417.5,2415.6)
+[t=0240] avg_pairwise_dist=155.6  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=26/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2389.1,2480.1) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2255.9,2530.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[t=0480] avg_pairwise_dist=154.9  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=106/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2416.0,2480.0) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2255.9,2530.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2242.8,2530.8) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2240.0,2528.0) tgt=patrol
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[qa] PASS: bounty_exists=n/a bounty_has_responder=n/a bounty_responder_attr_present=n/a bounty_responder_explicit=n/a intent_attr_present=True
+[scenario] counters: scenario=hero_stuck_repro stuck_events=13 unstuck_attempts=35 inside_attack_blocks=0 max_stuck_ms=3483
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[observe] Duplicate hero names detected: {'Cedric': 2, 'Nova': 3, 'Brock': 2}
+[t=0000] avg_pairwise_dist=89.3  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=1/200 started=False built=False targetable=False]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.9,2527.3) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.0,2528.2) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2417.5,2415.6)
+[t=0240] avg_pairwise_dist=301.2  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=26/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2389.1,2480.1) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2448.0,2544.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2160.0,2576.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2192.0,2384.0) tgt=patrol
+  - Brock        cls=warrior state=IDLE       gold=120  pots=0  pos=(2256.0,2188.2) tgt=patrol
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[t=0480] avg_pairwise_dist=300.1  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=0 spent=0  castle_hp=500/500  new_building[hp=106/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2416.0,2480.0) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2448.0,2544.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2202.0,2576.0) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2480.0,2672.0) tgt=patrol
+  - Aldric       cls=warrior state=IDLE       gold=120  pots=0  pos=(2129.7,2416.0) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2257.7,2145.9) tgt=patrol
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2720.0,2336.0)
+[qa] PASS: bounty_exists=n/a bounty_has_responder=n/a bounty_responder_attr_present=n/a bounty_responder_explicit=n/a intent_attr_present=True
+[scenario] counters: scenario=default stuck_events=12 unstuck_attempts=29 inside_attack_blocks=0 max_stuck_ms=3483
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[observe] Duplicate hero names detected: {'Cedric': 2, 'Nova': 3, 'Brock': 2}
+[t=0000] avg_pairwise_dist=89.7  alive=11  potions_total=0 max=0  bounties_unclaimed=1/1 claimed=0 spent=140  castle_hp=500/500  new_building[hp=1/200 started=False built=False targetable=False]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.9,2527.3) tgt=patrol
+  - Cedric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2242.0,2528.2) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Roland       cls=warrior state=IDLE       gold=120  pots=0  pos=(2240.0,2528.0) tgt=-
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Brock        cls=warrior state=MOVING     gold=120  pots=0  pos=(2241.4,2529.4) tgt=patrol
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2417.5,2415.6)
+  - GoblinAttacker target=hero:Brock
+[t=0240] avg_pairwise_dist=201.9  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=1 spent=140  castle_hp=449/500  new_building[hp=6/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2387.2,2478.6) tgt=enemy:goblin
+  - Cedric       cls=warrior state=MOVING     gold=123  pots=0  pos=(2542.5,2414.6) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2542.6,2546.6) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2542.6,2567.5) tgt=enemy:goblin
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(2250.1,2546.9) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2542.6,2567.5) tgt=enemy:goblin
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(2293.7,2414.5) tgt=enemy:goblin
+  - Brock        cls=warrior state=MOVING     gold=126  pots=0  pos=(2334.8,2270.9) tgt=enemy:goblin
+  - Peasant      state=MOVING     hp=40/40 inside_castle=False pos=(2603.2,2366.7)
+  - GoblinAttacker target=hero:Brock
+[t=0480] avg_pairwise_dist=189.6  alive=11  potions_total=0 max=0  bounties_unclaimed=0/0 claimed=1 spent=140  castle_hp=460/500  new_building[hp=6/200 started=True built=False targetable=True]
+  - Gareth       cls=warrior state=MOVING     gold=120  pots=0  pos=(2054.4,2132.7) tgt=enemy:goblin
+  - Cedric       cls=warrior state=MOVING     gold=123  pots=0  pos=(2194.3,2084.3) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2203.4,2206.9) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2204.9,2226.4) tgt=enemy:goblin
+  - Roland       cls=warrior state=MOVING     gold=120  pots=0  pos=(1932.9,2186.6) tgt=enemy:goblin
+  - Nova         cls=warrior state=MOVING     gold=120  pots=0  pos=(2204.9,2226.4) tgt=enemy:goblin
+  - Aldric       cls=warrior state=MOVING     gold=120  pots=0  pos=(1963.4,2066.3) tgt=enemy:goblin
+  - Brock        cls=warrior state=MOVING     gold=126  pots=0  pos=(1990.6,1936.4) tgt=enemy:goblin
+  - Peasant      state=WORKING    hp=40/40 inside_castle=False pos=(2416.0,2416.0)
+  - GoblinAttacker target=hero:Brock
+[qa] PASS: bounty_exists=True bounty_has_responder=True bounty_responder_attr_present=True bounty_responder_explicit=True intent_attr_present=True
+[scenario] counters: scenario=default stuck_events=1 unstuck_attempts=2 inside_attack_blocks=0 max_stuck_ms=2550
+
+[qa_smoke] === determinism_guard (static) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\determinism_guard.py
+[qa_smoke] exit_code=0
+
+[qa_smoke] === base (enemies, construction, combat, bounty) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --bounty
+[qa_smoke] exit_code=0
+
+[qa_smoke] === bounty scenario preset (responders/claim) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --no-enemies --scenario intent_bounty
+[qa_smoke] exit_code=0
+
+[qa_smoke] === WK2 hero_stuck_repro (stuck+recovery counters) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --no-enemies --scenario hero_stuck_repro
+[qa_smoke] exit_code=0
+
+[qa_smoke] === no-enemies (economy/shopping isolation) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --no-enemies
+[qa_smoke] exit_code=0
+
+[qa_smoke] === mock-LLM enabled (decision plumbing) ===
+[qa_smoke] cmd: C:\Python313\python.exe C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\tools\observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --llm --realtime --bounty
+[qa_smoke] exit_code=0
+
+[qa_smoke] DONE: PASS
