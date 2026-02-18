@@ -235,8 +235,37 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
             hero.target = {"type": "shopping", "blacksmith": blacksmith}
             return
 
+    # Heroes only know about enemies within 5 tiles of themselves (no map-wide awareness).
+    awareness_radius = TILE_SIZE * 5
+
+    enemies_nearby = []
+    for enemy in enemies:
+        if not enemy.is_alive:
+            continue
+
+        dist_to_hero = hero.distance_to(enemy.x, enemy.y)
+        if dist_to_hero <= awareness_radius:
+            enemies_nearby.append((enemy, dist_to_hero))
+
+    # If there are enemies nearby, engage the closest one.
+    if enemies_nearby:
+        # WK2 anti-oscillation: respect commitment window unless current target is invalid.
+        now_ms = int(sim_now_ms())
+        if now_ms < int(getattr(hero, "_target_commit_until_ms", 0) or 0):
+            cur = getattr(hero, "target", None)
+            if cur is not None and hasattr(cur, "is_alive") and getattr(cur, "is_alive", False):
+                return
+        enemies_nearby.sort(key=lambda x: x[1])
+        target_enemy, target_dist = enemies_nearby[0]
+        ai._debug_log(f"{hero.name} -> sees enemy {target_dist:.0f}px away, engaging!")
+        hero.target = target_enemy
+        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
+        hero.set_target_position(target_enemy.x, target_enemy.y)
+        hero.state = HeroState.MOVING
+        return
+
     # WK11: Get a drink at Inn (IDLE, full health, 10+ gold, ~10–15% chance per idle cycle).
-    if hero.hp >= hero.max_hp and hero.gold >= 10:
+    if hero.hp >= hero.max_hp and hero.gold >= 10 and not enemies_nearby:
         inns = [
             b for b in buildings
             if getattr(b, "building_type", None) == BuildingType.INN and getattr(b, "is_constructed", True)
@@ -266,35 +295,6 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         f"{hero.name} zone=({zone_x:.0f}, {zone_y:.0f}), hero at ({hero.x:.0f}, {hero.y:.0f})",
         throttle_key=f"{hero.name}_zone",
     )
-
-    # Heroes only know about enemies within 5 tiles of themselves (no map-wide awareness).
-    awareness_radius = TILE_SIZE * 5
-
-    enemies_nearby = []
-    for enemy in enemies:
-        if not enemy.is_alive:
-            continue
-
-        dist_to_hero = hero.distance_to(enemy.x, enemy.y)
-        if dist_to_hero <= awareness_radius:
-            enemies_nearby.append((enemy, dist_to_hero))
-
-    # If there are enemies nearby, engage the closest one.
-    if enemies_nearby:
-        # WK2 anti-oscillation: respect commitment window unless current target is invalid.
-        now_ms = int(sim_now_ms())
-        if now_ms < int(getattr(hero, "_target_commit_until_ms", 0) or 0):
-            cur = getattr(hero, "target", None)
-            if cur is not None and hasattr(cur, "is_alive") and getattr(cur, "is_alive", False):
-                return
-        enemies_nearby.sort(key=lambda x: x[1])
-        target_enemy, target_dist = enemies_nearby[0]
-        ai._debug_log(f"{hero.name} -> sees enemy {target_dist:.0f}px away, engaging!")
-        hero.target = target_enemy
-        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
-        hero.set_target_position(target_enemy.x, target_enemy.y)
-        hero.state = HeroState.MOVING
-        return
 
     ai._debug_log(
         f"{hero.name} -> no enemies within {awareness_radius}px",

@@ -256,6 +256,7 @@ class InputHandler:
 
         if event.button == 1:  # Left click
             # UI clicks should consume input before world selection.
+            action = None
             try:
                 gs = engine.get_game_state()
                 if hasattr(engine.hud, "handle_click"):
@@ -268,6 +269,35 @@ class InputHandler:
                         engine.building_panel.deselect()
                         engine.selected_building = None
                         return
+                    if action == "build_menu_toggle":
+                        if hasattr(engine.building_list_panel, "toggle"):
+                            engine.building_list_panel.toggle()
+                        else:
+                            if getattr(engine.building_list_panel, "visible", False):
+                                engine.building_list_panel.close()
+                            else:
+                                engine.building_list_panel.open()
+                        return
+                    if action == "hire_hero":
+                        engine.try_hire_hero()
+                        return
+                    if action == "place_bounty":
+                        engine.place_bounty()
+                        return
+            except Exception:
+                pass
+
+            # WK7 (partial): drag-to-windowed — top-bar click drops to windowed without touching SDL2.
+            # (Live window-drag via pygame._sdl2 after switch caused immediate crashes on Windows.)
+            try:
+                display_mode = str(getattr(engine, "display_mode", "windowed") or "windowed").strip().lower()
+                if (not action) and display_mode in ("borderless", "fullscreen"):
+                    x, y = int(event.pos[0]), int(event.pos[1])
+                    if y <= 40:
+                        quit_rect = getattr(engine.hud, "quit_rect", None)
+                        if not (quit_rect and quit_rect.collidepoint((x, y))):
+                            engine.request_display_settings("windowed", getattr(engine, "window_size", None))
+                            return
             except Exception:
                 pass
 
@@ -364,21 +394,27 @@ class InputHandler:
             engine.pause_menu.handle_mousemove(event.pos)
             return  # Consume mouse movement when menu is open
 
-        # Borderless drag live-drag handling
-        if engine._borderless_drag_active and engine._borderless_drag_window_offset is not None:
-            try:
-                import pygame._sdl2
-                sdl_window = pygame._sdl2.Window.from_display_module()
-                if sdl_window:
-                    # Calculate new window position based on mouse position
-                    new_x = event.pos[0] + engine._borderless_drag_window_offset[0]
-                    new_y = event.pos[1] + engine._borderless_drag_window_offset[1]
-                    sdl_window.position = (new_x, new_y)
-            except (ImportError, AttributeError):
-                # pygame._sdl2 not available: already degraded
+        # Borderless drag live-drag handling (only when already in windowed and past mode-switch cooldown)
+        if getattr(engine, "_borderless_drag_active", False) and engine._borderless_drag_window_offset is not None:
+            skip_frames = int(getattr(engine, "_skip_event_processing_frames", 0) or 0)
+            if skip_frames > 0:
+                # Do not touch SDL2 window during cooldown after set_mode(); can crash on Windows.
                 pass
-            except Exception:
-                raise
+            elif str(getattr(engine, "display_mode", "windowed")).strip().lower() == "windowed":
+                try:
+                    import pygame._sdl2
+                    sdl_window = pygame._sdl2.Window.from_display_module()
+                    if sdl_window:
+                        new_x = event.pos[0] + engine._borderless_drag_window_offset[0]
+                        new_y = event.pos[1] + engine._borderless_drag_window_offset[1]
+                        sdl_window.position = (new_x, new_y)
+                except (ImportError, AttributeError):
+                    pass
+                except Exception:
+                    # Avoid repeated crashes: clear drag state on any error
+                    engine._borderless_drag_active = False
+                    engine._borderless_drag_start_pos = None
+                    engine._borderless_drag_window_offset = None
 
         if engine.building_menu.selected_building:
             engine.building_menu.update_preview(

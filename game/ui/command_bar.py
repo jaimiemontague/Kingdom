@@ -65,14 +65,14 @@ class CommandBar:
                 "title": "Hire",
                 "hotkey_chip": "H",
                 "tooltip": f"Hire Hero\nHotkey: H\nCost: ${int(HERO_HIRE_COST)} (select a built guild first)",
-                "action": "",
+                "action": "hire_hero",
                 "icon": self._icon_hire,
             },
             {
                 "title": "Bounty",
                 "hotkey_chip": "B",
                 "tooltip": "Place Bounty\nHotkey: B\nPlace at mouse cursor\nShift/Ctrl: bigger (cost=reward)",
-                "action": "",
+                "action": "place_bounty",
                 "icon": self._icon_bounty,
             },
         ]

@@ -25,6 +25,7 @@ class PauseMenu:
         self._panel_tex_modal = "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png"
         self._button_tex_normal = "assets/ui/kingdomsim_ui_cc0/buttons/button_normal.png"
         self._button_tex_hover = "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png"
+        self._button_tex_pressed = "assets/ui/kingdomsim_ui_cc0/buttons/button_pressed.png"
         self._button_slice_border = 6
         self._icon_map = {
             "graphics": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png", (16, 16)),

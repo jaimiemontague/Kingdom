@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.3.4 — Refactor Bug Fixes Update
+
+- Fix: **ESC** no longer crashes when opening the pause menu (missing button texture).
+- UX: **Command bar** Build, Hire, and Bounty buttons are now clickable (same behavior as hotkeys).
+- UX: **Fullscreen/borderless** — click near the top of the screen to switch to windowed mode.
+- AI: Heroes **prefer fighting nearby monsters** over going to the Inn; rest/drink only when no enemies nearby or when critically low HP.
+
 ## Prototype v1.3.3 — The Inn & AI Behavior Update
 
 - Combat: Heroes inside buildings are now **fully untargetable** by enemies — covers resting, shopping, and all future inside-building states.

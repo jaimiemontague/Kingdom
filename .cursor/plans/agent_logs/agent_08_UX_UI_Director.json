@@ -2440,6 +2440,45 @@
           }
         }
       }
+    },
+    "v1.3.4-bug-fix-sprint": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.3.4_bug_fix_sprint_09d3e38c.plan.md",
+        "notes": "Bug fix sprint: ESC crash, command bar clicks (Agent 08); drag-to-windowed (03), Inn priority (06)."
+      },
+      "rounds": {
+        "v1.3.4_r1_bug1_bug3_ui_fixes": {
+          "sprint_id": "v1.3.4-bug-fix-sprint",
+          "round_id": "v1.3.4_r1_bug1_bug3_ui_fixes",
+          "round_meta": {
+            "prompt_set_id": "v1.3.4_bugfix_agent08_v1",
+            "build_target": "v1.3.4",
+            "sent_at_local": "2026-02-18"
+          },
+          "prompt_text": "Bug 1: ESC crash (PauseMenu missing _button_tex_pressed). Bug 3: Command bar Hire/Bounty buttons not clickable (missing actions + input handler wiring).",
+          "response": {
+            "received_at_local": "2026-02-18",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/pause_menu.py: defined self._button_tex_pressed so Button.render(texture_pressed=...) no longer crashes when ESC menu draws.",
+              "game/ui/command_bar.py: wired Hire action to 'hire_hero' and Bounty action to 'place_bounty' so HUD click returns a real action string.",
+              "game/input_handler.py (cross-domain, minimal): added action handlers for build_menu_toggle (building_list_panel.toggle/open/close), hire_hero (engine.try_hire_hero), place_bounty (engine.place_bounty)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: run python main.py --no-llm, press ESC, ensure menu opens without crash; click bottom bar Hire/Bounty and verify it triggers hero hire / bounty placement behavior."
+            ],
+            "evidence": {
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

@@ -767,6 +767,45 @@
           }
         }
       }
+      ,
+      "v1.3.4-bug-fix-sprint": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/v1.3.4_bug_fix_sprint_09d3e38c.plan.md",
+          "notes": "v1.3.4 bugfix sprint: ESC crash, drag-to-windowed, command bar clicks, heroes over-prioritizing Inn."
+        },
+        "rounds": {
+          "v1.3.4_r1_bug4_heroes_over_prioritizing_inn": {
+            "sprint_id": "v1.3.4-bug-fix-sprint",
+            "sprint_meta": {
+              "plan_ref": ".cursor/plans/v1.3.4_bug_fix_sprint_09d3e38c.plan.md",
+              "notes": ""
+            },
+            "round_id": "v1.3.4_r1_bug4_heroes_over_prioritizing_inn",
+            "round_meta": {
+              "prompt_set_id": "v1.3.4_bugfix_sprint",
+              "build_target": "v1.3.4",
+              "sent_at_local": "2026-02-18"
+            },
+            "prompt_text": "Bug 4: Heroes over-prioritizing Inn. Fix exploration get-a-drink to only fire when no enemies nearby; add nearby-enemy guard before send_home_to_rest so heroes don't route to Inn/home when healthy and enemies are close.",
+            "response": {
+              "received_at_local": "2026-02-18",
+              "status": "done",
+              "what_i_changed": [
+                "ai/behaviors/exploration.py: moved the nearby-enemy awareness+engage block to run before the Inn get-a-drink roll; additionally gated get-a-drink behind not enemies_nearby.",
+                "ai/basic_ai.py: before send_home_to_rest(), added a nearby-enemy guard (<=5 tiles) so heroes with HP > 25% skip resting and remain in the state machine to engage."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: spawn/place an enemy near a hero and observe the hero engages instead of heading to the Inn/home unless critically low HP."
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (exit_code=0) [determinism_guard PASS; pytest PASS; observe_sync profiles PASS]"
+              ],
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

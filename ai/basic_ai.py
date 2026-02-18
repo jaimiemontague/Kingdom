@@ -199,8 +199,22 @@ class BasicAI:
         # Check if hero should go home to rest (priority check, only if home is safe).
         if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():
             if hero.can_rest_at_home():
-                self.send_home_to_rest(hero, game_state)
-                return
+                # Bugfix v1.3.4: don't route to Inn/home to rest if enemies are nearby
+                # and the hero isn't critically low HP. Let the state machine engage instead.
+                enemies = game_state.get("enemies", [])
+                combat_guard_radius = TILE_SIZE * 5  # ~5 tiles / 160px
+                enemies_nearby = any(
+                    getattr(e, "is_alive", False) and hero.distance_to(e.x, e.y) <= combat_guard_radius
+                    for e in enemies
+                )
+                if enemies_nearby and hero.health_percent > 0.25:
+                    self._debug_log(
+                        f"{hero.name} -> skipping rest (enemies nearby, hp={hero.health_percent:.0%})",
+                        throttle_key=f"{hero.name}_skip_rest_enemy",
+                    )
+                else:
+                    self.send_home_to_rest(hero, game_state)
+                    return
 
         # Check if we need an LLM decision.
         if self.llm_bridge_behavior.should_consult_llm(self, hero, game_state):

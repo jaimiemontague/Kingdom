@@ -3683,6 +3683,56 @@
           "follow_ups": []
         }
       }
+    },
+    "onboarding-2026-02-18": {
+      "sprint_meta": {
+        "plan_ref": null,
+        "notes": "Agent 11 onboarding run on current workspace state (establish latest gate health and record evidence)."
+      },
+      "rounds": {
+        "onboard_r1": {
+          "round_id": "onboard_r1",
+          "status": "complete",
+          "what_i_changed": [
+            "Onboarding: ran current automated QA gates (qa_smoke --quick + validate_assets --report) and recorded evidence."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS; pytest PASS (81 tests).",
+                "observe_sync profiles PASS: base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM.",
+                "Non-blocking warning observed: pygame/pkg_resources deprecation (Setuptools timeline warning).",
+                "Non-blocking observation: duplicate hero names can occur (printed by observer)."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            }
+          },
+          "blockers": [
+            {
+              "summary": "Manual interactive smoke still requires human operator time (release-only).",
+              "needs": [
+                "Run `python main.py --no-llm` for ~10 minutes (no crashes, core loop OK).",
+                "Run `python main.py --provider mock` for ~10 minutes (no crashes, core loop OK)."
+              ],
+              "who": ["human_operator"]
+            }
+          ],
+          "bugs_found": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

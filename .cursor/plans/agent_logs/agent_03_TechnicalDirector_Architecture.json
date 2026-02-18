@@ -2117,6 +2117,40 @@
             }
           }
         }
+      },
+      "v1.3.4-bug-fix-sprint": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/v1.3.4_bug_fix_sprint_09d3e38c.plan.md",
+          "notes": "v1.3.4 Bug Fix Sprint."
+        },
+        "rounds": {
+          "v1.3.4_r1_bug2_drag_to_windowed": {
+            "sprint_id": "v1.3.4-bug-fix-sprint",
+            "round_id": "v1.3.4_r1_bug2_drag_to_windowed",
+            "round_meta": {
+              "prompt_set_id": "v1.3.4_bugfix_r1",
+              "build_target": "BugFix"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/input_handler.py: Wired drag-start detection in handle_mousedown for top-of-screen clicks while in borderless/fullscreen (excluding the Quit button) to drop to windowed; borderless starts the live-drag sequence, fullscreen only drops to windowed."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: run in borderless or fullscreen, then left-click and drag from the top ~40px (not on Quit) to drop to windowed and begin moving the window."
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }
