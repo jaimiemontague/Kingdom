@@ -5,10 +5,10 @@ import time
 import os
 import pygame
 from config import (
-    WINDOW_WIDTH, WINDOW_HEIGHT, FPS, GAME_TITLE, TILE_SIZE,
-    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK, COLOR_WHITE, COLOR_RED,
+    WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TILE_SIZE,
+    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
     CAMERA_SPEED_PX_PER_SEC, CAMERA_EDGE_MARGIN_PX,
-    ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
+    ZOOM_MIN, ZOOM_MAX,
     MAX_ALIVE_ENEMIES,
     LAIR_BOUNTY_COST,
     BOUNTY_REWARD_LOW,
@@ -23,24 +23,24 @@ from config import (
 from game.graphics.vfx import VFXSystem
 from game.audio.audio_system import AudioSystem
 from game.world import World, Visibility
- 
-from game.entities import (
-    Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
-    Blacksmith, Inn, TradingPost,
-    TempleAgrela, TempleDauros, TempleFervus, TempleKrypta, TempleKrolm, TempleHelia, TempleLunord,
-    GnomeHovel, ElvenBungalow, DwarvenSettlement,
-    Guardhouse, BallistaTower, WizardTower,
-    Fairgrounds, Library, RoyalGardens,
-    Palace, Hero, Goblin, TaxCollector, Peasant, Guard
-)
+
+from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem, NeutralBuildingSystem
 from game.systems.buffs import BuffSystem
 from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
 from game.ui.building_list_panel import BuildingListPanel
 from game.ui.pause_menu import PauseMenu
 from game.ui.build_catalog_panel import BuildCatalogPanel
+from game.input_handler import InputHandler
+from game.display_manager import DisplayManager
+from game.building_factory import BuildingFactory
+from game.cleanup_manager import CleanupManager
+from game.events import EventBus, GameEventType
+from game.systems.protocol import SystemContext
+from game.types import BountyType, HeroClass
 from game.graphics.font_cache import get_font
 from game.graphics.render_context import set_render_zoom
+from game.graphics.renderers import RendererRegistry
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms
@@ -88,6 +88,7 @@ class GameEngine:
         self.camera_y = 0
         self.zoom = 1.0
         self.default_zoom = 1.0
+        self.display_manager = DisplayManager(self)
         
         # Apply initial display settings
         self.apply_display_settings(self.display_mode, self.window_size)
@@ -123,6 +124,9 @@ class GameEngine:
         
         # Initialize game world
         self.world = World()
+        self.event_bus = EventBus()
+        self.renderer_registry = RendererRegistry()
+        self._renderer_prune_accum_s = 0.0
 
         # Render surfaces (avoid per-frame allocations).
         self._view_surface = None
@@ -147,12 +151,13 @@ class GameEngine:
         self.lair_system = LairSystem(self.world)
         self.neutral_building_system = NeutralBuildingSystem(self.world)
         self.buff_system = BuffSystem()
+        self.building_factory = BuildingFactory()
         
         # WK7-BUG-001 FIX: Audio system MUST be initialized before PauseMenu
         # (PauseMenu constructor requires audio_system parameter)
         # Audio system (WK6: non-authoritative, event-driven sound effects and ambient music).
         # Expected interface:
-        # - emit_from_events(events: list[dict]) -> None
+        # - on_event(event: dict) -> None
         # - set_ambient(track_name: str, volume: float) -> None
         self.audio_system = AudioSystem(enabled=True)
 
@@ -174,6 +179,8 @@ class GameEngine:
         
         # Selection
         self.selected_hero = None
+        self.input_handler = InputHandler(self)
+        self.cleanup_manager = CleanupManager(self)
         
         # AI controller (will be set from main.py)
         self.ai_controller = None
@@ -182,8 +189,12 @@ class GameEngine:
         # Expected interface:
         # - update(dt: float) -> None
         # - render(surface: pygame.Surface, camera_offset: tuple[int,int]) -> None
-        # - emit_from_events(events: list[dict]) -> None
+        # - on_event(event: dict) -> None
         self.vfx_system = VFXSystem()
+
+        # EventBus subscribers (deterministic registration order).
+        self.event_bus.subscribe("*", self.audio_system.on_event)
+        self.event_bus.subscribe("*", self.vfx_system.on_event)
         
         # Tax collector (created after castle is placed)
         self.tax_collector = None
@@ -270,381 +281,27 @@ class GameEngine:
         
     def handle_events(self):
         """Process input events."""
-        # WK7 display-mode crash mitigation:
-        # On some Windows/SDL builds, the first event poll immediately after a set_mode() can
-        # intermittently crash inside SDL_PumpEvents (no Python exception). Avoid calling
-        # any event APIs for a couple frames after a mode switch.
-        skip_frames = int(getattr(self, "_skip_event_processing_frames", 0) or 0)
-        if skip_frames > 0:
-            self._skip_event_processing_frames = skip_frames - 1
-            return
-
-        events = pygame.event.get()
-
-        for event in events:
-            if event.type == pygame.QUIT:
-                self.running = False
-                
-            elif event.type == pygame.KEYDOWN:
-                self.handle_keydown(event)
-                
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                self.handle_mousedown(event)
-            
-            elif event.type == pygame.MOUSEBUTTONUP:
-                # WK7: Menu slider drag end
-                if self.pause_menu.visible and event.button == 1:
-                    self.pause_menu.handle_mouseup(event.pos)
-                # WK7: End borderless drag
-                if event.button == 1 and getattr(self, "_borderless_drag_active", False):
-                    self._borderless_drag_active = False
-                    self._borderless_drag_start_pos = None
-                    self._borderless_drag_window_offset = None
-                
-            elif event.type == pygame.MOUSEMOTION:
-                self.handle_mousemove(event)
-
-            # Pygame 2 mouse wheel event
-            elif hasattr(pygame, "MOUSEWHEEL") and event.type == pygame.MOUSEWHEEL:
-                # V1.3-EXT-BUG-001: Do not zoom while paused / menu open.
-                if self.paused or self.pause_menu.visible:
-                    continue
-                # event.y: +1 scroll up, -1 scroll down
-                if event.y > 0:
-                    self.zoom_by(ZOOM_STEP)
-                elif event.y < 0:
-                    self.zoom_by(1.0 / ZOOM_STEP)
+        self.input_handler.process_events()
 
     def request_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
         """Queue a display mode change to be applied at a safe point (between frames)."""
         self._pending_display_settings = (str(display_mode), window_size)
     
     def select_building_for_placement(self, building_type: str) -> bool:
-        """
-        Unified method for selecting a building for placement.
-        Called by both hotkeys and panel clicks.
-        Returns True if selection succeeded, False otherwise.
-        """
-        # Check affordability
-        if not self.economy.can_afford_building(building_type):
-            self.hud.add_message("Not enough gold!", (255, 100, 100))
-            return False
-        
-        # Check prerequisites
-        from config import BUILDING_PREREQUISITES
-        if building_type in BUILDING_PREREQUISITES:
-            required = BUILDING_PREREQUISITES[building_type]
-            has_prereq = False
-            for building in self.buildings:
-                if building.building_type in required and getattr(building, "is_constructed", False):
-                    has_prereq = True
-                    break
-            if not has_prereq:
-                req_names = ", ".join(b.replace("_", " ").title() for b in required)
-                self.hud.add_message(f"Requires: {req_names}", (255, 200, 100))
-                return False
-        
-        # Check constraints (mutually exclusive)
-        from config import BUILDING_CONSTRAINTS
-        if building_type in BUILDING_CONSTRAINTS:
-            excluded = BUILDING_CONSTRAINTS[building_type]
-            for building in self.buildings:
-                if building.building_type in excluded:
-                    excl_name = building.building_type.replace("_", " ").title()
-                    self.hud.add_message(f"Cannot build: {excl_name} exists", (255, 200, 100))
-                    return False
-        
-        # All checks passed - select building
-        self.building_menu.select_building(building_type)
-        # Close panel if open
-        if self.building_list_panel.visible:
-            self.building_list_panel.close()
-        return True
+        """Select a building type for placement if checks pass."""
+        return self.input_handler.select_building_for_placement(building_type)
     
     def handle_keydown(self, event):
         """Handle keyboard input."""
-        # WK7: ESC menu takes priority
-        if event.key == pygame.K_ESCAPE:
-            if self.pause_menu.visible:
-                # Close menu (resume game)
-                self.pause_menu.close()
-                self.paused = False
-            else:
-                # Open menu (pause game)
-                self.pause_menu.open()
-                self.paused = True
-                # Also close building panels when opening menu
-                if self.building_list_panel.visible:
-                    self.building_list_panel.close()
-                    self.building_menu.cancel_selection()
-                if self.building_menu.selected_building:
-                    self.building_menu.cancel_selection()
-            return  # Consume ESC when menu is involved
-        
-        # Block world input when menu is open
-        if self.pause_menu.visible:
-            return
-
-        # V1.3-EXT-BUG-001: Block world camera/zoom input while paused (even if menu not visible).
-        if self.paused:
-            return
-                
-        elif event.key == pygame.K_TAB:
-            # WK7 mid-sprint: Toggle right-side panel
-            if hasattr(self.hud, "toggle_right_panel"):
-                self.hud.toggle_right_panel()
-            return
-
-        elif event.key == pygame.K_1:
-            self.select_building_for_placement("warrior_guild")
-        elif event.key == pygame.K_2:
-            self.select_building_for_placement("marketplace")
-        elif event.key == pygame.K_3:
-            self.select_building_for_placement("ranger_guild")
-        elif event.key == pygame.K_4:
-            self.select_building_for_placement("rogue_guild")
-        elif event.key == pygame.K_5:
-            self.select_building_for_placement("wizard_guild")
-        elif event.key == pygame.K_6:
-            self.select_building_for_placement("blacksmith")
-        elif event.key == pygame.K_7:
-            self.select_building_for_placement("inn")
-        elif event.key == pygame.K_8:
-            self.select_building_for_placement("trading_post")
-        elif event.key == pygame.K_t:
-            self.select_building_for_placement("temple_agrela")
-        elif event.key == pygame.K_g:
-            self.select_building_for_placement("gnome_hovel")
-        elif event.key == pygame.K_e:
-            self.select_building_for_placement("elven_bungalow")
-        elif event.key == pygame.K_v:
-            self.select_building_for_placement("dwarven_settlement")
-        elif event.key == pygame.K_u:
-            self.select_building_for_placement("guardhouse")
-        elif event.key == pygame.K_y:
-            self.select_building_for_placement("ballista_tower")
-        elif event.key == pygame.K_o:
-            self.select_building_for_placement("wizard_tower")
-        elif event.key == pygame.K_f:
-            self.select_building_for_placement("fairgrounds")
-        elif event.key == pygame.K_i:
-            self.select_building_for_placement("library")
-        elif event.key == pygame.K_r:
-            self.select_building_for_placement("royal_gardens")
-                
-        elif event.key == pygame.K_h:
-            # Hire a hero
-            self.try_hire_hero()
-            
-        elif event.key == pygame.K_SPACE:
-            # Center view on castle and reset to starting zoom
-            self.center_on_castle(reset_zoom=True)
-        
-        elif event.key == pygame.K_F1:
-            # Toggle debug panel
-            self.debug_panel.toggle()
-        elif event.key == pygame.K_F2:
-            # Toggle perf overlay
-            self.show_perf = not self.show_perf
-        elif event.key == pygame.K_F3:
-            # Toggle HUD help/controls overlay
-            if hasattr(self.hud, "toggle_help"):
-                self.hud.toggle_help()
-        
-        elif event.key == pygame.K_F12:
-            # Manual screenshot capture
-            self.capture_screenshot()
-        
-        elif event.key == pygame.K_b:
-            # Place a bounty at mouse position
-            self.place_bounty()
-            
-        elif event.key == pygame.K_p:
-            # Use potion for selected hero
-            if self.selected_hero and self.selected_hero.is_alive:
-                if self.selected_hero.use_potion():
-                    self.hud.add_message(f"{self.selected_hero.name} used a potion!", (100, 255, 100))
-
-        # Zoom controls (+/- and keypad)
-        elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
-            self.zoom_by(ZOOM_STEP)
-        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
-            self.zoom_by(1.0 / ZOOM_STEP)
+        self.input_handler.handle_keydown(event)
     
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
-        # WK7: Menu input handling (takes priority)
-        if self.pause_menu.visible:
-            if event.button == 1:  # Left click
-                action = self.pause_menu.handle_click(event.pos)
-                if action == "resume":
-                    self.pause_menu.close()
-                    self.paused = False
-                elif action == "quit":
-                    self.running = False
-                elif action and action.startswith("graphics_select_"):
-                    # Graphics page selection (already handled in PauseMenu.handle_click)
-                    pass
-                elif action == "audio_slider_drag":
-                    # Audio slider drag (already handled in PauseMenu.handle_mousemove)
-                    pass
-            return  # Consume all input when menu is open
-
-        # V1.3-EXT-BUG-001: While paused (without menu), do not allow world camera/zoom inputs.
-        if self.paused:
-            return
-        
-        # Mouse wheel zoom (older pygame uses buttons 4/5)
-        if event.button == 4:
-            self.zoom_by(ZOOM_STEP)
-            return
-        if event.button == 5:
-            self.zoom_by(1.0 / ZOOM_STEP)
-            return
-
-        if event.button == 1:  # Left click
-            # UI clicks should consume input before world selection.
-            try:
-                gs = self.get_game_state()
-                if hasattr(self.hud, "handle_click"):
-                    action = self.hud.handle_click(event.pos, gs)
-                    if action == "quit":
-                        self.running = False
-                        return
-                    if action == "close_selection":
-                        self.selected_hero = None
-                        self.building_panel.deselect()
-                        self.selected_building = None
-                        return
-            except Exception:
-                pass
-
-            # Debug panel close/consume
-            try:
-                if getattr(self.debug_panel, "visible", False) and hasattr(self.debug_panel, "handle_click"):
-                    if self.debug_panel.handle_click(event.pos):
-                        return
-            except Exception:
-                pass
-
-            # Perf overlay close/consume
-            try:
-                if self.show_perf and hasattr(self, "_perf_close_rect") and self._perf_close_rect and self._perf_close_rect.collidepoint(event.pos):
-                    self.show_perf = False
-                    return
-            except Exception:
-                pass
-
-            # Check if clicking on building list panel first (if visible)
-            if self.building_list_panel.visible:
-                result = self.building_list_panel.handle_click(event.pos, self.economy, self.buildings)
-                if result:  # Building type string
-                    self.select_building_for_placement(result)
-                    return
-                # Click outside panel - close it
-                self.building_list_panel.close()
-                return
-            
-            # Check if clicking on build catalog panel (WK7: castle-driven)
-            if self.build_catalog_panel.visible:
-                building_type = self.build_catalog_panel.handle_click(event.pos, self.economy, self.buildings)
-                if building_type:
-                    self.select_building_for_placement(building_type)
-                    return
-                # Click outside catalog - close it
-                self.build_catalog_panel.close()
-                return
-            
-            # Check if clicking on building panel
-            if self.building_panel.visible:
-                result = self.building_panel.handle_click(event.pos, self.economy, self.get_game_state())
-                if isinstance(result, dict) and result.get("type") == "open_build_catalog":
-                    # WK7: Open build catalog from castle
-                    self.build_catalog_panel.open()
-                    return
-                elif isinstance(result, dict) and result.get("type") == "demolish_building":
-                    # Handle player demolish action
-                    building = result.get("building")
-                    if building and building in self.buildings and building.building_type != "castle":
-                        # Set HP to 0 to trigger cleanup
-                        building.hp = 0
-                        # Immediate cleanup (instant UX) - suppress auto-demolish message
-                        self._cleanup_destroyed_buildings(emit_messages=False)
-                        # Emit HUD message (player demolish: white)
-                        building_name = building.building_type.replace("_", " ").title()
-                        self.hud.add_message(f"Demolished: {building_name}", COLOR_WHITE)
-                        # Deselect building (panel will close)
-                        self.building_panel.deselect()
-                        self.selected_building = None
-                    return
-                elif result:  # Other panel clicks (True)
-                    return
-            
-            if self.building_menu.selected_building:
-                # Try to place building
-                pos = self.building_menu.get_placement()
-                if pos:
-                    self.place_building(pos[0], pos[1])
-            else:
-                # Try to select a hero first
-                if self.try_select_hero(event.pos):
-                    self.building_panel.deselect()
-                    self.selected_building = None
-                # Then try to select a building
-                elif self.try_select_building(event.pos):
-                    self.selected_hero = None
-                else:
-                    # Clicked on empty space
-                    self.selected_hero = None
-                    self.building_panel.deselect()
-                    self.selected_building = None
-                
-        elif event.button == 3:  # Right click
-            # Indirect-control game: no direct hero commands.
-            pass
+        self.input_handler.handle_mousedown(event)
     
     def handle_mousemove(self, event):
         """Handle mouse movement."""
-        # WK7: Menu slider dragging
-        if self.pause_menu.visible:
-            self.pause_menu.handle_mousemove(event.pos)
-            return  # Consume mouse movement when menu is open
-        
-        # WK7: Borderless drag live-drag handling
-        if self._borderless_drag_active and self._borderless_drag_window_offset is not None:
-            try:
-                import pygame._sdl2
-                sdl_window = pygame._sdl2.Window.from_display_module()
-                if sdl_window:
-                    # Calculate new window position based on mouse position
-                    new_x = event.pos[0] + self._borderless_drag_window_offset[0]
-                    new_y = event.pos[1] + self._borderless_drag_window_offset[1]
-                    sdl_window.position = (new_x, new_y)
-            except (ImportError, AttributeError) as e:
-                # pygame._sdl2 not available: already degraded
-                pass
-            except Exception as e:
-                raise
-        
-        if self.building_menu.selected_building:
-            self.building_menu.update_preview(
-                event.pos, 
-                self.world, 
-                self.buildings,
-                (self.camera_x, self.camera_y),
-                zoom=self.zoom
-            )
-        
-        # Update building list panel hover state
-        if self.building_list_panel.visible:
-            self.building_list_panel.update_hover(event.pos, self.economy, self.buildings)
-        
-        # Update building panel hover state
-        self.building_panel.update_hover(event.pos)
-        
-        # WK7: Update build catalog panel hover state
-        if self.build_catalog_panel.visible:
-            self.build_catalog_panel.update_hover(event.pos)
+        self.input_handler.handle_mousemove(event)
     
     def try_select_hero(self, screen_pos: tuple) -> bool:
         """Try to select a hero at the given screen position. Returns True if selected."""
@@ -700,12 +357,12 @@ class GameEngine:
         
         # Spawn hero near guild
         class_by_guild = {
-            "warrior_guild": "warrior",
-            "ranger_guild": "ranger",
-            "rogue_guild": "rogue",
-            "wizard_guild": "wizard",
+            "warrior_guild": HeroClass.WARRIOR.value,
+            "ranger_guild": HeroClass.RANGER.value,
+            "rogue_guild": HeroClass.ROGUE.value,
+            "wizard_guild": HeroClass.WIZARD.value,
         }
-        hero_class = class_by_guild.get(guild.building_type, "warrior")
+        hero_class = class_by_guild.get(guild.building_type, HeroClass.WARRIOR.value)
         hero = Hero(
             guild.center_x + TILE_SIZE,
             guild.center_y,
@@ -726,63 +383,7 @@ class GameEngine:
             return
         
         # Create the building
-        building = None
-        if building_type == "warrior_guild":
-            building = WarriorGuild(grid_x, grid_y)
-        elif building_type == "ranger_guild":
-            building = RangerGuild(grid_x, grid_y)
-        elif building_type == "rogue_guild":
-            building = RogueGuild(grid_x, grid_y)
-        elif building_type == "wizard_guild":
-            building = WizardGuild(grid_x, grid_y)
-        elif building_type == "marketplace":
-            building = Marketplace(grid_x, grid_y)
-        # Phase 1: Economic Buildings
-        elif building_type == "blacksmith":
-            building = Blacksmith(grid_x, grid_y)
-        elif building_type == "inn":
-            building = Inn(grid_x, grid_y)
-        elif building_type == "trading_post":
-            building = TradingPost(grid_x, grid_y)
-        # Phase 2: Temples
-        elif building_type == "temple_agrela":
-            building = TempleAgrela(grid_x, grid_y)
-        elif building_type == "temple_dauros":
-            building = TempleDauros(grid_x, grid_y)
-        elif building_type == "temple_fervus":
-            building = TempleFervus(grid_x, grid_y)
-        elif building_type == "temple_krypta":
-            building = TempleKrypta(grid_x, grid_y)
-        elif building_type == "temple_krolm":
-            building = TempleKrolm(grid_x, grid_y)
-        elif building_type == "temple_helia":
-            building = TempleHelia(grid_x, grid_y)
-        elif building_type == "temple_lunord":
-            building = TempleLunord(grid_x, grid_y)
-        # Phase 3: Non-Human Dwellings
-        elif building_type == "gnome_hovel":
-            building = GnomeHovel(grid_x, grid_y)
-        elif building_type == "elven_bungalow":
-            building = ElvenBungalow(grid_x, grid_y)
-        elif building_type == "dwarven_settlement":
-            building = DwarvenSettlement(grid_x, grid_y)
-        # Phase 4: Defensive Structures
-        elif building_type == "guardhouse":
-            building = Guardhouse(grid_x, grid_y)
-        elif building_type == "ballista_tower":
-            building = BallistaTower(grid_x, grid_y)
-        elif building_type == "wizard_tower":
-            building = WizardTower(grid_x, grid_y)
-        # Phase 5: Special Buildings
-        elif building_type == "fairgrounds":
-            building = Fairgrounds(grid_x, grid_y)
-        elif building_type == "library":
-            building = Library(grid_x, grid_y)
-        elif building_type == "royal_gardens":
-            building = RoyalGardens(grid_x, grid_y)
-        # Phase 6: Palace
-        elif building_type == "palace":
-            building = Palace(grid_x, grid_y)
+        building = self.building_factory.create(building_type, grid_x, grid_y)
         
         if building is None:
             return
@@ -795,26 +396,12 @@ class GameEngine:
         self.building_menu.cancel_selection()
         self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
         
-        # WK6 Mid-Sprint: Emit building_placed event for audio (with position for visibility gating)
-        if self.audio_system is not None:
-            try:
-                # Calculate world position from grid
-                world_x = float(grid_x * TILE_SIZE)
-                world_y = float(grid_y * TILE_SIZE)
-                # Update viewport context
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events([{
-                    "type": "building_placed",
-                    "x": world_x,
-                    "y": world_y,
-                }])
-            except Exception:
-                pass  # Audio should never crash simulation
+        # Queue building placement event for EventBus subscribers (Audio/VFX).
+        self.event_bus.emit({
+            "type": GameEventType.BUILDING_PLACED.value,
+            "x": float(grid_x * TILE_SIZE),
+            "y": float(grid_y * TILE_SIZE),
+        })
     
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
@@ -834,26 +421,15 @@ class GameEngine:
             self.hud.add_message("Not enough gold for bounty!", (255, 100, 100))
             return
         
-        self.bounty_system.place_bounty(world_x, world_y, reward, "explore")
+        self.bounty_system.place_bounty(world_x, world_y, reward, BountyType.EXPLORE.value)
         self.hud.add_message(f"Bounty placed (${reward}). Heroes will respond.", (255, 215, 0))
         
-        # WK6 Mid-Sprint: Emit bounty_placed event for audio (with position for visibility gating)
-        if self.audio_system is not None:
-            try:
-                # Update viewport context
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events([{
-                    "type": "bounty_placed",
-                    "x": world_x,
-                    "y": world_y,
-                }])
-            except Exception:
-                pass  # Audio should never crash simulation
+        # Queue bounty placement event for EventBus subscribers (Audio/VFX).
+        self.event_bus.emit({
+            "type": GameEventType.BOUNTY_PLACED.value,
+            "x": float(world_x),
+            "y": float(world_y),
+        })
 
     def _nearest_lair_to(self, x: float, y: float):
         """Return nearest living lair to (x,y) or None."""
@@ -930,12 +506,35 @@ class GameEngine:
 
         bx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
         by = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-        self.bounty_system.place_bounty(bx, by, reward, "attack_lair", target=lair)
+        self.bounty_system.place_bounty(bx, by, reward, BountyType.ATTACK_LAIR.value, target=lair)
         self._early_nudge_starter_bounty_done = True
         self.hud.add_message(f"Starter bounty placed: Clear the lair (+${reward})", (255, 215, 0))
     
     def update(self, dt: float):
         """Update game state."""
+        if not self._prepare_sim_and_camera(dt):
+            self._flush_event_bus()
+            return
+
+        game_state = self.get_game_state()
+        system_ctx = self._build_system_context()
+        self._update_ai_and_heroes(dt, game_state)
+        castle = self._update_world_systems(system_ctx, dt, game_state)
+        self._update_peasants(dt, game_state, castle)
+        enemy_ranged_events = self._update_enemies(dt)
+        self._update_guards(dt)
+        self._spawn_enemies(dt)
+        events = self._process_combat(system_ctx, dt, enemy_ranged_events)
+        self._route_combat_events(events)
+        self._cleanup_after_combat()
+        self._process_bounties()
+        self._update_neutral_systems(dt, castle)
+        self._update_buildings(dt)
+        self._update_render_animations(dt)
+        self._finalize_update(dt)
+
+    def _prepare_sim_and_camera(self, dt: float) -> bool:
+        """Apply deterministic timing and update camera when world input is allowed."""
         if DETERMINISTIC_SIM:
             # Drive gameplay timing off simulation time (not wall-clock).
             self._sim_now_ms += int(round(float(dt) * 1000.0))
@@ -946,63 +545,82 @@ class GameEngine:
         # V1.3-EXT-BUG-001: Do not move camera/zoom while paused/menu open.
         if (not self.paused) and (not getattr(self.pause_menu, "visible", False)):
             self.update_camera(dt)
-        else:
-            return
-        
-        # Build game state for AI
-        game_state = self.get_game_state()
-        
-        # Update AI for heroes
+            return True
+        return False
+
+    def _build_system_context(self) -> SystemContext:
+        """Construct a shared context object for protocol-based systems."""
+        return SystemContext(
+            heroes=self.heroes,
+            enemies=self.enemies,
+            buildings=self.buildings,
+            world=self.world,
+            economy=self.economy,
+            event_bus=self.event_bus,
+        )
+
+    def _update_ai_and_heroes(self, dt: float, game_state: dict):
+        """Run AI controller and hero updates."""
         if self.ai_controller:
             self.ai_controller.update(dt, self.heroes, game_state)
-        
-        # Update heroes
+
         for hero in self.heroes:
             hero.update(dt, game_state)
 
+    def _update_world_systems(self, system_ctx: SystemContext, dt: float, game_state: dict):
+        """Update fog, buffs, and early pacing logic."""
         # Fog-of-war reveal (castle + heroes).
         self._update_fog_of_war()
 
         # Apply/refresh buffs (auras) once per tick so ATK/DEF stays dynamic and stable.
-        self.buff_system.update(self.heroes, self.buildings)
+        self.buff_system.update(system_ctx, dt)
 
-        # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
         castle = game_state.get("castle")
 
         # Content pacing guardrail: nudge player toward a clear early decision.
         self._maybe_apply_early_pacing_nudge(dt, castle)
+        return castle
 
+    def _update_peasants(self, dt: float, game_state: dict, castle):
+        """Spawn and update peasant workers."""
+        # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
         self.peasant_spawn_timer += dt
         alive_peasants = [p for p in self.peasants if p.is_alive]
         if castle and len(alive_peasants) < 2 and self.peasant_spawn_timer >= 5.0:
             self.peasant_spawn_timer = 0.0
             self.peasants.append(Peasant(castle.center_x, castle.center_y))
 
-        # Update peasants
         for peasant in self.peasants:
             peasant.update(dt, game_state)
-        
+
+    def _update_enemies(self, dt: float) -> list:
+        """Update enemies and collect ranged projectile events."""
         # Update enemies and collect ranged projectile events
         enemy_ranged_events = []
         for enemy in self.enemies:
             enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards, world=self.world)
-        
+
         # WK5: Collect ranged projectile events from enemies that just attacked
         # (do_attack() stores event in _last_ranged_event during update())
         for enemy in self.enemies:
             if hasattr(enemy, "_last_ranged_event") and enemy._last_ranged_event is not None:
                 enemy_ranged_events.append(enemy._last_ranged_event)
                 enemy._last_ranged_event = None  # Clear after collection
+        return enemy_ranged_events
 
+    def _update_guards(self, dt: float):
+        """Update existing guard units."""
         # Update guards
         for guard in self.guards:
             guard.update(dt, self.enemies, world=self.world, buildings=self.buildings)
-        
+
+    def _spawn_enemies(self, dt: float):
+        """Spawn enemies from waves and lairs with global cap enforcement."""
         # Spawn new enemies (with a safety cap to prevent runaway slowdown if enemies accumulate)
         alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
         remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
         if remaining_slots > 0:
-            new_enemies = self.spawner.update(dt)
+            new_enemies = self.spawner.spawn(dt)
             if new_enemies:
                 self.enemies.extend(new_enemies[:remaining_slots])
 
@@ -1010,54 +628,31 @@ class GameEngine:
             alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
             remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
             if remaining_slots > 0:
-                lair_enemies = self.lair_system.update(dt, self.buildings)
+                lair_enemies = self.lair_system.spawn_enemies(dt, self.buildings)
                 if lair_enemies:
                     self.enemies.extend(lair_enemies[:remaining_slots])
-        
-        # Process combat
-        events = self.combat_system.process_combat(
-            self.heroes, self.enemies, self.buildings
-        )
-        
-        # WK5: Merge enemy ranged projectile events with combat events.
-        # Building projectile events are collected later in the tick (after building updates)
-        # and emitted to VFX separately to avoid ordering hazards.
-        events.extend(enemy_ranged_events)
 
-        # Feed combat/enemy events into optional VFX system (non-blocking, best-effort).
-        if self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
-            try:
-                self.vfx_system.emit_from_events(events)
-            except Exception:
-                # VFX should never crash the simulation.
-                pass
-        
-        # WK6 Mid-Sprint: Feed combat/enemy events into AudioSystem (visibility-gated).
-        if self.audio_system is not None:
-            try:
-                # Update viewport context for visibility gating
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events(events)
-            except Exception:
-                # Audio should never crash the simulation.
-                pass
-        
+    def _process_combat(self, system_ctx: SystemContext, dt: float, enemy_ranged_events: list) -> list:
+        """Run combat and queue downstream events in EventBus."""
+        self.combat_system.update(system_ctx, dt)
+        if enemy_ranged_events:
+            # Enemy ranged attacks are emitted outside CombatSystem in enemy.update().
+            self.event_bus.emit_batch(enemy_ranged_events)
+        return self.combat_system.get_emitted_events()
+
+    def _route_combat_events(self, events: list):
+        """Handle user-facing combat outcomes and lair-clear follow-up effects."""
         # Handle combat events
         for event in events:
-            if event["type"] == "enemy_killed":
+            if event["type"] == GameEventType.ENEMY_KILLED.value:
                 self.hud.add_message(
                     f"{event['hero']} slew a {event['enemy']}! (+{event['gold']}g, +{event['xp']}xp)",
                     (255, 215, 0)
                 )
-            elif event["type"] == "castle_destroyed":
+            elif event["type"] == GameEventType.CASTLE_DESTROYED.value:
                 self.hud.add_message("GAME OVER - Castle Destroyed!", (255, 0, 0))
                 self.paused = True
-            elif event["type"] == "lair_cleared":
+            elif event["type"] == GameEventType.LAIR_CLEARED.value:
                 lair_name = event.get("lair_type", "lair").replace("_", " ").title()
                 gold = event.get("gold", 0)
                 hero_name = event.get("hero", "A hero")
@@ -1076,13 +671,13 @@ class GameEngine:
                         for b in list(getattr(self.bounty_system, "bounties", []) or []):
                             if getattr(b, "claimed", False):
                                 continue
-                            if getattr(b, "bounty_type", None) != "attack_lair":
+                            if getattr(b, "bounty_type", None) != BountyType.ATTACK_LAIR.value:
                                 continue
                             if getattr(b, "target", None) is lair_obj:
                                 if b.claim(hero_obj):
                                     # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
                                     bounty_claimed_events.append({
-                                        "type": "bounty_claimed",
+                                        "type": GameEventType.BOUNTY_CLAIMED.value,
                                         "x": float(b.x),
                                         "y": float(b.y),
                                         "reward": b.reward,
@@ -1092,25 +687,16 @@ class GameEngine:
                     # Bounty payout should never crash the sim.
                     pass
                 
-                # WK6 Mid-Sprint: Route bounty_claimed events to AudioSystem (visibility-gated)
-                if bounty_claimed_events and self.audio_system is not None:
-                    try:
-                        win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                        win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                        self.audio_system.set_listener_view(
-                            self.camera_x, self.camera_y, self.zoom,
-                            win_w, win_h, self.world
-                        )
-                        self.audio_system.emit_from_events(bounty_claimed_events)
-                    except Exception:
-                        # Audio should never crash the simulation
-                        pass
+                if bounty_claimed_events:
+                    self.event_bus.emit_batch(bounty_claimed_events)
 
                 if lair_obj in self.buildings:
                     self.buildings.remove(lair_obj)
                 if lair_obj in getattr(self.lair_system, "lairs", []):
                     self.lair_system.lairs.remove(lair_obj)
-        
+
+    def _cleanup_after_combat(self):
+        """Remove dead entities and destroyed buildings after combat resolution."""
         # Clean up dead enemies
         self.enemies = [e for e in self.enemies if e.is_alive]
 
@@ -1119,7 +705,9 @@ class GameEngine:
         
         # Clean up destroyed buildings (WK5: auto-demolish at 0 HP + reference cleanup)
         self._cleanup_destroyed_buildings()
-        
+
+    def _process_bounties(self):
+        """Resolve bounty claims and route claim events."""
         # Process bounties
         claimed = self.bounty_system.check_claims(self.heroes)
         bounty_claimed_events = []
@@ -1130,36 +718,29 @@ class GameEngine:
             )
             # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
             bounty_claimed_events.append({
-                "type": "bounty_claimed",
+                "type": GameEventType.BOUNTY_CLAIMED.value,
                 "x": float(bounty.x),
                 "y": float(bounty.y),
                 "reward": bounty.reward,
                 "hero": hero.name,
             })
-        
-        # WK6 Mid-Sprint: Route bounty_claimed events to AudioSystem (visibility-gated)
-        if bounty_claimed_events and self.audio_system is not None:
-            try:
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events(bounty_claimed_events)
-            except Exception:
-                # Audio should never crash the simulation
-                pass
-        
+
+        if bounty_claimed_events:
+            self.event_bus.emit_batch(bounty_claimed_events)
+
         self.bounty_system.cleanup()
 
+    def _update_neutral_systems(self, dt: float, castle):
+        """Update neutral/economic support systems outside direct combat."""
         # Neutral buildings: auto-spawn + passive tax
-        self.neutral_building_system.update(dt, self.buildings, self.heroes, castle)
-        
+        self.neutral_building_system.tick(dt, self.buildings, self.heroes, castle)
+
         # Update tax collector
         if self.tax_collector:
             self.tax_collector.update(dt, self.buildings, self.economy, world=self.world)
-        
+
+    def _update_buildings(self, dt: float):
+        """Update buildings and collect building-driven projectile events."""
         # Update buildings that need periodic updates and collect ranged projectile events
         building_ranged_events = []
         for building in self.buildings:
@@ -1197,29 +778,36 @@ class GameEngine:
                 building_ranged_events.append(building._last_ranged_event)
                 building._last_ranged_event = None  # Clear after collection
 
-        # WK5: Feed building projectile events into VFX after building updates.
-        if building_ranged_events and self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
-            try:
-                self.vfx_system.emit_from_events(building_ranged_events)
-            except Exception:
-                pass
-        
-        # WK6 Mid-Sprint: Feed building projectile events into AudioSystem (visibility-gated).
-        if building_ranged_events and self.audio_system is not None:
-            try:
-                # Update viewport context for visibility gating
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events(building_ranged_events)
-            except Exception:
-                pass
-        
+        if building_ranged_events:
+            self.event_bus.emit_batch(building_ranged_events)
+
+    def _update_render_animations(self, dt: float):
+        """Advance render-only entity animation state."""
+        self.renderer_registry.update_animations(
+            dt=dt,
+            heroes=self.heroes,
+            enemies=self.enemies,
+            peasants=self.peasants,
+            tax_collector=self.tax_collector,
+        )
+
+    def _finalize_update(self, dt: float):
+        """Finalize per-frame UI and VFX updates."""
+        self._flush_event_bus()
+
         # Update HUD
         self.hud.update()
+
+        # Drop renderer instances for entities that no longer exist.
+        self._renderer_prune_accum_s += float(dt)
+        if self._renderer_prune_accum_s >= 1.0:
+            self._renderer_prune_accum_s = 0.0
+            self.renderer_registry.prune(
+                heroes=self.heroes,
+                enemies=self.enemies,
+                peasants=self.peasants,
+                tax_collector=self.tax_collector,
+            )
 
         # Update VFX (after simulation state is updated).
         if self.vfx_system is not None and hasattr(self.vfx_system, "update"):
@@ -1227,282 +815,25 @@ class GameEngine:
                 self.vfx_system.update(dt)
             except Exception:
                 pass
-        
-        # Camera already updated at top of update()
+
+    def _flush_event_bus(self):
+        """Flush queued events once per frame after updating listener context."""
+        if self.audio_system is not None:
+            win_w = int(getattr(self, "window_width", self.screen.get_width()))
+            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            self.audio_system.set_listener_view(
+                self.camera_x, self.camera_y, self.zoom,
+                win_w, win_h, self.world
+            )
+        self.event_bus.flush()
     
     def _cleanup_destroyed_buildings(self, emit_messages: bool = True):
-        """
-        WK5: Remove buildings at hp <= 0 (except castle) and clear all references.
-        
-        WK5 Build B: Also emits building_destroyed events for debris spawning.
-        
-        This method is idempotent (safe to call multiple times per tick).
-        Called in update loop after combat/event handling, before building updates.
-        Also called immediately for player demolish (instant UX).
-        
-        Args:
-            emit_messages: If True, emit auto-demolish HUD messages. Set to False if caller
-                          handles messages (e.g., player demolish).
-        """
-        # Collect destroyed buildings first (avoid modifying list during iteration)
-        destroyed = [b for b in self.buildings if b.hp <= 0 and getattr(b, "building_type", None) != "castle"]
-        
-        if not destroyed:
-            return
-        
-        # WK5 Build B: Collect building destruction events for debris spawning
-        destruction_events = []
-        
-        for building in destroyed:
-            # WK5 Build B: Capture building position/type for debris before removal
-            building_x = getattr(building, "center_x", getattr(building, "x", 0.0))
-            building_y = getattr(building, "center_y", getattr(building, "y", 0.0))
-            building_type = getattr(building, "building_type", "unknown")
-            
-            # Emit auto-demolish message (red, warning) unless suppressed
-            if emit_messages:
-                building_name = building_type.replace("_", " ").title()
-                self.hud.add_message(f"{building_name} destroyed", COLOR_RED)
-            
-            # 1. Remove from primary lists
-            if building in self.buildings:
-                self.buildings.remove(building)
-            if getattr(building, "is_lair", False) and building in getattr(self.lair_system, "lairs", []):
-                self.lair_system.lairs.remove(building)
-            
-            # 2. Clear selection
-            if self.selected_building is building:
-                self.selected_building = None
-                self.building_panel.deselect()
-            
-            # 3. Clear entity target references
-            for hero in self.heroes:
-                if getattr(hero, "target", None) is building:
-                    hero.target = None
-                # Hero target dict with bounty_ref
-                target = getattr(hero, "target", None)
-                if isinstance(target, dict) and target.get("type") == "bounty":
-                    bounty_ref = target.get("bounty_ref")
-                    if bounty_ref and getattr(bounty_ref, "target", None) is building:
-                        hero.target = None
-            
-            for enemy in self.enemies:
-                if getattr(enemy, "target", None) is building:
-                    enemy.target = None
-            
-            for peasant in self.peasants:
-                if getattr(peasant, "target_building", None) is building:
-                    peasant.target_building = None
-            
-            if self.tax_collector:
-                if getattr(self.tax_collector, "target_guild", None) is building:
-                    self.tax_collector.target_guild = None
-            
-            for guard in self.guards:
-                if getattr(guard, "target", None) is building:
-                    guard.target = None
-            
-            # 4. Clear home_building references
-            for hero in self.heroes:
-                if getattr(hero, "home_building", None) is building:
-                    hero.home_building = None
-            
-            for guard in self.guards:
-                if getattr(guard, "home_building", None) is building:
-                    guard.home_building = None
-            
-            # 5. Clear bounty target references
-            for bounty in getattr(self.bounty_system, "bounties", []):
-                if getattr(bounty, "target", None) is building:
-                    bounty.target = None
-            
-            # WK5 Build B: Emit building destruction event for debris spawning
-            # WK5 Hotfix: Include footprint size for better debris visibility
-            # (after all cleanup to avoid stale references)
-            building_w = getattr(building, "width", 0) or (getattr(building, "size", (1, 1))[0] * TILE_SIZE)
-            building_h = getattr(building, "height", 0) or (getattr(building, "size", (1, 1))[1] * TILE_SIZE)
-            destruction_events.append({
-                "type": "building_destroyed",
-                "x": float(building_x),
-                "y": float(building_y),
-                "building_type": building_type,
-                "w": int(building_w),  # Footprint width in pixels
-                "h": int(building_h),  # Footprint height in pixels
-            })
-        
-        # WK5 Build B: Feed building destruction events to VFX system for debris
-        if destruction_events and self.vfx_system is not None and hasattr(self.vfx_system, "emit_from_events"):
-            try:
-                self.vfx_system.emit_from_events(destruction_events)
-            except Exception:
-                # VFX should never crash the simulation
-                pass
-        
-        # WK6 Mid-Sprint: Feed building destruction events to AudioSystem (visibility-gated)
-        if destruction_events and self.audio_system is not None:
-            try:
-                # Update viewport context for visibility gating
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
-                self.audio_system.set_listener_view(
-                    self.camera_x, self.camera_y, self.zoom,
-                    win_w, win_h, self.world
-                )
-                self.audio_system.emit_from_events(destruction_events)
-            except Exception:
-                # Audio should never crash the simulation
-                pass
+        """Remove buildings at hp <= 0 (except castle) and clear references."""
+        self.cleanup_manager.cleanup_destroyed_buildings(emit_messages=emit_messages)
     
     def apply_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
-        """
-        WK7: Apply display mode settings (fullscreen/borderless/windowed).
-        
-        Args:
-            display_mode: "fullscreen" | "borderless" | "windowed"
-            window_size: (width, height) tuple for windowed mode. If None, uses current window_size.
-        
-        This is UI-only and does not affect simulation determinism.
-        """
-        # Update state
-        self.display_mode = str(display_mode)
-        if window_size is not None:
-            self.window_size = (int(window_size[0]), int(window_size[1]))
-
-        # Skip event processing for a few frames after mode switches to avoid
-        # rare SDL crash inside pygame.event.get() on Windows.
-        try:
-            self._skip_event_processing_frames = 10
-        except Exception:
-            pass
-        
-        # Check for headless/dummy driver (safe fallback)
-        # NOTE: Even with SDL_VIDEODRIVER=dummy, pygame.display.set_mode can return a Surface.
-        # We must still set window_width/window_height (and preferably screen) so the engine can boot.
-        driver = str(os.environ.get("SDL_VIDEODRIVER", "")).lower()
-
-        # Get display info (dummy driver may report 0; fall back to configured defaults)
-        info = pygame.display.Info()
-        disp_w = int(getattr(info, "current_w", WINDOW_WIDTH) or WINDOW_WIDTH)
-        disp_h = int(getattr(info, "current_h", WINDOW_HEIGHT) or WINDOW_HEIGHT)
-        # Use desktop sizes when possible (avoids fullscreen staying at old window size)
-        try:
-            desktop_sizes = pygame.display.get_desktop_sizes()
-            if desktop_sizes:
-                disp_w, disp_h = int(desktop_sizes[0][0]), int(desktop_sizes[0][1])
-        except Exception:
-            pass
-        
-        # Clear forced window position when leaving borderless
-        if display_mode != "borderless":
-            os.environ.pop("SDL_VIDEO_WINDOW_POS", None)
-            os.environ.pop("SDL_VIDEO_CENTERED", None)
-
-        # Determine size and flags based on mode
-        flags = 0
-        desired_w = self.window_size[0]
-        desired_h = self.window_size[1]
-        
-        if driver == "dummy":
-            # Headless mode: keep it simple and deterministic-safe.
-            # We still create a display surface so downstream code can query sizes.
-            flags = 0
-            display_mode = "windowed"
-
-        if display_mode == "fullscreen":
-            flags |= pygame.FULLSCREEN
-            desired_w = disp_w
-            desired_h = disp_h
-        elif display_mode == "borderless":
-            flags |= pygame.NOFRAME
-            # Borderless uses desktop resolution
-            desired_w = disp_w
-            desired_h = disp_h
-            # Center on larger displays; pin to origin when matching display resolution
-            if desired_w == disp_w and desired_h == disp_h:
-                os.environ.setdefault("SDL_VIDEO_WINDOW_POS", "0,0")
-            else:
-                os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
-        elif display_mode == "windowed":
-            flags |= pygame.RESIZABLE
-            # Use saved window_size
-            desired_w = max(1, min(desired_w, disp_w))
-            desired_h = max(1, min(desired_h, disp_h))
-            # Center once to avoid pinned top-left on mode switch
-            os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
-        else:
-            # Unknown mode: default to windowed
-            flags |= pygame.RESIZABLE
-        
-
-        # Apply display mode
-        self.window_width = int(desired_w)
-        self.window_height = int(desired_h)
-        self.screen = pygame.display.set_mode((self.window_width, self.window_height), flags)
-        # Ensure dimensions reflect the actual mode applied by SDL
-        self.window_width = int(self.screen.get_width())
-        self.window_height = int(self.screen.get_height())
-        pygame.display.set_caption(GAME_TITLE)
-        # WK7-CRASH-DEBUG: SDL2 window centering disabled to isolate crash cause.
-        # The SDL_VIDEO_CENTERED env var (set above) should handle centering instead.
-        # if display_mode == "windowed":
-        #     try:
-        #         from pygame import _sdl2 as sdl2
-        #         sdl_window = sdl2.Window.from_display_module()
-        #         if sdl_window:
-        #             center_x = max(0, int((disp_w - self.window_width) // 2))
-        #             center_y = max(0, int((disp_h - self.window_height) // 2))
-        #             sdl_window.position = (center_x, center_y)
-        #     except Exception:
-        #         pass
-        
-        # Recreate cached surfaces sized to window
-        self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
-        self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
-        self._pause_overlay.fill((0, 0, 0, 128))
-        # Reset view surface so it gets resized on demand
-        self._view_surface = None
-        self._view_surface_size = (0, 0)
-        
-        # Update HUD size
-        if hasattr(self, "hud"):
-            self.hud.screen_width = self.window_width
-            self.hud.screen_height = self.window_height
-            if hasattr(self.hud, "on_resize"):
-                try:
-                    self.hud.on_resize(self.window_width, self.window_height)
-                except Exception:
-                    pass
-        # Resize modal panels if they expose on_resize (WK7 mid-sprint hitbox fix)
-        if hasattr(self, "pause_menu") and hasattr(self.pause_menu, "on_resize"):
-            try:
-                self.pause_menu.on_resize(self.window_width, self.window_height)
-            except Exception:
-                pass
-        if hasattr(self, "build_catalog_panel") and hasattr(self.build_catalog_panel, "on_resize"):
-            try:
-                self.build_catalog_panel.on_resize(self.window_width, self.window_height)
-            except Exception:
-                pass
-        if hasattr(self, "building_list_panel") and hasattr(self.building_list_panel, "on_resize"):
-            try:
-                self.building_list_panel.on_resize(self.window_width, self.window_height)
-            except Exception:
-                pass
-        # Clamp camera to new view bounds after mode change
-        if hasattr(self, "clamp_camera"):
-            try:
-                self.clamp_camera()
-            except Exception:
-                pass
-
-        # After a mode switch on some Windows/SDL builds, the *first* event poll can crash in SDL.
-        # Best-effort mitigation: pump once + clear the queue now (outside the main event loop).
-        # If this itself crashes, the last marker will be pre_event_pump, which is actionable.
-        try:
-            pygame.event.pump()
-            pygame.event.clear()
-        except Exception as e:
-            pass
+        """Apply display mode settings (fullscreen/borderless/windowed)."""
+        self.display_manager.apply_settings(display_mode, window_size)
     
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
         """Convert screen-space pixels to world-space pixels, accounting for zoom."""
@@ -1687,7 +1018,7 @@ class GameEngine:
 
         # Render buildings
         for building in self.buildings:
-            building.render(view_surface, camera_offset)
+            self.renderer_registry.render_building(view_surface, building, camera_offset)
 
         # Render enemies
         for enemy in self.enemies:
@@ -1699,23 +1030,23 @@ class GameEngine:
                     continue
             else:
                 continue
-            enemy.render(view_surface, camera_offset)
+            self.renderer_registry.render_enemy(view_surface, enemy, camera_offset)
 
         # Render heroes
         for hero in self.heroes:
-            hero.render(view_surface, camera_offset)
+            self.renderer_registry.render_hero(view_surface, hero, camera_offset)
 
         # Render guards
         for guard in self.guards:
-            guard.render(view_surface, camera_offset)
+            self.renderer_registry.render_guard(view_surface, guard, camera_offset)
 
         # Render peasants
         for peasant in self.peasants:
-            peasant.render(view_surface, camera_offset)
+            self.renderer_registry.render_peasant(view_surface, peasant, camera_offset)
 
         # Render tax collector
         if self.tax_collector:
-            self.tax_collector.render(view_surface, camera_offset)
+            self.renderer_registry.render_tax_collector(view_surface, self.tax_collector, camera_offset)
 
         # Render building preview
         self.building_menu.render(view_surface, camera_offset)
@@ -1745,7 +1076,11 @@ class GameEngine:
                 self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
             except Exception:
                 pass
-        self.bounty_system.render(view_surface, camera_offset)
+        self.renderer_registry.render_bounties(
+            view_surface,
+            getattr(self.bounty_system, "bounties", []),
+            camera_offset,
+        )
 
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:

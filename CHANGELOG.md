@@ -1,5 +1,18 @@
 # Changelog
 
+## Prototype v1.3.1 — The Refactor Update
+
+- Architecture: **Engine decomposed** — InputHandler, DisplayManager, BuildingFactory, CleanupManager extracted from the monolithic engine.
+- Architecture: **EventBus** centralizes all event routing (combat, audio, VFX) — replaces manual try/except routing blocks.
+- Architecture: **GameSystem Protocol** formalizes system interfaces — all 6 core systems conform.
+- Entities: **Building package** — 25+ building classes split into domain modules (guilds, temples, defensive, economic, special) with `HiringBuilding` mixin eliminating duplicate code.
+- Entities: **Sim/render separation** — all entity rendering moved to dedicated renderer classes; entity files are now pure simulation logic with no pygame dependency.
+- UI: **HUD decomposed** into focused sub-components (hero panel, command bar, top bar) with reusable **Button**, **HPBar**, and **TextLabel** widgets.
+- UI: **Building panel** decomposed into per-domain panel renderers via registry pattern.
+- Config: All tuning constants grouped into **frozen dataclasses** with backward-compatible aliases.
+- Types: **BuildingType**, **HeroClass**, **EnemyType**, **BountyType** enums replace bare strings (backward-compatible via `str` inheritance).
+- Quality: **pytest unit test suite** (29 tests) covering combat, economy, bounty, buffs, and spawner systems.
+
 ## Prototype v1.3.0 — The Basics Are In Update
 
 - AI: Heroes **buy potions more often** and **use potions before fleeing** (less early retreat).

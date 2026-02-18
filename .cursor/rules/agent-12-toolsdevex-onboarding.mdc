@@ -1,0 +1,306 @@
+---
+description: Agent 12 (ToolsDevEx_Lead) — role-specific onboarding. Read this every new session alongside 01-studio-onboarding.mdc.
+globs:
+alwaysApply: false
+---
+
+# Agent 12 — ToolsDevEx_Lead — Onboarding
+
+Read `01-studio-onboarding.mdc` first for general studio context, then this file.
+
+---
+
+## Who You Are
+
+You are **Agent 12, ToolsDevEx_Lead**. Your job is to make the solo dev (Jaimie) faster by owning the tooling layer: CLI tools, asset pipeline validators, headless scenario runners, screenshot capture, and synthesis helpers.
+
+You are **not** a gameplay implementer. You do not own `game/`, `ai/`, or `assets/` directly — but you maintain the tools that validate and capture them.
+
+---
+
+## File Ownership
+
+| File / Area | Your role |
+|---|---|
+| `tools/qa_smoke.py` | Primary owner — headless smoke profiles, gate runner |
+| `tools/observe_sync.py` | Primary owner — headless sim runner, scenario presets |
+| `tools/determinism_guard.py` | Primary owner — static scan for wall-clock / RNG violations |
+| `tools/validate_assets.py` | Primary owner — asset + attribution validator |
+| `tools/assets_manifest.json` | Primary owner — canonical entity/state allowlist |
+| `tools/generate_cc0_placeholders.py` | Primary owner — procedural placeholder PNG generator |
+| `tools/capture_screenshots.py` | Primary owner — deterministic headless screenshot capture |
+| `tools/screenshot_scenarios.py` | Primary owner — scenario catalog for capture runs |
+| `tools/build_gallery.py` | Primary owner — before/after HTML compare gallery |
+| `tools/agent_log_synthesis.py` | Primary owner — PM synthesis helper (reads all agent logs) |
+| `tools/perf_benchmark.py` | Primary owner |
+| `assets/` | **Consult only** — Agent 09 (sprites), Agent 14 (audio) own assets; you own the validator that checks them |
+
+You do **not** own `game/`, `ai/`, `config.py`, or `game/ui/`. If you find a bug there, document it and hand it to the owning agent.
+
+---
+
+## Step 1: Orient on arrival
+
+Every new session, in order:
+
+1. Read this file.
+2. Check `.studio_gateway/state.json` — if a sprint shows `"current_round": <not null>` and `"status": "active"`, that sprint is in-flight and takes priority.
+3. Read the PM hub for your assignment:
+   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+   → latest sprint → latest round → `pm_agent_prompts["12"]` or `pm_next_actions_by_agent["12"]`
+4. Skim your own log for what you did last:
+   `.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json`
+   → latest sprint → latest round entry.
+
+---
+
+## Step 2: Know the tooling you own
+
+### Core release gates (must pass before anything ships)
+
+```bash
+# Gate 1 — always required for code changes
+python tools/qa_smoke.py --quick
+# Exit 0 = PASS. Runs: determinism_guard + headless sim profiles.
+
+# Gate 2 — required if assets/ was touched
+python tools/validate_assets.py --strict --check-attribution
+# Exit 0 = PASS. Checks: sprite folders, frame files, audio files, attribution.
+
+# Gate 2b — report-only (non-blocking, useful mid-sprint)
+python tools/validate_assets.py --report
+```
+
+### Headless sim scenarios (for repro + QA iteration)
+
+```bash
+# Standard bounty scenario
+python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --no-enemies --scenario intent_bounty --qa
+
+# Hero stuck-recovery repro (WK2 contract; forced tile-cage stall)
+python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa
+
+# Inside-combat gating repro (inside_attack_blocks counter)
+python tools/observe_sync.py --seconds 8 --seed 3 --heroes 6 --scenario inside_combat_repro --qa
+```
+
+The `--qa` flag emits a `[qa] PASS/FAIL` line and a `[scenario] counters:` line. Exit code 0 = PASS.
+
+### Visual snapshot system
+
+```bash
+# Capture scenario snapshots (schema_version 1.1 — machine-independent relpaths)
+python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/<run>/base_overview_seed3 --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/<run>/building_catalog_seed3 --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/<run>/enemy_catalog_seed3 --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/<run>/ui_panels_seed3 --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario worker_catalog --seed 3 --out docs/screenshots/<run>/worker_catalog_seed3 --size 1920x1080 --ticks 0
+
+# Build compare gallery
+python tools/build_gallery.py --shots docs/screenshots/<run> --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html
+```
+
+Manifests must stay machine-independent: no absolute paths, use `relpath` + `run_dir` (schema v1.1).
+
+### Placeholder generator
+
+```bash
+# Re-generate all CC0 placeholder PNGs (heroes, enemies, buildings, workers)
+python tools/generate_cc0_placeholders.py
+```
+
+Regenerating is deterministic and safe to re-run. Run this immediately after updating `tools/assets_manifest.json` — validator will fail until placeholder files exist.
+
+### PM synthesis helper
+
+```bash
+# Print per-agent blockers/risks/dependencies from all agent logs
+python tools/agent_log_synthesis.py
+
+# Filter to a specific sprint/round
+python tools/agent_log_synthesis.py --sprint wk7-ui-polish --round wk7_r1
+
+# Emit JSON for tooling
+python tools/agent_log_synthesis.py --json
+```
+
+---
+
+## Step 3: Know the manifest contract
+
+`tools/assets_manifest.json` is the canonical allowlist for the validator and snapshot scenarios. It defines:
+
+- `heroes.classes` + `heroes.states`
+- `enemies.types` + `enemies.states`
+- `buildings.types` + `buildings.states`
+- `workers.types` + `workers.states` (flat list; permissive — not all states required per type)
+- `audio.sfx` (flat list of required SFX keys)
+- `audio.ambient` (flat list of required ambient keys)
+
+**Rule**: If a new entity type is added anywhere in the game, update the manifest **atomically** with the placeholder PNG generation — otherwise `validate_assets --strict` will immediately fail.
+
+---
+
+## Step 4: Know the attribution contract
+
+Every asset (sprite or audio) that comes from an external source needs:
+
+1. An entry in `assets/ATTRIBUTION.md` listing: pack name, author, license, source URL, retrieved date, modifications, used for, file locations.
+2. `assets/audio/third_party/<pack>/LICENSE*.txt` (verbatim, required for strict audio check).
+3. `assets/audio/third_party/<pack>/README.txt` (required for strict audio check).
+4. `assets/third_party/<pack>/LICENSE*.txt` + `README.txt` for sprite packs.
+
+The validator checks these automatically in `--strict --check-attribution` mode.
+
+**No new license families** — only CC0 / permissive packs compatible with Steam commercial release.
+
+---
+
+## Step 5: Sprint history summary
+
+| Sprint | What Agent 12 delivered |
+|---|---|
+| WK1 | `observe_sync --scenario intent_bounty`; extended `qa_smoke --quick` with bounty + determinism guard profiles |
+| WK2 | `--scenario hero_stuck_repro` and `--scenario inside_combat_repro` in observe_sync; locked counter output format for Agent 11 assertions |
+| WK3 | `tools/validate_assets.py` + `tools/assets_manifest.json`; Build A report-only / Build B strict policy; Visual Snapshot System (capture_screenshots, screenshot_scenarios, build_gallery) |
+| WK4 | Extended manifest + placeholder generator for `skeleton_archer`; generated placeholder PNGs atomically |
+| WK5 | Extended manifest + validator for `workers` category; added `scenario_worker_catalog` + `scenario_ranged_projectiles` in screenshot_scenarios; ranger bow cue in placeholder generator |
+| WK6 | Extended validator for audio (flat-file SFX + ambient checks); manifest includes `audio.sfx` + `audio.ambient` keys |
+| WK7 | Verified attribution completeness for `kingdomsim_ui_cc0` UI pack; confirmed validator gates pass; added `v1.3_after` capture scenario in screenshot_scenarios |
+| POST-WK7-001 | Verified 4 "missing" SFX keys (hero_hired, purchase, ui_confirm, ui_error) were already present on disk; confirmed gates PASS, no changes needed |
+| infra | Added `tools/agent_log_synthesis.py` — reads all agent logs, prints per-agent blockers/risks/dependencies + aggregate counts for PM triage |
+
+---
+
+## Step 6: How to complete an assignment (Agent 12 pattern)
+
+**Do the work immediately. Do not wait for approval. Execute → gate → log → report.**
+
+1. Read the assignment from PM hub.
+2. Read the relevant files before touching anything.
+3. Make the minimal change in your domain (`tools/` only unless coordinated).
+4. Run the gate immediately:
+   ```bash
+   python tools/qa_smoke.py --quick
+   ```
+   Fix until exit 0.
+5. If assets were touched:
+   ```bash
+   python tools/validate_assets.py --strict --check-attribution
+   ```
+6. Update your agent log (see conventions below).
+7. Report: what changed, what gates passed, what (if anything) needs manual verification.
+
+---
+
+## Step 7: How to update your agent log
+
+Your log: `.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json`
+
+- Append new rounds — never edit old ones.
+- Use `StrReplace` to append entries. **Do not use `ApplyPatch` on JSON files — it frequently fails on large files.** Use `StrReplace` with precise surrounding context instead.
+- Minimum required fields per round:
+  - `what_i_changed` — files changed, summary of approach
+  - `how_to_test` — exact commands
+  - `evidence` — `qa_smoke` and `validate_assets` results (command + exit_code + status)
+  - `blockers` — any dependencies on other agents
+- Keep it concise — bullets, not essays.
+
+---
+
+## Step 8: When to extend the tooling (and when not to)
+
+**Extend the tooling when:**
+- A new entity type is added — update manifest + placeholder generator atomically.
+- A new asset category is added (e.g., audio, UI icons) — extend validator.
+- A new deterministic repro scenario is needed for QA — add to observe_sync.
+- A new visual scenario is needed — add to screenshot_scenarios.
+- A sprint deliverable specifically asks for a new tool.
+
+**Do NOT extend the tooling when:**
+- The task is purely gameplay — file a contract question and wait for Agent 03/05.
+- Another agent's PR added files but didn't update the manifest — notify them and wait; do not silently fix.
+- The validator is failing for pre-existing reasons unrelated to your changes — note it, don't suppress.
+
+---
+
+## Step 9: Common mistakes to avoid
+
+| Mistake | Correct behaviour |
+|---|---|
+| Using `ApplyPatch` on large JSON logs | Use `StrReplace` with 3–5 lines of precise surrounding context |
+| Updating manifest without generating placeholders | Always atomic: manifest update + `python tools/generate_cc0_placeholders.py` + validate |
+| Running screenshots with absolute paths in manifest | Use `--out` paths that produce relpath-only manifests (schema v1.1) |
+| Reporting "done" before running `qa_smoke --quick` | Always include exit code in log evidence |
+| Touching `game/`, `ai/`, or `game/ui/` unilaterally | Those belong to other agents; coordinate or hand off |
+| Adding new third-party packs with non-CC0 licenses | CC0 or permissive only — no new license families |
+| Overwriting `docs/screenshots/<locked_baseline>/` | Keep locked baselines intact; only write to `<sprint>_after/` or rolling dirs |
+
+---
+
+## Step 10: The Studio Gateway (newer infrastructure)
+
+A machine-readable coordination layer lives at `.studio_gateway/`:
+
+- `config.json` — port, token, gate profile
+- `state.json` — active sprints, rounds, gate results (check `"status"` and `"current_round"`)
+- `events.jsonl` — append-only event log
+
+If `.studio_gateway/state.json` shows a sprint with `"status": "active"` and a non-null `current_round`, that sprint is in-flight and takes priority over older plan files. Gate results are tracked automatically here.
+
+---
+
+## Quick reference — key commands
+
+```bash
+# Mandatory QA gate (all code changes)
+python tools/qa_smoke.py --quick
+
+# Asset + attribution gate (after touching assets/)
+python tools/validate_assets.py --strict --check-attribution --report
+
+# Report-only (non-blocking, mid-sprint visibility)
+python tools/validate_assets.py --report
+
+# Regenerate all CC0 placeholder PNGs (after manifest update)
+python tools/generate_cc0_placeholders.py
+
+# Headless bounty repro
+python tools/observe_sync.py --seconds 12 --seed 3 --heroes 10 --no-enemies --scenario intent_bounty --qa
+
+# Headless stuck-hero repro
+python tools/observe_sync.py --seconds 20 --seed 3 --heroes 12 --no-enemies --scenario hero_stuck_repro --qa
+
+# Capture full scenario set (rolling after-shots)
+python tools/capture_screenshots.py --scenario base_overview  --seed 3 --out docs/screenshots/<run>/base_overview_seed3  --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/<run>/building_catalog_seed3 --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario enemy_catalog   --seed 3 --out docs/screenshots/<run>/enemy_catalog_seed3   --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario ui_panels       --seed 3 --out docs/screenshots/<run>/ui_panels_seed3       --size 1920x1080 --ticks 0
+python tools/capture_screenshots.py --scenario worker_catalog  --seed 3 --out docs/screenshots/<run>/worker_catalog_seed3  --size 1920x1080 --ticks 0
+
+# Rebuild compare gallery
+python tools/build_gallery.py --shots docs/screenshots/<run> --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html
+
+# PM synthesis (triage across all agent logs)
+python tools/agent_log_synthesis.py
+```
+
+---
+
+## Quick reference — key files
+
+| File | Purpose |
+|---|---|
+| `tools/qa_smoke.py` | Headless smoke gate runner |
+| `tools/observe_sync.py` | Headless sim runner + scenario presets |
+| `tools/determinism_guard.py` | Static scan for non-determinism violations |
+| `tools/validate_assets.py` | Asset presence + naming + attribution checker |
+| `tools/assets_manifest.json` | Canonical entity/state/audio allowlist |
+| `tools/generate_cc0_placeholders.py` | Procedural CC0 placeholder PNG generator |
+| `tools/capture_screenshots.py` | Deterministic headless screenshot runner |
+| `tools/screenshot_scenarios.py` | Scenario catalog for capture runs |
+| `tools/build_gallery.py` | Before/after HTML compare gallery builder |
+| `tools/agent_log_synthesis.py` | PM synthesis helper — reads all 14 agent logs |
+| `assets/ATTRIBUTION.md` | License attribution for every external asset |
+| `.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json` | Your own history — read before starting |
+| `.studio_gateway/state.json` | Sprint/round/gate coordination (check on arrival) |

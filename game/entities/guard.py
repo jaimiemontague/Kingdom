@@ -3,10 +3,8 @@ Guard unit spawned by guardhouses/palace for basic defense.
 """
 
 import math
-import pygame
 from enum import Enum, auto
-from config import TILE_SIZE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
-from game.graphics.font_cache import get_font, render_text_cached
+from config import TILE_SIZE
 
 
 class GuardState(Enum):
@@ -54,6 +52,11 @@ class Guard:
     @property
     def health_percent(self) -> float:
         return self.hp / self.max_hp if self.max_hp else 0.0
+
+    @property
+    def render_state(self) -> "Guard":
+        """Render accessor used by render-side systems."""
+        return self
 
     def distance_to(self, x: float, y: float) -> float:
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
@@ -149,31 +152,5 @@ class Guard:
                 follow_path(self, dt)
             else:
                 self.move_towards(self.target_position[0], self.target_position[1], dt)
-
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        if not self.is_alive:
-            return
-
-        cam_x, cam_y = camera_offset
-        sx = self.x - cam_x
-        sy = self.y - cam_y
-
-        pygame.draw.circle(surface, self.color, (int(sx), int(sy)), self.size // 2)
-        pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), self.size // 2, 1)
-
-        # Symbol
-        _ = get_font(14)
-        symbol_text = render_text_cached(14, "G", COLOR_WHITE)
-        symbol_rect = symbol_text.get_rect(center=(int(sx), int(sy)))
-        surface.blit(symbol_text, symbol_rect)
-
-        # Health bar
-        bar_w = self.size + 8
-        bar_h = 3
-        bx = sx - bar_w // 2
-        by = sy - self.size // 2 - 7
-        pygame.draw.rect(surface, (60, 60, 60), (bx, by, bar_w, bar_h))
-        hc = COLOR_GREEN if self.health_percent > 0.5 else COLOR_RED
-        pygame.draw.rect(surface, hc, (bx, by, bar_w * self.health_percent, bar_h))
 
 

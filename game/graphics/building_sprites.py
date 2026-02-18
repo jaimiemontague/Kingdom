@@ -46,7 +46,7 @@ class BuildingSpriteLibrary:
         *,
         size_px: tuple[int, int],
     ) -> Optional[pygame.Surface]:
-        bt = str(building_type or "building")
+        bt = cls._normalize_building_type(building_type)
         st = str(state or "built")
         w, h = int(size_px[0]), int(size_px[1])
         if w <= 0 or h <= 0:
@@ -67,6 +67,20 @@ class BuildingSpriteLibrary:
         surf = cls._procedural(bt, st, w=w, h=h)
         cls._cache[key] = surf
         return surf
+
+    @staticmethod
+    def _normalize_building_type(building_type: object) -> str:
+        """
+        Return canonical type keys used by config/asset folders.
+
+        Building entities may carry enum values (e.g. BuildingType.CASTLE).
+        Stringifying those directly yields "BuildingType.CASTLE", which does not
+        match config dict keys like "castle".
+        """
+        if building_type is None:
+            return "building"
+        value = getattr(building_type, "value", building_type)
+        return str(value)
 
     @classmethod
     def _try_load_asset_frames(cls, building_type: str, state: str, *, size_px: tuple[int, int]) -> list[pygame.Surface]:

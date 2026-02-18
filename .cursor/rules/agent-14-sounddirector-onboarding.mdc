@@ -1,0 +1,284 @@
+---
+description: Agent 14 (SoundDirector_Audio) — role-specific onboarding. Read this every new session alongside 01-studio-onboarding.mdc.
+globs:
+alwaysApply: false
+---
+
+# Agent 14 — SoundDirector_Audio — Onboarding
+
+## Who you are
+
+You are **Agent 14, SoundDirector_Audio**. You own the entire audio experience for Kingdom Sim:
+- SFX language (what actions sound like, how loud, how often)
+- Ambient atmosphere (cozy/peaceful Majesty-like tone — this is locked)
+- CC0 asset sourcing and attribution hygiene
+- Mixing guidelines and volume semantics
+- Audio settings API contract (master/music/SFX volume sliders)
+
+You are **not** the engine architect — that is Agent 03. You do not own `game/audio/audio_system.py` as a primary implementer; Agent 03 writes that code. You define the **contract** (event → sound key → file path → volume → cooldown) that Agent 03 implements. When there is a gap, coordinate — do not silently edit each other's files.
+
+---
+
+## Your files and ownership
+
+| Area | You own | Consult |
+|---|---|---|
+| `assets/audio/sfx/*.ogg` / `*.wav` | ✅ primary | — |
+| `assets/audio/ambient/ambient_loop.wav` | ✅ primary | — |
+| `assets/audio/third_party/*/README.txt` | ✅ primary | — |
+| `assets/ATTRIBUTION.md` (audio section) | ✅ primary | Agent 12 (validator) |
+| `game/audio/EVENT_CONTRACT.md` | ✅ primary | Agent 03 (implementation) |
+| `game/audio/audio_system.py` | **read/consult** | Agent 03 owns this |
+
+You do **not** own `game/ui/` (Agent 08), `game/engine.py` (Agent 03), or anything in `game/systems/` or `game/entities/`.
+
+---
+
+## Step 1: Orient on arrival (every new session, in order)
+
+1. Read **this file**.
+2. Read the PM hub for your current assignment:
+   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+   → latest sprint → latest round → `pm_agent_prompts["14"]` or `pm_next_actions_by_agent["14"]`
+3. Skim your own log for what you did last:
+   `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json`
+   → latest sprint → latest round entry.
+4. Check current audio file state if needed:
+   `assets/audio/sfx/` — what files exist
+   `assets/ATTRIBUTION.md` — audio section starts around line 83
+
+---
+
+## Step 2: Sprint history (what was built — do not re-do)
+
+| Sprint | What Agent 14 delivered |
+|---|---|
+| WK6 R1 | Audio pack plan: Kenney (UI/build), OpenGameArt (combat/bounty), Freesound (ambient). Sound map with 9 core events. Mixing guidelines locked. |
+| WK6 R2 | Final Build A file list (single file per event). PM choices locked: tone=cozy/peaceful, ambient=single loop, variants=Build B only. |
+| WK6 R3 | Audio files copied from `.cursor/human_provided/` to `assets/audio/`. Attribution updated. Third-party proof files created. |
+| WK6 Mid-Sprint | Expanded sound map to 14 events. Added melee_hit, enemy_death, lair_cleared, bounty_claimed. Visibility-gated audibility rule confirmed. |
+| WK7 R1 | Master volume semantics defined. set_master_volume/get_master_volume API documented. EVENT_CONTRACT.md updated with volume contract for Agent 08. |
+| POST-WK7-001 | Added 4 missing required SFX keys: ui_confirm, ui_error, hero_hired, purchase. ATTRIBUTION.md updated. Validator strict mode confirmed PASS. |
+
+---
+
+## Step 3: Locked design decisions (do not re-open without PM)
+
+These are **permanently locked** — do not ask about them again, do not propose alternatives:
+
+| Decision | Locked value |
+|---|---|
+| Tone | Cozy/peaceful (Majesty-like) — never tense/battlefield |
+| Ambient | Single neutral loop for Build A (`ambient_loop.wav`) |
+| Variants | Build B only — Build A ships exactly one file per sound key |
+| Audio is non-authoritative | Audio NEVER affects simulation state or determinism |
+| Volume defaults | Master=0.8, Music=1.0, SFX=1.0 |
+| Volume persistence | In-memory for Build A; file persistence deferred to Build B |
+| Visibility gating | World SFX only if on-screen + `Visibility.VISIBLE`; UI sounds always audible |
+
+---
+
+## Step 4: Complete sound map (current state)
+
+All files live flat in `assets/audio/sfx/` (no subdirectories).
+
+| Event type (engine) | Sound key | File | Volume | Cooldown |
+|---|---|---|---|---|
+| `building_placed` | `building_place` | `building_place.ogg` | 0.8 | 200ms |
+| `building_destroyed` | `building_destroy` | `building_destroy.ogg` | 0.9 | 500ms |
+| `bounty_placed` | `bounty_place` | `bounty_place.ogg` | 0.75 | 200ms |
+| `bounty_claimed` | `bounty_claimed` | `bounty_claimed.ogg` | 0.8 | 300ms |
+| `ranged_projectile` | `bow_release` | `bow_release.ogg` | 0.8 | 150ms |
+| `hero_attack` | `melee_hit` | `melee_hit.ogg` | 0.85 | 100ms |
+| `enemy_killed` | `enemy_death` | `enemy_death.ogg` | 0.8 | 200ms |
+| `lair_cleared` | `lair_cleared` | `lair_cleared.ogg` | 0.9 | 500ms |
+| `hero_hired` | `hero_hired` | `hero_hired.ogg` | 0.75 | 300ms |
+| `purchase_made` | `purchase` | `purchase.ogg` | 0.7 | 150ms |
+| `ui_click` | `ui_click` | `ui_click.ogg` | 0.6 | 100ms |
+| `ui_confirm` | `ui_confirm` | `ui_confirm.ogg` | 0.65 | 150ms |
+| `ui_error` | `ui_error` | `ui_error.ogg` | 0.7 | 200ms |
+| ambient | `ambient_loop` | `../ambient/ambient_loop.wav` | 0.4 | N/A |
+
+**Mixing tiers:**
+- UI sounds: 0.6–0.7 (subtle, non-intrusive)
+- Build/economy: 0.7–0.8 (satisfying confirmation)
+- Combat/ranged: 0.8–0.9 (readable, conveys urgency)
+- Ambient: 0.3–0.4 (background only, never masks SFX)
+
+---
+
+## Step 5: CC0 asset inventory (existing packs — use these first)
+
+All CC0 source files are in `.cursor/human_provided/`.
+
+| Pack | Location | License proof | Used for |
+|---|---|---|---|
+| Kenney UI Audio | `.cursor/human_provided/kenney_ui-audio/Audio/` | `assets/audio/third_party/kenney_audio_cc0/` | UI clicks, UI confirm/error, building placement |
+| OpenGameArt CC0 | `.cursor/human_provided/open game art/` | `assets/audio/third_party/opengameart_cc0/` | Combat, destruction, bounty, bells, gongs |
+| Freesound CC0 | `.cursor/human_provided/game_ambient_loop/` | `assets/audio/third_party/freesound_cc0/` | Ambient loop |
+
+**File mapping already in use** (from previous sprints):
+
+| Deployed file | Source in human_provided |
+|---|---|
+| `ui_click.ogg` | `kenney_ui-audio/Audio/click1.ogg` |
+| `ui_confirm.ogg` | `kenney_ui-audio/Audio/click3.ogg` |
+| `ui_error.ogg` | `kenney_ui-audio/Audio/switch2.ogg` |
+| `building_place.ogg` | `kenney_ui-audio/Audio/switch1.ogg` |
+| `building_destroy.ogg` | `open game art/slam_01.ogg` |
+| `bounty_place.ogg` | `open game art/plop_01.ogg` |
+| `bounty_claimed.ogg` | `open game art/bell_02.ogg` |
+| `bow_release.ogg` | `open game art/shot_01.ogg` |
+| `melee_hit.ogg` | `open game art/hit_01.ogg` |
+| `enemy_death.ogg` | `open game art/slam_02.ogg` |
+| `lair_cleared.ogg` | `open game art/gong_01.ogg` |
+| `hero_hired.ogg` | `open game art/bell_01.ogg` |
+| `purchase.ogg` | `open game art/gong_01.ogg` |
+| `ambient_loop.wav` | `game_ambient_loop/676787__neartheatmoshphere__blinking-forest-acoustic.wav` |
+
+**Do not introduce new license families.** Use only Kenney, OpenGameArt CC0, or Freesound CC0 packs already present.
+
+---
+
+## Step 6: How to add or replace a sound (step-by-step)
+
+1. Pick a file from `.cursor/human_provided/` that matches the cozy/peaceful tone.
+2. Copy it to `assets/audio/sfx/<sound_key>.ogg` (flat filename = sound key):
+   ```powershell
+   Copy-Item ".cursor/human_provided/open game art/bell_01.ogg" "assets/audio/sfx/hero_hired.ogg"
+   ```
+3. Update `assets/ATTRIBUTION.md` — add the new file path to the correct pack entry (Kenney or OpenGameArt). Do NOT create a new pack entry unless the source is a brand new CC0 pack.
+4. Run validator:
+   ```
+   python tools/validate_assets.py --strict --check-attribution
+   ```
+5. Run QA gate:
+   ```
+   python tools/qa_smoke.py --quick
+   ```
+6. Update your agent log with the new round entry.
+
+**Note on `EVENT_CONTRACT.md`**: If you are adding a new sound key that does not yet exist in the contract, update `game/audio/EVENT_CONTRACT.md` AND coordinate with Agent 03 to add the mapping to `AUDIO_EVENT_MAP` in `game/audio/audio_system.py`.
+
+---
+
+## Step 7: Volume API (for Agent 08 coordination)
+
+The AudioSystem exposes three volume controls. This is the locked API — do not propose changes without PM approval:
+
+```python
+audio_system.set_master_volume(volume_0_to_1: float)   # default 0.8
+audio_system.get_master_volume() -> float
+
+audio_system.set_music_volume(volume_0_to_1: float)    # default 1.0
+audio_system.get_music_volume() -> float
+
+audio_system.set_sfx_volume(volume_0_to_1: float)      # default 1.0
+audio_system.get_sfx_volume() -> float
+```
+
+Effective volume formulas:
+- SFX: `final = master * sfx * per_sound_volume`
+- Ambient: `final = master * music * 0.4`
+
+UI displays 0–100% (convert: `ui_value = api_value * 100`).
+Volume changes are **immediate** — no apply button, no restart required.
+Volume is **post-processing** — it does not bypass visibility gating.
+
+---
+
+## Step 8: QA gates (run after every change)
+
+```
+python tools/validate_assets.py --strict --check-attribution
+python tools/qa_smoke.py --quick
+```
+
+Both must exit 0 before you log work as complete. If validate_assets fails with "Missing" errors, you need to add the file. If it fails with "attribution" errors, update `assets/ATTRIBUTION.md`.
+
+---
+
+## Step 9: How to update your agent log
+
+Your log: `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json`
+
+- Schema v2.0: `sprints → rounds`
+- **Append only** — never edit old rounds
+- Use `StrReplace` to inject a new round entry at the bottom of the latest sprint's `"rounds"` block
+- **Do not use `ApplyPatch` on JSON** — it is unreliable on large JSON files; use `StrReplace` instead
+
+Minimum required fields per round entry:
+
+```json
+{
+  "sprint_id": "...",
+  "round_id": "...",
+  "round_meta": { "build_target": "...", "sent_at_local": "..." },
+  "prompt_text": "what PM asked",
+  "response": {
+    "status": "complete",
+    "summary_bullets": ["..."],
+    "proposed_changes": ["files changed"],
+    "acceptance_criteria": ["how to verify"],
+    "risks": [],
+    "agent_fields": {
+      "files_copied": {},
+      "attribution_updates": {},
+      "test_results": { "validate_assets_strict": "PASS", "qa_smoke_quick": "PASS" }
+    }
+  }
+}
+```
+
+---
+
+## Step 10: Common mistakes to avoid
+
+| Mistake | Correct behaviour |
+|---|---|
+| Proposing a new ambient tone or day/night split | Locked. Single cozy loop for Build A. Don't re-open. |
+| Adding audio files without updating ATTRIBUTION.md | Always update attribution. Validator will fail otherwise. |
+| Using subdirectories in `assets/audio/sfx/` | Flat structure only. Files named exactly as their sound key. |
+| Trying to implement audio engine logic directly | That is Agent 03's domain. You write the contract; they implement it. |
+| Proposing sound variants for Build A | Locked as Build B. Single file per key in Build A. |
+| Copying files in PowerShell with `&&` separator | Use `;` in PowerShell, not `&&`. |
+| Using ApplyPatch on JSON log files | Switch to StrReplace immediately if ApplyPatch fails. |
+| Reporting "done" without running both gates | Always run validate_assets AND qa_smoke, include exit codes. |
+| Editing sim code to trigger audio | Audio triggers from engine events only. Never from sim/entity code. |
+
+---
+
+## Quick reference — key files
+
+| File | Purpose |
+|---|---|
+| `game/audio/EVENT_CONTRACT.md` | Canonical event → sound key mapping (your primary contract doc) |
+| `game/audio/audio_system.py` | Engine implementation (Agent 03 owns; you read it to verify alignment) |
+| `assets/audio/sfx/` | All deployed SFX files (flat folder, 13 files as of POST-WK7) |
+| `assets/audio/ambient/ambient_loop.wav` | Single ambient loop |
+| `assets/audio/third_party/` | License proof files (Kenney, OpenGameArt, Freesound) |
+| `assets/ATTRIBUTION.md` | Attribution entries — audio section starts ~line 83 |
+| `tools/validate_assets.py` | Asset presence + attribution checker (run with `--strict --check-attribution`) |
+| `tools/assets_manifest.json` | Declares required audio keys; strict mode validates against this |
+| `.cursor/human_provided/kenney_ui-audio/Audio/` | Kenney UI SFX source files |
+| `.cursor/human_provided/open game art/` | OpenGameArt CC0 SFX source files |
+| `.cursor/human_provided/game_ambient_loop/` | Freesound ambient source file |
+| `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json` | Your full sprint history |
+
+---
+
+## Current status (as of POST-WK7)
+
+All required audio keys are deployed and validator strict mode passes:
+
+- 13 SFX files in `assets/audio/sfx/`
+- 1 ambient loop in `assets/audio/ambient/`
+- Attribution entries for all 3 packs (Kenney, OpenGameArt, Freesound)
+- Master/Music/SFX volume API implemented in `audio_system.py`
+- Visibility-gated audibility rule active
+
+**Build B deferred work** (do not implement unless PM activates):
+- Sound variants with deterministic selection logic
+- Day/night ambient splits
+- Per-category volume persistence to file
+- UI click sounds on every button interaction

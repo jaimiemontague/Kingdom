@@ -1,13 +1,13 @@
 """
 Enemy spawning system.
 """
-import pygame
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, GOBLIN_SPAWN_INTERVAL
 from game.entities.enemy import Goblin, SkeletonArcher
 from game.sim.determinism import get_rng
+from game.systems.protocol import GameSystem, SystemContext
 
 
-class EnemySpawner:
+class EnemySpawner(GameSystem):
     """Manages enemy wave spawning."""
     
     def __init__(self, world):
@@ -82,7 +82,13 @@ class EnemySpawner:
         # Fallback: center tile.
         return (cx * TILE_SIZE + TILE_SIZE // 2, cy * TILE_SIZE + TILE_SIZE // 2)
     
-    def update(self, dt: float) -> list:
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        """Protocol update hook that appends spawned enemies to the shared context."""
+        spawned = self.spawn(dt)
+        if spawned:
+            ctx.enemies.extend(spawned)
+
+    def spawn(self, dt: float) -> list:
         """
         Update spawner and return list of newly spawned enemies.
         """

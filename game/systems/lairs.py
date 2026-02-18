@@ -14,6 +14,7 @@ from config import (
 )
 from game.entities.lair import GoblinCamp, WolfDen, SkeletonCrypt, SpiderNest, BanditCamp, MonsterLair
 from game.sim.determinism import get_rng
+from game.systems.protocol import GameSystem, SystemContext
 
 
 @dataclass
@@ -31,7 +32,7 @@ DEFAULT_LAIR_SPECS: list[LairSpawnSpec] = [
 ]
 
 
-class LairSystem:
+class LairSystem(GameSystem):
     def __init__(self, world):
         self.world = world
         self.lairs: list[MonsterLair] = []
@@ -105,7 +106,13 @@ class LairSystem:
 
         return created
 
-    def update(self, dt: float, buildings: list) -> list:
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        """Protocol update hook that appends spawned lair enemies to shared context."""
+        spawned = self.spawn_enemies(dt, ctx.buildings)
+        if spawned:
+            ctx.enemies.extend(spawned)
+
+    def spawn_enemies(self, dt: float, buildings: list) -> list:
         """
         Update lairs; return a list of newly spawned enemies.
 

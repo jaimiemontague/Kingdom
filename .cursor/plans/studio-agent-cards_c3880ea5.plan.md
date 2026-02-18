@@ -2,6 +2,7 @@
 name: studio-agent-cards
 overview: A single copy/paste document containing a table of contents and a full set of department-lead AI agent cards for a solo-dev + AI-agent studio (Steam Early Access now, multiplayer later).
 todos: []
+isProject: false
 ---
 
 # AI Studio

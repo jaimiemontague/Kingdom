@@ -1,0 +1,54 @@
+---
+description: Asset folder conventions, naming rules, and licensing requirements.
+globs: "assets/**"
+alwaysApply: false
+---
+
+# Asset Conventions
+
+## Folder Structure
+
+```
+assets/
+├── sprites/
+│   ├── heroes/<class>/          # warrior/, ranger/, rogue/, wizard/
+│   │   └── <state>/frame_NNN.png   # idle/, walk/, attack/, hurt/, inside/
+│   ├── enemies/<type>/          # goblin/, wolf/, skeleton/, skeleton_archer/, etc.
+│   │   └── <state>/frame_NNN.png
+│   ├── buildings/<type>/        # castle/, warrior_guild/, marketplace/, etc.
+│   │   └── <state>.png            # built.png, construction.png, damaged.png
+│   └── workers/<type>/          # peasant/, tax_collector/
+│       └── <state>/frame_NNN.png
+├── audio/
+│   ├── sfx/                     # Short sound effects (.wav or .ogg)
+│   └── ambient/                 # Ambient loops (.ogg)
+├── ui/                          # UI skin assets (9-slice panels, icons, buttons)
+└── ATTRIBUTION.md               # Required: license + source for every asset
+```
+
+## Naming Rules
+
+- All lowercase, underscores for spaces: `warrior_guild`, `skeleton_archer`
+- Frame files: `frame_000.png`, `frame_001.png`, etc. (zero-padded to 3 digits)
+- State names match `tools/assets_manifest.json` exactly
+- Building types match `config.py` BUILDING_COSTS keys exactly
+
+## Sprite Size Rules
+
+- Heroes: 32x32 base (tile-multiple)
+- Enemies: 32x32 base
+- Buildings: tile-multiple sizes (e.g., castle = 96x96 = 3 tiles)
+- All sprites use nearest-neighbor scaling (no anti-aliasing)
+
+## Licensing (Non-negotiable)
+
+- All assets must be **CC0 or permissive** (compatible with commercial Steam release)
+- Every new asset file must have a corresponding entry in `assets/ATTRIBUTION.md`
+- Source packs go in `.cursor/human_provided/` with their original license files
+- Run `python tools/validate_assets.py --check-attribution` after adding assets
+
+## Fallback Safety
+
+- The game generates procedural placeholder sprites when asset files are missing
+- This means missing assets won't crash the game, but they look bad
+- Always test visually after adding assets: `python main.py`

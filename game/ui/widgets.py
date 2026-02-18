@@ -15,11 +15,13 @@ import pygame
 
 _IMAGE_CACHE: dict[tuple[str, tuple[int, int] | None], pygame.Surface | None] = {}
 _NINESLICE_CACHE: dict[tuple[str, int, int, int], pygame.Surface | None] = {}
+_TEXT_SURFACE_CACHE: dict[tuple[int, str, tuple[int, int, int]], pygame.Surface] = {}
 
 # Hard caps to prevent unbounded memory growth in long play sessions.
 # These caches are opportunistic performance optimizations; eviction is safe.
 _IMAGE_CACHE_MAX = 512
 _NINESLICE_CACHE_MAX = 512
+_TEXT_SURFACE_CACHE_MAX = 2048
 
 
 def _cache_put_bounded(cache: dict, key, value, *, max_items: int):
@@ -48,6 +50,237 @@ def load_image_cached(path: str, size: tuple[int, int] | None = None) -> pygame.
         # Cache miss to avoid repeated IO; still bounded.
         _cache_put_bounded(_IMAGE_CACHE, key, None, max_items=_IMAGE_CACHE_MAX)
         return None
+
+
+class TextLabel:
+    """Text rendering helper with optional shadow and global cache."""
+
+    @classmethod
+    def get_surface(
+        cls,
+        font: pygame.font.Font,
+        text: str,
+        color: tuple[int, int, int],
+    ) -> pygame.Surface:
+        normalized_text = str(text or "")
+        normalized_color = (int(color[0]), int(color[1]), int(color[2]))
+        key = (id(font), normalized_text, normalized_color)
+        surf = _TEXT_SURFACE_CACHE.get(key)
+        if surf is None:
+            surf = font.render(normalized_text, True, normalized_color)
+            _cache_put_bounded(
+                _TEXT_SURFACE_CACHE,
+                key,
+                surf,
+                max_items=_TEXT_SURFACE_CACHE_MAX,
+            )
+        return surf
+
+    @classmethod
+    def render(
+        cls,
+        surface: pygame.Surface,
+        font: pygame.font.Font,
+        text: str,
+        pos: tuple[int, int],
+        color: tuple[int, int, int],
+        *,
+        shadow_color: tuple[int, int, int] | None = None,
+        shadow_offset: tuple[int, int] = (1, 1),
+    ) -> pygame.Rect:
+        x = int(pos[0])
+        y = int(pos[1])
+        if shadow_color is not None:
+            shadow = cls.get_surface(font, text, shadow_color)
+            surface.blit(shadow, (x + int(shadow_offset[0]), y + int(shadow_offset[1])))
+        text_surf = cls.get_surface(font, text, color)
+        return surface.blit(text_surf, (x, y))
+
+
+class HPBar:
+    """Reusable health bar widget."""
+
+    @staticmethod
+    def render(
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        current_hp: int | float,
+        max_hp: int | float,
+        color_scheme: dict[str, tuple[int, int, int]] | None = None,
+    ) -> float:
+        if rect.width <= 0 or rect.height <= 0:
+            return 0.0
+
+        colors = color_scheme or {
+            "bg": (60, 60, 60),
+            "good": (80, 200, 100),
+            "warn": (220, 180, 90),
+            "bad": (220, 80, 80),
+            "border": (20, 20, 25),
+        }
+        bg_color = colors.get("bg", (60, 60, 60))
+        border_color = colors.get("border", (20, 20, 25))
+
+        current = max(0.0, float(current_hp or 0.0))
+        maximum = max(1.0, float(max_hp or 1.0))
+        ratio = max(0.0, min(1.0, current / maximum))
+
+        if ratio > 0.5:
+            fill_color = colors.get("good", (80, 200, 100))
+        elif ratio > 0.25:
+            fill_color = colors.get("warn", (220, 180, 90))
+        else:
+            fill_color = colors.get("bad", (220, 80, 80))
+
+        pygame.draw.rect(surface, bg_color, rect)
+        fill_w = int(rect.width * ratio)
+        if fill_w > 0:
+            fill_rect = pygame.Rect(rect.x, rect.y, fill_w, rect.height)
+            pygame.draw.rect(surface, fill_color, fill_rect)
+        pygame.draw.rect(surface, border_color, rect, 1)
+        return ratio
+
+
+@dataclass
+class Button:
+    """Reusable button widget with hover/pressed/disabled states."""
+
+    rect: pygame.Rect
+    text: str
+    font: pygame.font.Font
+    tooltip: str = ""
+    hotkey: str = ""
+    icon: pygame.Surface | None = None
+    enabled: bool = True
+
+    def hit_test(self, pos: tuple[int, int]) -> bool:
+        return self.rect.collidepoint(pos)
+
+    def _draw_fallback_frame(
+        self,
+        surface: pygame.Surface,
+        bg_color: tuple[int, int, int],
+        border_outer: tuple[int, int, int],
+        border_inner: tuple[int, int, int],
+        border_highlight: tuple[int, int, int],
+    ) -> None:
+        pygame.draw.rect(surface, bg_color, self.rect)
+        pygame.draw.rect(surface, border_outer, self.rect, 2)
+        inner = self.rect.inflate(-4, -4)
+        if inner.width > 0 and inner.height > 0:
+            pygame.draw.rect(surface, border_inner, inner, 1)
+            pygame.draw.line(
+                surface,
+                border_highlight,
+                (inner.left + 1, inner.top + 1),
+                (inner.right - 2, inner.top + 1),
+                1,
+            )
+            pygame.draw.line(
+                surface,
+                border_highlight,
+                (inner.left + 1, inner.top + 1),
+                (inner.left + 1, inner.bottom - 2),
+                1,
+            )
+
+    def render(
+        self,
+        surface: pygame.Surface,
+        mouse_pos: tuple[int, int] | None = None,
+        *,
+        pressed: bool = False,
+        enabled: bool | None = None,
+        texture_normal: str | None = None,
+        texture_hover: str | None = None,
+        texture_pressed: str | None = None,
+        slice_border: int = 6,
+        bg_normal: tuple[int, int, int] = (50, 50, 60),
+        bg_hover: tuple[int, int, int] = (70, 80, 100),
+        bg_pressed: tuple[int, int, int] = (60, 70, 90),
+        bg_disabled: tuple[int, int, int] = (80, 80, 80),
+        border_outer: tuple[int, int, int] = (20, 20, 25),
+        border_inner: tuple[int, int, int] = (80, 80, 100),
+        border_highlight: tuple[int, int, int] = (107, 107, 132),
+        text_color: tuple[int, int, int] = (240, 240, 240),
+        text_disabled_color: tuple[int, int, int] = (150, 150, 150),
+        text_shadow_color: tuple[int, int, int] | None = None,
+        text_align: str = "center",
+        content_left_pad: int = 12,
+        icon_slot: int = 16,
+        icon_gap: int = 6,
+        show_hotkey_chip: bool = False,
+        hotkey_font: pygame.font.Font | None = None,
+        hotkey_text_color: tuple[int, int, int] = (190, 190, 190),
+        hotkey_bg: tuple[int, int, int] = (45, 45, 60),
+        hotkey_border: tuple[int, int, int] = (80, 80, 100),
+    ) -> bool:
+        effective_enabled = self.enabled if enabled is None else bool(enabled)
+        hovered = bool(mouse_pos is not None and self.rect.collidepoint(mouse_pos))
+        draw_pressed = bool(pressed and hovered and effective_enabled)
+
+        if not effective_enabled:
+            bg_color = bg_disabled
+            texture = texture_normal
+        elif draw_pressed:
+            bg_color = bg_pressed
+            texture = texture_pressed or texture_hover or texture_normal
+        elif hovered:
+            bg_color = bg_hover
+            texture = texture_hover or texture_normal
+        else:
+            bg_color = bg_normal
+            texture = texture_normal
+
+        if texture and not NineSlice.render(surface, self.rect, texture, border=int(slice_border)):
+            self._draw_fallback_frame(surface, bg_color, border_outer, border_inner, border_highlight)
+        elif not texture:
+            self._draw_fallback_frame(surface, bg_color, border_outer, border_inner, border_highlight)
+
+        draw_color = text_color if effective_enabled else text_disabled_color
+        text_surf = TextLabel.get_surface(self.font, self.text, draw_color)
+
+        if text_align == "left":
+            text_x = int(self.rect.x + content_left_pad)
+            if self.icon is not None:
+                icon_x = text_x
+                icon_y = int(self.rect.y + (self.rect.height - self.icon.get_height()) // 2)
+                surface.blit(self.icon, (icon_x, icon_y))
+                text_x += int(icon_slot + icon_gap)
+            text_y = int(self.rect.y + (self.rect.height - text_surf.get_height()) // 2)
+        else:
+            text_x = int(self.rect.centerx - text_surf.get_width() // 2)
+            text_y = int(self.rect.centery - text_surf.get_height() // 2)
+            if self.icon is not None:
+                icon_total_w = self.icon.get_width() + icon_gap
+                text_x += icon_total_w // 2
+                icon_x = text_x - icon_total_w
+                icon_y = int(self.rect.y + (self.rect.height - self.icon.get_height()) // 2)
+                surface.blit(self.icon, (icon_x, icon_y))
+
+        if text_shadow_color is not None:
+            shadow_surf = TextLabel.get_surface(self.font, self.text, text_shadow_color)
+            surface.blit(shadow_surf, (text_x + 1, text_y + 1))
+        surface.blit(text_surf, (text_x, text_y))
+
+        if show_hotkey_chip and self.hotkey:
+            hk_font = hotkey_font or self.font
+            hk_surf = TextLabel.get_surface(hk_font, self.hotkey, hotkey_text_color)
+            chip_pad_x = 6
+            chip_pad_y = 2
+            chip_w = hk_surf.get_width() + chip_pad_x * 2
+            chip_h = hk_surf.get_height() + chip_pad_y * 2
+            chip_rect = pygame.Rect(
+                int(self.rect.right - chip_w - 10),
+                int(self.rect.bottom - chip_h - 10),
+                int(chip_w),
+                int(chip_h),
+            )
+            pygame.draw.rect(surface, hotkey_bg, chip_rect)
+            pygame.draw.rect(surface, hotkey_border, chip_rect, 1)
+            surface.blit(hk_surf, (chip_rect.x + chip_pad_x, chip_rect.y + chip_pad_y))
+
+        return hovered
 
 
 class NineSlice:

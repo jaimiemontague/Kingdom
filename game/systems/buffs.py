@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from game.sim.timebase import now_ms as sim_now_ms
+from game.systems.protocol import GameSystem, SystemContext
 
 
 @dataclass
@@ -22,14 +23,17 @@ class Buff:
         return now_ms >= int(self.expires_at_ms)
 
 
-class BuffSystem:
+class BuffSystem(GameSystem):
     """Applies/refreshes aura-style buffs and prunes expired buffs."""
 
     # Keep aura buffs short-lived so they naturally expire shortly after leaving range,
     # while still being refreshed each tick when inside the aura.
     AURA_REFRESH_SECONDS = 1.25
 
-    def update(self, heroes: list, buildings: list):
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        _ = dt
+        heroes = ctx.heroes
+        buildings = ctx.buildings
         now_ms = sim_now_ms()
 
         # Prune expired buffs first to keep hero stats stable and avoid drift/stacking.

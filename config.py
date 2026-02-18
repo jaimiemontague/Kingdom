@@ -1,43 +1,169 @@
 """
 Configuration settings for the Kingdom Sim game.
 """
+from dataclasses import dataclass
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
+@dataclass(frozen=True)
+class WindowConfig:
+    width: int = 1920
+    height: int = 1080
+    fps: int = 60
+    prototype_version: str = "1.3.1"
+    game_title: str = "Kingdom Sim (Prototype v1.3.1) — The Refactor Update"
+    default_borderless: bool = True
+
+
+@dataclass(frozen=True)
+class SimConfig:
+    deterministic_sim: bool
+    tick_hz: int
+    seed: int
+    early_pacing_nudge_mode: str
+
+
+@dataclass(frozen=True)
+class MapConfig:
+    tile_size: int = 32
+    width: int = 150
+    height: int = 150
+
+
+@dataclass(frozen=True)
+class CameraConfig:
+    speed_px_per_sec: int = 900
+    edge_margin_px: int = 40
+    zoom_min: float = 0.5
+    zoom_max: float = 2.5
+    zoom_step: float = 1.15
+
+
+@dataclass(frozen=True)
+class HeroConfig:
+    hire_cost: int = 50
+    base_hp: int = 100
+    base_attack: int = 10
+    base_defense: int = 5
+    speed: int = 2
+
+
+@dataclass(frozen=True)
+class EnemyConfig:
+    goblin_hp: int = 30
+    goblin_attack: int = 5
+    goblin_speed: float = 1.5
+    goblin_spawn_interval: int = 5000
+    max_alive_enemies: int = 20
+    wolf_hp: int = 22
+    wolf_attack: int = 4
+    wolf_speed: float = 2.3
+    skeleton_hp: int = 55
+    skeleton_attack: int = 7
+    skeleton_speed: float = 1.1
+    skeleton_archer_hp: int = 40
+    skeleton_archer_attack: int = 4
+    skeleton_archer_speed: float = 1.35
+    skeleton_archer_attack_range_tiles: float = 6.0
+    skeleton_archer_min_range_tiles: float = 2.0
+    skeleton_archer_attack_cooldown_ms: int = 1400
+
+
+@dataclass(frozen=True)
+class LairConfig:
+    initial_count: int = 2
+    min_distance_from_castle_tiles: int = 18
+    stash_growth_per_spawn: int = 8
+    rogue_lair_gold_threshold: int = 100
+    bounty_cost: int = 90
+
+
+@dataclass(frozen=True)
+class BountyConfig:
+    reward_low: int = 25
+    reward_med: int = 60
+    reward_high: int = 150
+    black_fog_distance_penalty: float = 1.2
+
+
+@dataclass(frozen=True)
+class EconomyConfig:
+    starting_gold: int = 1500
+    tax_rate: float = 0.20
+
+
+@dataclass(frozen=True)
+class LLMConfig:
+    provider: str
+    openai_api_key: str
+    anthropic_api_key: str
+    gemini_api_key: str
+    grok_api_key: str
+    decision_cooldown: int = 2000
+    timeout: float = 5.0
+    health_threshold_for_decision: float = 0.5
+
+
+@dataclass(frozen=True)
+class RangerConfig:
+    explore_black_fog_bias: float = 0.7
+    frontier_scan_radius_tiles: int = 10
+    frontier_commit_ms: int = 4000
+
+
+# Grouped config objects (frozen dataclasses)
+WINDOW = WindowConfig()
+SIM = SimConfig(
+    deterministic_sim=os.getenv("DETERMINISTIC_SIM", "0") == "1",
+    tick_hz=int(os.getenv("SIM_TICK_HZ", str(WINDOW.fps))),
+    seed=int(os.getenv("SIM_SEED", "1")),
+    early_pacing_nudge_mode=os.getenv("EARLY_PACING_NUDGE_MODE", "auto"),
+)
+MAP = MapConfig()
+CAMERA = CameraConfig()
+HERO = HeroConfig()
+ENEMY = EnemyConfig()
+LAIR = LairConfig()
+BOUNTY = BountyConfig()
+ECONOMY = EconomyConfig()
+LLM = LLMConfig(
+    provider=os.getenv("LLM_PROVIDER", "openai"),
+    openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+    anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+    gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+    grok_api_key=os.getenv("GROK_API_KEY", ""),
+)
+RANGER = RangerConfig()
+
+# Backward-compatible module-level aliases (consumers unchanged)
 # Window settings
-# WK3 decision: default launch is borderless fullscreen at 1920x1080 (fallback handled in engine).
-WINDOW_WIDTH = 1920
-WINDOW_HEIGHT = 1080
-FPS = 60
-PROTOTYPE_VERSION = "1.3.0"
-GAME_TITLE = f"Kingdom Sim (Prototype v{PROTOTYPE_VERSION}) — The Basics Are In Update"
+WINDOW_WIDTH = WINDOW.width
+WINDOW_HEIGHT = WINDOW.height
+FPS = WINDOW.fps
+PROTOTYPE_VERSION = WINDOW.prototype_version
+GAME_TITLE = WINDOW.game_title
+DEFAULT_BORDERLESS = WINDOW.default_borderless
 
-# Display behavior (Build A): borderless default, with safe fallback to display resolution if smaller.
-# Note: pygame flags are applied in `game/engine.py` where we can query display size.
-DEFAULT_BORDERLESS = True
+# Determinism / simulation settings
+DETERMINISTIC_SIM = SIM.deterministic_sim
+SIM_TICK_HZ = SIM.tick_hz
+SIM_SEED = SIM.seed
+EARLY_PACING_NUDGE_MODE = SIM.early_pacing_nudge_mode
 
-# Determinism / simulation settings (future multiplayer enablement)
-# - DETERMINISTIC_SIM=1: run simulation with fixed dt (tick-based) and seeded RNG.
-# - SIM_SEED: base seed for procedural world + spawns (do not use Python's hash()).
-DETERMINISTIC_SIM = os.getenv("DETERMINISTIC_SIM", "0") == "1"
-SIM_TICK_HZ = int(os.getenv("SIM_TICK_HZ", str(FPS)))
-SIM_SEED = int(os.getenv("SIM_SEED", "1"))
-
-# Tile settings
-TILE_SIZE = 32
-# Release tuning: smaller map for better performance / faster gameplay loop.
-# 25% smaller than 200x200 -> 150x150.
-MAP_WIDTH = 150  # tiles
-MAP_HEIGHT = 150  # tiles
+# Map settings
+TILE_SIZE = MAP.tile_size
+MAP_WIDTH = MAP.width
+MAP_HEIGHT = MAP.height
 
 # Camera / view settings
-CAMERA_SPEED_PX_PER_SEC = 900  # world pixels per second (WASD + edge scroll)
-CAMERA_EDGE_MARGIN_PX = 40
-ZOOM_MIN = 0.5
-ZOOM_MAX = 2.5
-ZOOM_STEP = 1.15
+CAMERA_SPEED_PX_PER_SEC = CAMERA.speed_px_per_sec
+CAMERA_EDGE_MARGIN_PX = CAMERA.edge_margin_px
+ZOOM_MIN = CAMERA.zoom_min
+ZOOM_MAX = CAMERA.zoom_max
+ZOOM_STEP = CAMERA.zoom_step
 
 # Colors
 COLOR_GRASS = (34, 139, 34)
@@ -184,80 +310,73 @@ BUILDING_PREREQUISITES = {
 }
 
 # Hero settings
-HERO_HIRE_COST = 50
-HERO_BASE_HP = 100
-HERO_BASE_ATTACK = 10
-HERO_BASE_DEFENSE = 5
-HERO_SPEED = 2
+HERO_HIRE_COST = HERO.hire_cost
+HERO_BASE_HP = HERO.base_hp
+HERO_BASE_ATTACK = HERO.base_attack
+HERO_BASE_DEFENSE = HERO.base_defense
+HERO_SPEED = HERO.speed
 
 # Enemy settings
-GOBLIN_HP = 30
-GOBLIN_ATTACK = 5
-GOBLIN_SPEED = 1.5
-GOBLIN_SPAWN_INTERVAL = 5000  # milliseconds
+GOBLIN_HP = ENEMY.goblin_hp
+GOBLIN_ATTACK = ENEMY.goblin_attack
+GOBLIN_SPEED = ENEMY.goblin_speed
+GOBLIN_SPAWN_INTERVAL = ENEMY.goblin_spawn_interval
 
 # Safety cap: reduce overall monster density for release stability.
 # (~2/3 reduction from 60 -> 20)
-MAX_ALIVE_ENEMIES = 20
+MAX_ALIVE_ENEMIES = ENEMY.max_alive_enemies
 
 # Additional enemy types (lairs)
-WOLF_HP = 22
-WOLF_ATTACK = 4
-WOLF_SPEED = 2.3
+WOLF_HP = ENEMY.wolf_hp
+WOLF_ATTACK = ENEMY.wolf_attack
+WOLF_SPEED = ENEMY.wolf_speed
 
-SKELETON_HP = 55
-SKELETON_ATTACK = 7
-SKELETON_SPEED = 1.1
+SKELETON_HP = ENEMY.skeleton_hp
+SKELETON_ATTACK = ENEMY.skeleton_attack
+SKELETON_SPEED = ENEMY.skeleton_speed
 
 # Skeleton Archer (ranged kiter)
-SKELETON_ARCHER_HP = 40
-SKELETON_ARCHER_ATTACK = 4
-SKELETON_ARCHER_SPEED = 1.35
-SKELETON_ARCHER_ATTACK_RANGE_TILES = 6.0
-SKELETON_ARCHER_MIN_RANGE_TILES = 2.0
-SKELETON_ARCHER_ATTACK_COOLDOWN_MS = 1400
+SKELETON_ARCHER_HP = ENEMY.skeleton_archer_hp
+SKELETON_ARCHER_ATTACK = ENEMY.skeleton_archer_attack
+SKELETON_ARCHER_SPEED = ENEMY.skeleton_archer_speed
+SKELETON_ARCHER_ATTACK_RANGE_TILES = ENEMY.skeleton_archer_attack_range_tiles
+SKELETON_ARCHER_MIN_RANGE_TILES = ENEMY.skeleton_archer_min_range_tiles
+SKELETON_ARCHER_ATTACK_COOLDOWN_MS = ENEMY.skeleton_archer_attack_cooldown_ms
 
 # Lair settings (release tuning)
 # (~2/3 reduction from 6 -> 2)
-LAIR_INITIAL_COUNT = 2
-LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = 18
-LAIR_STASH_GROWTH_PER_SPAWN = 8
-ROGUE_LAIR_GOLD_THRESHOLD = 100
-LAIR_BOUNTY_COST = 90
+LAIR_INITIAL_COUNT = LAIR.initial_count
+LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = LAIR.min_distance_from_castle_tiles
+LAIR_STASH_GROWTH_PER_SPAWN = LAIR.stash_growth_per_spawn
+ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
+LAIR_BOUNTY_COST = LAIR.bounty_cost
 
 # Bounty reward bands (player-paid; cost == reward). Used by Engine input + early pacing nudge.
-BOUNTY_REWARD_LOW = 25
-BOUNTY_REWARD_MED = 60
-BOUNTY_REWARD_HIGH = 150
-
-# Early pacing guardrail (FS-3 / Build B): deterministic nudge to surface bounties early.
-# Values:
-# - "auto": default behavior (tip at ~35s if no bounties; starter lair bounty at ~90s if none + affordable)
-# - "off": disable entirely
-# - "force": fire immediately (for QA verification), still respecting "don't trigger if any bounties exist"
-EARLY_PACING_NUDGE_MODE = os.getenv("EARLY_PACING_NUDGE_MODE", "auto")
+BOUNTY_REWARD_LOW = BOUNTY.reward_low
+BOUNTY_REWARD_MED = BOUNTY.reward_med
+BOUNTY_REWARD_HIGH = BOUNTY.reward_high
 
 # Economy settings
-STARTING_GOLD = 1500
-TAX_RATE = 0.20
+STARTING_GOLD = ECONOMY.starting_gold
+TAX_RATE = ECONOMY.tax_rate
 
 # LLM settings
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # openai, claude, gemini, grok
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GROK_API_KEY = os.getenv("GROK_API_KEY", "")
+LLM_PROVIDER = LLM.provider  # openai, claude, gemini, grok
+OPENAI_API_KEY = LLM.openai_api_key
+ANTHROPIC_API_KEY = LLM.anthropic_api_key
+GEMINI_API_KEY = LLM.gemini_api_key
+GROK_API_KEY = LLM.grok_api_key
 
 # LLM decision settings
-LLM_DECISION_COOLDOWN = 2000  # milliseconds between LLM calls per hero
-LLM_TIMEOUT = 5.0  # seconds
-HEALTH_THRESHOLD_FOR_DECISION = 0.5  # 50% health triggers retreat consideration
+LLM_DECISION_COOLDOWN = LLM.decision_cooldown
+LLM_TIMEOUT = LLM.timeout
+HEALTH_THRESHOLD_FOR_DECISION = LLM.health_threshold_for_decision
 
 # WK6: Ranger exploration bias toward black fog
-RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
-RANGER_FRONTIER_SCAN_RADIUS_TILES = 10  # Maximum radius (in tiles) to scan for black fog frontier tiles
-RANGER_FRONTIER_COMMIT_MS = 4000  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
+RANGER_EXPLORE_BLACK_FOG_BIAS = RANGER.explore_black_fog_bias  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
+RANGER_FRONTIER_SCAN_RADIUS_TILES = RANGER.frontier_scan_radius_tiles  # Maximum radius (in tiles) to scan for black fog frontier tiles
+RANGER_FRONTIER_COMMIT_MS = RANGER.frontier_commit_ms  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
 
 # WK6: Bounty targeting in black fog
-BOUNTY_BLACK_FOG_DISTANCE_PENALTY = 1.2  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
+BOUNTY_BLACK_FOG_DISTANCE_PENALTY = BOUNTY.black_fog_distance_penalty  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
 

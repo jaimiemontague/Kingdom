@@ -3079,6 +3079,430 @@
           }
         }
       }
+    },
+    "wk8-engine-entities-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+        "notes": "WK8: Engine + Entities structural refactor verification."
+      },
+      "rounds": {
+        "wk8_r2_verification": {
+          "round_id": "wk8_r2_verification",
+          "status": "done",
+          "what_i_changed": [
+            "Ran determinism guard, full QA smoke suite, and asset validation on the post-refactor workspace.",
+            "Executed non-interactive boot checks for no-LLM and mock-provider startup paths.",
+            "Verified qa_smoke executed all required headless profiles (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM).",
+            "Ran read-only cross-checks for determinism and tooling compatibility on newly split refactor files (engine helper modules + buildings package)."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/observe_sync.py --help",
+            "python tools/qa_smoke.py --help",
+            "python tools/capture_screenshots.py --help",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game=GameEngine(); game.ai_controller=BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game=GameEngine(); brain=LLMBrain(provider_name='mock'); game.ai_controller=BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\"",
+            "python -c \"from game.entities.building import Building; print('building_shim_import_ok')\""
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[determinism_guard] PASS: no violations found"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[qa_smoke] DONE: PASS",
+              "profiles": [
+                "base",
+                "intent_bounty",
+                "hero_stuck_repro",
+                "no-enemies",
+                "mock-LLM"
+              ],
+              "profile_exit_codes": {
+                "base": 0,
+                "intent_bounty": 0,
+                "hero_stuck_repro": 0,
+                "no-enemies": 0,
+                "mock-LLM": 0
+              }
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "boot_checks": {
+              "no_llm_init": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game=GameEngine(); game.ai_controller=BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_no_llm_ok"
+              },
+              "mock_provider_init": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game=GameEngine(); brain=LLMBrain(provider_name='mock'); game.ai_controller=BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_mock_provider_ok"
+              }
+            },
+            "manual_smoke_10min": {
+              "status": "NOT RUN",
+              "reason": "Requires interactive human play session (10 min each for --no-llm and --provider mock) on local display."
+            },
+            "cross_checks_agent04_12": {
+              "new_refactor_files_detected": {
+                "engine_helpers": [
+                  "game/input_handler.py",
+                  "game/display_manager.py",
+                  "game/building_factory.py",
+                  "game/cleanup_manager.py"
+                ],
+                "buildings_package": [
+                  "game/entities/buildings/types.py",
+                  "game/entities/buildings/hiring_mixin.py",
+                  "game/entities/buildings/base.py",
+                  "game/entities/buildings/guilds.py",
+                  "game/entities/buildings/temples.py",
+                  "game/entities/buildings/defensive.py",
+                  "game/entities/buildings/economic.py",
+                  "game/entities/buildings/special.py",
+                  "game/entities/buildings/castle.py",
+                  "game/entities/buildings/dwellings.py",
+                  "game/entities/buildings/__init__.py"
+                ]
+              },
+              "determinism_pattern_scan_new_files": {
+                "pattern": "time.time|pygame.time.get_ticks|random.random|random.choice|random.randint",
+                "result": "No matches found in new engine helper files or game/entities/buildings/*.py"
+              },
+              "tool_import_resolution": {
+                "observe_sync_help": "PASS (exit code 0)",
+                "qa_smoke_help": "PASS (exit code 0)",
+                "capture_screenshots_help": "PASS (exit code 0)"
+              },
+              "backward_compat_import_shim": {
+                "command": "python -c \"from game.entities.building import Building; print('building_shim_import_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "building_shim_import_ok"
+              },
+              "tools_reference_scan": {
+                "findings": [
+                  "tools/screenshot_scenarios.py imports from game.entities.building",
+                  "tools/capture_screenshots.py imports from game.engine"
+                ],
+                "assessment": "No breakage observed; backward-compat import paths resolve and tools run."
+              }
+            }
+          },
+          "blockers": [
+            {
+              "summary": "Manual 10-minute interactive smoke remains pending.",
+              "needs": [
+                "Human operator to run `python main.py --no-llm` for 10 minutes.",
+                "Human operator to run `python main.py --provider mock` for 10 minutes."
+              ],
+              "who": [
+                "human_operator"
+              ]
+            }
+          ],
+          "bugs_found": []
+        },
+        "wk8_r4_final_verification": {
+          "round_id": "wk8_r4_final_verification",
+          "status": "blocked",
+          "what_i_changed": [
+            "Ran final WK8 post-Track-3 verification gates on current workspace state (determinism, qa_smoke quick, validate_assets report).",
+            "Verified qa_smoke headless profile coverage for base, intent_bounty, hero_stuck_repro, no-enemies, and mock-LLM paths.",
+            "Performed read-only determinism sanity checks for new Track 3 architecture files (`game/events.py`, `game/types.py`, `game/systems/protocol.py`) and Track 1/2 refactor files.",
+            "Ran non-interactive startup checks for no-LLM and mock-provider modes.",
+            "Ran read-only tool import-resolution checks (`observe_sync`, `qa_smoke`, `capture_screenshots`) against new structure."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/observe_sync.py --help",
+            "python tools/qa_smoke.py --help",
+            "python tools/capture_screenshots.py --help",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game=GameEngine(); game.ai_controller=BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game=GameEngine(); brain=LLMBrain(provider_name='mock'); game.ai_controller=BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\""
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[determinism_guard] PASS: no violations found"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[qa_smoke] DONE: PASS",
+              "profiles": [
+                "base",
+                "intent_bounty",
+                "hero_stuck_repro",
+                "no-enemies",
+                "mock-LLM"
+              ],
+              "profile_exit_codes": {
+                "base": 0,
+                "intent_bounty": 0,
+                "hero_stuck_repro": 0,
+                "no-enemies": 0,
+                "mock-LLM": 0
+              }
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "determinism_track3_readonly_audit": {
+              "key_files_checked": [
+                "game/events.py",
+                "game/types.py",
+                "game/systems/protocol.py",
+                "game/entities/buildings/*.py",
+                "game/input_handler.py",
+                "game/display_manager.py",
+                "game/building_factory.py",
+                "game/cleanup_manager.py"
+              ],
+              "eventbus_dispatch_order": "Deterministic by design: subscribers stored in list and flushed in registration order; queue processed in append order.",
+              "system_context_boundary": "No render-state fields found in SystemContext (heroes, enemies, buildings, world, economy, event_bus only).",
+              "building_factory_registry": "Registry uses direct key lookup (`dict.get`) and does not iterate unordered structures for behavior decisions.",
+              "forbidden_pattern_scan": {
+                "pattern": "time.time|pygame.time.get_ticks|random.random|random.choice|random.randint",
+                "result": "No matches in the key WK8 new files listed above."
+              }
+            },
+            "tool_import_resolution_readonly": {
+              "observe_sync_help": {
+                "command": "python tools/observe_sync.py --help",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_help": {
+                "command": "python tools/qa_smoke.py --help",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "capture_screenshots_help": {
+                "command": "python tools/capture_screenshots.py --help",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "config_dataclasses_presence_check": {
+              "file": "config.py",
+              "required_classes_present": [
+                "WindowConfig",
+                "SimConfig",
+                "MapConfig",
+                "CameraConfig",
+                "HeroConfig",
+                "EnemyConfig",
+                "LairConfig",
+                "BountyConfig",
+                "EconomyConfig",
+                "LLMConfig",
+                "RangerConfig"
+              ],
+              "aliases_present": [
+                "WINDOW",
+                "SIM"
+              ],
+              "status": "PASS (detected in current workspace)"
+            },
+            "startup_checks_noninteractive": {
+              "no_llm_init": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game=GameEngine(); game.ai_controller=BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_no_llm_ok"
+              },
+              "mock_provider_init": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game=GameEngine(); brain=LLMBrain(provider_name='mock'); game.ai_controller=BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_mock_provider_ok"
+              }
+            },
+            "manual_smoke_10min": {
+              "status": "NOT RUN",
+              "reason": "Requires interactive human play session (10 min each for --no-llm and --provider mock)."
+            }
+          },
+          "blockers": [
+            {
+              "summary": "Manual final smoke remains pending (interactive-only in this environment).",
+              "needs": [
+                "Human operator to run `python main.py --no-llm` for 10 minutes and note regressions.",
+                "Human operator to run `python main.py --provider mock` for 10 minutes and note regressions."
+              ],
+              "who": [
+                "human_operator"
+              ]
+            }
+          ],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk9-sim-render-tests-ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+        "notes": "WK9 Track 2: pytest infrastructure + focused system unit tests."
+      },
+      "rounds": {
+        "wk9_r1_implementation": {
+          "round_id": "wk9_r1_implementation",
+          "status": "done",
+          "what_i_changed": [
+            "Added pytest dependency to requirements.txt.",
+            "Created tests/conftest.py with shared factory fixtures: make_hero, make_enemy, make_building, make_economy, make_world.",
+            "Added focused system test suites: tests/test_combat.py, tests/test_economy.py, tests/test_bounty.py, tests/test_buffs.py, tests/test_spawner.py (29 tests total).",
+            "Covered CombatSystem and BuffSystem via SystemContext + update(ctx, dt) protocol path.",
+            "Kept scope to Track 2 system tests; entity tests are intentionally deferred until Track 1 removes pygame from entities."
+          ],
+          "how_to_test": [
+            "python -m pytest tests -q",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest_unit_suite": {
+              "command": "python -m pytest tests -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "29 passed in 0.10s",
+              "tests_added": [
+                "tests/conftest.py",
+                "tests/test_combat.py",
+                "tests/test_economy.py",
+                "tests/test_bounty.py",
+                "tests/test_buffs.py",
+                "tests/test_spawner.py"
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[qa_smoke] DONE: PASS",
+              "profiles": [
+                "base",
+                "intent_bounty",
+                "hero_stuck_repro",
+                "no-enemies",
+                "mock-LLM"
+              ],
+              "profile_exit_codes": {
+                "base": 0,
+                "intent_bounty": 0,
+                "hero_stuck_repro": 0,
+                "no-enemies": 0,
+                "mock-LLM": 0
+              }
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            }
+          },
+          "bugs_found": [],
+          "followups": [
+            "Add entity unit tests (Hero/Enemy/Building) in WK9 Track 2 Step 3 after Track 1 fully removes pygame/render dependencies from entity classes."
+          ]
+        },
+        "wk9_r2_verification": {
+          "round_id": "wk9_r2_verification",
+          "status": "blocked",
+          "what_i_changed": [
+            "Added WK9 entity test suites now that entities are pygame-free: tests/test_hero.py, tests/test_enemy.py, tests/test_building.py.",
+            "Covered requested areas: Hero state/inventory/shopping/stuck snapshot, Enemy targeting/kiting/ranged projectile behavior, Building construction/damage/HiringBuilding mixin.",
+            "Re-ran full verification gates (pytest tests/, qa_smoke --quick, validate_assets --report).",
+            "Confirmed qa_smoke now includes pytest as part of the mandatory gate."
+          ],
+          "how_to_test": [
+            "python -m pytest tests -q",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest_tests_dir": {
+              "command": "python -m pytest tests -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "51 passed in 0.14s",
+              "new_entity_test_files": [
+                "tests/test_hero.py",
+                "tests/test_enemy.py",
+                "tests/test_building.py"
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[qa_smoke] DONE: PASS",
+              "includes_pytest_gate": true,
+              "profiles": [
+                "base",
+                "intent_bounty",
+                "hero_stuck_repro",
+                "no-enemies",
+                "mock-LLM"
+              ],
+              "profile_exit_codes": {
+                "base": 0,
+                "intent_bounty": 0,
+                "hero_stuck_repro": 0,
+                "no-enemies": 0,
+                "mock-LLM": 0
+              }
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "entity_boundary_check": {
+              "check": "rg 'import pygame' game/entities",
+              "result": "No matches found"
+            }
+          },
+          "blockers": [
+            {
+              "summary": "Manual 10-minute smoke runs are still pending (interactive-only).",
+              "needs": [
+                "Human operator to run `python main.py --no-llm` for 10 minutes.",
+                "Human operator to run `python main.py --provider mock` for 10 minutes."
+              ],
+              "who": [
+                "human_operator"
+              ]
+            }
+          ],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

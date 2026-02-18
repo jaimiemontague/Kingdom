@@ -1,7 +1,8 @@
 """
 Game entities package.
 """
-from .building import (
+from .buildings import (
+    BuildingType,
     Building, Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
     Blacksmith, Inn, TradingPost,
     TempleAgrela, TempleDauros, TempleFervus, TempleKrypta, TempleKrolm, TempleHelia, TempleLunord,

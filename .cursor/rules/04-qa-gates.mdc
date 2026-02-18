@@ -1,0 +1,48 @@
+---
+description: QA gates that must pass before any work is considered done.
+globs:
+alwaysApply: true
+---
+
+# QA Gates
+
+Every agent must run the relevant gates after making changes. Do not report work as "done" if gates fail.
+
+## Gate 1: QA Smoke (mandatory for all code changes)
+
+```
+python tools/qa_smoke.py --quick
+```
+
+Runs: determinism guard + headless sim profiles (bounty, stuck recovery, economy, mock LLM). Must exit 0.
+
+## Gate 2: Asset Validation (mandatory if you touched assets/)
+
+```
+python tools/validate_assets.py --report
+```
+
+Checks that all declared assets exist, filenames are correct, and attribution is present. Target: 0 errors.
+
+## Gate 3: Determinism Guard (runs automatically inside Gate 1)
+
+```
+python tools/determinism_guard.py
+```
+
+Scans for `time.time()`, `random.random()`, and other non-deterministic patterns in simulation code. Must PASS.
+
+## Gate 4: Manual Smoke (before releases only)
+
+```
+python main.py --no-llm          # Play for 5 minutes
+python main.py --provider mock   # Play for 5 minutes
+```
+
+Check: no crashes, heroes move, combat works, buildings construct, UI responsive.
+
+## What to do if a gate fails
+
+1. Fix the issue if it's in your domain
+2. If the failure is pre-existing (not caused by your changes), note it in your log and move on
+3. If the failure is in another agent's domain, file it as a bug in your log and notify PM

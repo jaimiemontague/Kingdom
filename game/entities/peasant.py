@@ -10,10 +10,8 @@ Peasants are attackable and can die.
 """
 
 import math
-import pygame
 from enum import Enum, auto
-from config import TILE_SIZE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
-from game.graphics.worker_sprites import WorkerSpriteLibrary
+from config import TILE_SIZE
 
 
 class PeasantState(Enum):
@@ -57,12 +55,7 @@ class Peasant:
         Peasant._spawn_counter += 1
         self._idle_offset = Peasant._idle_offsets[slot]
         self._idle_outside = False
-
-        # Animation / sprite rendering (pixel-art sprites; falls back procedurally if no assets exist)
-        self._anim = WorkerSpriteLibrary.create_player("peasant", size=32)
-        self._anim_base = "idle"
-        self._anim_lock_one_shot = None
-        self._last_hp = self.hp
+        self._render_anim_trigger: str | None = None
 
     @property
     def is_alive(self) -> bool:
@@ -72,6 +65,11 @@ class Peasant:
     def health_percent(self) -> float:
         return self.hp / self.max_hp if self.max_hp else 0.0
 
+    @property
+    def render_state(self) -> "Peasant":
+        """Render accessor used by render-side systems."""
+        return self
+
     def distance_to(self, x: float, y: float) -> float:
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
 
@@ -79,15 +77,9 @@ class Peasant:
         self.hp = max(0, self.hp - amount)
         if self.hp <= 0:
             self.state = PeasantState.DEAD
-            if hasattr(self, "_anim") and self._anim is not None:
-                self._anim_lock_one_shot = "dead"
-                self._anim.play("dead", restart=True)
+            self._queue_render_animation("dead")
             return True
-        # Trigger hurt animation if damaged
-        if hasattr(self, "_anim") and self._anim is not None and self.hp < self._last_hp:
-            self._anim_lock_one_shot = "hurt"
-            self._anim.play("hurt", restart=True)
-        self._last_hp = self.hp
+        self._queue_render_animation("hurt")
         return False
 
     def move_towards(self, target_x: float, target_y: float, dt: float) -> bool:
@@ -225,66 +217,7 @@ class Peasant:
 
         self.state = PeasantState.MOVING
 
-        # Update animation
-        self._update_animation(dt)
-
-    def _update_animation(self, dt: float):
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-
-        if self._anim_lock_one_shot:
-            if self._anim.current != self._anim_lock_one_shot:
-                self._anim.play(self._anim_lock_one_shot, restart=True)
-            self._anim.update(dt)
-            if self._anim.finished:
-                self._anim_lock_one_shot = None
-                self._anim.play(self._anim_base, restart=True)
-            return
-
-        # Select base animation based on state
-        if self.state == PeasantState.DEAD:
-            self._anim_base = "dead"
-        elif self.state == PeasantState.WORKING:
-            self._anim_base = "work"
-        elif self.state == PeasantState.MOVING:
-            self._anim_base = "walk"
-        else:
-            self._anim_base = "idle"
-
-        self._anim.play(self._anim_base, restart=False)
-        self._anim.update(dt)
-
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        if not self.is_alive:
-            return
-        if self.is_inside_castle:
-            return
-
-        cam_x, cam_y = camera_offset
-        sx = self.x - cam_x
-        sy = self.y - cam_y
-
-        # Sprite render (procedural fallback until art exists)
-        if hasattr(self, "_anim") and self._anim is not None:
-            frame = self._anim.frame()
-            fw, fh = frame.get_width(), frame.get_height()
-            surface.blit(frame, (int(sx - fw // 2), int(sy - fh // 2)))
-        else:
-            # Fallback: old glyph render
-            pygame.draw.circle(surface, self.color, (int(sx), int(sy)), self.size // 2)
-            pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), self.size // 2, 1)
-            font = pygame.font.Font(None, 14)
-            symbol_text = font.render("P", True, COLOR_WHITE)
-            symbol_rect = symbol_text.get_rect(center=(int(sx), int(sy)))
-            surface.blit(symbol_text, symbol_rect)
-
-        # Health bar
-        bar_w = self.size + 8
-        bar_h = 3
-        bx = sx - bar_w // 2
-        by = sy - self.size // 2 - 7
-        pygame.draw.rect(surface, (60, 60, 60), (bx, by, bar_w, bar_h))
-        hc = COLOR_GREEN if self.health_percent > 0.5 else COLOR_RED
-        pygame.draw.rect(surface, hc, (bx, by, bar_w * self.health_percent, bar_h))
+    def _queue_render_animation(self, name: str) -> None:
+        self._render_anim_trigger = str(name)
 
 

@@ -1942,6 +1942,136 @@
             }
           }
         }
+      },
+      "wk8-engine-entities-refactor": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+          "notes": "Track 1 engine decomposition implementation (no behavior changes)."
+        },
+        "rounds": {
+          "wk8_r1_implementation": {
+            "sprint_id": "wk8-engine-entities-refactor",
+            "round_id": "wk8_r1_implementation",
+            "round_meta": {
+              "prompt_set_id": "wk8_r1_implementation_v1",
+              "build_target": "Track1_engine_decomposition"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/building_factory.py: Added BuildingFactory registry and create() for all placeable building types.",
+                "game/display_manager.py: Extracted runtime display-mode switching logic from GameEngine.apply_display_settings().",
+                "game/input_handler.py: Extracted handle_events/keydown/mousedown/mousemove/select_building_for_placement behavior.",
+                "game/cleanup_manager.py: Extracted _cleanup_destroyed_buildings() with all reference cleanup and VFX/audio event routing.",
+                "game/engine.py: Wired manager delegation (input/display/building_factory/cleanup) and replaced place_building if/elif chain with BuildingFactory.",
+                "game/engine.py: Refactored update() into ordered phase methods (_prepare_sim_and_camera, _update_ai_and_heroes, _update_world_systems, _update_peasants, _update_enemies, _update_guards, _spawn_enemies, _process_combat, _route_combat_events, _cleanup_after_combat, _process_bounties, _update_neutral_systems, _update_buildings, _finalize_update)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                },
+                "validate_assets": {
+                  "command": "python tools/validate_assets.py --report",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          },
+          "wk8_r3_track3_foundations": {
+            "sprint_id": "wk8-engine-entities-refactor",
+            "round_id": "wk8_r3_track3_foundations",
+            "round_meta": {
+              "prompt_set_id": "wk8_r3_track3_foundations_v1",
+              "build_target": "Track3A_B_D_foundations"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/events.py: Added GameEventType enum and EventBus with subscribe(), emit(), emit_batch(), and flush() (subscriber callbacks sandboxed by bus-level try/except).",
+                "game/systems/protocol.py: Added SystemContext dataclass and GameSystem Protocol contracts for tick systems.",
+                "game/types.py: Added HeroClass, EnemyType, and BountyType string enums for backward-compatible typed constants.",
+                "game/systems/combat.py: Added protocol-compliant update(ctx, dt) path that emits events to ctx.event_bus; retained process_combat() for tooling compatibility.",
+                "game/systems/buffs.py: Refactored BuffSystem to protocol signature update(ctx, dt).",
+                "game/audio/audio_system.py + game/graphics/vfx.py: Added on_event() subscriber callbacks and single-event handlers for EventBus dispatch.",
+                "game/engine.py: Wired EventBus, subscribed Audio/VFX, replaced manual audio/vfx routing blocks with event_bus.emit()/emit_batch(), switched combat to SystemContext, and centralized one-per-frame listener+flush in _flush_event_bus().",
+                "game/cleanup_manager.py: Replaced direct audio/vfx emission with EventBus building_destroyed batch emission."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                },
+                "validate_assets": {
+                  "command": "python tools/validate_assets.py --report",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      },
+      "wk9-sim-render-tests-ui": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+          "notes": "Track 1 architecture + protocol adoption implementation (no behavior changes)."
+        },
+        "rounds": {
+          "wk9_r1_implementation": {
+            "sprint_id": "wk9-sim-render-tests-ui",
+            "round_id": "wk9_r1_implementation",
+            "round_meta": {
+              "prompt_set_id": "wk9_r1_implementation_v1",
+              "build_target": "Track1_renderer_registry_protocol_adoption"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/graphics/renderers/: Added RendererRegistry architecture and renderer modules (hero, enemy, worker, building, bounty) so rendering is owned by render-side classes instead of entities/systems.",
+                "game/engine.py: Wired RendererRegistry into render/update pipeline (renderer.render calls, per-tick renderer animation updates, periodic renderer cache pruning).",
+                "game/entities/: Removed all pygame imports and all render() methods from hero/enemy/peasant/guard/tax_collector/lair/neutral/building entity files; removed entity-owned animation/facing fields and added render_state accessors + one-shot render trigger fields.",
+                "game/entities/buildings/base.py: Removed base render logic and pygame.Rect dependency; added lightweight BuildingRect collidepoint helper for selection hit-tests.",
+                "game/systems/bounty.py + game/graphics/renderers/bounty_renderer.py: Moved Bounty/BountySystem rendering out of system code into BountyRenderer.",
+                "game/systems/spawner.py: Removed unused pygame import.",
+                "game/systems/protocol adoption: Added GameSystem update(ctx, dt) conformance for BountySystem, LairSystem, NeutralBuildingSystem, and EnemySpawner while preserving existing behavior paths used by engine."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                },
+                "validate_assets": {
+                  "command": "python tools/validate_assets.py --report",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

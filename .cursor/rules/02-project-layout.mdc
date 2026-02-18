@@ -1,0 +1,66 @@
+---
+description: Project layout and key file locations — reference this when you need to find something.
+globs:
+alwaysApply: true
+---
+
+# Project Layout
+
+```
+Kingdom/
+├── main.py                          # Entry point: python main.py
+├── config.py                        # All tuning constants, costs, sizes, colors
+├── requirements.txt                 # pygame, openai, anthropic, google-generativeai, httpx, python-dotenv
+├── CHANGELOG.md                     # Version history (update on release only)
+│
+├── game/
+│   ├── engine.py                    # Main game loop, input, coordination
+│   ├── world.py                     # Tile map, fog of war
+│   ├── entities/                    # Hero, Enemy, Building, Peasant, TaxCollector, Guard, Lair
+│   ├── systems/                     # Combat, Economy, Bounty, Spawner, Lair, Buffs, Pathfinding
+│   ├── ui/                          # HUD, panels, menus, widgets, theme
+│   ├── graphics/                    # Sprite generators, animation, VFX, font cache
+│   ├── audio/                       # AudioSystem + event contract
+│   └── sim/                         # Timebase, determinism, contracts, guardrails
+│
+├── ai/
+│   ├── basic_ai.py                  # Hero AI decision loop (no-LLM and LLM paths)
+│   └── providers/                   # LLM provider adapters (openai, claude, gemini, grok, mock)
+│
+├── assets/
+│   ├── sprites/                     # Pixel art: heroes/, enemies/, buildings/, workers/
+│   ├── audio/sfx/                   # Sound effects (.wav/.ogg)
+│   ├── audio/ambient/               # Ambient loops (.ogg)
+│   └── ui/                          # UI skin assets (9-slice, icons)
+│
+├── tools/
+│   ├── qa_smoke.py                  # QA gate: python tools/qa_smoke.py --quick
+│   ├── validate_assets.py           # Asset gate: python tools/validate_assets.py --report
+│   ├── determinism_guard.py         # Static determinism checker
+│   ├── observe_sync.py              # Headless behavior observer
+│   ├── capture_screenshots.py       # Deterministic screenshot runner
+│   └── assets_manifest.json         # Expected assets list
+│
+├── docs/
+│   └── screenshots/                 # Baseline + manual screenshots
+│
+└── .cursor/
+    ├── rules/                       # THIS FOLDER — SOPs for all agents
+    └── plans/
+        ├── studio-agent-cards_*.plan.md   # Full agent card definitions
+        ├── agent_logs/                     # Per-agent JSON logs (1 file per agent)
+        └── *.plan.md                       # Sprint plan files
+```
+
+## Key constants location
+
+All game tuning lives in `config.py`: costs, sizes, speeds, HP values, spawn rates. Check there before hardcoding numbers.
+
+## How to run the game
+
+```
+python main.py                    # Default (mock AI, borderless window)
+python main.py --no-llm           # No AI decisions (basic patrol only)
+python main.py --provider mock    # Mock LLM provider (deterministic)
+python main.py --provider openai  # Real LLM (needs .env with API key)
+```

@@ -1,12 +1,9 @@
 """
 Tax Collector NPC that collects gold from warrior guilds.
 """
-import pygame
 import math
 from enum import Enum, auto
-from config import TILE_SIZE, COLOR_WHITE
-from game.graphics.font_cache import get_font, render_text_cached
-from game.graphics.worker_sprites import WorkerSpriteLibrary
+from config import TILE_SIZE
 
 
 class CollectorState(Enum):
@@ -43,13 +40,15 @@ class TaxCollector:
         # Gold being carried
         self.carried_gold = 0
         self.total_collected = 0
-        
-        # Animation / sprite rendering (pixel-art sprites; falls back procedurally if no assets exist)
-        self._anim = WorkerSpriteLibrary.create_player("tax_collector", size=32)
-        self._anim_base = "idle"
+        self._render_anim_trigger: str | None = None
     
     def distance_to(self, x: float, y: float) -> float:
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
+
+    @property
+    def render_state(self) -> "TaxCollector":
+        """Render accessor used by render-side systems."""
+        return self
     
     def move_towards(self, target_x: float, target_y: float, dt: float) -> bool:
         """Move towards target. Returns True if reached."""
@@ -162,73 +161,4 @@ class TaxCollector:
                     economy.total_tax_collected += self.carried_gold
                     self.carried_gold = 0
                 self.state = CollectorState.WAITING
-
-        # Update animation
-        self._update_animation(dt)
-    
-    def _update_animation(self, dt: float):
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-
-        # Select base animation based on state
-        if self.state == CollectorState.COLLECTING:
-            self._anim_base = "collect"
-        elif self.state == CollectorState.RETURNING:
-            self._anim_base = "return"
-        elif self.state == CollectorState.MOVING_TO_GUILD:
-            self._anim_base = "walk"
-        else:
-            self._anim_base = "idle"
-
-        self._anim.play(self._anim_base, restart=False)
-        self._anim.update(dt)
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render the tax collector."""
-        cam_x, cam_y = camera_offset
-        screen_x = self.x - cam_x
-        screen_y = self.y - cam_y
-        
-        # Sprite render (procedural fallback until art exists)
-        if hasattr(self, "_anim") and self._anim is not None:
-            frame = self._anim.frame()
-            fw, fh = frame.get_width(), frame.get_height()
-            surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
-        else:
-            # Fallback: old glyph render
-            self._render_glyph(surface, screen_x, screen_y)
-        
-        # Show carried gold (text overlay is fine per requirements)
-        if self.carried_gold > 0:
-            font = get_font(14)
-            gold_text = font.render(f"${self.carried_gold}", True, (255, 215, 0))
-            gold_rect = gold_text.get_rect(center=(screen_x, screen_y - self.size))
-            surface.blit(gold_text, gold_rect)
-        
-        # Show state indicator
-        if self.state != CollectorState.WAITING:
-            font = get_font(12)
-            state_text = "Collecting..." if self.state == CollectorState.COLLECTING else ""
-            if state_text:
-                text = font.render(state_text, True, COLOR_WHITE)
-                text_rect = text.get_rect(center=(screen_x, screen_y + self.size + 5))
-                surface.blit(text, text_rect)
-    
-    def _render_glyph(self, surface: pygame.Surface, screen_x: float, screen_y: float):
-        """Fallback glyph rendering (used if sprites are missing)."""
-        # Draw collector as a small diamond shape
-        points = [
-            (screen_x, screen_y - self.size // 2),
-            (screen_x + self.size // 2, screen_y),
-            (screen_x, screen_y + self.size // 2),
-            (screen_x - self.size // 2, screen_y),
-        ]
-        pygame.draw.polygon(surface, self.color, points)
-        pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
-        
-        # Draw tax collector symbol ($)
-        _ = get_font(16)
-        symbol_text = render_text_cached(16, "$", COLOR_WHITE)
-        symbol_rect = symbol_text.get_rect(center=(int(screen_x), int(screen_y)))
-        surface.blit(symbol_text, symbol_rect)
 

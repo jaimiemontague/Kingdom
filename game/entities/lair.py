@@ -6,17 +6,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-import pygame
-
 from config import (
     TILE_SIZE,
-    COLOR_WHITE,
     LAIR_STASH_GROWTH_PER_SPAWN,
 )
 from game.entities.building import Building
 from game.entities.enemy import Goblin, Wolf, Skeleton, SkeletonArcher, Spider, Bandit
-from game.graphics.font_cache import render_text_shadowed_cached
-from game.graphics.render_context import get_render_zoom
 from game.sim.determinism import get_rng
 
 
@@ -161,25 +156,6 @@ class MonsterLair(Building):
             else:
                 hero.gold = getattr(hero, "gold", 0) + payout
         return {"gold": payout, "threat_level": self.threat_level, "lair_type": self.building_type}
-
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        super().render(surface, camera_offset)
-
-        # Simple label + stash indicator
-        cam_x, cam_y = camera_offset
-        sx = self.world_x - cam_x
-        sy = self.world_y - cam_y
-
-        label = self.building_type.replace("_", " ").upper()
-        txt = render_text_shadowed_cached(16, label, COLOR_WHITE)
-        rect = txt.get_rect(center=(sx + self.width // 2, sy + self.height // 2))
-        surface.blit(txt, rect)
-
-        # Reduce label clutter when zoomed out: only show stash value at normal zoom+.
-        if get_render_zoom() >= 1.0:
-            stash = render_text_shadowed_cached(14, f"${self.stash_gold}", (255, 215, 0))
-            stash_rect = stash.get_rect(center=(sx + self.width // 2, sy + self.height + 8))
-            surface.blit(stash, stash_rect)
 
 
 class GoblinCamp(MonsterLair):

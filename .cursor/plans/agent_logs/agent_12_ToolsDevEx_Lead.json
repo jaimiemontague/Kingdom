@@ -1882,6 +1882,255 @@
             }
           },
           "blockers": []
+        },
+        "infra_agent12_onboarding_rule": {
+          "round_id": "infra_agent12_onboarding_rule",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              ".cursor/rules/09-agent12-toolsdevex-onboarding.mdc"
+            ],
+            "summary": "Created Agent 12 role-specific onboarding rule file. Covers: who I am, file ownership, all tool commands + flags (qa_smoke, validate_assets, observe_sync scenarios, capture_screenshots, build_gallery, generate_cc0_placeholders, agent_log_synthesis), manifest contract, attribution contract, sprint history summary (WK1–WK7 + post-WK7), Studio Gateway orientation, and common mistakes to avoid."
+          },
+          "how_to_test": [
+            "Read .cursor/rules/09-agent12-toolsdevex-onboarding.mdc and confirm it is accurate",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --strict --check-attribution"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --strict --check-attribution",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": []
+        }
+      }
+    },
+    "wk8-engine-entities-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+        "notes": "WK8 verification after engine + entities structural refactor."
+      },
+      "rounds": {
+        "wk8_r2_verification": {
+          "round_id": "wk8_r2_verification",
+          "status": "done",
+          "what_i_changed": {
+            "files": [],
+            "summary": "Verified tooling compatibility against the new engine/entities structure. Confirmed backward-compat imports still resolve and all primary tools execute successfully.",
+            "compat_checks": [
+              "tools/screenshot_scenarios.py still imports Building from game.entities.building (shim path) and executes via capture flow.",
+              "tools/capture_screenshots.py still imports GameEngine from game.engine and completes deterministic capture run.",
+              "tools/observe_sync.py and tools/qa_smoke.py execute all standard headless profiles successfully."
+            ]
+          },
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+            "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\""
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[determinism_guard] PASS: no violations found"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "All quick profiles PASS: determinism_guard, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM."
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[validate_assets] SUMMARY errors=0 warns=0"
+            },
+            "capture_screenshots": {
+              "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Capture completed and wrote manifest + 4 PNGs."
+            },
+            "import_compat": {
+              "command": "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Backward-compatible imports resolved: Building, GameEngine."
+            },
+            "determinism_scan_coverage": {
+              "command": "python -c \"from tools import determinism_guard as d; files=d._iter_py_files(d.DEFAULT_SCAN_DIRS, exclude_dirs=d.DEFAULT_EXCLUDE_DIRS); print('scan_count', len(files)); print('includes_base', any(p.name=='base.py' and 'buildings' in p.parts for p in files)); print('includes_guilds', any(p.name=='guilds.py' and 'buildings' in p.parts for p in files)); print('includes_types', any(p.name=='types.py' and 'buildings' in p.parts for p in files));\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Scan includes new package files under game/entities/buildings (base, guilds, types)."
+            }
+          },
+          "bugs_found": [],
+          "blockers": []
+        },
+        "wk8_r4_final_verification": {
+          "round_id": "wk8_r4_final_verification",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "config.py"
+            ],
+            "summary": "Implemented Track 3C by introducing frozen config dataclass groups and preserving full backward compatibility via legacy module-level aliases. Re-verified tooling and gates after Track 3 landed.",
+            "dataclass_groups": [
+              "WindowConfig",
+              "SimConfig",
+              "MapConfig",
+              "CameraConfig",
+              "HeroConfig",
+              "EnemyConfig",
+              "LairConfig",
+              "BountyConfig",
+              "EconomyConfig",
+              "LLMConfig",
+              "RangerConfig"
+            ],
+            "compatibility_notes": [
+              "Legacy constants remain available (e.g., WINDOW_WIDTH, FPS, TILE_SIZE, BOUNTY_REWARD_HIGH).",
+              "Building dictionaries and color constants were left unchanged as requested.",
+              "Added grouped objects (WINDOW, SIM, MAP, CAMERA, HERO, ENEMY, LAIR, BOUNTY, ECONOMY, LLM, RANGER) for typed access."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/determinism_guard.py",
+            "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_r4_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+            "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+            "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
+            "python -c \"import config; print('aliases_ok', config.WINDOW.width==config.WINDOW_WIDTH, config.SIM.tick_hz==config.SIM_TICK_HZ, config.BOUNTY.reward_high==config.BOUNTY_REWARD_HIGH, config.LLM.timeout==config.LLM_TIMEOUT)\""
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "All quick profiles PASS: determinism_guard, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM."
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[validate_assets] SUMMARY errors=0 warns=0"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[determinism_guard] PASS: no violations found"
+            },
+            "capture_screenshots": {
+              "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk8_r4_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Capture completed and wrote manifest + 4 PNGs."
+            },
+            "tool_imports": {
+              "command": "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "All four tool modules import without errors."
+            },
+            "import_compat": {
+              "command": "python -c \"from game.entities.building import Building; from game.engine import GameEngine; print('imports_ok', Building.__name__, GameEngine.__name__)\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Backward-compatible imports resolved: Building, GameEngine."
+            },
+            "alias_compat": {
+              "command": "python -c \"import config; print('aliases_ok', config.WINDOW.width==config.WINDOW_WIDTH, config.SIM.tick_hz==config.SIM_TICK_HZ, config.BOUNTY.reward_high==config.BOUNTY_REWARD_HIGH, config.LLM.timeout==config.LLM_TIMEOUT)\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Dataclass fields and legacy alias constants match."
+            }
+          },
+          "bugs_found": [],
+          "blockers": []
+        }
+      }
+    },
+    "wk9-sim-render-tests-ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+        "notes": "WK9 final verification and pytest gate integration."
+      },
+      "rounds": {
+        "wk9_r2_verification": {
+          "round_id": "wk9_r2_verification",
+          "status": "done",
+          "what_i_changed": {
+            "files": [
+              "tools/qa_smoke.py"
+            ],
+            "summary": "Integrated pytest into the mandatory quick QA gate and re-verified tooling under WK9 sim/render separation.",
+            "details": [
+              "Added a pytest stage to `qa_smoke --quick` using `python -m pytest tests/`.",
+              "Made pytest mandatory in quick mode: nonzero pytest exit fails the gate.",
+              "Added explicit failure when `tests/` is missing to keep the unit-test gate enforceable."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/determinism_guard.py",
+            "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+            "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Quick gate now includes pytest. Output shows `pytest (unit tests)` stage and `29 passed` before profile runs."
+            },
+            "pytest_via_gate": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Executed inside qa_smoke quick; 29 tests passed in 0.15s."
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[validate_assets] SUMMARY errors=0 warns=0"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[determinism_guard] PASS: no violations found"
+            },
+            "tool_imports": {
+              "command": "python -c \"import tools.observe_sync, tools.qa_smoke, tools.determinism_guard, tools.capture_screenshots; print('tools_import_ok')\"",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "All core tooling modules import successfully with WK9 renderer structure."
+            },
+            "capture_screenshots": {
+              "command": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk9_tooling_verify/base_overview_seed3 --size 1280x720 --ticks 0",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "Capture runner executed successfully and wrote manifest + 4 PNG outputs."
+            }
+          },
+          "bugs_found": [],
+          "blockers": []
         }
       }
     }

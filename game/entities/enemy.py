@@ -1,9 +1,7 @@
 """
 Enemy entities.
 """
-import pygame
 import math
-import random
 from enum import Enum, auto
 from config import (
     TILE_SIZE, GOBLIN_HP, GOBLIN_ATTACK, GOBLIN_SPEED,
@@ -12,9 +10,8 @@ from config import (
     SKELETON_ARCHER_HP, SKELETON_ARCHER_ATTACK, SKELETON_ARCHER_SPEED,
     SKELETON_ARCHER_ATTACK_RANGE_TILES, SKELETON_ARCHER_MIN_RANGE_TILES,
     SKELETON_ARCHER_ATTACK_COOLDOWN_MS,
-    COLOR_RED, COLOR_WHITE, COLOR_GREEN
+    COLOR_RED
 )
-from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.sim.timebase import now_ms
 
 
@@ -63,13 +60,7 @@ class Enemy:
         # Visual
         self.size = 18
         self.color = COLOR_RED
-
-        # Animation / facing (pixel-art sprites; falls back procedurally if no assets exist)
-        self.facing = 1  # 1=right, -1=left
-        self._last_pos = (float(self.x), float(self.y))
-        self._anim = EnemySpriteLibrary.create_player(self.enemy_type, size=32)
-        self._anim_base = "idle"
-        self._anim_lock_one_shot = None  # "attack" / "hurt" / "dead"
+        self._render_anim_trigger: str | None = None
         
     @property
     def is_alive(self) -> bool:
@@ -78,38 +69,24 @@ class Enemy:
     @property
     def health_percent(self) -> float:
         return self.hp / self.max_hp
+
+    @property
+    def render_state(self) -> "Enemy":
+        """Render accessor used by render-side systems."""
+        return self
     
     def take_damage(self, amount: int) -> bool:
         """Take damage, returns True if killed."""
         self.hp = max(0, self.hp - amount)
         if self.hp <= 0:
             self.state = EnemyState.DEAD
-            self._play_one_shot("dead")
+            self._queue_render_animation("dead")
             return True
-        self._play_one_shot("hurt")
+        self._queue_render_animation("hurt")
         return False
 
-    def _play_one_shot(self, name: str):
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-        self._anim_lock_one_shot = name
-        self._anim.play(name, restart=True)
-
-    def _update_animation(self, dt: float):
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-
-        if self._anim_lock_one_shot:
-            if self._anim.current != self._anim_lock_one_shot:
-                self._anim.play(self._anim_lock_one_shot, restart=True)
-            self._anim.update(dt)
-            if self._anim.finished:
-                self._anim_lock_one_shot = None
-                self._anim.play(self._anim_base, restart=True)
-            return
-
-        self._anim.play(self._anim_base, restart=False)
-        self._anim.update(dt)
+    def _queue_render_animation(self, name: str) -> None:
+        self._render_anim_trigger = str(name)
     
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""
@@ -198,8 +175,6 @@ class Enemy:
         """Update enemy state and behavior."""
         if not self.is_alive:
             return
-
-        prev_x, prev_y = self.x, self.y
         
         # Update attack cooldown
         if self.attack_cooldown > 0:
@@ -285,20 +260,6 @@ class Enemy:
                     self.move_towards(target_x, target_y, dt)
             else:
                 self.move_towards(target_x, target_y, dt)
-
-        # Facing (based on motion)
-        dx = self.x - prev_x
-        if abs(dx) > 0.01:
-            self.facing = 1 if dx >= 0 else -1
-
-        # Base animation selection (one-shots can override)
-        if self.state == EnemyState.MOVING:
-            self._anim_base = "walk"
-        else:
-            self._anim_base = "idle"
-        self._update_animation(dt)
-
-        self._last_pos = (float(self.x), float(self.y))
     
     def do_attack(self):
         """
@@ -308,7 +269,7 @@ class Enemy:
         for collection by engine.
         """
         if self.target and hasattr(self.target, 'take_damage'):
-            self._play_one_shot("attack")
+            self._queue_render_animation("attack")
             self.target.take_damage(self.attack_power)
             
             # WK5: Emit ranged projectile event for ranged attackers
@@ -349,46 +310,6 @@ class Enemy:
             else:
                 # Clear any stale event for non-ranged attackers
                 self._last_ranged_event = None
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render the enemy."""
-        if not self.is_alive:
-            return
-            
-        cam_x, cam_y = camera_offset
-        screen_x = self.x - cam_x
-        screen_y = self.y - cam_y
-
-        # Sprite render (procedural fallback until art exists)
-        if hasattr(self, "_anim") and self._anim is not None:
-            frame = self._anim.frame()
-            if self.facing < 0:
-                frame = pygame.transform.flip(frame, True, False)
-            fw, fh = frame.get_width(), frame.get_height()
-            surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
-        else:
-            # Fallback: old polygon render
-            points = [
-                (screen_x, screen_y - self.size // 2),
-                (screen_x - self.size // 2, screen_y + self.size // 2),
-                (screen_x + self.size // 2, screen_y + self.size // 2),
-            ]
-            pygame.draw.polygon(surface, self.color, points)
-            pygame.draw.polygon(surface, COLOR_WHITE, points, 1)
-        
-        # Draw health bar
-        bar_width = self.size + 6
-        bar_height = 3
-        bar_x = screen_x - bar_width // 2
-        bar_y = screen_y - self.size // 2 - 6
-        
-        pygame.draw.rect(surface, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
-        health_color = COLOR_GREEN if self.health_percent > 0.5 else COLOR_RED
-        pygame.draw.rect(
-            surface, 
-            health_color, 
-            (bar_x, bar_y, bar_width * self.health_percent, bar_height)
-        )
 
 
 class Goblin(Enemy):
@@ -473,8 +394,6 @@ class SkeletonArcher(Enemy):
         """Override to add kiting behavior: maintain distance band with hysteresis/commitment."""
         if not self.is_alive:
             return
-
-        prev_x, prev_y = self.x, self.y
         now_ms_val = now_ms()
         
         # Update attack cooldown
@@ -590,20 +509,6 @@ class SkeletonArcher(Enemy):
                         self.move_towards(target_x, target_y, dt)
                 else:
                     self.move_towards(target_x, target_y, dt)
-
-        # Facing (based on motion)
-        dx = self.x - prev_x
-        if abs(dx) > 0.01:
-            self.facing = 1 if dx >= 0 else -1
-
-        # Base animation selection (one-shots can override)
-        if self.state == EnemyState.MOVING:
-            self._anim_base = "walk"
-        else:
-            self._anim_base = "idle"
-        self._update_animation(dt)
-
-        self._last_pos = (float(self.x), float(self.y))
 
 
 class Spider(Enemy):

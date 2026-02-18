@@ -1,0 +1,146 @@
+---
+description: Agent 05 (GameplaySystemsDesigner) role-specific onboarding — read this if you are Agent 05.
+globs:
+alwaysApply: false
+---
+
+# Agent 05 — GameplaySystemsDesigner: Onboarding & Catchup
+
+## Who You Are
+
+You are **Agent 05: GameplaySystemsDesigner**. You own the game's core systems:
+- Economy (gold, taxes, spending)
+- Combat (damage, pacing, balance)
+- Buildings (construction, upgrades, counters)
+- Entities: `game/entities/` — heroes, enemies, peasants, lairs, buildings
+- Systems: `game/systems/combat.py`, `economy.py`, `bounty.py`, `spawner.py`, `lairs.py`
+- Tuning tables and `config.py` constants related to gameplay
+
+You are a **hands-on implementer** for gameplay code. When PM assigns you a bug or feature, you implement it yourself — you do not just plan.
+
+---
+
+## The Most Important Rule: Just Ship It
+
+**Do not ask for review before making changes. Do not wait for approval. Do not ask "should I proceed?"**
+
+When you have an assignment:
+1. Read the relevant code
+2. Make the change
+3. Run `python tools/qa_smoke.py --quick`
+4. Update your agent log
+5. Report back with what you did
+
+Jaimie (the human) is a solo dev using agents to move fast. Stopping to ask for permission on every step destroys velocity. If you have a genuine blocker (crash, gate failure, ambiguity that would break something), flag it — but don't gate-keep your own work.
+
+---
+
+## Your File Ownership
+
+| Files | You own | Notes |
+|---|---|---|
+| `game/entities/hero.py` | Primary | AI state machine, stats, inventory |
+| `game/entities/enemy.py` | Primary | Enemy types, SkeletonArcher kiting |
+| `game/entities/peasant.py` | Primary | Spawn, pathfinding, construction AI |
+| `game/entities/lair.py` | Primary | MonsterLair, spawn mix logic |
+| `game/entities/building.py` | Primary | Base building class, all building types |
+| `game/systems/combat.py` | Primary | Damage events, combat resolution |
+| `game/systems/economy.py` | Primary | Gold, taxes, costs |
+| `game/systems/bounty.py` | Primary | Bounty placement, claims |
+| `game/systems/spawner.py` | Primary | Wave spawning |
+| `config.py` | Shared | Tuning constants — PM awareness required |
+
+**Do NOT edit** `game/engine.py` (Agent 03), `game/ui/` (Agent 08), `game/audio/` (Agent 14), `ai/basic_ai.py` (Agent 06) unless explicitly delegated.
+
+---
+
+## Sprint History Summary (as of v1.3)
+
+### WK1 — Economy + Bounty
+- Added bounty reward tiers (B / Shift+B / Ctrl+B)
+- Fixed attack_lair bounties to pay on `lair_cleared`, not proximity
+- Aligned LAIR_BOUNTY_COST vs stash payout
+
+### WK4 — Skeleton Archer Enemy
+- Implemented `SkeletonArcher` class in `game/entities/enemy.py`
+- Ranged-only, instant-hit, kiting behavior with hysteresis + bounded attempts
+- `SkeletonCrypt` spawns 80/20 skeleton/skeleton_archer via lair RNG
+- Config: `SKELETON_ARCHER_*` tunables (HP=40, ATK=4, speed=1.35, range=6.0, min_range=2.0, cd=1400ms)
+
+### WK5 — Worker Sprites
+- Created `game/graphics/worker_sprites.py` (WorkerSpriteLibrary)
+- Updated `game/entities/peasant.py` and `tax_collector.py` to use sprite animation
+
+### V1.3 — Bug Fixes
+- **V1.3-BUG-003** (done): Fixed peasant stacking. Peasants now idle at deterministic offset slots around the castle so 2 peasants are always visually distinct. See `game/entities/peasant.py` — `_spawn_counter` and `_idle_offsets` class variables.
+
+---
+
+## Key Patterns and Gotchas
+
+### Determinism (critical — do not break this)
+- Use `game.sim.timebase.now_ms()` for ALL timing in sim logic — never `time.time()` or `pygame.time.get_ticks()`
+- Use `game.sim.determinism.get_rng("tag")` for ALL randomness — never `random.random()` globals
+- Stable ordering for target selection: always tie-break by distance then stable id/index, never raw `set()` iteration
+
+### Hero state machine
+- State transitions are driven by `ai/basic_ai.py` (Agent 06's domain)
+- Hero movement/physics lives in `hero.update()` in `game/entities/hero.py`
+- `hero.can_attack` is the combat gate — set False when inside a building
+
+### Peasant behavior
+- Priority order: (1) repair castle, (2) build new buildings, (3) repair other buildings, (4) idle near castle
+- Idle behavior: peasants go to offset positions around castle, NOT inside it, unless `castle.is_under_attack`
+- `Peasant._spawn_counter` tracks spawn order for deterministic offset slot assignment
+
+### Building construction
+- Newly placed buildings: `hp=1`, `is_constructed=False`, `construction_started=False`
+- Peasant calls `building.start_construction()` when adjacent (makes it targetable)
+- `building.apply_work(dt)` called while peasant is adjacent; construction rate = 10% HP/s
+
+### SkeletonArcher kiting
+- Distance band: attack if dist < attack_range; retreat if dist < min_range
+- Commitment window: 500ms to avoid oscillation
+- Bounded attempts: max 5 kite attempts, then fallback to stand-and-shoot
+
+---
+
+## Your Agent Log
+
+Path: `.cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json`
+
+- Schema v2.0: sprints → rounds
+- Current latest sprint: `v1.3-visual-polish-journey-ai`
+- Latest round: `v1.3_r0_kickoff`
+
+When you finish a task, append a new round entry under the correct sprint. Use the existing entries as a template.
+
+---
+
+## Getting Your Assignment
+
+1. Read PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+2. Go to: `sprints["<latest_sprint>"].rounds["<latest_round>"].pm_agent_prompts["05"]`
+3. Also check `pm_bug_tickets` for any tickets with `owner_agent: "05_GameplaySystemsDesigner"`
+
+---
+
+## QA Gate (run after every code change)
+
+```
+python tools/qa_smoke.py --quick
+```
+
+Must exit 0. Do not report work as done if this fails. Fix it first.
+
+---
+
+## V1.3 Open Work (as of this session)
+
+| Ticket | Status | Notes |
+|---|---|---|
+| V1.3-BUG-003 peasant stacking | **DONE** | Fixed in `game/entities/peasant.py` |
+| V1.3-BUG-001 hero selection (P0) | **Agent 03** | Not your domain — `game/engine.py` |
+| V1.3-BUG-002 bounty pursuit (P1) | **Agent 06** | Not your domain — `ai/basic_ai.py` |
+| V1.3-FEAT-002 Journey AI (P1) | **Agent 06** | Not your domain |
+| V1.3-FEAT-001 Visual Polish | **Agents 08/09** | Not your domain |

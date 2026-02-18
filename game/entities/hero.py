@@ -1,19 +1,15 @@
 """
 Hero entity with stats, inventory, and AI state machine.
 """
-import pygame
-import random
 import math
 from enum import Enum, auto
-from game.graphics.hero_sprites import HeroSpriteLibrary
-from game.graphics.font_cache import get_font
 from game.systems.buffs import Buff
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
 from game.sim.contracts import HeroDecisionRecord, HeroIntentSnapshot
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
-    HERO_SPEED, COLOR_BLUE, COLOR_WHITE, COLOR_GREEN, COLOR_RED
+    HERO_SPEED, COLOR_BLUE
 )
 
 
@@ -121,14 +117,7 @@ class Hero:
         # Visual
         self.size = 20
         self.color = COLOR_BLUE
-        self.facing = 1  # 1=right, -1=left (used for mirroring sprites)
-        self._last_pos = (float(self.x), float(self.y))
-
-        # Animation
-        # Uses real sprite frames if present in assets; otherwise procedural placeholder frames.
-        self._anim = HeroSpriteLibrary.create_player(self.hero_class, size=32)
-        self._anim_base = "idle"
-        self._anim_lock_one_shot = None  # e.g. "attack" or "hurt"
+        self._render_anim_trigger: str | None = None
 
         # Building interaction
         self.is_inside_building = False
@@ -227,6 +216,11 @@ class Hero:
     @property
     def health_percent(self) -> float:
         return self.hp / self.max_hp
+
+    @property
+    def render_state(self) -> "Hero":
+        """Render accessor used by render-side systems."""
+        return self
     
     def take_damage(self, amount: int) -> bool:
         """Take damage, returns True if killed."""
@@ -235,7 +229,7 @@ class Hero:
         self.damage_since_left_home += actual_damage
         # Hurt "one-shot" animation (if still alive)
         if self.hp > 0:
-            self._play_one_shot("hurt")
+            self._queue_render_animation("hurt")
         if self.hp <= 0:
             self.state = HeroState.DEAD
             self.intent = "idle"
@@ -506,8 +500,6 @@ class Hero:
             self.can_attack = True
             self.attack_blocked_reason = ""
 
-        prev_x, prev_y = self.x, self.y
-
         # Handle brief "inside building" timer (shopping etc.)
         if self.is_inside_building and self.state != HeroState.RESTING and self.inside_timer > 0:
             self.inside_timer = max(0.0, self.inside_timer - dt)
@@ -563,23 +555,6 @@ class Hero:
                 follow_path(self, dt)
             else:
                 self.move_towards(self.target_position[0], self.target_position[1], dt)
-
-        # Update facing (based on motion)
-        dx = self.x - prev_x
-        if abs(dx) > 0.01:
-            self.facing = 1 if dx >= 0 else -1
-
-        # Animation base state selection (one-shots can override)
-        if self.is_inside_building:
-            self._anim_base = "inside"
-        elif self.state in (HeroState.MOVING, HeroState.RETREATING):
-            self._anim_base = "walk"
-        else:
-            self._anim_base = "idle"
-
-        self._update_animation(dt)
-
-        self._last_pos = (float(self.x), float(self.y))
 
     # -----------------------------
     # Intent + last decision contract
@@ -697,35 +672,15 @@ class Hero:
             self.record_decision(action=intent, reason=reason, now_ms=now_ms, context=ctx)
             self._intent_prev_key = new_key
 
-    def _play_one_shot(self, name: str):
-        """Play a non-looping clip and prevent base animation from overriding until it finishes."""
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-        self._anim_lock_one_shot = name
-        self._anim.play(name, restart=True)
-
-    def _update_animation(self, dt: float):
-        if not hasattr(self, "_anim") or self._anim is None:
-            return
-
-        # If a one-shot is active, keep it until finished.
-        if self._anim_lock_one_shot:
-            if self._anim.current != self._anim_lock_one_shot:
-                self._anim.play(self._anim_lock_one_shot, restart=True)
-            self._anim.update(dt)
-            if self._anim.finished:
-                self._anim_lock_one_shot = None
-                self._anim.play(self._anim_base, restart=True)
-            return
-
-        # Otherwise follow the base state
-        self._anim.play(self._anim_base, restart=False)
-        self._anim.update(dt)
+    def _queue_render_animation(self, name: str) -> None:
+        """Queue a one-shot render animation to be consumed by the renderer."""
+        self._render_anim_trigger = str(name)
 
     def on_attack_landed(self, target, damage: int, killed: bool):
         """Called by CombatSystem when this hero lands an attack."""
         # For now, just play an attack one-shot.
-        self._play_one_shot("attack")
+        _ = (target, damage, killed)
+        self._queue_render_animation("attack")
     
     def get_context_for_llm(self, game_state: dict) -> dict:
         """Build context dictionary for LLM decision making."""
@@ -781,73 +736,4 @@ class Hero:
                     context["near_marketplace"] = True
         
         return context
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render the hero."""
-        if not self.is_alive:
-            return
-            
-        cam_x, cam_y = camera_offset
-        screen_x = self.x - cam_x
-        screen_y = self.y - cam_y
-
-        # If inside a building, render a small animated "bubble" at the building location.
-        if self.is_inside_building and self.inside_building is not None:
-            bx = getattr(self.inside_building, "center_x", self.x) - cam_x
-            by = getattr(self.inside_building, "center_y", self.y) - cam_y
-            bubble = self._anim.frame() if self._anim is not None else None
-            if bubble is not None:
-                # Small and subtle
-                # Pixel art: keep nearest-neighbor scaling (avoid blur + extra cost).
-                bubble_small = pygame.transform.scale(bubble, (16, 16))
-                surface.blit(bubble_small, (int(bx - 8), int(by - 28)))
-            return
-
-        # Draw animated sprite frame (procedural placeholder until real assets exist)
-        if hasattr(self, "_anim") and self._anim is not None:
-            frame = self._anim.frame()
-            if self.facing < 0:
-                frame = pygame.transform.flip(frame, True, False)
-            fw, fh = frame.get_width(), frame.get_height()
-            surface.blit(frame, (int(screen_x - fw // 2), int(screen_y - fh // 2)))
-        else:
-            # Fallback: old circle render
-            pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), self.size // 2)
-            pygame.draw.circle(surface, COLOR_WHITE, (int(screen_x), int(screen_y)), self.size // 2, 2)
-        
-        # Draw health bar
-        bar_width = self.size + 10
-        bar_height = 4
-        bar_x = screen_x - bar_width // 2
-        bar_y = screen_y - self.size // 2 - 8
-        
-        # Background
-        pygame.draw.rect(surface, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
-        
-        # Health
-        health_color = COLOR_GREEN if self.health_percent > 0.5 else COLOR_RED
-        pygame.draw.rect(
-            surface, 
-            health_color, 
-            (bar_x, bar_y, bar_width * self.health_percent, bar_height)
-        )
-        
-        # Draw name
-        font = get_font(16)
-        name_text = font.render(self.name, True, COLOR_WHITE)
-        name_rect = name_text.get_rect(center=(screen_x, screen_y + self.size // 2 + 10))
-        surface.blit(name_text, name_rect)
-        
-        # Draw gold if any (show both spendable and taxed)
-        total_gold = self.gold + self.taxed_gold
-        if total_gold > 0:
-            gold_text = font.render(f"${self.gold}(+{self.taxed_gold})", True, (255, 215, 0))
-            gold_rect = gold_text.get_rect(center=(screen_x, screen_y + self.size // 2 + 22))
-            surface.blit(gold_text, gold_rect)
-        
-        # Show resting indicator
-        if self.state == HeroState.RESTING:
-            rest_text = font.render("Zzz", True, (150, 200, 255))
-            rest_rect = rest_text.get_rect(center=(screen_x + 15, screen_y - self.size // 2 - 15))
-            surface.blit(rest_text, rest_rect)
 

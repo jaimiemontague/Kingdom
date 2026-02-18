@@ -2060,6 +2060,56 @@
           "blockers": []
         }
       }
+    },
+    "wk9-sim-render-tests-ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+        "notes": "WK9 Track 1 renderer extraction. Agent 09 owns creation of entity renderers under game/graphics/renderers/."
+      },
+      "rounds": {
+        "wk9_r1_implementation": {
+          "sprint_id": "wk9-sim-render-tests-ui",
+          "round_id": "wk9_r1_implementation",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created render-only entity renderer modules for hero, enemy, building, and workers, preserving current visual behavior while preparing sim/render separation.",
+            "files": [
+              "game/graphics/renderers/__init__.py",
+              "game/graphics/renderers/hero_renderer.py",
+              "game/graphics/renderers/enemy_renderer.py",
+              "game/graphics/renderers/building_renderer.py",
+              "game/graphics/renderers/worker_renderer.py"
+            ],
+            "details": [
+              "HeroRenderer: renderer-owned HeroSpriteLibrary animation state, facing, inside-building bubble, hp bar, name/gold/rest overlays.",
+              "EnemyRenderer: renderer-owned EnemySpriteLibrary animation state, facing, hp bar.",
+              "WorkerRenderer: peasant + tax_collector sprite rendering/animation and guard fallback rendering in one module.",
+              "BuildingRenderer: base building sprite pass plus subclass overlays (guild/temple/economic/defensive/special labels), lair labels/stash, neutral tax labels."
+            ],
+            "coordination_notes": [
+              "Prepared for Agent 03 Track 1 wiring: these renderers are ready for RendererRegistry integration and entity render() removal in subsequent round.",
+              "No simulation logic changed; files are additive under game/graphics/renderers/."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0
+            }
+          },
+          "blockers": []
+        }
+      }
     }
   }
 }

@@ -7,12 +7,8 @@ slowly generate taxable income over time.
 
 from __future__ import annotations
 
-import pygame
-
-from config import BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS, COLOR_WHITE
+from config import BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS
 from game.entities.building import Building
-from game.graphics.font_cache import render_text_shadowed_cached
-from game.graphics.render_context import get_render_zoom
 
 
 class NeutralBuilding(Building):
@@ -61,23 +57,6 @@ class NeutralBuilding(Building):
         if add > 0:
             self._tax_accum -= add
             self.stored_tax_gold += add
-
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        super().render(surface, camera_offset)
-
-        # Minimal label.
-        cam_x, cam_y = camera_offset
-        sx = self.world_x - cam_x
-        sy = self.world_y - cam_y
-        label = self.building_type.replace("_", " ").upper()
-        txt = render_text_shadowed_cached(14, label, COLOR_WHITE)
-        rect = txt.get_rect(center=(sx + self.width // 2, sy + self.height // 2))
-        surface.blit(txt, rect)
-
-        if self.stored_tax_gold > 0 and get_render_zoom() >= 1.0:
-            stash = render_text_shadowed_cached(12, f"Tax: ${self.stored_tax_gold}", (255, 215, 0))
-            stash_rect = stash.get_rect(center=(sx + self.width // 2, sy + self.height + 8))
-            surface.blit(stash, stash_rect)
 
 
 class House(NeutralBuilding):

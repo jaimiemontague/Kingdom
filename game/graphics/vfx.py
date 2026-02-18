@@ -66,42 +66,53 @@ class VFXSystem:
         if not self.enabled:
             return
         for e in events or []:
-            et = e.get("type")
-            if et == "ranged_projectile":
-                # WK5: Handle ranged projectile events (these do not use generic x/y fields)
-                from_x = e.get("from_x")
-                from_y = e.get("from_y")
-                to_x = e.get("to_x")
-                to_y = e.get("to_y")
-                if from_x is not None and from_y is not None and to_x is not None and to_y is not None:
-                    kind = e.get("projectile_kind", "arrow")
-                    color = e.get("color")
-                    size_px = e.get("size_px", 2)  # Build B: default 2px for readability
-                    self._spawn_projectile(
-                        float(from_x), float(from_y),
-                        float(to_x), float(to_y),
-                        kind, color, size_px
-                    )
-                continue
+            self._emit_event(e)
 
-            # World-space burst events require x/y
-            x = e.get("x")
-            y = e.get("y")
-            if x is None or y is None:
-                continue
+    def on_event(self, event: dict):
+        """
+        EventBus subscriber callback for single event dispatch.
+        """
+        if not self.enabled:
+            return
+        self._emit_event(event)
 
-            if et in ("hero_attack", "hero_attack_lair"):
-                self._spawn_hit(float(x), float(y))
-            elif et == "enemy_killed":
-                self._spawn_kill(float(x), float(y))
-            elif et == "lair_cleared":
-                self._spawn_big(float(x), float(y))
-            elif et == "building_destroyed":
-                # WK5 Build B: Spawn debris decal at building location
-                building_type = e.get("building_type", "unknown")
-                w = e.get("w", 0.0)  # Footprint width (optional, 0 = use default)
-                h = e.get("h", 0.0)  # Footprint height (optional, 0 = use default)
-                self._spawn_debris(float(x), float(y), building_type, float(w), float(h))
+    def _emit_event(self, event: dict):
+        et = event.get("type")
+        if et == "ranged_projectile":
+            # WK5: Handle ranged projectile events (these do not use generic x/y fields)
+            from_x = event.get("from_x")
+            from_y = event.get("from_y")
+            to_x = event.get("to_x")
+            to_y = event.get("to_y")
+            if from_x is not None and from_y is not None and to_x is not None and to_y is not None:
+                kind = event.get("projectile_kind", "arrow")
+                color = event.get("color")
+                size_px = event.get("size_px", 2)  # Build B: default 2px for readability
+                self._spawn_projectile(
+                    float(from_x), float(from_y),
+                    float(to_x), float(to_y),
+                    kind, color, size_px
+                )
+            return
+
+        # World-space burst events require x/y
+        x = event.get("x")
+        y = event.get("y")
+        if x is None or y is None:
+            return
+
+        if et in ("hero_attack", "hero_attack_lair"):
+            self._spawn_hit(float(x), float(y))
+        elif et == "enemy_killed":
+            self._spawn_kill(float(x), float(y))
+        elif et == "lair_cleared":
+            self._spawn_big(float(x), float(y))
+        elif et == "building_destroyed":
+            # WK5 Build B: Spawn debris decal at building location
+            building_type = event.get("building_type", "unknown")
+            w = event.get("w", 0.0)  # Footprint width (optional, 0 = use default)
+            h = event.get("h", 0.0)  # Footprint height (optional, 0 = use default)
+            self._spawn_debris(float(x), float(y), building_type, float(w), float(h))
 
     def _spawn_hit(self, x: float, y: float):
         rnd = random.Random((int(x) << 16) ^ int(y))

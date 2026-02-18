@@ -9,6 +9,7 @@ from __future__ import annotations
 from config import TILE_SIZE
 from game.entities.neutral_buildings import House, Farm, FoodStand
 from game.sim.determinism import get_rng
+from game.systems.protocol import GameSystem, SystemContext
 
 
 def _overlaps_any(buildings: list, gx: int, gy: int, w: int, h: int) -> bool:
@@ -38,7 +39,7 @@ def _ring_positions(cx: int, cy: int, r: int) -> list[tuple[int, int]]:
     return out
 
 
-class NeutralBuildingSystem:
+class NeutralBuildingSystem(GameSystem):
     """
     Spawns Houses/Farms/FoodStands and ticks their passive tax generation.
 
@@ -89,7 +90,19 @@ class NeutralBuildingSystem:
     def _count(self, buildings: list, building_type: str) -> int:
         return sum(1 for b in buildings if getattr(b, "building_type", None) == building_type and getattr(b, "hp", 1) > 0)
 
-    def update(self, dt: float, buildings: list, heroes: list, castle):
+    def _find_castle(self, buildings: list) -> object | None:
+        for building in buildings:
+            bt = getattr(building, "building_type", None)
+            if getattr(bt, "value", bt) == "castle":
+                return building
+        return None
+
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        """Protocol update hook for neutral building simulation."""
+        castle = self._find_castle(ctx.buildings)
+        self.tick(dt, ctx.buildings, ctx.heroes, castle)
+
+    def tick(self, dt: float, buildings: list, heroes: list, castle) -> None:
         # Tick tax generation for existing neutral buildings
         for b in buildings:
             if getattr(b, "is_neutral", False) and hasattr(b, "update"):

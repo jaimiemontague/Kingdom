@@ -254,28 +254,43 @@ class AudioSystem:
         now_ms = float(sim_now_ms())
         
         for event in events:
-            event_type = event.get("type")
-            if not event_type:
-                continue
-            
-            # Map event type to sound key (flat contract)
-            sound_key = AUDIO_EVENT_MAP.get(event_type)
-            if not sound_key:
-                continue
-            
-            # WK6 Mid-Sprint: Check visibility gating (viewport + fog-of-war)
-            if not self._is_audible_world_event(event):
-                continue  # Event is off-screen or not visible - skip sound
-            
-            # Check cooldown
-            cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_key, 0)
-            last_play = self._cooldowns.get(sound_key, 0.0)
-            if (now_ms - last_play) < cooldown_ms:
-                continue  # Still on cooldown
-            
-            # Play sound
-            self.play_sfx(sound_key, volume=1.0)
-            self._cooldowns[sound_key] = now_ms
+            self._emit_single_event(event, now_ms)
+
+    def on_event(self, event: dict):
+        """
+        EventBus subscriber callback for single event dispatch.
+        """
+        if not self.enabled:
+            return
+        from game.sim.timebase import now_ms as sim_now_ms
+        self._emit_single_event(event, float(sim_now_ms()))
+
+    def _emit_single_event(self, event: dict, now_ms: float):
+        if not event:
+            return
+
+        event_type = event.get("type")
+        if not event_type:
+            return
+        
+        # Map event type to sound key (flat contract)
+        sound_key = AUDIO_EVENT_MAP.get(event_type)
+        if not sound_key:
+            return
+        
+        # WK6 Mid-Sprint: Check visibility gating (viewport + fog-of-war)
+        if not self._is_audible_world_event(event):
+            return  # Event is off-screen or not visible - skip sound
+        
+        # Check cooldown
+        cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_key, 0)
+        last_play = self._cooldowns.get(sound_key, 0.0)
+        if (now_ms - last_play) < cooldown_ms:
+            return  # Still on cooldown
+        
+        # Play sound
+        self.play_sfx(sound_key, volume=1.0)
+        self._cooldowns[sound_key] = now_ms
     
     def play_sfx(self, sound_key: str, volume: float = 1.0):
         """

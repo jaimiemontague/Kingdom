@@ -1,15 +1,23 @@
 """
 Combat system for handling attacks and damage.
 """
+from __future__ import annotations
+
 import math
+from collections.abc import Callable
+
 from config import TILE_SIZE
+from game.events import GameEventType
+from game.systems.protocol import GameSystem, SystemContext
+from game.types import EnemyType
 
 
-class CombatSystem:
+class CombatSystem(GameSystem):
     """Manages combat between heroes and enemies."""
     
     def __init__(self):
         self.combat_log = []
+        self._emitted_events: list[dict] = []
 
     def _hero_can_attack(self, hero) -> bool:
         """
@@ -23,13 +31,51 @@ class CombatSystem:
                 return not bool(getattr(hero, "is_inside_building", False))
         return not bool(getattr(hero, "is_inside_building", False))
         
+    @staticmethod
+    def _normalize_enemy_type(enemy_type: object) -> str:
+        enum_value = getattr(enemy_type, "value", None)
+        if isinstance(enum_value, str):
+            return enum_value
+        value = str(enemy_type)
+        try:
+            return EnemyType(value).value
+        except ValueError:
+            return value
+
+    @staticmethod
+    def _emit_event(emit_event: Callable[[dict], None], event_type: GameEventType, payload: dict) -> None:
+        payload["type"] = event_type.value
+        emit_event(payload)
+
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        """
+        Protocol entrypoint: process combat and emit events through EventBus.
+        """
+        _ = dt
+        self._emitted_events.clear()
+
+        def emit_and_queue(event: dict):
+            self._emitted_events.append(event)
+            if ctx.event_bus is not None:
+                ctx.event_bus.emit(event)
+
+        self._run_combat(ctx.heroes, ctx.enemies, ctx.buildings, emit_and_queue)
+
+    def get_emitted_events(self) -> list[dict]:
+        """Events emitted by the most recent update() call."""
+        return self._emitted_events
+
     def process_combat(self, heroes: list, enemies: list, buildings: list) -> list:
         """
-        Process all combat interactions.
-        Returns list of events (kills, damage, etc.)
+        Backward-compatible API used by tooling paths.
         """
-        events = []
-        
+        events: list[dict] = []
+        self._run_combat(heroes, enemies, buildings, events.append)
+        return events
+
+    def _run_combat(self, heroes: list, enemies: list, buildings: list, emit_event: Callable[[dict], None]) -> None:
+        """Shared combat implementation for both update() and process_combat()."""
+
         # Heroes attacking enemies
         for hero in heroes:
             if not hero.is_alive:
@@ -87,10 +133,9 @@ class CombatSystem:
                         # Backwards-compatible signature
                         hero.on_attack_landed()
                 
-                events.append({
-                    "type": "hero_attack",
+                self._emit_event(emit_event, GameEventType.HERO_ATTACK, {
                     "attacker": hero.name,
-                    "target": closest_enemy.enemy_type,
+                    "target": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
                     "damage": damage,
                     "x": closest_enemy.x,
                     "y": closest_enemy.y,
@@ -109,8 +154,7 @@ class CombatSystem:
                     color = (spec or {}).get("color", (200, 200, 200))
                     size = (spec or {}).get("size_px", 2)  # Build B: default 2px for readability
                     
-                    events.append({
-                        "type": "ranged_projectile",
+                    self._emit_event(emit_event, GameEventType.RANGED_PROJECTILE, {
                         "from_x": float(hero.x),
                         "from_y": float(hero.y),
                         "to_x": float(closest_enemy.x),
@@ -135,10 +179,9 @@ class CombatSystem:
                             gold_share = gold_per_hero + (1 if i == 0 and remainder > 0 else 0)
                             recipient.add_gold(gold_share)
                         
-                        events.append({
-                            "type": "enemy_killed",
+                        self._emit_event(emit_event, GameEventType.ENEMY_KILLED, {
                             "hero": hero.name,
-                            "enemy": closest_enemy.enemy_type,
+                            "enemy": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
                             "gold": closest_enemy.gold_reward,
                             "xp": closest_enemy.xp_reward,
                             "gold_split": len(gold_recipients),
@@ -195,8 +238,7 @@ class CombatSystem:
             lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
             lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
             
-            events.append({
-                "type": "hero_attack_lair",
+            self._emit_event(emit_event, GameEventType.HERO_ATTACK_LAIR, {
                 "attacker": hero.name,
                 "target": getattr(lair, "building_type", "lair"),
                 "damage": damage,
@@ -217,8 +259,7 @@ class CombatSystem:
                 color = (spec or {}).get("color", (200, 200, 200))
                 size = (spec or {}).get("size_px", 1)
                 
-                events.append({
-                    "type": "ranged_projectile",
+                self._emit_event(emit_event, GameEventType.RANGED_PROJECTILE, {
                     "from_x": float(hero.x),
                     "from_y": float(hero.y),
                     "to_x": float(lair.center_x),
@@ -238,8 +279,7 @@ class CombatSystem:
                 lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
                 lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
                 
-                events.append({
-                    "type": "lair_cleared",
+                self._emit_event(emit_event, GameEventType.LAIR_CLEARED, {
                     "hero": hero.name,
                     "lair_type": getattr(lair, "building_type", "lair"),
                     "gold": summary.get("gold", 0),
@@ -261,11 +301,8 @@ class CombatSystem:
         # Check for building destruction
         for building in buildings:
             if building.hp <= 0 and building.building_type == "castle":
-                events.append({
-                    "type": "castle_destroyed",
+                self._emit_event(emit_event, GameEventType.CASTLE_DESTROYED, {
                 })
-        
-        return events
     
     def get_enemies_in_range(self, x: float, y: float, range_dist: float, enemies: list) -> list:
         """Get all enemies within range of a position."""

@@ -21,6 +21,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OBSERVE = PROJECT_ROOT / "tools" / "observe_sync.py"
 DETERMINISM_GUARD = PROJECT_ROOT / "tools" / "determinism_guard.py"
+TESTS_DIR = PROJECT_ROOT / "tests"
 
 
 def _run_determinism_guard(*, title: str) -> int:
@@ -47,6 +48,15 @@ def _run_profile(args_list: list[str], *, title: str) -> int:
     print(f"\n[qa_smoke] === {title} ===")
     print("[qa_smoke] cmd:", " ".join(cmd))
     completed = subprocess.run(cmd, env=env, cwd=str(PROJECT_ROOT))
+    print(f"[qa_smoke] exit_code={completed.returncode}")
+    return int(completed.returncode)
+
+
+def _run_pytest(*, title: str) -> int:
+    cmd = [sys.executable, "-m", "pytest", str(TESTS_DIR)]
+    print(f"\n[qa_smoke] === {title} ===")
+    print("[qa_smoke] cmd:", " ".join(cmd))
+    completed = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
     print(f"[qa_smoke] exit_code={completed.returncode}")
     return int(completed.returncode)
 
@@ -98,6 +108,18 @@ def main() -> int:
         if rc != 0:
             print("\n[qa_smoke] DONE:", f"FAIL (rc={rc})")
             return rc
+
+        # Unit tests are part of the mandatory verification gate.
+        if TESTS_DIR.exists():
+            rc = _run_pytest(title="pytest (unit tests)")
+            if rc != 0:
+                print("\n[qa_smoke] DONE:", f"FAIL (rc={rc})")
+                return rc
+        else:
+            print(f"\n[qa_smoke] === pytest (unit tests) ===")
+            print(f"[qa_smoke] ERROR: missing test directory: {TESTS_DIR}")
+            print("\n[qa_smoke] DONE: FAIL (rc=2)")
+            return 2
 
         for title, a in profiles:
             prc = _run_profile(a, title=title)

@@ -1,0 +1,62 @@
+---
+description: Standard operating procedure for completing an assignment — the step-by-step workflow every agent follows.
+globs:
+alwaysApply: true
+---
+
+# Workflow SOP: How to Complete an Assignment
+
+Follow these steps in order every time you receive a task.
+
+## Phase 1: Orient (do this FIRST, before touching any code)
+
+1. **Read your assignment** from the PM hub log:
+   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+   → latest sprint → latest round → `pm_agent_prompts["YOUR_NUMBER"]` or `pm_next_actions_by_agent["YOUR_NUMBER"]`
+
+2. **Read your own log** to understand what you did last:
+   `.cursor/plans/agent_logs/agent_NN_YourRole.json`
+
+3. **Understand the scope**: What files are you expected to touch? What is the acceptance criteria?
+
+## Phase 2: Investigate (read before you write)
+
+4. **Read the relevant source files** before making changes. Understand the current state.
+5. **Check for related bugs or recent changes** in the area you're working on.
+6. **If the task is unclear**, check the sprint plan file referenced in `sprint_meta.plan_ref`.
+
+## Phase 3: Implement
+
+7. **Make your changes** — small, focused, testable.
+8. **Stay in your lane** — only touch files in your domain unless coordinated with the owner.
+9. **Don't refactor unrelated code** — fix what you were asked to fix.
+
+## Phase 4: Verify
+
+10. **Run the QA gate**:
+    ```
+    python tools/qa_smoke.py --quick
+    ```
+    This MUST pass. If it doesn't, fix your changes until it does.
+
+11. **If you touched assets**, also run:
+    ```
+    python tools/validate_assets.py --report
+    ```
+
+## Phase 5: Report
+
+12. **Update your agent log** with:
+    - What you changed (files, approach)
+    - Test evidence (gate results)
+    - Any follow-ups or bugs found
+
+13. **Report back** with a concise summary: what you did, what passed, what's left.
+
+## Common Mistakes to Avoid
+
+- **Don't dive into code before reading your assignment** — you'll solve the wrong problem
+- **Don't make changes without running the QA gate** — broken gates block everyone
+- **Don't forget to update your log** — if it's not written down, it didn't happen
+- **Don't "fix" things outside your assignment** — file a bug and let the owner handle it
+- **Don't write essays** — bullets and code references, not paragraphs

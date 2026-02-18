@@ -6,7 +6,7 @@ Centered modal menu with pages: Resume, Graphics, Audio, Controls, Quit.
 from __future__ import annotations
 
 import pygame
-from game.ui.widgets import ModalPanel, Slider, RadioGroup, NineSlice, load_image_cached
+from game.ui.widgets import Button, ModalPanel, Slider, RadioGroup, load_image_cached
 from game.ui.theme import UITheme
 from config import COLOR_WHITE, COLOR_UI_BG, COLOR_UI_BORDER
 
@@ -44,6 +44,7 @@ class PauseMenu:
         
         # Page buttons (main menu)
         self.page_buttons = {}  # {page_name: rect}
+        self.page_button_widgets: dict[str, Button] = {}
         self._update_page_buttons()
         
         # Controls page: keybinds list
@@ -99,6 +100,14 @@ class PauseMenu:
             "controls": pygame.Rect(button_x, button_y + spacing * 3, button_w, button_h),
             "quit": pygame.Rect(button_x, button_y + spacing * 4, button_w, button_h),
         }
+        self.page_button_widgets = {}
+        for page_name, rect in self.page_buttons.items():
+            self.page_button_widgets[page_name] = Button(
+                rect=pygame.Rect(rect),
+                text=page_name.replace("_", " ").title(),
+                font=self.theme.font_body,
+                icon=self._icon_map.get(page_name),
+            )
     
     def _build_keybinds_list(self) -> list[tuple[str, str]]:
         """Build read-only keybinds list for Controls page."""
@@ -334,28 +343,32 @@ class PauseMenu:
             
             # Buttons
             for page_name, rect in self.page_buttons.items():
-                # Button background
-                is_hover = rect.collidepoint(pygame.mouse.get_pos())
-                tex = self._button_tex_hover if is_hover else self._button_tex_normal
-                if not NineSlice.render(surface, rect, tex, border=self._button_slice_border):
-                    bg_color = (70, 70, 80) if is_hover else (50, 50, 60)
-                    pygame.draw.rect(surface, bg_color, rect)
-                    pygame.draw.rect(surface, self.theme.panel_border, rect, 2)
-                
-                # Button text
-                label = page_name.replace("_", " ").title()
-                text_surf = self.theme.font_body.render(label, True, self.theme.text)
-                icon = self._icon_map.get(page_name)
-                left_pad = 14
-                icon_slot = 16
-                icon_gap = 8
-                icon_x = rect.x + left_pad
-                icon_y = rect.centery - icon_slot // 2
-                if icon is not None:
-                    surface.blit(icon, (icon_x, icon_y))
-                text_x = icon_x + icon_slot + icon_gap
-                text_y = rect.centery - text_surf.get_height() // 2
-                surface.blit(text_surf, (text_x, text_y))
+                button = self.page_button_widgets.get(page_name)
+                if button is None:
+                    continue
+                button.rect = pygame.Rect(rect)
+                button.icon = self._icon_map.get(page_name)
+                button.text = page_name.replace("_", " ").title()
+                button.render(
+                    surface,
+                    pygame.mouse.get_pos(),
+                    texture_normal=self._button_tex_normal,
+                    texture_hover=self._button_tex_hover,
+                    texture_pressed=self._button_tex_pressed,
+                    slice_border=self._button_slice_border,
+                    bg_normal=(50, 50, 60),
+                    bg_hover=(70, 70, 80),
+                    bg_pressed=(80, 80, 95),
+                    border_outer=(20, 20, 25),
+                    border_inner=(80, 80, 100),
+                    border_highlight=(107, 107, 132),
+                    text_color=self.theme.text,
+                    text_shadow_color=(20, 20, 30),
+                    text_align="left",
+                    content_left_pad=14,
+                    icon_slot=16,
+                    icon_gap=8,
+                )
         
         elif self.current_page == "graphics":
             # Graphics page

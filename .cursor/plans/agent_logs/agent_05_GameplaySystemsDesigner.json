@@ -999,6 +999,88 @@
           }
         }
       }
+    },
+    "wk8-engine-entities-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+        "notes": "WK8 Track 2: building decomposition into package + compatibility shims."
+      },
+      "rounds": {
+        "wk8_r1_implementation": {
+          "sprint_id": "wk8-engine-entities-refactor",
+          "round_id": "wk8_r1_implementation",
+          "round_meta": {
+            "build_target": "internal_refactor",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "Created `game/entities/buildings/` package and moved building code into focused modules: `base.py`, `hiring_mixin.py`, `castle.py`, `guilds.py`, `temples.py`, `economic.py`, `defensive.py`, `special.py`, `__init__.py`.",
+                "Extracted shared guild/temple hire+tax behavior into `HiringBuilding` mixin and wired guild/temple classes to use it without changing gameplay behavior.",
+                "Replaced `game/entities/building.py` with backward-compatible re-export shim and updated `game/entities/__init__.py` to re-export from `.buildings`."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "validate_assets_report": {
+                  "command": "python tools/validate_assets.py --report",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "warns": 0
+                }
+              }
+            }
+          }
+        },
+        "wk8_r2_track2_implementation": {
+          "sprint_id": "wk8-engine-entities-refactor",
+          "round_id": "wk8_r2_track2_implementation",
+          "round_meta": {
+            "build_target": "internal_refactor",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "Step 0: Added `game/entities/buildings/types.py` with `BuildingType(str, Enum)` using all keys currently present in `config.py` `BUILDING_COSTS`.",
+                "Wired `BuildingType` into Track 2 modules for constructor building identifiers and base type hints (`Building.__init__(..., building_type: BuildingType | str)`).",
+                "Step 1: Kept `HiringBuilding` mixin and applied it to guilds/temples while preserving method behavior (`can_hire`, `hire_hero`, `add_tax_gold`, `collect_taxes`, `stored_tax_gold`).",
+                "Step 2: Kept domain split and moved non-human dwellings into `dwellings.py` to satisfy package line-count constraints while preserving class behavior.",
+                "Step 3: Preserved backward-compatible shims (`game/entities/building.py` re-export, `game/entities/__init__.py` re-export from `.buildings`)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "validate_assets_report": {
+                  "command": "python tools/validate_assets.py --report",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "warns": 0
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -1,11 +1,9 @@
 """
 Bounty system for incentivizing hero behavior.
 """
-import pygame
-import math
-from config import TILE_SIZE, COLOR_GOLD, COLOR_WHITE
-from game.graphics.font_cache import get_font
+from config import TILE_SIZE
 from game.sim.timebase import now_ms as sim_now_ms
+from game.systems.protocol import GameSystem, SystemContext
 
 
 class Bounty:
@@ -194,79 +192,8 @@ class Bounty:
         dx = self.x - x
         dy = self.y - y
         return (dx * dx + dy * dy) <= distance * distance
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render the bounty flag."""
-        if self.claimed:
-            return
-        
-        cam_x, cam_y = camera_offset
-        screen_x = self.x - cam_x
-        screen_y = self.y - cam_y
-        
-        # WK6: Draw flag pole with stronger outline for black fog visibility
-        # Pole outline (darker brown for contrast)
-        pygame.draw.line(
-            surface,
-            (80, 50, 25),  # Dark brown outline
-            (screen_x, screen_y),
-            (screen_x, screen_y - 30),
-            5
-        )
-        # Pole core
-        pygame.draw.line(
-            surface,
-            (139, 90, 43),  # Brown
-            (screen_x, screen_y),
-            (screen_x, screen_y - 30),
-            3
-        )
-        
-        # Draw flag with outline for black fog visibility
-        flag_color = COLOR_GOLD
-        flag_points = [
-            (screen_x, screen_y - 30),
-            (screen_x + 20, screen_y - 25),
-            (screen_x, screen_y - 20),
-        ]
-        # WK6: Add dark outline for black fog contrast
-        pygame.draw.polygon(surface, (100, 80, 0), flag_points)  # Dark gold outline
-        pygame.draw.polygon(surface, flag_color, flag_points)
-        
-        # Draw reward amount
-        font = get_font(16)
-        reward_val = int(getattr(self, "reward", 0) or 0)
-        if self._ui_cache_reward_value != reward_val or self._ui_cache_reward_surf is None:
-            self._ui_cache_reward_value = reward_val
-            self._ui_cache_reward_surf = font.render(f"${reward_val}", True, COLOR_WHITE)
-            self._ui_cache_reward_rect = self._ui_cache_reward_surf.get_rect(center=(0, 0))
-        if self._ui_cache_reward_surf is not None and self._ui_cache_reward_rect is not None:
-            # Position per-frame, but reuse surface/rect template
-            rect = self._ui_cache_reward_rect.copy()
-            rect.center = (screen_x + 10, screen_y - 35)
-            surface.blit(self._ui_cache_reward_surf, rect)
 
-        # Draw responders + attractiveness (compact, readable)
-        responders = int(getattr(self, "responders", getattr(self, "ui_responders", 0)) or 0)
-        tier = str(getattr(self, "attractiveness_tier", getattr(self, "ui_attractiveness", "low")) or "low").lower()
-        tier_label = {"low": "Low", "med": "Med", "high": "High"}.get(tier, "Low")
-        tier_color = {"low": (150, 150, 150), "med": (240, 210, 90), "high": (110, 230, 140)}.get(tier, (150, 150, 150))
-
-        meta_font = get_font(14)
-        meta_key = (int(responders), str(tier))
-        if self._ui_cache_meta_key != meta_key or self._ui_cache_r_surf is None or self._ui_cache_a_surf is None:
-            self._ui_cache_meta_key = meta_key
-            self._ui_cache_r_surf = meta_font.render(f"R:{responders}", True, COLOR_WHITE)
-            self._ui_cache_r_w = int(self._ui_cache_r_surf.get_width()) if self._ui_cache_r_surf else 0
-            self._ui_cache_a_surf = meta_font.render(tier_label, True, tier_color)
-
-        if self._ui_cache_r_surf is not None:
-            surface.blit(self._ui_cache_r_surf, (screen_x + 24, screen_y - 18))
-        if self._ui_cache_a_surf is not None:
-            surface.blit(self._ui_cache_a_surf, (screen_x + 24 + self._ui_cache_r_w + 6, screen_y - 18))
-
-
-class BountySystem:
+class BountySystem(GameSystem):
     """Manages bounties in the game."""
     
     def __init__(self):
@@ -277,6 +204,10 @@ class BountySystem:
         # UI metric cadence (avoid per-frame O(H*B) scans and allocations)
         self._ui_last_update_ms = 0
         self._ui_update_interval_ms = 250
+
+    def update(self, ctx: SystemContext, dt: float) -> None:
+        """Protocol hook (bounty claim processing remains orchestrated by engine)."""
+        _ = (ctx, dt)
         
     def place_bounty(self, x: float, y: float, reward: int, bounty_type: str = "explore", target=None) -> Bounty:
         """Place a new bounty."""
@@ -420,9 +351,4 @@ class BountySystem:
     def cleanup(self):
         """Remove claimed bounties."""
         self.bounties = [b for b in self.bounties if not b.claimed]
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render all bounties."""
-        for bounty in self.bounties:
-            bounty.render(surface, camera_offset)
 

@@ -1,0 +1,50 @@
+---
+description: Coding standards and constraints that every agent must follow when writing code.
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Coding Standards
+
+## Language & Runtime
+
+- Python 3.13, pygame 2.6
+- No type: ignore unless absolutely necessary — fix the type issue
+- Imports at top of file, stdlib first, then third-party, then project
+
+## Determinism Rules (Critical)
+
+These rules exist because the game must support deterministic replay and future multiplayer.
+
+1. **Never use `time.time()` or `pygame.time.get_ticks()` in simulation logic** — use `game.sim.timebase.now_ms()`
+2. **Never use `random.random()` or unseeded RNG in simulation** — use `game.sim.determinism.get_rng("your_subsystem")`
+3. **Never use `set()` iteration order** for anything that affects game state — use sorted lists or ordered dicts
+4. **Never use Python `hash()` as a key** in sim-visible data — use stable IDs
+5. Audio, UI rendering, and debug overlays are exempt (they don't affect sim state)
+
+## Performance Rules
+
+1. **No per-frame allocations** for surfaces, fonts, or large lists — cache and reuse
+2. **No O(N*M) loops** where N and M both grow with entity count — find a better structure
+3. Font surfaces: use `game.graphics.font_cache.get_font()` — never call `pygame.font.Font()` per frame
+
+## Code Style
+
+1. No comments that just narrate what code does ("# increment counter")
+2. Comments should explain WHY, not WHAT
+3. Keep functions under ~80 lines; extract helpers for clarity
+4. Use `getattr(obj, "field", default)` defensively when reading optional attributes
+
+## File Ownership
+
+- Stay in your lane. If your task touches files outside your domain, coordinate with the owning agent
+- If you must make a cross-domain change, document it in your agent log and notify the owner
+- `config.py` is shared — changes here need PM awareness
+
+## Testing Your Changes
+
+After every code change, run:
+```
+python tools/qa_smoke.py --quick
+```
+This must PASS before you report your work as done.

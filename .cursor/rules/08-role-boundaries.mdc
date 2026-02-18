@@ -1,0 +1,49 @@
+---
+description: Role boundaries — what each agent owns and must NOT do. Prevents stepping on each other.
+globs:
+alwaysApply: true
+---
+
+# Role Boundaries
+
+## The Golden Rule
+
+**Do your job. Don't do someone else's job.**
+
+If you find a bug outside your domain, document it and hand it off. Do not fix it yourself.
+
+## Agent 01 (PM) — DOES NOT WRITE CODE
+
+The PM plans, delegates, tracks, and communicates. The PM never implements features or fixes bugs unless the human explicitly overrides this rule. If PM notices an issue, they file a bug ticket and assign it to the owning agent.
+
+## File Ownership (who changes what)
+
+| Files / Area | Primary Owner | Consult |
+|---|---|---|
+| `game/engine.py` | Agent 03 | Agent 08 (UI hooks) |
+| `game/entities/` | Agent 05 | Agent 03 (contracts) |
+| `game/systems/combat.py`, `economy.py` | Agent 05 | Agent 06 (AI hooks) |
+| `game/systems/bounty.py` | Agent 05 | Agent 06 |
+| `game/systems/spawner.py`, `lairs.py` | Agent 05 | Agent 07 (scenarios) |
+| `ai/basic_ai.py`, `ai/providers/` | Agent 06 | Agent 03 (determinism) |
+| `game/ui/` | Agent 08 | Agent 03 (input routing) |
+| `game/graphics/` | Agent 09 | Agent 08 (UI icons) |
+| `game/audio/` | Agent 14 | Agent 03 (event contract) |
+| `game/sim/` | Agent 03 | Agent 04 (determinism) |
+| `tools/` | Agent 12 | Agent 11 (QA tools) |
+| `config.py` | Shared | PM awareness required |
+| `assets/` | Agent 09 (sprites), Agent 14 (audio) | Agent 12 (validator) |
+
+## Cross-Domain Changes
+
+If your task requires editing a file you don't own:
+1. Check if the owner has recent changes that might conflict
+2. Make the minimal change needed
+3. Document it in your agent log
+4. Note it for the file owner so they can review
+
+## What "Consult" Means
+
+- You may be asked to review or advise on changes in that area
+- You don't implement unless the owner delegates to you
+- If you see a problem, tell the owner — don't fix it silently

@@ -1,0 +1,56 @@
+---
+description: How to read and write your agent log — the audit trail that keeps the studio running.
+globs: "**/*.json"
+alwaysApply: false
+---
+
+# Agent Log Conventions
+
+## Your log file
+
+Location: `.cursor/plans/agent_logs/agent_NN_YourRole.json`
+
+This is YOUR file. Only you write to it. Other agents read it.
+
+## Log structure
+
+```json
+{
+  "schema_version": "2.0",
+  "agent": { "id": "NN", "name": "YourRole" },
+  "sprints": {
+    "sprint-name": {
+      "sprint_meta": { "plan_ref": "...", "notes": "..." },
+      "rounds": {
+        "round_id": {
+          "round_meta": { ... },
+          "prompt_text": "what PM asked you to do",
+          "response": {
+            "status": "complete",
+            "summary_bullets": ["what you did"],
+            "proposed_changes": ["files you changed"],
+            "acceptance_criteria": ["how to verify"],
+            "risks": ["what could go wrong"],
+            "questions_back_to_pm": []
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## What to log (every time)
+
+1. **What you were asked to do** (copy from PM assignment)
+2. **What you actually did** (files changed, approach taken)
+3. **Test evidence** (gate results: `qa_smoke --quick` PASS/FAIL)
+4. **Anything unexpected** (bugs found, scope changes, blockers)
+5. **Follow-ups needed** (tasks for other agents, deferred work)
+
+## Rules
+
+- **Append, don't rewrite** — add new rounds, don't edit old ones
+- **Be specific** — "fixed hero click" is useless; "added 20px click radius buffer to try_select_hero in game/engine.py line 640" is useful
+- **Include test commands** — so anyone can verify your work
+- **Keep it concise** — bullet points, not essays
