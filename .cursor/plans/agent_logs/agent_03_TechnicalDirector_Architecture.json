@@ -2072,6 +2072,51 @@
             }
           }
         }
+      },
+      "wk11-building-interiors-llm": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+          "notes": "Track 4 LLM API setup (model configurability + env documentation)."
+        },
+        "rounds": {
+          "wk11_r1_implementation": {
+            "sprint_id": "wk11-building-interiors-llm",
+            "round_id": "wk11_r1_implementation",
+            "round_meta": {
+              "prompt_set_id": "wk11_r1_implementation_v1",
+              "build_target": "Track4_LLM_API_setup"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "config.py: Added LLMConfig.openai_model loaded from OPENAI_MODEL with default gpt-5-nano; exported backward-compatible OPENAI_MODEL alias.",
+                "ai/providers/openai_provider.py: Removed hardcoded gpt-3.5-turbo default and now source model from config OPENAI_MODEL (still supports optional constructor override).",
+                ".env.example: Added OpenAI setup template (LLM_PROVIDER, OPENAI_API_KEY, OPENAI_MODEL).",
+                "main.py + README.md: Documented that --provider openai reads OPENAI_API_KEY/OPENAI_MODEL from .env while CLI default remains mock.",
+                "Verified .gitignore already includes .env (no file change needed)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python -m pytest tests/",
+                "python main.py --provider openai  # with OPENAI_API_KEY set in .env"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                },
+                "pytest": {
+                  "command": "python -m pytest tests/",
+                  "exit_code": 0,
+                  "status": "PASS",
+                  "notes": "Direct `pytest tests/` was unavailable in PATH on this machine; module invocation used."
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

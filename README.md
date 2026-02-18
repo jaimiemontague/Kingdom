@@ -43,10 +43,11 @@ pip install -r requirements.txt
 
 3. (Optional) Set up your LLM API key:
    - Create a `.env` file in the project root
-   - Add your API key:
+   - Add your OpenAI settings:
 ```
 LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-5-nano
 ```
 
 ## Running the Game
@@ -55,7 +56,7 @@ OPENAI_API_KEY=sk-your-key-here
 # Run with mock AI (no API key needed)
 python main.py
 
-# Run with OpenAI
+# Run with OpenAI (uses OPENAI_API_KEY/OPENAI_MODEL from .env)
 python main.py --provider openai
 
 # Run with Claude

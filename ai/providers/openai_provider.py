@@ -2,14 +2,14 @@
 OpenAI GPT provider implementation.
 """
 from .base import BaseLLMProvider
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, OPENAI_MODEL
 
 
 class OpenAIProvider(BaseLLMProvider):
     """OpenAI GPT provider."""
     
-    def __init__(self, model: str = "gpt-3.5-turbo"):
-        self.model = model
+    def __init__(self, model: str | None = None):
+        self.model = model or OPENAI_MODEL
         self.client = None
         self._init_client()
     
@@ -32,7 +32,7 @@ class OpenAIProvider(BaseLLMProvider):
         return "openai"
     
     def is_available(self) -> bool:
-        return self.client is not None and OPENAI_API_KEY
+        return self.client is not None and bool(OPENAI_API_KEY)
     
     def complete(
         self, 

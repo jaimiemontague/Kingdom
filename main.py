@@ -5,7 +5,7 @@ Usage:
     python main.py [--provider <provider_name>]
     
 Providers:
-    openai  - OpenAI GPT (requires OPENAI_API_KEY)
+    openai  - OpenAI GPT (reads OPENAI_API_KEY/OPENAI_MODEL from .env)
     claude  - Anthropic Claude (requires ANTHROPIC_API_KEY)  
     gemini  - Google Gemini (requires GEMINI_API_KEY)
     grok    - xAI Grok (requires GROK_API_KEY)
@@ -28,7 +28,7 @@ def parse_args():
         type=str,
         default="mock",
         choices=["openai", "claude", "gemini", "grok", "mock"],
-        help="LLM provider to use for hero decisions (default: mock)"
+        help="LLM provider to use for hero decisions (default: mock; --provider openai uses .env API key/model)"
     )
     parser.add_argument(
         "--no-llm",

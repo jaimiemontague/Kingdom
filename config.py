@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.3.2"
-    game_title: str = "Kingdom Sim (Prototype v1.3.2) — The AI Refactor Update"
+    prototype_version: str = "1.3.3"
+    game_title: str = "Kingdom Sim (Prototype v1.3.3) — The Inn & AI Behavior Update"
     default_borderless: bool = True
 
 
@@ -99,6 +99,7 @@ class EconomyConfig:
 class LLMConfig:
     provider: str
     openai_api_key: str
+    openai_model: str
     anthropic_api_key: str
     gemini_api_key: str
     grok_api_key: str
@@ -132,6 +133,7 @@ ECONOMY = EconomyConfig()
 LLM = LLMConfig(
     provider=os.getenv("LLM_PROVIDER", "openai"),
     openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+    openai_model=os.getenv("OPENAI_MODEL", "gpt-5-nano"),
     anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
     gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
     grok_api_key=os.getenv("GROK_API_KEY", ""),
@@ -361,8 +363,9 @@ STARTING_GOLD = ECONOMY.starting_gold
 TAX_RATE = ECONOMY.tax_rate
 
 # LLM settings
-LLM_PROVIDER = LLM.provider  # openai, claude, gemini, grok
+LLM_PROVIDER = LLM.provider  # openai, claude, gemini, grok, mock
 OPENAI_API_KEY = LLM.openai_api_key
+OPENAI_MODEL = LLM.openai_model
 ANTHROPIC_API_KEY = LLM.anthropic_api_key
 GEMINI_API_KEY = LLM.gemini_api_key
 GROK_API_KEY = LLM.grok_api_key

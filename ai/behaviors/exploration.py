@@ -11,11 +11,12 @@ from config import (
     RANGER_FRONTIER_SCAN_RADIUS_TILES,
     TILE_SIZE,
 )
+from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
 from game.sim.hero_guardrails_tunables import TARGET_COMMIT_WINDOW_S
+from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
-from game.sim.timebase import now_ms as sim_now_ms
 
 
 def assign_patrol_zone(ai: Any, hero: Any, game_state: dict) -> tuple[float, float]:
@@ -232,6 +233,30 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
                 hero.target_position = (blacksmith.center_x, blacksmith.center_y)
             hero.state = HeroState.MOVING
             hero.target = {"type": "shopping", "blacksmith": blacksmith}
+            return
+
+    # WK11: Get a drink at Inn (IDLE, full health, 10+ gold, ~10–15% chance per idle cycle).
+    if hero.hp >= hero.max_hp and hero.gold >= 10:
+        inns = [
+            b for b in buildings
+            if getattr(b, "building_type", None) == BuildingType.INN and getattr(b, "is_constructed", True)
+        ]
+        if inns and ai._ai_rng.random() < 0.12:  # ~12% chance
+            inn = min(inns, key=lambda b: hero.distance_to(b.center_x, b.center_y))
+            world = game_state.get("world")
+            if world:
+                adj = best_adjacent_tile(world, buildings, inn, hero.x, hero.y)
+                if adj:
+                    hero.target_position = (
+                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
+                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
+                    )
+                else:
+                    hero.target_position = (inn.center_x, inn.center_y)
+            else:
+                hero.target_position = (inn.center_x, inn.center_y)
+            hero.state = HeroState.MOVING
+            hero.target = {"type": "get_drink", "inn": inn}
             return
 
     # Get this hero's patrol zone.

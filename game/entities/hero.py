@@ -3,6 +3,7 @@ Hero entity with stats, inventory, and AI state machine.
 """
 import math
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 from game.systems.buffs import Buff
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
@@ -11,6 +12,9 @@ from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE
 )
+
+if TYPE_CHECKING:
+    from game.entities.buildings.base import Building
 
 
 class HeroState(Enum):
@@ -123,6 +127,9 @@ class Hero:
         self.is_inside_building = False
         self.inside_building = None
         self.inside_timer = 0.0  # for short non-rest "enter" moments (e.g. shopping)
+        self.pending_task: str | None = None
+        self.pending_task_building: Building | None = None
+        self._rest_heal_progress = 0.0
 
         # -----------------------------
         # WK2 contracts: combat gating + stuck signals (Hero-owned, UI-readable)
@@ -272,62 +279,110 @@ class Hero:
     
     def start_resting(self):
         """Start resting at home."""
-        # Can't rest if building is damaged
-        if self.home_building and self.home_building.is_damaged:
+        return self.start_resting_at_building(self.home_building)
+
+    def start_resting_at_building(
+        self,
+        building: "Building | None",
+        *,
+        duration_sec: float | None = None,
+    ) -> bool:
+        """Start resting in a specific safe building (home guild or inn)."""
+        if building is None:
             self.state = HeroState.IDLE
             return False
-        
-        # Enter the home building (Majesty-style: hero disappears inside).
-        if self.home_building:
-            self.is_inside_building = True
-            self.inside_building = self.home_building
-            self.inside_timer = 0.0
-            self.x = self.home_building.center_x
-            self.y = self.home_building.center_y
+        if getattr(building, "is_damaged", False):
+            self.state = HeroState.IDLE
+            return False
+
+        # If switching buildings while already inside, notify the old building first.
+        if self.is_inside_building and self.inside_building is not None and self.inside_building is not building:
+            old_building = self.inside_building
+            if hasattr(old_building, "on_hero_exit"):
+                try:
+                    old_building.on_hero_exit(self)
+                except Exception:
+                    pass
+
+        self.is_inside_building = True
+        self.inside_building = building
+        self.inside_timer = max(0.0, float(duration_sec)) if duration_sec is not None else 0.0
+        self.x = building.center_x
+        self.y = building.center_y
+
+        if hasattr(building, "on_hero_enter"):
+            try:
+                building.on_hero_enter(self)
+            except Exception:
+                pass
 
         self.state = HeroState.RESTING
         self.hp_healed_this_rest = 0
-        self.last_heal_time = 0
+        self.last_heal_time = 0.0
+        self._rest_heal_progress = 0.0
         return True
     
     def update_resting(self, dt: float) -> bool:
         """Update resting state. Returns True if still resting."""
         if self.state != HeroState.RESTING:
             return False
-        
-        # Check if building is damaged - must pop out and defend!
-        if self.home_building and self.home_building.is_damaged:
+
+        rest_building = self.inside_building or self.home_building
+        if rest_building is None:
+            self.state = HeroState.IDLE
+            return False
+
+        # Check if building is damaged - must pop out and defend.
+        if getattr(rest_building, "is_damaged", False):
             self.pop_out_of_building()
             return False
-        
-        self.last_heal_time += dt
-        
-        # Heal 1 HP every 2 seconds
-        if self.last_heal_time >= 2.0:
-            self.last_heal_time = 0
+
+        # Optional timed rest (used by inn/task-duration flows).
+        if self.inside_timer > 0.0:
+            self.inside_timer = max(0.0, self.inside_timer - dt)
+            if self.inside_timer <= 0.0:
+                self.finish_resting()
+                return False
+
+        # Default guild rate is 0.01 -> 1 HP per 2s.
+        # Inn rate is 0.02 -> 1 HP per 1s.
+        recovery_rate = float(getattr(rest_building, "rest_recovery_rate", 0.01))
+        self._rest_heal_progress += max(0.0, recovery_rate) * 50.0 * float(dt)
+        heal_points = int(self._rest_heal_progress)
+        if heal_points > 0:
+            self._rest_heal_progress -= float(heal_points)
             if self.hp < self.max_hp:
-                self.hp += 1
-                self.hp_healed_this_rest += 1
-        
+                applied = min(heal_points, self.max_hp - self.hp)
+                self.hp += applied
+                self.hp_healed_this_rest += applied
+
         # Stop resting if fully healed or healed 30 points
         if self.hp >= self.max_hp or self.hp_healed_this_rest >= 30:
             self.finish_resting()
             return False
-        
+
         return True
     
-    def pop_out_of_building(self):
-        """Hero pops out of building (when building takes damage)."""
+    def pop_out_of_building(self) -> "Building | None":
+        """Hero pops out of the current building and becomes targetable again."""
+        popped_building = self.inside_building or self.home_building
         self.state = HeroState.IDLE
         self.hp_healed_this_rest = 0
+        self.last_heal_time = 0.0
+        self._rest_heal_progress = 0.0
         self.is_inside_building = False
         self.inside_timer = 0.0
         self.inside_building = None
-        # Stay near the building to defend it
-        if self.home_building:
-            # Position slightly outside the building
-            self.x = self.home_building.center_x + TILE_SIZE
-            self.y = self.home_building.center_y
+        if popped_building and hasattr(popped_building, "on_hero_exit"):
+            try:
+                popped_building.on_hero_exit(self)
+            except Exception:
+                pass
+        # Stay near the building to defend it / continue AI task resolution.
+        if popped_building:
+            self.x = popped_building.center_x + TILE_SIZE
+            self.y = popped_building.center_y
+        return popped_building
     
     def can_rest_at_home(self) -> bool:
         """Check if hero can rest at their home building."""
@@ -346,15 +401,27 @@ class Hero:
         if self.is_inside_building:
             self.pop_out_of_building()
 
-    def enter_building_briefly(self, building, duration_sec: float = 0.6):
+    def enter_building_briefly(self, building: "Building | None", duration_sec: float = 0.6) -> None:
         """Enter a building briefly (e.g. shopping) then auto-exit after duration."""
         if not building:
             return
+        if self.is_inside_building and self.inside_building is not None and self.inside_building is not building:
+            old_building = self.inside_building
+            if hasattr(old_building, "on_hero_exit"):
+                try:
+                    old_building.on_hero_exit(self)
+                except Exception:
+                    pass
         self.is_inside_building = True
         self.inside_building = building
         self.inside_timer = max(0.0, float(duration_sec))
         self.x = building.center_x
         self.y = building.center_y
+        if hasattr(building, "on_hero_enter"):
+            try:
+                building.on_hero_enter(self)
+            except Exception:
+                pass
     
     def transfer_taxes_to_home(self):
         """Transfer taxed gold to home building."""
@@ -503,13 +570,8 @@ class Hero:
         # Handle brief "inside building" timer (shopping etc.)
         if self.is_inside_building and self.state != HeroState.RESTING and self.inside_timer > 0:
             self.inside_timer = max(0.0, self.inside_timer - dt)
-            if self.inside_timer <= 0 and self.inside_building is not None:
-                # Pop out near the building we entered.
-                b = self.inside_building
-                self.is_inside_building = False
-                self.inside_building = None
-                self.x = b.center_x + TILE_SIZE
-                self.y = b.center_y
+            if self.inside_timer <= 0:
+                self.pop_out_of_building()
         
         # Update attack cooldown
         if self.attack_cooldown > 0:

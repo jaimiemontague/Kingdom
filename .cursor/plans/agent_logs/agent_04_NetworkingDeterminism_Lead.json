@@ -746,6 +746,57 @@
         }
       }
     }
+  },
+  "wk11-building-interiors-llm": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+      "notes": "WK11 verification: determinism audit for combat safety, task durations, Inn rest/get a drink, enemy targeting."
+    },
+    "rounds": {
+      "wk11_r2_verification": {
+        "sprint_id": "wk11-building-interiors-llm",
+        "round_id": "wk11_r2_verification",
+        "round_meta": {
+          "prompt_set_id": "wk11_verification_r2_v1",
+          "build_target": "verification",
+          "sent_at_local": "2026-02-18"
+        },
+        "prompt_text": "Agent 04 — Determinism Audit: Verify duration rolls use get_rng, get a drink chance uses seeded RNG, Inn healing uses sim time, enemy.py targeting/attack path is deterministic; run determinism_guard.",
+        "response": {
+          "received_at_local": "2026-02-18",
+          "status": "complete",
+          "raw": "Agent 04 WK11 determinism verification complete. Duration rolls: all call sites in ai/behaviors/bounty_pursuit.py use rng = get_rng('ai_basic') before calling roll_duration_seconds(); task_durations.py takes rng as argument (callers pass seeded RNG). Get a drink chance: ai/behaviors/exploration.py uses ai._ai_rng.random() < 0.12; _ai_rng is set from get_rng('ai_basic') in ai/basic_ai.py — seeded. Inn healing: hero rest/inside_timer and _rest_heal_progress use dt only (no time.time/get_ticks); engine uses fixed dt when DETERMINISTIC_SIM=1 and advances sim_now_ms from it; game/entities/buildings/economic.py has no time usage. Enemy targeting: game/entities/enemy.py find_target() excludes heroes with getattr(hero, 'is_inside_building', False); _needs_new_target() and do_attack() both check _is_inside_building_target(); enemy uses now_ms() from game.sim.timebase only; no random or wall-clock in enemy.py or combat.py. Determinism guard: python tools/determinism_guard.py exit 0.",
+          "summary_bullets": [
+            "PASS: All duration rolls use get_rng('ai_basic') at call sites (bounty_pursuit.py); roll_duration_seconds(task_key, rng) takes seeded rng.",
+            "PASS: Get a drink chance uses ai._ai_rng.random() < 0.12 where _ai_rng is get_rng('ai_basic') in basic_ai.py.",
+            "PASS: Inn/healing timing is dt-driven; no wall-clock in hero or economic building; DETERMINISTIC_SIM uses fixed dt and sim_now_ms.",
+            "PASS: enemy.py targeting and do_attack use is_inside_building; no non-deterministic behavior introduced; time from sim timebase only.",
+            "PASS: python tools/determinism_guard.py"
+          ],
+          "agent_fields": {
+            "status": "PASS",
+            "bugs_found": [],
+            "evidence": {
+              "determinism_guard": {
+                "command": "python tools/determinism_guard.py",
+                "exit_code": 0,
+                "result": "PASS"
+              }
+            },
+            "reviewed_files": [
+              "ai/behaviors/task_durations.py",
+              "ai/behaviors/bounty_pursuit.py",
+              "ai/behaviors/exploration.py",
+              "ai/basic_ai.py",
+              "game/entities/hero.py",
+              "game/entities/buildings/economic.py",
+              "game/entities/enemy.py",
+              "game/engine.py"
+            ]
+          }
+        }
+      }
+    }
   }
 }
 

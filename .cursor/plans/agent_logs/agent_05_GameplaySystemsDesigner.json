@@ -1081,6 +1081,52 @@
           }
         }
       }
+    },
+    "wk11-building-interiors-llm-setup": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+        "notes": "WK11 Agent 05 Track 1/2/3 implementation: combat safety for inside heroes, hero pending-task timing hooks, and inn rest wiring."
+      },
+      "rounds": {
+        "wk11_r1_implementation": {
+          "sprint_id": "wk11-building-interiors-llm-setup",
+          "round_id": "wk11_r1_implementation",
+          "round_meta": {
+            "build_target": "feature_groundwork",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "Track 1 combat safety in `game/entities/enemy.py`: hero targeting now excludes `is_inside_building`, removed inside-hero building-priority branch, and added hard damage guard in `do_attack()` so enemies cannot damage heroes while inside any building.",
+                "Track 1 secondary-path fix: enemy retargeting now invalidates targets that moved inside buildings in both `Enemy.update()` and `SkeletonArcher.update()`.",
+                "Track 2 hero timing hooks in `game/entities/hero.py`: added `pending_task` and `pending_task_building` fields, switched brief-inside timer exit to use `pop_out_of_building()`, and added typed `start_resting_at_building(..., duration_sec=...)` support for longer 8-22s interior tasks.",
+                "Track 3 inn entity wiring: `Inn` now tracks enter/exit occupants via `heroes_resting`, supports drink-income accumulation via `record_drink_purchase()`, and hero resting now heals from building `rest_recovery_rate` while inside (inn 0.02 => 1 HP/s, guild fallback 0.01 => 1 HP/2s).",
+                "Regression coverage updates: adjusted `tests/test_enemy.py` for new combat contract and added hero/inn behavior assertions in `tests/test_hero.py`."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python -m pytest tests/"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest_tests": {
+                  "command": "python -m pytest tests/",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "81 passed"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

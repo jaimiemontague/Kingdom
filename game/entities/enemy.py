@@ -91,6 +91,24 @@ class Enemy:
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
+
+    @staticmethod
+    def _is_inside_building_target(target: object) -> bool:
+        """Whether a target entity is currently inside any building."""
+        try:
+            return bool(getattr(target, "is_inside_building", False))
+        except Exception:
+            return False
+
+    def _needs_new_target(self) -> bool:
+        """Return True when the current target is invalid for attacking."""
+        if self.target is None:
+            return True
+        if hasattr(self.target, "is_alive") and not self.target.is_alive:
+            return True
+        if self._is_inside_building_target(self.target):
+            return True
+        return False
     
     def move_towards(self, target_x: float, target_y: float, dt: float):
         """Move towards a target position."""
@@ -120,9 +138,9 @@ class Enemy:
                     best_dist = dist
                     best_target = peasant
         
-        # Check heroes that are NOT resting (inside buildings)
+        # Check heroes that are NOT inside buildings (covers resting/shopping/etc).
         for hero in heroes:
-            if hero.is_alive and hero.state.name != "RESTING":
+            if hero.is_alive and not bool(getattr(hero, "is_inside_building", False)):
                 dist = self.distance_to(hero.x, hero.y)
                 if dist < best_dist:
                     best_dist = dist
@@ -136,7 +154,7 @@ class Enemy:
                     best_dist = dist
                     best_target = guard
         
-        # Check buildings - prioritize ones with resting heroes inside
+        # Check buildings
         for building in buildings:
             if building.hp <= 0:
                 continue
@@ -145,20 +163,8 @@ class Enemy:
             
             dist = self.distance_to(building.center_x, building.center_y)
             
-            # Check if building has heroes resting inside
-            has_heroes_inside = False
-            for hero in heroes:
-                if (hero.is_alive and hero.state.name == "RESTING" and 
-                    hero.home_building == building):
-                    has_heroes_inside = True
-                    break
-            
-            # Prioritize buildings with heroes inside
-            if has_heroes_inside and dist < best_dist:
-                best_dist = dist
-                best_target = building
             # Castle is always a valid fallback target
-            elif building.building_type == "castle" and dist < best_dist * 0.8:
+            if building.building_type == "castle" and dist < best_dist * 0.8:
                 best_dist = dist
                 best_target = building
             # Neutral buildings (houses/farms/food stands) can be attacked if they are meaningfully closer
@@ -180,8 +186,8 @@ class Enemy:
         if self.attack_cooldown > 0:
             self.attack_cooldown -= dt * 1000
         
-        # Find target if we don't have one
-        if self.target is None or (hasattr(self.target, 'is_alive') and not self.target.is_alive):
+        # Retarget if we don't have one, the target died, or the target moved inside a building.
+        if self._needs_new_target():
             self.find_target(heroes, peasants, buildings, guards=guards)
         
         if self.target is None:
@@ -268,6 +274,15 @@ class Enemy:
         WK5: For ranged attackers, stores ranged projectile event in _last_ranged_event
         for collection by engine.
         """
+        if self.target is None or not hasattr(self.target, "take_damage"):
+            self._last_ranged_event = None
+            return
+        if self._is_inside_building_target(self.target):
+            # Hard safety gate: never apply damage to heroes while they are inside buildings.
+            self.target = None
+            self._last_ranged_event = None
+            return
+
         if self.target and hasattr(self.target, 'take_damage'):
             self._queue_render_animation("attack")
             self.target.take_damage(self.attack_power)
@@ -404,8 +419,8 @@ class SkeletonArcher(Enemy):
         if self._kite_reposition_cooldown_ms > 0:
             self._kite_reposition_cooldown_ms -= dt * 1000
         
-        # Find target if we don't have one
-        if self.target is None or (hasattr(self.target, 'is_alive') and not self.target.is_alive):
+        # Retarget if we don't have one, the target died, or the target moved inside a building.
+        if self._needs_new_target():
             self.find_target(heroes, peasants, buildings, guards=guards)
             # Reset kite state on new target
             if self.target is not None:

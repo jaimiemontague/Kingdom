@@ -2406,6 +2406,40 @@
           }
         }
       }
+    },
+    "wk11-building-interiors-llm": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+        "notes": "WK11 Building Interiors Groundwork + LLM Setup. Agent 08 Track 3: Inn UI."
+      },
+      "rounds": {
+        "wk11_r1_implementation": {
+          "sprint_id": "wk11-building-interiors-llm",
+          "round_id": "wk11_r1_implementation",
+          "round_meta": {
+            "prompt_set_id": "wk11_r1_implementation_v1",
+            "build_target": "WK11",
+            "sent_at_local": "2026-02-18"
+          },
+          "prompt_text": "Track 3: Update Inn panel to show heroes inside, recovery rate, drink income.",
+          "response": {
+            "received_at_local": "2026-02-18",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/building_renderers/economic_panel.py: _render_inn() now shows construction notice when unbuilt; heroes currently inside (from building.heroes_resting or derived from heroes + inside_building); recovery rate 'Heals 1 HP per second'; gold earned from drinks (getattr gold_earned_from_drinks)."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "pytest tests/"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+              "pytest": { "command": "pytest tests/ -q", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

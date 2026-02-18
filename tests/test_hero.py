@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from config import TILE_SIZE
+from game.entities.buildings.economic import Inn
 from game.entities.hero import Hero, HeroState
 from game.systems.buffs import Buff
 
@@ -89,6 +90,32 @@ def test_update_exits_brief_inside_building_state_when_timer_elapsed() -> None:
     assert hero.inside_building is None
     assert hero.x == building.center_x + TILE_SIZE
     assert hero.y == building.center_y
+
+
+def test_hero_pending_task_fields_default_to_none() -> None:
+    hero = Hero(0, 0, hero_class="warrior")
+
+    assert hero.pending_task is None
+    assert hero.pending_task_building is None
+
+
+def test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate() -> None:
+    hero = Hero(0, 0, hero_class="warrior")
+    hero.max_hp = 100
+    hero.hp = 90
+    inn = Inn(2, 3)
+
+    started = hero.start_resting_at_building(inn)
+    assert started is True
+    assert hero in inn.heroes_resting
+
+    still_resting = hero.update_resting(1.0)
+    assert still_resting is True
+    assert hero.hp == 91  # Inn rate: 1 HP per second.
+
+    hero.pop_out_of_building()
+    assert hero not in inn.heroes_resting
+    assert hero.is_inside_building is False
 
 
 def test_update_moves_towards_target_position_without_world() -> None:

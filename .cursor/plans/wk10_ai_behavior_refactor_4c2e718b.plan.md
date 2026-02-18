@@ -61,7 +61,7 @@ Each module receives a reference to the AI controller (for shared state like `he
   - `score_bounty()` — scoring heuristic for bounty attractiveness
   - `start_bounty_pursuit()` — commit hero to pursue a bounty
   - `_resolve_bounty_from_target()` — resolve bounty object from hero target
-- `**ai/behaviors/defense.py**` (~180 lines)
+- `**ai/behaviors/defense.py`** (~180 lines)
   - `defend_castle()` — rush to defend castle under attack
   - `defend_home_building()` — defend the hero's home guild/temple
   - `defend_neutral_building_if_visible()` — defend visible neutral buildings
@@ -119,7 +119,7 @@ After Track 1 lands, add focused tests for the separated behavior modules:
 
 - `**tests/test_ai_bounty.py`** — bounty scoring returns expected tiers, pursuit commits hero, claim radius works
 - `**tests/test_ai_defense.py`** — castle defense triggers when castle under attack, retreat picks nearest safe building
-- `**tests/test_ai_shopping.py**` — marketplace/blacksmith finding works, purchase triggers economy call
+- `**tests/test_ai_shopping.py`** — marketplace/blacksmith finding works, purchase triggers economy call
 - `**tests/test_ai_stuck.py**` — stuck detection fires after threshold, recovery attempts increment, max attempts respected
 - `**tests/test_ai_exploration.py**` — frontier tile finding works with seeded RNG, ranger bias applied correctly
 

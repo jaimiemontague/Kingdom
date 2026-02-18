@@ -182,12 +182,49 @@ class EconomicPanelRenderer:
         return y
 
     def _render_inn(self, panel, surface: pygame.Surface, building, heroes: list, y: int) -> int:
-        resting_count = len([hero for hero in heroes if hero.is_alive and hero.home_building == building])
-        resting = panel.font_normal.render(f"Heroes Resting: {resting_count}", True, COLOR_WHITE)
-        surface.blit(resting, (10, y))
-        y += 25
-        info = panel.font_small.render("Faster HP recovery than guilds", True, (180, 180, 180))
-        surface.blit(info, (10, y))
+        if hasattr(building, "is_constructed") and not building.is_constructed:
+            return self._render_construction_notice(panel, surface, y)
+
+        # Heroes currently inside (resting or drinking): prefer Inn.heroes_resting, else derive from heroes
+        inside_list = getattr(building, "heroes_resting", None)
+        if isinstance(inside_list, list) and inside_list:
+            inside_heroes = [h for h in inside_list if getattr(h, "is_alive", True)]
+        else:
+            inside_heroes = [
+                h for h in heroes
+                if getattr(h, "is_alive", True)
+                and getattr(h, "is_inside_building", False)
+                and getattr(h, "inside_building", None) is building
+            ]
+        count = len(inside_heroes)
+        heroes_inside_text = panel.font_normal.render(f"Heroes inside: {count}", True, COLOR_WHITE)
+        surface.blit(heroes_inside_text, (10, y))
+        y += 22
+        if inside_heroes:
+            names = ", ".join(getattr(h, "name", "?") for h in inside_heroes[:5])
+            if len(inside_heroes) > 5:
+                names += f" (+{len(inside_heroes) - 5})"
+            names_line = panel.font_small.render(names, True, (180, 180, 180))
+            surface.blit(names_line, (15, y))
+            y += 18
+
+        # Recovery rate (plan: 0.02 = 1 HP per second)
+        recovery_text = panel.font_small.render(
+            "Heals 1 HP per second",
+            True,
+            (180, 180, 180),
+        )
+        surface.blit(recovery_text, (10, y))
+        y += 20
+
+        # Gold earned from drinks (when Agent 05 wires it)
+        drink_gold = int(getattr(building, "gold_earned_from_drinks", 0))
+        drink_line = panel.font_small.render(
+            f"Gold from drinks: ${drink_gold}",
+            True,
+            COLOR_GOLD,
+        )
+        surface.blit(drink_line, (10, y))
         y += 20
         return y
 

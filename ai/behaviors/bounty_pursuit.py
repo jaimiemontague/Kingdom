@@ -6,11 +6,15 @@ import math
 from typing import Any
 
 from config import BOUNTY_BLACK_FOG_DISTANCE_PENALTY, TILE_SIZE
+from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
+from game.sim.determinism import get_rng
 from game.sim.hero_guardrails_tunables import BOUNTY_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
+
+from ai.behaviors.task_durations import roll_duration_seconds
 
 
 def _resolve_bounty_from_target(target_dict: dict[str, Any], bounties: list[Any]) -> Any | None:
@@ -288,15 +292,43 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                 hero.target_position = None
                 return
 
-            # Check if we were going shopping.
+            # Check if we were going shopping (WK11: deferred — purchase on exit).
             if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
                 shop_building = hero.target.get("marketplace") or hero.target.get("blacksmith")
                 if shop_building:
-                    # Briefly "enter" the building (Majesty-style) for clarity.
-                    hero.enter_building_briefly(shop_building, duration_sec=0.5)
-                    started_journey = ai.shopping_behavior.do_shopping(ai, hero, shop_building, game_state)
-                    if started_journey:
-                        return
+                    rng = get_rng("ai_basic")
+                    duration_sec = roll_duration_seconds("shopping", rng)
+                    setattr(hero, "pending_task", "shopping")
+                    setattr(hero, "pending_task_building", shop_building)
+                    hero.enter_building_briefly(shop_building, duration_sec=float(duration_sec))
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.SHOPPING
+                return
+
+            # Rest at Inn (WK11): enter and heal inside; finalize on exit.
+            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "rest_inn":
+                inn = hero.target.get("inn")
+                if inn:
+                    rng = get_rng("ai_basic")
+                    duration_sec = roll_duration_seconds("rest_inn", rng)
+                    setattr(hero, "pending_task", "rest_inn")
+                    setattr(hero, "pending_task_building", inn)
+                    hero.enter_building_briefly(inn, duration_sec=float(duration_sec))
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
+            # Get a drink at Inn (WK11): enter, pay on exit.
+            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "get_drink":
+                inn = hero.target.get("inn")
+                if inn:
+                    rng = get_rng("ai_basic")
+                    duration_sec = roll_duration_seconds("get_drink", rng)
+                    setattr(hero, "pending_task", "get_drink")
+                    setattr(hero, "pending_task_building", inn)
+                    hero.enter_building_briefly(inn, duration_sec=float(duration_sec))
                 hero.target = None
                 hero.target_position = None
                 hero.state = HeroState.IDLE
@@ -313,6 +345,8 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
         if target_type in [
             "going_home",
             "shopping",
+            "rest_inn",
+            "get_drink",
             "patrol",
             "guard_home",
             "patrol_castle",

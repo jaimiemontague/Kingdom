@@ -17,6 +17,7 @@ from ai.behaviors import (
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import get_fallback_decision
 from config import TILE_SIZE
+from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
@@ -166,6 +167,14 @@ class BasicAI:
         # WK2 Build A: stuck detection + deterministic recovery.
         self.stuck_recovery_behavior._update_stuck_and_recover(self, hero, game_state)
 
+        # WK11: Finalize deferred task when hero just left a building (pending_task set, not inside).
+        if not hero.is_inside_building:
+            pending = getattr(hero, "pending_task", None)
+            pending_building = getattr(hero, "pending_task_building", None)
+            if pending and pending_building:
+                self._finalize_deferred_task(hero, game_state)
+                return
+
         # Handle resting state first (doesn't need LLM).
         if hero.state == HeroState.RESTING:
             self.handle_resting(hero, dt, game_state)
@@ -304,8 +313,30 @@ class BasicAI:
             else:
                 hero.target_position = (nearest_safe.center_x, nearest_safe.center_y)
 
+    def _finalize_deferred_task(self, hero, game_state: dict) -> None:
+        """Run deferred task on pop-out (WK11): shopping purchase, get_drink payment, or clear rest_inn."""
+        pending = getattr(hero, "pending_task", None)
+        pending_building = getattr(hero, "pending_task_building", None)
+        if not pending or not pending_building:
+            return
+        if pending == "shopping":
+            self.shopping_behavior.do_shopping(self, hero, pending_building, game_state)
+        elif pending == "get_drink":
+            rng = get_rng("ai_basic")
+            cost = int(rng.randint(5, 10))
+            cost = min(cost, hero.gold)
+            hero.gold -= cost
+            current = getattr(pending_building, "gold_earned_from_drinks", 0)
+            setattr(pending_building, "gold_earned_from_drinks", current + cost)
+        # rest_inn: nothing to finalize (healing happened while inside)
+        setattr(hero, "pending_task", None)
+        setattr(hero, "pending_task_building", None)
+        hero.state = HeroState.IDLE
+
     def handle_shopping(self, hero, game_state: dict):
-        """Handle shopping state - buy items at marketplace."""
+        """Handle shopping state - wait inside or buy at marketplace (WK11: deferred purchase on exit)."""
+        if hero.is_inside_building:
+            return  # Wait for inside_timer to expire; finalize_deferred_task runs on pop-out
         buildings = game_state.get("buildings", [])
 
         marketplace = None
@@ -326,10 +357,29 @@ class BasicAI:
         hero.state = HeroState.IDLE
 
     def send_home_to_rest(self, hero, game_state: dict):
-        """Send hero home to rest and heal."""
+        """Send hero home to rest and heal; prefer Inn if closer (WK11)."""
+        buildings = game_state.get("buildings", [])
+        world = game_state.get("world")
+
+        # WK11: Prefer Inn when closer than home guild.
+        inns = [b for b in buildings if getattr(b, "building_type", None) == BuildingType.INN and getattr(b, "is_constructed", True)]
+        if inns and hero.home_building:
+            hero_dist_home = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
+            closest_inn = min(inns, key=lambda b: hero.distance_to(b.center_x, b.center_y))
+            if hero.distance_to(closest_inn.center_x, closest_inn.center_y) < hero_dist_home:
+                adj = best_adjacent_tile(world, buildings, closest_inn, hero.x, hero.y) if world else None
+                if adj:
+                    hero.target_position = (
+                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
+                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
+                    )
+                else:
+                    hero.target_position = (closest_inn.center_x, closest_inn.center_y)
+                hero.state = HeroState.MOVING
+                hero.target = {"type": "rest_inn", "inn": closest_inn}
+                return
+
         if hero.home_building:
-            buildings = game_state.get("buildings", [])
-            world = game_state.get("world")
             if world:
                 adj = best_adjacent_tile(world, buildings, hero.home_building, hero.x, hero.y)
                 if adj:

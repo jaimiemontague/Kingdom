@@ -1,5 +1,16 @@
 # Changelog
 
+## Prototype v1.3.3 — The Inn & AI Behavior Update
+
+- Combat: Heroes inside buildings are now **fully untargetable** by enemies — covers resting, shopping, and all future inside-building states.
+- Combat: Enemies no longer **prioritize buildings with heroes inside**, preventing the flush-and-kill pattern.
+- Buildings: Heroes now **spend realistic time inside** buildings — buying potions takes 8-12 seconds, armor 16-22 seconds, with randomized durations per task.
+- Buildings: Purchases happen **when the hero exits**, not on entry — creating a natural in-and-out feel.
+- Inn: Heroes can now **rest at Inns** with faster healing (1 HP/sec vs guild 1 HP/2sec) and will choose a closer Inn over their home guild.
+- Inn: Heroes occasionally **"get a drink"** at the Inn when idle, full health, and have spare gold — flavor behavior that makes the world feel alive.
+- Inn: Panel now shows **heroes inside**, recovery rate, and gold earned from drinks.
+- LLM: OpenAI model is now **configurable** via `OPENAI_MODEL` env var (default: `gpt-5-nano`); added `.env.example` for setup.
+
 ## Prototype v1.3.2 — The AI Refactor Update
 
 - AI: **Hero AI decomposed** into 7 focused behavior modules — bounty pursuit, defense, journey, stuck recovery, exploration, shopping, and LLM bridge.

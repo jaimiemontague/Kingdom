@@ -6,10 +6,22 @@ from game.entities.enemy import Enemy, EnemyState, Goblin, SkeletonArcher
 from game.entities.hero import HeroState
 
 
-def test_find_target_ignores_resting_heroes_and_peasants_inside_castle() -> None:
+def test_find_target_ignores_heroes_inside_buildings_and_peasants_inside_castle() -> None:
     enemy = Enemy(0, 0, enemy_type="goblin")
-    resting_hero = SimpleNamespace(is_alive=True, state=HeroState.RESTING, x=4.0, y=0.0)
-    active_hero = SimpleNamespace(is_alive=True, state=HeroState.IDLE, x=100.0, y=0.0)
+    resting_hero = SimpleNamespace(
+        is_alive=True,
+        state=HeroState.RESTING,
+        is_inside_building=True,
+        x=4.0,
+        y=0.0,
+    )
+    active_hero = SimpleNamespace(
+        is_alive=True,
+        state=HeroState.IDLE,
+        is_inside_building=False,
+        x=100.0,
+        y=0.0,
+    )
     inside_castle_peasant = SimpleNamespace(is_alive=True, is_inside_castle=True, x=2.0, y=0.0)
     guard = SimpleNamespace(is_alive=True, x=8.0, y=0.0)
 
@@ -33,7 +45,7 @@ def test_find_target_prefers_nearest_available_peasant() -> None:
     assert target is peasant
 
 
-def test_find_target_can_choose_building_with_resting_hero_inside() -> None:
+def test_find_target_does_not_prioritize_building_for_inside_heroes() -> None:
     enemy = Enemy(0, 0, enemy_type="goblin")
     inn = SimpleNamespace(
         hp=200,
@@ -46,6 +58,7 @@ def test_find_target_can_choose_building_with_resting_hero_inside() -> None:
     resting_hero = SimpleNamespace(
         is_alive=True,
         state=HeroState.RESTING,
+        is_inside_building=True,
         x=inn.center_x,
         y=inn.center_y,
         home_building=inn,
@@ -53,7 +66,29 @@ def test_find_target_can_choose_building_with_resting_hero_inside() -> None:
 
     target = enemy.find_target(heroes=[resting_hero], peasants=[], buildings=[inn], guards=[])
 
-    assert target is inn
+    assert target is None
+
+
+def test_do_attack_skips_hero_inside_building() -> None:
+    enemy = Enemy(0, 0, enemy_type="goblin")
+    calls = {"count": 0}
+
+    def _take_damage(_amount: int) -> None:
+        calls["count"] += 1
+
+    inside_hero = SimpleNamespace(
+        is_alive=True,
+        is_inside_building=True,
+        x=0.0,
+        y=0.0,
+        take_damage=_take_damage,
+    )
+    enemy.target = inside_hero
+
+    enemy.do_attack()
+
+    assert calls["count"] == 0
+    assert enemy.target is None
 
 
 def test_take_damage_sets_dead_state_and_trigger() -> None:

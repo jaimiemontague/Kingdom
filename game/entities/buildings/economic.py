@@ -2,8 +2,15 @@
 Economic building entities.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from .base import Building, is_research_unlocked, unlock_research
 from .types import BuildingType
+
+if TYPE_CHECKING:
+    from game.entities.hero import Hero
 
 
 class Marketplace(Building):
@@ -130,8 +137,25 @@ class Inn(Building):
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.INN)
-        self.heroes_resting = []
+        self.heroes_resting: list[Hero] = []
         self.rest_recovery_rate = 0.02  # Faster than guilds (0.01)
+        self.drink_income_gold = 0
+
+    def on_hero_enter(self, hero: Hero) -> None:
+        """Track heroes currently inside the inn (resting or drinking)."""
+        if hero not in self.heroes_resting:
+            self.heroes_resting.append(hero)
+
+    def on_hero_exit(self, hero: Hero) -> None:
+        """Remove hero from current inn occupants when they leave."""
+        try:
+            self.heroes_resting.remove(hero)
+        except ValueError:
+            pass
+
+    def record_drink_purchase(self, amount: int) -> None:
+        """Accumulate gold earned from hero drink purchases."""
+        self.drink_income_gold += max(0, int(amount))
 
 
 class TradingPost(Building):

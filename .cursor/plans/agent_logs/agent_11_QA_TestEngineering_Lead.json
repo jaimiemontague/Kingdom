@@ -3630,6 +3630,59 @@
           "bugs_found": []
         }
       }
+    },
+    "wk11-building-interiors-llm": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+        "notes": "WK11: combat safety, task durations, Inn rest/drink, LLM config; Agent 11 full verification."
+      },
+      "rounds": {
+        "wk11_r2_verification": {
+          "round_id": "wk11_r2_verification",
+          "status": "complete",
+          "what_i_changed": [
+            "Ran full QA verification per WK11 assignment: qa_smoke --quick, pytest tests/, documented manual checklist."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -m pytest tests/ -v",
+            "Manual (15-20 min): combat safety, task durations, Inn rest, get a drink, LLM config — see manual_checklist below."
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "Run as part of qa_smoke --quick."
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output_tail": "[qa_smoke] DONE: PASS",
+              "profiles": ["determinism_guard", "pytest", "base", "intent_bounty", "hero_stuck_repro", "no-enemies", "mock-LLM"]
+            },
+            "pytest_tests": {
+              "command": "python -m pytest tests/ -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "81 passed in ~0.3s"
+            }
+          },
+          "manual_checklist": {
+            "status": "Documented for human; not run by agent.",
+            "items": [
+              "Combat safety: Build marketplace, hero buys potions; while inside, spawn/lure enemies — enemies must NOT attack hero inside. Same at guild rest.",
+              "Task durations: Hero in marketplace for potions 8-12s; armor 16-22s.",
+              "Inn resting: Build Inn, damage hero; if Inn closer than guild, hero goes to Inn; verify faster healing (1 HP/s vs 1 HP/2s at guild).",
+              "Get a drink: Idle full-health heroes with gold — some should occasionally visit Inn for a drink.",
+              "LLM config: python main.py --provider openai — attempts connect, fails gracefully without real .env key."
+            ]
+          },
+          "bugs_found": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

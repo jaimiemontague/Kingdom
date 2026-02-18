@@ -723,6 +723,49 @@
             }
           }
         }
+      },
+      "wk11-building-interiors-llm": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+          "notes": "WK11: Building interiors groundwork + LLM setup. Agent 06: Track 2 (duration table, deferred shopping) + Track 3 (Inn rest, get a drink)."
+        },
+        "rounds": {
+          "wk11_r1_implementation": {
+            "sprint_id": "wk11-building-interiors-llm",
+            "sprint_meta": {
+              "plan_ref": ".cursor/plans/wk11_building_interiors_llm_c32b84cc.plan.md",
+              "notes": "Track 2 + Track 3 implementation"
+            },
+            "round_id": "wk11_r1_implementation",
+            "round_meta": {
+              "prompt_set_id": "wk11_r1_impl_v1",
+              "build_target": "WK11 P0",
+              "sent_at_local": "2026-02-18"
+            },
+            "prompt_text": "Track 2: Duration table + deferred shopping (do_shopping on exit). Track 3: Inn rest routing when closer than home; get-a-drink idle behavior (10-15% chance).",
+            "response": {
+              "received_at_local": "2026-02-18",
+              "status": "done",
+              "what_i_changed": [
+                "Created ai/behaviors/task_durations.py: TASK_DURATION_RANGES (buy_potion 8-12, buy_weapon 12-18, buy_armor 16-22, shopping 8-22, research 10-15, rest_inn 10-20, get_drink 8-15) and roll_duration_seconds(task_key, rng).",
+                "ai/behaviors/bounty_pursuit.py: On reaching shopping building, set pending_task/pending_task_building, roll duration, enter_building_briefly(duration), state SHOPPING; no do_shopping on entry. Added rest_inn and get_drink arrival handling (enter_building_briefly + pending_task). Added rest_inn and get_drink to non-interrupt target types.",
+                "ai/basic_ai.py: _finalize_deferred_task() on pop-out: run do_shopping for 'shopping'; for 'get_drink' deduct 5-10 gold (rng) and add to inn.gold_earned_from_drinks; clear pending_task/pending_task_building and set IDLE. handle_shopping: if is_inside_building return (wait). send_home_to_rest: prefer closest Inn when closer than home_building (target type rest_inn).",
+                "ai/behaviors/exploration.py: handle_idle: get-a-drink branch when hp>=max_hp, gold>=10, Inn exists, ~12% chance (ai._ai_rng); route to nearest Inn with target type get_drink."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "pytest tests/"
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => FAIL (2 pytest failures in tests/test_enemy.py: test_find_target_ignores_resting_heroes_and_peasants_inside_castle, test_find_target_can_choose_building_with_resting_hero_inside). These assert pre-WK11 enemy targeting; Agent 05 Track 1 (combat safety) will change enemy.py and is expected to fix/update these tests.",
+                "Agent 06 code: no linter errors; determinism via get_rng('ai_basic') and sim time only; uses getattr/setattr for pending_task/pending_task_building to coordinate with Agent 05."
+              ],
+              "blockers": [
+                "qa_smoke fails on 2 enemy tests until Agent 05 implements Track 1 (enemy find_target/is_inside_building guards)."
+              ]
+            }
+          }
+        }
       }
     }
   }
