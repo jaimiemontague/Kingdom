@@ -217,7 +217,11 @@ class EconomicPanelRenderer:
         y: int,
         economy,
     ) -> int:
-        building_type = str(getattr(building, "building_type", "") or "")
+        raw_building_type = getattr(building, "building_type", "")
+        raw_building_type = getattr(raw_building_type, "value", raw_building_type)
+        building_type = str(raw_building_type).strip().lower()
+        if building_type.startswith("buildingtype.") and "." in building_type:
+            building_type = building_type.split(".", 1)[1]
         if building_type == "marketplace":
             return self._render_marketplace(panel, surface, building, y, economy)
         if building_type == "blacksmith":

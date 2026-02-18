@@ -2356,6 +2356,54 @@
             },
             "blockers": []
           }
+        },
+        "wk9_r1_marketplace_panel_regression_fix": {
+          "sprint_id": "wk9-sim-render-tests-ui-cleanup",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk9_sim-render_tests_ui_8f93dd8e.plan.md",
+            "notes": "Hotfix for marketplace/economic panel regression after Track 3 split."
+          },
+          "round_id": "wk9_r1_marketplace_panel_regression_fix",
+          "round_meta": {
+            "prompt_set_id": "wk9_r1_marketplace_panel_regression_fix_v1",
+            "build_target": "WK9",
+            "sent_at_local": "2026-02-18T17:20:00"
+          },
+          "prompt_text": "Fix marketplace panel regression where potion research/purchase options do not appear.",
+          "response": {
+            "received_at_local": "2026-02-18T17:20:00",
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/building_renderers/economic_panel.py: normalized enum/string building_type values inside EconomicPanelRenderer.render() before dispatching marketplace/blacksmith/inn/trading_post branches.",
+              "tests/test_ui_building_renderers.py: added regression coverage for enum dispatch across all economic building types and integration checks that marketplace/blacksmith controls render from BuildingPanel."
+            ],
+            "how_to_test": [
+              "python -m pytest tests/test_ui_building_renderers.py -q",
+              "python main.py --no-llm",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "pytest_ui_renderers": {
+                "command": "python -m pytest tests/test_ui_building_renderers.py -q",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "manual_main_no_llm": {
+                "command": "python main.py --no-llm",
+                "exit_code": 1,
+                "status": "BLOCKED",
+                "notes": "Blocked by pre-existing crash in game/ui/pause_menu.py: AttributeError 'PauseMenu' object has no attribute '_button_tex_pressed'."
+              }
+            },
+            "blockers": [
+              "Manual marketplace click-through could not be completed due unrelated pre-existing pause-menu crash on startup."
+            ]
+          }
         }
       }
     }

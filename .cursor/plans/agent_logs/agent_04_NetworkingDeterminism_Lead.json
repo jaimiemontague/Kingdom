@@ -650,6 +650,101 @@
           }
         }
       }
+    },
+    "wk10-ai-behavior-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk10_ai_behavior_refactor_4c2e718b.plan.md",
+        "notes": "WK10 verification: determinism audit for AI behavior module split."
+      },
+      "rounds": {
+        "wk10_r2_verification": {
+          "sprint_id": "wk10-ai-behavior-refactor",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk10_ai_behavior_refactor_4c2e718b.plan.md",
+            "notes": "Agent 04 verification round for ai/behaviors split."
+          },
+          "round_id": "wk10_r2_verification",
+          "round_meta": {
+            "prompt_set_id": "wk10_verification_r2_v1",
+            "build_target": "verification",
+            "sent_at_local": "2026-02-18T09:35:00-07:00"
+          },
+          "prompt_text": "Review all ai/behaviors modules for determinism compliance, confirm no random/time usage or inter-behavior imports, and run determinism_guard.",
+          "response": {
+            "received_at_local": "2026-02-18T09:35:00-07:00",
+            "status": "complete",
+            "raw": "Agent 04 WK10 determinism audit complete for the AI behavior refactor. Reviewed all seven modules under `ai/behaviors/` plus `ai/basic_ai.py` RNG/time setup. No forbidden wall-clock usage (`time.time`, `pygame.time.get_ticks`, `datetime`) and no direct `random` module usage were found in behavior modules. No behavior module imports another behavior module; only package-level aggregation in `ai/behaviors/__init__.py` is present. RNG use inside behavior modules goes through `ai._ai_rng`, and `ai/basic_ai.py` seeds this via `get_rng(\"ai_basic\")`, preserving deterministic streams. Time usage in modules that need timing consistently uses `sim_now_ms()`. Required gate passed: `python tools/determinism_guard.py` exit 0.",
+            "summary_bullets": [
+              "PASS: no `random` module usage and no wall-clock APIs in `ai/behaviors/`.",
+              "PASS: no inter-behavior imports/circular dependencies inside behavior modules.",
+              "PASS: deterministic RNG path preserved via `ai._ai_rng` initialized from `get_rng(\"ai_basic\")` in `ai/basic_ai.py`.",
+              "PASS: behavior-module timing uses `sim_now_ms()` where timing is needed.",
+              "PASS: `python tools/determinism_guard.py`."
+            ],
+            "proposed_changes": [
+              "None. Verification-only round; no regressions found."
+            ],
+            "acceptance_criteria": [
+              "Behavior modules avoid `random.*` and wall-clock APIs.",
+              "Behavior modules do not import one another.",
+              "RNG source is deterministic (`get_rng` seeded stream through `ai._ai_rng`).",
+              "`python tools/determinism_guard.py` passes."
+            ],
+            "risks": [
+              "No determinism regressions identified in the WK10 behavior-module scope."
+            ],
+            "dependencies": [
+              "Agent 11 test/gate/manual-smoke verification for full WK10 closeout."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Agent 11's behavior-unit-test and full-gate verification tasks.",
+              "If any WK10 test fails in AI behaviors, rerun targeted determinism scan on affected module(s)."
+            ],
+            "agent_fields": {
+              "status": "PASS",
+              "what_i_changed": [
+                "Verification-only; no code edits."
+              ],
+              "bugs_found": [],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "random_usage_scan_behaviors": {
+                  "command": "rg '\\\\bimport random\\\\b|\\\\brandom\\\\.' ai/behaviors",
+                  "result": "No matches found"
+                },
+                "wallclock_scan_behaviors": {
+                  "command": "rg '\\\\btime\\\\.time\\\\(|\\\\bdatetime\\\\.|\\\\bpygame\\\\.time\\\\.get_ticks\\\\(' ai/behaviors",
+                  "result": "No matches found"
+                },
+                "behavior_import_boundary_scan": {
+                  "command": "rg 'from\\\\s+\\\\.\\\\s+import\\\\s+|from\\\\s+\\\\.\\\\w+\\\\s+import|from\\\\s+ai\\\\.behaviors\\\\s+import|import\\\\s+ai\\\\.behaviors' ai/behaviors",
+                  "result": "Only package aggregator imports in ai/behaviors/__init__.py; no cross-imports in behavior modules"
+                },
+                "deterministic_rng_source_scan": {
+                  "command": "rg 'get_rng\\\\(|_ai_rng\\\\s*=|sim_now_ms' ai/basic_ai.py",
+                  "result": "Found get_rng('ai_basic') and _ai_rng assignment; behavior modules use ai._ai_rng and sim_now_ms"
+                },
+                "reviewed_files": [
+                  "ai/behaviors/__init__.py",
+                  "ai/behaviors/bounty_pursuit.py",
+                  "ai/behaviors/defense.py",
+                  "ai/behaviors/journey.py",
+                  "ai/behaviors/stuck_recovery.py",
+                  "ai/behaviors/exploration.py",
+                  "ai/behaviors/shopping.py",
+                  "ai/behaviors/llm_bridge.py",
+                  "ai/basic_ai.py"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

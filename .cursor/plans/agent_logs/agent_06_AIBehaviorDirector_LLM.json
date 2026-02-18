@@ -680,6 +680,49 @@
           ],
           "blockers": []
         }
+      },
+      "wk10-ai-behavior-refactor": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk10_ai_behavior_refactor_4c2e718b.plan.md",
+          "notes": "WK10 Track 1: AI decomposition of ai/basic_ai.py into ai/behaviors package"
+        },
+        "rounds": {
+          "wk10_r1_implementation": {
+            "sprint_id": "wk10-ai-behavior-refactor",
+            "sprint_meta": {
+              "plan_ref": ".cursor/plans/wk10_ai_behavior_refactor_4c2e718b.plan.md",
+              "notes": "Pure structural refactor, no behavior changes"
+            },
+            "round_id": "wk10_r1_implementation",
+            "round_meta": {
+              "prompt_set_id": "wk10_r1_track1_impl_v1",
+              "build_target": "WK10 Track1",
+              "sent_at_local": "2026-02-18T09:40:00-07:00"
+            },
+            "prompt_text": "Split ai/basic_ai.py into ai/behaviors modules and slim BasicAI to coordinator while preserving identical behavior and determinism.",
+            "response": {
+              "received_at_local": "2026-02-18T09:40:00-07:00",
+              "status": "done",
+              "what_i_changed": [
+                "Created ai/behaviors package with modules: bounty_pursuit.py, defense.py, journey.py, stuck_recovery.py, exploration.py, shopping.py, llm_bridge.py, plus ai/behaviors/__init__.py exports.",
+                "Moved the requested behavior methods into module-level functions that receive the AI controller plus hero/game_state, preserving logic and deterministic ordering.",
+                "Refactored ai/basic_ai.py into a coordinator class (~360 lines) that keeps only __init__, update/update_hero, state handlers, intent helpers, and send_home_to_rest; state handlers now dispatch to behavior modules (not inline logic).",
+                "Kept module coordination through BasicAI attributes (no behavior module imports another behavior module), and preserved the single shared deterministic RNG stream via ai._ai_rng."
+              ],
+              "how_to_test": [
+                "python -m compileall ai/basic_ai.py ai/behaviors",
+                "python tools/qa_smoke.py --quick",
+                "python -m pytest tests/"
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (determinism_guard PASS; intent_bounty PASS; hero_stuck_repro PASS; all profiles PASS).",
+                "python -m pytest tests/ => PASS (51 passed).",
+                "python -m compileall ai/basic_ai.py ai/behaviors => PASS."
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

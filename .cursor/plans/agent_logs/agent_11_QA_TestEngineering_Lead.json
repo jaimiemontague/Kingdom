@@ -3503,6 +3503,133 @@
           "bugs_found": []
         }
       }
+    },
+    "wk10-ai-behavior-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk10_ai_behavior_refactor_4c2e718b.plan.md",
+        "notes": "WK10: split BasicAI into ai/behaviors modules; Agent 11 owns behavior module tests and verification."
+      },
+      "rounds": {
+        "wk10_r2_verification": {
+          "round_id": "wk10_r2_verification",
+          "status": "blocked",
+          "what_i_changed": [
+            "Added AI behavior unit tests for the split modules: tests/test_ai_bounty.py, tests/test_ai_defense.py, tests/test_ai_shopping.py, tests/test_ai_stuck.py, tests/test_ai_exploration.py (20 tests total).",
+            "Executed Agent 04 determinism audit checks over ai/behaviors/: no random/time violations, sim-time usage present, no module-to-module imports outside package __init__.",
+            "Ran required automated gates: tools/determinism_guard.py, pytest tests/, and tools/qa_smoke.py --quick."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests -q",
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game = GameEngine(); game.ai_controller = BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+            "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game = GameEngine(); brain = LLMBrain(provider_name='mock'); game.ai_controller = BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\""
+          ],
+          "evidence": {
+            "tests_added": {
+              "files": [
+                "tests/test_ai_bounty.py",
+                "tests/test_ai_defense.py",
+                "tests/test_ai_shopping.py",
+                "tests/test_ai_stuck.py",
+                "tests/test_ai_exploration.py"
+              ],
+              "new_tests_count": 20,
+              "coverage_focus": [
+                "bounty scoring + pursuit commitment + claim radius",
+                "castle/neutral defense + retreat routing",
+                "shopping lookup + purchase/economy + journey handoff",
+                "stuck threshold + recovery attempts + fallback",
+                "frontier detection + ranger exploration bias"
+              ]
+            },
+            "determinism_audit_behavior_modules": {
+              "forbidden_patterns_scan": {
+                "command": "rg \"time.time|import random|random.\" ai/behaviors",
+                "result": "No matches found"
+              },
+              "cross_module_import_scan": {
+                "command": "rg \"from \\\\.|from ai.behaviors|import ai.behaviors\" ai/behaviors",
+                "result": "Only ai/behaviors/__init__.py imports behavior modules; no behavior module imports another behavior module."
+              },
+              "rng_source_contract": {
+                "evidence": [
+                  "ai/basic_ai.py: _AI_RNG = get_rng(\"ai_basic\")",
+                  "ai/basic_ai.py: self._ai_rng = _AI_RNG"
+                ],
+                "assessment": "Behavior modules consume ai._ai_rng, which is seeded via get_rng()."
+              },
+              "sim_time_usage": {
+                "command": "rg \"sim_now_ms\" ai/behaviors --count",
+                "result": {
+                  "bounty_pursuit.py": 5,
+                  "defense.py": 4,
+                  "exploration.py": 4,
+                  "journey.py": 2,
+                  "llm_bridge.py": 3,
+                  "stuck_recovery.py": 2
+                }
+              }
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[determinism_guard] PASS: no violations found"
+            },
+            "pytest_tests_dir": {
+              "command": "python -m pytest tests -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "71 passed in 0.15s"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "output": "[qa_smoke] DONE: PASS",
+              "profiles": [
+                "base",
+                "intent_bounty",
+                "hero_stuck_repro",
+                "no-enemies",
+                "mock-LLM"
+              ]
+            },
+            "boot_checks_noninteractive": {
+              "no_llm": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; game = GameEngine(); game.ai_controller = BasicAI(llm_brain=None); print('boot_no_llm_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_no_llm_ok"
+              },
+              "mock_provider": {
+                "command": "python -c \"from game.engine import GameEngine; from ai.basic_ai import BasicAI; from ai.llm_brain import LLMBrain; game = GameEngine(); brain = LLMBrain(provider_name='mock'); game.ai_controller = BasicAI(llm_brain=brain); print('boot_mock_provider_ok')\"",
+                "exit_code": 0,
+                "status": "PASS",
+                "output": "boot_mock_provider_ok"
+              }
+            },
+            "manual_smoke_10min": {
+              "status": "NOT RUN",
+              "reason": "Requires interactive human play for 10 minutes each in --no-llm and --provider mock to verify behavior parity."
+            }
+          },
+          "blockers": [
+            {
+              "summary": "Manual 10-minute parity smoke is still pending (interactive-only).",
+              "needs": [
+                "Human operator to run `python main.py --no-llm` for 10 minutes and confirm hero behavior parity.",
+                "Human operator to run `python main.py --provider mock` for 10 minutes and confirm hero behavior parity."
+              ],
+              "who": [
+                "human_operator"
+              ]
+            }
+          ],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.3.2 — The AI Refactor Update
+
+- AI: **Hero AI decomposed** into 7 focused behavior modules — bounty pursuit, defense, journey, stuck recovery, exploration, shopping, and LLM bridge.
+- AI: `basic_ai.py` slimmed from **1,580 to 363 lines** as a coordinator; behavior logic lives in `ai/behaviors/`.
+- Quality: **20 new AI behavior tests** (bounty scoring, defense triggers, shopping, stuck recovery, exploration) — total test suite now at **68 tests**.
+- Fix: **Marketplace panel** now correctly displays potion research and purchase options.
+
 ## Prototype v1.3.1 — The Refactor Update
 
 - Architecture: **Engine decomposed** — InputHandler, DisplayManager, BuildingFactory, CleanupManager extracted from the monolithic engine.
