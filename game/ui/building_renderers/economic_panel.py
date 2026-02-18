@@ -5,6 +5,7 @@ from __future__ import annotations
 import pygame
 
 from config import COLOR_GOLD, COLOR_GREEN, COLOR_UI_BORDER, COLOR_WHITE
+from game.ui.building_renderers import render_occupants
 from game.ui.widgets import Button
 
 
@@ -24,6 +25,8 @@ class EconomicPanelRenderer:
         if hasattr(building, "is_constructed") and not building.is_constructed:
             panel.research_button_rect = None
             return self._render_construction_notice(panel, surface, y)
+
+        y = render_occupants(panel, surface, building, y)
 
         if hasattr(building, "potions_researched") and bool(building.potions_researched):
             researched = panel.font_normal.render("Healing Potions: RESEARCHED", True, COLOR_GREEN)
@@ -99,6 +102,8 @@ class EconomicPanelRenderer:
     def _render_blacksmith(self, panel, surface: pygame.Surface, building, y: int, economy) -> int:
         if hasattr(building, "is_constructed") and not building.is_constructed:
             return self._render_construction_notice(panel, surface, y)
+
+        y = render_occupants(panel, surface, building, y)
 
         upgrades = panel.font_normal.render(
             f"Upgrades Sold: {int(getattr(building, 'upgrades_sold', 0))}",
@@ -185,28 +190,7 @@ class EconomicPanelRenderer:
         if hasattr(building, "is_constructed") and not building.is_constructed:
             return self._render_construction_notice(panel, surface, y)
 
-        # Heroes currently inside (resting or drinking): prefer Inn.heroes_resting, else derive from heroes
-        inside_list = getattr(building, "heroes_resting", None)
-        if isinstance(inside_list, list) and inside_list:
-            inside_heroes = [h for h in inside_list if getattr(h, "is_alive", True)]
-        else:
-            inside_heroes = [
-                h for h in heroes
-                if getattr(h, "is_alive", True)
-                and getattr(h, "is_inside_building", False)
-                and getattr(h, "inside_building", None) is building
-            ]
-        count = len(inside_heroes)
-        heroes_inside_text = panel.font_normal.render(f"Heroes inside: {count}", True, COLOR_WHITE)
-        surface.blit(heroes_inside_text, (10, y))
-        y += 22
-        if inside_heroes:
-            names = ", ".join(getattr(h, "name", "?") for h in inside_heroes[:5])
-            if len(inside_heroes) > 5:
-                names += f" (+{len(inside_heroes) - 5})"
-            names_line = panel.font_small.render(names, True, (180, 180, 180))
-            surface.blit(names_line, (15, y))
-            y += 18
+        y = render_occupants(panel, surface, building, y)
 
         # Recovery rate (plan: 0.02 = 1 HP per second)
         recovery_text = panel.font_small.render(

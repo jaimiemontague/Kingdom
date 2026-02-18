@@ -8,6 +8,29 @@ import pygame
 
 from config import COLOR_GOLD, COLOR_RED, COLOR_WHITE
 
+
+def render_occupants(panel, surface: pygame.Surface, building, y: int) -> int:
+    """Shared helper: render 'Heroes inside: N/max' + hero names. Returns new y. No-op if max_occupants <= 0."""
+    max_occ = int(getattr(building, "max_occupants", 0))
+    if max_occ <= 0:
+        return y
+    occupants = getattr(building, "occupants", [])
+    inside_heroes = [h for h in occupants if getattr(h, "is_alive", True)]
+    count = len(inside_heroes)
+    heroes_inside_text = panel.font_normal.render(
+        f"Heroes inside: {count}/{max_occ}", True, COLOR_WHITE
+    )
+    surface.blit(heroes_inside_text, (10, y))
+    y += 22
+    if inside_heroes:
+        names = ", ".join(getattr(h, "name", "?") for h in inside_heroes[:5])
+        if len(inside_heroes) > 5:
+            names += f" (+{len(inside_heroes) - 5})"
+        names_line = panel.font_small.render(names, True, (180, 180, 180))
+        surface.blit(names_line, (15, y))
+        y += 18
+    return y
+
 from .castle_panel import CastlePanelRenderer
 from .defensive_panel import DefensivePanelRenderer
 from .economic_panel import EconomicPanelRenderer
@@ -46,6 +69,8 @@ class GenericPanelRenderer:
         y: int,
         economy,
     ) -> int:
+        y = render_occupants(panel, surface, building, y)
+
         hp_text = panel.font_normal.render(
             f"HP: {int(getattr(building, 'hp', 0))}/{int(getattr(building, 'max_hp', 0))}",
             True,

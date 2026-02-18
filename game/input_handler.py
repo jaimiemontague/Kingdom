@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from config import ZOOM_STEP, COLOR_WHITE
+from config import DEFAULT_SPEED_TIER, ZOOM_STEP, COLOR_WHITE
+from game.sim.timebase import get_time_multiplier, set_time_multiplier
+from game.ui.speed_control import SPEED_TIERS
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
@@ -221,6 +223,26 @@ class InputHandler:
         elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
             engine.zoom_by(1.0 / ZOOM_STEP)
 
+        # Speed controls (wk12 Chronos): [ slower, ] faster, ` pause toggle
+        elif event.key == pygame.K_BACKQUOTE:
+            current = get_time_multiplier()
+            if current <= 0.0:
+                before = getattr(engine, "_speed_before_pause", DEFAULT_SPEED_TIER)
+                set_time_multiplier(before)
+            else:
+                engine._speed_before_pause = current
+                set_time_multiplier(0.0)
+        elif event.key == pygame.K_LEFTBRACKET:
+            current = get_time_multiplier()
+            idx = next((i for i, m in enumerate(SPEED_TIERS) if abs(m - current) < 0.01), 0)
+            idx = max(0, idx - 1)
+            set_time_multiplier(SPEED_TIERS[idx])
+        elif event.key == pygame.K_RIGHTBRACKET:
+            current = get_time_multiplier()
+            idx = next((i for i, m in enumerate(SPEED_TIERS) if abs(m - current) < 0.01), len(SPEED_TIERS) - 1)
+            idx = min(len(SPEED_TIERS) - 1, idx + 1)
+            set_time_multiplier(SPEED_TIERS[idx])
+
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
         engine = self.engine
@@ -270,13 +292,11 @@ class InputHandler:
                         engine.selected_building = None
                         return
                     if action == "build_menu_toggle":
-                        if hasattr(engine.building_list_panel, "toggle"):
-                            engine.building_list_panel.toggle()
+                        # Open Build Catalog (centered grid) — same UI as castle "Build Buildings"
+                        if engine.build_catalog_panel.visible:
+                            engine.build_catalog_panel.close()
                         else:
-                            if getattr(engine.building_list_panel, "visible", False):
-                                engine.building_list_panel.close()
-                            else:
-                                engine.building_list_panel.open()
+                            engine.build_catalog_panel.open()
                         return
                     if action == "hire_hero":
                         engine.try_hire_hero()

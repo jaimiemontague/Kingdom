@@ -31,6 +31,7 @@ What it covers (via `observe_sync`):
   - At least one bounty exists (in bounty-enabled profiles)
   - At least one bounty responder appears after warmup
   - If/when `hero.intent` is implemented, it must become non-empty after warmup
+- **wk12 Chronos**: `--speed-multiplier` headless runs at 0.1x, 0.25x, 0.5x, 1.0x (sim-time equivalent); occupancy assertions when Building has `occupants`/`get_occupant_count()` or Inn `heroes_resting`
 
 ## Manual Smoke (5–10 minutes)
 Run one of:

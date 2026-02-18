@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.3.4"
-    game_title: str = "Kingdom Sim (Prototype v1.3.4) — Refactor Bug Fixes Update"
+    prototype_version: str = "1.3.5"
+    game_title: str = "Kingdom Sim (Prototype v1.3.5) — Time and Speed Update"
     default_borderless: bool = True
 
 
@@ -113,6 +113,22 @@ class RangerConfig:
     explore_black_fog_bias: float = 0.7
     frontier_scan_radius_tiles: int = 10
     frontier_commit_ms: int = 4000
+
+
+# Speed tiers (wk12 Chronos: 5-tier player-facing speed control)
+SPEED_PAUSE = 0.0
+SPEED_SUPER_SLOW = 0.1
+SPEED_SLOW = 0.25
+SPEED_NORMAL = 0.5
+SPEED_FAST = 1.0
+DEFAULT_SPEED_TIER = SPEED_NORMAL
+SPEED_TIER_NAMES = {
+    SPEED_PAUSE: "Paused",
+    SPEED_SUPER_SLOW: "Super Slow",
+    SPEED_SLOW: "Slow",
+    SPEED_NORMAL: "Normal",
+    SPEED_FAST: "Fast",
+}
 
 
 # Grouped config objects (frozen dataclasses)
@@ -309,6 +325,39 @@ BUILDING_CONSTRAINTS = {
 # Building prerequisites (required buildings)
 BUILDING_PREREQUISITES = {
     "ballista_tower": ["dwarven_settlement"],
+}
+
+# Max heroes that can be inside a building at once (0 = not enterable in this sprint)
+BUILDING_MAX_OCCUPANTS = {
+    "castle": 0,
+    "warrior_guild": 4,
+    "ranger_guild": 4,
+    "rogue_guild": 4,
+    "wizard_guild": 4,
+    "marketplace": 3,
+    "blacksmith": 2,
+    "inn": 6,
+    "trading_post": 0,
+    "temple_agrela": 4,
+    "temple_dauros": 4,
+    "temple_fervus": 4,
+    "temple_krypta": 4,
+    "temple_krolm": 4,
+    "temple_helia": 4,
+    "temple_lunord": 4,
+    "gnome_hovel": 0,
+    "elven_bungalow": 0,
+    "dwarven_settlement": 0,
+    "guardhouse": 0,
+    "ballista_tower": 0,
+    "wizard_tower": 0,
+    "fairgrounds": 0,
+    "library": 0,
+    "royal_gardens": 0,
+    "palace": 0,
+    "house": 0,
+    "farm": 0,
+    "food_stand": 0,
 }
 
 # Hero settings

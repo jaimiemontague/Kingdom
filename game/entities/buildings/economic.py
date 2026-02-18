@@ -137,21 +137,26 @@ class Inn(Building):
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.INN)
-        self.heroes_resting: list[Hero] = []
         self.rest_recovery_rate = 0.02  # Faster than guilds (0.01)
         self.drink_income_gold = 0
 
+    @property
+    def heroes_resting(self) -> list:
+        """Backward compatibility: same as base class occupants."""
+        return self.occupants
+
+    @property
+    def gold_earned_from_drinks(self) -> int:
+        """Backward compatibility for panel display."""
+        return int(getattr(self, "drink_income_gold", 0))
+
     def on_hero_enter(self, hero: Hero) -> None:
         """Track heroes currently inside the inn (resting or drinking)."""
-        if hero not in self.heroes_resting:
-            self.heroes_resting.append(hero)
+        super().on_hero_enter(hero)
 
     def on_hero_exit(self, hero: Hero) -> None:
         """Remove hero from current inn occupants when they leave."""
-        try:
-            self.heroes_resting.remove(hero)
-        except ValueError:
-            pass
+        super().on_hero_exit(hero)
 
     def record_drink_purchase(self, amount: int) -> None:
         """Accumulate gold earned from hero drink purchases."""

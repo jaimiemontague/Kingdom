@@ -6,6 +6,8 @@ import pygame
 
 from config import COLOR_GOLD, COLOR_UI_BORDER, COLOR_WHITE
 
+from game.ui.building_renderers import render_occupants
+
 
 class GuildPanelRenderer:
     """Shared renderer for guild and dwelling buildings."""
@@ -19,6 +21,8 @@ class GuildPanelRenderer:
         y: int,
         economy,
     ) -> int:
+        y = render_occupants(panel, surface, building, y)
+
         hero_info = panel.get_heroes_for_building(building, heroes)
 
         tax_text = panel.font_normal.render(

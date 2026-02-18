@@ -8,6 +8,7 @@ from config import COLOR_GOLD, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.command_bar import CommandBar
 from game.ui.hero_panel import HeroPanel
+from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
 from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
@@ -127,6 +128,12 @@ class HUD:
             button_tex_pressed=self._button_tex_pressed,
             button_slice_border=self._button_slice_border,
         )
+        self._speed_bar = SpeedControlBar(
+            self.theme,
+            frame_outer=self._frame_outer,
+            frame_inner=self._frame_inner,
+            frame_highlight=self._frame_highlight,
+        )
         self._hero_panel = HeroPanel(
             self.theme,
             frame_inner=self._frame_inner,
@@ -141,11 +148,12 @@ class HUD:
 
         self.quit_rect: pygame.Rect | None = None
         self.right_close_rect: pygame.Rect | None = None
+        self._speed_rect: pygame.Rect | None = None
         self.messages: list[dict] = []
         self.message_duration = 3000
 
-    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
-        """Compute UI rects from current surface size."""
+    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+        """Compute UI rects from current surface size. Returns top, bottom, right, minimap, command, speed_rect."""
         w, h = surface.get_width(), surface.get_height()
         self.screen_width = int(w)
         self.screen_height = int(h)
@@ -170,12 +178,22 @@ class HUD:
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
+        # Speed bar: bottom-right, left of right panel (wk12 Chronos)
+        speed_bar_w = 200
+        speed_bar_h = 50
+        speed_rect = pygame.Rect(
+            (w - right_w) - speed_bar_w - margin,
+            bottom.y + margin,
+            speed_bar_w,
+            min(speed_bar_h, bottom_h - 2 * margin),
+        )
+
         minimap_size = max(64, bottom_h - 2 * margin)
         minimap = pygame.Rect(margin, bottom.y + margin, minimap_size, minimap_size)
         cmd_x = minimap.right + gutter
-        cmd_w = max(0, (w - right_w) - cmd_x - gutter)
+        cmd_w = max(0, speed_rect.left - cmd_x - gutter)
         command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
-        return top, bottom, right, minimap, command
+        return top, bottom, right, minimap, command, speed_rect
 
     def _build_placing_banner(self, text_surf: pygame.Surface) -> pygame.Surface:
         pad_x = 14
@@ -372,7 +390,7 @@ class HUD:
             y_offset += 18
 
     def render(self, surface: pygame.Surface, game_state: dict) -> None:
-        top, bottom, right, minimap, cmd = self._compute_layout(surface)
+        top, bottom, right, minimap, cmd, speed_rect = self._compute_layout(surface)
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
@@ -442,6 +460,8 @@ class HUD:
 
         self.render_messages(surface)
         self._command_bar.render(surface, cmd)
+        self._speed_bar.render(surface, speed_rect, pygame.mouse.get_pos())
+        self._speed_rect = speed_rect
 
         selected_hero = game_state.get("selected_hero")
         selected_building = game_state.get("selected_building")
@@ -481,5 +501,7 @@ class HUD:
         action = self._command_bar.handle_click((x, y))
         if action:
             return action
+        if getattr(self, "_speed_rect", None) is not None and self._speed_bar.handle_click((x, y)):
+            return None
         return None
 

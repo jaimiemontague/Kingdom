@@ -19,6 +19,7 @@ from config import (
     SIM_TICK_HZ,
     SIM_SEED,
     DEFAULT_BORDERLESS,
+    DEFAULT_SPEED_TIER,
 )
 from game.graphics.vfx import VFXSystem
 from game.audio.audio_system import AudioSystem
@@ -43,7 +44,7 @@ from game.graphics.render_context import set_render_zoom
 from game.graphics.renderers import RendererRegistry
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
-from game.sim.timebase import set_sim_now_ms
+from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
 
 class GameEngine:
     """Main game engine class."""
@@ -56,6 +57,9 @@ class GameEngine:
         # Seed early so world gen + initial lairs are reproducible when enabled.
         set_sim_seed(SIM_SEED)
         self._sim_now_ms = 0
+        # wk12 Chronos: 5-tier speed control; default NORMAL (0.5x). Camera dt kept separate in run().
+        set_time_multiplier(DEFAULT_SPEED_TIER)
+        self._camera_dt = 0.0
 
         # Early pacing guardrail (ContentScenarioDirector, wk1 broad sweep):
         # Within the first few minutes, surface a clear prompt and optionally place
@@ -260,7 +264,9 @@ class GameEngine:
         if hasattr(castle, "construction_started"):
             castle.construction_started = True
         self.buildings.append(castle)
-        
+        if hasattr(castle, "set_event_bus"):
+            castle.set_event_bus(self.event_bus)
+
         # Create tax collector at castle
         self.tax_collector = TaxCollector(castle)
         
@@ -393,6 +399,8 @@ class GameEngine:
             building.mark_unconstructed()
         
         self.buildings.append(building)
+        if hasattr(building, "set_event_bus"):
+            building.set_event_bus(self.event_bus)
         self.building_menu.cancel_selection()
         self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
         
@@ -517,6 +525,12 @@ class GameEngine:
             return
 
         game_state = self.get_game_state()
+
+        # wk12 Chronos: ensure all buildings have event_bus for hero_entered/exited_building events
+        for building in self.buildings:
+            if getattr(building, "_event_bus", None) is None and hasattr(building, "set_event_bus"):
+                building.set_event_bus(self.event_bus)
+
         system_ctx = self._build_system_context()
         self._update_ai_and_heroes(dt, game_state)
         castle = self._update_world_systems(system_ctx, dt, game_state)
@@ -542,11 +556,19 @@ class GameEngine:
         else:
             set_sim_now_ms(None)
 
-        # V1.3-EXT-BUG-001: Do not move camera/zoom while paused/menu open.
-        if (not self.paused) and (not getattr(self.pause_menu, "visible", False)):
-            self.update_camera(dt)
-            return True
-        return False
+        # wk12 Chronos: speed-tier pause (multiplier 0) or menu pause → no sim (return False). Camera still pans when paused (not when menu open).
+        if get_time_multiplier() == 0.0 or self.paused:
+            if not getattr(self.pause_menu, "visible", False):
+                camera_dt = getattr(self, "_camera_dt", dt)
+                self.update_camera(camera_dt)
+            return False
+        # V1.3-EXT-BUG-001: Do not move camera/zoom while menu open.
+        if getattr(self.pause_menu, "visible", False):
+            return False
+        # Camera uses wall-clock dt for responsiveness; sim uses scaled dt (already passed in as dt).
+        camera_dt = getattr(self, "_camera_dt", dt)
+        self.update_camera(camera_dt)
+        return True
 
     def _build_system_context(self) -> SystemContext:
         """Construct a shared context object for protocol-based systems."""
@@ -1242,13 +1264,16 @@ class GameEngine:
                 tick_ms = self.clock.tick(FPS)
                 dt = tick_ms / 1000.0  # Delta time in seconds
 
+            # wk12 Chronos: camera uses raw dt; sim uses dt * multiplier (pause = 0).
+            self._camera_dt = dt
+            sim_dt = dt * get_time_multiplier()
 
             t0 = time.perf_counter()
             self.handle_events()
             t1 = time.perf_counter()
 
 
-            self.update(dt)
+            self.update(sim_dt)
             t2 = time.perf_counter()
 
 

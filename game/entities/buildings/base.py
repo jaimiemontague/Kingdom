@@ -7,10 +7,13 @@ from dataclasses import dataclass
 from config import (
     BUILDING_COLORS,
     BUILDING_COSTS,
+    BUILDING_MAX_OCCUPANTS,
     BUILDING_SIZES,
     TILE_SIZE,
 )
 from game.sim.timebase import now_ms as sim_now_ms
+
+from game.events import GameEventType
 
 from .types import BuildingType
 
@@ -72,6 +75,13 @@ class Building:
         self.is_constructed = True
         self.construction_started = True
         self._work_accum = 0.0  # fractional HP accumulator for build/repair work
+
+        # Universal occupancy (Sprint 1 Chronos): all buildings track occupants.
+        self.occupants: list = []
+        self.max_occupants: int = BUILDING_MAX_OCCUPANTS.get(
+            getattr(building_type, "value", building_type), 8
+        )
+        self._event_bus = None  # Set by engine for EventBus emit on enter/exit
 
     @property
     def world_x(self) -> float:
@@ -192,3 +202,40 @@ class Building:
     def is_fully_repaired(self) -> bool:
         """Check if building is at full health."""
         return self.hp >= self.max_hp
+
+    def set_event_bus(self, event_bus) -> None:
+        """Set EventBus for emitting hero_entered_building / hero_exited_building (called by engine)."""
+        self._event_bus = event_bus
+
+    def on_hero_enter(self, hero) -> None:
+        """Track hero as occupant; emit event. Call from hero when entering."""
+        if hero in self.occupants:
+            return
+        if len(self.occupants) >= self.max_occupants:
+            return
+        self.occupants.append(hero)
+        if self._event_bus is not None:
+            self._event_bus.emit({
+                "type": GameEventType.HERO_ENTERED_BUILDING.value,
+                "hero": hero,
+                "building": self,
+            })
+
+    def on_hero_exit(self, hero) -> None:
+        """Remove hero from occupants; emit event. Call from hero when leaving."""
+        try:
+            self.occupants.remove(hero)
+            if self._event_bus is not None:
+                self._event_bus.emit({
+                    "type": GameEventType.HERO_EXITED_BUILDING.value,
+                    "hero": hero,
+                    "building": self,
+                })
+        except ValueError:
+            pass
+
+    def get_occupant_count(self) -> int:
+        return len(self.occupants)
+
+    def is_full(self) -> bool:
+        return self.max_occupants > 0 and len(self.occupants) >= self.max_occupants

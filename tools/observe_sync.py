@@ -29,7 +29,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
-from game.sim.timebase import set_sim_now_ms  # noqa: E402
+from game.sim.timebase import set_sim_now_ms, set_time_multiplier, get_time_multiplier  # noqa: E402
 from game.world import World, TileType  # noqa: E402
 from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
@@ -197,9 +197,19 @@ def main() -> int:
     ap.add_argument("--llm", action="store_true", help="enable LLM brain (mock provider) to observe decisions")
     ap.add_argument("--qa", action="store_true", help="enable QA assertions (nonzero exit on failure)")
     ap.add_argument("--qa-warmup-ticks", type=int, default=240, help="wait N ticks before starting QA assertions")
+    ap.add_argument(
+        "--speed-multiplier",
+        type=float,
+        default=1.0,
+        help="simulation speed multiplier (0.1–4.0); applied to dt each tick (wk12 Chronos)",
+    )
     args = ap.parse_args()
 
     random.seed(args.seed)
+
+    # Apply speed multiplier before run (wk12 Chronos). Clamped inside set_time_multiplier.
+    mult = max(0.0, min(4.0, float(args.speed_multiplier)))
+    set_time_multiplier(mult)
 
     pygame.init()
     pygame.display.init()
@@ -323,6 +333,8 @@ def main() -> int:
 
     dt = 1.0 / 60.0
     ticks = int(args.seconds * 60)
+    # Effective sim dt per tick (wk12 Chronos: multiplier scales sim advancement only).
+    sim_dt = dt * get_time_multiplier()
 
     # Drive deterministic sim-time for code that reads "now" (bounties, etc).
     set_sim_now_ms(0)
@@ -343,6 +355,10 @@ def main() -> int:
     _prev_unstuck_attempts: dict[int, int] = {}
     _any_can_attack_field = False
     _any_stuck_fields = False
+
+    # wk12 Chronos: occupancy QA (conditional on Building having occupants or heroes_resting).
+    _prev_hero_inside: dict[int, object] = {}  # id(hero) -> building or None
+    qa_occupancy_violations: list[str] = []
 
     def _hero_intent_label(h) -> str:
         # Prefer new explicit intent if present.
@@ -387,12 +403,15 @@ def main() -> int:
         return count
 
     for t in range(ticks):
-        # Advance deterministic sim time (ms) at 60Hz.
-        set_sim_now_ms(int((t * 1000) / 60))
+        # Advance deterministic sim time (ms) at 60Hz, scaled by speed multiplier (wk12 Chronos).
+        set_sim_now_ms(int(t * sim_dt * 1000))
         if args.realtime:
             # Keep pygame's internal clock advancing similarly to the real game loop.
             pygame.time.delay(int(dt * 1000))
             pygame.event.pump()
+        # When paused (multiplier 0), skip sim updates but still advance loop for realtime/cleanup.
+        if sim_dt <= 0:
+            continue
 
         # Keep bounties consistent with the live game: expose only unclaimed bounties.
         bounties = bounty_system.get_unclaimed_bounties()
@@ -409,11 +428,11 @@ def main() -> int:
             "world": world,
         }
 
-        ai.update(dt, heroes, game_state)
+        ai.update(sim_dt, heroes, game_state)
         for h in heroes:
-            h.update(dt, game_state)
+            h.update(sim_dt, game_state)
         for p in peasants:
-            p.update(dt, game_state)
+            p.update(sim_dt, game_state)
 
         # Populate bounty contract fields (responders/tier) before any claims/cleanup so QA can observe >0.
         if hasattr(bounty_system, "update_ui_metrics"):
@@ -475,6 +494,50 @@ def main() -> int:
                                 break
                         except Exception:
                             continue
+
+        # wk12 Chronos: occupancy assertions (when building has occupants or heroes_resting).
+        if args.qa and sim_dt > 0:
+            for h in heroes:
+                if not getattr(h, "is_alive", True):
+                    continue
+                hid = id(h)
+                inside = bool(getattr(h, "is_inside_building", False))
+                building = getattr(h, "inside_building", None)
+                prev_building = _prev_hero_inside.get(hid)
+                _prev_hero_inside[hid] = building if inside else None
+
+                if inside and building is not None:
+                    # Hero entered or is inside: building must list them.
+                    if hasattr(building, "get_occupant_count") and hasattr(building, "occupants"):
+                        try:
+                            cnt = building.get_occupant_count()
+                            if cnt < 1:
+                                qa_occupancy_violations.append(
+                                    f"occupancy: hero inside but get_occupant_count()={cnt}"
+                                )
+                            if h not in building.occupants:
+                                qa_occupancy_violations.append(
+                                    "occupancy: hero inside but hero not in building.occupants"
+                                )
+                        except Exception as e:
+                            qa_occupancy_violations.append(f"occupancy: get_occupant_count/occupants error: {e}")
+                    elif hasattr(building, "heroes_resting"):
+                        if h not in building.heroes_resting:
+                            qa_occupancy_violations.append(
+                                "occupancy: hero inside Inn but not in building.heroes_resting"
+                            )
+                elif prev_building is not None:
+                    # Hero just exited: must not be in that building's list.
+                    if hasattr(prev_building, "occupants"):
+                        if h in prev_building.occupants:
+                            qa_occupancy_violations.append(
+                                "occupancy: hero exited but still in building.occupants"
+                            )
+                    if hasattr(prev_building, "heroes_resting"):
+                        if h in prev_building.heroes_resting:
+                            qa_occupancy_violations.append(
+                                "occupancy: hero exited but still in building.heroes_resting"
+                            )
 
         # QA assertions:
         # - Bounty existence/response should be tracked for the whole run (a bounty may be claimed before warmup).
@@ -598,6 +661,11 @@ def main() -> int:
             if int(scenario_counters.get("inside_attack_blocks", 0)) <= 0:
                 print("[qa] FAIL: inside_combat_repro expected >=1 inside_attack_blocks when can_attack field exists")
                 failed = True
+
+        # wk12 Chronos: occupancy assertions (Inn or base Building occupants).
+        for msg in qa_occupancy_violations:
+            print(f"[qa] FAIL: {msg}")
+            failed = True
 
         if not failed:
             # Print a small summary so CI logs show what was checked vs skipped.

@@ -101,6 +101,24 @@ def main() -> int:
         profiles.append(("WK2 hero_stuck_repro (stuck+recovery counters)", [*base, "--no-enemies", "--scenario", "hero_stuck_repro"]))
         profiles.append(("no-enemies (economy/shopping isolation)", [*base, "--no-enemies"]))
         profiles.append(("mock-LLM enabled (decision plumbing)", [*base, "--llm", "--realtime", "--bounty"]))
+        # wk12 Chronos: speed_scaling — verify sim runs correctly at each non-pause tier.
+        # Use sim-time equivalence: seconds = 12/mult so each run gets ~12 sim seconds (bounty can claim).
+        for mult in (0.1, 0.25, 0.5, 1.0):
+            sim_seconds = 12.0 / max(0.01, mult)
+            profiles.append(
+                (
+                    f"speed_scaling {mult}x",
+                    [
+                        "--seconds", str(sim_seconds),
+                        "--heroes", str(ns.heroes),
+                        "--seed", str(ns.seed),
+                        "--log-every", "240",
+                        "--qa",
+                        "--bounty",
+                        "--speed-multiplier", str(mult),
+                    ],
+                )
+            )
 
         rc = 0
         # Determinism is a release gate: fail fast if someone reintroduced wall-clock/RNG into sim logic.

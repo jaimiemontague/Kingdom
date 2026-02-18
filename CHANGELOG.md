@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.3.5 — Time and Speed Update
+
+- UX: **5-tier speed control** — Pause, Super Slow, Slow, Normal, and Fast (bottom-right bar). Game starts at Normal (0.5x); Fast matches previous speed.
+- UX: **Hotkeys** — `[` / `]` step speed slower/faster; backtick (`` ` ``) toggles pause.
+- Buildings: **Universal occupancy** — all buildings track heroes inside; building panels show "Heroes inside: N/max" for guilds, Inn, Marketplace, Blacksmith.
+- Foundation: EventBus events when heroes enter or exit buildings (for future interior view and LLM chat).
+
 ## Prototype v1.3.4 — Refactor Bug Fixes Update
 
 - Fix: **ESC** no longer crashes when opening the pause menu (missing button texture).
