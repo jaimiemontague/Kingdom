@@ -1,5 +1,15 @@
 # Changelog
 
+## Prototype v1.3.6 — Interiors Update
+
+- UX: **Enter Building** — select any enterable building (Inn, guilds, Marketplace, Blacksmith, temples) and click "Enter Building" to view its interior in the right panel.
+- UX: **Building interiors** — procedural interior scenes for Inn (bar, tables, fireplace), Marketplace (shelves, counter), and Warrior Guild (training dummies, sparring ring); other enterable buildings use a generic interior.
+- UX: **Interior panel** — right panel shows background, furniture, NPC (bartender/merchant/guildmaster), and hero occupants in real time; Exit button, ESC, or clicking the map returns to overview.
+- UX: **Auto-slow on enter** — game slows to 0.25x when entering a building; speed restores on exit.
+- Fix: Right panel now opens automatically when entering a building (no need to click a hero first).
+- Fix: Building panel scrolls when content is tall (e.g. Warrior Guild) so "Enter Building" is always visible.
+- Fix: Inn "get a drink" gold no longer crashes (gold_earned_from_drinks property setter added).
+
 ## Prototype v1.3.5 — Time and Speed Update
 
 - UX: **5-tier speed control** — Pause, Super Slow, Slow, Normal, and Fast (bottom-right bar). Game starts at Normal (0.5x); Fast matches previous speed.

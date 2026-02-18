@@ -119,6 +119,10 @@ def main() -> int:
                     ],
                 )
             )
+        # wk13 Living Interiors: interior_view — MicroViewManager enter/exit no-crash + occupancy assertions.
+        profiles.append(
+            ("interior_view (MicroViewManager + occupancy)", [*base, "--scenario", "interior_view"])
+        )
 
         rc = 0
         # Determinism is a release gate: fail fast if someone reintroduced wall-clock/RNG into sim logic.

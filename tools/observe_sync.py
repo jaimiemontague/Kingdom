@@ -35,6 +35,7 @@ from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardG
 from game.systems.economy import EconomySystem  # noqa: E402
 from game.systems.combat import CombatSystem  # noqa: E402
 from game.systems.bounty import BountySystem  # noqa: E402
+from game.ui.micro_view_manager import MicroViewManager  # noqa: E402 (wk13 interior_view scenario)
 from ai.basic_ai import BasicAI  # noqa: E402
 from ai.llm_brain import LLMBrain  # noqa: E402
 
@@ -173,6 +174,44 @@ def _scenario_setup(
         return
 
 
+def _smoke_micro_view_manager(buildings: list) -> bool:
+    """
+    wk13 Living Interiors: verify MicroViewManager enter_interior/exit_interior
+    do not raise in headless. Building destruction path (exit_interior(reason='destroyed')) included.
+    Returns True if all calls succeed.
+    """
+    try:
+        mvm = MicroViewManager()
+        # Pick first enterable building (max_occupants > 0).
+        building = None
+        for b in buildings:
+            if getattr(b, "max_occupants", 0) > 0:
+                building = b
+                break
+        if building is None:
+            # No enterable building (e.g. minimal setup); still exercise API with any building.
+            building = buildings[0] if buildings else None
+        if building is None:
+            return True
+        mvm.enter_interior(building)
+        mvm.exit_interior()
+        mvm.enter_interior(building)
+        # Simulate building destroyed while viewing; graceful exit.
+        prev_hp = getattr(building, "hp", 200)
+        prev_max = getattr(building, "max_hp", 200)
+        if hasattr(building, "take_damage"):
+            building.take_damage(max(prev_hp, 999))
+        mvm.exit_interior(reason="destroyed")
+        # Restore building for rest of sim (occupancy assertions, economy).
+        if hasattr(building, "hp"):
+            building.hp = prev_max
+        if hasattr(building, "max_hp"):
+            building.max_hp = prev_max
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=20.0)
@@ -189,7 +228,7 @@ def main() -> int:
         "--scenario",
         type=str,
         default="default",
-        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro"],
+        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro", "interior_view"],
         help="deterministic test setup presets (default: default)",
     )
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
@@ -315,6 +354,11 @@ def main() -> int:
             castle=castle,
             market=market,
         )
+
+    # wk13 Living Interiors: smoke-test MicroViewManager enter/exit (no crash in headless).
+    qa_interior_view_ok = True
+    if args.scenario == "interior_view":
+        qa_interior_view_ok = _smoke_micro_view_manager(buildings)
 
     # Local view (unclaimed only); refreshed per tick.
     bounties = bounty_system.get_unclaimed_bounties()
@@ -665,6 +709,11 @@ def main() -> int:
         # wk12 Chronos: occupancy assertions (Inn or base Building occupants).
         for msg in qa_occupancy_violations:
             print(f"[qa] FAIL: {msg}")
+            failed = True
+
+        # wk13 Living Interiors: MicroViewManager enter/exit must not crash in headless.
+        if str(args.scenario) == "interior_view" and not qa_interior_view_ok:
+            print("[qa] FAIL: interior_view scenario — MicroViewManager enter_interior/exit_interior raised an exception")
             failed = True
 
         if not failed:

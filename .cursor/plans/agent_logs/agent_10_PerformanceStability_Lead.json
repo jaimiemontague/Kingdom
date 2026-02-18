@@ -793,6 +793,105 @@
           }
         }
       }
+    },
+    "wk12-chronos": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+        "notes": "Sprint 1 Chronos: 5-tier speed controls + occupancy. Agent 10 consult-only (1D)."
+      },
+      "rounds": {
+        "wk12_r1_consult": {
+          "sprint_id": "wk12-chronos",
+          "round_id": "wk12_r1_consult",
+          "round_meta": {
+            "prompt_set_id": "wk12_chronos_activation",
+            "build_target": "1D QA + determinism + perf review",
+            "sent_at_local": "2026-02-18"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "Consult-only review for wk12 Chronos (determinism + perf). Determinism: timebase.py multiplier applied at engine level only; now_ms/set_sim_now_ms unchanged; no wall-clock leak. Engine sim_dt/camera_dt split confirmed; set_time_multiplier() local client state (lockstep-safe). determinism_guard PASS. Perf: perf_benchmark 15.355 ms/tick; at SPEED_FAST (1.0x) game identical to pre-Chronos. One allocation finding: SpeedControlBar renders 5 symbol surfaces per frame (font_small.render in loop) — file for Agent 08.",
+            "summary_bullets": [
+              "Determinism: timebase multiplier applied in engine only; sim_dt/camera_dt split correct; determinism_guard PASS.",
+              "set_time_multiplier() local client state — safe for future lockstep.",
+              "Perf benchmark: 15.355 ms/tick; no regression from Chronos (benchmark does not use engine).",
+              "SpeedControlBar: 5 symbol surfaces per frame in render() — file for Agent 08 to cache."
+            ],
+            "evidence": {
+              "determinism_guard": "PASS (exit 0)",
+              "qa_smoke": "PASS (exit 0)",
+              "perf_benchmark_ms_per_tick": 15.355
+            },
+            "agent_fields": {
+              "determinism_review": {
+                "timebase": "Multiplier stored in module; applied in engine only. now_ms()/set_sim_now_ms() unchanged. No wall-clock leak into sim boundary.",
+                "engine": "_camera_dt = dt (raw); sim_dt = dt * get_time_multiplier(); update(sim_dt). Camera uses wall-clock dt; sim uses scaled dt. Determinism intact.",
+                "lockstep": "set_time_multiplier() is local client setting (not synced). Safe for future lockstep.",
+                "determinism_guard": "python tools/determinism_guard.py — PASS."
+              },
+              "perf_review": {
+                "perf_benchmark_command": "python tools/perf_benchmark.py (default 12s, 20 heroes, 20 enemies)",
+                "perf_benchmark_result_ms_per_tick": 15.355,
+                "speed_fast_note": "At SPEED_FAST (1.0x) game behavior identical to pre-Chronos; no regression.",
+                "speed_super_slow_note": "At 0.1x sim advances 0.1x; spot-check CPU drop is manual."
+              },
+              "allocation_finding": {
+                "file": "game/ui/speed_control.py",
+                "line": 122,
+                "issue": "sym_surf = self.theme.font_small.render(sym, True, text_color) inside for loop — 5 new surfaces per frame.",
+                "recommendation": "Cache symbol surfaces (e.g. dict keyed by (sym, text_color) or prebuild 5x2 surfaces). Assign to Agent 08.",
+                "assign_to": "Agent 08"
+              }
+            }
+          }
+        }
+      }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "Sprint 2 Living Interiors: interior view panel. Agent 10 consult-only (2E)."
+      },
+      "rounds": {
+        "wk13_r1_consult": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r1_consult",
+          "round_meta": {
+            "prompt_set_id": "wk13_living_interiors_activation",
+            "build_target": "2E QA + determinism + perf review",
+            "sent_at_local": "2026-02-18"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "Consult-only perf review for wk13 Living Interiors. InteriorSpriteLibrary: all surfaces cached (bg, npc, furniture, hero_slots) by (building_type, w, h) or building_type. Deterministic via zlib.crc32 in _rng(). InteriorViewPanel: background/furniture/NPC from library (cached); hero occupants use _hero_idle_surface() cached by (hero_class, size). Minor: tooltip/hover creates font_small.render + SRCALPHA surface per frame when hovering hero/NPC — optional cache by text for Agent 08. Perf benchmark 19.019 ms/tick; headless benchmark does not run interior code; no regression. determinism_guard PASS; qa_smoke PASS.",
+            "summary_bullets": [
+              "InteriorSpriteLibrary: backgrounds, NPCs, furniture, hero_slots all cached; deterministic zlib.crc32.",
+              "InteriorViewPanel: hero occupants use cached _hero_idle_surface(hero_class, 64); no per-frame sprite creation.",
+              "Minor: interior tooltip/hover allocates 1–2 surfaces per frame when hovering; recommend cache by text (Agent 08).",
+              "perf_benchmark unchanged (interior not in headless path); determinism_guard PASS; qa_smoke PASS."
+            ],
+            "evidence": {
+              "determinism_guard": "PASS (exit 0)",
+              "qa_smoke": "PASS (exit 0)",
+              "perf_benchmark_ms_per_tick": 19.019
+            },
+            "agent_fields": {
+              "interior_sprites_review": {
+                "backgrounds": "_bg_cache (building_type, w, h); generated once, then cached.",
+                "npc": "_npc_cache by building_type.",
+                "furniture": "_furniture_cache (building_type, w, h).",
+                "hero_slots": "_slot_cache (building_type, w, h).",
+                "determinism": "_rng(tag, w, h) uses zlib.crc32; no wall-clock."
+              },
+              "interior_panel_review": {
+                "hero_occupants": "_hero_idle_surface(hero_class, 64) uses module-level cache by (hero_class, size); reuses HeroSpriteLibrary clips.",
+                "minor_finding": "Lines 193–202, 206: tooltip/hover render creates font_small.render() and small SRCALPHA surface per frame when hovering. Optional: cache by tooltip text; assign to Agent 08."
+              },
+              "perf_baseline": "perf_benchmark does not exercise interior (headless); interior is UI-only and cached; no regression."
+            }
+          }
+        }
+      }
     }
   }
 }

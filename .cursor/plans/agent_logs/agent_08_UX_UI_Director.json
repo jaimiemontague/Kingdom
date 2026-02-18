@@ -2479,6 +2479,83 @@
           }
         }
       }
+    },
+    "wk12-chronos": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+        "notes": "Sprint 1 Immersive Kingdom: 5-tier speed control. Agent 08: Section 1B."
+      },
+      "rounds": {
+        "wk12_r1_section_1b": {
+          "sprint_id": "wk12-chronos",
+          "round_id": "wk12_r1_section_1b",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "Section 1B: SpeedControlBar, HUD integration, [ ] backtick hotkeys.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/speed_control.py: SpeedControlBar 5 buttons, active highlight, handle_click -> set_time_multiplier",
+              "game/ui/hud.py: speed_rect in layout, command bar shrunk, render + handle_click",
+              "game/input_handler.py: K_BACKQUOTE pause toggle, K_LEFTBRACKET/K_RIGHTBRACKET step speed"
+            ],
+            "evidence": {
+              "qa_smoke": "exit_code=1; FAIL on speed_scaling 0.1x only (Agent 11 scope). base + others PASS."
+            },
+            "blockers": ["speed_scaling 0.1x assertion (Agent 11)."]
+          }
+        },
+        "wk12_r2_perf_symbol_cache": {
+          "sprint_id": "wk12-chronos",
+          "round_id": "wk12_r2_perf_symbol_cache",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "Perf fix (Agents 04/10): cache speed bar symbol surfaces in speed_control.py render().",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/speed_control.py: added _symbol_cache dict keyed by (symbol, color); _get_symbol_surface(sym, color) populates cache; render() uses _get_symbol_surface() instead of font_small.render() per frame."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "Sprint 2 Immersive Kingdom: Living Interiors. Agent 08: Section 2C — InteriorViewPanel."
+      },
+      "rounds": {
+        "wk13_r1_section_2c": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r1_section_2c",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "Section 2C: InteriorViewPanel with layered rendering, hero occupant sync, Exit button, hover/click regions.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/interior_view_panel.py: new InteriorViewPanel — Layer 1 background (InteriorSpriteLibrary.get_background), Layer 2 furniture (get_furniture_layout), Layer 3 NPC (get_npc_sprite + _npc_position), Layer 4 hero occupants (get_hero_slots + building.occupants, HeroSpriteLibrary idle at 64px), Layer 5 header + Exit button (returns exit_interior), hover highlight + name tooltip for heroes, NPC tooltip stub (Coming Soon). handle_click returns exit_interior for Exit button.",
+              "game/ui/hud.py: import InteriorViewPanel; create _interior_panel in __init__ with theme and button textures; already passed to _micro_view.render/handle_click via getattr(_interior_panel)."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        },
+        "wk13_hotfix_bug2_panel_height": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_hotfix_bug2_panel_height",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "BUG 2: Enter Building button clipped on Warrior Guild (fixed panel_height=400). Make panel height dynamic.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/building_panel.py: render to oversized scratch surface (height min(700, screen_height-panel_y-20)); after content render set panel_height = min(scratch_h, max(400, y + 20)); blit subsurface(0,0, panel_width, panel_height). Enter Building and all content now visible on content-heavy buildings."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

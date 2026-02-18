@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.3.5"
-    game_title: str = "Kingdom Sim (Prototype v1.3.5) — Time and Speed Update"
+    prototype_version: str = "1.3.6"
+    game_title: str = "Kingdom Sim (Prototype v1.3.6) — Interiors Update"
     default_borderless: bool = True
 
 

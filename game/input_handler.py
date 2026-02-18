@@ -7,6 +7,7 @@ import pygame
 
 from config import DEFAULT_SPEED_TIER, ZOOM_STEP, COLOR_WHITE
 from game.sim.timebase import get_time_multiplier, set_time_multiplier
+from game.ui.micro_view_manager import ViewMode
 from game.ui.speed_control import SPEED_TIERS
 
 if TYPE_CHECKING:
@@ -117,6 +118,11 @@ class InputHandler:
 
         # ESC menu takes priority
         if event.key == pygame.K_ESCAPE:
+            # wk13: exit interior view first (before opening pause menu)
+            micro_view = getattr(engine, "micro_view", None)
+            if micro_view is not None and getattr(micro_view, "mode", None) == ViewMode.INTERIOR:
+                micro_view.exit_interior()
+                return
             if engine.pause_menu.visible:
                 # Close menu (resume game)
                 engine.pause_menu.close()
@@ -291,6 +297,10 @@ class InputHandler:
                         engine.building_panel.deselect()
                         engine.selected_building = None
                         return
+                    if action == "exit_interior":
+                        if getattr(engine, "micro_view", None) is not None:
+                            engine.micro_view.exit_interior()
+                        return
                     if action == "build_menu_toggle":
                         # Open Build Catalog (centered grid) — same UI as castle "Build Buildings"
                         if engine.build_catalog_panel.visible:
@@ -357,6 +367,18 @@ class InputHandler:
                 engine.build_catalog_panel.close()
                 return
 
+            # wk13: left-click on world map while in interior view → exit interior, then continue to selection
+            gs = engine.get_game_state()
+            micro_view = getattr(engine, "micro_view", None)
+            right_panel_rect = gs.get("right_panel_rect")
+            if (
+                micro_view is not None
+                and getattr(micro_view, "mode", None) == ViewMode.INTERIOR
+                and right_panel_rect is not None
+                and not right_panel_rect.collidepoint(event.pos)
+            ):
+                micro_view.exit_interior()
+
             # Check if clicking on building panel
             if engine.building_panel.visible:
                 result = engine.building_panel.handle_click(event.pos, engine.economy, engine.get_game_state())
@@ -376,6 +398,15 @@ class InputHandler:
                         building_name = building.building_type.replace("_", " ").title()
                         engine.hud.add_message(f"Demolished: {building_name}", COLOR_WHITE)
                         # Deselect building (panel will close)
+                        engine.building_panel.deselect()
+                        engine.selected_building = None
+                    return
+                elif isinstance(result, dict) and result.get("type") == "enter_building":
+                    # wk13 Living Interiors: transition right panel to interior view
+                    building = result.get("building")
+                    if building and getattr(engine, "micro_view", None) is not None:
+                        engine.micro_view.enter_interior(building)
+                        engine.hud.right_panel_visible = True
                         engine.building_panel.deselect()
                         engine.selected_building = None
                     return

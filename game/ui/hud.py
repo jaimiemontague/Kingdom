@@ -8,6 +8,8 @@ from config import COLOR_GOLD, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.command_bar import CommandBar
 from game.ui.hero_panel import HeroPanel
+from game.ui.interior_view_panel import InteriorViewPanel
+from game.ui.micro_view_manager import MicroViewManager
 from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
@@ -139,6 +141,15 @@ class HUD:
             frame_inner=self._frame_inner,
             frame_highlight=self._frame_highlight,
         )
+        self._interior_panel = InteriorViewPanel(
+            self.theme,
+            frame_outer=self._frame_outer,
+            frame_highlight=self._frame_highlight,
+            button_tex_normal=self._button_tex_normal,
+            button_tex_hover=self._button_tex_hover,
+            button_tex_pressed=self._button_tex_pressed,
+            slice_border=self._button_slice_border,
+        )
         self._right_close_button = Button(
             rect=pygame.Rect(0, 0, 1, 1),
             text="X",
@@ -148,6 +159,8 @@ class HUD:
 
         self.quit_rect: pygame.Rect | None = None
         self.right_close_rect: pygame.Rect | None = None
+        self._right_rect: pygame.Rect | None = None
+        self._micro_view = MicroViewManager()
         self._speed_rect: pygame.Rect | None = None
         self.messages: list[dict] = []
         self.message_duration = 3000
@@ -217,6 +230,35 @@ class HUD:
             return
         pygame.draw.line(surface, self._frame_inner, (x, y), (x + width, y), 1)
         pygame.draw.line(surface, self._frame_highlight, (x, y + 1), (x + width, y + 1), 1)
+
+    def _render_right_panel_overview(
+        self, surface: pygame.Surface, right: pygame.Rect, game_state: dict
+    ) -> None:
+        """Render OVERVIEW mode content: hero panel, building summary, or empty hint (wk13 delegate from MicroViewManager)."""
+        selected_hero = game_state.get("selected_hero")
+        selected_building = game_state.get("selected_building")
+        self.right_close_rect = None
+        if selected_hero is not None or selected_building is not None:
+            self._render_right_close_button(surface, right)
+        if selected_hero is not None:
+            self._hero_panel.render(
+                surface,
+                selected_hero,
+                right,
+                right_close_rect=self.right_close_rect,
+                debug_ui=bool(game_state.get("debug_ui", False)),
+            )
+        elif selected_building is not None:
+            self._render_building_summary(surface, selected_building, right)
+        else:
+            pad = self._right_panel_top_pad(right)
+            TextLabel.render(
+                surface,
+                self.theme.font_body,
+                "Select a hero or building",
+                (right.x + int(self.theme.margin), right.y + pad),
+                (180, 180, 180),
+            )
 
     def _right_panel_top_pad(self, rect: pygame.Rect) -> int:
         pad = int(self.theme.margin)
@@ -467,27 +509,15 @@ class HUD:
         selected_building = game_state.get("selected_building")
         self.right_close_rect = None
         if self.right_panel_visible:
-            if selected_hero is not None or selected_building is not None:
-                self._render_right_close_button(surface, right)
-            if selected_hero:
-                self._hero_panel.render(
-                    surface,
-                    selected_hero,
-                    right,
-                    right_close_rect=self.right_close_rect,
-                    debug_ui=bool(game_state.get("debug_ui", False)),
-                )
-            elif selected_building is not None:
-                self._render_building_summary(surface, selected_building, right)
-            else:
-                pad = self._right_panel_top_pad(right)
-                TextLabel.render(
-                    surface,
-                    self.theme.font_body,
-                    "Select a hero or building",
-                    (right.x + int(self.theme.margin), right.y + pad),
-                    (180, 180, 180),
-                )
+            self._right_rect = right
+            interior_panel = getattr(self, "_interior_panel", None)
+            exit_msg = self._micro_view.render(
+                surface, right, game_state, self, interior_panel
+            )
+            if exit_msg:
+                self.add_message(exit_msg, (255, 180, 100))
+        else:
+            self._right_rect = None
 
         TextLabel.render(surface, self.theme.font_small, "Minimap", (minimap.x + 6, minimap.y + 6), (200, 200, 200))
 
@@ -498,6 +528,11 @@ class HUD:
             return "quit"
         if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
             return "close_selection"
+        if self._right_rect is not None and self._right_rect.collidepoint((x, y)):
+            interior_panel = getattr(self, "_interior_panel", None)
+            action = self._micro_view.handle_click((x, y), self._right_rect, interior_panel)
+            if action == "exit_interior":
+                return "exit_interior"
         action = self._command_bar.handle_click((x, y))
         if action:
             return action

@@ -150,6 +150,11 @@ class Inn(Building):
         """Backward compatibility for panel display."""
         return int(getattr(self, "drink_income_gold", 0))
 
+    @gold_earned_from_drinks.setter
+    def gold_earned_from_drinks(self, value: int) -> None:
+        """Allow AI/other code to set via setattr (writes to drink_income_gold)."""
+        self.drink_income_gold = max(0, int(value))
+
     def on_hero_enter(self, hero: Hero) -> None:
         """Track heroes currently inside the inn (resting or drinking)."""
         super().on_hero_enter(hero)

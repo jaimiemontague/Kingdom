@@ -797,6 +797,94 @@
         }
       }
     }
+  },
+  "wk12-chronos": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+      "notes": "Sprint 1 Immersive Kingdom Initiative: 5-tier speed + occupancy. Agent 04 consult-only (1D)."
+    },
+    "rounds": {
+      "wk12_r1_review": {
+        "sprint_id": "wk12-chronos",
+        "round_id": "wk12_r1_review",
+        "round_meta": {
+          "prompt_set_id": "wk12_chronos_activation",
+          "build_target": "1D QA + determinism + perf consult",
+          "sent_at_local": "2026-02-18"
+        },
+        "prompt_text": "Review time_multiplier/timebase, engine sim_dt/camera_dt split, set_time_multiplier lockstep safety; run determinism_guard. Also run perf_benchmark at 1.0x, spot-check 0.1x CPU, check SpeedControlBar per-frame allocations.",
+        "response": {
+          "status": "complete",
+          "raw": "Determinism: timebase.py keeps multiplier as module-level state; multiplier applied only in engine (dt * get_time_multiplier()). now_ms() unchanged; no wall-clock leak from multiplier. engine.py: _camera_dt set in run() from raw dt; sim_dt = dt * get_time_multiplier(); update(sim_dt); _prepare_sim_and_camera receives sim_dt so _sim_now_ms advances by scaled dt; camera uses self._camera_dt (raw). Determinism intact. set_time_multiplier() is client-local UI state; safe for lockstep (not synced). determinism_guard PASS. Perf: perf_benchmark run ms/tick 16.659; benchmark is headless and does not use engine speed multiplier. SpeedControlBar: symbol surfaces created per frame in render() (5x font_small.render per frame). Tier labels cached. Assign cache fix to Agent 08.",
+          "summary_bullets": [
+            "PASS: timebase multiplier applied at engine only; no wall-clock leak into sim boundary.",
+            "PASS: engine sim_dt/camera_dt split correct; sim gets scaled dt, camera gets raw dt.",
+            "PASS: set_time_multiplier() state is client-local; safe for future lockstep.",
+            "PASS: python tools/determinism_guard.py.",
+            "PASS: python tools/qa_smoke.py --quick.",
+            "FINDING (perf): SpeedControlBar creates 5 symbol surfaces per frame; recommend Agent 08 cache symbol surfaces for zero per-frame allocations."
+          ],
+          "agent_fields": {
+            "determinism_review": "PASS",
+            "determinism_violations": [],
+            "lockstep_safety": "set_time_multiplier is local client setting; not synced; safe.",
+            "evidence": {
+              "determinism_guard": { "command": "python tools/determinism_guard.py", "exit_code": 0, "result": "PASS" },
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "PASS" },
+              "perf_benchmark": { "command": "python tools/perf_benchmark.py", "exit_code": 0, "ms_per_tick": 16.659, "note": "Headless benchmark; does not drive engine speed multiplier." }
+            }
+          },
+          "perf_findings": [
+            {
+              "hotspot": "game/ui/speed_control.py render()",
+              "issue": "Five button symbols (||, >, >>, >>>, >>>>) rendered via theme.font_small.render() every frame — 5 new Surface allocations per frame.",
+              "mitigation": "Cache symbol surfaces (e.g. in __init__ or dict keyed by symbol or index); tier name label already cached via _label_cache.",
+              "assign_to": "08_UX_UI_Director"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "wk13-living-interiors": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+      "notes": "Sprint 2 Immersive Kingdom Initiative: Enter Building + interior panel. Agent 04 consult-only (2E)."
+    },
+    "rounds": {
+      "wk13_r1_review": {
+        "sprint_id": "wk13-living-interiors",
+        "round_id": "wk13_r1_review",
+        "round_meta": {
+          "prompt_set_id": "wk13_living_interiors_activation",
+          "build_target": "2E determinism review",
+          "sent_at_local": "2026-02-18"
+        },
+        "prompt_text": "Review InteriorSpriteLibrary (zlib.crc32, no wall-clock), MicroViewManager (UI-only, not sim boundary); run determinism_guard.",
+        "response": {
+          "status": "complete",
+          "raw": "InteriorSpriteLibrary: _rng(tag,w,h) seeds via zlib.crc32(f\"interior|{tag}|{w}|{h}\".encode()) & 0xFFFFFFFF, returns random.Random(seed). All background/furniture/slot generation uses this RNG. No time.time(), pygame.time.get_ticks(), or datetime. Caching is per (building_type, width, height). MicroViewManager: state is mode, interior_building, _previous_speed, _exit_message; only calls set_time_multiplier (client-local) and reads building.hp for graceful exit. No sim state writes; purely UI/presentation. determinism_guard PASS.",
+          "summary_bullets": [
+            "PASS: InteriorSpriteLibrary uses zlib.crc32 for RNG seed; no wall-clock; all surfaces cached per (building_type, w, h).",
+            "PASS: MicroViewManager state is UI-only (mode, interior_building, _previous_speed); not in sim boundary.",
+            "PASS: python tools/determinism_guard.py.",
+            "PASS: python tools/qa_smoke.py --quick."
+          ],
+          "agent_fields": {
+            "determinism_review": "PASS",
+            "determinism_violations": [],
+            "evidence": {
+              "determinism_guard": { "command": "python tools/determinism_guard.py", "exit_code": 0, "result": "PASS" },
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "PASS" }
+            }
+          },
+          "reviewed_files": [
+            "game/graphics/interior_sprites.py",
+            "game/ui/micro_view_manager.py"
+          ]
+        }
+      }
+    }
   }
 }
 

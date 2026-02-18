@@ -2151,6 +2151,105 @@
             }
           }
         }
+      },
+      "wk12-chronos": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+          "notes": "Sprint 1 Chronos: time multiplier + occupancy foundation."
+        },
+        "rounds": {
+          "wk12_r1": {
+            "sprint_id": "wk12-chronos",
+            "round_id": "wk12_r1",
+            "round_meta": {
+              "prompt_set_id": "wk12_chronos_r1",
+              "build_target": "1A time multiplier, engine dt split, config speed tiers"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/sim/timebase.py: _TIME_MULTIPLIER, set_time_multiplier(m) clamp [0,4], get_time_multiplier()",
+                "config.py: SPEED_PAUSE/SUPER_SLOW/SLOW/NORMAL/FAST, DEFAULT_SPEED_TIER=SPEED_NORMAL, SPEED_TIER_NAMES",
+                "game/engine.py: run() sets _camera_dt=dt, sim_dt=dt*get_time_multiplier(), update(sim_dt); _prepare_sim_and_camera uses _camera_dt for camera, returns False when mult==0 or paused (camera still pans when paused); __init__ set_time_multiplier(DEFAULT_SPEED_TIER), _camera_dt=0"
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: main.py --no-llm at SPEED_FAST (1.0) and SPEED_NORMAL (0.5); pause (mult 0) and pan camera"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      },
+      "wk13-living-interiors": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+          "notes": "Sprint 2 Living Interiors: MicroViewManager, engine integration, input interior exits."
+        },
+        "rounds": {
+          "wk13_r1": {
+            "sprint_id": "wk13-living-interiors",
+            "round_id": "wk13_r1",
+            "round_meta": {
+              "prompt_set_id": "wk13_living_interiors_r1",
+              "build_target": "2A MicroViewManager + engine + input"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/ui/micro_view_manager.py (new): ViewMode enum OVERVIEW/INTERIOR, MicroViewManager with enter_interior/exit_interior, auto-slow SPEED_SLOW, render() delegates to HUD overview or interior_panel, handle_click forwards to interior_panel, building destroyed → exit_interior(reason='destroyed') + message",
+                "game/ui/hud.py: _micro_view in __init__, _right_rect, _render_right_panel_overview() extracted, right-panel block replaced with _micro_view.render(); handle_click forwards to _micro_view.handle_click, returns exit_interior",
+                "game/engine.py: self.micro_view = hud._micro_view; get_game_state() adds micro_view_mode, micro_view_building, right_panel_rect",
+                "game/input_handler.py: ESC in INTERIOR calls micro_view.exit_interior() before menu; enter_building action calls micro_view.enter_interior(building), deselects panel; exit_interior action from HUD handled; map click outside right panel in INTERIOR exits interior then selection"
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: enter_interior(building) via Agent 05 button when landed; ESC and map click exit; building destroyed while viewing shows message"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          },
+          "wk13_r2_hotfix": {
+            "sprint_id": "wk13-living-interiors",
+            "round_id": "wk13_r2_hotfix",
+            "round_meta": {
+              "prompt_set_id": "wk13_hotfix",
+              "build_target": "BUG 1: interior panel visible on Enter Building"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/input_handler.py: after micro_view.enter_interior(building) set engine.hud.right_panel_visible = True so interior panel shows when right panel was closed"
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: close right panel (Tab), select building, click Enter Building — interior should appear"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

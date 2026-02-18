@@ -2110,6 +2110,54 @@
           "blockers": []
         }
       }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "WK13 Sprint 2 of Immersive Kingdom Initiative. Agent 09 owns 2B: InteriorSpriteLibrary."
+      },
+      "rounds": {
+        "wk13_r1_interior_sprites": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r1_interior_sprites",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created InteriorSpriteLibrary with procedural backgrounds, NPC sprites, furniture layouts, and hero slot positions for Inn, Marketplace, Warrior Guild, and generic fallback interiors.",
+            "files": [
+              "game/graphics/interior_sprites.py"
+            ],
+            "details": [
+              "FurnitureAnchor and HeroSlot data classes for typed anchor/slot positions.",
+              "Inn interior: stone walls with mortar lines, wood-plank floor with knots, bar counter with mugs, 2 tables with stools, fireplace with warm glow. Bartender NPC (apron accent). 6 hero slots (2 stool, 4 table).",
+              "Marketplace interior: wooden shelving walls with potion/item shelves, stone tile floor, central counter with coins, side display shelves. Merchant NPC (coin-bag accent). 3 hero slots (2 browsing, 1 counter).",
+              "Warrior Guild interior: blue-steel stone walls with weapon racks (sword/axe/mace silhouettes), dirt floor with sparring ring outline, training dummies, weapon rack furniture. Guildmaster NPC (blue cloak accent). 4 hero slots (2 dummy, 2 sparring).",
+              "Fallback interior: generic stone walls, tile floor, single table. No NPC. 4 hero slots.",
+              "All surfaces cached by (building_type, width, height). All generation seeded via zlib.crc32 — deterministic, no wall-clock, no unseeded random."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"import pygame; pygame.init(); from game.graphics.interior_sprites import InteriorSpriteLibrary; bg = InteriorSpriteLibrary.get_background('inn', 380, 600); print(f'Inn bg: {bg.get_size()}'); npc = InteriorSpriteLibrary.get_npc_sprite('inn'); print(f'NPC: {npc.get_size() if npc else None}'); slots = InteriorSpriteLibrary.get_hero_slots('inn', 380, 600); print(f'Slots: {len(slots)}'); furn = InteriorSpriteLibrary.get_furniture_layout('inn', 380, 600); print(f'Furniture: {len(furn)}')\""
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "linter": {
+              "status": "PASS",
+              "note": "No linter errors on game/graphics/interior_sprites.py"
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 08 (UX/UI) needs this file for InteriorViewPanel: import InteriorSpriteLibrary, FurnitureAnchor, HeroSlot from game.graphics.interior_sprites.",
+            "Hero occupant rendering at hero slots should use HeroSpriteLibrary idle frames at 2x scale (64x64).",
+            "NPC anchors for Inn (bartender), Marketplace (merchant), Warrior Guild (guildmaster) are positioned relative to the counter/rack furniture."
+          ]
+        }
+      }
     }
   }
 }

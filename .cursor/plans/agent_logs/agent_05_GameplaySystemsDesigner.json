@@ -1127,6 +1127,121 @@
           }
         }
       }
+    },
+    "wk12-chronos": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+        "notes": "wk12 Chronos Sprint 1: Universal building occupancy (Section 1C)."
+      },
+      "rounds": {
+        "wk12_r1_occupancy": {
+          "sprint_id": "wk12-chronos",
+          "round_id": "wk12_r1_occupancy",
+          "round_meta": {
+            "build_target": "occupancy_foundation",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/entities/buildings/base.py: Added occupants list, max_occupants (from config), on_hero_enter/on_hero_exit (with EventBus emit), get_occupant_count(), is_full(), set_event_bus().",
+                "game/events.py: Added GameEventType.HERO_ENTERED_BUILDING and HERO_EXITED_BUILDING.",
+                "config.py: Added BUILDING_MAX_OCCUPANTS dict (Inn=6, guilds=4, marketplace=3, blacksmith=2, temples=4, castle/defensive/special=0).",
+                "game/entities/buildings/economic.py: Inn now calls super().on_hero_enter/exit; heroes_resting property returns occupants; gold_earned_from_drinks property for panel.",
+                "game/ui/building_renderers/__init__.py: Added render_occupants() helper; GenericPanelRenderer calls it.",
+                "game/ui/building_renderers/economic_panel.py: _render_inn uses render_occupants; _render_marketplace and _render_blacksmith call render_occupants.",
+                "game/ui/building_renderers/guild_panel.py: Calls render_occupants at top of render().",
+                "game/engine.py: set_event_bus on castle at init, on building at place_building; update() ensures all buildings have event_bus."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: select Inn/Guild/Marketplace/Blacksmith, confirm 'Heroes inside: N/max' displays."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "FAIL",
+                  "exit_code": 1,
+                  "note": "Failure in speed_scaling 0.1x profile (bounty_has_responder assertion); determinism + pytest + base + intent_bounty + hero_stuck_repro + no-enemies + mock-LLM all PASS. Speed_scaling is Agent 11 scenario tuning."
+                },
+                "pytest_tests": {
+                  "command": "python -m pytest tests/",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "81 passed"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "wk13 Living Interiors Sprint 2: Enter Building button (Section 2D)."
+      },
+      "rounds": {
+        "wk13_r1_enter_building": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r1_enter_building",
+          "round_meta": {
+            "build_target": "enter_building_action",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/ui/building_panel.py: Added enter_building_button_rect and enter_building_button_hovered; _render_enter_building_button() for buildings with max_occupants > 0 and is_constructed, not castle; handle_click returns {\"type\": \"enter_building\", \"building\": building}; update_hover for enter button. Input handler already had enter_building branch (calls micro_view.enter_interior, deselects panel)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: select Inn/Guild/Marketplace/Blacksmith, click Enter Building, confirm interior view; exit via button/ESC/map click."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        },
+        "wk13_r2_hotfix_gold_earned_setter": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r2_hotfix_gold_earned_setter",
+          "round_meta": {
+            "build_target": "hotfix",
+            "sent_at_local": "2026-02-18T00:00:00",
+            "notes": "BUG 3: Inn.gold_earned_from_drinks property had no setter; ai/basic_ai.py setattr() caused crash."
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/entities/buildings/economic.py: Added @gold_earned_from_drinks.setter on Inn that writes to self.drink_income_gold (max(0, int(value))). Fixes crash when AI assigns drink cost via setattr(pending_building, 'gold_earned_from_drinks', current + cost)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: hero gets drink at Inn, confirm no property setter crash."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

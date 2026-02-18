@@ -23,6 +23,7 @@ class BuildingPanel:
 
         self.panel_width = 300
         self.panel_height = 400
+        self._panel_height_max = 700  # scratch height for dynamic sizing
         self.panel_x = 10
         self.panel_y = 50
 
@@ -38,6 +39,8 @@ class BuildingPanel:
         self.upgrade_button_hovered = False
         self.demolish_button_rect: pygame.Rect | None = None
         self.demolish_button_hovered = False
+        self.enter_building_button_rect: pygame.Rect | None = None
+        self.enter_building_button_hovered = False
         self.build_catalog_button_rect: pygame.Rect | None = None
         self.build_catalog_button_hovered = False
         self.blacksmith_research_rects: dict[str, pygame.Rect] = {}
@@ -108,6 +111,11 @@ class BuildingPanel:
 
         building_type = self._building_type_key(self.selected_building)
 
+        if self.enter_building_button_rect and self.enter_building_button_rect.collidepoint(mouse_pos):
+            building = self.selected_building
+            if building and getattr(building, "max_occupants", 0) > 0 and getattr(building, "is_constructed", True):
+                return {"type": "enter_building", "building": building}
+
         if self.demolish_button_rect and self.demolish_button_rect.collidepoint(mouse_pos):
             building = self.selected_building
             if building_type == "castle":
@@ -162,6 +170,10 @@ class BuildingPanel:
             self.demolish_button_hovered = self.demolish_button_rect.collidepoint(mouse_pos)
         else:
             self.demolish_button_hovered = False
+        if self.enter_building_button_rect:
+            self.enter_building_button_hovered = self.enter_building_button_rect.collidepoint(mouse_pos)
+        else:
+            self.enter_building_button_hovered = False
         if self.build_catalog_button_rect:
             self.build_catalog_button_hovered = self.build_catalog_button_rect.collidepoint(mouse_pos)
         else:
@@ -199,16 +211,19 @@ class BuildingPanel:
         self.upgrade_button_rect = None
         self.build_catalog_button_rect = None
         self.demolish_button_rect = None
+        self.enter_building_button_rect = None
 
-        panel_surf = pygame.Surface((self.panel_width, self.panel_height), pygame.SRCALPHA)
+        # Render to oversized scratch so content height can exceed 400 (wk13 hotfix: Enter Building not clipped)
+        scratch_h = min(self._panel_height_max, max(400, self.screen_height - self.panel_y - 20))
+        panel_surf = pygame.Surface((self.panel_width, scratch_h), pygame.SRCALPHA)
         if not NineSlice.render(
             panel_surf,
-            pygame.Rect(0, 0, self.panel_width, self.panel_height),
+            pygame.Rect(0, 0, self.panel_width, scratch_h),
             self._panel_tex_modal,
             border=self._panel_slice_border,
         ):
             panel_surf.fill((*COLOR_UI_BG, 240))
-            pygame.draw.rect(panel_surf, COLOR_UI_BORDER, (0, 0, self.panel_width, self.panel_height), 2)
+            pygame.draw.rect(panel_surf, COLOR_UI_BORDER, (0, 0, self.panel_width, scratch_h), 2)
 
         y = 10
         building_type_key = self._building_type_key(building)
@@ -222,7 +237,12 @@ class BuildingPanel:
         renderer = get_panel_renderer(getattr(building, "building_type", ""))
         y = renderer.render(self, panel_surf, building, heroes, y, economy)
         y = self._render_demolish_button(panel_surf, building, y)
-        surface.blit(panel_surf, (self.panel_x, self.panel_y))
+        y = self._render_enter_building_button(panel_surf, building, y)
+
+        bottom_padding = 20
+        self.panel_height = min(scratch_h, max(400, y + bottom_padding))
+        visible = panel_surf.subsurface((0, 0, self.panel_width, self.panel_height))
+        surface.blit(visible, (self.panel_x, self.panel_y))
 
     def render_hero_row(self, surface: pygame.Surface, hero, y: int, index: int) -> int:
         """Render one hero row (portrait + status + vitals)."""
@@ -335,6 +355,46 @@ class BuildingPanel:
             text_disabled_color=(120, 120, 120),
         )
         self.demolish_button_rect = pygame.Rect(
+            self.panel_x + local_rect.x,
+            self.panel_y + local_rect.y,
+            local_rect.width,
+            local_rect.height,
+        )
+        y += local_rect.height + 10
+        return y
+
+    def _render_enter_building_button(self, surface: pygame.Surface, building, y: int) -> int:
+        """Render 'Enter Building' button for enterable, fully constructed buildings (wk13 Living Interiors)."""
+        max_occ = int(getattr(building, "max_occupants", 0))
+        is_constructed = getattr(building, "is_constructed", True)
+        building_type_key = self._building_type_key(building)
+        if max_occ <= 0 or not is_constructed or building_type_key == "castle":
+            self.enter_building_button_rect = None
+            return y
+
+        pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
+        y += 10
+
+        local_rect = pygame.Rect(10, y, 200, 30)
+        button = Button(
+            rect=local_rect,
+            text="Enter Building",
+            font=self.font_small,
+            enabled=True,
+        )
+        button.render(
+            surface,
+            mouse_pos=pygame.mouse.get_pos() if self.enter_building_button_hovered else None,
+            enabled=True,
+            bg_normal=(40, 100, 60),
+            bg_hover=(60, 140, 80),
+            bg_pressed=(50, 120, 70),
+            border_outer=(20, 20, 25),
+            border_inner=(80, 80, 100),
+            border_highlight=(107, 107, 132),
+            text_color=COLOR_WHITE,
+        )
+        self.enter_building_button_rect = pygame.Rect(
             self.panel_x + local_rect.x,
             self.panel_y + local_rect.y,
             local_rect.width,

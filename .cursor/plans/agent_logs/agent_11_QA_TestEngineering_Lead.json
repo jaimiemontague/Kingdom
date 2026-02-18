@@ -3733,6 +3733,77 @@
           "follow_ups": []
         }
       }
+    },
+    "wk12-chronos": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk12_chronos_sprint_fe22a1ee.plan.md",
+        "notes": "Sprint 1 Chronos: 5-tier speed control + universal building occupancy. Agent 11 Section 1D — speed_scaling QA, occupancy assertions."
+      },
+      "rounds": {
+        "wk12_r1": {
+          "round_id": "wk12_r1",
+          "status": "done",
+          "what_i_changed": [
+            "tools/observe_sync.py: added --speed-multiplier N (0–4), set_time_multiplier/get_time_multiplier at start; sim loop uses sim_dt = dt * multiplier, skip update when multiplier 0.",
+            "tools/observe_sync.py: occupancy QA assertions (conditional): when Building has get_occupant_count/occupants or Inn has heroes_resting, assert hero inside → building list contains hero; hero exited → hero not in building list.",
+            "tools/qa_smoke.py: added speed_scaling profiles at 0.1x, 0.25x, 0.5x, 1.0x with sim-time equivalence (--seconds 12/mult) so each run gets ~12 sim seconds.",
+            "QA_TEST_PLAN.md: noted wk12 Chronos speed_scaling and occupancy assertions."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/observe_sync.py --seconds 20 --heroes 8 --seed 3 --qa --bounty --speed-multiplier 0.5"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["determinism_guard + pytest + base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1x/0.25x/0.5x/1.0x all PASS."]
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Manual smoke: 5 min at super slow, slow, normal (per plan 1D).",
+            "After Agent 05 lands base Building occupants: occupancy assertions will run for all enterable buildings."
+          ]
+        }
+      }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "Sprint 2 Living Interiors: Enter Building + interior panel. Agent 11 Section 2E — interior_view QA scenario, regression."
+      },
+      "rounds": {
+        "wk13_r1": {
+          "round_id": "wk13_r1",
+          "status": "done",
+          "what_i_changed": [
+            "tools/observe_sync.py: added scenario 'interior_view'; _smoke_micro_view_manager(buildings) calls MicroViewManager.enter_interior/exit_interior (and building-destroyed path), restores building hp for rest of run.",
+            "tools/observe_sync.py: when --qa and scenario=interior_view, fail if smoke raises.",
+            "tools/qa_smoke.py: added profile 'interior_view (MicroViewManager + occupancy)' to --quick.",
+            "QA_TEST_PLAN.md: noted wk13 interior_view scenario."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/observe_sync.py --seconds 6 --heroes 4 --seed 3 --qa --scenario interior_view"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["All profiles PASS including new interior_view (MicroViewManager smoke + occupancy)."]
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Manual smoke (per plan 2E): enter each of 3 featured interiors; verify occupants appear/disappear; exit via button, ESC, map click."
+          ]
+        }
+      }
     }
   }
 }

@@ -167,6 +167,7 @@ class GameEngine:
 
         # UI (must be initialized after audio_system - see WK7-BUG-001)
         self.hud = HUD(self.window_width, self.window_height)
+        self.micro_view = self.hud._micro_view  # wk13: right-panel state (OVERVIEW / INTERIOR)
         self.building_menu = BuildingMenu()
         self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
         self.debug_panel = DebugPanel(self.window_width, self.window_height)
@@ -1004,6 +1005,10 @@ class GameEngine:
             "placing_building_type": getattr(self.building_menu, "selected_building", None),
             # UI helper: whether debug UI is currently visible (used to gate debug-only HUD indicators)
             "debug_ui": bool(getattr(self.debug_panel, "visible", False)),
+            # wk13 Living Interiors: right-panel mode and rect for input (ESC/map click exit)
+            "micro_view_mode": getattr(self.micro_view, "mode", None),
+            "micro_view_building": getattr(self.micro_view, "interior_building", None),
+            "right_panel_rect": getattr(self.hud, "_right_rect", None),
         }
     
     def render(self):
