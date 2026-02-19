@@ -1,5 +1,31 @@
 # Changelog
 
+## Prototype v1.4 — Hero Chat, Graphics & UX Polish
+
+### Bug Fixes
+
+- **Chat input freeze:** Chat panel rate-limiting now uses real-time `pygame.time.get_ticks()` instead of the sim clock, so the panel no longer gets stuck on "Thinking..." after the first message.
+- **OpenAI API parameter fallback:** Exception matching in `ai/providers/openai_provider.py` updated for newer OpenAI library error formats; cleanly falls back to `max_tokens` when `max_completion_tokens` is rejected.
+- **Default LLM model:** Placeholder `gpt-5-nano` replaced with `gpt-4o-mini` in config and `.env` references.
+- **Peasant overshoot & void walking:** Peasant `move_towards` in `game/entities/peasant.py` now clamps movement so large dt no longer causes overshoot, vibration, or drifting off-screen.
+- **Skeleton 12-tile pathing loop:** Enemy `_long_distance_mode` in `game/entities/enemy.py` uses a hysteresis buffer (enter A* at 12 tiles, revert only at 10 tiles) so grid snapping no longer causes infinite pathing stutter.
+- **Initial camera start position:** Edge-scroll is disabled until the window has mouse focus (`pygame.mouse.get_focused()`), preventing the camera from rapidly scrolling into fog on startup.
+- **Spacebar centering after hero chats:** Background click-to-exit in INTERIOR/QUEST views now correctly notifies ChatPanel to end the conversation, releasing the keyboard hook so spacebar camera-center works again.
+- **WASD while chatting:** Camera panning is skipped when the hero ChatPanel is active, so typing W/A/S/D no longer moves the view.
+
+### Quality of Life & UI
+
+- **Dedicated hero left panel:** HUD now has a permanent 320px left column (`_panel_left`) for hero details; right panel is strictly for Building Summaries, Building Interiors, and Player–Hero Chat.
+- **Message feed offset:** System notification feed shifts horizontally when the left panel is visible so messages aren’t hidden behind hero stats.
+
+### Graphics & Engine (4× detail pass)
+
+- **Procedural map textures:** `game/graphics/tile_sprites.py` — Grass (24 variants): 3D grass tufts, macro clumps, pebble clusters, flower props. Paths (12): cobblestone borders, cart-rut tracks. Trees (8): 3-tier crowns, drop shadows, bark texture, root splits. Water (6): animated wave crest strokes.
+- **Entity animation generation:** `tools/generate_cc0_placeholders.py` refactored to multi-frame sequences (6–8 frame walk with articulated strides, class/type weapon arcs); baked idle, walk, attack, hurt, dead for heroes, enemies, workers.
+- **Building procedural detail:** Building frames upgraded with material texturing (wood slats, stone blocks), sloped roof shingle grids, and dynamic layered windows with lit/unlit states; determinism preserved via coordinate hashing.
+
+---
+
 ## Prototype v1.3.7 — Hero Chat with Broken LLMs
 
 - UX: **Hero chat** — click a hero in a building interior to open a chat panel; type messages and press Enter; hero responds via LLM (when provider is available).
