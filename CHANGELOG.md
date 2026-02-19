@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.3.7 — Hero Chat with Broken LLMs
+
+- UX: **Hero chat** — click a hero in a building interior to open a chat panel; type messages and press Enter; hero responds via LLM (when provider is available).
+- UX: **Chat panel** — word-wrapped messages, auto-scroll, "Thinking..." indicator, End Conversation button; LLM provider default now reads from `.env` (e.g. `LLM_PROVIDER=openai`).
+- Fix: OpenAI provider updated for `gpt-5-nano` (max_completion_tokens, no custom temperature); conversation worker returns fallback text on errors.
+- Fix: Chat keystrokes no longer leak to game hotkeys; chat input handled before pause/menu checks.
+- **Known issue:** LLM conversation calls can still fail or stop responding after a few attempts. Once these are stable, we'll be ready to officially bump to v1.4.
+
 ## Prototype v1.3.6 — Interiors Update
 
 - UX: **Enter Building** — select any enterable building (Inn, guilds, Marketplace, Blacksmith, temples) and click "Enter Building" to view its interior in the right panel.

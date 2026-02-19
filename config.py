@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.3.6"
-    game_title: str = "Kingdom Sim (Prototype v1.3.6) — Interiors Update"
+    prototype_version: str = "1.3.7"
+    game_title: str = "Kingdom Sim (Prototype v1.3.7) — Hero Chat with Broken LLMs"
     default_borderless: bool = True
 
 
@@ -423,6 +423,11 @@ GROK_API_KEY = LLM.grok_api_key
 LLM_DECISION_COOLDOWN = LLM.decision_cooldown
 LLM_TIMEOUT = LLM.timeout
 HEALTH_THRESHOLD_FOR_DECISION = LLM.health_threshold_for_decision
+
+# wk14 Persona and Presence: conversation mode
+CONVERSATION_COOLDOWN_MS = 2000
+CONVERSATION_HISTORY_LIMIT = 20
+CONVERSATION_TIMEOUT = 8.0
 
 # WK6: Ranger exploration bias toward black fog
 RANGER_EXPLORE_BLACK_FOG_BIAS = RANGER.explore_black_fog_bias  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
