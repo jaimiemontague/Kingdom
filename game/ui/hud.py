@@ -8,8 +8,10 @@ from config import COLOR_GOLD, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.command_bar import CommandBar
 from game.ui.hero_panel import HeroPanel
+from game.ui.chat_panel import ChatPanel
 from game.ui.interior_view_panel import InteriorViewPanel
 from game.ui.micro_view_manager import MicroViewManager
+from game.ui.quest_view_panel import QuestViewPanel
 from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
@@ -97,6 +99,19 @@ class HUD:
             texture_path=self._panel_tex_right,
             slice_border=self._panel_slice_border,
         )
+        self._panel_left = Panel(
+            pygame.Rect(0, 0, 1, 1),
+            self.theme.panel_bg,
+            self._frame_outer,
+            alpha=int(self.theme.panel_alpha),
+            border_w=2,
+            inner_border_rgb=self._frame_inner,
+            inner_border_w=1,
+            highlight_rgb=self._frame_highlight,
+            highlight_w=1,
+            texture_path=self._panel_tex_top,  # Top panel texture serves fine for blocky 9-slices
+            slice_border=self._panel_slice_border,
+        )
         self._panel_minimap = Panel(
             pygame.Rect(0, 0, 1, 1),
             self.theme.panel_bg,
@@ -150,6 +165,8 @@ class HUD:
             button_tex_pressed=self._button_tex_pressed,
             slice_border=self._button_slice_border,
         )
+        self._quest_panel = QuestViewPanel(self.theme)
+        self._chat_panel = ChatPanel(self.theme)
         self._right_close_button = Button(
             rect=pygame.Rect(0, 0, 1, 1),
             text="X",
@@ -165,8 +182,8 @@ class HUD:
         self.messages: list[dict] = []
         self.message_duration = 3000
 
-    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
-        """Compute UI rects from current surface size. Returns top, bottom, right, minimap, command, speed_rect."""
+    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+        """Compute UI rects from current surface size. Returns top, bottom, left, right, minimap, command, speed_rect."""
         w, h = surface.get_width(), surface.get_height()
         self.screen_width = int(w)
         self.screen_height = int(h)
@@ -191,6 +208,9 @@ class HUD:
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
+        left_w = 320
+        left = pygame.Rect(0, top_h, left_w, max(0, h - top_h - bottom_h))
+
         # Speed bar: bottom-right, left of right panel (wk12 Chronos)
         speed_bar_w = 200
         speed_bar_h = 50
@@ -206,7 +226,7 @@ class HUD:
         cmd_x = minimap.right + gutter
         cmd_w = max(0, speed_rect.left - cmd_x - gutter)
         command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
-        return top, bottom, right, minimap, command, speed_rect
+        return top, bottom, left, right, minimap, command, speed_rect
 
     def _build_placing_banner(self, text_surf: pygame.Surface) -> pygame.Surface:
         pad_x = 14
@@ -234,28 +254,18 @@ class HUD:
     def _render_right_panel_overview(
         self, surface: pygame.Surface, right: pygame.Rect, game_state: dict
     ) -> None:
-        """Render OVERVIEW mode content: hero panel, building summary, or empty hint (wk13 delegate from MicroViewManager)."""
-        selected_hero = game_state.get("selected_hero")
+        """Render OVERVIEW mode content: building summary, or empty hint (wk13 delegate from MicroViewManager)."""
         selected_building = game_state.get("selected_building")
         self.right_close_rect = None
-        if selected_hero is not None or selected_building is not None:
+        if selected_building is not None:
             self._render_right_close_button(surface, right)
-        if selected_hero is not None:
-            self._hero_panel.render(
-                surface,
-                selected_hero,
-                right,
-                right_close_rect=self.right_close_rect,
-                debug_ui=bool(game_state.get("debug_ui", False)),
-            )
-        elif selected_building is not None:
             self._render_building_summary(surface, selected_building, right)
         else:
             pad = self._right_panel_top_pad(right)
             TextLabel.render(
                 surface,
                 self.theme.font_body,
-                "Select a hero or building",
+                "Select a building",
                 (right.x + int(self.theme.margin), right.y + pad),
                 (180, 180, 180),
             )
@@ -424,22 +434,38 @@ class HUD:
         self.screen_width = int(screen_width)
         self.screen_height = int(screen_height)
 
-    def render_messages(self, surface: pygame.Surface) -> None:
+    def render_messages(self, surface: pygame.Surface, left_rect: pygame.Rect | None = None) -> None:
         y_offset = self.top_bar_height + 10
+        x_offset = 10
+        if left_rect and left_rect.width > 0:
+            x_offset = left_rect.right + 10
         for msg in self.messages:
             text = self.font_small.render(msg["text"], True, msg["color"])
-            surface.blit(text, (10, y_offset))
+            surface.blit(text, (x_offset, y_offset))
             y_offset += 18
 
     def render(self, surface: pygame.Surface, game_state: dict) -> None:
-        top, bottom, right, minimap, cmd, speed_rect = self._compute_layout(surface)
+        top, bottom, left, right, minimap, cmd, speed_rect = self._compute_layout(surface)
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
+        self._panel_left.set_rect(left)
         self._panel_right.set_rect(right)
         self._panel_minimap.set_rect(minimap)
         self._panel_top.render(surface)
         self._panel_bottom.render(surface)
+        
+        selected_hero = game_state.get("selected_hero")
+        if selected_hero is not None:
+            self._panel_left.render(surface)
+            self._hero_panel.render(
+                surface,
+                selected_hero,
+                left,
+                right_close_rect=None,
+                debug_ui=bool(game_state.get("debug_ui", False)),
+            )
+
         if self.right_panel_visible:
             self._panel_right.render(surface)
         self._panel_minimap.render(surface)
@@ -500,7 +526,7 @@ class HUD:
         except Exception:
             pass
 
-        self.render_messages(surface)
+        self.render_messages(surface, left)
         self._command_bar.render(surface, cmd)
         self._speed_bar.render(surface, speed_rect, pygame.mouse.get_pos())
         self._speed_rect = speed_rect
@@ -511,8 +537,10 @@ class HUD:
         if self.right_panel_visible:
             self._right_rect = right
             interior_panel = getattr(self, "_interior_panel", None)
+            quest_panel = getattr(self, "_quest_panel", None)
+            chat_panel = getattr(self, "_chat_panel", None)
             exit_msg = self._micro_view.render(
-                surface, right, game_state, self, interior_panel
+                surface, right, game_state, self, interior_panel, quest_panel, chat_panel
             )
             if exit_msg:
                 self.add_message(exit_msg, (255, 180, 100))
@@ -530,9 +558,21 @@ class HUD:
             return "close_selection"
         if self._right_rect is not None and self._right_rect.collidepoint((x, y)):
             interior_panel = getattr(self, "_interior_panel", None)
-            action = self._micro_view.handle_click((x, y), self._right_rect, interior_panel)
+            quest_panel = getattr(self, "_quest_panel", None)
+            chat_panel = getattr(self, "_chat_panel", None)
+            if chat_panel is not None and chat_panel.is_active():
+                click_result = chat_panel.handle_click((x, y), self._right_rect)
+                if click_result is not None:
+                    return click_result
+            action = self._micro_view.handle_click(
+                (x, y), self._right_rect, interior_panel, quest_panel, chat_panel
+            )
+            if isinstance(action, dict) and action.get("type") == "start_conversation":
+                return action
             if action == "exit_interior":
                 return "exit_interior"
+            if action == "exit_quest":
+                return "exit_quest"
         action = self._command_bar.handle_click((x, y))
         if action:
             return action

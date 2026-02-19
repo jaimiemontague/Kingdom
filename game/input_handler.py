@@ -118,10 +118,21 @@ class InputHandler:
 
         # ESC menu takes priority
         if event.key == pygame.K_ESCAPE:
-            # wk13: exit interior view first (before opening pause menu)
+            # wk14: close chat first if active
+            chat_panel = getattr(engine.hud, "_chat_panel", None)
+            if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+                chat_panel.end_conversation()
+                return
+            # wk13/wk14: exit interior or quest view (before opening pause menu)
             micro_view = getattr(engine, "micro_view", None)
-            if micro_view is not None and getattr(micro_view, "mode", None) == ViewMode.INTERIOR:
+            mode = getattr(micro_view, "mode", None) if micro_view else None
+            if micro_view is not None and mode == ViewMode.INTERIOR:
+                if getattr(engine, "audio_system", None) is not None:
+                    engine.audio_system.stop_interior_ambient()
                 micro_view.exit_interior()
+                return
+            if micro_view is not None and mode == ViewMode.QUEST:
+                micro_view.exit_quest()
                 return
             if engine.pause_menu.visible:
                 # Close menu (resume game)
@@ -139,6 +150,19 @@ class InputHandler:
                     engine.building_menu.cancel_selection()
             return  # Consume ESC when menu is involved
 
+        # wk14: when chat is active, consume ALL keystrokes (typing, Enter, etc.)
+        # Must run before pause/menu checks so chat works even at low speed tiers.
+        chat_panel = getattr(engine.hud, "_chat_panel", None)
+        if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+            result = chat_panel.handle_keydown(event)
+            if result == "send_message":
+                text = getattr(chat_panel, "get_pending_message", lambda: "")()
+                if text and getattr(chat_panel, "hero_target", None) is not None:
+                    engine.send_player_message(chat_panel.hero_target, text)
+            elif result == "end_conversation":
+                chat_panel.end_conversation()
+            return
+
         # Block world input when menu is open
         if engine.pause_menu.visible:
             return
@@ -147,7 +171,7 @@ class InputHandler:
         if engine.paused:
             return
 
-        elif event.key == pygame.K_TAB:
+        if event.key == pygame.K_TAB:
             # Toggle right-side panel
             if hasattr(engine.hud, "toggle_right_panel"):
                 engine.hud.toggle_right_panel()
@@ -299,7 +323,23 @@ class InputHandler:
                         return
                     if action == "exit_interior":
                         if getattr(engine, "micro_view", None) is not None:
+                            if getattr(engine, "audio_system", None) is not None:
+                                engine.audio_system.stop_interior_ambient()
                             engine.micro_view.exit_interior()
+                        return
+                    if action == "exit_quest":
+                        if getattr(engine, "micro_view", None) is not None:
+                            engine.micro_view.exit_quest()
+                        return
+                    if isinstance(action, dict) and action.get("type") == "start_conversation":
+                        chat_panel = getattr(engine.hud, "_chat_panel", None)
+                        if chat_panel is not None:
+                            chat_panel.start_conversation(action["hero"])
+                        return
+                    if action == "end_conversation":
+                        chat_panel = getattr(engine.hud, "_chat_panel", None)
+                        if chat_panel is not None:
+                            chat_panel.end_conversation()
                         return
                     if action == "build_menu_toggle":
                         # Open Build Catalog (centered grid) — same UI as castle "Build Buildings"
@@ -367,17 +407,26 @@ class InputHandler:
                 engine.build_catalog_panel.close()
                 return
 
-            # wk13: left-click on world map while in interior view → exit interior, then continue to selection
+            # wk13/wk14: left-click on world map while in interior or quest view → exit that view, then continue
             gs = engine.get_game_state()
             micro_view = getattr(engine, "micro_view", None)
             right_panel_rect = gs.get("right_panel_rect")
+            mode = getattr(micro_view, "mode", None) if micro_view else None
             if (
                 micro_view is not None
-                and getattr(micro_view, "mode", None) == ViewMode.INTERIOR
                 and right_panel_rect is not None
                 and not right_panel_rect.collidepoint(event.pos)
             ):
-                micro_view.exit_interior()
+                if mode == ViewMode.INTERIOR:
+                    if getattr(engine, "audio_system", None) is not None:
+                        engine.audio_system.stop_interior_ambient()
+                    micro_view.exit_interior()
+                elif mode == ViewMode.QUEST:
+                    micro_view.exit_quest()
+                # Ensure chat is exited if we close the interior/quest view by clicking out
+                chat_panel = getattr(engine.hud, "_chat_panel", None)
+                if chat_panel is not None:
+                    chat_panel.end_conversation()
 
             # Check if clicking on building panel
             if engine.building_panel.visible:
@@ -406,6 +455,10 @@ class InputHandler:
                     building = result.get("building")
                     if building and getattr(engine, "micro_view", None) is not None:
                         engine.micro_view.enter_interior(building)
+                        if getattr(engine, "audio_system", None) is not None:
+                            engine.audio_system.start_interior_ambient(
+                                getattr(building, "building_type", "") or ""
+                            )
                         engine.hud.right_panel_visible = True
                         engine.building_panel.deselect()
                         engine.selected_building = None

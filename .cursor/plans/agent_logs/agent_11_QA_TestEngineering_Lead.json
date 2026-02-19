@@ -3804,6 +3804,41 @@
           ]
         }
       }
+    },
+    "wk14-persona-presence": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+        "notes": "Sprint 3 Persona and Presence: LLM chat, quest panel, interior polish. Agent 11 Section 3F — conversation and quest_panel QA scenarios."
+      },
+      "rounds": {
+        "wk14_r1": {
+          "round_id": "wk14_r1",
+          "status": "done",
+          "what_i_changed": [
+            "tools/observe_sync.py: added scenario 'quest_panel'; _smoke_quest_panel(heroes) calls MicroViewManager.enter_quest(hero, {})/exit_quest() twice.",
+            "tools/observe_sync.py: added scenario 'conversation'; _smoke_conversation(hero, game_state, llm) builds context, request_conversation(hero.name, context, [], 'Hello'), polls get_conversation_response up to ~3s (mock provider).",
+            "tools/observe_sync.py: when --qa and scenario=quest_panel or conversation, fail if corresponding smoke raises.",
+            "tools/qa_smoke.py: added profiles 'quest_panel (MicroViewManager QUEST mode)' and 'conversation (mock request/response cycle)' to --quick.",
+            "QA_TEST_PLAN.md: noted wk14 quest_panel and conversation scenarios."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/observe_sync.py --seconds 4 --heroes 3 --seed 3 --qa --scenario quest_panel",
+            "python tools/observe_sync.py --seconds 4 --heroes 3 --seed 3 --qa --llm --scenario conversation"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["All profiles PASS including quest_panel and conversation (mock)."]
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

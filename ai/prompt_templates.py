@@ -48,6 +48,28 @@ IMPORTANT RULES:
 
 Respond ONLY with the JSON object, no other text."""
 
+# wk14 Persona and Presence: conversational mode (in-building chat with Sovereign)
+CONVERSATION_SYSTEM_PROMPT = """You are {hero_name}, a level {level} {hero_class} in a fantasy kingdom.
+Personality: {personality}.
+
+The Sovereign (the player who rules this kingdom) is speaking with you directly.
+Respond in character. You are loyal to the Sovereign but have your own personality.
+Keep responses to 2-3 sentences. Be colorful and in-world.
+
+Current location: {location}. {building_context}
+{occupants_note}
+"""
+
+CONVERSATION_USER_PROMPT = """Recent adventures:
+{recent_decisions}
+
+Conversation so far:
+{conversation_history}
+
+The Sovereign says: "{player_message}"
+
+Respond in character as {hero_name}:"""
+
 
 DECISION_PROMPT = """Current Situation for {hero_name}:
 
@@ -62,6 +84,59 @@ Remember:
 - {shop_note}
 
 Respond with a JSON decision:"""
+
+
+def build_conversation_prompt(
+    hero_context: dict,
+    conversation_history: list,
+    player_message: str,
+) -> tuple[str, str]:
+    """Build (system_prompt, user_prompt) for conversational LLM mode. Returns (system_prompt, user_prompt)."""
+    hero = hero_context["hero"]
+    location = hero_context.get("current_location", "outdoors")
+    building_context = hero_context.get("building_context", "") or ""
+    occupants = hero_context.get("building_occupants", []) or []
+    occupants_note = f"Others here: {', '.join(occupants)}." if occupants else "You are alone here."
+
+    system_prompt = CONVERSATION_SYSTEM_PROMPT.format(
+        hero_name=hero["name"],
+        level=hero["level"],
+        hero_class=hero["class"],
+        personality=hero_context.get("personality", "balanced and reliable"),
+        location=location,
+        building_context=building_context,
+        occupants_note=occupants_note,
+    )
+
+    recent_decisions = ""
+    if hero_context.get("hero") and hasattr(hero_context.get("hero"), "last_decision"):
+        # If context was built from a hero object we might have last_decision; here we have dict.
+        pass
+    last_dec = hero_context.get("last_decision")
+    if last_dec and isinstance(last_dec, dict):
+        action = last_dec.get("action", "")
+        reason = last_dec.get("reasoning", last_dec.get("reason", ""))
+        recent_decisions = f"Last action: {action}. {reason}" if action else "No recent action."
+    else:
+        recent_decisions = "No recent action."
+
+    conv_lines = []
+    for msg in (conversation_history or [])[-10:]:
+        role = msg.get("role", "")
+        text = msg.get("text", "")
+        if role == "player":
+            conv_lines.append(f"Sovereign: {text}")
+        else:
+            conv_lines.append(f"{hero['name']}: {text}")
+    conversation_history_str = "\n".join(conv_lines) if conv_lines else "(No messages yet.)"
+
+    user_prompt = CONVERSATION_USER_PROMPT.format(
+        recent_decisions=recent_decisions,
+        conversation_history=conversation_history_str,
+        player_message=player_message.strip() or "(nothing)",
+        hero_name=hero["name"],
+    )
+    return (system_prompt, user_prompt)
 
 
 def build_decision_prompt(context: dict, summary: str) -> str:

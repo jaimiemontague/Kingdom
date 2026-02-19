@@ -45,18 +45,35 @@ class OpenAIProvider(BaseLLMProvider):
             raise RuntimeError("OpenAI client not available")
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            base_kwargs = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.7,
-                max_tokens=200,
-                timeout=timeout
+                "timeout": timeout,
+            }
+            # gpt-5 family expects max_completion_tokens, while older models
+            # may still accept max_tokens. Try modern first, then fallback.
+            attempts = (
+                {"max_completion_tokens": 600},
+                {"max_tokens": 200},
             )
-            
-            return response.choices[0].message.content
+            last_error = None
+            for token_kwargs in attempts:
+                try:
+                    response = self.client.chat.completions.create(
+                        **base_kwargs,
+                        **token_kwargs,
+                    )
+                    return (response.choices[0].message.content or "").strip()
+                except Exception as e:
+                    msg = str(e)
+                    if "max_tokens" in msg or "max_completion_tokens" in msg or "unsupported_parameter" in msg:
+                        last_error = e
+                        continue
+                    raise
+            raise RuntimeError(last_error or "Unknown OpenAI token parameter error")
             
         except Exception as e:
             raise RuntimeError(f"OpenAI API error: {e}")

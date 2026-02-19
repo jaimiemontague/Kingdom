@@ -8,9 +8,13 @@ import queue
 from typing import Optional
 from ai.context_builder import ContextBuilder
 from ai.prompt_templates import (
-    SYSTEM_PROMPT, VALID_ACTIONS, build_decision_prompt, get_fallback_decision
+    SYSTEM_PROMPT,
+    VALID_ACTIONS,
+    build_decision_prompt,
+    build_conversation_prompt,
+    get_fallback_decision,
 )
-from config import LLM_PROVIDER, LLM_TIMEOUT
+from config import LLM_PROVIDER, LLM_TIMEOUT, CONVERSATION_TIMEOUT
 
 
 class LLMBrain:
@@ -23,11 +27,13 @@ class LLMBrain:
         self.provider_name = provider_name or LLM_PROVIDER
         self.provider = self._create_provider()
         
-        # Request queue: (hero_key, context) where hero_key is a stable identifier (int/str)
+        # Request queue: (hero_key, context) or (hero_key, payload, mode) for conversation
         self.request_queue = queue.Queue()
         
         # Response storage: hero_key -> decision
         self.responses = {}
+        # Conversation responses: hero_key -> raw text (wk14)
+        self.conversation_responses = {}
         self.response_lock = threading.Lock()
         
         # Background worker thread
@@ -81,23 +87,32 @@ class LLMBrain:
             self.worker_thread.join(timeout=2.0)
     
     def _worker_loop(self):
-        """Background worker that processes LLM requests."""
+        """Background worker that processes LLM requests (decision or conversation)."""
         while self.running:
             try:
-                # Get request with timeout
-                hero_name, context = self.request_queue.get(timeout=0.5)
-                
-                # Process the request
-                decision = self._process_request(hero_name, context)
-                
-                # Store the response
-                with self.response_lock:
-                    self.responses[hero_name] = decision
-                
+                item = self.request_queue.get(timeout=0.5)
+                if len(item) == 2:
+                    hero_key, context = item
+                    mode = "decision"
+                else:
+                    hero_key, payload, mode = item
+                    context = payload
+
+                if mode == "conversation":
+                    text = self._process_conversation(hero_key, context)
+                    with self.response_lock:
+                        self.conversation_responses[hero_key] = text
+                else:
+                    decision = self._process_request(hero_key, context)
+                    with self.response_lock:
+                        self.responses[hero_key] = decision
             except queue.Empty:
                 continue
             except Exception as e:
                 print(f"LLM worker error: {e}")
+                if hero_key and mode == "conversation":
+                    with self.response_lock:
+                        self.conversation_responses[hero_key] = "I'm at a loss for words right now."
     
     def _process_request(self, hero_key, context: dict) -> dict:
         """Process a single LLM request."""
@@ -159,9 +174,51 @@ class LLMBrain:
         except json.JSONDecodeError:
             return None
     
+    def _process_conversation(self, hero_key, payload: dict) -> str:
+        """Process a conversation request; returns raw response text."""
+        try:
+            hero_context = payload.get("hero_context", {})
+            conversation_history = payload.get("conversation_history", [])
+            player_message = payload.get("player_message", "")
+            system_prompt, user_prompt = build_conversation_prompt(
+                hero_context, conversation_history, player_message
+            )
+            response_text = self.provider.complete(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                timeout=CONVERSATION_TIMEOUT,
+            )
+            text = (response_text or "").strip()
+            if not text:
+                return "I am thinking, Sovereign... ask me again in a moment."
+            return text
+        except Exception as e:
+            print(f"Conversation request failed for {hero_key}: {e}")
+            return "I'm at a loss for words right now."
+
     def request_decision(self, hero_key, context: dict):
         """Queue a decision request for a hero."""
         self.request_queue.put((hero_key, context))
+
+    def request_conversation(
+        self,
+        hero_key,
+        hero_context: dict,
+        conversation_history: list,
+        player_message: str,
+    ):
+        """Queue a conversation request (wk14 Persona and Presence)."""
+        payload = {
+            "hero_context": hero_context,
+            "conversation_history": conversation_history,
+            "player_message": player_message,
+        }
+        self.request_queue.put((hero_key, payload, "conversation"))
+
+    def get_conversation_response(self, hero_key) -> Optional[str]:
+        """Get and consume a conversation response for the hero, if ready."""
+        with self.response_lock:
+            return self.conversation_responses.pop(hero_key, None)
     
     def get_decision(self, hero_key) -> Optional[dict]:
         """Get a decision for a hero if one is ready."""

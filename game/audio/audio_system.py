@@ -41,6 +41,8 @@ AUDIO_EVENT_MAP = {
     "ui_click": "ui_click",
     "ui_confirm": "ui_confirm",
     "ui_error": "ui_error",
+    # wk14: interior building under attack (while player is in interior view)
+    "interior_building_under_attack": "building_under_attack_rumble",
 }
 
 # Sound cooldowns (milliseconds) to prevent spam
@@ -59,6 +61,7 @@ SOUND_COOLDOWNS_MS = {
     "ui_click": 100,
     "ui_confirm": 150,
     "ui_error": 200,
+    "building_under_attack_rumble": 3000,  # wk14: throttle so not every frame
 }
 
 
@@ -119,25 +122,25 @@ class AudioSystem:
             return
         
         # Load sounds from flat paths (sfx/building_place.wav or .ogg, etc.)
-        for event_name, sound_key in AUDIO_EVENT_MAP.items():
+        # Include extra SFX keys not triggered by events (e.g. wk14 building_under_attack_rumble)
+        all_keys = set(AUDIO_EVENT_MAP.values())
+        for sound_key in all_keys:
             # Try .wav first, then .ogg
             wav_file = sfx_dir / f"{sound_key}.wav"
             ogg_file = sfx_dir / f"{sound_key}.ogg"
-            
+
             sound_file = None
             if wav_file.exists():
                 sound_file = wav_file
             elif ogg_file.exists():
                 sound_file = ogg_file
-            
+
             if sound_file:
                 try:
                     self._sfx_cache[sound_key] = pygame.mixer.Sound(str(sound_file))
                 except Exception:
-                    # File exists but failed to load; continue without this sound
                     self._sfx_cache[sound_key] = None
             else:
-                # File missing; cache None (will be no-op on play)
                 self._sfx_cache[sound_key] = None
     
     @staticmethod
@@ -364,7 +367,7 @@ class AudioSystem:
         """Stop ambient playback."""
         if not self.enabled:
             return
-        
+
         if self._ambient_channel:
             try:
                 self._ambient_channel.stop()
@@ -372,7 +375,44 @@ class AudioSystem:
                 pass
         self._ambient_channel = None
         self._ambient_sound = None
-    
+
+    # wk14: Interior ambient (per-building-type loops when player is in interior view)
+    _INTERIOR_AMBIENT_MAP = {
+        "inn": "ambient_inn",
+        "marketplace": "ambient_marketplace",
+        "warrior_guild": "ambient_warrior_guild",
+        "ranger_guild": "ambient_interior_default",
+        "rogue_guild": "ambient_interior_default",
+        "wizard_guild": "ambient_interior_default",
+        "blacksmith": "ambient_blacksmith",
+        "temple_agrela": "ambient_temple",
+        "temple_dauros": "ambient_temple",
+        "temple_fervus": "ambient_temple",
+        "temple_krypta": "ambient_temple",
+        "temple_krolm": "ambient_temple",
+        "temple_helia": "ambient_temple",
+        "temple_lunord": "ambient_temple",
+    }
+
+    def start_interior_ambient(self, building_type: str) -> None:
+        """
+        Start interior ambient loop for the given building type (wk14).
+        If the track file does not exist, fails silently (non-authoritative).
+        """
+        if not self.enabled:
+            return
+        bt = (building_type or "").lower().strip()
+        track_name = self._INTERIOR_AMBIENT_MAP.get(bt, "ambient_interior_default")
+        self.set_ambient(track_name, volume=0.35)
+
+    def stop_interior_ambient(self) -> None:
+        """
+        Restore outdoor ambient loop after exiting interior view (wk14).
+        """
+        if not self.enabled:
+            return
+        self.set_ambient("ambient_loop", volume=0.4)
+
     def _apply_ambient_volume(self):
         """Apply master/music volume to ambient if playing."""
         if self._ambient_sound is None or self._ambient_channel is None:

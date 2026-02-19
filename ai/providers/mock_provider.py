@@ -26,7 +26,14 @@ class MockProvider(BaseLLMProvider):
         user_prompt: str, 
         timeout: float = 5.0
     ) -> str:
-        """Generate a mock decision based on keywords in the prompt."""
+        """Generate mock response: conversation (in-character text) or decision (JSON)."""
+        # wk14: Detect conversation mode (no JSON in system prompt, or "Sovereign says" in user prompt)
+        is_conversation = (
+            "JSON" not in system_prompt
+            or "Sovereign says" in user_prompt
+        )
+        if is_conversation:
+            return self._mock_conversation_response(system_prompt, user_prompt)
         prompt_lower = user_prompt.lower()
         
         # Parse health percentage from prompt
@@ -185,4 +192,39 @@ class MockProvider(BaseLLMProvider):
             "target": "",
             "reasoning": "Looking for adventure"
         }
+
+    def _mock_conversation_response(self, system_prompt: str, user_prompt: str) -> str:
+        """Return a canned in-character response by hero class (wk14). Deterministic RNG."""
+        hero_class = "warrior"
+        if "ranger" in system_prompt.lower():
+            hero_class = "ranger"
+        elif "rogue" in system_prompt.lower():
+            hero_class = "rogue"
+        elif "wizard" in system_prompt.lower():
+            hero_class = "wizard"
+        templates = {
+            "warrior": [
+                "Aye, Sovereign. I live to serve. Point me at the next threat.",
+                "My blade is yours. Just say where the fight is.",
+                "Honored to speak with you. I'll keep the realm safe.",
+            ],
+            "ranger": [
+                "The wilds call, but I hear you. What do you need?",
+                "Sovereign. I've seen much from the trails. Ask what you will.",
+                "Nature and kingdom both deserve protection. I'm with you.",
+            ],
+            "rogue": [
+                "Gold talks, Sovereign. But so do I. What's the job?",
+                "A pleasure. Let's just say we're aligned on profitable outcomes.",
+                "You've got my ear. And my skills, when the price is right.",
+            ],
+            "wizard": [
+                "Knowledge serves the realm. I am at your disposal, Sovereign.",
+                "The arcane obeys its own laws—but I obey yours. How may I help?",
+                "Wise of you to seek counsel. The world holds many secrets.",
+            ],
+        }
+        choices = templates.get(hero_class, templates["warrior"])
+        idx = int(_MOCK_RNG.random() * len(choices)) % len(choices)
+        return choices[idx]
 

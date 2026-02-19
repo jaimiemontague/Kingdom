@@ -100,11 +100,14 @@ def _outline_rect(s: pygame.Surface, r: pygame.Rect, fill, outline=(20, 20, 25))
     pygame.draw.rect(s, fill, r.inflate(-2, -2), 0)
 
 
-def _hero_frame(hero_class: str, state: str) -> pygame.Surface:
-    s = _mk32()
-    s.fill((0, 0, 0, 0))
+def _hero_frames(hero_class: str, state: str) -> list[pygame.Surface]:
+    import math
+    st = (state or "idle").lower()
+    counts = {"idle": 6, "walk": 8, "attack": 6, "hurt": 4, "inside": 6}
+    num_frames = counts.get(st, 1)
 
-    # Class accents (match existing placeholder color language)
+    frames = []
+    # Class accents
     accents = {
         "warrior": (70, 120, 255),
         "ranger": (70, 200, 120),
@@ -112,43 +115,99 @@ def _hero_frame(hero_class: str, state: str) -> pygame.Surface:
         "wizard": (170, 90, 230),
     }
     acc = accents.get(hero_class, (220, 220, 220))
+    skin = (255, 210, 180)
+    dark = (20, 20, 25)
+    
+    for i in range(num_frames):
+        s = _mk32()
+        s.fill((0, 0, 0, 0))
+        t = i / float(num_frames) if num_frames > 1 else 0
 
-    # Body + head (simple silhouette)
-    _outline_rect(s, pygame.Rect(11, 10, 10, 14), (60, 60, 70))
-    _outline_rect(s, pygame.Rect(12, 6, 8, 6), (90, 90, 100))
-    # Accent cloak/trim
-    pygame.draw.rect(s, acc, pygame.Rect(9, 14, 14, 10))
-    pygame.draw.rect(s, (20, 20, 25), pygame.Rect(9, 14, 14, 10), 1)
+        if st == "inside":
+            pygame.draw.circle(s, (245, 245, 245, 230), (16, 16), int(10 + 2 * math.sin(t * math.tau)), 2)
+            pygame.draw.circle(s, (255, 215, 80, 210), (18, 14), 2, 0)
+            frames.append(s)
+            continue
 
-    # State hint pixels
-    st = (state or "idle").lower()
-    hc_lower = (hero_class or "").lower()
-    if st == "attack":
-        if hc_lower == "ranger":
-            # Bow cue: C-curve vertical arc + string (coordinated with projectile VFX)
-            pygame.draw.line(s, (20, 20, 25), (22, 10), (26, 22), 2)  # bow limb
-            pygame.draw.line(s, (200, 200, 210), (24, 10), (24, 22), 1)  # string
-            # Arrow cue (minimal, matches skeleton_archer style)
-            pygame.draw.line(s, (255, 245, 220), (26, 14), (31, 12), 2)
+        bob = int(max(0, math.sin(t * math.tau) * 2)) if st == "idle" else 0
+        lean = int(math.sin(t * math.tau) * 1.5) if st == "walk" else 0
+        if st == "hurt":
+            lean = -2 if i % 2 == 0 else 2
+        elif st == "attack":
+            lean = 3 if t > 0.3 else -1
+
+        # Body Base
+        bx, by = 16 + lean, 18 + bob
+        # Head
+        pygame.draw.rect(s, dark, pygame.Rect(bx - 4, by - 12, 8, 8))
+        pygame.draw.rect(s, skin, pygame.Rect(bx - 3, by - 11, 6, 6))
+        
+        # Torso
+        pygame.draw.rect(s, dark, pygame.Rect(bx - 5, by - 4, 10, 8))
+        pygame.draw.rect(s, acc, pygame.Rect(bx - 4, by - 3, 8, 5))
+        pygame.draw.rect(s, _shade(acc, -20), pygame.Rect(bx - 4, by + 2, 8, 2))
+
+        # Legs (Walking logic)
+        leg_base = by + 4
+        if st == "walk":
+            l_off = int(math.sin(t * math.tau) * 4)
+            r_off = int(math.cos(t * math.tau) * 4)
         else:
-            pygame.draw.line(s, (255, 235, 160), (20, 12), (30, 6), 2)
-    elif st == "hurt":
-        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
-        overlay.fill((255, 60, 60, 55))
-        s.blit(overlay, (0, 0))
-    elif st == "inside":
-        pygame.draw.circle(s, (245, 245, 245, 230), (16, 8), 6, 2)
-        pygame.draw.circle(s, (255, 215, 80, 210), (18, 6), 2, 0)
-    elif st == "walk":
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(10, 26, 4, 2))
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(18, 26, 4, 2))
-    return s
+            l_off, r_off = -2, 2
+
+        # Left Leg
+        pygame.draw.rect(s, dark, pygame.Rect(bx - 3 + l_off, leg_base, 4, 6))
+        pygame.draw.rect(s, (100, 100, 100), pygame.Rect(bx - 2 + l_off, leg_base, 2, 5))
+        # Right Leg
+        pygame.draw.rect(s, dark, pygame.Rect(bx - 1 + r_off, leg_base, 4, 6))
+        pygame.draw.rect(s, (100, 100, 100), pygame.Rect(bx + r_off, leg_base, 2, 5))
+
+        # Attack logic (arms / weapons)
+        hc_lower = (hero_class or "").lower()
+        if st == "attack":
+            if hc_lower == "warrior":
+                start_x, start_y = bx - 2, by - 4
+                end_x, end_y = bx + 10, by - 14 + int(28 * t)
+                pygame.draw.line(s, (220, 220, 225), (start_x, start_y), (end_x, end_y), 3)
+                pygame.draw.line(s, (255, 255, 255), (start_x+1, start_y), (end_x, end_y), 1)
+                pygame.draw.rect(s, (255, 200, 50), pygame.Rect(start_x-1, start_y-1, 3, 3))
+            elif hc_lower == "ranger":
+                pygame.draw.line(s, dark, (bx+4, by-8), (bx+6, by+4), 2)
+                pygame.draw.line(s, (200, 200, 200), (bx+4, by-8), (bx+4, by+4), 1)
+                if t > 0.2:
+                    pygame.draw.line(s, (220, 200, 150), (bx, by-2), (bx+14, by-4), 2)
+            elif hc_lower == "wizard":
+                pygame.draw.line(s, (100, 60, 20), (bx+2, by+8), (bx+10, by-10), 2)
+                glow_r = int(6 * math.sin(t * math.pi))
+                if glow_r > 0:
+                    pygame.draw.circle(s, (200, 150, 255, 150), (bx+10, by-10), glow_r)
+                    pygame.draw.circle(s, (255, 255, 255), (bx+10, by-10), 2)
+            elif hc_lower == "rogue":
+                dx1, dy1 = bx + 8, by - 4 + int(8 * t)
+                dx2, dy2 = bx + 10, by + 6 - int(10 * t)
+                pygame.draw.line(s, (180, 180, 190), (bx, by-2), (dx1, dy1), 2)
+                pygame.draw.line(s, (180, 180, 190), (bx+2, by+2), (dx2, dy2), 2)
+        else:
+            pygame.draw.rect(s, skin, pygame.Rect(bx - 6, by - 2, 2, 4))
+            pygame.draw.rect(s, skin, pygame.Rect(bx + 4, by - 2, 2, 4))
+
+        if st == "hurt":
+            ov = pygame.Surface((32, 32), pygame.SRCALPHA)
+            ov.fill((255, 60, 60, 80))
+            s.blit(ov, (0, 0))
+
+        frames.append(s)
+    return frames
 
 
-def _enemy_frame(enemy_type: str, state: str) -> pygame.Surface:
-    s = _mk32()
-    s.fill((0, 0, 0, 0))
+
+def _enemy_frames(enemy_type: str, state: str) -> list[pygame.Surface]:
+    import math
     et = (enemy_type or "goblin").lower()
+    st = (state or "idle").lower()
+    
+    counts = {"idle": 6, "walk": 8, "attack": 6, "hurt": 4, "dead": 1}
+    num_frames = counts.get(st, 1)
 
     base = {
         "goblin": (90, 170, 90),
@@ -159,120 +218,136 @@ def _enemy_frame(enemy_type: str, state: str) -> pygame.Surface:
         "bandit": (140, 100, 65),
     }.get(et, (150, 150, 150))
 
-    # Stronger silhouette per enemy type (still simple, but readable)
     dark = (20, 20, 25)
     hi = _shade(base, 35)
     mid = base
     sh = _shade(base, -25)
 
-    if et == "goblin":
-        # big head + small body + dagger
-        pygame.draw.circle(s, dark, (15, 13), 7)
-        pygame.draw.circle(s, mid, (15, 13), 6)
-        pygame.draw.circle(s, sh, (13, 11), 3)
-        _outline_rect(s, pygame.Rect(12, 18, 8, 10), mid)
-        pygame.draw.rect(s, hi, pygame.Rect(12, 18, 8, 3))
-        # eyes
-        pygame.draw.rect(s, (250, 250, 250), pygame.Rect(13, 12, 2, 2))
-        pygame.draw.rect(s, (250, 250, 250), pygame.Rect(16, 12, 2, 2))
-        # dagger arm (state affects)
-        arm_y = 18
-        if (state or "").lower() == "attack":
-            pygame.draw.line(s, dark, (19, arm_y), (28, 14), 2)
-            pygame.draw.line(s, (220, 220, 230), (26, 13), (30, 11), 2)
-        else:
-            pygame.draw.line(s, dark, (19, arm_y), (25, 20), 2)
-            pygame.draw.line(s, (220, 220, 230), (24, 19), (27, 18), 2)
-    elif et == "wolf":
-        # body + head + tail
-        _outline_rect(s, pygame.Rect(7, 16, 18, 8), mid)
-        pygame.draw.rect(s, hi, pygame.Rect(7, 16, 18, 2))
-        _outline_rect(s, pygame.Rect(22, 14, 7, 6), mid)
-        pygame.draw.rect(s, sh, pygame.Rect(22, 18, 7, 2))
-        # tail
-        pygame.draw.line(s, dark, (7, 18), (3, 16), 2)
-        # legs (walk offset)
-        step = 1 if (state or "").lower() == "walk" else 0
-        pygame.draw.rect(s, dark, pygame.Rect(10, 24, 2, 2 + step))
-        pygame.draw.rect(s, dark, pygame.Rect(16, 24, 2, 2 - step))
-        if (state or "").lower() == "attack":
-            # pounce cue
-            pygame.draw.line(s, (255, 245, 220), (24, 14), (31, 11), 2)
-    elif et == "skeleton":
-        # skull + ribs + limbs
-        pygame.draw.circle(s, dark, (16, 11), 6)
-        pygame.draw.circle(s, mid, (16, 11), 5)
-        pygame.draw.rect(s, dark, pygame.Rect(14, 10, 2, 2))
-        pygame.draw.rect(s, dark, pygame.Rect(17, 10, 2, 2))
-        _outline_rect(s, pygame.Rect(12, 16, 8, 10), mid)
-        for i in range(3):
-            pygame.draw.line(s, sh, (13, 18 + i * 2), (19, 18 + i * 2), 1)
-        # weapon cue
-        if (state or "").lower() == "attack":
-            pygame.draw.line(s, dark, (19, 18), (29, 14), 2)
-            pygame.draw.line(s, (200, 200, 210), (27, 13), (31, 11), 2)
-    elif et == "skeleton_archer":
-        # skeleton base, but with a persistent bow cue so it reads as ranged at 32x32
-        pygame.draw.circle(s, dark, (16, 11), 6)
-        pygame.draw.circle(s, mid, (16, 11), 5)
-        pygame.draw.rect(s, dark, pygame.Rect(14, 10, 2, 2))
-        pygame.draw.rect(s, dark, pygame.Rect(17, 10, 2, 2))
-        _outline_rect(s, pygame.Rect(12, 16, 8, 10), mid)
-        for i in range(3):
-            pygame.draw.line(s, sh, (13, 18 + i * 2), (19, 18 + i * 2), 1)
+    frames = []
+    
+    for i in range(num_frames):
+        s = _mk32()
+        s.fill((0, 0, 0, 0))
+        t = i / float(num_frames) if num_frames > 1 else 0
+        
+        # Animations
+        bob = int(max(0, math.sin(t * math.tau) * 2)) if st == "idle" else 0
+        lean = int(math.sin(t * math.tau) * 1.5) if st == "walk" else 0
+        if st == "hurt":
+            lean = -2 if i % 2 == 0 else 2
+        elif st == "attack":
+            lean = 4 if t > 0.3 else -2
+        elif st == "dead":
+            lean = 0
+            
+        bx, by = 16 + lean, 18 + bob
 
-        st = (state or "").lower()
-        # Bow: a curved-ish vertical arc plus string (simple but readable)
-        if st == "attack":
-            # raise the bow, add a small "impact" streak
-            pygame.draw.line(s, dark, (22, 10), (26, 22), 2)  # bow limb
-            pygame.draw.line(s, (200, 200, 210), (24, 10), (24, 22), 1)  # string
-            pygame.draw.line(s, (255, 245, 220), (26, 14), (31, 12), 2)  # shot cue
-        else:
-            pygame.draw.line(s, dark, (22, 12), (25, 23), 2)  # bow limb
-            pygame.draw.line(s, (200, 200, 210), (23, 12), (23, 23), 1)  # string
-            # quiver hint on back
-            pygame.draw.rect(s, (120, 75, 55), pygame.Rect(9, 16, 3, 8))
-            pygame.draw.rect(s, dark, pygame.Rect(9, 16, 3, 8), 1)
-    elif et == "spider":
-        pygame.draw.circle(s, dark, (16, 18), 8)
-        pygame.draw.circle(s, mid, (16, 18), 6)
-        pygame.draw.circle(s, sh, (14, 16), 3)
-        for off in (-6, -2, 2, 6):
-            pygame.draw.line(s, dark, (11, 18 + off // 3), (4, 20 + off // 3), 2)
-            pygame.draw.line(s, dark, (21, 18 + off // 3), (28, 20 + off // 3), 2)
-        if (state or "").lower() == "attack":
-            pygame.draw.line(s, (255, 245, 220), (18, 16), (26, 12), 2)
-    elif et == "bandit":
-        # hooded humanoid with club
-        pygame.draw.circle(s, dark, (16, 12), 6)
-        pygame.draw.circle(s, mid, (16, 12), 5)
-        pygame.draw.rect(s, sh, pygame.Rect(12, 10, 8, 3))
-        _outline_rect(s, pygame.Rect(12, 17, 8, 11), mid)
-        pygame.draw.rect(s, hi, pygame.Rect(12, 17, 8, 3))
-        if (state or "").lower() == "attack":
-            pygame.draw.line(s, dark, (20, 18), (29, 20), 3)
-        else:
-            pygame.draw.line(s, dark, (20, 18), (26, 24), 3)
-    else:
-        pygame.draw.circle(s, dark, (16, 18), 9)
-        pygame.draw.circle(s, mid, (16, 18), 7)
+        if et == "goblin":
+            pygame.draw.circle(s, dark, (bx-1, by-5), 7)
+            pygame.draw.circle(s, mid, (bx-1, by-5), 6)
+            pygame.draw.circle(s, sh, (bx-3, by-7), 3)
+            _outline_rect(s, pygame.Rect(bx-4, by, 8, 10), mid)
+            pygame.draw.rect(s, hi, pygame.Rect(bx-4, by, 8, 3))
+            pygame.draw.rect(s, (250, 250, 250), pygame.Rect(bx-3, by-6, 2, 2))
+            pygame.draw.rect(s, (250, 250, 250), pygame.Rect(bx, by-6, 2, 2))
+            arm_y = by
+            if st == "attack":
+                pygame.draw.line(s, dark, (bx+3, arm_y), (bx+12+int(4*t), arm_y-4+int(8*t)), 2)
+                pygame.draw.line(s, (220, 220, 230), (bx+10, arm_y-5), (bx+14+int(4*t), arm_y-7+int(8*t)), 2)
+            else:
+                pygame.draw.line(s, dark, (bx+3, arm_y), (bx+9, arm_y+2), 2)
+                pygame.draw.line(s, (220, 220, 230), (bx+8, arm_y+1), (bx+11, arm_y), 2)
+                
+            l_off = int(math.sin(t * math.tau) * 3) if st == "walk" else 0
+            r_off = int(math.cos(t * math.tau) * 3) if st == "walk" else 0
+            pygame.draw.rect(s, dark, pygame.Rect(bx-3+l_off, by+10, 2, 3))
+            pygame.draw.rect(s, dark, pygame.Rect(bx+1+r_off, by+10, 2, 3))
 
-    st = (state or "idle").lower()
-    if st == "attack":
-        # attack is expressed in the per-type silhouette above where possible
-        pass
-    elif st == "hurt":
-        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
-        overlay.fill((255, 60, 60, 55))
-        s.blit(overlay, (0, 0))
-    elif st == "dead":
-        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 110))
-        s.blit(overlay, (0, 0))
-        # collapse hint
-        pygame.draw.line(s, (10, 10, 12), (10, 26), (24, 24), 2)
-    return s
+        elif et == "wolf":
+            wx, wy = bx-2, by+4
+            _outline_rect(s, pygame.Rect(wx-9, wy-2, 18, 8), mid)
+            pygame.draw.rect(s, hi, pygame.Rect(wx-9, wy-2, 18, 2))
+            _outline_rect(s, pygame.Rect(wx+6, wy-4, 7, 6), mid)
+            pygame.draw.rect(s, sh, pygame.Rect(wx+6, wy, 7, 2))
+            t_wag = int(math.sin(t * math.tau * 2) * 2) if st == "idle" else 0
+            pygame.draw.line(s, dark, (wx-9, wy), (wx-13, wy-2+t_wag), 2)
+            step = 2 if st == "walk" else 0
+            pygame.draw.rect(s, dark, pygame.Rect(wx-6, wy+6, 2, 2 + step*math.sin(t*math.tau)))
+            pygame.draw.rect(s, dark, pygame.Rect(wx+0, wy+6, 2, 2 - step*math.sin(t*math.tau)))
+            if st == "attack":
+                pygame.draw.line(s, (255, 245, 220), (wx+8, wy-4), (wx+15, wy-7), 2)
+
+        elif "skeleton" in et:
+            pygame.draw.circle(s, dark, (bx, by-7), 6)
+            pygame.draw.circle(s, mid, (bx, by-7), 5)
+            pygame.draw.rect(s, dark, pygame.Rect(bx-2, by-8, 2, 2))
+            pygame.draw.rect(s, dark, pygame.Rect(bx+1, by-8, 2, 2))
+            _outline_rect(s, pygame.Rect(bx-4, by-2, 8, 10), mid)
+            for j in range(3):
+                pygame.draw.line(s, sh, (bx-3, by+j*2), (bx+3, by+j*2), 1)
+
+            if et == "skeleton":
+                if st == "attack":
+                    pygame.draw.line(s, dark, (bx+3, by), (bx+13, by-4+int(8*t)), 2)
+                    pygame.draw.line(s, (200, 200, 210), (bx+11, by-5), (bx+15, by-7+int(8*t)), 2)
+            else:
+                if st == "attack":
+                    pygame.draw.line(s, dark, (bx+6, by-8), (bx+10, by+4), 2)
+                    pygame.draw.line(s, (200, 200, 210), (bx+8, by-8), (bx+8, by+4), 1)
+                    pygame.draw.line(s, (255, 245, 220), (bx+10, by-4), (bx+15, by-6), 2)
+                else:
+                    pygame.draw.line(s, dark, (bx+6, by-6), (bx+9, by+5), 2)
+                    pygame.draw.line(s, (200, 200, 210), (bx+7, by-6), (bx+7, by+5), 1)
+                    pygame.draw.rect(s, (120, 75, 55), pygame.Rect(bx-7, by-2, 3, 8))
+                    
+            l_off = int(math.sin(t * math.tau) * 3) if st == "walk" else 0
+            r_off = int(math.cos(t * math.tau) * 3) if st == "walk" else 0
+            pygame.draw.line(s, mid, (bx-2, by+8), (bx-2+l_off, by+13), 2)
+            pygame.draw.line(s, mid, (bx+2, by+8), (bx+2+r_off, by+13), 2)
+
+        elif "spider" in et:
+            pygame.draw.circle(s, dark, (bx, by), 8)
+            pygame.draw.circle(s, mid, (bx, by), 6)
+            pygame.draw.circle(s, sh, (bx-2, by-2), 3)
+            l_w = int(math.sin(t * math.tau) * 2) if st == "walk" else 0
+            for off in (-6, -2, 2, 6):
+                pygame.draw.line(s, dark, (bx-5, by + off//3), (bx-12, by+2 + off//3 + l_w), 2)
+                pygame.draw.line(s, dark, (bx+5, by + off//3), (bx+12, by+2 + off//3 - l_w), 2)
+            if st == "attack":
+                pygame.draw.line(s, (255, 245, 220), (bx+2, by-2), (bx+10, by-6), 2)
+
+        elif "bandit" in et:
+            pygame.draw.circle(s, dark, (bx, by-6), 6)
+            pygame.draw.circle(s, mid, (bx, by-6), 5)
+            pygame.draw.rect(s, sh, pygame.Rect(bx-4, by-8, 8, 3))
+            _outline_rect(s, pygame.Rect(bx-4, by-1, 8, 11), mid)
+            pygame.draw.rect(s, hi, pygame.Rect(bx-4, by-1, 8, 3))
+            if st == "attack":
+                pygame.draw.line(s, dark, (bx+4, by), (bx+13, by+2+int(8*t)), 3)
+            else:
+                pygame.draw.line(s, dark, (bx+4, by), (bx+10, by+6), 3)
+            
+            l_off = int(math.sin(t * math.tau) * 3) if st == "walk" else 0
+            r_off = int(math.cos(t * math.tau) * 3) if st == "walk" else 0
+            pygame.draw.line(s, mid, (bx-2, by+10), (bx-2+l_off, by+15), 2)
+            pygame.draw.line(s, mid, (bx+2, by+10), (bx+2+r_off, by+15), 2)
+
+        else:
+            pygame.draw.circle(s, dark, (bx, by), 9)
+            pygame.draw.circle(s, mid, (bx, by), 7)
+
+        if st == "hurt":
+            ov = pygame.Surface((32, 32), pygame.SRCALPHA)
+            ov.fill((255, 60, 60, 55))
+            s.blit(ov, (0, 0))
+        elif st == "dead":
+            ov = pygame.Surface((32, 32), pygame.SRCALPHA)
+            ov.fill((0, 0, 0, 110))
+            s.blit(ov, (0, 0))
+            pygame.draw.line(s, (10, 10, 12), (10, 26), (24, 24), 2)
+            
+        frames.append(s)
+    return frames
 
 
 def _building_frame(building_type: str, state: str) -> pygame.Surface:
@@ -313,13 +388,33 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
         _outline_poly(s, pts, col, outline=OUT)
         # highlight edge (top-left)
         pygame.draw.line(s, _shade(col, 35), pts[0], pts[1], 2)
+        # 4x Detail: shingle / roof texture lines
+        r_w = abs(pts[2][0] - pts[0][0])
+        r_h = abs(pts[1][1] - pts[0][1])
+        if r_w > 10 and r_h > 5:
+            col_dark = _shade(col, -20)
+            for yy in range(pts[1][1]+4, pts[0][1], 6):
+                dx = int((pts[0][1] - yy) * (r_w/2.0) / float(r_h)) if r_h > 0 else 0
+                cx = pts[1][0]
+                pygame.draw.line(s, col_dark, (int(cx - dx + 2), yy), (int(cx + dx - 2), yy), 1)
 
     def wall_rect(r: pygame.Rect, col: tuple[int, int, int]):
         pygame.draw.rect(s, OUT, r, 0)
         pygame.draw.rect(s, col, r.inflate(-2, -2), 0)
+        # 4x detail: brick/wood texture
+        col_dark = _shade(col, -15)
+        for yy in range(r.top + 4, r.bottom - 2, 8):
+            pygame.draw.line(s, col_dark, (r.left + 2, yy), (r.right - 3, yy), 1)
         # subtle top highlight
         pygame.draw.line(s, _shade(col, 25), (r.left + 2, r.top + 2), (r.right - 3, r.top + 2), 2)
         pygame.draw.rect(s, OUT, r, 1)
+
+    def draw_window(wx, wy, ww=6, wh=10, lit=False):
+        pygame.draw.rect(s, OUT, pygame.Rect(wx, wy, ww, wh), 0)
+        win_col = (200, 220, 255) if lit else (60, 80, 100)
+        pygame.draw.rect(s, win_col, pygame.Rect(wx+1, wy+1, ww-2, wh-2), 0)
+        pygame.draw.line(s, OUT, (wx+ww//2, wy), (wx+ww//2, wy+wh), 1)
+        pygame.draw.line(s, OUT, (wx, wy+wh//2), (wx+ww, wy+wh//2), 1)
 
     # Tier-1: distinct silhouettes (others fall back to generic hut)
     if bt == "castle":
@@ -327,6 +422,8 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
         # keep
         keep = pygame.Rect(pad * 3, pad * 4, w - pad * 6, h - pad * 10)
         wall_rect(keep, stone)
+        draw_window(keep.centerx - 12, keep.centery - 8, 6, 8, lit=True)
+        draw_window(keep.centerx + 6, keep.centery - 8, 6, 8, lit=True)
         # towers
         tw = max(10, w // 6)
         for tx in (pad * 2, w - pad * 2 - tw):
@@ -358,6 +455,8 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
         baseplate(wood)
         body = pygame.Rect(pad * 5, pad * 8, w - pad * 10, h - pad * 14)
         wall_rect(body, _shade(wood, -10))
+        draw_window(body.left + 4, body.top + 4, 6, 8, lit=True)
+        draw_window(body.right - 10, body.top + 4, 6, 8, lit=True)
         roof_poly([(body.left - pad, body.top), (body.centerx, body.top - pad * 4), (body.right + pad, body.top)], roof_red)
         # door + sign
         door = pygame.Rect(body.centerx - 5, body.bottom - 12, 10, 12)
@@ -427,78 +526,77 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
     return s
 
 
-def _worker_frame(worker_type: str, state: str) -> pygame.Surface:
-    """Generate placeholder sprite for workers (peasant, tax_collector)."""
-    s = _mk32()
-    s.fill((0, 0, 0, 0))
-    wt = (worker_type or "peasant").lower()
+def _worker_frames(worker_type: str, state: str) -> list[pygame.Surface]:
+    import math
     st = (state or "idle").lower()
+    counts = {"idle": 6, "walk": 8, "work": 6, "collect": 6, "return": 8, "hurt": 4, "dead": 1}
+    num_frames = counts.get(st, 1)
 
+    frames = []
+    wt = (worker_type or "peasant").lower()
+    
     dark = (20, 20, 25)
-    # Peasant: simple brown/beige worker colors
-    # Tax collector: slightly richer colors with hat/coat cue
     if wt == "peasant":
-        base = (140, 110, 80)  # brown worker
-        mid = base
-        hi = _shade(base, 35)
-        sh = _shade(base, -25)
+        base = (140, 110, 80)
     elif wt == "tax_collector":
-        base = (160, 130, 100)  # richer brown
-        mid = base
-        hi = _shade(base, 35)
-        sh = _shade(base, -25)
+        base = (160, 130, 100)
     else:
         base = (150, 120, 90)
-        mid = base
-        hi = _shade(base, 35)
-        sh = _shade(base, -25)
 
-    # Body + head (simple humanoid silhouette, consistent with hero placeholder style)
-    _outline_rect(s, pygame.Rect(11, 10, 10, 14), (60, 60, 70))
-    _outline_rect(s, pygame.Rect(12, 6, 8, 6), (90, 90, 100))
-    # Torso
-    pygame.draw.rect(s, mid, pygame.Rect(11, 16, 10, 8))
-    pygame.draw.rect(s, dark, pygame.Rect(11, 16, 10, 8), 1)
+    mid = base
+    hi = _shade(base, 35)
+    sh = _shade(base, -25)
+    
+    for i in range(num_frames):
+        s = _mk32()
+        s.fill((0, 0, 0, 0))
+        t = i / float(num_frames) if num_frames > 1 else 0
 
-    # Type-specific cues
-    if wt == "tax_collector":
-        # Hat cue (top of head)
-        pygame.draw.rect(s, (80, 60, 40), pygame.Rect(11, 4, 10, 4))
-        pygame.draw.rect(s, dark, pygame.Rect(11, 4, 10, 4), 1)
-        # Coat cue (slightly longer torso)
-        pygame.draw.rect(s, _shade(base, -15), pygame.Rect(9, 18, 14, 6))
-        pygame.draw.rect(s, dark, pygame.Rect(9, 18, 14, 6), 1)
+        bob = int(max(0, math.sin(t * math.tau) * 2)) if st == "idle" else 0
+        lean = int(math.sin(t * math.tau) * 1.5) if st in ("walk", "return") else 0
+        if st == "hurt":
+            lean = -2 if i % 2 == 0 else 2
+        elif st in ("work", "collect"):
+            lean = 2 if t > 0.5 else -1
 
-    # State-specific cues
-    if st == "walk":
-        # Legs offset (walking animation hint)
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(10, 26, 4, 2))
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(18, 26, 4, 2))
-    elif st == "work" and wt == "peasant":
-        # Tool/hammer cue (distinctive for peasant)
-        pygame.draw.line(s, dark, (20, 18), (28, 14), 2)
-        pygame.draw.rect(s, (100, 80, 60), pygame.Rect(26, 13, 4, 3))
-    elif st == "collect" and wt == "tax_collector":
-        # Coin bag visible (distinctive for tax_collector)
-        pygame.draw.circle(s, (255, 215, 0), (22, 20), 4)
-        pygame.draw.circle(s, dark, (22, 20), 4, 1)
-        pygame.draw.line(s, dark, (20, 18), (24, 18), 1)
-    elif st == "return" and wt == "tax_collector":
-        # Walking back (similar to walk, maybe slight variation)
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(10, 26, 4, 2))
-        pygame.draw.rect(s, (240, 240, 240), pygame.Rect(18, 26, 4, 2))
-    elif st == "hurt":
-        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
-        overlay.fill((255, 60, 60, 55))
-        s.blit(overlay, (0, 0))
-    elif st == "dead":
-        overlay = pygame.Surface((32, 32), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 110))
-        s.blit(overlay, (0, 0))
-        # Collapse hint
-        pygame.draw.line(s, (10, 10, 12), (10, 26), (24, 24), 2)
+        bx, by = 16 + lean, 18 + bob
 
-    return s
+        _outline_rect(s, pygame.Rect(bx-5, by-8, 10, 14), (60, 60, 70))
+        _outline_rect(s, pygame.Rect(bx-4, by-12, 8, 6), (90, 90, 100))
+        pygame.draw.rect(s, mid, pygame.Rect(bx-5, by-2, 10, 8))
+        pygame.draw.rect(s, dark, pygame.Rect(bx-5, by-2, 10, 8), 1)
+
+        if wt == "tax_collector":
+            pygame.draw.rect(s, (80, 60, 40), pygame.Rect(bx-5, by-14, 10, 4))
+            pygame.draw.rect(s, dark, pygame.Rect(bx-5, by-14, 10, 4), 1)
+            pygame.draw.rect(s, _shade(base, -15), pygame.Rect(bx-7, by, 14, 6))
+            pygame.draw.rect(s, dark, pygame.Rect(bx-7, by, 14, 6), 1)
+
+        l_off = int(math.sin(t * math.tau) * 3) if st in ("walk", "return") else 0
+        r_off = int(math.cos(t * math.tau) * 3) if st in ("walk", "return") else 0
+        pygame.draw.rect(s, dark, pygame.Rect(bx-4+l_off, by+6, 2, 4))
+        pygame.draw.rect(s, dark, pygame.Rect(bx+1+r_off, by+6, 2, 4))
+
+        if st == "work" and wt == "peasant":
+            pygame.draw.line(s, dark, (bx+4, by), (bx+12, by-4+int(8*t)), 2)
+            pygame.draw.rect(s, (100, 80, 60), pygame.Rect(bx+10, by-5+int(8*t), 4, 3))
+        elif st == "collect" and wt == "tax_collector":
+            pygame.draw.circle(s, (255, 215, 0), (bx+6, by+2), 4)
+            pygame.draw.circle(s, dark, (bx+6, by+2), 4, 1)
+            pygame.draw.line(s, dark, (bx+4, by), (bx+8, by), 1)
+
+        if st == "hurt":
+            ov = pygame.Surface((32, 32), pygame.SRCALPHA)
+            ov.fill((255, 60, 60, 55))
+            s.blit(ov, (0, 0))
+        elif st == "dead":
+            ov = pygame.Surface((32, 32), pygame.SRCALPHA)
+            ov.fill((0, 0, 0, 110))
+            s.blit(ov, (0, 0))
+            pygame.draw.line(s, (10, 10, 12), (10, 26), (24, 24), 2)
+            
+        frames.append(s)
+    return frames
 
 
 def main() -> int:
@@ -518,13 +616,13 @@ def main() -> int:
 
     for hc in heroes:
         for st in hero_states:
-            surf = _hero_frame(hc, st)
-            _save(surf, out / "heroes" / hc / st / "frame_000.png")
+            for i, surf in enumerate(_hero_frames(hc, st)):
+                _save(surf, out / "heroes" / hc / st / f"frame_{i:03d}.png")
 
     for et in enemies:
         for st in enemy_states:
-            surf = _enemy_frame(et, st)
-            _save(surf, out / "enemies" / et / st / "frame_000.png")
+            for i, surf in enumerate(_enemy_frames(et, st)):
+                _save(surf, out / "enemies" / et / st / f"frame_{i:03d}.png")
 
     for bt in buildings:
         # Build native pixel sizes when possible (tile multiples); otherwise fall back to 32.
@@ -540,15 +638,15 @@ def main() -> int:
     # but we generate all frames to pass strict validation.
     for wt in workers:
         for st in worker_states:
-            surf = _worker_frame(wt, st)
-            _save(surf, out / "workers" / wt / st / "frame_000.png")
+            for i, surf in enumerate(_worker_frames(wt, st)):
+                _save(surf, out / "workers" / wt / st / f"frame_{i:03d}.png")
 
     print("[generate_cc0_placeholders] wrote sprites for:")
-    print(f"  heroes: {len(heroes)} classes × {len(hero_states)} states")
-    print(f"  enemies: {len(enemies)} types × {len(enemy_states)} states")
+    print(f"  heroes: {len(heroes)} classes × {len(hero_states)} states (animated)")
+    print(f"  enemies: {len(enemies)} types × {len(enemy_states)} states (animated)")
     print(f"  buildings: {len(buildings)} types × {len(building_states)} states")
     if workers:
-        print(f"  workers: {len(workers)} types × {len(worker_states)} states (permissive subset)")
+        print(f"  workers: {len(workers)} types × {len(worker_states)} states (animated)")
     return 0
 
 

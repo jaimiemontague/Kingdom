@@ -16,6 +16,7 @@ import argparse
 from game.engine import GameEngine
 from ai.basic_ai import BasicAI
 from ai.llm_brain import LLMBrain
+from config import LLM_PROVIDER
 
 
 def parse_args():
@@ -26,9 +27,9 @@ def parse_args():
     parser.add_argument(
         "--provider",
         type=str,
-        default="mock",
+        default=LLM_PROVIDER,
         choices=["openai", "claude", "gemini", "grok", "mock"],
-        help="LLM provider to use for hero decisions (default: mock; --provider openai uses .env API key/model)"
+        help=f"LLM provider (default from .env: {LLM_PROVIDER})"
     )
     parser.add_argument(
         "--no-llm",

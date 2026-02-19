@@ -165,7 +165,27 @@ class ContextBuilder:
             "enemies_nearby": len(context["nearby_enemies"]) > 0,
             "outnumbered": len(context["nearby_enemies"]) > len(context["nearby_allies"]) + 1,
         }
-        
+
+        # 3A: Location context (wk14 Persona and Presence)
+        building_context_map = {
+            "inn": "resting at the bar",
+            "marketplace": "browsing wares",
+            "warrior_guild": "training in the guild",
+            "blacksmith": "watching the smith work",
+        }
+        if getattr(hero, "is_inside_building", False) and getattr(hero, "inside_building", None) is not None:
+            building = hero.inside_building
+            btype = getattr(building, "building_type", "") or ""
+            context["current_location"] = btype.replace("_", " ").title()
+            occupants = getattr(building, "occupants", []) or []
+            context["building_occupants"] = [getattr(h, "name", str(h)) for h in occupants if h is not hero]
+            context["building_context"] = building_context_map.get(btype, "inside a building")
+        else:
+            context["current_location"] = "outdoors"
+            context["building_occupants"] = []
+            context["building_context"] = ""
+        context["player_is_present"] = game_state.get("micro_view_building") is getattr(hero, "inside_building", None)
+
         return context
     
     @staticmethod
@@ -175,13 +195,21 @@ class ContextBuilder:
         inv = context["inventory"]
         sit = context["situation"]
         
+        location_line = ""
+        if context.get("current_location") and context["current_location"] != "outdoors":
+            loc = context["current_location"]
+            bctx = context.get("building_context", "")
+            names = context.get("building_occupants", []) or []
+            names_str = ", ".join(names) if names else "none"
+            location_line = f"\nLocation: {loc} ({bctx}). Fellow occupants: {names_str}.\n"
+
         summary = f"""
 {hero['name']} the {hero['class'].title()} (Level {hero['level']})
 Health: {hero['hp']}/{hero['max_hp']} ({hero['health_percent']}%)
 Gold: {hero['gold']} | Attack: {hero['attack']} | Defense: {hero['defense']}
 Weapon: {inv['weapon']} | Armor: {inv['armor']} | Potions: {inv['potions']}
 Personality: {context['personality']}
-
+{location_line}
 Current State: {context['current_state']}
 """
         

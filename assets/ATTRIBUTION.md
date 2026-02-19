@@ -123,4 +123,8 @@ Use this exact bullet structure (one bullet per pack):
 - **File locations**:
   - `assets/audio/ambient/ambient_loop.wav`
 
+### wk14: Interior ambient and building-under-attack (optional)
+
+Interior ambient loops (per building type) and the building-under-attack rumble SFX are **optional**. When CC0 assets are added, they will be listed here with pack, license, and file locations. Until then, the game runs without these files (fail silently). Required filenames: see `game/audio/EVENT_CONTRACT.md` (Interior ambient + Interior building-under-attack sections).
+
 

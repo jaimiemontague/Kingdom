@@ -2158,6 +2158,51 @@
           ]
         }
       }
+    },
+    "wk14-persona-presence": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+        "notes": "WK14 Sprint 3 of Immersive Kingdom Initiative. Agent 09 owns 3E: Blacksmith and Temple interiors."
+      },
+      "rounds": {
+        "wk14_r1_blacksmith_temple_interiors": {
+          "sprint_id": "wk14-persona-presence",
+          "round_id": "wk14_r1_blacksmith_temple_interiors",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added Blacksmith and Temple interiors to InteriorSpriteLibrary; normalized temple_* building types to shared 'temple' interior.",
+            "files": [
+              "game/graphics/interior_sprites.py"
+            ],
+            "details": [
+              "_interior_key(building_type): all temple_agrela, temple_dauros, etc. map to 'temple' for cache and dispatch; used in get_background, get_npc_sprite, get_furniture_layout, get_hero_slots.",
+              "Blacksmith interior: dark stone walls, soot floor, forge glow (orange/red bottom-left). Furniture: forge with fire and chimney, anvil, weapon display rack. NPC: blacksmith with hammer accent (new accent_type 'hammer' in _npc_base). 2 hero slots (by anvil, by weapon display).",
+              "Temple interior: pale holy walls, stained-glass glow (purple/gold/blue top), marble-style floor. Furniture: altar with candle/symbol, four pews (two rows, left/right). No NPC. 4 hero slots (pew left/right front and back).",
+              "All new content cached and deterministic via zlib.crc32; no new per-frame allocations."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"import pygame; pygame.init(); from game.graphics.interior_sprites import InteriorSpriteLibrary; bg = InteriorSpriteLibrary.get_background('blacksmith', 380, 600); t = InteriorSpriteLibrary.get_background('temple_agrela', 380, 600); print(bg.get_size(), t.get_size()); npc = InteriorSpriteLibrary.get_npc_sprite('blacksmith'); print('blacksmith npc', npc.get_size() if npc else None); print('temple npc', InteriorSpriteLibrary.get_npc_sprite('temple_dauros')); print('slots', len(InteriorSpriteLibrary.get_hero_slots('blacksmith')), len(InteriorSpriteLibrary.get_hero_slots('temple_helia')))\""
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "linter": {
+              "status": "PASS",
+              "note": "No linter errors on game/graphics/interior_sprites.py"
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 14 (audio): Blacksmith and Temple can use same interior ambient strategy as other buildings; building type key is normalized (temple_* → temple) for lookups.",
+            "Agent 08: InteriorViewPanel already uses building_type from building; temple_agrela etc. will automatically get the shared temple interior."
+          ]
+        }
+      }
     }
   }
 }

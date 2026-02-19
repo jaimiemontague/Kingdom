@@ -15,6 +15,7 @@ import sys
 import argparse
 import math
 import random
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -37,6 +38,7 @@ from game.systems.combat import CombatSystem  # noqa: E402
 from game.systems.bounty import BountySystem  # noqa: E402
 from game.ui.micro_view_manager import MicroViewManager  # noqa: E402 (wk13 interior_view scenario)
 from ai.basic_ai import BasicAI  # noqa: E402
+from ai.context_builder import ContextBuilder  # noqa: E402 (wk14 conversation scenario)
 from ai.llm_brain import LLMBrain  # noqa: E402
 
 
@@ -212,6 +214,43 @@ def _smoke_micro_view_manager(buildings: list) -> bool:
         return False
 
 
+def _smoke_quest_panel(heroes: list) -> bool:
+    """
+    wk14 Persona and Presence: verify MicroViewManager enter_quest/exit_quest
+    do not raise in headless. Returns True if all calls succeed.
+    """
+    try:
+        mvm = MicroViewManager()
+        hero = heroes[0] if heroes else None
+        if hero is None:
+            return True
+        mvm.enter_quest(hero, {})
+        mvm.exit_quest()
+        mvm.enter_quest(hero, {"title": "Test"})
+        mvm.exit_quest()
+        return True
+    except Exception:
+        return False
+
+
+def _smoke_conversation(hero, game_state: dict, llm: LLMBrain) -> bool:
+    """
+    wk14 Persona and Presence: verify conversation request/response cycle with mock provider
+    completes without crash. Returns True if no exception (response may or may not arrive in time).
+    """
+    try:
+        context = ContextBuilder.build_hero_context(hero, game_state)
+        llm.request_conversation(hero.name, context, [], "Hello")
+        for _ in range(150):
+            time.sleep(0.02)
+            resp = llm.get_conversation_response(hero.name)
+            if resp is not None:
+                break
+        return True
+    except Exception:
+        return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=20.0)
@@ -228,7 +267,7 @@ def main() -> int:
         "--scenario",
         type=str,
         default="default",
-        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro", "interior_view"],
+        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro", "interior_view", "quest_panel", "conversation"],
         help="deterministic test setup presets (default: default)",
     )
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
@@ -360,6 +399,11 @@ def main() -> int:
     if args.scenario == "interior_view":
         qa_interior_view_ok = _smoke_micro_view_manager(buildings)
 
+    # wk14 Persona and Presence: smoke-test quest panel enter/exit (no crash in headless).
+    qa_quest_panel_ok = True
+    if args.scenario == "quest_panel":
+        qa_quest_panel_ok = _smoke_quest_panel(heroes)
+
     # Local view (unclaimed only); refreshed per tick.
     bounties = bounty_system.get_unclaimed_bounties()
 
@@ -367,6 +411,22 @@ def main() -> int:
     combat = CombatSystem()
     llm = LLMBrain(provider_name="mock") if args.llm else None
     ai = BasicAI(llm_brain=llm)
+
+    # wk14 Persona and Presence: smoke-test conversation request/response with mock (only when --llm).
+    qa_conversation_ok = True
+    if args.scenario == "conversation" and llm is not None and heroes:
+        game_state_0 = {
+            "heroes": heroes,
+            "peasants": peasants,
+            "enemies": enemies,
+            "buildings": buildings,
+            "bounties": bounty_system.get_unclaimed_bounties(),
+            "bounty_system": bounty_system,
+            "castle": castle,
+            "economy": economy,
+            "world": world,
+        }
+        qa_conversation_ok = _smoke_conversation(heroes[0], game_state_0, llm)
 
     name_counts = Counter([h.name for h in heroes])
     dupes = {n: c for n, c in name_counts.items() if c > 1}
@@ -714,6 +774,16 @@ def main() -> int:
         # wk13 Living Interiors: MicroViewManager enter/exit must not crash in headless.
         if str(args.scenario) == "interior_view" and not qa_interior_view_ok:
             print("[qa] FAIL: interior_view scenario — MicroViewManager enter_interior/exit_interior raised an exception")
+            failed = True
+
+        # wk14 Persona and Presence: quest panel enter/exit must not crash in headless.
+        if str(args.scenario) == "quest_panel" and not qa_quest_panel_ok:
+            print("[qa] FAIL: quest_panel scenario — MicroViewManager enter_quest/exit_quest raised an exception")
+            failed = True
+
+        # wk14 Persona and Presence: conversation request/response cycle must not crash (mock provider).
+        if str(args.scenario) == "conversation" and not qa_conversation_ok:
+            print("[qa] FAIL: conversation scenario — request_conversation/get_conversation_response raised an exception")
             failed = True
 
         if not failed:

@@ -93,6 +93,7 @@ class InteriorViewPanel:
         self._hovered_hero_index: int | None = None
         self._hovered_npc: bool = False
         self._tooltip_name: str | None = None
+        self._hero_click_rects: list[tuple[pygame.Rect, Any]] = []
 
     def render(
         self,
@@ -130,6 +131,7 @@ class InteriorViewPanel:
         mouse_pos = pygame.mouse.get_pos()
         self._hovered_hero_index = None
         self._tooltip_name = None
+        self._hero_click_rects = []
 
         for idx, slot in enumerate(slots):
             if idx >= len(occupants):
@@ -142,6 +144,7 @@ class InteriorViewPanel:
                 sy = ry + slot.y
                 surface.blit(surf, (sx, sy))
                 slot_rect = pygame.Rect(sx, sy, surf.get_width(), surf.get_height())
+                self._hero_click_rects.append((slot_rect, hero))
                 if slot_rect.collidepoint(mouse_pos):
                     self._hovered_hero_index = idx
                     self._tooltip_name = getattr(hero, "name", "Hero")
@@ -169,6 +172,19 @@ class InteriorViewPanel:
             (rx + pad + 4, ry + pad + (header_h - self.theme.font_body.get_height()) // 2),
             (220, 220, 220),
         )
+        # wk14: Building-under-attack warning banner (Agent 14)
+        if getattr(building, "is_under_attack", False):
+            warn_h = 22
+            warn_rect = pygame.Rect(rx + 6, ry + pad + header_h + 4, w - 12, warn_h)
+            pygame.draw.rect(surface, (120, 40, 40), warn_rect)
+            pygame.draw.rect(surface, (180, 60, 60), warn_rect, 1)
+            TextLabel.render(
+                surface,
+                self.theme.font_small,
+                "Building under attack!",
+                (rx + pad + 4, ry + pad + header_h + 4 + (warn_h - self.theme.font_small.get_height()) // 2),
+                (255, 200, 200),
+            )
 
         # Exit button (top-right)
         exit_w = 56
@@ -209,12 +225,14 @@ class InteriorViewPanel:
             ty = mouse_pos[1] + 12
             surface.blit(stub, (tx, ty))
 
-    def handle_click(self, mouse_pos: tuple[int, int], right_rect: pygame.Rect) -> str | None:
-        """Handle click: Exit returns 'exit_interior'; hero/NPC clicks are stubs (no action)."""
+    def handle_click(self, mouse_pos: tuple[int, int], right_rect: pygame.Rect) -> str | dict | None:
+        """Handle click: Exit returns 'exit_interior'; hero click returns start_conversation dict."""
         x, y = int(mouse_pos[0]), int(mouse_pos[1])
         if not right_rect.collidepoint(x, y):
             return None
         if self._exit_rect and self._exit_rect.collidepoint(x, y):
             return "exit_interior"
-        # Hero/NPC click stubs: could show "Speak with Hero (Coming Soon)" etc. — no return action
+        for slot_rect, hero in self._hero_click_rects:
+            if slot_rect.collidepoint(x, y):
+                return {"type": "start_conversation", "hero": hero}
         return None

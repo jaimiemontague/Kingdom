@@ -827,6 +827,52 @@
           }
         }
       }
+    },
+    "wk14-persona-presence": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+        "notes": "Sprint 3 Immersive Kingdom: interior ambient audio, building-under-attack SFX and banner (3E)."
+      },
+      "rounds": {
+        "wk14_3e_interior_audio": {
+          "sprint_id": "wk14-persona-presence",
+          "round_id": "wk14_3e_interior_audio",
+          "round_meta": {
+            "build_target": "v1.4.0",
+            "sent_at_local": "2026-02-18"
+          },
+          "prompt_text": "wk14 3E: Interior ambient audio per building type, building-under-attack warning SFX, CC0 assets; red banner in interior panel.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "AudioSystem: start_interior_ambient(building_type) and stop_interior_ambient(); interior track map (inn, marketplace, warrior_guild, blacksmith, temple_*, default).",
+              "Event interior_building_under_attack -> building_under_attack_rumble SFX; throttle 3s sim-time; GameEventType and AUDIO_EVENT_MAP updated.",
+              "Engine: transition detection after HUD render to call stop_interior_ambient when exiting interior; _finalize_update emits interior_building_under_attack when in interior and building.is_under_attack.",
+              "InputHandler: start_interior_ambient on enter_building; stop_interior_ambient on exit_interior (Exit button, ESC, map click).",
+              "InteriorViewPanel: red 'Building under attack!' banner when building.is_under_attack.",
+              "EVENT_CONTRACT.md and ATTRIBUTION.md updated for wk14 interior ambient and rumble (optional assets)."
+            ],
+            "what_i_changed": [
+              "game/audio/audio_system.py: INTERIOR_AMBIENT_MAP, start_interior_ambient(), stop_interior_ambient(); AUDIO_EVENT_MAP and cooldown for building_under_attack_rumble; _load_sfx iterates set of keys.",
+              "game/events.py: INTERIOR_BUILDING_UNDER_ATTACK.",
+              "game/engine.py: _previous_micro_view_mode, _last_interior_rumble_sim_ms; post-HUD transition stop_interior_ambient; _finalize_update emit interior_building_under_attack.",
+              "game/input_handler.py: start_interior_ambient on enter_building; stop_interior_ambient on exit_interior (3 call sites).",
+              "game/ui/interior_view_panel.py: under-attack red banner.",
+              "game/audio/EVENT_CONTRACT.md: interior ambient table and building-under-attack event.",
+              "assets/ATTRIBUTION.md: wk14 optional interior/rumble note."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "Manual: Enter building -> interior ambient starts (or silent if files missing); Exit -> outdoor ambient; while in interior, damage building -> rumble SFX (if file present) and red banner."
+            ],
+            "evidence": {
+              "qa_smoke_quick": "PASS (exit 0)",
+              "validate_assets_report": "PASS (errors=0 warns=0)"
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -2556,6 +2556,46 @@
           }
         }
       }
+    },
+    "wk14-persona-presence": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+        "notes": "Sprint 3 Immersive Kingdom: Persona and Presence. Agent 08: Section 3B — Chat Interface."
+      },
+      "rounds": {
+        "wk14_r1_section_3b": {
+          "sprint_id": "wk14-persona-presence",
+          "round_id": "wk14_r1_section_3b",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "Section 3B: ChatPanel in right panel; hero click in interior starts conversation; HUD/input route chat.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/chat_panel.py: (pre-existing) ChatPanel with header, scrollable messages, input, End Conversation, handle_click/handle_keydown, get_pending_message, receive_response, is_active.",
+              "game/ui/interior_view_panel.py: _hero_click_rects built in render (slot_rect, hero); handle_click returns {\"type\": \"start_conversation\", \"hero\": hero} when click on hero.",
+              "game/ui/micro_view_manager.py: render() accepts chat_panel; draws chat_panel when active (after interior). handle_click() accepts chat_panel; when INTERIOR and chat active, forwards to chat_panel; else interior_panel; returns dict for start_conversation, end_conversation.",
+              "game/ui/hud.py: ChatPanel import; _chat_panel in __init__; pass chat_panel to _micro_view.render/handle_click; when right-panel click and chat active, handle_click to chat first; return start_conversation dict and end_conversation.",
+              "game/input_handler.py: ESC when chat active -> end_conversation; keydown when chat active -> chat_panel.handle_keydown, send_message -> send_player_message(hero_target, get_pending_message()); mousedown action start_conversation -> start_conversation(hero), action end_conversation -> end_conversation()."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        },
+        "wk14_hotfix_chat_wordwrap": {
+          "sprint_id": "wk14-persona-presence",
+          "round_id": "wk14_hotfix_chat_wordwrap",
+          "round_meta": { "build_target": "v1.4.0", "sent_at_local": "2026-02-18" },
+          "prompt_text": "BUG: Chat text overflows message area (no word wrap). Fix: word wrap in render() using font.size(), player lines right-aligned, hero lines left-aligned.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/chat_panel.py: In message-area loop, wrap each message text to fit (msg_rect.width - 2*pad) by splitting into words and building lines with font.size(); render each wrapped line with content_y advance; player messages right-aligned per line, hero messages left-aligned."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

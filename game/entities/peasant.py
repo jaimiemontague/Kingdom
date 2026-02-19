@@ -92,8 +92,13 @@ class Peasant:
             return True
         if dist > 0:
             move_dist = self.speed * dt * 60
-            self.x += (dx / dist) * move_dist
-            self.y += (dy / dist) * move_dist
+            if move_dist >= dist:
+                self.x = target_x
+                self.y = target_y
+                return True
+            else:
+                self.x += (dx / dist) * move_dist
+                self.y += (dy / dist) * move_dist
         return False
 
     def _adjacent_to_building(self, building) -> bool:

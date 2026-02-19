@@ -805,6 +805,43 @@
             }
           }
         }
+      },
+      "wk14-persona-presence": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+          "notes": "wk14 Sprint 3 Immersive Kingdom: Persona and Presence — 3A location context + 3C conversation mode"
+        },
+        "rounds": {
+          "wk14_r1_3a_3c": {
+            "sprint_id": "wk14-persona-presence",
+            "round_id": "wk14_r1_3a_3c",
+            "round_meta": {
+              "prompt_set_id": "wk14_persona_presence",
+              "build_target": "v1.4.0",
+              "sent_at_local": "2026-02-18"
+            },
+            "prompt_text": "3A: Add current_location, building_occupants, building_context, player_is_present to ContextBuilder; update build_summary. 3C: CONVERSATION_SYSTEM_PROMPT + build_conversation_prompt; request_conversation + _process_conversation + get_conversation_response in LLMBrain; mock conversation in MockProvider; config constants; engine send_player_message + poll.",
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "ai/context_builder.py: build_hero_context() adds current_location, building_occupants, building_context, player_is_present; build_summary() adds Location line when inside building.",
+                "ai/prompt_templates.py: CONVERSATION_SYSTEM_PROMPT, CONVERSATION_USER_PROMPT, build_conversation_prompt().",
+                "ai/llm_brain.py: conversation_responses dict; worker dispatches mode=conversation to _process_conversation(); request_conversation(), get_conversation_response().",
+                "ai/providers/mock_provider.py: detect conversation mode; _mock_conversation_response() with class-based canned responses (deterministic RNG).",
+                "config.py: CONVERSATION_COOLDOWN_MS, CONVERSATION_HISTORY_LIMIT, CONVERSATION_TIMEOUT.",
+                "game/engine.py: send_player_message(hero, text), _poll_conversation_response(), CONVERSATION_* imports, ContextBuilder import, _last_conversation_request_time."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual (after Agent 08 ChatPanel): enter interior, click hero, send message; mock provider returns canned response."
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (exit_code=0)"
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

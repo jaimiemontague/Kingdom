@@ -33,6 +33,7 @@ What it covers (via `observe_sync`):
   - If/when `hero.intent` is implemented, it must become non-empty after warmup
 - **wk12 Chronos**: `--speed-multiplier` headless runs at 0.1x, 0.25x, 0.5x, 1.0x (sim-time equivalent); occupancy assertions when Building has `occupants`/`get_occupant_count()` or Inn `heroes_resting`
 - **wk13 Living Interiors**: `interior_view` scenario — MicroViewManager `enter_interior()`/`exit_interior()` no-crash in headless; building-destroyed path (`exit_interior(reason="destroyed")`); occupancy assertions still run
+- **wk14 Persona and Presence**: `quest_panel` scenario — MicroViewManager `enter_quest()`/`exit_quest()` no-crash in headless; `conversation` scenario — mock provider `request_conversation`/`get_conversation_response` cycle no-crash (with `--llm`)
 
 ## Manual Smoke (5–10 minutes)
 Run one of:

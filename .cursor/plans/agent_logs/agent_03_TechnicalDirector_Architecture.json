@@ -2250,6 +2250,45 @@
             }
           }
         }
+      },
+      "wk14-persona-presence": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+          "notes": "Sprint 3 Persona and Presence: 3D quest architecture only."
+        },
+        "rounds": {
+          "wk14_r1": {
+            "sprint_id": "wk14-persona-presence",
+            "round_id": "wk14_r1",
+            "round_meta": {
+              "prompt_set_id": "wk14_persona_r1",
+              "build_target": "3D QUEST ViewMode, QuestViewPanel placeholder, quest events"
+            },
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "game/events.py: GameEventType QUEST_STARTED, QUEST_COMPLETED, QUEST_HERO_RETURNED",
+                "game/ui/micro_view_manager.py: ViewMode.QUEST; enter_quest(hero, quest_data), exit_quest(); render/handle_click delegate to quest_panel; quest_hero, quest_data state",
+                "game/ui/quest_view_panel.py (new): QuestViewPanel placeholder — hero portrait+name, Questing..., travelogue area, Recall Hero button; render(surface, right_rect, game_state), handle_click -> exit_quest",
+                "game/ui/hud.py: _quest_panel = QuestViewPanel(theme); pass quest_panel to _micro_view.render() and handle_click(); return exit_quest",
+                "game/engine.py: get_game_state() micro_view_quest_hero, micro_view_quest_data",
+                "game/input_handler.py: ESC in QUEST calls exit_quest(); action exit_quest calls micro_view.exit_quest(); map click outside right panel in QUEST exits quest"
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: micro_view.enter_quest(hero, {}) then Tab to show panel; Recall Hero or ESC or map click exits"
+              ],
+              "evidence": {
+                "qa_smoke": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

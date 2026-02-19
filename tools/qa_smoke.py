@@ -123,6 +123,13 @@ def main() -> int:
         profiles.append(
             ("interior_view (MicroViewManager + occupancy)", [*base, "--scenario", "interior_view"])
         )
+        # wk14 Persona and Presence: quest_panel — enter_quest/exit_quest no-crash; conversation — mock request/response no-crash.
+        profiles.append(
+            ("quest_panel (MicroViewManager QUEST mode)", [*base, "--scenario", "quest_panel"])
+        )
+        profiles.append(
+            ("conversation (mock request/response cycle)", [*base, "--llm", "--scenario", "conversation"])
+        )
 
         rc = 0
         # Determinism is a release gate: fail fast if someone reintroduced wall-clock/RNG into sim logic.

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import pygame
@@ -62,6 +62,8 @@ _WARM_AMBER = (180, 130, 60)
 _COOL_GREEN = (70, 100, 80)
 _BLUE_STEEL = (80, 100, 130)
 _DIRT_BROWN = (90, 70, 50)
+_FORGE_ORANGE = (180, 90, 40)
+_HOLY_GOLD = (220, 200, 120)
 
 
 class InteriorSpriteLibrary:
@@ -77,13 +79,21 @@ class InteriorSpriteLibrary:
     _furniture_cache: Dict[Tuple[str, int, int], List[FurnitureAnchor]] = {}
     _slot_cache: Dict[Tuple[str, int, int], List[HeroSlot]] = {}
 
+    @classmethod
+    def _interior_key(cls, building_type: str) -> str:
+        """Normalize building type for interior lookup; all temple_* share one interior."""
+        bt = building_type.lower()
+        if bt.startswith("temple_"):
+            return "temple"
+        return bt
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     @classmethod
     def get_background(cls, building_type: str, width: int, height: int) -> pygame.Surface:
-        key = (building_type, width, height)
+        key = (cls._interior_key(building_type), width, height)
         cached = cls._bg_cache.get(key)
         if cached is not None:
             return cached
@@ -93,15 +103,16 @@ class InteriorSpriteLibrary:
 
     @classmethod
     def get_npc_sprite(cls, building_type: str) -> Optional[pygame.Surface]:
-        if building_type in cls._npc_cache:
-            return cls._npc_cache[building_type]
-        surf = cls._gen_npc(building_type)
-        cls._npc_cache[building_type] = surf
+        key = cls._interior_key(building_type)
+        if key in cls._npc_cache:
+            return cls._npc_cache[key]
+        surf = cls._gen_npc(key)
+        cls._npc_cache[key] = surf
         return surf
 
     @classmethod
     def get_furniture_layout(cls, building_type: str, width: int = 380, height: int = 600) -> List[FurnitureAnchor]:
-        key = (building_type, width, height)
+        key = (cls._interior_key(building_type), width, height)
         cached = cls._furniture_cache.get(key)
         if cached is not None:
             return cached
@@ -111,7 +122,7 @@ class InteriorSpriteLibrary:
 
     @classmethod
     def get_hero_slots(cls, building_type: str, width: int = 380, height: int = 600) -> List[HeroSlot]:
-        key = (building_type, width, height)
+        key = (cls._interior_key(building_type), width, height)
         cached = cls._slot_cache.get(key)
         if cached is not None:
             return cached
@@ -125,13 +136,17 @@ class InteriorSpriteLibrary:
 
     @classmethod
     def _gen_background(cls, building_type: str, w: int, h: int) -> pygame.Surface:
-        bt = building_type.lower()
+        bt = cls._interior_key(building_type.lower())
         if bt == "inn":
             return cls._bg_inn(w, h)
         if bt == "marketplace":
             return cls._bg_marketplace(w, h)
         if bt == "warrior_guild":
             return cls._bg_warrior_guild(w, h)
+        if bt == "blacksmith":
+            return cls._bg_blacksmith(w, h)
+        if bt == "temple":
+            return cls._bg_temple(w, h)
         return cls._bg_fallback(bt, w, h)
 
     @staticmethod
@@ -310,6 +325,93 @@ class InteriorSpriteLibrary:
 
         return surf
 
+    # -- Blacksmith --------------------------------------------------------
+
+    @classmethod
+    def _bg_blacksmith(cls, w: int, h: int) -> pygame.Surface:
+        rnd = cls._rng("blacksmith", w, h)
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        wall_h = h // 3
+        floor_y = wall_h
+
+        # Dark stone walls (soot / smoke tint)
+        wall_col = (55, 50, 48)
+        surf.fill(_rgba(wall_col))
+        for _ in range(int(w * wall_h * 0.02)):
+            px, py = rnd.randrange(w), rnd.randrange(wall_h)
+            c = _shade(wall_col, rnd.randint(-6, 6))
+            surf.set_at((px, py), _rgba(c))
+
+        # Stone floor (dirt / soot)
+        floor_col = (60, 55, 50)
+        pygame.draw.rect(surf, _rgba(floor_col), pygame.Rect(0, floor_y, w, h - floor_y))
+        for _ in range(int(w * (h - floor_y) * 0.015)):
+            px = rnd.randrange(w)
+            py = rnd.randrange(floor_y, h)
+            c = _shade(floor_col, rnd.randint(-10, 10))
+            surf.set_at((px, py), _rgba(c))
+
+        # Forge glow (bottom-left, orange/red)
+        glow = pygame.Surface((w, h), pygame.SRCALPHA)
+        glow_center = (w // 5, h - h // 5)
+        for radius in range(100, 15, -6):
+            alpha = max(3, 35 - radius // 3)
+            pygame.draw.circle(glow, (255, 120, 40, alpha), glow_center, radius)
+        for radius in range(50, 8, -4):
+            pygame.draw.circle(glow, (255, 80, 20, 40), glow_center, radius)
+        surf.blit(glow, (0, 0))
+
+        pygame.draw.line(surf, _rgba((45, 42, 40)), (0, floor_y), (w, floor_y), 2)
+        return surf
+
+    # -- Temple -------------------------------------------------------------
+
+    @classmethod
+    def _bg_temple(cls, w: int, h: int) -> pygame.Surface:
+        rnd = cls._rng("temple", w, h)
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        wall_h = h // 3
+        floor_y = wall_h
+
+        # Pale stone / holy walls
+        wall_col = (200, 195, 175)
+        surf.fill(_rgba(wall_col))
+        for _ in range(int(w * wall_h * 0.012)):
+            px, py = rnd.randrange(w), rnd.randrange(wall_h)
+            c = _shade(wall_col, rnd.randint(-8, 8))
+            surf.set_at((px, py), _rgba(c))
+
+        # Stained-glass glow (top, soft colored light)
+        glass = pygame.Surface((w, wall_h), pygame.SRCALPHA)
+        for i, (gx, gcol) in enumerate([
+            (w // 6, (180, 120, 255)),   # purple
+            (w // 2, (255, 220, 150)),  # gold/amber
+            (w * 5 // 6, (120, 200, 255)),  # blue
+        ]):
+            for radius in range(50, 5, -5):
+                alpha = max(4, 30 - radius)
+                pygame.draw.circle(glass, (*gcol, alpha), (gx, wall_h // 2), radius)
+        surf.blit(glass, (0, 0))
+
+        # Marble / pale stone floor
+        floor_col = (190, 185, 170)
+        pygame.draw.rect(surf, _rgba(floor_col), pygame.Rect(0, floor_y, w, h - floor_y))
+        tile_sz = 28
+        for tx in range(0, w, tile_sz):
+            pygame.draw.line(surf, _rgba(_shade(floor_col, -12)), (tx, floor_y), (tx, h), 1)
+        for ty in range(floor_y, h, tile_sz):
+            pygame.draw.line(surf, _rgba(_shade(floor_col, -12)), (0, ty), (w, ty), 1)
+        for _ in range(int(w * (h - floor_y) * 0.004)):
+            px = rnd.randrange(w)
+            py = rnd.randrange(floor_y, h)
+            c = _shade(floor_col, rnd.randint(-6, 6))
+            surf.set_at((px, py), _rgba(c))
+
+        pygame.draw.line(surf, _rgba(_shade(wall_col, -25)), (0, floor_y), (w, floor_y), 2)
+        return surf
+
     # -- Fallback ----------------------------------------------------------
 
     @classmethod
@@ -357,6 +459,8 @@ class InteriorSpriteLibrary:
             return cls._npc_merchant()
         if bt == "warrior_guild":
             return cls._npc_guildmaster()
+        if bt == "blacksmith":
+            return cls._npc_blacksmith()
         return None
 
     @staticmethod
@@ -399,6 +503,11 @@ class InteriorSpriteLibrary:
                        (cx + 9, cy + 10), (cx - 9, cy + 10)]
             pygame.draw.polygon(surf, (*accent_color, 180), points)
             pygame.draw.polygon(surf, _shade(accent_color, -30), points, 1)
+        elif accent_type == "hammer":
+            # Hammer in hand (raised)
+            pygame.draw.line(surf, _rgba((90, 70, 45)), (cx + 4, cy - 2), (cx + 14, cy - 10), 3)
+            pygame.draw.rect(surf, _rgba((80, 75, 70)), pygame.Rect(cx + 12, cy - 14, 8, 10))
+            pygame.draw.rect(surf, _rgba((60, 55, 50)), pygame.Rect(cx + 12, cy - 14, 8, 10), 1)
 
         return surf
 
@@ -426,19 +535,31 @@ class InteriorSpriteLibrary:
             accent_type="cloak",
         )
 
+    @classmethod
+    def _npc_blacksmith(cls) -> pygame.Surface:
+        return cls._npc_base(
+            body_color=(90, 75, 65),
+            accent_color=(120, 100, 80),
+            accent_type="hammer",
+        )
+
     # ------------------------------------------------------------------
     # Furniture generation
     # ------------------------------------------------------------------
 
     @classmethod
     def _gen_furniture(cls, building_type: str, w: int, h: int) -> List[FurnitureAnchor]:
-        bt = building_type.lower()
+        bt = cls._interior_key(building_type.lower())
         if bt == "inn":
             return cls._furniture_inn(w, h)
         if bt == "marketplace":
             return cls._furniture_marketplace(w, h)
         if bt == "warrior_guild":
             return cls._furniture_warrior_guild(w, h)
+        if bt == "blacksmith":
+            return cls._furniture_blacksmith(w, h)
+        if bt == "temple":
+            return cls._furniture_temple(w, h)
         return cls._furniture_fallback(w, h)
 
     @classmethod
@@ -566,6 +687,74 @@ class InteriorSpriteLibrary:
         return anchors
 
     @classmethod
+    def _furniture_blacksmith(cls, w: int, h: int) -> List[FurnitureAnchor]:
+        rnd = cls._rng("furniture_blacksmith", w, h)
+        anchors: List[FurnitureAnchor] = []
+        wall_h = h // 3
+
+        # Forge (left, with fire)
+        forge_x, forge_y = 12, h - 70
+        forge_surf = pygame.Surface((70, 60), pygame.SRCALPHA)
+        pygame.draw.rect(forge_surf, _rgba((50, 45, 42)), pygame.Rect(0, 0, 70, 60))
+        pygame.draw.rect(forge_surf, _rgba((40, 38, 35)), pygame.Rect(0, 0, 70, 60), 2)
+        pygame.draw.rect(forge_surf, _rgba((220, 100, 30)), pygame.Rect(12, 18, 46, 28))
+        pygame.draw.rect(forge_surf, _rgba((255, 140, 50, 150)), pygame.Rect(16, 22, 38, 20))
+        # Chimney
+        pygame.draw.rect(forge_surf, _rgba((45, 42, 40)), pygame.Rect(28, 0, 14, 18))
+        anchors.append(FurnitureAnchor("forge", forge_x, forge_y, forge_surf))
+
+        # Anvil (center-left)
+        anvil_x, anvil_y = w // 4 - 20, wall_h + (h - wall_h) // 2 - 25
+        anvil_surf = pygame.Surface((40, 24), pygame.SRCALPHA)
+        pygame.draw.rect(anvil_surf, _rgba((70, 70, 75)), pygame.Rect(4, 8, 32, 12))
+        pygame.draw.rect(anvil_surf, _rgba((55, 55, 60)), pygame.Rect(4, 8, 32, 12), 1)
+        pygame.draw.polygon(anvil_surf, _rgba((75, 75, 80)), [(8, 8), (20, 0), (32, 8), (32, 20), (8, 20)])
+        pygame.draw.polygon(anvil_surf, _rgba((60, 60, 65)), [(8, 8), (20, 0), (32, 8), (32, 20), (8, 20)], 1)
+        anchors.append(FurnitureAnchor("anvil", anvil_x, anvil_y, anvil_surf))
+
+        # Weapon display (right wall)
+        rack_x, rack_y = w - 55, wall_h + 20
+        rack_surf = pygame.Surface((50, 80), pygame.SRCALPHA)
+        pygame.draw.rect(rack_surf, _rgba((65, 55, 45)), pygame.Rect(0, 0, 50, 80))
+        pygame.draw.rect(rack_surf, _rgba((50, 45, 38)), pygame.Rect(0, 0, 50, 80), 1)
+        for wy in range(12, 72, 18):
+            pygame.draw.line(rack_surf, _rgba((160, 155, 150)), (8, wy), (42, wy), 2)
+            hilt_x = rnd.randint(12, 32)
+            pygame.draw.rect(rack_surf, _rgba((110, 85, 50)), pygame.Rect(hilt_x, wy - 4, 5, 8))
+        anchors.append(FurnitureAnchor("weapon_display", rack_x, rack_y, rack_surf))
+
+        return anchors
+
+    @classmethod
+    def _furniture_temple(cls, w: int, h: int) -> List[FurnitureAnchor]:
+        rnd = cls._rng("furniture_temple", w, h)
+        anchors: List[FurnitureAnchor] = []
+        wall_h = h // 3
+
+        # Altar (center top)
+        altar_w, altar_h = 100, 28
+        altar_x = (w - altar_w) // 2
+        altar_y = wall_h + 25
+        altar_surf = pygame.Surface((altar_w, altar_h), pygame.SRCALPHA)
+        pygame.draw.rect(altar_surf, _rgba((210, 200, 180)), pygame.Rect(0, 0, altar_w, altar_h), border_radius=2)
+        pygame.draw.rect(altar_surf, _rgba((180, 170, 155)), pygame.Rect(0, 0, altar_w, altar_h), 2, border_radius=2)
+        # Holy symbol (simple candle / flame)
+        pygame.draw.rect(altar_surf, _rgba((255, 240, 180)), pygame.Rect(altar_w // 2 - 6, 6, 12, 14))
+        pygame.draw.rect(altar_surf, _rgba((255, 200, 80)), pygame.Rect(altar_w // 2 - 4, 8, 8, 10))
+        anchors.append(FurnitureAnchor("altar", altar_x, altar_y, altar_surf))
+
+        # Pews (two rows, left and right of center)
+        pew_w, pew_h = 80, 14
+        for row, py in enumerate([wall_h + 75, wall_h + 120]):
+            for side_name, px in [("left", w // 4 - pew_w // 2), ("right", w * 3 // 4 - pew_w // 2)]:
+                pew_surf = pygame.Surface((pew_w, pew_h), pygame.SRCALPHA)
+                pygame.draw.rect(pew_surf, _rgba((160, 145, 120)), pygame.Rect(0, 0, pew_w, pew_h), border_radius=2)
+                pygame.draw.rect(pew_surf, _rgba((140, 125, 100)), pygame.Rect(0, 0, pew_w, pew_h), 1, border_radius=2)
+                anchors.append(FurnitureAnchor(f"pew_{row}_{side_name}", px, py, pew_surf))
+
+        return anchors
+
+    @classmethod
     def _furniture_fallback(cls, w: int, h: int) -> List[FurnitureAnchor]:
         anchors: List[FurnitureAnchor] = []
         wall_h = h // 3
@@ -587,13 +776,17 @@ class InteriorSpriteLibrary:
 
     @classmethod
     def _gen_hero_slots(cls, building_type: str, w: int, h: int) -> List[HeroSlot]:
-        bt = building_type.lower()
+        bt = cls._interior_key(building_type.lower())
         if bt == "inn":
             return cls._slots_inn(w, h)
         if bt == "marketplace":
             return cls._slots_marketplace(w, h)
         if bt == "warrior_guild":
             return cls._slots_warrior_guild(w, h)
+        if bt == "blacksmith":
+            return cls._slots_blacksmith(w, h)
+        if bt == "temple":
+            return cls._slots_temple(w, h)
         return cls._slots_fallback(w, h)
 
     @staticmethod
@@ -629,6 +822,25 @@ class InteriorSpriteLibrary:
             HeroSlot(w * 3 // 4 + 30, wall_h + 50, "at dummy 2"),
             HeroSlot(w // 2 - 40, ring_cy - 10, "sparring left"),
             HeroSlot(w // 2 + 20, ring_cy - 10, "sparring right"),
+        ]
+
+    @staticmethod
+    def _slots_blacksmith(w: int, h: int) -> List[HeroSlot]:
+        wall_h = h // 3
+        mid_y = wall_h + (h - wall_h) // 2
+        return [
+            HeroSlot(w // 4 - 16, mid_y - 30, "by anvil"),
+            HeroSlot(w // 2 + 20, mid_y - 20, "by weapon display"),
+        ]
+
+    @staticmethod
+    def _slots_temple(w: int, h: int) -> List[HeroSlot]:
+        wall_h = h // 3
+        return [
+            HeroSlot(w // 4 - 16, wall_h + 92, "pew left front"),
+            HeroSlot(w * 3 // 4 - 16, wall_h + 92, "pew right front"),
+            HeroSlot(w // 4 - 16, wall_h + 137, "pew left back"),
+            HeroSlot(w * 3 // 4 - 16, wall_h + 137, "pew right back"),
         ]
 
     @staticmethod

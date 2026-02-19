@@ -885,6 +885,51 @@
         }
       }
     }
+  },
+  "wk14-persona-presence": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+      "notes": "Sprint 3 Immersive Kingdom Initiative: LLM chat, quest panel, interior polish. Agent 04 consult-only (3F)."
+    },
+    "rounds": {
+      "wk14_r1_review": {
+        "sprint_id": "wk14-persona-presence",
+        "round_id": "wk14_r1_review",
+        "round_meta": {
+          "prompt_set_id": "wk14_persona_presence_activation",
+          "build_target": "3F determinism review",
+          "sent_at_local": "2026-02-18"
+        },
+        "prompt_text": "Review conversation prompts (no wall-clock in context), mock conversation (seeded RNG), quest panel (UI-only); run determinism_guard.",
+        "response": {
+          "status": "complete",
+          "raw": "Conversation prompts: build_conversation_prompt uses hero_context from ContextBuilder; context_builder uses sim_now_ms() only (no time.time/datetime). Location fields (current_location, building_occupants, building_context, player_is_present) come from hero/game_state. No wall-clock in conversation context. Mock conversation: mock_provider uses _MOCK_RNG = get_rng('mock_provider'); _mock_conversation_response uses idx = int(_MOCK_RNG.random() * len(choices)) % len(choices). Seeded RNG. Quest panel: MicroViewManager quest_hero/quest_data/mode=QUEST and QuestViewPanel only read game_state (micro_view_quest_hero, micro_view_quest_data); enter_quest/exit_quest call set_time_multiplier (client-local). UI-only, not in sim boundary. determinism_guard PASS.",
+          "summary_bullets": [
+            "PASS: Conversation prompts use context from ContextBuilder (sim_now_ms only); no wall-clock in conversation context.",
+            "PASS: Mock conversation responses use get_rng('mock_provider') for template choice; seeded RNG.",
+            "PASS: Quest panel state (quest_hero, quest_data, QUEST mode) is UI-only; not in sim boundary.",
+            "PASS: python tools/determinism_guard.py.",
+            "PASS: python tools/qa_smoke.py --quick."
+          ],
+          "agent_fields": {
+            "determinism_review": "PASS",
+            "determinism_violations": [],
+            "evidence": {
+              "determinism_guard": { "command": "python tools/determinism_guard.py", "exit_code": 0, "result": "PASS" },
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "result": "PASS" }
+            }
+          },
+          "reviewed_files": [
+            "ai/context_builder.py",
+            "ai/prompt_templates.py",
+            "ai/providers/mock_provider.py",
+            "ai/llm_brain.py",
+            "game/ui/micro_view_manager.py",
+            "game/ui/quest_view_panel.py"
+          ]
+        }
+      }
+    }
   }
 }
 

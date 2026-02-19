@@ -237,9 +237,11 @@ class Enemy:
                 # Avoid long-distance A*: it is expensive on large maps and not needed until near the goal.
                 # Far away, just steer straight towards the goal (we only truly need pathing to avoid
                 # building footprints when we are close to them).
-                if dist > TILE_SIZE * 12:
+                if dist > TILE_SIZE * 12 or (getattr(self, "_long_distance_mode", False) and dist > TILE_SIZE * 10):
+                    self._long_distance_mode = True
                     self.move_towards(target_x, target_y, dt)
                     return
+                self._long_distance_mode = False
 
                 # Path around buildings/blocked tiles.
                 from game.systems.navigation import compute_path_worldpoints, follow_path

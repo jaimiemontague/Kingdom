@@ -20,6 +20,8 @@ from config import (
     SIM_SEED,
     DEFAULT_BORDERLESS,
     DEFAULT_SPEED_TIER,
+    CONVERSATION_COOLDOWN_MS,
+    CONVERSATION_HISTORY_LIMIT,
 )
 from game.graphics.vfx import VFXSystem
 from game.audio.audio_system import AudioSystem
@@ -45,6 +47,7 @@ from game.graphics.renderers import RendererRegistry
 from game.systems import perf_stats
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
+from ai.context_builder import ContextBuilder
 
 class GameEngine:
     """Main game engine class."""
@@ -168,6 +171,9 @@ class GameEngine:
         # UI (must be initialized after audio_system - see WK7-BUG-001)
         self.hud = HUD(self.window_width, self.window_height)
         self.micro_view = self.hud._micro_view  # wk13: right-panel state (OVERVIEW / INTERIOR)
+        self._last_conversation_request_ms = -CONVERSATION_COOLDOWN_MS  # wk14: allow first message immediately
+        self._previous_micro_view_mode = None  # wk14: detect interior exit for audio
+        self._last_interior_rumble_sim_ms: float | None = None  # wk14: throttle building-under-attack SFX
         self.building_menu = BuildingMenu()
         self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
         self.debug_panel = DebugPanel(self.window_width, self.window_height)
@@ -547,6 +553,40 @@ class GameEngine:
         self._update_buildings(dt)
         self._update_render_animations(dt)
         self._finalize_update(dt)
+        self._poll_conversation_response()
+
+    def send_player_message(self, hero, text: str):
+        """Send a player message to a hero in conversation (wk14). Queues LLM request and sets chat panel waiting."""
+        chat_panel = getattr(self.hud, "_chat_panel", None)
+        if not chat_panel:
+            return
+        llm = getattr(self.ai_controller, "llm_brain", None)
+        if not llm:
+            return
+        now_ms = pygame.time.get_ticks()
+        if now_ms - self._last_conversation_request_ms < CONVERSATION_COOLDOWN_MS:
+            return
+        self._last_conversation_request_ms = now_ms
+        history = (getattr(chat_panel, "conversation_history", []) or [])[-CONVERSATION_HISTORY_LIMIT:]
+        game_state = self.get_game_state()
+        context = ContextBuilder.build_hero_context(hero, game_state)
+        llm.request_conversation(hero.name, context, history, text)
+        chat_panel.waiting_for_response = True
+
+    def _poll_conversation_response(self):
+        """When chat is active, poll LLM for conversation response and push to chat panel (wk14)."""
+        chat_panel = getattr(self.hud, "_chat_panel", None)
+        llm = getattr(self.ai_controller, "llm_brain", None)
+        if not chat_panel or not llm:
+            return
+        if not getattr(chat_panel, "is_active", lambda: False)():
+            return
+        hero_target = getattr(chat_panel, "hero_target", None)
+        if not hero_target:
+            return
+        response = llm.get_conversation_response(hero_target.name)
+        if response is not None:
+            chat_panel.receive_response(response)
 
     def _prepare_sim_and_camera(self, dt: float) -> bool:
         """Apply deterministic timing and update camera when world input is allowed."""
@@ -816,6 +856,20 @@ class GameEngine:
 
     def _finalize_update(self, dt: float):
         """Finalize per-frame UI and VFX updates."""
+        # wk14: Interior building-under-attack rumble (throttled by sim time)
+        from game.ui.micro_view_manager import ViewMode
+        from game.events import GameEventType
+        from game.sim.timebase import now_ms as sim_now_ms
+        if (
+            getattr(self.micro_view, "mode", None) == ViewMode.INTERIOR
+            and getattr(self.micro_view, "interior_building", None) is not None
+            and getattr(self.micro_view.interior_building, "is_under_attack", False)
+        ):
+            now_ms = float(sim_now_ms())
+            last = getattr(self, "_last_interior_rumble_sim_ms", None)
+            if last is None or (now_ms - last) >= 3000:
+                self.event_bus.emit({"type": GameEventType.INTERIOR_BUILDING_UNDER_ATTACK.value})
+                self._last_interior_rumble_sim_ms = now_ms
         self._flush_event_bus()
 
         # Update HUD
@@ -945,6 +999,12 @@ class GameEngine:
 
     def update_camera(self, dt: float):
         """Update camera position based on WASD + mouse edge scrolling."""
+        # wk14: If chat is active, do not pan the camera (typing intercepts WASD)
+        if hasattr(self, "hud"):
+            chat_panel = getattr(self.hud, "_chat_panel", None)
+            if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+                return
+
         keys = pygame.key.get_pressed()
         speed = float(CAMERA_SPEED_PX_PER_SEC) * float(dt)
 
@@ -962,16 +1022,17 @@ class GameEngine:
             dy += speed
 
         # Mouse edge scroll (still in world-space pixels)
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        if mouse_x < CAMERA_EDGE_MARGIN_PX:
-            dx -= speed
-        elif mouse_x > int(getattr(self, "window_width", self.screen.get_width())) - CAMERA_EDGE_MARGIN_PX:
-            dx += speed
+        if pygame.mouse.get_focused():
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            if mouse_x < CAMERA_EDGE_MARGIN_PX:
+                dx -= speed
+            elif mouse_x > int(getattr(self, "window_width", self.screen.get_width())) - CAMERA_EDGE_MARGIN_PX:
+                dx += speed
 
-        if mouse_y < CAMERA_EDGE_MARGIN_PX:
-            dy -= speed
-        elif mouse_y > int(getattr(self, "window_height", self.screen.get_height())) - CAMERA_EDGE_MARGIN_PX:
-            dy += speed
+            if mouse_y < CAMERA_EDGE_MARGIN_PX:
+                dy -= speed
+            elif mouse_y > int(getattr(self, "window_height", self.screen.get_height())) - CAMERA_EDGE_MARGIN_PX:
+                dy += speed
 
         if dx or dy:
             self.camera_x += dx
@@ -1008,7 +1069,11 @@ class GameEngine:
             # wk13 Living Interiors: right-panel mode and rect for input (ESC/map click exit)
             "micro_view_mode": getattr(self.micro_view, "mode", None),
             "micro_view_building": getattr(self.micro_view, "interior_building", None),
+            # wk14: quest panel state for QuestViewPanel
+            "micro_view_quest_hero": getattr(self.micro_view, "quest_hero", None),
+            "micro_view_quest_data": getattr(self.micro_view, "quest_data", None),
             "right_panel_rect": getattr(self.hud, "_right_rect", None),
+            "llm_available": getattr(self.ai_controller, "llm_brain", None) is not None,
         }
     
     def render(self):
@@ -1123,7 +1188,14 @@ class GameEngine:
         # Render HUD
         if not bool(getattr(self, "screenshot_hide_ui", False)):
             self.hud.render(self.screen, self.get_game_state())
-            
+            # wk14: If we transitioned out of interior (e.g. building destroyed), restore outdoor ambient
+            from game.ui.micro_view_manager import ViewMode
+            prev = getattr(self, "_previous_micro_view_mode", None)
+            now_mode = getattr(self.micro_view, "mode", None)
+            if prev == ViewMode.INTERIOR and now_mode != ViewMode.INTERIOR and self.audio_system is not None:
+                self.audio_system.stop_interior_ambient()
+            self._previous_micro_view_mode = now_mode
+
             # Render debug panel
             self.debug_panel.render(self.screen, self.get_game_state())
             

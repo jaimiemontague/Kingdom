@@ -21,6 +21,12 @@ class GameEventType(str, Enum):
     BOUNTY_CLAIMED = "bounty_claimed"
     HERO_ENTERED_BUILDING = "hero_entered_building"
     HERO_EXITED_BUILDING = "hero_exited_building"
+    # wk14: interior view feedback (audio; non-authoritative)
+    INTERIOR_BUILDING_UNDER_ATTACK = "interior_building_under_attack"
+    # wk14: remote exploration (architecture only)
+    QUEST_STARTED = "quest_started"
+    QUEST_COMPLETED = "quest_completed"
+    QUEST_HERO_RETURNED = "quest_hero_returned"
 
 
 class EventBus:

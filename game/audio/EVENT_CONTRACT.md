@@ -54,6 +54,27 @@ Uses flat contract keys for simplicity.
 - **File**: `assets/audio/ambient/ambient_loop.ogg` or `.wav`
 - **Volume**: 0.4 (background only, never masks critical cues)
 
+### wk14: Interior ambient (optional)
+
+When the player enters interior view, `AudioSystem.start_interior_ambient(building_type)` is called. When they exit, `AudioSystem.stop_interior_ambient()` restores outdoor ambient. Track names are chosen by building type; if a file is missing, playback fails silently.
+
+| Building type(s) | Track name | File (optional) |
+|------------------|------------|-----------------|
+| inn | ambient_inn | `assets/audio/ambient/ambient_inn.ogg` or `.wav` |
+| marketplace | ambient_marketplace | `assets/audio/ambient/ambient_marketplace.ogg` or `.wav` |
+| warrior_guild | ambient_warrior_guild | `assets/audio/ambient/ambient_warrior_guild.ogg` or `.wav` |
+| blacksmith | ambient_blacksmith | `assets/audio/ambient/ambient_blacksmith.ogg` or `.wav` |
+| temple_* | ambient_temple | `assets/audio/ambient/ambient_temple.ogg` or `.wav` |
+| default (other) | ambient_interior_default | `assets/audio/ambient/ambient_interior_default.ogg` or `.wav` |
+
+Volume for interior ambients: 0.35 (slightly below outdoor 0.4). All must be CC0 when added.
+
+### wk14: Interior building-under-attack
+
+| Event Type | Sound Key | File Path | Notes |
+|------------|-----------|-----------|-------|
+| `interior_building_under_attack` | `building_under_attack_rumble` | `assets/audio/sfx/building_under_attack_rumble.ogg` or `.wav` | Emitted when player is in interior view and the viewed building is under attack. Throttled to once per 3s (sim time). Optional; no crash if file missing. |
+
 ## Cooldowns (milliseconds)
 
 Default cooldowns (Build A):
@@ -71,6 +92,7 @@ Default cooldowns (Build A):
 - `ui_click`: 100ms
 - `ui_confirm`: 150ms
 - `ui_error`: 200ms
+- `building_under_attack_rumble`: 3000ms (wk14)
 
 ## Visibility Gating (WK6 Mid-Sprint)
 

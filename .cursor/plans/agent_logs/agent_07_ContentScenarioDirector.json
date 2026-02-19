@@ -340,6 +340,37 @@
         }
       }
     }
+  },
+  "wk14-persona-presence": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",
+      "notes": "Sprint 3 Immersive Kingdom: LLM chat, quest panel architecture, interior polish. Agent 07 = 3D content specs only."
+    },
+    "rounds": {
+      "wk14_r1_quest_specs": {
+        "sprint_id": "wk14-persona-presence",
+        "round_id": "wk14_r1_quest_specs",
+        "round_meta": {
+          "build_target": "v1.4.0",
+          "assignment": "3D quest archetype specs (design only)"
+        },
+        "response": {
+          "received_at_local": "2026-02-18",
+          "status": "complete",
+          "what_i_changed": [
+            "Created docs/quest_archetypes.md with 3 archetype specs: Dungeon Crawl, Diplomatic Mission, Bounty Hunt (Remote). Each specifies trigger, duration (sim-time), 3-5 narrative beats, reward types, failure conditions. Added data contract table and alignment with existing systems (lairs, bounties, economy, determinism)."
+          ],
+          "how_to_test": "No code changes. Read docs/quest_archetypes.md; verify 2-3 archetypes present and each has trigger, duration, beats, rewards, failure conditions.",
+          "evidence": {
+            "qa_smoke": "python tools/qa_smoke.py --quick → exit_code=1 (FAIL). Failure in speed_scaling 0.1x profile: ImportError CONVERSATION_TIMEOUT from config (missing; wk14 3C not yet landed). Agent 07 changed docs only; no code. Pre-existing dependency."
+          },
+          "agent_fields": {
+            "deliverable": "docs/quest_archetypes.md",
+            "archetypes": ["Dungeon Crawl", "Diplomatic Mission", "Bounty Hunt (Remote)"]
+          }
+        }
+      }
+    }
   }
 }
 
