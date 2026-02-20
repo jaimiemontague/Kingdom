@@ -36,7 +36,7 @@ class Enemy:
         self.attack_power = 5
         self.speed = 1.5
         self.xp_reward = 25
-        self.gold_reward = 10
+        self.gold_reward = 15  # wk15: +50% for pacing (was 10)
         
         # AI State
         self.state = EnemyState.IDLE
@@ -48,6 +48,9 @@ class Enemy:
         self._approach_target = None
         self._approach_pos = None  # (x, y) world-space
         self._next_replan_ms = 0  # backoff timer for pathfinding (prevents A* spam on no-path)
+        # Commitment window: stick to current path for N ms to avoid jitter when chasing moving targets.
+        self._path_commit_until_ms = 0
+        self._path_commit_duration_ms = 500
         
         # WK5: Ranged projectile event storage (for engine collection)
         self._last_ranged_event = None
@@ -249,16 +252,20 @@ class Enemy:
                     self.path = []
                     self._path_goal = None
                 goal_key = (int(target_x), int(target_y))
-
-                want_replan = (not self.path) or (getattr(self, "_path_goal", None) != goal_key)
-                if want_replan and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0):
+                path_commit = int(getattr(self, "_path_commit_until_ms", 0) or 0)
+                has_path = bool(getattr(self, "path", None))
+                # Commitment: when chasing moving targets, stick to current path to avoid jitter.
+                # Replan only if no path, or (goal changed AND commitment window expired).
+                want_replan = (
+                    (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
+                ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
+                if want_replan:
                     self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
                     self._path_goal = goal_key
-                    # If no path exists, avoid recomputing every frame.
+                    self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
                     if not self.path:
                         self._next_replan_ms = now_ms_val + 800
                     else:
-                        # Throttle replans a bit even on success.
                         self._next_replan_ms = now_ms_val + 150
 
                 if self.path:
@@ -339,7 +346,7 @@ class Goblin(Enemy):
         self.attack_power = GOBLIN_ATTACK * 2  # 2x damage (scaled back from 4x)
         self.speed = GOBLIN_SPEED
         self.xp_reward = 25
-        self.gold_reward = 10  # Fixed 10 gold per goblin
+        self.gold_reward = 15  # wk15: +50% for pacing (was 10)
         self.color = (139, 69, 19)  # Brown-ish green
         
         # Track who has hit this goblin for gold distribution
@@ -360,7 +367,7 @@ class Wolf(Enemy):
         self.attack_power = WOLF_ATTACK
         self.speed = WOLF_SPEED
         self.xp_reward = 20
-        self.gold_reward = 6
+        self.gold_reward = 9   # wk15: +50% for pacing (was 6)
         self.color = (160, 160, 160)
 
 
@@ -374,7 +381,7 @@ class Skeleton(Enemy):
         self.attack_power = SKELETON_ATTACK
         self.speed = SKELETON_SPEED
         self.xp_reward = 35
-        self.gold_reward = 14
+        self.gold_reward = 21  # wk15: +50% for pacing (was 14)
         self.color = (220, 220, 240)
 
 
@@ -388,7 +395,7 @@ class SkeletonArcher(Enemy):
         self.attack_power = SKELETON_ARCHER_ATTACK
         self.speed = SKELETON_ARCHER_SPEED
         self.xp_reward = 35  # Same as skeleton
-        self.gold_reward = 14  # Same as skeleton
+        self.gold_reward = 21  # wk15: +50% for pacing (was 14)
         self.color = (200, 200, 220)
         
         # Ranged attack settings
@@ -512,10 +519,15 @@ class SkeletonArcher(Enemy):
                         self.path = []
                         self._path_goal = None
                     goal_key = (int(target_x), int(target_y))
-                    want_replan = (not self.path) or (getattr(self, "_path_goal", None) != goal_key)
-                    if want_replan and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0):
+                    path_commit = int(getattr(self, "_path_commit_until_ms", 0) or 0)
+                    has_path = bool(getattr(self, "path", None))
+                    want_replan = (
+                        (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
+                    ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
+                    if want_replan:
                         self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
                         self._path_goal = goal_key
+                        self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
                         if not self.path:
                             self._next_replan_ms = now_ms_val + 800
                         else:
@@ -538,7 +550,7 @@ class Spider(Enemy):
         self.attack_power = 4
         self.speed = 2.6
         self.xp_reward = 18
-        self.gold_reward = 5
+        self.gold_reward = 8   # wk15: +50% for pacing (was 5)
         self.color = (30, 30, 30)
         self.attackers = set()
 
@@ -556,7 +568,7 @@ class Bandit(Enemy):
         self.attack_power = 9
         self.speed = 1.7
         self.xp_reward = 32
-        self.gold_reward = 12
+        self.gold_reward = 18  # wk15: +50% for pacing (was 12)
         self.color = (120, 80, 50)
         self.attackers = set()
 

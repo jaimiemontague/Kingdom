@@ -66,6 +66,7 @@ class RendererRegistry:
         enemies: list[object],
         peasants: list[object],
         tax_collector: object | None,
+        guards: list[object] | None = None,
     ) -> None:
         """Advance all animated renderers once per tick."""
         for hero in heroes:
@@ -79,6 +80,9 @@ class RendererRegistry:
                 getattr(tax_collector, "render_state", tax_collector),
                 dt,
             )
+        for guard in guards or []:
+            if getattr(guard, "is_alive", True):
+                self._guard_renderer.update_animation(getattr(guard, "render_state", guard), dt)
 
     def render_building(
         self,

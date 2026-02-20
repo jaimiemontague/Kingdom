@@ -167,6 +167,16 @@ class BasicAI:
         # WK2 Build A: stuck detection + deterministic recovery.
         self.stuck_recovery_behavior._update_stuck_and_recover(self, hero, game_state)
 
+        # WK15: Castle under attack — urgent priority: drop everything (including popping out) and defend.
+        castle = game_state.get("castle")
+        if castle and getattr(castle, "is_under_attack", False):
+            if getattr(hero, "is_inside_building", False):
+                hero.pop_out_of_building()
+                setattr(hero, "pending_task", None)
+                setattr(hero, "pending_task_building", None)
+            self.defense_behavior.defend_castle(self, hero, game_state, castle)
+            return
+
         # WK11: Finalize deferred task when hero just left a building (pending_task set, not inside).
         if not hero.is_inside_building:
             pending = getattr(hero, "pending_task", None)
@@ -180,11 +190,16 @@ class BasicAI:
             self.handle_resting(hero, dt, game_state)
             return
 
-        # Priority: defend castle if it's under attack (unless already fighting).
+        # Priority: defend castle if damaged or under attack (unless already fighting).
         castle = game_state.get("castle")
-        if castle and castle.is_damaged and hero.state != HeroState.FIGHTING:
+        if castle and (castle.is_damaged or getattr(castle, "is_under_attack", False)) and hero.state != HeroState.FIGHTING:
             self.defense_behavior.defend_castle(self, hero, game_state, castle)
             return
+
+        # WK15: Warriors prioritize defending economic buildings (farm, food_stand) under attack.
+        if hero.state != HeroState.FIGHTING and getattr(hero, "hero_class", "") == "warrior":
+            if self.defense_behavior.defend_economic_building_warrior(self, hero, game_state):
+                return
 
         # Priority: defend home building if it's damaged.
         if hero.home_building and hero.home_building.is_damaged and hero.state != HeroState.FIGHTING:

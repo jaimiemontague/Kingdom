@@ -117,10 +117,11 @@ def step_towards(x: float, y: float, tx: float, ty: float, speed: float, dt: flo
     return x + (dx / dist) * move_dist, y + (dy / dist) * move_dist, False
 
 
-def follow_path(entity, dt: float, arrive_radius: float = 4.0) -> bool:
+def follow_path(entity, dt: float, arrive_radius: float = 10.0) -> bool:
     """
     Step an entity along its `path` list of world-space waypoints.
     Returns True if the entity reached the end of the path (or has no path).
+    arrive_radius: consider waypoint reached when within this many px (reduces overshoot jitter).
     """
     path: List[Tuple[float, float]] = getattr(entity, "path", None) or []
     if not path:

@@ -243,7 +243,7 @@ class InputHandler:
 
         elif event.key == pygame.K_p:
             # Use potion for selected hero
-            if engine.selected_hero and engine.selected_hero.is_alive:
+            if engine.selected_hero and getattr(engine.selected_hero, "is_alive", False) and hasattr(engine.selected_hero, "use_potion"):
                 if engine.selected_hero.use_potion():
                     engine.hud.add_message(f"{engine.selected_hero.name} used a potion!", (100, 255, 100))
 
@@ -332,9 +332,19 @@ class InputHandler:
                             engine.micro_view.exit_quest()
                         return
                     if isinstance(action, dict) and action.get("type") == "start_conversation":
+                        hero = action.get("hero")
+                        if hero is not None:
+                            engine.selected_hero = hero
+                            engine.selected_building = None
                         chat_panel = getattr(engine.hud, "_chat_panel", None)
                         if chat_panel is not None:
                             chat_panel.start_conversation(action["hero"])
+                        return
+                    if isinstance(action, dict) and action.get("type") == "select_hero":
+                        hero = action.get("hero")
+                        if hero is not None:
+                            engine.selected_hero = hero
+                            engine.selected_building = None
                         return
                     if action == "end_conversation":
                         chat_panel = getattr(engine.hud, "_chat_panel", None)
@@ -472,11 +482,16 @@ class InputHandler:
                 if pos:
                     engine.place_building(pos[0], pos[1])
             else:
-                # Try to select a hero first
+                # Try to select hero, then tax collector, then guard, then building
                 if engine.try_select_hero(event.pos):
                     engine.building_panel.deselect()
                     engine.selected_building = None
-                # Then try to select a building
+                elif engine.try_select_tax_collector(event.pos):
+                    engine.building_panel.deselect()
+                    engine.selected_building = None
+                elif engine.try_select_guard(event.pos):
+                    engine.building_panel.deselect()
+                    engine.selected_building = None
                 elif engine.try_select_building(event.pos):
                     engine.selected_hero = None
                 else:

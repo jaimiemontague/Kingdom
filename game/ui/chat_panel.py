@@ -165,8 +165,9 @@ class ChatPanel:
 
         surface.blit(self._get_dim_surface(w, h), (rx, ry))
 
-        # Header
+        # Header (clickable: selects hero and shows left panel — wk16)
         header_rect = pygame.Rect(rx, ry, w, header_h)
+        self._header_rect = header_rect
         pygame.draw.rect(surface, _COLOR_HEADER_BG, header_rect)
         pygame.draw.rect(surface, self._frame_outer, header_rect, 1)
         portrait_center = (rx + 24, ry + header_h // 2)
@@ -263,9 +264,11 @@ class ChatPanel:
             text_color=_COLOR_TEXT,
         )
 
-    def handle_click(self, mouse_pos: tuple[int, int], right_rect: pygame.Rect) -> str | None:
+    def handle_click(self, mouse_pos: tuple[int, int], right_rect: pygame.Rect) -> str | dict | None:
         if not self.is_active() or not right_rect.collidepoint(mouse_pos):
             return None
+        if getattr(self, "_header_rect", None) and self._header_rect.collidepoint(mouse_pos):
+            return {"type": "select_hero", "hero": self.hero_target}
         if self._end_button_rect and self._end_button_rect.collidepoint(mouse_pos):
             return "end_conversation"
         return None

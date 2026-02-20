@@ -103,6 +103,84 @@ def defend_home_building(ai: Any, hero: Any, game_state: dict) -> None:
             hero.state = HeroState.IDLE
 
 
+# WK15: Economic building types warriors prioritize defending (neutral buildings that generate tax).
+ECONOMIC_NEUTRAL_TYPES = ("farm", "food_stand")
+
+
+def defend_economic_building_warrior(ai: Any, hero: Any, game_state: dict) -> bool:
+    """
+    Warriors prioritize moving to defend nearby economic buildings (farm, food_stand) under attack.
+    Runs only for warrior class; no randomness (always respond if in range).
+    """
+    buildings = game_state.get("buildings", [])
+    enemies = game_state.get("enemies", [])
+
+    if not getattr(hero, "hero_class", "") == "warrior":
+        return False
+
+    # Don't interrupt explicit activities.
+    if hero.target and isinstance(hero.target, dict):
+        if hero.target.get("type") in ["going_home", "shopping"]:
+            return False
+
+    now_ms = int(sim_now_ms())
+    if now_ms < int(getattr(hero, "_target_commit_until_ms", 0) or 0):
+        cur = getattr(hero, "target", None)
+        if cur is not None and hasattr(cur, "is_alive") and getattr(cur, "is_alive", False):
+            return False
+
+    visibility_radius = TILE_SIZE * 8
+    candidate = None
+    candidate_dist = float("inf")
+    for building in buildings:
+        bt = getattr(building, "building_type", None)
+        if bt is not None and hasattr(bt, "value"):
+            bt = bt.value
+        if bt not in ECONOMIC_NEUTRAL_TYPES:
+            continue
+        if getattr(building, "hp", 0) <= 0:
+            continue
+        if not getattr(building, "is_under_attack", False):
+            continue
+        dist = hero.distance_to(building.center_x, building.center_y)
+        if dist <= visibility_radius and dist < candidate_dist:
+            candidate = building
+            candidate_dist = dist
+
+    if not candidate:
+        return False
+
+    target_enemy = None
+    target_dist = float("inf")
+    for enemy in enemies:
+        if not getattr(enemy, "is_alive", False):
+            continue
+        dist = enemy.distance_to(candidate.center_x, candidate.center_y)
+        if dist < TILE_SIZE * 6 and dist < target_dist:
+            target_enemy = enemy
+            target_dist = dist
+
+    if target_enemy:
+        dist_to_hero = hero.distance_to(target_enemy.x, target_enemy.y)
+        if dist_to_hero <= hero.attack_range:
+            hero.target = target_enemy
+            hero._target_commit_until_ms = int(
+                now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0)
+            )
+            hero.state = HeroState.FIGHTING
+            return True
+        hero.target = target_enemy
+        hero._target_commit_until_ms = int(now_ms + int(float(TARGET_COMMIT_WINDOW_S) * 1000.0))
+        hero.set_target_position(target_enemy.x, target_enemy.y)
+        hero.state = HeroState.MOVING
+        return True
+
+    hero.target = {"type": "defend_neutral", "building": candidate}
+    hero.set_target_position(candidate.center_x + TILE_SIZE, candidate.center_y)
+    hero.state = HeroState.MOVING
+    return True
+
+
 def defend_neutral_building_if_visible(ai: Any, hero: Any, game_state: dict) -> bool:
     """
     If a neutral building is under attack within the hero's "visible" radius,

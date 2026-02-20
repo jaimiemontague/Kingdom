@@ -16,6 +16,7 @@ class WorkerSpriteSpec:
     outline: Tuple[int, int, int] = (240, 240, 240)
     peasant: Tuple[int, int, int] = (200, 180, 120)
     tax_collector: Tuple[int, int, int] = (218, 165, 32)  # Gold color
+    guard: Tuple[int, int, int] = (100, 110, 145)  # Steel blue-gray
 
 
 class WorkerSpriteLibrary:
@@ -58,6 +59,14 @@ class WorkerSpriteLibrary:
                 "hurt": dict(frame_time=0.06, loop=False),
                 "dead": dict(frame_time=0.10, loop=False),
             }
+        elif wt == "guard":
+            actions = {
+                "idle": dict(frame_time=0.14, loop=True),
+                "walk": dict(frame_time=0.10, loop=True),
+                "attack": dict(frame_time=0.12, loop=True),  # Loop while in ATTACKING state
+                "hurt": dict(frame_time=0.06, loop=False),
+                "dead": dict(frame_time=0.10, loop=False),
+            }
         else:  # peasant (default)
             actions = {
                 "idle": dict(frame_time=0.14, loop=True),
@@ -88,12 +97,121 @@ class WorkerSpriteLibrary:
         spec = WorkerSpriteSpec()
         if wt == "tax_collector":
             return spec.tax_collector
+        if wt == "guard":
+            return spec.guard
         return spec.peasant
 
     @classmethod
     def _try_load_asset_frames(cls, worker_type: str, action: str, *, size: int) -> list[pygame.Surface]:
         folder = cls._assets_dir() / (worker_type or "peasant") / action
         return load_png_frames(folder, scale_to=(int(size), int(size)))
+
+    @staticmethod
+    def _guard_procedural_frames(
+        action: str,
+        base_color: Tuple[int, int, int],
+        spec: WorkerSpriteSpec,
+    ) -> list[pygame.Surface]:
+        """Pixel-art procedural frames for guard: helmet, body, spear/shield silhouette."""
+        s = int(spec.size)
+        cx, cy = s // 2, s // 2
+        ol = (0, 0, 0)  # Black outline for guard (pixel-art readability)
+
+        def mk() -> pygame.Surface:
+            return pygame.Surface((s, s), pygame.SRCALPHA)
+
+        def color(brighten: float = 1.0) -> Tuple[int, int, int]:
+            return (
+                min(255, int(base_color[0] * brighten)),
+                min(255, int(base_color[1] * brighten)),
+                min(255, int(base_color[2] * brighten)),
+            )
+
+        def draw_guard_silhouette(
+            surf: pygame.Surface,
+            bob_px: float = 0.0,
+            lean: float = 0.0,
+            weapon_angle: float = 0.0,
+            brighten: float = 1.0,
+        ) -> None:
+            col = color(brighten)
+            # Shadow
+            shadow = pygame.Rect(0, 0, 14, 6)
+            shadow.center = (cx, cy + 10 + int(bob_px))
+            pygame.draw.ellipse(surf, (0, 0, 0, 50), shadow)
+            # Body (rounded rect: torso)
+            by = int(cy + bob_px + 2)
+            body = pygame.Rect(cx - 6, by - 4, 12, 14)
+            body.x += int(lean * 2)
+            pygame.draw.rect(surf, col, body, 0, 2)
+            pygame.draw.rect(surf, ol, body, 1, 2)
+            # Helmet (dome on top)
+            helm_center = (cx + int(lean), int(by - 10))
+            pygame.draw.circle(surf, (80, 85, 100), helm_center, 6)
+            pygame.draw.circle(surf, ol, helm_center, 6, 1)
+            # Visor hint (2px line)
+            pygame.draw.line(
+                surf, (40, 42, 50),
+                (helm_center[0] - 3, helm_center[1]),
+                (helm_center[0] + 3, helm_center[1]),
+                1,
+            )
+            # Spear (vertical line + tip)
+            tip_x = cx + 8 + int(lean * 2) + int(weapon_angle * 4)
+            tip_y = by - 12 + int(weapon_angle * 2)
+            pygame.draw.line(surf, (90, 85, 75), (cx + 6, by - 2), (tip_x, tip_y), 2)
+            pygame.draw.line(surf, ol, (cx + 6, by - 2), (tip_x, tip_y), 1)
+            # Small shield (rectangle left of body)
+            sh_x = cx - 10 + int(lean)
+            sh_y = int(by - 2)
+            pygame.draw.rect(surf, (80, 90, 110), (sh_x, sh_y, 5, 8), 0, 1)
+            pygame.draw.rect(surf, ol, (sh_x, sh_y, 5, 8), 1, 1)
+
+        if action == "idle":
+            frames = []
+            for i in range(6):
+                surf = mk()
+                bob = math.sin(i / 6.0 * math.tau) * 1.0
+                draw_guard_silhouette(surf, bob_px=bob, brighten=1.0)
+                frames.append(surf)
+            return frames
+        if action == "walk":
+            frames = []
+            for i in range(8):
+                surf = mk()
+                t = i / 8.0
+                bob = abs(math.sin(t * math.tau)) * 1.5
+                lean = math.sin(t * math.tau) * 1.2
+                draw_guard_silhouette(surf, bob_px=-bob, lean=lean, brighten=1.02)
+                frames.append(surf)
+            return frames
+        if action == "attack":
+            frames = []
+            for i in range(6):
+                surf = mk()
+                t = i / 6.0
+                # Thrust forward
+                weapon_angle = -2.0 + t * 4.0 if t < 0.5 else 4.0 - (t - 0.5) * 8.0
+                weapon_angle = max(-2, min(2, weapon_angle))
+                lean = 1.5 if t < 0.5 else -0.5
+                draw_guard_silhouette(surf, lean=lean, weapon_angle=weapon_angle, brighten=1.1)
+                frames.append(surf)
+            return frames
+        if action == "hurt":
+            frames = []
+            for i in range(4):
+                surf = mk()
+                flash = 1.0 + (i % 2) * 0.25
+                draw_guard_silhouette(surf, brighten=flash)
+                frames.append(surf)
+            return frames
+        if action == "dead":
+            surf = mk()
+            draw_guard_silhouette(surf, brighten=0.5)
+            return [surf]
+        surf = mk()
+        draw_guard_silhouette(surf)
+        return [surf]
 
     @staticmethod
     def _procedural_frames(
@@ -103,6 +221,9 @@ class WorkerSpriteLibrary:
         spec: WorkerSpriteSpec,
     ) -> list[pygame.Surface]:
         """Generate procedural fallback frames if assets are missing."""
+        if (worker_type or "").lower() == "guard":
+            return WorkerSpriteLibrary._guard_procedural_frames(action, base_color, spec)
+
         s = int(spec.size)
         cx = cy = s // 2
         r = max(6, s // 3)

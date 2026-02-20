@@ -88,10 +88,11 @@ def test_blacksmith_research_unlocks_upgraded_items() -> None:
     economy = SimpleNamespace(player_gold=1_000)
 
     ok = blacksmith.research("Weapon Upgrades", economy=economy)
-    item_names = {item["name"] for item in blacksmith.get_available_items()}
-
     assert ok is True
-    assert economy.player_gold == 700
+    assert economy.player_gold == 800  # research cost $200
+    # wk15: research is timed; advance timer to completion then check items.
+    blacksmith.advance_research(blacksmith.research_started_ms + blacksmith.research_duration_ms + 1)
+    item_names = {item["name"] for item in blacksmith.get_available_items()}
     assert "Steel Sword" in item_names
     assert "Mithril Blade" in item_names
 

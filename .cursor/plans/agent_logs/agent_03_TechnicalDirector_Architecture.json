@@ -2290,6 +2290,70 @@
           }
         }
       }
+    },
+    "wk15-ux-pacing": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk15_ux_and_pacing_sprint.plan.md",
+        "notes": "wk15 UX Polish & Pacing: Agent 03 = 15B Economy, Difficulty & Pacing Configs"
+      },
+      "rounds": {
+        "wk15_r0_execution": {
+          "sprint_id": "wk15-ux-pacing",
+          "round_id": "wk15_r0_execution",
+          "round_meta": {
+            "prompt_set_id": "wk15_r0_execution_v1",
+            "build_target": "BuildA",
+            "sent_at_local": "2026-02-19T00:00:00"
+          },
+          "prompt_text": "Execute 15B: Economy, Difficulty & Pacing Configs — starting gold +40%, tax rate/collection, monster density.",
+          "response": {
+            "received_at_local": "2026-02-19T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "EconomyConfig: starting_gold 1500→2100 (+40%), tax_rate 0.20→0.28, added tax_collection_interval_sec 45.0; TaxCollector and hero.add_gold use config.",
+              "EnemyConfig: goblin_spawn_interval 5000→3500, max_alive_enemies 20→32. LairConfig: initial_count 2→4.",
+              "QA gate: python tools/qa_smoke.py --quick PASS."
+            ],
+            "files_changed": ["config.py", "game/entities/tax_collector.py", "game/entities/hero.py"],
+            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: verify higher starting gold, more lairs, faster waves"],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            }
+          }
+        }
+      }
+    },
+    "wk16-ux-interactions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk16_ux_and_interactions_sprint.plan.md",
+        "notes": "wk16 UX & Interactions: Agent 03 = 16B Tax Collector Selection"
+      },
+      "rounds": {
+        "wk16_r0_execution": {
+          "sprint_id": "wk16-ux-interactions",
+          "round_id": "wk16_r0_execution",
+          "round_meta": {
+            "prompt_set_id": "wk16_r0_execution_v1",
+            "build_target": "BuildA",
+            "sent_at_local": "2026-02-20T00:00:00"
+          },
+          "prompt_text": "Execute 16B: Tax Collector Selection — make tax collectors clickable; left panel shows gold/status.",
+          "response": {
+            "received_at_local": "2026-02-20T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Engine: try_select_tax_collector() added; selection raycast includes tax collector (distance < size). selected_hero holds tax collector when clicked (unified selection state).",
+              "Input_handler: try_select_tax_collector() called after try_select_hero; use_potion guarded with getattr/hasattr so TaxCollector selection does not trigger hero hotkeys.",
+              "HeroPanel: isinstance(hero, TaxCollector) branch; _render_tax_collector() draws left panel with Status, Carried gold, Total collected."
+            ],
+            "files_changed": ["game/engine.py", "game/input_handler.py", "game/ui/hero_panel.py"],
+            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: click tax collector on map; left panel shows Tax Collector with status and gold"],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            }
+          }
+        }
+      }
     }
   }
 }

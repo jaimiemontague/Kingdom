@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.3.7"
-    game_title: str = "Kingdom Sim (Prototype v1.3.7) — Hero Chat with Broken LLMs"
+    prototype_version: str = "1.4"
+    game_title: str = "Kingdom Sim (Prototype v1.4) — Hero Chat, Graphics & UX Polish"
     default_borderless: bool = True
 
 
@@ -56,8 +56,8 @@ class EnemyConfig:
     goblin_hp: int = 30
     goblin_attack: int = 5
     goblin_speed: float = 1.5
-    goblin_spawn_interval: int = 5000
-    max_alive_enemies: int = 20
+    goblin_spawn_interval: int = 3500   # wk15: lower = more frequent waves (was 5000)
+    max_alive_enemies: int = 32         # wk15: higher cap for more aggressive waves (was 20)
     wolf_hp: int = 22
     wolf_attack: int = 4
     wolf_speed: float = 2.3
@@ -74,7 +74,7 @@ class EnemyConfig:
 
 @dataclass(frozen=True)
 class LairConfig:
-    initial_count: int = 2
+    initial_count: int = 4   # wk15: more lairs = more monster density (was 2)
     min_distance_from_castle_tiles: int = 18
     stash_growth_per_spawn: int = 8
     rogue_lair_gold_threshold: int = 100
@@ -91,8 +91,11 @@ class BountyConfig:
 
 @dataclass(frozen=True)
 class EconomyConfig:
-    starting_gold: int = 1500
-    tax_rate: float = 0.20
+    starting_gold: int = 2100   # wk15: +40% from 1500 for pacing
+    tax_rate: float = 0.25      # 25% (hero/lair gold uses this; monster gold increased separately for pacing)
+    tax_collection_interval_sec: float = 45.0  # wk15: collector runs more often (was 60s hardcoded)
+    tax_collector_rest_after_return_sec: float = 10.0  # Rest at castle 10s after returning a nice haul
+    tax_collector_nice_haul_gold: int = 20  # Gold deposited >= this triggers the short rest
 
 
 @dataclass(frozen=True)
@@ -155,6 +158,10 @@ LLM = LLMConfig(
     grok_api_key=os.getenv("GROK_API_KEY", ""),
 )
 RANGER = RangerConfig()
+
+# Research timer (wk15: timed research for Marketplace/Blacksmith/Library)
+RESEARCH_POTIONS_DURATION_MS = 30_000  # 30s for potions
+RESEARCH_DURATION_MS_PER_100_GOLD = 10_000  # e.g. 200 cost = 20s, 300 = 30s
 
 # Backward-compatible module-level aliases (consumers unchanged)
 # Window settings
@@ -410,6 +417,9 @@ BOUNTY_REWARD_HIGH = BOUNTY.reward_high
 # Economy settings
 STARTING_GOLD = ECONOMY.starting_gold
 TAX_RATE = ECONOMY.tax_rate
+TAX_COLLECTION_INTERVAL_SEC = ECONOMY.tax_collection_interval_sec
+TAX_COLLECTOR_REST_AFTER_RETURN_SEC = ECONOMY.tax_collector_rest_after_return_sec
+TAX_COLLECTOR_NICE_HAUL_GOLD = ECONOMY.tax_collector_nice_haul_gold
 
 # LLM settings
 LLM_PROVIDER = LLM.provider  # openai, claude, gemini, grok, mock

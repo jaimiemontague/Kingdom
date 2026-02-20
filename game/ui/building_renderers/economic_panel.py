@@ -6,7 +6,7 @@ import pygame
 
 from config import COLOR_GOLD, COLOR_GREEN, COLOR_UI_BORDER, COLOR_WHITE
 from game.ui.building_renderers import render_occupants
-from game.ui.widgets import Button
+from game.ui.widgets import Button, HPBar
 
 
 class EconomicPanelRenderer:
@@ -46,37 +46,62 @@ class EconomicPanelRenderer:
             surface.blit(not_researched, (10, y))
             y += 25
 
-            local_rect = pygame.Rect(10, y, 200, 30)
-            can_afford = bool(economy.player_gold >= 100)
-            button_text = "Research Potions ($100)" if can_afford else "Research Potions (Need $100)"
-            button = Button(
-                rect=local_rect,
-                text=button_text,
-                font=panel.font_small,
-                enabled=can_afford,
-            )
-            hover = bool(panel.research_button_hovered and can_afford)
-            mouse = pygame.mouse.get_pos() if hover else None
-            button.render(
-                surface,
-                mouse_pos=mouse,
-                enabled=can_afford,
-                bg_normal=(60, 120, 60) if can_afford else (80, 80, 80),
-                bg_hover=(80, 150, 80),
-                bg_pressed=(70, 140, 70),
-                border_outer=(20, 20, 25),
-                border_inner=(80, 80, 100),
-                border_highlight=(107, 107, 132),
-                text_color=COLOR_WHITE,
-                text_disabled_color=(180, 180, 180),
-            )
-            panel.research_button_rect = pygame.Rect(
-                panel.panel_x + local_rect.x,
-                panel.panel_y + local_rect.y,
-                local_rect.width,
-                local_rect.height,
-            )
-            y += 40
+            # If research is in progress, show progress bar instead of button (wk15)
+            research_in_progress = getattr(building, "research_in_progress", False)
+            research_progress = max(0.0, min(1.0, float(getattr(building, "research_progress", 0.0))))
+
+            if research_in_progress and research_progress < 1.0:
+                label = panel.font_small.render("Researching potions...", True, (200, 200, 180))
+                surface.blit(label, (10, y))
+                y += 18
+                bar_rect = pygame.Rect(10, y, 200, 12)
+                HPBar.render(
+                    surface,
+                    bar_rect,
+                    research_progress,
+                    1.0,
+                    color_scheme={
+                        "bg": (60, 60, 60),
+                        "good": (100, 150, 200),
+                        "warn": (220, 180, 90),
+                        "bad": (220, 80, 80),
+                        "border": (20, 20, 25),
+                    },
+                )
+                panel.research_button_rect = None
+                y += 22
+            else:
+                local_rect = pygame.Rect(10, y, 200, 30)
+                can_afford = bool(economy.player_gold >= 100)
+                button_text = "Research Potions ($100)" if can_afford else "Research Potions (Need $100)"
+                button = Button(
+                    rect=local_rect,
+                    text=button_text,
+                    font=panel.font_small,
+                    enabled=can_afford,
+                )
+                hover = bool(panel.research_button_hovered and can_afford)
+                mouse = pygame.mouse.get_pos() if hover else None
+                button.render(
+                    surface,
+                    mouse_pos=mouse,
+                    enabled=can_afford,
+                    bg_normal=(60, 120, 60) if can_afford else (80, 80, 80),
+                    bg_hover=(80, 150, 80),
+                    bg_pressed=(70, 140, 70),
+                    border_outer=(20, 20, 25),
+                    border_inner=(80, 80, 100),
+                    border_highlight=(107, 107, 132),
+                    text_color=COLOR_WHITE,
+                    text_disabled_color=(180, 180, 180),
+                )
+                panel.research_button_rect = pygame.Rect(
+                    panel.panel_x + local_rect.x,
+                    panel.panel_y + local_rect.y,
+                    local_rect.width,
+                    local_rect.height,
+                )
+                y += 40
 
         y += 10
         pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (panel.panel_width - 10, y))
@@ -149,6 +174,31 @@ class EconomicPanelRenderer:
                 y += 18
                 continue
 
+            research_in_progress = getattr(building, "research_in_progress", None)
+            research_progress = max(0.0, min(1.0, float(getattr(building, "research_progress", 0.0))))
+            
+            if research_in_progress == option["key"] and research_progress < 1.0:
+                label = panel.font_small.render(f"Researching {option['label']}...", True, (200, 200, 180))
+                surface.blit(label, (10, y))
+                y += 18
+                bar_rect = pygame.Rect(10, y, 200, 12)
+                HPBar.render(
+                    surface,
+                    bar_rect,
+                    research_progress,
+                    1.0,
+                    color_scheme={
+                        "bg": (60, 60, 60),
+                        "good": (100, 150, 200),
+                        "warn": (220, 180, 90),
+                        "bad": (220, 80, 80),
+                        "border": (20, 20, 25),
+                    },
+                )
+                panel.blacksmith_research_rects[option["key"]] = pygame.Rect(0, 0, 0, 0)
+                y += 22
+                continue
+
             local_rect = pygame.Rect(10, y, panel.panel_width - 20, 24)
             can_afford = bool(economy.player_gold >= option["cost"])
             button_text = (
@@ -184,6 +234,26 @@ class EconomicPanelRenderer:
                 local_rect.height,
             )
             y += local_rect.height + 8
+
+        # Weapons & armor for sale (after research; shows what heroes can buy post-upgrade)
+        if hasattr(building, "get_available_items"):
+            pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (panel.panel_width - 10, y))
+            y += 10
+            sale_title = panel.font_normal.render("Weapons & armor for sale:", True, COLOR_WHITE)
+            surface.blit(sale_title, (10, y))
+            y += 22
+            for item in building.get_available_items():
+                name = item.get("name", "?")
+                price = int(item.get("price", 0))
+                extra = []
+                if item.get("type") == "weapon" and "attack" in item:
+                    extra.append(f"Atk {item['attack']}")
+                if item.get("type") == "armor" and "defense" in item:
+                    extra.append(f"Def {item['defense']}")
+                suffix = f" ({', '.join(extra)})" if extra else ""
+                line = panel.font_small.render(f"- {name} — ${price}{suffix}", True, (180, 180, 180))
+                surface.blit(line, (15, y))
+                y += 16
         return y
 
     def _render_inn(self, panel, surface: pygame.Surface, building, heroes: list, y: int) -> int:

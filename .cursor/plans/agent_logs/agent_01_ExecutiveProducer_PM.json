@@ -1,6 +1,9 @@
 {
   "schema_version": "2.0",
-  "agent": { "id": "01", "name": "ExecutiveProducer_PM" },
+  "agent": {
+    "id": "01",
+    "name": "ExecutiveProducer_PM"
+  },
   "notes": [
     "This file is owned by Agent 01 only.",
     "Structure nests rounds inside sprints to keep history organized.",
@@ -146,8 +149,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "14", "11"],
-            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "14",
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13"
+            ],
             "rationale": "WK7 is primarily UI + display system work with audio settings integration and QA validation. Art/tools/perf are consult-only unless blockers appear."
           }
         },
@@ -248,8 +266,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "14", "11"],
-            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "14",
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13"
+            ],
             "rationale": "All four active agents have ongoing work; next leg is execution sequencing and unblocking UI wiring via explicit API signatures."
           }
         },
@@ -325,8 +358,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["08", "11"],
-            "do_not_send": ["03", "14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "send_to_agents": [
+              "08",
+              "11"
+            ],
+            "do_not_send": [
+              "03",
+              "14",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13"
+            ],
             "rationale": "03 and 14 delivered their core APIs; remaining work is UI wiring + build catalog + benchmark polish (08) and verification (11). Ping 03/14 only if integration issues appear."
           }
         },
@@ -390,8 +438,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["08", "11"],
-            "do_not_send": ["03", "14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "send_to_agents": [
+              "08",
+              "11"
+            ],
+            "do_not_send": [
+              "03",
+              "14",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13"
+            ],
             "rationale": "Only remaining work is UI benchmark/polish (08) and verification/manual QA (11)."
           }
         },
@@ -494,8 +557,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "11"],
-            "do_not_send": ["14", "02", "04", "05", "06", "07", "09", "10", "12", "13"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "11"
+            ],
+            "do_not_send": [
+              "14",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13"
+            ],
             "rationale": "Boot crash is a release blocker. Assign to Agent 03 (engine init order), consult Agent 08 (PauseMenu expectations), and have Agent 11 verify qa_smoke and boot."
           }
         },
@@ -596,8 +674,7 @@
                 "python tools/qa_smoke.py --quick PASS"
               ],
               "status": "assigned"
-            }
-            ,
+            },
             {
               "id": "WK7-BUG-004",
               "title": "Windowed mode window is stuck top-left and cannot be moved",
@@ -728,8 +805,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "09", "11", "12"],
-            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "09",
+              "11",
+              "12"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "10",
+              "13",
+              "14"
+            ],
             "rationale": "Reactivated Agent 03 for WK7-BUG-004 (windowed window pinned top-left). Continue: UI pack (09) + attribution/tooling (12) + UI skin/layout (08) + QA (11)."
           }
         },
@@ -806,8 +898,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["08", "11"],
-            "do_not_send": ["02", "03", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
+            "send_to_agents": [
+              "08",
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "Closeout work is UI skin/layout integration (08) and QA proof (11). Others are stand-by unless QA finds regressions."
           }
         },
@@ -1004,8 +1111,21 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["11"],
-            "do_not_send": ["02", "04", "05", "06", "07", "09", "10", "12", "13", "14"],
+            "send_to_agents": [
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "Engineering fixes are reported done (03/08). Next step is QA final signoff: re-run qa_smoke + manual Windows verification + screenshots, and file any late bugs."
           }
         },
@@ -1047,7 +1167,10 @@
               "id": "POST-WK7-001",
               "title": "Add missing optional SFX files or demote to warn-only in manifest",
               "severity": "minor",
-              "owner_agents": ["14_SoundDirector_Audio", "12_ToolsDevEx_Lead"],
+              "owner_agents": [
+                "14_SoundDirector_Audio",
+                "12_ToolsDevEx_Lead"
+              ],
               "description": "Asset validator (--strict) fails with 4 missing SFX: hero_hired, purchase, ui_confirm, ui_error. These were optional Build B keys from WK6 but are now listed as required in the manifest.",
               "options": [
                 "Option A (preferred): Agent 14 adds the 4 SFX files from .cursor/human_provided/ sources (Kenney UI pack for ui_confirm/ui_error; OpenGameArt for hero_hired/purchase)",
@@ -1095,10 +1218,18 @@
               "severity": "blocker",
               "owner_agent": "03_TechnicalDirector_Architecture",
               "reporter": "human_playtest",
-              "repro_steps": ["Run python main.py", "Click on any hero", "Nothing happens"],
+              "repro_steps": [
+                "Run python main.py",
+                "Click on any hero",
+                "Nothing happens"
+              ],
               "expected": "Clicking hero selects them; right panel shows info (when Tab panel visible)",
               "actual": "Heroes cannot be selected by clicking",
-              "acceptance_test": ["Click hero → selected", "Tab panel shows hero info", "qa_smoke --quick PASS"],
+              "acceptance_test": [
+                "Click hero → selected",
+                "Tab panel shows hero info",
+                "qa_smoke --quick PASS"
+              ],
               "status": "assigned"
             },
             {
@@ -1107,10 +1238,17 @@
               "severity": "major",
               "owner_agent": "06_AIBehaviorDirector_LLM",
               "reporter": "human_playtest",
-              "repro_steps": ["Run python main.py", "Place bounty flags with B", "Watch heroes for extended time"],
+              "repro_steps": [
+                "Run python main.py",
+                "Place bounty flags with B",
+                "Watch heroes for extended time"
+              ],
               "expected": "Heroes occasionally pursue bounty flags",
               "actual": "Heroes never pursue any bounty flags",
-              "acceptance_test": ["Place bounty → hero pursues within reasonable time", "qa_smoke bounty tests PASS"],
+              "acceptance_test": [
+                "Place bounty → hero pursues within reasonable time",
+                "qa_smoke bounty tests PASS"
+              ],
               "status": "assigned"
             },
             {
@@ -1119,10 +1257,16 @@
               "severity": "major",
               "owner_agent": "05_GameplaySystemsDesigner",
               "reporter": "human_playtest",
-              "repro_steps": ["Run python main.py", "Observe peasants near castle"],
+              "repro_steps": [
+                "Run python main.py",
+                "Observe peasants near castle"
+              ],
               "expected": "2 peasants visible and distinguishable",
               "actual": "Peasants stack on same pixel, appearing as 1",
-              "acceptance_test": ["2 peasants visible at game start", "They don't permanently overlap"],
+              "acceptance_test": [
+                "2 peasants visible at game start",
+                "They don't permanently overlap"
+              ],
               "status": "assigned"
             }
           ],
@@ -1130,7 +1274,10 @@
             {
               "id": "V1.3-FEAT-001",
               "title": "Visual Polish Pass (UI + Pixel Art)",
-              "owner_agents": ["08_UX_UI_Director", "09_ArtDirector_Pixel_Animation_VFX"],
+              "owner_agents": [
+                "08_UX_UI_Director",
+                "09_ArtDirector_Pixel_Animation_VFX"
+              ],
               "description": "Upgrade overall look and feel: more detailed pixel art, improved UI art, better visual impression",
               "baseline": "docs/screenshots/manual/ contains v1.2.9 before screenshots",
               "status": "pending"
@@ -1166,14 +1313,24 @@
             "03": {
               "status": "assigned_active",
               "priority": "P0",
-              "asks": ["Fix V1.3-BUG-001: Debug and fix hero click selection - this is a release blocker"],
-              "acceptance_criteria": ["Heroes can be clicked and selected", "qa_smoke --quick PASS"]
+              "asks": [
+                "Fix V1.3-BUG-001: Debug and fix hero click selection - this is a release blocker"
+              ],
+              "acceptance_criteria": [
+                "Heroes can be clicked and selected",
+                "qa_smoke --quick PASS"
+              ]
             },
             "05": {
               "status": "assigned_active",
               "priority": "P1",
-              "asks": ["Fix V1.3-BUG-003: Ensure 2 peasants spawn with distinct positions, don't stack"],
-              "acceptance_criteria": ["2 peasants visible at start", "They work independently without permanent overlap"]
+              "asks": [
+                "Fix V1.3-BUG-003: Ensure 2 peasants spawn with distinct positions, don't stack"
+              ],
+              "acceptance_criteria": [
+                "2 peasants visible at start",
+                "They work independently without permanent overlap"
+              ]
             },
             "06": {
               "status": "assigned_active",
@@ -1182,24 +1339,51 @@
                 "Fix V1.3-BUG-002: Debug why heroes never pursue bounties",
                 "After fix: Implement V1.3-FEAT-002 Journey behavior"
               ],
-              "acceptance_criteria": ["Heroes pursue bounties", "Journey triggers after shopping when healthy"]
+              "acceptance_criteria": [
+                "Heroes pursue bounties",
+                "Journey triggers after shopping when healthy"
+              ]
             },
             "08": {
               "status": "assigned_active",
               "priority": "P2",
-              "asks": ["V1.3-FEAT-001: Plan UI visual polish improvements using baseline screenshots"],
-              "acceptance_criteria": ["Concrete proposal list", "Before/after comparison ready"]
+              "asks": [
+                "V1.3-FEAT-001: Plan UI visual polish improvements using baseline screenshots"
+              ],
+              "acceptance_criteria": [
+                "Concrete proposal list",
+                "Before/after comparison ready"
+              ]
             },
             "09": {
               "status": "assigned_active",
               "priority": "P2",
-              "asks": ["V1.3-FEAT-001: Plan pixel art detail improvements"],
-              "acceptance_criteria": ["Concrete proposal list for sprite/art upgrades"]
+              "asks": [
+                "V1.3-FEAT-001: Plan pixel art detail improvements"
+              ],
+              "acceptance_criteria": [
+                "Concrete proposal list for sprite/art upgrades"
+              ]
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "05", "06", "08", "09"],
-            "do_not_send": ["02", "04", "07", "10", "11", "12", "13", "14"],
+            "send_to_agents": [
+              "03",
+              "05",
+              "06",
+              "08",
+              "09"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "07",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "Bug fixes (03/05/06) are critical. Visual polish (08/09) can start planning in parallel."
           },
           "pm_agent_prompts": {
@@ -1229,8 +1413,7 @@
               "prompt": "Plan pixel art detail improvements. Reference baseline screenshots in docs/screenshots/v1.2.9_baseline/. Propose concrete improvements to sprites and art to add more detail and visual appeal. Deliver: proposal list for sprite/art upgrades."
             }
           }
-        }
-        ,
+        },
         "v1.3_r1_execution_and_polish": {
           "round_meta": {
             "prompt_set_id": "v1.3_r1_execution_and_polish_v1",
@@ -1335,16 +1518,36 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "09", "11", "12"],
-            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "09",
+              "11",
+              "12"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "10",
+              "13",
+              "14"
+            ],
             "rationale": "05/06 already delivered fixes; this leg is execution/polish + QA evidence + tooling support."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["03", "08", "09", "11", "12"],
+            "send_to": [
+              "03",
+              "08",
+              "09",
+              "11",
+              "12"
+            ],
             "prompt": "You are resuming v1.3 execution. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r1_execution_and_polish\"]`\n\n1) Your assignments\n- Execute ONLY the tasks listed for your agent id under `pm_next_actions_by_agent`.\n- Maintain determinism constraints (sim-time only; seeded RNG only) and keep gates green.\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r1_execution_and_polish`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshots/paths), and `blockers` if any.\n"
           }
-        }
-        ,
+        },
         "v1.3_r2_final_QA_screenshots_and_closeout": {
           "round_meta": {
             "prompt_set_id": "v1.3_r2_final_QA_screenshots_and_closeout_v1",
@@ -1384,16 +1587,32 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["11"],
-            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "send_to_agents": [
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "Engineering + polish tasks are complete; only QA evidence + screenshots remain to close v1.3."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["11"],
+            "send_to": [
+              "11"
+            ],
             "prompt": "You are Agent 11. Finalize v1.3 QA + evidence.\n\n0) Context\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r2_final_QA_screenshots_and_closeout\"]`\n\n1) Do the checklist exactly\n- Run gates: `python tools/qa_smoke.py --quick` AND `python tools/validate_assets.py --strict --check-attribution`\n- Manual Windows checks: hero select opens panel; bounty gets pursued; journey triggers after shopping.\n- Capture screenshots:\n  - `python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0`\n  - (Optional) `base_overview` for terrain/path comparison.\n\n2) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r2_final_QA_screenshots_and_closeout`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
           }
-        }
-        ,
+        },
         "v1.3_r3_visual_polish_pass_2": {
           "round_meta": {
             "prompt_set_id": "v1.3_r3_visual_polish_pass_2_v1",
@@ -1508,16 +1727,36 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "08", "09", "11", "12"],
-            "do_not_send": ["02", "04", "05", "06", "07", "10", "13", "14"],
+            "send_to_agents": [
+              "03",
+              "08",
+              "09",
+              "11",
+              "12"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "10",
+              "13",
+              "14"
+            ],
             "rationale": "Polish pass requires UI (08), world art variety (09), small engine support for label readability (03), tooling capture consistency (12), and QA evidence (11). Agents 05/06 are not needed unless regressions are discovered."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["03", "08", "09", "11", "12"],
+            "send_to": [
+              "03",
+              "08",
+              "09",
+              "11",
+              "12"
+            ],
             "prompt": "You are resuming v1.3 visual polish pass 2. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r3_visual_polish_pass_2\"]`\n\n1) Scope constraints (locked)\n- Do NOT work on fog-of-war edge softness.\n- Do NOT hide/remove debug overlays or tip text.\n\n2) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Maintain determinism constraints (seeded RNG only; sim-time only) and keep performance safe (avoid per-frame allocations).\n\n3) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r3_visual_polish_pass_2`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
           }
-        }
-        ,
+        },
         "v1.3_r4_final_manual_spotcheck_and_closeout": {
           "round_meta": {
             "prompt_set_id": "v1.3_r4_final_manual_spotcheck_and_closeout_v1",
@@ -1558,16 +1797,32 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["11"],
-            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "send_to_agents": [
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "All implementation work is complete; only manual Windows spot-check + signoff remains."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["11"],
+            "send_to": [
+              "11"
+            ],
             "prompt": "You are Agent 11. Final manual spot-check + v1.3 closeout.\n\n0) Context\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r4_final_manual_spotcheck_and_closeout\"]`\n\n1) Manual Windows spot-check (required)\n- Build Catalog: thumbnails (not color swatches) + readable.\n- Right panel: intentional/compact; no placeholder blocks feel.\n- Labels: readable on grass; less cluttered when zoomed out.\n\n2) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r4_final_manual_spotcheck_and_closeout`\n- `status`: `done` OR `blocked`\n- `evidence`: PASS/FAIL and screenshot path references.\n"
           }
-        }
-        ,
+        },
         "v1.3_r5_extension_mid_sprint": {
           "round_meta": {
             "prompt_set_id": "v1.3_r5_extension_mid_sprint_v1",
@@ -1594,49 +1849,77 @@
               "title": "Screen/camera scrolls while paused",
               "severity": "major",
               "owner_agent": "03_TechnicalDirector_Architecture",
-              "repro_steps": ["Open ESC menu (paused)", "Move mouse to screen edge or use mouse wheel", "Observe camera/zoom changes"],
+              "repro_steps": [
+                "Open ESC menu (paused)",
+                "Move mouse to screen edge or use mouse wheel",
+                "Observe camera/zoom changes"
+              ],
               "expected": "World camera/zoom should not change while paused/menu open",
               "actual": "Camera and/or zoom can change while paused",
-              "acceptance_test": ["ESC open: edge scroll disabled", "ESC open: mouse wheel zoom disabled", "Game unpaused: inputs work normally"]
+              "acceptance_test": [
+                "ESC open: edge scroll disabled",
+                "ESC open: mouse wheel zoom disabled",
+                "Game unpaused: inputs work normally"
+              ]
             },
             {
               "id": "V1.3-EXT-BUG-002",
               "title": "Demolish option appears on non-player buildings (e.g., monster lairs)",
               "severity": "major",
               "owner_agent": "08_UX_UI_Director",
-              "repro_steps": ["Select a monster lair", "Observe building panel buttons"],
+              "repro_steps": [
+                "Select a monster lair",
+                "Observe building panel buttons"
+              ],
               "expected": "Demolish is only available for player-owned buildings",
               "actual": "Demolish can appear for lairs/neutral buildings",
-              "acceptance_test": ["Lair: no demolish button", "Player building: demolish button present (castle exception unchanged)"]
+              "acceptance_test": [
+                "Lair: no demolish button",
+                "Player building: demolish button present (castle exception unchanged)"
+              ]
             },
             {
               "id": "V1.3-EXT-BUG-003",
               "title": "Menu button text alignment inconsistent",
               "severity": "minor",
               "owner_agent": "08_UX_UI_Director",
-              "repro_steps": ["Open ESC menu", "Compare alignment across buttons (Resume/Graphics/Audio/Controls/Quit)"],
+              "repro_steps": [
+                "Open ESC menu",
+                "Compare alignment across buttons (Resume/Graphics/Audio/Controls/Quit)"
+              ],
               "expected": "All button labels share a consistent alignment baseline/padding",
               "actual": "Labels vary in vertical alignment/padding",
-              "acceptance_test": ["All menu buttons visually aligned consistently"]
+              "acceptance_test": [
+                "All menu buttons visually aligned consistently"
+              ]
             }
           ],
           "pm_feature_requests": [
             {
               "id": "V1.3-EXT-FEAT-001",
               "title": "AI: heroes buy potions more often and flee less before using potions",
-              "owner_agents": ["06_AIBehaviorDirector_LLM"],
+              "owner_agents": [
+                "06_AIBehaviorDirector_LLM"
+              ],
               "status": "assigned"
             },
             {
               "id": "V1.3-EXT-FEAT-002",
               "title": "Audio: separate Master/Music/SFX volume controls (3 sliders)",
-              "owner_agents": ["14_SoundDirector_Audio", "08_UX_UI_Director"],
+              "owner_agents": [
+                "14_SoundDirector_Audio",
+                "08_UX_UI_Director"
+              ],
               "status": "assigned"
             },
             {
               "id": "V1.3-EXT-FEAT-003",
               "title": "Blacksmith: research weapon/armor upgrades; heroes purchase upgrades; purchases feed Journey trigger",
-              "owner_agents": ["05_GameplaySystemsDesigner", "06_AIBehaviorDirector_LLM", "08_UX_UI_Director"],
+              "owner_agents": [
+                "05_GameplaySystemsDesigner",
+                "06_AIBehaviorDirector_LLM",
+                "08_UX_UI_Director"
+              ],
               "status": "assigned"
             }
           ],
@@ -1759,16 +2042,38 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "05", "06", "08", "11", "12", "14"],
-            "do_not_send": ["02", "04", "07", "09", "10", "13"],
+            "send_to_agents": [
+              "03",
+              "05",
+              "06",
+              "08",
+              "11",
+              "12",
+              "14"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "07",
+              "09",
+              "10",
+              "13"
+            ],
             "rationale": "This extension needs AI behavior tuning (06), gameplay/buildings (05), UI (08), audio (14), engine input gating (03), QA verification (11), and optional tooling support (12)."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["03", "05", "06", "08", "11", "12", "14"],
+            "send_to": [
+              "03",
+              "05",
+              "06",
+              "08",
+              "11",
+              "12",
+              "14"
+            ],
             "prompt": "You are resuming V1.3 mid-sprint extension work. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Read plan: `.cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]`\n\n1) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Respect constraints: determinism (seeded RNG, sim-time only), perf-safe (avoid per-frame allocations).\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r5_extension_mid_sprint`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + paths/screenshots), and `blockers` if any.\n"
           }
-        }
-        ,
+        },
         "v1.3_r6_integration_QA_and_ship_decision": {
           "round_meta": {
             "prompt_set_id": "v1.3_r6_integration_QA_and_ship_decision_v1",
@@ -1814,16 +2119,32 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["11"],
-            "do_not_send": ["02", "03", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14"],
+            "send_to_agents": [
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
             "rationale": "All implementation work is integrated and pushed; only QA verification + ship/extend decision remains."
           },
           "pm_universal_prompt_for_agents": {
-            "send_to": ["11"],
+            "send_to": [
+              "11"
+            ],
             "prompt": "You are Agent 11. Run integration QA for v1.3 extension and report ship-readiness.\n\n0) Context\n- Pull latest `main`.\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r6_integration_QA_and_ship_decision\"]`\n\n1) Gates\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n2) Manual Windows checklist\n- Potions: heroes buy more often; use before fleeing.\n- Pause: no camera/zoom movement while ESC menu open.\n- Audio: Master/Music/SFX independent.\n- Blacksmith: research upgrades; heroes purchase; Journey purchase trigger still works.\n- Demolish: no demolish on lairs.\n\n3) Evidence (preferred)\n- `python tools/capture_screenshots.py --scenario ui_audio_blacksmith --seed 3 --out docs/screenshots/v1.3.0_after/ui_audio_blacksmith_seed3 --size 1920x1080 --ticks 0`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r6_integration_QA_and_ship_decision`\n- `status`: `done` OR `blocked`\n- `evidence`: PASS/FAIL (include screenshot paths) and any bug tickets filed.\n"
           }
-        }
-        ,
+        },
         "v1.3_r7_closeout_human_acceptance": {
           "round_meta": {
             "prompt_set_id": "v1.3_r7_closeout_human_acceptance_v1",
@@ -1927,8 +2248,16 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "12", "14", "11"],
-            "do_not_send": ["06", "08"],
+            "send_to_agents": [
+              "03",
+              "12",
+              "14",
+              "11"
+            ],
+            "do_not_send": [
+              "06",
+              "08"
+            ],
             "rationale": "AI + UI implementations are complete and passing qa_smoke; remaining work is audio asset alignment/files + tooling scenario hook + QA verification."
           }
         },
@@ -1999,8 +2328,23 @@
             }
           },
           "pm_send_list_minimal": {
-            "send_to_agents": ["03", "14", "11", "12"],
-            "do_not_send": ["06", "08", "09", "10", "13", "02", "04", "05", "07"],
+            "send_to_agents": [
+              "03",
+              "14",
+              "11",
+              "12"
+            ],
+            "do_not_send": [
+              "06",
+              "08",
+              "09",
+              "10",
+              "13",
+              "02",
+              "04",
+              "05",
+              "07"
+            ],
             "rationale": "Only remaining work is audio asset mapping + one missing bounty_claimed emission + verification/tooling confirmation. No AI/UI/art/perf changes required right now."
           }
         },
@@ -2034,7 +2378,21 @@
           },
           "pm_send_list_minimal": {
             "send_to_agents": [],
-            "do_not_send": ["03", "11", "12", "14", "06", "08", "09", "10", "13", "02", "04", "05", "07"],
+            "do_not_send": [
+              "03",
+              "11",
+              "12",
+              "14",
+              "06",
+              "08",
+              "09",
+              "10",
+              "13",
+              "02",
+              "04",
+              "05",
+              "07"
+            ],
             "rationale": "Closeout entry only. Optional polishing can be scheduled as Build B later."
           }
         }
@@ -3336,8 +3694,7 @@
           "status": "ready_for_human_choice_tag_vs_swap"
         }
       }
-    }
-    ,
+    },
     "wk4-new-enemy-skeleton-archer": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
@@ -3414,8 +3771,7 @@
           "status": "ready_to_ship"
         }
       }
-    }
-    ,
+    },
     "wk5-demolition-projectiles-workers": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk5_demolition+projectiles_d4ea82e0.plan.md",
@@ -3453,11 +3809,18 @@
               "ranger_bow_readability": "Ranger attack pose must read as bow shot at 32x32 (strong C-curve bow silhouette + release pose cue).",
               "workers_pixel_sprites": {
                 "replace_glyphs": true,
-                "types": ["peasant", "tax_collector"],
+                "types": [
+                  "peasant",
+                  "tax_collector"
+                ],
                 "states_manifest_strategy": "Build A uses flat state list in assets_manifest (per Agent 12); permissive subset per type is acceptable for strict validator."
               },
               "snapshot_tick_strategy": {
-                "ranged_projectiles": [60, 90, 120],
+                "ranged_projectiles": [
+                  60,
+                  90,
+                  120
+                ],
                 "rationale": "Fixed ticks for deterministic mid-flight coverage (per QA)."
               },
               "required_gates": [
@@ -3656,8 +4019,7 @@
             "ready_to_ship_buildA": true
           },
           "status": "complete_buildA_ready_to_ship"
-        }
-        ,
+        },
         "wk5_r5": {
           "round_meta": {
             "prompt_set_id": "wk5_r5_buildB_polish_v1",
@@ -3686,4 +4048,3 @@
     }
   }
 }
-

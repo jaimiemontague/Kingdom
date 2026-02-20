@@ -6,6 +6,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from config import RESEARCH_POTIONS_DURATION_MS, RESEARCH_DURATION_MS_PER_100_GOLD
+from game.sim.timebase import now_ms as sim_now_ms
+
 from .base import Building, is_research_unlocked, unlock_research
 from .types import BuildingType
 
@@ -51,6 +54,37 @@ class Marketplace(Building):
         """Check if marketplace can sell potions."""
         return self.potions_researched
 
+    def start_research_potions(self, economy) -> bool:
+        """Start timed potions research (wk15). Deducts gold and starts timer; completion in advance_research."""
+        if self.potions_researched or getattr(self, "research_in_progress", None):
+            return False
+        if economy.player_gold < 100:
+            return False
+        economy.player_gold -= 100
+        self.research_in_progress = "potions"
+        self.research_started_ms = sim_now_ms()
+        self.research_duration_ms = RESEARCH_POTIONS_DURATION_MS
+        return True
+
+    def advance_research(self, now_ms: int) -> None:
+        """Complete potions research when timer elapses."""
+        if getattr(self, "research_in_progress", None) != "potions":
+            return
+        if now_ms - self.research_started_ms < self.research_duration_ms:
+            return
+        self.potions_researched = True
+        self.research_in_progress = None
+        self.research_started_ms = 0
+        self.research_duration_ms = 0
+
+    @property
+    def research_progress(self) -> float:
+        if not getattr(self, "research_in_progress", None):
+            return 0.0
+        elapsed = sim_now_ms() - getattr(self, "research_started_ms", 0)
+        duration = getattr(self, "research_duration_ms", 1)
+        return max(0.0, min(1.0, float(elapsed) / float(duration)))
+
 
 class Blacksmith(Building):
     """Building where heroes can upgrade weapons and armor."""
@@ -60,10 +94,10 @@ class Blacksmith(Building):
         self.upgrades_sold = 0
         self.researched_items = []
 
-        # Research options (similar to Library pattern)
+        # Research options (similar to Library pattern) — $200 each
         self.available_research = [
-            {"name": "Weapon Upgrades", "cost": 300, "researched": is_research_unlocked("Weapon Upgrades")},
-            {"name": "Armor Upgrades", "cost": 300, "researched": is_research_unlocked("Armor Upgrades")},
+            {"name": "Weapon Upgrades", "cost": 200, "researched": is_research_unlocked("Weapon Upgrades")},
+            {"name": "Armor Upgrades", "cost": 200, "researched": is_research_unlocked("Armor Upgrades")},
         ]
 
         # Mirror global unlocks into this instance for display/UX
@@ -71,21 +105,21 @@ class Blacksmith(Building):
             if item["researched"]:
                 self.researched_items.append(item["name"])
 
-        # Base items (always available)
+        # Base items (always available) — prices 40% lower
         self.base_items = [
-            {"name": "Iron Sword", "type": "weapon", "price": 80, "attack": 5},
-            {"name": "Leather Armor", "type": "armor", "price": 60, "defense": 3},
+            {"name": "Iron Sword", "type": "weapon", "price": 48, "attack": 5},
+            {"name": "Leather Armor", "type": "armor", "price": 36, "defense": 3},
         ]
 
-        # Upgraded items (gated by research)
+        # Upgraded items (gated by research) — prices 40% lower
         self.upgraded_weapons = [
-            {"name": "Steel Sword", "type": "weapon", "price": 150, "attack": 10},
-            {"name": "Mithril Blade", "type": "weapon", "price": 250, "attack": 15},
+            {"name": "Steel Sword", "type": "weapon", "price": 90, "attack": 10},
+            {"name": "Mithril Blade", "type": "weapon", "price": 150, "attack": 15},
         ]
 
         self.upgraded_armor = [
-            {"name": "Chain Mail", "type": "armor", "price": 120, "defense": 7},
-            {"name": "Plate Armor", "type": "armor", "price": 200, "defense": 12},
+            {"name": "Chain Mail", "type": "armor", "price": 72, "defense": 7},
+            {"name": "Plate Armor", "type": "armor", "price": 120, "defense": 12},
         ]
 
     def can_research(self, research_name: str) -> bool:
@@ -98,20 +132,50 @@ class Blacksmith(Building):
         return False
 
     def research(self, research_name: str, economy, game_state: dict | None = None) -> bool:
-        """Perform research if affordable."""
+        """Start timed research if affordable (wk15); completion happens in advance_research."""
         if hasattr(self, "is_constructed") and not self.is_constructed:
             return False
         if is_research_unlocked(research_name):
             return False
+        if getattr(self, "research_in_progress", None):
+            return False
         for item in self.available_research:
             if item["name"] == research_name and not item["researched"]:
-                if economy.player_gold >= item["cost"]:
-                    economy.player_gold -= item["cost"]
-                    item["researched"] = True
-                    self.researched_items.append(research_name)
-                    unlock_research(research_name)
+                cost = item.get("cost", 300)
+                if economy.player_gold >= cost:
+                    economy.player_gold -= cost
+                    self.research_in_progress = research_name
+                    self.research_started_ms = sim_now_ms()
+                    self.research_duration_ms = (cost // 100) * RESEARCH_DURATION_MS_PER_100_GOLD
+                    if self.research_duration_ms < 10_000:
+                        self.research_duration_ms = 10_000
                     return True
         return False
+
+    def advance_research(self, now_ms: int) -> None:
+        """Complete blacksmith research when timer elapses."""
+        key = getattr(self, "research_in_progress", None)
+        if not key:
+            return
+        if now_ms - self.research_started_ms < self.research_duration_ms:
+            return
+        for item in self.available_research:
+            if item["name"] == key and not item.get("researched", False):
+                item["researched"] = True
+                self.researched_items.append(key)
+                unlock_research(key)
+                break
+        self.research_in_progress = None
+        self.research_started_ms = 0
+        self.research_duration_ms = 0
+
+    @property
+    def research_progress(self) -> float:
+        if not getattr(self, "research_in_progress", None):
+            return 0.0
+        elapsed = sim_now_ms() - getattr(self, "research_started_ms", 0)
+        duration = getattr(self, "research_duration_ms", 1)
+        return max(0.0, min(1.0, float(elapsed) / float(duration)))
 
     def get_available_items(self) -> list:
         """Get list of items available for purchase (gated by research)."""

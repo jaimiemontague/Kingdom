@@ -806,6 +806,46 @@
           }
         }
       },
+      "wk15-ux-pacing": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk15_ux_and_pacing_sprint.plan.md",
+          "notes": "wk15 UX Polish & Pacing Tuning — 15C Hero Defense & Research Systems"
+        },
+        "rounds": {
+          "wk15_r1_15c": {
+            "sprint_id": "wk15-ux-pacing",
+            "round_id": "wk15_r1_15c",
+            "round_meta": {
+              "prompt_set_id": "wk15_ux_and_pacing",
+              "build_target": "wk15",
+              "sent_at_local": "2026-02-19"
+            },
+            "prompt_text": "15C: Castle defense urgent priority; warrior defend Farms/Mills when under attack; timed research for Marketplace/Blacksmith/Library.",
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "ai/basic_ai.py: At top of update_hero, castle is_under_attack triggers pop_out_of_building (and clear pending_task), then defend_castle; added warrior-only defend_economic_building_warrior call before defend home.",
+                "ai/behaviors/defense.py: ECONOMIC_NEUTRAL_TYPES (farm, food_stand); new defend_economic_building_warrior() so warriors prioritize defending economic neutrals under attack (no randomness, 8-tile visibility).",
+                "config.py: RESEARCH_POTIONS_DURATION_MS = 30000, RESEARCH_DURATION_MS_PER_100_GOLD = 10000.",
+                "game/entities/buildings/base.py: research_in_progress, research_started_ms, research_duration_ms; advance_research() no-op; research_progress_0_to_1 property for UI.",
+                "game/entities/buildings/economic.py: Marketplace start_research_potions(), advance_research(); Blacksmith research() starts timer, advance_research() completes and unlocks.",
+                "game/entities/buildings/special.py: Library research() starts timer; advance_research() completes and calls _apply_research_effect.",
+                "game/engine.py: _update_buildings() calls advance_research(now_ms) on buildings with research_in_progress (sim-time, deterministic).",
+                "game/ui/building_panel.py: Marketplace research click calls start_research_potions(economy) when available, else legacy instant unlock.",
+                "tests/test_building.py: test_blacksmith_research_unlocks_upgraded_items advances timer via advance_research() before asserting items."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: castle under attack — heroes inside buildings pop out and move to defend; warriors defend farm/food_stand when under attack; Marketplace/Blacksmith/Library research shows delay and progress (Agent 08 progress bar reads research_progress_0_to_1)."
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (exit_code=0)"
+              ],
+              "blockers": []
+            }
+          }
+        }
+      },
       "wk14-persona-presence": {
         "sprint_meta": {
           "plan_ref": ".cursor/plans/wk14_persona_presence_sprint_c65cb250.plan.md",

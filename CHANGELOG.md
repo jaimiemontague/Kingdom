@@ -1,5 +1,35 @@
 # Changelog
 
+## Prototype v1.4.1 — UI UX Improvements and NPC Upgrades
+
+### UI & Menu Polish
+
+- **Pause menu button alignment:** Resume and Quit buttons now use a transparent icon placeholder when `icon_play.png`/`icon_quit.png` are missing, ensuring all 5 menu buttons align perfectly.
+- **Slimmer left panel:** Hero detail panel reduced from 320px to 224px (30% slimmer) for more map visibility.
+- **Right panel auto-hide:** Right panel now fully disappears when no building or entity is selected.
+- **Animated research progress bar:** Marketplace, Blacksmith, and Library research shows a filling progress bar instead of a static grey bar; backed by `sim_now_ms()` for deterministic rendering.
+
+### NPC & Interaction Upgrades
+
+- **Tax collector clickability:** Tax collectors are now selectable on the map; clicking one opens a dedicated left panel showing Status, Carried Gold, and Total Collected.
+- **Guard panel:** Clicking a guard now opens a left panel with Post, State, HP bar, and ATK stats.
+- **Global hero selection:** Clicking a hero inside a building interior or clicking a hero's name/portrait in the chat panel opens their detail panel on the left.
+
+### Economy & Pacing
+
+- **Monster gold +50%:** Spider gold 5→8, Bandit gold 12→18 for faster mid-game income.
+- **Tax rate:** Normalized to 25%.
+- **Starting gold +40%:** Increased from 1500 to 2100.
+- **Monster density:** Lair count 2→4, goblin spawn interval 5000→3500ms, max alive enemies 20→32.
+
+### AI & Defense
+
+- **Castle urgent defense:** Heroes pop out of buildings and abandon tasks to defend the castle when it's under attack.
+- **Economic building defense:** Warriors now prioritize defending farms and food stands under attack.
+- **Timed research system:** Research at Marketplace, Blacksmith, and Library takes real sim-time (30s for potions, scaled by cost for others) instead of instant unlock.
+
+---
+
 ## Prototype v1.4 — Hero Chat, Graphics & UX Polish
 
 ### Bug Fixes

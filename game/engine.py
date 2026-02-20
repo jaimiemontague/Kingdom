@@ -332,7 +332,39 @@ class GameEngine:
                 return True
         
         return False
-    
+
+    def try_select_tax_collector(self, screen_pos: tuple) -> bool:
+        """Try to select the tax collector at the given screen position. Returns True if selected. (wk16)"""
+        if self.tax_collector is None:
+            return False
+        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        tc = self.tax_collector
+        if tc.distance_to(world_x, world_y) < tc.size:
+            self.selected_hero = tc  # unified selection state for left panel
+            self.selected_building = None
+            if hasattr(self, "hud"):
+                try:
+                    self.hud.right_panel_visible = True
+                except Exception:
+                    pass
+            return True
+        return False
+
+    def try_select_guard(self, screen_pos: tuple) -> bool:
+        """Try to select a guard at the given screen position. Returns True if selected."""
+        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        for guard in self.guards:
+            if getattr(guard, "is_alive", True) and guard.distance_to(world_x, world_y) < guard.size:
+                self.selected_hero = guard
+                self.selected_building = None
+                if hasattr(self, "hud"):
+                    try:
+                        self.hud.right_panel_visible = True
+                    except Exception:
+                        pass
+                return True
+        return False
+
     def try_select_building(self, screen_pos: tuple) -> bool:
         """Try to select a building at the given screen position. Returns True if selected."""
         world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
@@ -804,6 +836,15 @@ class GameEngine:
 
     def _update_buildings(self, dt: float):
         """Update buildings and collect building-driven projectile events."""
+        # WK15: Advance timed research (sim-time based, deterministic).
+        from game.sim.timebase import now_ms as sim_now_ms
+        now_ms = int(sim_now_ms())
+        for building in self.buildings:
+            if getattr(building, "research_in_progress", None):
+                advance = getattr(building, "advance_research", None)
+                if callable(advance):
+                    advance(now_ms)
+
         # Update buildings that need periodic updates and collect ranged projectile events
         building_ranged_events = []
         for building in self.buildings:
@@ -852,6 +893,7 @@ class GameEngine:
             enemies=self.enemies,
             peasants=self.peasants,
             tax_collector=self.tax_collector,
+            guards=self.guards,
         )
 
     def _finalize_update(self, dt: float):

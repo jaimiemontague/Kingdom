@@ -27,7 +27,11 @@ class PauseMenu:
         self._button_tex_hover = "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png"
         self._button_tex_pressed = "assets/ui/kingdomsim_ui_cc0/buttons/button_pressed.png"
         self._button_slice_border = 6
+        # WK16: Use blank 16x16 for resume/quit when icons missing so Button layout aligns all 5
+        _blank_16 = pygame.Surface((16, 16), pygame.SRCALPHA)
         self._icon_map = {
+            "resume": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_play.png", (16, 16)) or _blank_16,
+            "quit": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_quit.png", (16, 16)) or _blank_16,
             "graphics": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png", (16, 16)),
             "audio": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_audio.png", (16, 16)),
             "controls": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_controls.png", (16, 16)),
@@ -37,8 +41,8 @@ class PauseMenu:
         self.modal = ModalPanel(
             screen_width=screen_width,
             screen_height=screen_height,
-            panel_width=480,
-            panel_height=520,
+            panel_width=320,
+            panel_height=420,
             texture_path=self._panel_tex_modal,
             slice_border=8,
         )
@@ -88,11 +92,11 @@ class PauseMenu:
     def _update_page_buttons(self):
         """Update page button rectangles based on current panel size."""
         panel_rect = self.modal.get_panel_rect()
-        button_y = panel_rect.y + 70
-        button_h = 40
-        button_w = 200
+        button_y = panel_rect.y + 56
+        button_h = 42
+        button_w = 260
         button_x = panel_rect.centerx - button_w // 2
-        spacing = 44
+        spacing = 48
         
         self.page_buttons = {
             "resume": pygame.Rect(button_x, button_y, button_w, button_h),
@@ -103,9 +107,15 @@ class PauseMenu:
         }
         self.page_button_widgets = {}
         for page_name, rect in self.page_buttons.items():
+            if page_name == "resume":
+                text = "► Resume"
+            elif page_name == "quit":
+                text = "■ Quit"
+            else:
+                text = page_name.replace("_", " ").title()
             self.page_button_widgets[page_name] = Button(
                 rect=pygame.Rect(rect),
-                text=page_name.replace("_", " ").title(),
+                text=text,
                 font=self.theme.font_body,
                 icon=self._icon_map.get(page_name),
             )

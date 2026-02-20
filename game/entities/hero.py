@@ -10,7 +10,7 @@ from game.sim.timebase import now_ms as sim_now_ms
 from game.sim.contracts import HeroDecisionRecord, HeroIntentSnapshot
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
-    HERO_SPEED, COLOR_BLUE
+    HERO_SPEED, COLOR_BLUE, TAX_RATE
 )
 
 if TYPE_CHECKING:
@@ -249,7 +249,7 @@ class Hero:
     
     def add_gold(self, amount: int):
         """Add gold with automatic 25% tax reservation."""
-        tax_amount = int(amount * 0.25)
+        tax_amount = int(amount * TAX_RATE)
         spendable = amount - tax_amount
         self.gold += spendable
         self.taxed_gold += tax_amount

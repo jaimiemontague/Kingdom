@@ -512,6 +512,14 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             engine2.hud.right_panel_visible = False
         engine2.selected_hero = hero
 
+    def _apply_select_tax_collector(engine2):
+        _apply_clear(engine2)
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = True
+        tc = getattr(engine2, "tax_collector", None)
+        if tc is not None:
+            engine2.selected_hero = tc
+
     cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
     cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
     return [
@@ -550,6 +558,15 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             zoom=1.4,
             meta={"scenario": "ui_panels", "mode": "debug"},
             apply=_apply_debug_open,
+        ),
+        Shot(
+            filename="ui_panels_tax_collector.png",
+            label="UI Panels: Tax Collector Selected (Left Panel)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            meta={"scenario": "ui_panels", "mode": "tax_collector"},
+            apply=_apply_select_tax_collector,
         ),
     ]
 

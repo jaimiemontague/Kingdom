@@ -5,6 +5,7 @@ Guard unit spawned by guardhouses/palace for basic defense.
 import math
 from enum import Enum, auto
 from config import TILE_SIZE
+from game.sim.timebase import now_ms
 
 
 class GuardState(Enum):
@@ -40,6 +41,9 @@ class Guard:
         self.state = GuardState.IDLE
         self.target = None
         self.target_position = None
+        self._path_goal = None
+        self._path_commit_until_ms = 0
+        self._path_commit_duration_ms = 500
 
         # Visual
         self.size = 14
@@ -144,11 +148,18 @@ class Guard:
                 from game.systems.navigation import compute_path_worldpoints, follow_path
                 if not hasattr(self, "path"):
                     self.path = []
-                    self._path_goal = None
+                now_ms_val = int(now_ms())
                 goal_key = (int(self.target_position[0]), int(self.target_position[1]))
-                if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
+                path_commit = int(getattr(self, "_path_commit_until_ms", 0) or 0)
+                has_path = bool(getattr(self, "path", None))
+                # Commitment: stick to current path to avoid jitter when chasing moving enemy.
+                want_replan = (not has_path) or (
+                    getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit
+                )
+                if want_replan:
                     self.path = compute_path_worldpoints(world, buildings or [], self.x, self.y, self.target_position[0], self.target_position[1])
                     self._path_goal = goal_key
+                    self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
                 follow_path(self, dt)
             else:
                 self.move_towards(self.target_position[0], self.target_position[1], dt)

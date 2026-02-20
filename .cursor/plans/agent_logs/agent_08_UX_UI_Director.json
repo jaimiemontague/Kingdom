@@ -2596,6 +2596,67 @@
           }
         }
       }
+    },
+    "wk15-ux-pacing": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk15_ux_and_pacing_sprint.plan.md",
+        "notes": "Sprint wk15 UX Polish & Pacing. Agent 08: 15A UI Polish & Overhaul."
+      },
+      "rounds": {
+        "wk15_r1_15a_ui_polish": {
+          "sprint_id": "wk15-ux-pacing",
+          "round_id": "wk15_r1_15a_ui_polish",
+          "round_meta": { "build_target": "wk15", "sent_at_local": "2026-02-19" },
+          "prompt_text": "Execute 15A: Pause menu spacing/icons; left panel 30% slimmer; right menu vanish when nothing selected; Research progress bar when research active.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/pause_menu.py: Added icon_map entries for resume (icon_play.png) and quit (icon_quit.png); reduced button_y 70->56, button_h 40->34, spacing 44->32.",
+              "game/ui/hud.py: Left panel width 320->224 (30% slimmer). Right panel: only show when right_panel_visible AND (selected_building or micro_view != OVERVIEW); _show_right_panel set in render(); right panel and content not rendered when nothing selected.",
+              "game/ui/building_renderers/economic_panel.py: Marketplace Research: when building.research_in_progress and research_progress < 1.0, show 'Researching potions...' label + HPBar progress bar; else show existing Research button. Reads optional research_in_progress/research_progress for Agent 06 timed research."
+            ],
+            "how_to_test": [
+              "python main.py --no-llm: ESC -> Pause menu has tighter buttons, Resume/Quit show icons if assets exist.",
+              "Left panel: select hero/building -> panel is 224px wide.",
+              "Deselect all, Tab on -> right panel stays hidden until building selected or interior/quest view.",
+              "Select Marketplace (no research): Research button. When Agent 06 adds research_in_progress/research_progress, progress bar shows during research."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=1 (FAIL from Agent 06: basic_ai calls defend_economic_building_warrior not yet in ai.behaviors.defense; speed_scaling 0.1x profile failed). Determinism PASS, pytest 81 passed, base/bounty/stuck/no-enemies/mock-LLM profiles PASS."
+            },
+            "blockers": ["QA gate FAIL is pre-existing: Agent 06 15C defense method and speed_scaling profile; no UI code in failure path."]
+          }
+        }
+      }
+    },
+    "wk16-ux-interactions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk16_ux_and_interactions_sprint.plan.md",
+        "notes": "Sprint wk16 UX & Interactions. Agent 08: 16A Menu Alignment & Hero Selection Contexts."
+      },
+      "rounds": {
+        "wk16_r1_16a_menu_and_hero_selection": {
+          "sprint_id": "wk16-ux-interactions",
+          "round_id": "wk16_r1_16a_menu_and_hero_selection",
+          "round_meta": { "build_target": "wk16", "sent_at_local": "2026-02-19" },
+          "prompt_text": "16A: Pause menu alignment (blank icon for resume/quit when missing); hero global selection from interior click and chat header click -> selected_hero, left panel.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/pause_menu.py: When icon_play.png/icon_quit.png fail to load, use pygame.Surface((16,16), SRCALPHA) for resume/quit in _icon_map so Button layout aligns all 5 main menu buttons.",
+              "game/input_handler.py: On start_conversation dict set engine.selected_hero = hero, engine.selected_building = None so left panel shows hero when clicking hero in interior. On select_hero dict set selected_hero and selected_building = None (chat header click).",
+              "game/ui/chat_panel.py: Store _header_rect in render(); handle_click returns {\"type\": \"select_hero\", \"hero\": hero_target} when click on header (portrait/name). Return type str | dict | None."
+            ],
+            "how_to_test": [
+              "ESC -> Pause menu: Resume and Quit buttons align with Graphics/Audio/Controls (same icon slot width).",
+              "Enter building, click a hero: left panel shows that hero; conversation can start as before.",
+              "In chat with a hero, click the header (name/portrait): left panel shows that hero's details."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

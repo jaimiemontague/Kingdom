@@ -130,7 +130,11 @@ class BuildingPanel:
             if self.research_button_rect.collidepoint(mouse_pos):
                 if hasattr(self.selected_building, "is_constructed") and not self.selected_building.is_constructed:
                     return True
-                if not self.selected_building.potions_researched and economy.player_gold >= 100:
+                # WK15: Start timed research if building supports it; otherwise legacy instant unlock.
+                if hasattr(self.selected_building, "start_research_potions"):
+                    if self.selected_building.start_research_potions(economy):
+                        return True
+                elif not self.selected_building.potions_researched and economy.player_gold >= 100:
                     economy.player_gold -= 100
                     self.selected_building.potions_researched = True
                     return True

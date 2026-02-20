@@ -165,7 +165,7 @@ class GoblinCamp(MonsterLair):
             grid_y,
             "goblin_camp",
             spawn_interval_sec=8.5,
-            stash_gold=75,
+            stash_gold=113,  # wk15: +50% for pacing (was 75)
             threat_level=1,
         )
         self.size = (2, 2)
@@ -184,7 +184,7 @@ class WolfDen(MonsterLair):
             grid_y,
             "wolf_den",
             spawn_interval_sec=7.5,
-            stash_gold=60,
+            stash_gold=90,   # wk15: +50% for pacing (was 60)
             threat_level=1,
         )
         self.size = (2, 2)
@@ -202,7 +202,7 @@ class SkeletonCrypt(MonsterLair):
             grid_y,
             "skeleton_crypt",
             spawn_interval_sec=10.5,
-            stash_gold=120,
+            stash_gold=180,  # wk15: +50% for pacing (was 120)
             threat_level=2,
         )
         self.size = (3, 3)
@@ -224,7 +224,7 @@ class SpiderNest(MonsterLair):
             grid_y,
             "spider_nest",
             spawn_interval_sec=7.0,
-            stash_gold=65,
+            stash_gold=98,   # wk15: +50% for pacing (was 65)
             threat_level=1,
         )
         self.size = (2, 2)
@@ -243,7 +243,7 @@ class BanditCamp(MonsterLair):
             grid_y,
             "bandit_camp",
             spawn_interval_sec=10.0,
-            stash_gold=120,
+            stash_gold=180,  # wk15: +50% for pacing (was 120)
             threat_level=2,
         )
         self.size = (3, 3)

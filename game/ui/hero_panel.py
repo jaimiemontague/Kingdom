@@ -5,6 +5,8 @@ from __future__ import annotations
 import pygame
 
 from config import COLOR_GOLD, COLOR_GREEN, COLOR_RED, COLOR_WHITE
+from game.entities.guard import Guard
+from game.entities.tax_collector import TaxCollector
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.widgets import HPBar, TextLabel
 
@@ -143,6 +145,195 @@ class HeroPanel:
             return f"Last decision: {head} - {reason}", COLOR_WHITE
         return f"Last decision: {head}", COLOR_WHITE
 
+    def _render_tax_collector(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        tc: TaxCollector,
+        *,
+        right_close_rect: pygame.Rect | None = None,
+    ) -> None:
+        """Render left-panel content for selected Tax Collector (wk16)."""
+        panel_width = int(rect.width)
+        panel_x = int(rect.x)
+        panel_y = int(rect.y)
+        pad = self._right_panel_top_pad(rect, right_close_rect)
+        y = panel_y + pad
+        bar_width = panel_width - (pad * 2)
+
+        header_h = 28
+        header_rect = pygame.Rect(panel_x + 6, panel_y + pad - 4, panel_width - 12, header_h)
+        pygame.draw.rect(surface, (35, 35, 45), header_rect)
+        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
+        pygame.draw.line(
+            surface,
+            self._frame_highlight,
+            (header_rect.left + 1, header_rect.top + 1),
+            (header_rect.right - 2, header_rect.top + 1),
+            1,
+        )
+        TextLabel.render(
+            surface,
+            self.theme.font_title,
+            "Tax Collector",
+            (panel_x + pad, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
+            COLOR_WHITE,
+            shadow_color=(20, 20, 30),
+        )
+        y = header_rect.bottom + 6
+
+        state_name = str(getattr(tc.state, "name", "UNKNOWN")).replace("_", " ").title()
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"Status: {state_name}",
+            (panel_x + pad, y),
+            (200, 200, 200),
+            shadow_color=(25, 25, 35),
+        )
+        y += self.theme.font_small.get_height() + 6
+
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            "Gold",
+            (panel_x + pad, y),
+            (180, 180, 200),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_small.get_height() + 4
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"Carried: {int(getattr(tc, 'carried_gold', 0))}",
+            (panel_x + pad, y),
+            COLOR_GOLD,
+            shadow_color=(25, 25, 35),
+        )
+        y += 14
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"Total collected: {int(getattr(tc, 'total_collected', 0))}",
+            (panel_x + pad, y),
+            (220, 220, 220),
+            shadow_color=(25, 25, 35),
+        )
+
+    def _render_guard(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        guard: Guard,
+        *,
+        right_close_rect: pygame.Rect | None = None,
+    ) -> None:
+        """Render left-panel content for selected Guard."""
+        panel_width = int(rect.width)
+        panel_x = int(rect.x)
+        panel_y = int(rect.y)
+        pad = self._right_panel_top_pad(rect, right_close_rect)
+        y = panel_y + pad
+        bar_width = panel_width - (pad * 2)
+
+        header_h = 28
+        header_rect = pygame.Rect(panel_x + 6, panel_y + pad - 4, panel_width - 12, header_h)
+        pygame.draw.rect(surface, (35, 35, 45), header_rect)
+        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
+        pygame.draw.line(
+            surface,
+            self._frame_highlight,
+            (header_rect.left + 1, header_rect.top + 1),
+            (header_rect.right - 2, header_rect.top + 1),
+            1,
+        )
+        TextLabel.render(
+            surface,
+            self.theme.font_title,
+            "Guard",
+            (panel_x + pad, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
+            COLOR_WHITE,
+            shadow_color=(20, 20, 30),
+        )
+        y = header_rect.bottom + 6
+
+        post_name = "Guard"
+        home = getattr(guard, "home_building", None)
+        if home is not None and hasattr(home, "building_type"):
+            btype = str(getattr(home, "building_type", "") or "").replace("_", " ").title()
+            post_name = f"Post: {btype}" if btype else "Guard"
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            post_name,
+            (panel_x + pad, y),
+            (200, 200, 200),
+            shadow_color=(25, 25, 35),
+        )
+        y += self.theme.font_small.get_height() + 6
+
+        state_name = str(getattr(getattr(guard, "state", None), "name", "IDLE")).replace("_", " ").title()
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"State: {state_name}",
+            (panel_x + pad, y),
+            (200, 200, 200),
+            shadow_color=(25, 25, 35),
+        )
+        y += self.theme.font_small.get_height() + 6
+
+        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        y += 6
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            "Vitals",
+            (panel_x + pad, y),
+            (180, 180, 200),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_small.get_height() + 4
+
+        hp_line = f"HP: {int(getattr(guard, 'hp', 0))}/{int(getattr(guard, 'max_hp', 1))}"
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            hp_line,
+            (panel_x + pad, y),
+            COLOR_WHITE,
+            shadow_color=(25, 25, 35),
+        )
+        y += self.theme.font_small.get_height() + 6
+
+        bar_rect = pygame.Rect(panel_x + pad, y, bar_width, 8)
+        HPBar.render(
+            surface,
+            bar_rect,
+            int(getattr(guard, "hp", 0)),
+            int(max(1, getattr(guard, "max_hp", 1))),
+            color_scheme={
+                "bg": (60, 60, 60),
+                "good": COLOR_GREEN,
+                "warn": (220, 180, 90),
+                "bad": COLOR_RED,
+                "border": (20, 20, 25),
+            },
+        )
+        y += bar_rect.height + 6
+
+        atk = int(getattr(guard, "attack_power", 0))
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"ATK: {atk}",
+            (panel_x + pad, y),
+            (220, 220, 220),
+            shadow_color=(25, 25, 35),
+        )
+
     def render(
         self,
         surface: pygame.Surface,
@@ -152,6 +343,13 @@ class HeroPanel:
         right_close_rect: pygame.Rect | None = None,
         debug_ui: bool = False,
     ) -> None:
+        if isinstance(hero, TaxCollector):
+            self._render_tax_collector(surface, rect, hero, right_close_rect=right_close_rect)
+            return
+        if isinstance(hero, Guard):
+            self._render_guard(surface, rect, hero, right_close_rect=right_close_rect)
+            return
+
         panel_width = int(rect.width)
         panel_x = int(rect.x)
         panel_y = int(rect.y)

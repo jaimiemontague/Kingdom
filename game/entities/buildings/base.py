@@ -83,6 +83,26 @@ class Building:
         )
         self._event_bus = None  # Set by engine for EventBus emit on enter/exit
 
+        # WK15: Timed research (optional; used by Marketplace, Blacksmith, Library).
+        self.research_in_progress = None  # str key or None
+        self.research_started_ms = 0
+        self.research_duration_ms = 0
+
+    def advance_research(self, now_ms: int) -> None:
+        """Override in subclasses that support timed research. Base: no-op."""
+        pass
+
+    @property
+    def research_progress_0_to_1(self) -> float | None:
+        """Progress of current research (0.0–1.0) for UI progress bar; None if none in progress."""
+        if not self.research_in_progress or self.research_duration_ms <= 0:
+            return None
+        now = sim_now_ms()
+        elapsed = now - self.research_started_ms
+        if elapsed >= self.research_duration_ms:
+            return 1.0
+        return min(1.0, max(0.0, elapsed / self.research_duration_ms))
+
     @property
     def world_x(self) -> float:
         return self.grid_x * TILE_SIZE

@@ -10,7 +10,7 @@ from game.ui.command_bar import CommandBar
 from game.ui.hero_panel import HeroPanel
 from game.ui.chat_panel import ChatPanel
 from game.ui.interior_view_panel import InteriorViewPanel
-from game.ui.micro_view_manager import MicroViewManager
+from game.ui.micro_view_manager import MicroViewManager, ViewMode
 from game.ui.quest_view_panel import QuestViewPanel
 from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
@@ -200,7 +200,9 @@ class HUD:
             )
         )
         right_w = int(max(280, min(right_w, w - 2 * margin)))
-        if not self.right_panel_visible:
+        # Right panel only when visible and there is content (selected building or interior/quest view)
+        show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
+        if not show_right:
             right_w = 0
         self.side_panel_width = right_w
 
@@ -208,17 +210,18 @@ class HUD:
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
-        left_w = 320
+        left_w = 224  # 30% slimmer than previous 320 (hero/building detail panel)
         left = pygame.Rect(0, top_h, left_w, max(0, h - top_h - bottom_h))
 
-        # Speed bar: bottom-right, left of right panel (wk12 Chronos)
+        # Speed bar: just above bottom bar, 100px left of right panel to avoid edge-scroll
         speed_bar_w = 200
         speed_bar_h = 50
+        speed_gap_above_bar = 4
         speed_rect = pygame.Rect(
-            (w - right_w) - speed_bar_w - margin,
-            bottom.y + margin,
+            (w - right_w) - speed_bar_w - margin - 100,
+            bottom.y - speed_bar_h - speed_gap_above_bar,
             speed_bar_w,
-            min(speed_bar_h, bottom_h - 2 * margin),
+            speed_bar_h,
         )
 
         minimap_size = max(64, bottom_h - 2 * margin)
@@ -445,6 +448,13 @@ class HUD:
             y_offset += 18
 
     def render(self, surface: pygame.Surface, game_state: dict) -> None:
+        # Right panel vanishes when nothing is selected (maximize map view)
+        # Fix: right menu shouldn't come up for building descriptions since left menu already shows it
+        has_right_content = (
+            self._micro_view.mode != ViewMode.OVERVIEW
+        )
+        self._show_right_panel = self.right_panel_visible and has_right_content
+
         top, bottom, left, right, minimap, cmd, speed_rect = self._compute_layout(surface)
 
         self._panel_top.set_rect(top)
@@ -466,7 +476,7 @@ class HUD:
                 debug_ui=bool(game_state.get("debug_ui", False)),
             )
 
-        if self.right_panel_visible:
+        if self._show_right_panel:
             self._panel_right.render(surface)
         self._panel_minimap.render(surface)
 
@@ -534,7 +544,7 @@ class HUD:
         selected_hero = game_state.get("selected_hero")
         selected_building = game_state.get("selected_building")
         self.right_close_rect = None
-        if self.right_panel_visible:
+        if self._show_right_panel:
             self._right_rect = right
             interior_panel = getattr(self, "_interior_panel", None)
             quest_panel = getattr(self, "_quest_panel", None)

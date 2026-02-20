@@ -2,6 +2,9 @@
 Special building entities.
 """
 
+from config import RESEARCH_DURATION_MS_PER_100_GOLD
+from game.sim.timebase import now_ms as sim_now_ms
+
 from .base import Building, is_research_unlocked, unlock_research
 from .types import BuildingType
 
@@ -63,22 +66,48 @@ class Library(Building):
         return False
 
     def research(self, research_name: str, economy, game_state: dict | None = None) -> bool:
-        """Perform research if affordable."""
+        """Start timed research if affordable (wk15); completion in advance_research."""
         if hasattr(self, "is_constructed") and not self.is_constructed:
             return False
         if is_research_unlocked(research_name):
             return False
+        if getattr(self, "research_in_progress", None):
+            return False
         for item in self.available_research:
             if item["name"] == research_name and not item["researched"]:
-                if economy.player_gold >= item["cost"]:
-                    economy.player_gold -= item["cost"]
-                    item["researched"] = True
-                    self.researched_items.append(research_name)
-                    unlock_research(research_name)
-                    if game_state is not None:
-                        self._apply_research_effect(research_name, game_state)
+                cost = item.get("cost", 200)
+                if economy.player_gold >= cost:
+                    economy.player_gold -= cost
+                    self.research_in_progress = research_name
+                    self.research_started_ms = sim_now_ms()
+                    self.research_duration_ms = (cost // 100) * RESEARCH_DURATION_MS_PER_100_GOLD
+                    if self.research_duration_ms < 10_000:
+                        self.research_duration_ms = 10_000
+                    self._research_game_state = game_state  # for completion
                     return True
         return False
+
+    def advance_research(self, now_ms: int) -> None:
+        """Complete library research when timer elapses."""
+        key = getattr(self, "research_in_progress", None)
+        if not key:
+            return
+        if now_ms - self.research_started_ms < self.research_duration_ms:
+            return
+        game_state = getattr(self, "_research_game_state", None)
+        for item in self.available_research:
+            if item["name"] == key and not item.get("researched", False):
+                item["researched"] = True
+                self.researched_items.append(key)
+                unlock_research(key)
+                if game_state is not None:
+                    self._apply_research_effect(key, game_state)
+                break
+        self.research_in_progress = None
+        self.research_started_ms = 0
+        self.research_duration_ms = 0
+        if hasattr(self, "_research_game_state"):
+            del self._research_game_state
 
     def _apply_research_effect(self, research_name: str, game_state: dict) -> None:
         """Apply gameplay effects for a completed research unlock."""

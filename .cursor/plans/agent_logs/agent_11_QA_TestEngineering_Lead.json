@@ -3839,6 +3839,106 @@
           "follow_ups": []
         }
       }
+    },
+    "wk15-ux-pacing": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk15_ux_and_pacing_sprint.plan.md",
+        "notes": "Sprint wk15 UX Polish & Pacing: UI (pause menu, left/right panels, research progress), economy/difficulty configs, hero defense priority, timed research. Agent 11 Assignment 15D: Verification & Regression."
+      },
+      "rounds": {
+        "wk15_r1": {
+          "round_id": "wk15_r1",
+          "status": "done",
+          "what_i_changed": [
+            "No code changes. Executed 15D: ran qa_smoke --quick and validate_assets --report; ran determinism_guard; captured snapshot galleries for Pause Menu and Left panel; built gallery.html."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/determinism_guard.py",
+            "python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/wk15_ux_pacing/pause_menu --size 1920x1080 --ticks 0",
+            "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk15_ux_pacing/left_panel --size 1920x1080 --ticks 0",
+            "python tools/build_gallery.py --shots docs/screenshots/wk15_ux_pacing --refs docs/screenshots/wk15_ux_pacing --out docs/screenshots/wk15_ux_pacing/gallery.html"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["determinism_guard PASS; pytest 81 passed; all observe_sync profiles PASS (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling, interior_view, quest_panel, conversation)."]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["No violations found. Research timers (when added by Agent 06) must use sim-time (now_ms()/set_sim_now_ms) not time.time() to keep headless determinism; determinism_guard will flag time.time() in sim code."]
+            },
+            "snapshot_galleries": {
+              "pause_menu": "docs/screenshots/wk15_ux_pacing/pause_menu (1 PNG + manifest.json)",
+              "left_panel": "docs/screenshots/wk15_ux_pacing/left_panel (4 PNGs + manifest.json)",
+              "gallery_html": "docs/screenshots/wk15_ux_pacing/gallery.html"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "When Agent 06 lands timed research: re-run determinism_guard and qa_smoke --quick; if research uses wall-clock, file determinism bug. Headless observe_sync does not click Research; optional: add research smoke scenario if needed for regression."
+          ]
+        }
+      }
+    },
+    "wk16-ux-interactions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk16_ux_and_interactions_sprint.plan.md",
+        "notes": "Sprint wk16 UX & Interactions: Pause menu alignment, Tax Collector clickable, hero selection from interiors/chat. Agent 11 Assignment 16D: Verification & Regression. Context: .cursor/Play Test Results.txt (Improvements to make)."
+      },
+      "rounds": {
+        "wk16_r1": {
+          "round_id": "wk16_r1",
+          "status": "done",
+          "what_i_changed": [
+            "tools/screenshot_scenarios.py: added Tax Collector left-panel shot to scenario_ui_panels (_apply_select_tax_collector, Shot ui_panels_tax_collector.png) so snapshot gallery can capture Left Panel targeting a Tax Collector.",
+            "Ran qa_smoke --quick, validate_assets --report; captured Pause Menu and Left Panel (incl. tax collector) galleries; built gallery.html."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/wk16_ux_interactions/pause_menu --size 1920x1080 --ticks 0",
+            "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk16_ux_interactions/left_panel_tax_collector --size 1920x1080 --ticks 0",
+            "python tools/build_gallery.py --shots docs/screenshots/wk16_ux_interactions --refs docs/screenshots/wk16_ux_interactions --out docs/screenshots/wk16_ux_interactions/gallery.html"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": ["All profiles PASS (determinism_guard, pytest, observe_sync base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling, interior_view, quest_panel, conversation)."]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "snapshot_galleries": {
+              "pause_menu": "docs/screenshots/wk16_ux_interactions/pause_menu (1 PNG + manifest.json)",
+              "left_panel_tax_collector": "docs/screenshots/wk16_ux_interactions/left_panel_tax_collector (5 PNGs: hero, hidden, building, debug, tax_collector + manifest.json)",
+              "gallery_html": "docs/screenshots/wk16_ux_interactions/gallery.html"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "When Agent 03/08 land Tax Collector clickability and left-panel renderer: re-capture ui_panels to confirm ui_panels_tax_collector.png shows tax collector details; manual smoke: click tax collector on map and confirm left panel opens."
+          ]
+        }
+      }
     }
   }
 }

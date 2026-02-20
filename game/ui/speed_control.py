@@ -111,22 +111,22 @@ class SpeedControlBar:
                 and btn_rect.collidepoint(mouse_pos[0], mouse_pos[1])
             )
 
-            # Background: accent if active, else normal/hover
+            # Background: inverted — active = dark, inactive = light (so edge-scroll zone is obvious)
             if is_active:
-                bg = self._accent
-            elif hovered:
-                bg = (self._frame_highlight[0], self._frame_highlight[1], self._frame_highlight[2])
-            else:
                 bg = (50, 50, 60)
+            elif hovered:
+                bg = (160, 160, 170)
+            else:
+                bg = (200, 200, 210)
             pygame.draw.rect(surface, bg, btn_rect)
             pygame.draw.rect(surface, self._frame_outer, btn_rect, 1)
             inner = btn_rect.inflate(-2, -2)
             if inner.width > 0 and inner.height > 0:
                 pygame.draw.rect(surface, self._frame_inner, inner, 1)
 
-            # Symbol (cached by symbol + color)
+            # Symbol (cached by symbol + color) — light text on active (dark), dark text on inactive (light)
             sym = SPEED_SYMBOLS[i]
-            text_color = (30, 30, 30) if is_active else (240, 240, 240)
+            text_color = (240, 240, 240) if is_active else (50, 50, 60)
             sym_surf = self._get_symbol_surface(sym, text_color)
             sx = btn_rect.centerx - sym_surf.get_width() // 2
             sy = btn_rect.y + (btn_rect.height - sym_surf.get_height()) // 2

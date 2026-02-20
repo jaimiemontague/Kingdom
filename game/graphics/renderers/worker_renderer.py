@@ -36,7 +36,7 @@ class WorkerRenderer:
         self._init_animation_player()
 
     def _init_animation_player(self) -> None:
-        if self.worker_type in ("peasant", "tax_collector"):
+        if self.worker_type in ("peasant", "tax_collector", "guard"):
             self._anim = WorkerSpriteLibrary.create_player(self.worker_type, size=self.size_px)
             self._anim_base = "idle"
             self._anim_lock_one_shot = None
@@ -77,6 +77,15 @@ class WorkerRenderer:
             elif state_name == "RETURNING":
                 self._anim_base = "return"
             elif state_name == "MOVING_TO_GUILD":
+                self._anim_base = "walk"
+            else:
+                self._anim_base = "idle"
+        elif self.worker_type == "guard":
+            if state_name == "DEAD":
+                self._anim_base = "dead"
+            elif state_name == "ATTACKING":
+                self._anim_base = "attack"
+            elif state_name == "MOVING":
                 self._anim_base = "walk"
             else:
                 self._anim_base = "idle"
@@ -217,21 +226,26 @@ class WorkerRenderer:
         sx = x - cam_x
         sy = y - cam_y
         size = int(_state_get(entity_state, "size", 14))
-        color = tuple(_state_get(entity_state, "color", (120, 120, 160)))
 
-        pygame.draw.circle(surface, color, (int(sx), int(sy)), size // 2)
-        pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), size // 2, 1)
-        symbol = render_text_cached(14, "G", COLOR_WHITE)
-        symbol_rect = symbol.get_rect(center=(int(sx), int(sy)))
-        surface.blit(symbol, symbol_rect)
+        if self._anim is not None:
+            frame = self._anim.frame()
+            fw, fh = frame.get_width(), frame.get_height()
+            surface.blit(frame, (int(sx - fw // 2), int(sy - fh // 2)))
+        else:
+            color = tuple(_state_get(entity_state, "color", (120, 120, 160)))
+            pygame.draw.circle(surface, color, (int(sx), int(sy)), size // 2)
+            pygame.draw.circle(surface, COLOR_WHITE, (int(sx), int(sy)), size // 2, 1)
+            symbol = render_text_cached(14, "G", COLOR_WHITE)
+            symbol_rect = symbol.get_rect(center=(int(sx), int(sy)))
+            surface.blit(symbol, symbol_rect)
 
         hp = float(_state_get(entity_state, "hp", 0.0))
         max_hp = max(1.0, float(_state_get(entity_state, "max_hp", 1.0)))
         health_percent = max(0.0, min(1.0, hp / max_hp))
-        bar_w = size + 8
+        bar_w = (self.size_px if self._anim else size) + 8
         bar_h = 3
         bx = sx - bar_w // 2
-        by = sy - size // 2 - 7
+        by = sy - (self.size_px if self._anim else size) // 2 - 7
         pygame.draw.rect(surface, (60, 60, 60), (bx, by, bar_w, bar_h))
         hc = COLOR_GREEN if health_percent > 0.5 else COLOR_RED
         pygame.draw.rect(surface, hc, (bx, by, bar_w * health_percent, bar_h))

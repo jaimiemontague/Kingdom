@@ -1,0 +1,21 @@
+Improvements to make:
+	-auto spawned player buildings (like farms, houses, etc) need to have their own line of sight, right now they can get covered in fog of war.  That shouldn't happen.  Guards should also get their own line of sight.
+	-there is some kind of memory leak or something i encountered that lagged out the game a few minutes into play on my last run.
+	-peasants should be clickable.
+	-i see the call to the LLM and it says dagger and the hero leaves the inn and then instead of going into the blacksmith to buy the dagger he almost immediately goes back into the inn.  See why this is happening and fix (it doesnt happen every time but its too common.)
+
+
+Future Sprint: 
+	LLM-AI Merger - LLM gets control of their character.
+		-When I say "hey, would you leave the inn?", the LLM should make a decision on what to do - obey their lord, or defy and face the consequences?  They have free will and it is a monarchy not a dictatorship, but defy shouldn't be used commonly as its a scary move to make for all but the bravest and most lone wolf of characters.  And yeah, if they decide to leave, they should have the tools needed to control their character and make it actually leave the inn and seek to protect the kingdom or do whatever the llm commands next.  Please plan out the tooling to provide the LLM agent before implementing, as this is a major ask.  Present me with the plan and wait for me to approve before implementing.
+		
+
+
+
+Prior requests (informational purposes only.  May or may not be fulfilled, section may not be up to date):
+	-Lairs/Waves need more monsters to be coming my way to make the game more challenging.
+	-Gold accumulation / collection by debt collectors needs to either be increased in rate, in amount, or both; This in part would be solved by the last point about adding more monsters, but right now it takes too long to acquire gold to make more money.  Starting gold should also get a 40% increase.
+	-Castle under attack needs to be more of an urgent demand that can cause heros to abandoned what they are doing inside of nearby buildings and come out to defend the castle.
+	-When clicking "Research" (in places like the Market for Healing Potions), that task should take some time depending on the item (30 seconds for healing potions, other items adjust relative to their value and cost), and the Research button should change pixels such that a loading bar takes the place of the button.
+	-Right menu should vanish when nothing is selected in it to allow for a larger map view.
+	-Warriors should defend nearby buildings like farms when under attack instead of ignoring at the rate they do now.
