@@ -882,6 +882,38 @@
             }
           }
         }
+      },
+      "wk17-quality-logic-immersion": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+          "notes": "WK17: Quality, Logic, & Immersion. Intent conviction (hysteresis)."
+        },
+        "rounds": {
+          "wk17_r1_kickoff_investigation": {
+            "sprint_id": "wk17-quality-logic-immersion",
+            "round_id": "wk17_r1_kickoff_investigation",
+            "round_meta": {
+              "prompt_set_id": "wk17_r1_investigation_v1",
+              "build_target": "BuildA_midweek",
+              "sent_at_local": "2026-02-20"
+            },
+            "prompt_text": "Audit hero simulation loop for intent conviction (hysteresis). Lock in LLM-directed transitions (e.g. going to Blacksmith) so hero does not reconsider every tick until destination reached or attacked.",
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "ai/basic_ai.py: Added _COMMITTED_DESTINATION_TYPES and _is_committed_destination(hero). When MOVING toward committed destination (shopping, rest_inn, get_drink, going_home, bounty, patrol, etc.), skip LLM consult and skip applying pending LLM decision; clear pending_llm_decision to avoid applying stale decision later."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: Hero heading to Blacksmith/shopping/Inn/home should complete walk without re-deciding every tick."
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (exit_code=0); determinism_guard PASS; all observe_sync profiles PASS."
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

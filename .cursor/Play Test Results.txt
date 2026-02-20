@@ -1,18 +1,21 @@
-Improvements to make:
-	-auto spawned player buildings (like farms, houses, etc) need to have their own line of sight, right now they can get covered in fog of war.  That shouldn't happen.  Guards should also get their own line of sight.
-	-there is some kind of memory leak or something i encountered that lagged out the game a few minutes into play on my last run.
-	-peasants should be clickable.
-	-i see the call to the LLM and it says dagger and the hero leaves the inn and then instead of going into the blacksmith to buy the dagger he almost immediately goes back into the inn.  See why this is happening and fix (it doesnt happen every time but its too common.)
+AGENTS - DO NOT EDIT.  HUMAN ONLY DOC
+
+#Improvements to make:
 
 
-Future Sprint: 
-	LLM-AI Merger - LLM gets control of their character.
+#Future Sprint: 
+	-LLM-AI Merger - LLM gets control of their character.
 		-When I say "hey, would you leave the inn?", the LLM should make a decision on what to do - obey their lord, or defy and face the consequences?  They have free will and it is a monarchy not a dictatorship, but defy shouldn't be used commonly as its a scary move to make for all but the bravest and most lone wolf of characters.  And yeah, if they decide to leave, they should have the tools needed to control their character and make it actually leave the inn and seek to protect the kingdom or do whatever the llm commands next.  Please plan out the tooling to provide the LLM agent before implementing, as this is a major ask.  Present me with the plan and wait for me to approve before implementing.
-		
+		-Heros should also have a good context into all the details of their stats - everything I see about the hero in the left menu, the LLM should have in its context window, and it should identify as being that entity with those stats.
+	-AI/LLM Monitoring Dev Tools: Lets get some dev tools in game so i can see all the ai logs (including LLM outputs) and real-time actions / LLM responses.
+	-Hero Collision Boxes - Heroes can no longer inhibit the same space.
+	-Are heros actually entering the blacksmith? I see that they are getting the items but i dont see them enter the building.
+	-Inn needs to cost money every time heros enter.  Cheap, but it costs money to get a room (to heal) or to get a drink.  This should discourage the heros from spending so much time at the inn.
+	-When a building is destroyed, heros should immediately pop out.
 
 
 
-Prior requests (informational purposes only.  May or may not be fulfilled, section may not be up to date):
+#Prior requests (informational purposes only.  May or may not be fulfilled, section may not be up to date):
 	-Lairs/Waves need more monsters to be coming my way to make the game more challenging.
 	-Gold accumulation / collection by debt collectors needs to either be increased in rate, in amount, or both; This in part would be solved by the last point about adding more monsters, but right now it takes too long to acquire gold to make more money.  Starting gold should also get a 40% increase.
 	-Castle under attack needs to be more of an urgent demand that can cause heros to abandoned what they are doing inside of nearby buildings and come out to defend the castle.

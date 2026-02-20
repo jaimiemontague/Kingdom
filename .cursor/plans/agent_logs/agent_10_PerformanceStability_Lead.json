@@ -893,6 +893,45 @@
         }
       }
     }
+  },
+  "wk17-quality-logic-immersion": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+      "notes": "WK17: Quality, Logic, & Immersion. Memory leak profile for Agent 03."
+    },
+    "rounds": {
+      "wk17_r1_kickoff_investigation": {
+        "sprint_id": "wk17-quality-logic-immersion",
+        "round_id": "wk17_r1_kickoff_investigation",
+        "round_meta": {
+          "prompt_set_id": "wk17_r1_investigation_v1",
+          "build_target": "BuildA_midweek"
+        },
+        "response": {
+          "status": "complete",
+          "raw": "Profiled game over 5-minute headless --no-llm run using tracemalloc. Created tools/memory_profile.py; ran 60s verification and full 300s profile. Documented root cause and recommendations in docs/memory_leak_wk17.md for Agent 03 (Round 2). Primary: pathfinding allocates per call with no cache (get_neighbors/find_path); secondary: animation/graphics scale/flip, perf overlay Font creation, bounty list comp. Renderer registry prune and dead-entity cleanup confirmed; no unbounded leak — allocation churn and GC pressure. qa_smoke --quick PASS.",
+          "summary_bullets": [
+            "Added tools/memory_profile.py: tracemalloc + 5-min headless --no-llm run; report to docs/memory_leak_wk17.md.",
+            "Root cause documented: pathfinding (primary), graphics/animation (secondary), perf overlay font (secondary).",
+            "Recommendations for Agent 03: path cache or commitment window for pathfinding; reuse overlay font; ensure caches bounded.",
+            "qa_smoke --quick PASS."
+          ],
+          "acceptance_criteria_met": ["Documented root cause of the memory leak."],
+          "evidence": {
+            "qa_smoke": "python tools/qa_smoke.py --quick",
+            "qa_smoke_exit_code": 0,
+            "report_path": "docs/memory_leak_wk17.md",
+            "profile_duration_sec": 300,
+            "total_size_increase_mib": 0.28
+          },
+          "agent_fields": {
+            "primary_hotspot": "game/systems/pathfinding.py (get_neighbors, find_path — no path cache)",
+            "secondary_hotspots": ["animation.py transform.scale", "enemy_renderer.py transform.flip", "engine.py line 1290 Font(None, 72)"],
+            "handoff_to_agent_03": "docs/memory_leak_wk17.md"
+          }
+        }
+      }
+    }
   }
 }
 

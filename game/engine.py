@@ -141,6 +141,7 @@ class GameEngine:
         self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
         self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
         self._pause_overlay.fill((0, 0, 0, 128))
+        self._pause_font = None  # WK17: cache PAUSED overlay font to avoid per-frame allocation
         
         # Game objects
         self.buildings = []
@@ -184,6 +185,7 @@ class GameEngine:
         
         # Selection
         self.selected_building = None
+        self.selected_peasant = None
         
         # Bounty system
         self.bounty_system = BountySystem()
@@ -218,10 +220,13 @@ class GameEngine:
             self.audio_system.set_ambient("ambient_loop", volume=0.4)
 
     def _update_fog_of_war(self):
-        """Update fog-of-war visibility around the castle and living heroes."""
+        """Update fog-of-war visibility around the castle, living heroes, neutral buildings, and guards."""
         # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.
+        # WK17: per docs/vision_rules_fog_of_war.md (Agent 05 spec).
         CASTLE_VISION_TILES = 10
         HERO_VISION_TILES = 7
+        GUARD_VISION_TILES = 6
+        NEUTRAL_VISION = {"house": 3, "farm": 5, "food_stand": 3}
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
         revealers = []
@@ -234,6 +239,24 @@ class GameEngine:
             if getattr(hero, "is_alive", True):
                 revealers.append((hero.x, hero.y, HERO_VISION_TILES))
                 hero_revealers.append((hero, hero.x, hero.y, HERO_VISION_TILES))
+
+        # WK17: Neutral buildings (house, farm, food_stand) as vision sources.
+        for building in self.buildings:
+            btype = getattr(building, "building_type", None)
+            if btype not in NEUTRAL_VISION:
+                continue
+            if getattr(building, "is_constructed", True) is not True:
+                continue
+            if getattr(building, "hp", 1) <= 0:
+                continue
+            radius = NEUTRAL_VISION[btype]
+            revealers.append((building.center_x, building.center_y, radius))
+
+        # WK17: Living guards as vision sources.
+        for guard in self.guards:
+            if not getattr(guard, "is_alive", True):
+                continue
+            revealers.append((guard.x, guard.y, GUARD_VISION_TILES))
 
         if revealers:
             # WK6: Track newly revealed tiles for XP awards
@@ -323,6 +346,7 @@ class GameEngine:
         for hero in self.heroes:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
                 self.selected_hero = hero
+                self.selected_peasant = None
                 # Ensure the right panel becomes visible on selection (Tab panel UX).
                 if hasattr(self, "hud"):
                     try:
@@ -342,6 +366,7 @@ class GameEngine:
         if tc.distance_to(world_x, world_y) < tc.size:
             self.selected_hero = tc  # unified selection state for left panel
             self.selected_building = None
+            self.selected_peasant = None
             if hasattr(self, "hud"):
                 try:
                     self.hud.right_panel_visible = True
@@ -357,6 +382,28 @@ class GameEngine:
             if getattr(guard, "is_alive", True) and guard.distance_to(world_x, world_y) < guard.size:
                 self.selected_hero = guard
                 self.selected_building = None
+                self.selected_peasant = None
+                if hasattr(self, "hud"):
+                    try:
+                        self.hud.right_panel_visible = True
+                    except Exception:
+                        pass
+                return True
+        return False
+
+    def try_select_peasant(self, screen_pos: tuple) -> bool:
+        """Try to select a peasant at the given screen position. Returns True if selected."""
+        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        for peasant in self.peasants:
+            if getattr(peasant, "is_alive", True) and peasant.distance_to(world_x, world_y) < peasant.size:
+                self.selected_peasant = peasant
+                self.selected_hero = None
+                self.selected_building = None
+                if hasattr(self, "building_panel"):
+                    try:
+                        self.building_panel.deselect()
+                    except Exception:
+                        pass
                 if hasattr(self, "hud"):
                     try:
                         self.hud.right_panel_visible = True
@@ -373,6 +420,7 @@ class GameEngine:
             rect = building.get_rect()
             if rect.collidepoint(world_x, world_y):
                 self.selected_building = building
+                self.selected_peasant = None
                 self.building_panel.select_building(building, self.heroes)
                 return True
         
@@ -1101,6 +1149,7 @@ class GameEngine:
             "wave": self.spawner.wave_number,
             "selected_hero": self.selected_hero,
             "selected_building": getattr(self, "selected_building", None),
+            "selected_peasant": getattr(self, "selected_peasant", None),
             "castle": castle,
             "economy": self.economy,
             "world": self.world,
@@ -1259,9 +1308,9 @@ class GameEngine:
             # Pause overlay (only show if paused but menu not visible)
             if self.paused and not self.pause_menu.visible:
                 self.screen.blit(self._pause_overlay, (0, 0))
-                
-                font = pygame.font.Font(None, 72)
-                text = font.render("PAUSED", True, (255, 255, 255))
+                if self._pause_font is None:
+                    self._pause_font = pygame.font.Font(None, 72)
+                text = self._pause_font.render("PAUSED", True, (255, 255, 255))
                 win_w = int(getattr(self, "window_width", self.screen.get_width()))
                 win_h = int(getattr(self, "window_height", self.screen.get_height()))
                 text_rect = text.get_rect(center=(win_w // 2, win_h // 2))

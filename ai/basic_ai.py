@@ -26,6 +26,20 @@ from game.systems.navigation import best_adjacent_tile
 # Deterministic AI RNG stream (isolated from gameplay RNG).
 _AI_RNG = get_rng("ai_basic")
 
+# WK17: Target types that lock in intent — hero does not reconsider until destination reached or attacked.
+_COMMITTED_DESTINATION_TYPES = frozenset({
+    "going_home",
+    "shopping",
+    "rest_inn",
+    "get_drink",
+    "bounty",
+    "patrol",
+    "explore_frontier",
+    "guard_home",
+    "patrol_castle",
+    "defend_castle",
+})
+
 # Debug logging (set to True to see AI decision logs).
 DEBUG_AI = False
 
@@ -116,6 +130,15 @@ class BasicAI:
     def set_intent(self, hero, intent: str) -> None:
         """Set hero intent label (taxonomy)."""
         setattr(hero, "intent", str(intent or "idle"))
+
+    def _is_committed_destination(self, hero) -> bool:
+        """True when hero is MOVING toward a destination we should not reconsider (WK17 intent conviction)."""
+        if hero.state != HeroState.MOVING:
+            return False
+        target = getattr(hero, "target", None)
+        if not isinstance(target, dict):
+            return False
+        return target.get("type") in _COMMITTED_DESTINATION_TYPES
 
     def record_decision(
         self,
@@ -231,33 +254,39 @@ class BasicAI:
                     self.send_home_to_rest(hero, game_state)
                     return
 
-        # Check if we need an LLM decision.
-        if self.llm_bridge_behavior.should_consult_llm(self, hero, game_state):
-            # If no LLM brain is wired, still choose via deterministic fallback so
-            # the no-LLM path produces stable intent/decision logging.
-            if self.llm_brain:
-                self.llm_bridge_behavior.request_llm_decision(self, hero, game_state)
-            else:
-                context = ContextBuilder.build_hero_context(hero, game_state)
-                decision = get_fallback_decision(context)
-                self.llm_bridge_behavior.apply_llm_decision(
-                    self,
-                    hero,
-                    decision,
-                    game_state,
-                    source="fallback",
-                    context=context,
-                )
+        # WK17: Intent conviction — do not consult or apply LLM when hero is committed to a destination.
+        if not self._is_committed_destination(hero):
+            # Check if we need an LLM decision.
+            if self.llm_bridge_behavior.should_consult_llm(self, hero, game_state):
+                # If no LLM brain is wired, still choose via deterministic fallback so
+                # the no-LLM path produces stable intent/decision logging.
+                if self.llm_brain:
+                    self.llm_bridge_behavior.request_llm_decision(self, hero, game_state)
+                else:
+                    context = ContextBuilder.build_hero_context(hero, game_state)
+                    decision = get_fallback_decision(context)
+                    self.llm_bridge_behavior.apply_llm_decision(
+                        self,
+                        hero,
+                        decision,
+                        game_state,
+                        source="fallback",
+                        context=context,
+                    )
 
-        # Handle LLM decision response.
-        if hero.pending_llm_decision and self.llm_brain:
-            decision = self.llm_brain.get_decision(hero.name)
-            if decision:
-                context = ContextBuilder.build_hero_context(hero, game_state)
-                src = "mock" if getattr(self.llm_brain, "provider_name", None) == "mock" else "llm"
-                self.llm_bridge_behavior.apply_llm_decision(
-                    self, hero, decision, game_state, source=src, context=context
-                )
+            # Handle LLM decision response.
+            if hero.pending_llm_decision and self.llm_brain:
+                decision = self.llm_brain.get_decision(hero.name)
+                if decision:
+                    context = ContextBuilder.build_hero_context(hero, game_state)
+                    src = "mock" if getattr(self.llm_brain, "provider_name", None) == "mock" else "llm"
+                    self.llm_bridge_behavior.apply_llm_decision(
+                        self, hero, decision, game_state, source=src, context=context
+                    )
+                    hero.pending_llm_decision = False
+        else:
+            # Committed to destination: do not apply a stale pending decision when we later become IDLE.
+            if hero.pending_llm_decision:
                 hero.pending_llm_decision = False
 
         # State machine behavior.

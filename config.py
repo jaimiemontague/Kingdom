@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.4"
-    game_title: str = "Kingdom Sim (Prototype v1.4) — Hero Chat, Graphics & UX Polish"
+    prototype_version: str = "1.4.2"
+    game_title: str = "Kingdom Sim (Prototype v1.4.2) — Playability Quality Reached"
     default_borderless: bool = True
 
 

@@ -254,6 +254,94 @@ class HUD:
         pygame.draw.line(surface, self._frame_inner, (x, y), (x + width, y), 1)
         pygame.draw.line(surface, self._frame_highlight, (x, y + 1), (x + width, y + 1), 1)
 
+    def _peasant_action_label(self, peasant) -> str:
+        """Return a short player-facing label for the peasant's current action."""
+        if not getattr(peasant, "is_alive", True):
+            return "Dead"
+        state = getattr(peasant, "state", None)
+        state_name = getattr(state, "name", str(state) if state else "") or ""
+        target = getattr(peasant, "target_building", None)
+        btype = ""
+        if target is not None:
+            btype = str(getattr(target, "building_type", getattr(target, "__class__", "").__name__) or "").replace("_", " ").title()
+        if state_name == "DEAD":
+            return "Dead"
+        if state_name == "IN_CASTLE":
+            return "Resting in castle"
+        if state_name == "WORKING":
+            if target is None:
+                return "Working"
+            constructed = getattr(target, "is_constructed", True)
+            if not constructed:
+                return f"Building ({btype})" if btype else "Building"
+            return f"Repairing ({btype})" if btype else "Repairing"
+        if state_name == "MOVING":
+            if target is not None:
+                return f"Going to {btype}" if btype else "Walking"
+            return "Walking"
+        return "Working" if state_name else "Idle"
+
+    def _render_peasant_summary(self, surface: pygame.Surface, peasant, left_rect: pygame.Rect) -> None:
+        """Render a compact peasant info block in the left panel (wk17)."""
+        x = left_rect.x + int(self.theme.margin)
+        y = left_rect.y + int(self.theme.margin)
+        header_h = 26
+        header_rect = pygame.Rect(left_rect.x + 4, y, left_rect.width - 8, header_h)
+        pygame.draw.rect(surface, (35, 35, 45), header_rect)
+        pygame.draw.rect(surface, self._frame_inner, header_rect, 1)
+        pygame.draw.line(
+            surface,
+            self._frame_highlight,
+            (header_rect.left + 1, header_rect.top + 1),
+            (header_rect.right - 2, header_rect.top + 1),
+            1,
+        )
+        TextLabel.render(
+            surface,
+            self.theme.font_title,
+            "Peasant",
+            (x, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
+            COLOR_WHITE,
+            shadow_color=(20, 20, 30),
+        )
+        y = header_rect.bottom + 8
+        self._draw_section_divider(surface, x, y, max(0, left_rect.width - int(self.theme.margin) * 2))
+        y += 8
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            "Action",
+            (x, y),
+            (180, 180, 200),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_small.get_height() + 4
+        action = self._peasant_action_label(peasant)
+        TextLabel.render(
+            surface,
+            self.theme.font_body,
+            action,
+            (x, y),
+            (220, 220, 220),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_body.get_height() + 8
+        hp = int(getattr(peasant, "hp", 0) or 0)
+        max_hp = max(1, int(getattr(peasant, "max_hp", 1) or 1))
+        HPBar.render(
+            surface,
+            pygame.Rect(x, y, max(0, left_rect.width - int(self.theme.margin) * 2), 8),
+            hp,
+            max_hp,
+            color_scheme={
+                "bg": (60, 60, 60),
+                "good": (80, 200, 100),
+                "warn": (220, 180, 90),
+                "bad": (220, 80, 80),
+                "border": (20, 20, 25),
+            },
+        )
+
     def _render_right_panel_overview(
         self, surface: pygame.Surface, right: pygame.Rect, game_state: dict
     ) -> None:
@@ -466,6 +554,7 @@ class HUD:
         self._panel_bottom.render(surface)
         
         selected_hero = game_state.get("selected_hero")
+        selected_peasant = game_state.get("selected_peasant")
         if selected_hero is not None:
             self._panel_left.render(surface)
             self._hero_panel.render(
@@ -475,6 +564,9 @@ class HUD:
                 right_close_rect=None,
                 debug_ui=bool(game_state.get("debug_ui", False)),
             )
+        elif selected_peasant is not None:
+            self._panel_left.render(surface)
+            self._render_peasant_summary(surface, selected_peasant, left)
 
         if self._show_right_panel:
             self._panel_right.render(surface)

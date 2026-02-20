@@ -13,7 +13,7 @@
     "wk7-ui-polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk7-ui-polish_36a51780.plan.md",
-        "notes": "WK7: UI overhaul — window/display modes, ESC menu, castle build catalog, and Majesty-quality UI benchmark pass."
+        "notes": "WK7: UI overhaul \u2014 window/display modes, ESC menu, castle build catalog, and Majesty-quality UI benchmark pass."
       },
       "rounds": {
         "wk7_r0_kickoff": {
@@ -27,7 +27,7 @@
             "overall_status": "Kickoff",
             "wk7_focus": [
               "UI polish to Majesty standard (quality uplift, not a clone).",
-              "Window/display mode options (fullscreen/borderless/windowed) exposed in ESC menu → Graphics.",
+              "Window/display mode options (fullscreen/borderless/windowed) exposed in ESC menu \u2192 Graphics.",
               "ESC opens a centered pause/settings menu; world input is blocked while open.",
               "Castle-driven Build Catalog window with building thumbnails + click-to-place."
             ],
@@ -45,7 +45,7 @@
             }
           },
           "pm_integration_order": [
-            "Agent 03: add/solidify runtime display-mode switching API in engine (apply_display_settings + settings model) + best-effort borderless top-bar drag → windowed live-drag.",
+            "Agent 03: add/solidify runtime display-mode switching API in engine (apply_display_settings + settings model) + best-effort borderless top-bar drag \u2192 windowed live-drag.",
             "Agent 08: implement ESC menu modal + Graphics/Audio/Controls pages using Agent 03 API; block world input while menu is open; wire ESC behavior to show menu.",
             "Agent 14: define audio settings semantics (master volume; optional split) and ensure UI hooks do not violate the visibility-gated audibility rule.",
             "Agent 08: implement castle-driven Build Catalog panel (center screen) + click-to-place; add thumbnails/fallback visuals.",
@@ -63,7 +63,7 @@
                 "Keep determinism unaffected: settings are UI-only; do not introduce wall-clock time into sim paths."
               ],
               "acceptance_criteria": [
-                "User can switch among fullscreen/borderless/windowed via ESC → Graphics and see changes apply immediately.",
+                "User can switch among fullscreen/borderless/windowed via ESC \u2192 Graphics and see changes apply immediately.",
                 "In borderless: click+hold+drag in top bar switches to windowed; window follows cursor (best-effort).",
                 "python tools/qa_smoke.py --quick PASS"
               ],
@@ -86,7 +86,7 @@
               "acceptance_criteria": [
                 "Esc opens centered menu; Resume closes; world input is blocked while open; game is paused while menu is open.",
                 "Graphics/Audio/Controls pages render without clutter and remain readable at 1920x1080.",
-                "Castle → Build buildings opens the catalog; clicking an item enters placement and closes the catalog.",
+                "Castle \u2192 Build buildings opens the catalog; clicking an item enters placement and closes the catalog.",
                 "Before/after screenshot set + delta list recorded in Agent 08 log.",
                 "python tools/qa_smoke.py --quick PASS"
               ],
@@ -206,7 +206,7 @@
               ]
             },
             "audio_slider_units": {
-              "decision": "UI displays 0–100%, API uses 0.0–1.0 floats internally.",
+              "decision": "UI displays 0\u2013100%, API uses 0.0\u20131.0 floats internally.",
               "default_master_volume": 80
             }
           },
@@ -302,7 +302,7 @@
             ],
             "what_is_not_done_yet": [
               "Agent 08: Wire Graphics page to call engine.apply_display_settings() using game_state['display_mode']/['window_size'].",
-              "Agent 08: Wire Audio page to call audio_system.set_master_volume() and reflect current audio_system.get_master_volume() (UI shows 0–100%).",
+              "Agent 08: Wire Audio page to call audio_system.set_master_volume() and reflect current audio_system.get_master_volume() (UI shows 0\u2013100%).",
               "Agent 08: Implement castle-driven Build Catalog panel (center screen) with thumbnails/fallbacks and click-to-place; close menu on selection.",
               "Agent 08: Complete Majesty UI benchmark (before/after screenshots + delta list) and implement the top 3 high-impact deltas that fit scope.",
               "Agent 11: Run qa_smoke --quick after each integration step and perform manual checks (window switching + borderless drag + ESC input blocking + build catalog + audio slider). File bugs if needed."
@@ -320,7 +320,7 @@
               "status": "assigned_active",
               "asks": [
                 "Integrate Graphics page now that Agent 03 API is landed:\n- Read current selection from game_state['display_mode'] and game_state['window_size'].\n- On selection change, call engine.apply_display_settings(display_mode, window_size_if_needed).",
-                "Integrate Audio page now that Agent 14 API is landed:\n- Read current from audio_system.get_master_volume().\n- On slider change, call audio_system.set_master_volume(vol_0_to_1).\n- UI displays percent (0–100) but converts to 0.0–1.0 internally.",
+                "Integrate Audio page now that Agent 14 API is landed:\n- Read current from audio_system.get_master_volume().\n- On slider change, call audio_system.set_master_volume(vol_0_to_1).\n- UI displays percent (0\u2013100) but converts to 0.0\u20131.0 internally.",
                 "Implement Castle Build Catalog (centered modal):\n- Castle selection offers 'Build buildings'.\n- Catalog shows thumbnail (building sprite if available; else swatch), name, cost, hotkey, disabled reasons.\n- Click selects building -> closes catalog and enters placement via engine.select_building_for_placement().",
                 "Complete Majesty benchmark:\n- Capture current screenshots in a similar state to reference.\n- Produce a delta list.\n- Implement top 3 deltas (highest impact, lowest risk) this round.",
                 "After each major integration (Graphics wiring, Audio wiring, Build Catalog, top 3 deltas), run qa_smoke or coordinate with Agent 11 to confirm it stays green."
@@ -328,7 +328,7 @@
               "acceptance_criteria": [
                 "ESC menu Graphics page actually changes modes; current mode is reflected correctly.",
                 "ESC menu Audio page changes master volume immediately; value persists during session.",
-                "Castle → Build buildings opens centered catalog; clicking a building exits catalog and enters placement.",
+                "Castle \u2192 Build buildings opens centered catalog; clicking a building exits catalog and enters placement.",
                 "Benchmark before/after screenshots + delta list recorded in Agent 08 log; top 3 deltas shipped.",
                 "python tools/qa_smoke.py --quick PASS"
               ],
@@ -399,8 +399,8 @@
               "Castle-driven Build Catalog exists (Build buildings button + centered catalog + click-to-place)."
             ],
             "remaining": [
-              "Majesty benchmark (before/after screenshots + delta list + top 3 polish deltas) — Agent 08.",
-              "QA re-run on latest code + manual verification (graphics mode switching, borderless drag, ESC input blocking, audio slider volume change, build catalog) — Agent 11.",
+              "Majesty benchmark (before/after screenshots + delta list + top 3 polish deltas) \u2014 Agent 08.",
+              "QA re-run on latest code + manual verification (graphics mode switching, borderless drag, ESC input blocking, audio slider volume change, build catalog) \u2014 Agent 11.",
               "If any regression is found, file WK7 bug tickets and assign owner."
             ],
             "gates": {
@@ -587,7 +587,7 @@
           "pm_status_summary": {
             "overall_status": "Core WK7 UI exists (ESC menu, build catalog, mode toggles), but human playtest reports major usability + aesthetic issues requiring a mid-sprint corrective push.",
             "human_reports": {
-              "click_offset_build_menu": "Build-related UI requires clicking ~100–200px above the visible control to register.",
+              "click_offset_build_menu": "Build-related UI requires clicking ~100\u2013200px above the visible control to register.",
               "display_mode_switching": "Graphics menu attempts mode changes but ends up staying fullscreen regardless of selection.",
               "ui_look": "UI still looks clunky/grey/empty; no art skin; wasted space; massive always-present right sidebar.",
               "windowed_position_locked": "After switching to windowed mode, the window is stuck at the top-left and cannot be moved around the desktop."
@@ -622,7 +622,7 @@
                 "Observe click registers only when clicking significantly above the visible control"
               ],
               "expected": "Click target matches the visible control bounds.",
-              "actual": "Click registers offset upward by ~100–200px.",
+              "actual": "Click registers offset upward by ~100\u2013200px.",
               "suspected_area": [
                 "Coordinate space mismatch between panel-local drawing and screen-space Rect hit-tests",
                 "Modal panels caching stale screen sizes after display mode changes"
@@ -650,7 +650,7 @@
               "reporter": "human_playtest",
               "repro_steps": [
                 "Run: python main.py",
-                "ESC → Graphics → choose Windowed or Borderless",
+                "ESC \u2192 Graphics \u2192 choose Windowed or Borderless",
                 "Observe screen flicker/attempt but ends up fullscreen anyway"
               ],
               "expected": "Windowed is obviously windowed (decorated/resizable); borderless is fullscreen-windowed; fullscreen is exclusive fullscreen.",
@@ -665,7 +665,7 @@
                 "Avoid new persistent settings storage in BuildA unless trivial."
               ],
               "proposed_fix": [
-                "Make windowed mode default clearly smaller (e.g., 1280×720) unless prior windowed size exists.",
+                "Make windowed mode default clearly smaller (e.g., 1280\u00d7720) unless prior windowed size exists.",
                 "Ensure mode switching clears/sets flags appropriately on Windows and triggers UI resize propagation.",
                 "Optional: minimal HUD toast showing the active mode + resolution after switching."
               ],
@@ -684,7 +684,7 @@
               "reporter": "human_playtest",
               "repro_steps": [
                 "Run: python main.py",
-                "ESC → Graphics → switch to Windowed",
+                "ESC \u2192 Graphics \u2192 switch to Windowed",
                 "Try dragging the window by the title bar around the desktop"
               ],
               "expected": "In windowed mode, the OS-decorated window can be dragged/moved normally.",
@@ -745,7 +745,7 @@
             "03": {
               "status": "assigned_active",
               "asks": [
-                "Fix WK7-BUG-003: ensure mode switching truly switches modes on Windows and that 'windowed' is obviously windowed (default to 1280×720 if needed).",
+                "Fix WK7-BUG-003: ensure mode switching truly switches modes on Windows and that 'windowed' is obviously windowed (default to 1280\u00d7720 if needed).",
                 "Ensure apply_display_settings() triggers UI resize propagation (call HUD/PauseMenu/BuildCatalogPanel on_resize).",
                 "Fix WK7-BUG-004: in windowed mode, the OS window must be draggable/movable (not pinned top-left).",
                 "Optional: add a minimal confirmation UI (toast) after switching modes with mode+resolution."
@@ -794,7 +794,7 @@
             "11": {
               "status": "assigned_active",
               "asks": [
-                "After each integration step (A–D), run `python tools/qa_smoke.py --quick` and log PASS/FAIL evidence.",
+                "After each integration step (A\u2013D), run `python tools/qa_smoke.py --quick` and log PASS/FAIL evidence.",
                 "Manual verify: click-hitbox alignment, display-mode switching on Windows, Tab toggle behavior, no startup crashes.",
                 "Capture before/after screenshots comparing against .cursor/human_provided/week6-7 UI.JPG and the Majesty reference."
               ],
@@ -859,7 +859,7 @@
               "asks": [
                 "Integrate the CC0 UI pack into UI rendering:\n- Use assets/ui/kingdomsim_ui_cc0/panels/* and buttons/* for Panel/ModalPanel frames and primary buttons.\n- Add icons (build/hire/bounty/graphics/audio/controls) to improve affordances.\n- Implement 9-slice rendering in game/ui/widgets.py with caching (no per-frame scaling).",
                 "Tighten layout to reduce wasted space:\n- Reduce oversized modal padding; compact rows/spacing.\n- Ensure right panel being hidden truly reclaims world space.\n- Keep color language warm (avoid grey/black dominance).",
-                "After changes: run `python tools/qa_smoke.py --quick` and capture 2–4 screenshots (ESC menu, build catalog, normal HUD with right panel hidden+shown)."
+                "After changes: run `python tools/qa_smoke.py --quick` and capture 2\u20134 screenshots (ESC menu, build catalog, normal HUD with right panel hidden+shown)."
               ],
               "acceptance_criteria": [
                 "UI visibly improved (less grey/black, better framed, icons present, less wasted space).",
@@ -939,7 +939,7 @@
             "gates": {
               "automated": "python tools/qa_smoke.py --quick PASS",
               "manual_windows": [
-                "Windowed → Fullscreen transition: world/play area must expand and match UI",
+                "Windowed \u2192 Fullscreen transition: world/play area must expand and match UI",
                 "Close X is clean (no overlapping text)",
                 "Selected building panel uses the new textured skin"
               ]
@@ -948,15 +948,15 @@
           "pm_bug_tickets": [
             {
               "id": "WK7-BUG-005",
-              "title": "World/play area does not re-expand when switching Windowed → Fullscreen",
+              "title": "World/play area does not re-expand when switching Windowed \u2192 Fullscreen",
               "severity": "blocker",
               "build_target": "BuildA_release_candidate",
               "owner_agent": "03_TechnicalDirector_Architecture",
               "reporter": "human_playtest",
               "repro_steps": [
                 "Run: python main.py",
-                "ESC → Graphics → Windowed (choose a smaller window)",
-                "ESC → Graphics → Fullscreen",
+                "ESC \u2192 Graphics \u2192 Windowed (choose a smaller window)",
+                "ESC \u2192 Graphics \u2192 Fullscreen",
                 "Observe UI expands but world/play area remains shrunk/incorrectly scaled"
               ],
               "expected": "After switching to fullscreen/borderless, world/play area and camera viewport use the new display size.",
@@ -976,7 +976,7 @@
                 "If any cached surfaces depend on size, invalidate/rebuild them on resize."
               ],
               "acceptance_test": [
-                "Manual (Windows): windowed→fullscreen expands world correctly",
+                "Manual (Windows): windowed\u2192fullscreen expands world correctly",
                 "python tools/qa_smoke.py --quick PASS"
               ],
               "status": "assigned"
@@ -1074,12 +1074,12 @@
               "status": "assigned_active",
               "asks": [
                 "Fix WK7-BUG-008: ensure GameEngine initializes self.zoom (and any camera vars clamp_camera needs) before apply_display_settings() calls clamp_camera; boot must not crash.",
-                "Fix WK7-BUG-005: ensure world/play area expands correctly when switching windowed→fullscreen/borderless (resize all world render targets + viewport/camera sizing).",
+                "Fix WK7-BUG-005: ensure world/play area expands correctly when switching windowed\u2192fullscreen/borderless (resize all world render targets + viewport/camera sizing).",
                 "After fix: run `python tools/qa_smoke.py --quick` and perform a quick manual repro on Windows."
               ],
               "acceptance_criteria": [
                 "Boot does not crash (no AttributeError on zoom)",
-                "Windowed→Fullscreen expands world correctly",
+                "Windowed\u2192Fullscreen expands world correctly",
                 "qa_smoke --quick PASS"
               ]
             },
@@ -1100,7 +1100,7 @@
               "status": "assigned_active",
               "asks": [
                 "After 03 and 08 land fixes, run `python tools/qa_smoke.py --quick`.",
-                "Manual (Windows): verify windowed→fullscreen expansion, close X looks clean, selected-building panel skinned, and no interaction regressions.",
+                "Manual (Windows): verify windowed\u2192fullscreen expansion, close X looks clean, selected-building panel skinned, and no interaction regressions.",
                 "Capture final before/after screenshots for PM signoff."
               ],
               "acceptance_criteria": [
@@ -1137,9 +1137,9 @@
             "visibility": "Closeout: WK7 sprint is CLOSED. This entry documents final state."
           },
           "pm_status_summary": {
-            "overall_status": "CLOSED — WK7 UI Overhaul shipped as v1.2.9",
+            "overall_status": "CLOSED \u2014 WK7 UI Overhaul shipped as v1.2.9",
             "shipped_features": [
-              "Window mode switching: fullscreen/borderless/windowed via ESC → Graphics",
+              "Window mode switching: fullscreen/borderless/windowed via ESC \u2192 Graphics",
               "ESC pause/settings menu (Graphics/Audio/Controls pages)",
               "Castle-driven Build Catalog with click-to-place",
               "CC0 UI skin (9-slice panels/buttons/icons)",
@@ -1147,18 +1147,18 @@
               "Best-effort borderless drag-to-windowed"
             ],
             "bugs_resolved": [
-              "WK7-BUG-001: Boot crash PauseMenu before audio_system — VERIFIED FIXED",
-              "WK7-BUG-002: UI click hitboxes vertically offset — VERIFIED FIXED",
-              "WK7-BUG-003: Graphics menu display mode switching ineffective — VERIFIED FIXED",
-              "WK7-BUG-004: Windowed mode window stuck top-left — VERIFIED FIXED",
-              "WK7-BUG-005: World not re-expanding on windowed→fullscreen — VERIFIED FIXED",
-              "WK7-BUG-006: Close X label overlap — VERIFIED FIXED",
-              "WK7-BUG-007: Selected-building panel grey/unskinned — VERIFIED FIXED",
-              "WK7-BUG-008: Boot crash zoom init — VERIFIED FIXED"
+              "WK7-BUG-001: Boot crash PauseMenu before audio_system \u2014 VERIFIED FIXED",
+              "WK7-BUG-002: UI click hitboxes vertically offset \u2014 VERIFIED FIXED",
+              "WK7-BUG-003: Graphics menu display mode switching ineffective \u2014 VERIFIED FIXED",
+              "WK7-BUG-004: Windowed mode window stuck top-left \u2014 VERIFIED FIXED",
+              "WK7-BUG-005: World not re-expanding on windowed\u2192fullscreen \u2014 VERIFIED FIXED",
+              "WK7-BUG-006: Close X label overlap \u2014 VERIFIED FIXED",
+              "WK7-BUG-007: Selected-building panel grey/unskinned \u2014 VERIFIED FIXED",
+              "WK7-BUG-008: Boot crash zoom init \u2014 VERIFIED FIXED"
             ],
             "gates_at_close": {
               "qa_smoke_quick": "PASS",
-              "validate_assets_strict": "FAIL (4 optional SFX missing — carried forward to followup task)",
+              "validate_assets_strict": "FAIL (4 optional SFX missing \u2014 carried forward to followup task)",
               "manual_smoke": "PASS (human playtest confirmed)"
             }
           },
@@ -1226,7 +1226,7 @@
               "expected": "Clicking hero selects them; right panel shows info (when Tab panel visible)",
               "actual": "Heroes cannot be selected by clicking",
               "acceptance_test": [
-                "Click hero → selected",
+                "Click hero \u2192 selected",
                 "Tab panel shows hero info",
                 "qa_smoke --quick PASS"
               ],
@@ -1246,7 +1246,7 @@
               "expected": "Heroes occasionally pursue bounty flags",
               "actual": "Heroes never pursue any bounty flags",
               "acceptance_test": [
-                "Place bounty → hero pursues within reasonable time",
+                "Place bounty \u2192 hero pursues within reasonable time",
                 "qa_smoke bounty tests PASS"
               ],
               "status": "assigned"
@@ -1390,7 +1390,7 @@
             "03": {
               "assignment": "V1.3-BUG-001",
               "priority": "P0 BLOCKER",
-              "prompt": "Fix hero click selection. Heroes cannot be clicked/selected. Repro: run python main.py, click any hero — nothing happens. Suspected areas: game/engine.py handle_mousedown() and try_select_hero(), UI panels consuming clicks, screen_to_world() coordinate conversion. Acceptance: click hero → selected, Tab panel shows hero info, qa_smoke --quick PASS."
+              "prompt": "Fix hero click selection. Heroes cannot be clicked/selected. Repro: run python main.py, click any hero \u2014 nothing happens. Suspected areas: game/engine.py handle_mousedown() and try_select_hero(), UI panels consuming clicks, screen_to_world() coordinate conversion. Acceptance: click hero \u2192 selected, Tab panel shows hero info, qa_smoke --quick PASS."
             },
             "05": {
               "assignment": "V1.3-BUG-003",
@@ -1400,7 +1400,7 @@
             "06": {
               "assignment": "V1.3-BUG-002 + V1.3-FEAT-002",
               "priority": "P1 + Feature",
-              "prompt": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior — when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy."
+              "prompt": "Bug: Heroes ignore bounty flags entirely. Repro: place bounties with B, heroes never pursue. Fix bounty pursuit logic in ai/basic_ai.py or game/systems/bounty.py. Feature (after bug fix): Implement Journey behavior \u2014 when hero is full health + recently purchased potions/equipment, trigger journey to explore fog OR attack lair. Class rules: Rogue=few squares into fog, Warrior=10-30 squares or attack lair (prefers fighting), Ranger=limitless exploration (prefers exploring). Acceptance: bounties get pursued, journey triggers after shopping when healthy."
             },
             "08": {
               "assignment": "V1.3-FEAT-001 (UI)",
@@ -1422,7 +1422,7 @@
             "visibility": "Execution round: land bugfixes + implement visual polish + capture before/after evidence"
           },
           "pm_status_summary": {
-            "overall_status": "Execution largely complete — awaiting final manual QA + standardized screenshot evidence",
+            "overall_status": "Execution largely complete \u2014 awaiting final manual QA + standardized screenshot evidence",
             "what_landed_per_agent_logs": [
               "Agent 03: verified hero selection fix remains (click hero forces HUD right panel visible); gates PASS (qa_smoke + validate_assets strict).",
               "Agent 08: implemented P0 UI polish (top bar hierarchy, command bar hotkey chips + placement banner, right panel readability, build catalog header + hover) and captured deterministic after screenshots under `docs/screenshots/v1.3.0_after/`; gates PASS.",
@@ -1447,7 +1447,7 @@
                 "After integration, run: python tools/qa_smoke.py --quick"
               ],
               "acceptance_criteria": [
-                "Click hero → right panel opens + shows hero info (no ‘silent selection’)",
+                "Click hero \u2192 right panel opens + shows hero info (no \u2018silent selection\u2019)",
                 "qa_smoke --quick PASS"
               ]
             },
@@ -1457,11 +1457,11 @@
               "asks": [
                 "Implement the highest-ROI UI polish items from your v1.3 proposal (focus on hierarchy + readability, minimal gameplay risk):",
                 "- Top bar: icons/separators + contrast tweak (keep style consistent with UI-v2 skin).",
-                "- Bottom command bar: clearer button framing (icon + label + hotkey chip) and an obvious ‘placement mode’ banner/indicator.",
+                "- Bottom command bar: clearer button framing (icon + label + hotkey chip) and an obvious \u2018placement mode\u2019 banner/indicator.",
                 "- Right panel: section separators + spacing + value contrast; ensure close X never overlaps text (regression-proof).",
                 "- Build catalog modal: header strip with title + consistent close button alignment; add simple hover highlight on cards if possible.",
                 "- Minimap: stronger frame and separation from bottom bar.",
-                "Capture ‘after’ screenshots per your before/after pairing plan (same resolution/framing)."
+                "Capture \u2018after\u2019 screenshots per your before/after pairing plan (same resolution/framing)."
               ],
               "acceptance_criteria": [
                 "Side-by-side vs v1.2.9 baseline: improved hierarchy/readability (top bar, command bar, right panel, build modal).",
@@ -1476,7 +1476,7 @@
                 "- Reduce grass speckle noise; add macro clumps; keep tile-coord deterministic.",
                 "- Improve path silhouette: 1px edge banding and contrast vs grass (no perf regressions).",
                 "Optionally (only if time): small fog boundary rim/soft edge render-only tweak.",
-                "Capture matching ‘after’ screenshots for the baseline comparisons."
+                "Capture matching \u2018after\u2019 screenshots for the baseline comparisons."
               ],
               "acceptance_criteria": [
                 "Terrain/path readability improved at gameplay zoom (Z2) without added noise.",
@@ -1492,7 +1492,7 @@
                 "- python tools/validate_assets.py --strict --check-attribution",
                 "Manual checklist (Windows):",
                 "- Click heroes: right panel opens and shows hero info",
-                "- Place a bounty: at least one hero pursues within ~30–60 seconds",
+                "- Place a bounty: at least one hero pursues within ~30\u201360 seconds",
                 "- Trigger Journey: shop a hero at full health; confirm journey target change (explore fog or lair)",
                 "Capture before/after screenshots for v1.3 signoff (match v1.2.9 baseline framing as closely as possible)."
               ],
@@ -1507,7 +1507,7 @@
               "priority": "P2",
               "asks": [
                 "Support v1.3 before/after comparison workflow (tooling-only):",
-                "- If needed, add/update screenshot scenarios for ‘ui_polish_after’ and/or a ‘v1.3_after’ capture set to standardize comparisons.",
+                "- If needed, add/update screenshot scenarios for \u2018ui_polish_after\u2019 and/or a \u2018v1.3_after\u2019 capture set to standardize comparisons.",
                 "- Ensure build_gallery can include the v1.3 before/after folders cleanly.",
                 "If any strict validation edge cases appear due to new art assets, assist with validator/attribution workflow (do not weaken strict gates without PM approval)."
               ],
@@ -1571,9 +1571,9 @@
                 "- `python tools/qa_smoke.py --quick`",
                 "- `python tools/validate_assets.py --strict --check-attribution`",
                 "Manual Windows checklist:",
-                "- Click a hero → right panel opens and shows hero info (no silent selection).",
-                "- Place a bounty (B) → at least one hero pursues within ~30–60 seconds.",
-                "- Shop a hero at full health → journey target changes (explore fog or lair).",
+                "- Click a hero \u2192 right panel opens and shows hero info (no silent selection).",
+                "- Place a bounty (B) \u2192 at least one hero pursues within ~30\u201360 seconds.",
+                "- Shop a hero at full health \u2192 journey target changes (explore fog or lair).",
                 "Capture deterministic after screenshots (this unblocks v1.3 visual signoff):",
                 "- Preferred (repeatable): `python tools/capture_screenshots.py --scenario ui_polish_after --seed 3 --out docs/screenshots/v1.3.0_after/ui_polish_after_seed3 --size 1920x1080 --ticks 0`",
                 "- Also capture: `base_overview` if needed for terrain/path readability comparison (same out root under docs/screenshots/v1.3.0_after/).",
@@ -1627,9 +1627,9 @@
               "Do NOT hide/remove debug overlays or tip text (defer)."
             ],
             "primary_feedback_reasons": [
-              "UI reads as flat tan/brown rectangles → weak hierarchy/depth.",
-              "Bottom command bar and right panel feel too large for the information shown → wasted space.",
-              "Right panel has large empty areas/placeholder blocks → feels unfinished.",
+              "UI reads as flat tan/brown rectangles \u2192 weak hierarchy/depth.",
+              "Bottom command bar and right panel feel too large for the information shown \u2192 wasted space.",
+              "Right panel has large empty areas/placeholder blocks \u2192 feels unfinished.",
               "Build Catalog feels placeholder because entries are color swatches, not building art.",
               "World labels (names/taxes) feel noisy and sometimes hard to read on grass.",
               "World still feels repetitive/low variety; UI improvements outpace world art."
@@ -1671,7 +1671,7 @@
                 "- Add a few deterministic tree variants (small canopy/shape/palette shifts) to reduce repetition.",
                 "- Improve path readability further if needed (edge definition/contrast), but keep it subtle and consistent.",
                 "Do NOT work on fog-edge softness in this round.",
-                "Provide 2–3 suggested 'before/after' comparison shots to capture that best show the improvement (paths + open grass + trees)."
+                "Provide 2\u20133 suggested 'before/after' comparison shots to capture that best show the improvement (paths + open grass + trees)."
               ],
               "acceptance_criteria": [
                 "World looks less repetitive at Z2; grass/trees feel richer without extra noise.",
@@ -1754,7 +1754,7 @@
               "11",
               "12"
             ],
-            "prompt": "You are resuming v1.3 visual polish pass 2. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r3_visual_polish_pass_2\"]`\n\n1) Scope constraints (locked)\n- Do NOT work on fog-of-war edge softness.\n- Do NOT hide/remove debug overlays or tip text.\n\n2) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Maintain determinism constraints (seeded RNG only; sim-time only) and keep performance safe (avoid per-frame allocations).\n\n3) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r3_visual_polish_pass_2`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
+            "prompt": "You are resuming v1.3 visual polish pass 2. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r3_visual_polish_pass_2\"]`\n\n1) Scope constraints (locked)\n- Do NOT work on fog-of-war edge softness.\n- Do NOT hide/remove debug overlays or tip text.\n\n2) Execute ONLY your agent\u2019s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Maintain determinism constraints (seeded RNG only; sim-time only) and keep performance safe (avoid per-frame allocations).\n\n3) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n4) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r3_visual_polish_pass_2`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + screenshot paths), and `blockers` if any.\n"
           }
         },
         "v1.3_r4_final_manual_spotcheck_and_closeout": {
@@ -1982,7 +1982,7 @@
               "priority": "P0",
               "asks": [
                 "UI: fix inconsistent menu button label alignment (ESC menu). Ensure a single alignment policy across buttons.",
-                "Audio UI: update ESC → Audio page to show 3 sliders: Master, Music, SFX; wire to AudioSystem APIs (Agent 14).",
+                "Audio UI: update ESC \u2192 Audio page to show 3 sliders: Master, Music, SFX; wire to AudioSystem APIs (Agent 14).",
                 "Demolish gating: fix V1.3-EXT-BUG-002 by hiding demolish for lairs/neutral buildings; only show for player-owned buildings (castle exception unchanged). Touchpoint: `game/ui/building_panel.py` currently hides only for castle.",
                 "Blacksmith UI: add research buttons to Blacksmith panel (weapon/armor upgrades) similar to existing research/upgrade patterns; ensure affordability + messaging.",
                 "Run gates: qa_smoke --quick."
@@ -2071,7 +2071,7 @@
               "12",
               "14"
             ],
-            "prompt": "You are resuming V1.3 mid-sprint extension work. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Read plan: `.cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]`\n\n1) Execute ONLY your agent’s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Respect constraints: determinism (seeded RNG, sim-time only), perf-safe (avoid per-frame allocations).\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r5_extension_mid_sprint`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + paths/screenshots), and `blockers` if any.\n"
+            "prompt": "You are resuming V1.3 mid-sprint extension work. Follow this exactly.\n\n0) Regather context (required)\n- Read: `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`\n- Read plan: `.cursor/plans/v1.3_extension_mid_sprint_7c2b1a9e.plan.md`\n- Open PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n- Navigate to: `sprints[\"v1.3-visual-polish-journey-ai\"].rounds[\"v1.3_r5_extension_mid_sprint\"]`\n\n1) Execute ONLY your agent\u2019s tasks\n- Find your agent id under `pm_next_actions_by_agent` and execute ONLY those tasks.\n- Respect constraints: determinism (seeded RNG, sim-time only), perf-safe (avoid per-frame allocations).\n\n2) Required gates (if you changed code/assets)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n\n3) Logging requirement (required)\nReply ONLY by writing to your own agent log JSON with:\n- `round_id`: `v1.3_r5_extension_mid_sprint`\n- `status`: `in_progress|blocked|done`\n- `what_i_changed`, `how_to_test`, `evidence` (PASS/FAIL + paths/screenshots), and `blockers` if any.\n"
           }
         },
         "v1.3_r6_integration_QA_and_ship_decision": {
@@ -2102,7 +2102,7 @@
                 "- `git pull`",
                 "- `python tools/qa_smoke.py --quick`",
                 "- `python tools/validate_assets.py --strict --check-attribution`",
-                "Manual Windows checklist (15–20 min):",
+                "Manual Windows checklist (15\u201320 min):",
                 "- AI: after potions are researched, heroes buy potions regularly; in common fights heroes with potions use them before retreating.",
                 "- Pause: with ESC menu open, mouse wheel + edge scroll + WASD do NOT move camera/zoom.",
                 "- Audio: Master/Music/SFX sliders work independently (music changes ambient only; sfx changes sfx only; master scales both).",
@@ -2243,7 +2243,7 @@
               "asks": [
                 "After above fixes land: re-run `python tools/qa_smoke.py --quick` and confirm PASS; run `python tools/validate_assets.py --report` and confirm no errors.",
                 "Capture deterministic screenshots: `bounty_in_black_fog` and `building_menu_open` and confirm visuals (bounty visible on black fog; build menu visible).",
-                "Quick manual interaction check: Build → click building row → place → ESC cancels."
+                "Quick manual interaction check: Build \u2192 click building row \u2192 place \u2192 ESC cancels."
               ]
             }
           },
@@ -2632,7 +2632,7 @@
               ],
               "acceptance_test": [
                 "Run: python main.py --no-llm",
-                "After 30–90s, select hero and verify Last decision is not '(none yet)' for at least one hero",
+                "After 30\u201390s, select hero and verify Last decision is not '(none yet)' for at least one hero",
                 "Run: python tools/qa_smoke.py --quick (must remain PASS)"
               ],
               "integration_notes": {
@@ -2669,7 +2669,7 @@
               ],
               "proposed_fix": [
                 "Update help overlay to explicitly say: 'B: place bounty at mouse cursor (Shift/Ctrl for tiers)'",
-                "Add a one-time toast hint on first minute if no bounty placed (already present tip text; ensure it’s visible and accurate)"
+                "Add a one-time toast hint on first minute if no bounty placed (already present tip text; ensure it\u2019s visible and accurate)"
               ],
               "acceptance_test": [
                 "Run: python main.py --no-llm",
@@ -2690,7 +2690,7 @@
                 "Observe output includes: bounty_responder_attr_present=False"
               ],
               "expected": "Bounty objects expose stable responder/tier fields per contract (so QA can assert them reliably).",
-              "actual": "Responder/tier appears to be computed as UI-only fields (QA can’t detect contract fields).",
+              "actual": "Responder/tier appears to be computed as UI-only fields (QA can\u2019t detect contract fields).",
               "evidence": "qa_smoke output: bounty_responder_attr_present=False while scenario passes.",
               "suspected_area": [
                 "game/systems/bounty.py field naming (ui_responders vs contract fields)",
@@ -2914,14 +2914,14 @@
             "04": {
               "status": "stand_down_consult_only",
               "pm_reply": [
-                "Thanks—determinism guidance is noted. You are consult-only for WK2; no further action unless pinged."
+                "Thanks\u2014determinism guidance is noted. You are consult-only for WK2; no further action unless pinged."
               ],
               "asks": []
             },
             "05": {
               "status": "stand_down_consult_only",
               "pm_reply": [
-                "Thanks—tuning defaults captured. You are consult-only for WK2; no further action unless pinged (we may ask for tuning review after repro harness exists)."
+                "Thanks\u2014tuning defaults captured. You are consult-only for WK2; no further action unless pinged (we may ask for tuning review after repro harness exists)."
               ],
               "asks": []
             },
@@ -2935,20 +2935,20 @@
             "10": {
               "status": "stand_down_consult_only",
               "pm_reply": [
-                "Thanks—perf gate suggestions captured. You are consult-only for WK2; no further action unless a perf regression appears."
+                "Thanks\u2014perf gate suggestions captured. You are consult-only for WK2; no further action unless a perf regression appears."
               ],
               "asks": []
             },
             "13": {
               "status": "stand_down_consult_only",
               "pm_reply": [
-                "Thanks—release scaffolds are fine. You are consult-only for WK2; no further action until end-of-sprint when we draft/post Build A/B notes."
+                "Thanks\u2014release scaffolds are fine. You are consult-only for WK2; no further action until end-of-sprint when we draft/post Build A/B notes."
               ],
               "asks": []
             }
           },
           "pm_integration_order": [
-            "Lock contracts and field names (Agent 3) — treat as API for WK2.",
+            "Lock contracts and field names (Agent 3) \u2014 treat as API for WK2.",
             "Tools deterministic repro scenario (Agent 12) + QA assertions wiring (Agent 11).",
             "Combat gating (Agent 6) + stuck recovery (Agent 6) validated via scenario + qa_smoke.",
             "Anti-oscillation guardrails (Agent 6) validated via scenario + manual smoke.",
@@ -3018,7 +3018,7 @@
             "02": {
               "status": "acknowledged",
               "pm_reply": [
-                "Thanks—gate PASS evidence recorded and no vision disputes. We still need the interactive 10-minute manual smoke before tagging Build A."
+                "Thanks\u2014gate PASS evidence recorded and no vision disputes. We still need the interactive 10-minute manual smoke before tagging Build A."
               ],
               "asks": []
             },
@@ -3034,7 +3034,7 @@
             "06": {
               "status": "in_review",
               "pm_reply": [
-                "Excellent—core Build A P0 is implemented and gates are green.",
+                "Excellent\u2014core Build A P0 is implemented and gates are green.",
                 "Please switch any hard-coded thresholds to import from `game.sim.hero_guardrails_tunables` so AI/QA/tools cannot drift."
               ],
               "asks": [
@@ -3054,7 +3054,7 @@
             "09": {
               "status": "in_review",
               "pm_reply": [
-                "Thanks—Build B pipeline prep is on track.",
+                "Thanks\u2014Build B pipeline prep is on track.",
                 "Note: you fixed a HUD crash (helpful), but for process: please ensure any cross-domain fixes are clearly logged (which you did) and call out merge-risk if another agent touched the same file."
               ],
               "asks": [
@@ -3075,7 +3075,7 @@
             "12": {
               "status": "acknowledged",
               "pm_reply": [
-                "Great—deterministic repro scenarios and counters are exactly what we needed.",
+                "Great\u2014deterministic repro scenarios and counters are exactly what we needed.",
                 "Thanks for keeping assertions conditioned to field presence to avoid flake during rollout."
               ],
               "asks": [
@@ -3214,11 +3214,11 @@
             "02": {
               "status": "acknowledged",
               "pm_reply": [
-                "Accepted: your 1080p readability + ‘no clutter’ rules are the product acceptance lens for Build A.",
+                "Accepted: your 1080p readability + \u2018no clutter\u2019 rules are the product acceptance lens for Build A.",
                 "Decision: we are not attempting a full settings menu this sprint; focus on default behavior + clarity."
               ],
               "asks": [
-                "In wk3_r2, please do an approval/cut pass on Agent 8’s concrete HUD layout and list any ‘must cut’ items if clutter risk appears."
+                "In wk3_r2, please do an approval/cut pass on Agent 8\u2019s concrete HUD layout and list any \u2018must cut\u2019 items if clutter risk appears."
               ]
             },
             "03": {
@@ -3278,7 +3278,7 @@
               "status": "acknowledged",
               "pm_reply": [
                 "Approved: create attribution standard doc + patch-notes template section for Credits/Attribution.",
-                "Decision: keep release notes precise: we will not claim ‘pixel art for everything’ unless validator passes and QA confirms coverage."
+                "Decision: keep release notes precise: we will not claim \u2018pixel art for everything\u2019 unless validator passes and QA confirms coverage."
               ],
               "asks": [
                 "In wk3_r2, add docs-only scaffolds: attribution standard + WK3 Build A/B patch notes drafts (with Credits section placeholders)."
@@ -3287,8 +3287,8 @@
             "09": {
               "status": "stand_down_consult_only",
               "pm_reply": [
-                "Thanks—style direction is accepted. You are consult-only for wk3_r2; no response needed unless pinged.",
-                "We may ask you in wk3_r3 to shortlist 1–2 CC0/open-license packs per category (heroes/enemies/buildings/UI) with cohesion notes."
+                "Thanks\u2014style direction is accepted. You are consult-only for wk3_r2; no response needed unless pinged.",
+                "We may ask you in wk3_r3 to shortlist 1\u20132 CC0/open-license packs per category (heroes/enemies/buildings/UI) with cohesion notes."
               ],
               "asks": []
             }
@@ -3316,7 +3316,7 @@
           "pm_messages_to_agents": {
             "02": {
               "status": "requested",
-              "message": "Round 2: do an approval/cut pass on Agent 8’s HUD layout implementation once it’s posted/landed. Call out any clutter risks; prioritize readability at 1080p and ‘key info always visible’ (gold/time/alerts) without covering the playfield."
+              "message": "Round 2: do an approval/cut pass on Agent 8\u2019s HUD layout implementation once it\u2019s posted/landed. Call out any clutter risks; prioritize readability at 1080p and \u2018key info always visible\u2019 (gold/time/alerts) without covering the playfield."
             },
             "03": {
               "status": "requested",
@@ -3324,7 +3324,7 @@
             },
             "08": {
               "status": "requested",
-              "message": "Round 2: implement Build A UI skeleton: top bar + bottom command bar + right info panel + minimap region, plus minimal `theme.py` + `widgets.py` primitives. Keep it incremental (don’t refactor everything at once), cache surfaces/text to avoid per-frame churn, and compute layout from actual screen_w/screen_h (no hardcoded 1920x1080 assumptions). Evidence: `python tools/qa_smoke.py --quick` PASS."
+              "message": "Round 2: implement Build A UI skeleton: top bar + bottom command bar + right info panel + minimap region, plus minimal `theme.py` + `widgets.py` primitives. Keep it incremental (don\u2019t refactor everything at once), cache surfaces/text to avoid per-frame churn, and compute layout from actual screen_w/screen_h (no hardcoded 1920x1080 assumptions). Evidence: `python tools/qa_smoke.py --quick` PASS."
             },
             "10": {
               "status": "requested",
@@ -3367,7 +3367,7 @@
             "02": {
               "status": "acknowledged",
               "pm_reply": [
-                "Thanks—your cut guidance is accepted. Good call that we should avoid always-on clutter and keep full control legends behind F3."
+                "Thanks\u2014your cut guidance is accepted. Good call that we should avoid always-on clutter and keep full control legends behind F3."
               ],
               "asks": [
                 "In wk3_r3, please sanity-check the completed UI skeleton at 1920x1080 and confirm it meets readability rules (no overlap/clipping; right panel not too wide)."
@@ -3376,10 +3376,10 @@
             "08": {
               "status": "acknowledged",
               "pm_reply": [
-                "Great—UI skeleton + theme/widgets landed with caching and screen-size-derived layout; that matches Build A goals."
+                "Great\u2014UI skeleton + theme/widgets landed with caching and screen-size-derived layout; that matches Build A goals."
               ],
               "asks": [
-                "In wk3_r3, do a quick pass to ensure the new HUD doesn’t accidentally force legacy panels to stay visible (building/debug panels) and that layout remains usable if window size changes."
+                "In wk3_r3, do a quick pass to ensure the new HUD doesn\u2019t accidentally force legacy panels to stay visible (building/debug panels) and that layout remains usable if window size changes."
               ]
             },
             "10": {
@@ -3430,7 +3430,7 @@
             "pm_authored_at_local": "2025-12-21T00:00:00",
             "notes": "Round 3: close remaining Build A blockers and (if clear) kickoff Build B asset ingestion + strict validation."
           },
-          "pm_instruction": "WK3 Round 3 (wk3_r3): Blockers-only. Primary goal is to make borderless fallback safe (no WINDOW_WIDTH/HEIGHT assumptions when window differs), keep `python tools/qa_smoke.py --quick` PASS, and declare Build A ready for human manual smoke + tag. If Build A is cleared early, we’ll immediately kickoff Build B prep (pack shortlist + strict validator severity plan + attribution wiring).",
+          "pm_instruction": "WK3 Round 3 (wk3_r3): Blockers-only. Primary goal is to make borderless fallback safe (no WINDOW_WIDTH/HEIGHT assumptions when window differs), keep `python tools/qa_smoke.py --quick` PASS, and declare Build A ready for human manual smoke + tag. If Build A is cleared early, we\u2019ll immediately kickoff Build B prep (pack shortlist + strict validator severity plan + attribution wiring).",
           "pm_messages_to_agents": {
             "03": {
               "status": "requested",
@@ -3442,7 +3442,7 @@
             },
             "02": {
               "status": "requested",
-              "message": "Quick signoff: once Agent 03 lands fallback-safe sizing, review UI readability at 1920x1080 and confirm no overlap/clipping + right panel not too wide. If anything is too cluttered, list the top 1–2 cuts (Build A only)."
+              "message": "Quick signoff: once Agent 03 lands fallback-safe sizing, review UI readability at 1920x1080 and confirm no overlap/clipping + right panel not too wide. If anything is too cluttered, list the top 1\u20132 cuts (Build A only)."
             },
             "08": {
               "status": "requested",
@@ -3454,7 +3454,7 @@
             },
             "09": {
               "status": "requested",
-              "message": "Build B kickoff prep: shortlist 1–2 CC0/open-license packs per category (heroes/enemies/buildings, optional UI icons) with cohesion notes (outline thickness, palette/ramp). Keep it minimal and curated (avoid repo bloat). Do not commit assets yet in this round—just shortlist + rationale + any normalization steps."
+              "message": "Build B kickoff prep: shortlist 1\u20132 CC0/open-license packs per category (heroes/enemies/buildings, optional UI icons) with cohesion notes (outline thickness, palette/ramp). Keep it minimal and curated (avoid repo bloat). Do not commit assets yet in this round\u2014just shortlist + rationale + any normalization steps."
             },
             "13": {
               "status": "requested",
@@ -3472,11 +3472,11 @@
             ],
             "build_a_readiness": "Automation gates are green and the fallback-resolution blocker is resolved in code. However, a new P0 crash was found during manual smoke boot: UITheme dataclass slots prevent setting font_* attributes in __post_init__. Build A is NOT smokeable until WK3-BUG-001 is fixed.",
             "required_human_steps": [
-              "Manual smoke 10 min: `python main.py --no-llm` — verify borderless behavior and UI readability at actual runtime resolution; confirm no catastrophic clipping/crash if display <1080p.",
-              "Manual smoke 10 min: `python main.py --provider mock` — same checks.",
+              "Manual smoke 10 min: `python main.py --no-llm` \u2014 verify borderless behavior and UI readability at actual runtime resolution; confirm no catastrophic clipping/crash if display <1080p.",
+              "Manual smoke 10 min: `python main.py --provider mock` \u2014 same checks.",
               "Optional informational: `python tools/validate_assets.py --report` (should exit 0 and report missing sprite folders/states as WARNs)."
             ],
-            "build_b_go_no_go": "GO for Build B kickoff planning now (pack/license verification + strict validator policy), but do not claim ‘pixel art for everything’ until validator+QA confirm coverage."
+            "build_b_go_no_go": "GO for Build B kickoff planning now (pack/license verification + strict validator policy), but do not claim \u2018pixel art for everything\u2019 until validator+QA confirm coverage."
           },
           "pm_decisions": {
             "build_a_status": "blocked_on_WK3-BUG-001",
@@ -3580,13 +3580,13 @@
                 "Shipped as requested. Great job keeping it UI-only and perf-safe (debug panel caching was a nice win)."
               ],
               "asks": [
-                "No further action unless a UX issue appears during manual smoke (e.g., quit misclicks → consider confirm dialog later)."
+                "No further action unless a UX issue appears during manual smoke (e.g., quit misclicks \u2192 consider confirm dialog later)."
               ]
             },
             "11": {
               "status": "acknowledged",
               "pm_reply": [
-                "Checklist updates accepted. Keep click behaviors manual-verified; avoid flaky headless assertions beyond what’s already in place."
+                "Checklist updates accepted. Keep click behaviors manual-verified; avoid flaky headless assertions beyond what\u2019s already in place."
               ],
               "asks": [
                 "No further action unless Build B validator wiring changes are ready."
@@ -3765,7 +3765,7 @@
               "python tools/validate_assets.py --strict --check-attribution => PASS"
             ],
             "manual_spot_check": [
-              "Recommended: run `python main.py --no-llm` and confirm a Skeleton Archer appears as the first wave enemy within ~10–15s and engages near the castle."
+              "Recommended: run `python main.py --no-llm` and confirm a Skeleton Archer appears as the first wave enemy within ~10\u201315s and engages near the castle."
             ]
           },
           "status": "ready_to_ship"
@@ -3803,7 +3803,7 @@
                 "scope": "All ranged units now and in future (generic pipeline).",
                 "first_pass": "Visual-only projectiles (no collision/physics).",
                 "event_contract": "Combat emits a ranged_projectile event (from_x/y, to_x/y, projectile_kind, optional color/size). VFX consumes it.",
-                "timing_defaults": "Approx 3000 px/s speed with 80–140ms clamp (distance-based).",
+                "timing_defaults": "Approx 3000 px/s speed with 80\u2013140ms clamp (distance-based).",
                 "palette_defaults": "Arrow = high-contrast warm/wood + bright tip pixel; Bolt = cool/steel variant (as needed)."
               },
               "ranger_bow_readability": "Ranger attack pose must read as bow shot at 32x32 (strong C-curve bow silhouette + release pose cue).",
@@ -3853,7 +3853,7 @@
               "status": "accepted",
               "pm_reply": [
                 "Accepted: demolish guardrails locked for Build A: allowed while under attack; disabled for under-construction; castle excluded; no refunds.",
-                "Accepted: projectile tuning defaults (≈3000 px/s, 80–140ms clamp) and arrow/bolt color language as v0."
+                "Accepted: projectile tuning defaults (\u22483000 px/s, 80\u2013140ms clamp) and arrow/bolt color language as v0."
               ],
               "asks": [
                 "Confirm current ranged attackers inventory for Build A (at minimum Ranger, SkeletonArcher, BallistaTower) and any other ranged unit present in code.",
@@ -3874,7 +3874,7 @@
               "status": "accepted_with_art_notes",
               "pm_reply": [
                 "Accepted: bow readability requirements for Ranger (strong C-curve silhouette + release pose cues at 32x32).",
-                "Accepted: projectile spec (1–2 px arrow/bolt, bright tip pixel, trailing-edge outline, deterministic).",
+                "Accepted: projectile spec (1\u20132 px arrow/bolt, bright tip pixel, trailing-edge outline, deterministic).",
                 "Accepted: worker silhouettes: peasant reads via tool; tax collector reads via coin bag/trim."
               ],
               "asks": [
@@ -3993,7 +3993,7 @@
                 "Confirm BallistaTower ranged attacks (if present) also emit ranged_projectile; otherwise document as Build B follow-up."
               ],
               "09": [
-                "Implement VFX rendering for `ranged_projectile` in `game/graphics/vfx.py` (1–2 px arrow/bolt with bright tip pixel, deterministic).",
+                "Implement VFX rendering for `ranged_projectile` in `game/graphics/vfx.py` (1\u20132 px arrow/bolt with bright tip pixel, deterministic).",
                 "Verify ranger bow cue + projectile readability at Z2; confirm single arrow color policy for Build A."
               ],
               "12": [
@@ -4010,7 +4010,7 @@
               "Enemy-side ranged_projectile event emission for SkeletonArcher (Agent 03).",
               "Building-side ranged_projectile event emission for BallistaTower (Agent 03).",
               "Engine collection/merge of ranged_projectile events from enemies/buildings into the VFX feed (Agent 03).",
-              "VFX rendering for ranged_projectile (1–2 px, bright tip, deterministic; Build A enforces wood-brown) (Agent 09).",
+              "VFX rendering for ranged_projectile (1\u20132 px, bright tip, deterministic; Build A enforces wood-brown) (Agent 09).",
               "QA verification: qa_smoke --quick PASS; validate_assets --strict --check-attribution PASS; worker_catalog snapshot PASS; ranged_projectiles snapshots PASS at ticks 60/90/120; gallery build PASS (Agent 11)."
             ],
             "evidence": [
@@ -4043,6 +4043,199 @@
             ]
           },
           "status": "ready_for_buildB_kickoff"
+        }
+      }
+    },
+    "wk17-quality-logic-immersion": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+        "notes": "WK17: Quality, Logic, & Immersion. Focus on line of sight fixes, AI hysteresis (conviction), clickable peasants, and memory leak/performance hardening."
+      },
+      "rounds": {
+        "wk17_r1_kickoff_investigation": {
+          "round_meta": {
+            "prompt_set_id": "wk17_r1_investigation_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-02-20T12:00:00",
+            "visibility": "WK17 Round 1: Investigation & Independent Foundation"
+          },
+          "pm_status_summary": {
+            "overall_status": "Round 1 - Investigation and Foundation",
+            "focus": "Profile memory leaks, define vision rules, unblock AI and UI independent tasks."
+          },
+          "pm_next_actions_by_agent": {
+            "10": {
+              "status": "assigned_active",
+              "asks": [
+                "Profile game over 5-minute --no-llm run.",
+                "Identify exact leaking objects (using tracemalloc/object graphs).",
+                "Document findings so Agent 03 can implement the fix in Round 2."
+              ],
+              "acceptance_criteria": [
+                "Documented root cause of the memory leak."
+              ]
+            },
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Define visibility radii and rules for auto-spawned buildings (Farms, Houses) and Guards so Agent 03 can hook them into Fog of War."
+              ],
+              "acceptance_criteria": [
+                "Documented radii and rules for Fog of War integration."
+              ]
+            },
+            "06": {
+              "status": "assigned_active",
+              "asks": [
+                "Audit hero simulation loop for intent conviction (hysteresis).",
+                "Lock in LLM-directed transitions (like going to Blacksmith) so hero does not reconsider every tick until destination reached or attacked."
+              ],
+              "acceptance_criteria": [
+                "Heroes exiting building for a target complete the walk >95% of time.",
+                "qa_smoke PASS"
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Hook peasants into entity selection system.",
+                "Design/implement simple tasteful info panel for selected peasant displaying current action (e.g. Carrying Wood)."
+              ],
+              "acceptance_criteria": [
+                "Clicking peasant selects them and displays panel.",
+                "qa_smoke PASS"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "05",
+              "06",
+              "08",
+              "10"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "09",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "rationale": "Agent 03 is blocked by Agent 10 (memory profile) and Agent 05 (vision rules) and will be activated in Round 2."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK17-BUG-001",
+              "title": "Memory leak / Lag after 5 minutes of play",
+              "severity": "blocker",
+              "owner_agent": "10_PerformanceStability_Lead",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --no-llm for a few minutes"
+              ],
+              "expected": "Smooth FPS and stable memory plateau.",
+              "actual": "Lag and potential memory leak after 5 minutes.",
+              "status": "investigated_by_agent_10"
+            },
+            {
+              "id": "WK17-BUG-002",
+              "title": "Heroes immediately turn back after leaving inn for a task",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Hero declares intent to buy dagger",
+                "Hero exits inn",
+                "Hero almost immediately re-enters inn instead of completing task"
+              ],
+              "expected": "Hero locks in decision to complete errand with higher priority (hysteresis).",
+              "actual": "Hero re-evaluates and changes mind immediately.",
+              "status": "resolved_in_round_1"
+            },
+            {
+              "id": "WK17-BUG-003",
+              "title": "Auto-spawned buildings and guards swallowed by Fog of War",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Wait for farm/house to auto-spawn, or spawn a guard",
+                "Observe fog around them"
+              ],
+              "expected": "Player structures and guards inherently provide line of sight to push back fog.",
+              "actual": "They can get covered in fog of war.",
+              "status": "defined_in_round_1"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK17-FEAT-001",
+              "title": "Clickable Peasants",
+              "owner_agent": "08_UX_UI_Director",
+              "specs": [
+                "Every peasant must have a click hitbox",
+                "Clicking peasant sets them as active selection",
+                "Show a minimal flavorful UI panel with their current simple task (e.g., 'Carrying Wood')"
+              ],
+              "status": "implemented_in_round_1"
+            }
+          ]
+        },
+        "wk17_r2_execution_integration": {
+          "round_meta": {
+            "prompt_set_id": "wk17_r2_execution_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-02-20T12:00:00",
+            "visibility": "WK17 Round 2: Architecture Execution"
+          },
+          "pm_status_summary": {
+            "overall_status": "Round 2 - Architecture Integration",
+            "focus": "Agent 03 executes the technical fixes based on guidelines from Agent 10 and 05."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Review Agent 10's memory leak profile and implement the fix (ensure dead entities GC'd, caches bounded).",
+                "Review Agent 05's visibility rules and implement engine hooks to register auto-spawned buildings and Guards as vision sources, tying into FogOfWar dynamically."
+              ],
+              "acceptance_criteria": [
+                "Memory plateaus over time.",
+                "Guards and auto-spawned buildings clear fog dynamically without tanking FPS.",
+                "qa_smoke PASS"
+              ]
+            },
+            "11": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by for gate validation once implementation is merged."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "03"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "rationale": "Round 2 is entirely focused on Agent 03 clearing the technical blockers identified in Round 1."
+          }
         }
       }
     }

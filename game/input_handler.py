@@ -320,6 +320,7 @@ class InputHandler:
                         engine.selected_hero = None
                         engine.building_panel.deselect()
                         engine.selected_building = None
+                        engine.selected_peasant = None
                         return
                     if action == "exit_interior":
                         if getattr(engine, "micro_view", None) is not None:
@@ -486,19 +487,26 @@ class InputHandler:
                 if engine.try_select_hero(event.pos):
                     engine.building_panel.deselect()
                     engine.selected_building = None
+                    engine.selected_peasant = None
                 elif engine.try_select_tax_collector(event.pos):
                     engine.building_panel.deselect()
                     engine.selected_building = None
+                    engine.selected_peasant = None
                 elif engine.try_select_guard(event.pos):
                     engine.building_panel.deselect()
                     engine.selected_building = None
+                    engine.selected_peasant = None
+                elif engine.try_select_peasant(event.pos):
+                    engine.selected_hero = None
                 elif engine.try_select_building(event.pos):
                     engine.selected_hero = None
+                    engine.selected_peasant = None
                 else:
                     # Clicked on empty space
                     engine.selected_hero = None
                     engine.building_panel.deselect()
                     engine.selected_building = None
+                    engine.selected_peasant = None
 
         elif event.button == 3:  # Right click
             # Indirect-control game: no direct hero commands.

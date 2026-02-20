@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.4.2 — Playability Quality Reached
+
+### WK17 Sprint: Quality, Logic, & Immersion
+- **Hero Conviction System**: Added hysteresis to hero AI behavior to prevent immediate task churning and ensure commitment to intents like shopping or errands.
+- **Clickable Peasants**: Peasants can now be selected, revealing a UI info panel detailing their current action and HP.
+- **Dynamic Fog of War**: Auto-spawned player structures (farms, houses, etc.) and active guards now inherently push back the fog of war, ensuring visibility over your domain.
+- **Performance & Stability**: Fixed a memory leak by caching UI overlay fonts and instituting a bounded FIFO cache for the A* pathfinding system.
+
 ## Prototype v1.4.1 — UI UX Improvements and NPC Upgrades
 
 ### UI & Menu Polish

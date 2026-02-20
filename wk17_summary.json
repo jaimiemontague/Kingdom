@@ -1,0 +1,71 @@
+{
+  "05": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+      "notes": "WK17: Quality, Logic, & Immersion."
+    },
+    "rounds": {
+      "wk17_r1_kickoff_investigation": {
+        "round_id": "wk17_r1_kickoff_investigation",
+        "sprint_id": "wk17-quality-logic-immersion",
+        "round_meta": {
+          "prompt_set_id": "wk17_r1_investigation_v1",
+          "build_target": "BuildA_midweek"
+        },
+        "response": {
+          "status": "done",
+          "agent_fields": {
+            "what_i_changed": [
+              "docs/vision_rules_fog_of_war.md: Added visibility radii and rules for auto-spawned buildings (house, farm, food_stand) and Guards for Fog of War integration. Agent 03 implements engine hooks in Round 2."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick (no game code change; doc only)"
+            ],
+            "evidence": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "status": "PASS",
+                "exit_code": 0
+              }
+            },
+            "blockers": []
+          }
+        }
+      }
+    }
+  },
+  "06": null,
+  "08": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+      "notes": "WK17: Quality, Logic, & Immersion. Agent 08: Peasant selection + info panel."
+    },
+    "rounds": {
+      "wk17_r1_kickoff_investigation": {
+        "sprint_id": "wk17-quality-logic-immersion",
+        "round_id": "wk17_r1_kickoff_investigation",
+        "round_meta": {
+          "build_target": "BuildA_midweek",
+          "sent_at_local": "2026-02-20"
+        },
+        "response": {
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: selected_peasant; try_select_peasant(screen_pos); clear selected_peasant in try_select_hero/tc/guard/building and on empty click; game_state['selected_peasant'].",
+            "game/input_handler.py: try_select_peasant in selection chain (after guard, before building); clear selected_peasant on hero/tc/guard/empty; close_selection clears selected_peasant.",
+            "game/ui/hud.py: _peasant_action_label(peasant), _render_peasant_summary(surface, peasant, left_rect); left panel shows peasant panel when selected_peasant set (title Peasant, Action, HP bar)."
+          ],
+          "how_to_test": [
+            "Run game, wait for peasants to spawn. Click a peasant: left panel shows 'Peasant' with Action (e.g. Building (Farm), Repairing (Market), Resting in castle, Walking) and HP bar.",
+            "Click hero/building/empty: peasant selection clears. Click peasant again: panel displays."
+          ],
+          "evidence": {
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+          },
+          "blockers": []
+        }
+      }
+    }
+  },
+  "10": null
+}

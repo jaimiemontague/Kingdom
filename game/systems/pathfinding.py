@@ -1,8 +1,13 @@
 """
 Simple A* pathfinding implementation.
+WK17: Bounded path cache to reduce allocation churn (memory leak mitigation).
 """
 import heapq
 from config import TILE_SIZE
+
+# Bounded path cache: key (start, goal) -> path. FIFO eviction, max 256 entries.
+_PATH_CACHE: dict[tuple[tuple[int, int], tuple[int, int]], list] = {}
+_PATH_CACHE_MAX = 256
 
 
 def heuristic(a: tuple, b: tuple) -> float:
@@ -55,10 +60,17 @@ def find_path(
     """
     if start == goal:
         return [start]
-    
-    # Check if goal is walkable
+
+    # Build set of blocked tiles from buildings (needed for cache validation and A*)
+    blocked = set()
+    if buildings:
+        for building in buildings:
+            for dx in range(building.size[0]):
+                for dy in range(building.size[1]):
+                    blocked.add((building.grid_x + dx, building.grid_y + dy))
+
+    # Check if goal is walkable; adjust to nearest walkable if not
     if not world.is_walkable(goal[0], goal[1]):
-        # Find nearest walkable tile to goal
         for radius in range(1, 5):
             for dx in range(-radius, radius + 1):
                 for dy in range(-radius, radius + 1):
@@ -72,15 +84,24 @@ def find_path(
             else:
                 continue
             break
-    
-    # Build set of blocked tiles from buildings
-    blocked = set()
-    if buildings:
-        for building in buildings:
-            for dx in range(building.size[0]):
-                for dy in range(building.size[1]):
-                    blocked.add((building.grid_x + dx, building.grid_y + dy))
-    
+
+    cache_key = (start, goal)
+    cached = _PATH_CACHE.get(cache_key)
+    if cached is not None:
+        # Validate cached path still valid (each cell walkable or goal; non-goal not blocked)
+        valid = True
+        for cell in cached:
+            if cell == goal:
+                continue
+            if cell in blocked:
+                valid = False
+                break
+            if not world.is_walkable(cell[0], cell[1]):
+                valid = False
+                break
+        if valid:
+            return list(cached)
+
     # A* algorithm
     open_set = []
     heapq.heappush(open_set, (0, start))
@@ -106,6 +127,11 @@ def find_path(
                 current = came_from[current]
             path.append(start)
             path.reverse()
+            # WK17: Store in bounded cache (FIFO eviction)
+            if len(_PATH_CACHE) >= _PATH_CACHE_MAX:
+                first = next(iter(_PATH_CACHE))
+                del _PATH_CACHE[first]
+            _PATH_CACHE[cache_key] = path
             return path
         
         for neighbor in get_neighbors(current, world):

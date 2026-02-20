@@ -1,1 +1,14 @@
-All agents are done working.  Please check their logs for updates, let me know the status of the sprint, determine the next set of tasks needed to be assigned to each agent for the next leg of the sprint (or to finish the sprint), and then add those instructions to your log and give me a universal prompt I can give to all the agents along with telling me which agents to send it to (only sending to necessary agents.)
+You are being activated for Round 2 of the WK17 Sprint (Quality, Logic, & Immersion).
+
+Read your assignment in the PM hub:
+.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json
+→ sprints["wk17-quality-logic-immersion"].rounds["wk17_r2_execution_integration"]
+
+Your specific prompt is under pm_next_actions_by_agent["03"].
+Agent 05 has provided the vision radius rules in `docs/vision_rules_fog_of_war.md` (or their log).
+Agent 10 was supposed to profile the memory leak, but if their output isn't explicit, you are tasked with finding and fixing the memory leak in the pathfinding caches, dead entity lingering, or surface rendering.
+
+After completing your work:
+1. Update your agent log (agent_03_TechnicalDirector_Architecture.json)
+2. Run: python tools/qa_smoke.py --quick (must PASS)
+3. Report status back

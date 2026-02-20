@@ -1242,6 +1242,41 @@
           }
         }
       }
+    },
+    "wk17-quality-logic-immersion": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+        "notes": "WK17: Quality, Logic, & Immersion."
+      },
+      "rounds": {
+        "wk17_r1_kickoff_investigation": {
+          "round_id": "wk17_r1_kickoff_investigation",
+          "sprint_id": "wk17-quality-logic-immersion",
+          "round_meta": {
+            "prompt_set_id": "wk17_r1_investigation_v1",
+            "build_target": "BuildA_midweek"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "docs/vision_rules_fog_of_war.md: Added visibility radii and rules for auto-spawned buildings (house, farm, food_stand) and Guards for Fog of War integration. Agent 03 implements engine hooks in Round 2."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick (no game code change; doc only)"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

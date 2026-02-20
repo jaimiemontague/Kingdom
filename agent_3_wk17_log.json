@@ -1,0 +1,42 @@
+{
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
+    "notes": "WK17 Quality, Logic, & Immersion. Agent 03 Round 2: vision hooks + memory leak fixes."
+  },
+  "rounds": {
+    "wk17_r2_execution_integration": {
+      "sprint_id": "wk17-quality-logic-immersion",
+      "round_id": "wk17_r2_execution_integration",
+      "round_meta": {
+        "prompt_set_id": "wk17_r2_execution_v1",
+        "build_target": "BuildA_midweek",
+        "sent_at_local": "2026-02-20T00:00:00"
+      },
+      "prompt_text": "Review Agent 10 memory leak profile and implement fix; implement Agent 05 visibility rules (engine hooks for neutral buildings and guards as vision sources).",
+      "response": {
+        "received_at_local": "2026-02-20T00:00:00",
+        "status": "complete",
+        "summary_bullets": [
+          "Fog of war: added revealers for neutral buildings (house/farm/food_stand) and living guards in _update_fog_of_war(); radii per docs/vision_rules_fog_of_war.md.",
+          "Memory: cached PAUSED overlay font in engine (_pause_font, created once) to avoid per-frame Font allocation.",
+          "Memory: added bounded path cache in pathfinding.py (key (start,goal), max 256, FIFO); validate cached path before return; reduces A* allocation churn."
+        ],
+        "files_changed": [
+          "game/engine.py",
+          "game/systems/pathfinding.py"
+        ],
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: run with neutral buildings/guards; fog clears around them; long session for memory plateau"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        }
+      }
+    }
+  }
+}
