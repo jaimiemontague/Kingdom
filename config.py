@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.4.2"
-    game_title: str = "Kingdom Sim (Prototype v1.4.2) — Playability Quality Reached"
+    prototype_version: str = "1.4.3"
+    game_title: str = "Kingdom Sim (Prototype v1.4.3) — The LLM-AI Merger Update"
     default_borderless: bool = True
 
 
@@ -333,6 +333,10 @@ BUILDING_CONSTRAINTS = {
 BUILDING_PREREQUISITES = {
     "ballista_tower": ["dwarven_settlement"],
 }
+
+# Inn economy (WK18): entry and loiter fees; heroes with gold < 1 are ejected
+INN_ENTRY_FEE = 2
+INN_LOITER_FEE_GOLD_PER_SEC = 0.5
 
 # Max heroes that can be inside a building at once (0 = not enterable in this sprint)
 BUILDING_MAX_OCCUPANTS = {

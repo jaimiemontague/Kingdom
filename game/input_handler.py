@@ -35,11 +35,18 @@ class InputHandler:
         events = pygame.event.get()
 
         for event in events:
+            if getattr(engine, "dev_tools_panel", None) and engine.dev_tools_panel.visible:
+                if engine.dev_tools_panel.handle_event(event):
+                    continue
+
             if event.type == pygame.QUIT:
                 engine.running = False
 
             elif event.type == pygame.KEYDOWN:
                 self.handle_keydown(event)
+
+            elif event.type == pygame.VIDEORESIZE:
+                engine.apply_display_settings(engine.display_mode, (event.w, event.h))
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_mousedown(event)
@@ -232,6 +239,10 @@ class InputHandler:
             # Toggle HUD help/controls overlay
             if hasattr(engine.hud, "toggle_help"):
                 engine.hud.toggle_help()
+        elif event.key == pygame.K_F4:
+            # WK18: Toggle Dev Tools overlay (AI/LLM log)
+            if hasattr(engine, "dev_tools_panel") and hasattr(engine.dev_tools_panel, "toggle"):
+                engine.dev_tools_panel.toggle()
 
         elif event.key == pygame.K_F12:
             # Manual screenshot capture

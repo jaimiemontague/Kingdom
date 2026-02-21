@@ -8,7 +8,21 @@ VALID_ACTIONS = {
     "buy_item",
     "use_potion",
     "explore",
+    "leave_building",
+    "move_to",
 }
+
+# WK18: Tool-use schema for Obey/Defy and physical actions (LLM agency).
+TOOL_ACTIONS = {
+    "leave_building",
+    "move_to",
+    "fight",
+    "retreat",
+    "buy_item",
+    "use_potion",
+    "explore",
+}
+OBEY_DEFY_VALUES = ("Obey", "Defy")
 
 SYSTEM_PROMPT = """You are an AI controlling a hero character in a fantasy kingdom simulation game. 
 You must make tactical decisions to help your hero survive, grow stronger, and protect the kingdom.
@@ -29,8 +43,13 @@ You must respond with a JSON object containing your decision. The format is:
 {
     "action": "<action_type>",
     "target": "<target_name_or_id>",
-    "reasoning": "<brief explanation>"
+    "reasoning": "<brief explanation>",
+    "obey_defy": "Obey" or "Defy",
+    "tool_action": "<physical_action>"
 }
+
+obey_defy: Say "Obey" if you are following the Sovereign's implied orders or the situation; say "Defy" if you are deliberately acting against them.
+tool_action: One of leave_building, move_to, fight, retreat, buy_item, use_potion, explore. Use leave_building when you want to exit the current building; use move_to for going somewhere (target can describe destination).
 
 Valid actions:
 - "fight": Continue or start fighting (target = enemy type if specific)
@@ -51,6 +70,9 @@ Respond ONLY with the JSON object, no other text."""
 # wk14 Persona and Presence: conversational mode (in-building chat with Sovereign)
 CONVERSATION_SYSTEM_PROMPT = """You are {hero_name}, a level {level} {hero_class} in a fantasy kingdom.
 Personality: {personality}.
+
+Your current status:
+{hero_stat_block}
 
 The Sovereign (the player who rules this kingdom) is speaking with you directly.
 Respond in character. You are loyal to the Sovereign but have your own personality.
@@ -73,6 +95,9 @@ Respond in character as {hero_name}:"""
 
 DECISION_PROMPT = """Current Situation for {hero_name}:
 
+--- Hero (left panel) ---
+{hero_stat_block}
+--- Situation ---
 {context_summary}
 
 Based on your personality ({personality}) and the current situation, what action should you take?
@@ -103,6 +128,7 @@ def build_conversation_prompt(
         level=hero["level"],
         hero_class=hero["class"],
         personality=hero_context.get("personality", "balanced and reliable"),
+        hero_stat_block=hero_context.get("hero_stat_block", ""),
         location=location,
         building_context=building_context,
         occupants_note=occupants_note,
@@ -166,6 +192,7 @@ def build_decision_prompt(context: dict, summary: str) -> str:
     
     return DECISION_PROMPT.format(
         hero_name=hero["name"],
+        hero_stat_block=context.get("hero_stat_block", ""),
         context_summary=summary,
         personality=context["personality"],
         potions=context["inventory"]["potions"],

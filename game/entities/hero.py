@@ -100,6 +100,8 @@ class Hero:
         self.last_llm_decision_time = 0
         self.pending_llm_decision = False
         self.last_llm_action = None
+        # WK18: Physical hook — when set by behavior, engine applies to state (move_to).
+        self.llm_move_request: tuple[float, float] | None = None
 
         # Intent + last decision snapshot (for UI/debug/QA).
         # Keep this data simple for future determinism/networking friendliness.
@@ -331,6 +333,22 @@ class Hero:
         if rest_building is None:
             self.state = HeroState.IDLE
             return False
+
+        # WK18-FEAT-002: Inn loiter fee and eject when broke (resting at Inn)
+        if getattr(rest_building, "building_type", None) == "inn":
+            from config import INN_LOITER_FEE_GOLD_PER_SEC
+            deduct = max(0.0, float(INN_LOITER_FEE_GOLD_PER_SEC)) * dt
+            if deduct > 0 and getattr(self, "gold", 0) > 0:
+                accum = getattr(self, "_loiter_fee_accum", 0.0) + deduct
+                if accum >= 1.0:
+                    drop = int(accum)
+                    self.gold = max(0, self.gold - drop)
+                    self._loiter_fee_accum = accum - drop
+                else:
+                    self._loiter_fee_accum = accum
+            if getattr(self, "gold", 0) < 1:
+                self.pop_out_of_building()
+                return False
 
         # Check if building is damaged - must pop out and defend.
         if getattr(rest_building, "is_damaged", False):
@@ -569,6 +587,22 @@ class Hero:
 
         # Handle brief "inside building" timer (shopping etc.)
         if self.is_inside_building and self.state != HeroState.RESTING and self.inside_timer > 0:
+            # WK18-FEAT-002: Inn loiter fee and eject when broke
+            inn = self.inside_building
+            if getattr(inn, "building_type", None) == "inn":
+                from config import INN_LOITER_FEE_GOLD_PER_SEC
+                deduct = max(0.0, float(INN_LOITER_FEE_GOLD_PER_SEC)) * dt
+                if deduct > 0 and getattr(self, "gold", 0) > 0:
+                    accum = getattr(self, "_loiter_fee_accum", 0.0) + deduct
+                    if accum >= 1.0:
+                        drop = int(accum)
+                        self.gold = max(0, self.gold - drop)
+                        self._loiter_fee_accum = accum - drop
+                    else:
+                        self._loiter_fee_accum = accum
+                if getattr(self, "gold", 0) < 1:
+                    self.pop_out_of_building()
+                    return
             self.inside_timer = max(0.0, self.inside_timer - dt)
             if self.inside_timer <= 0:
                 self.pop_out_of_building()

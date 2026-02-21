@@ -1,5 +1,14 @@
 # Changelog
 
+## Prototype v1.4.3 — The LLM-AI Merger Update
+
+### WK18 Sprint: LLM-AI Merger, Physicality, & Dev Tools
+- **Hero Context Injection**: Heroes are now explicitly self-aware of their physical reality (HP, Gold, Potions, Stats, Location) through the new `hero_stat_block` injected directly into their conversational prompt.
+- **Physical Soft-Collisions**: Heroes physically push each other apart (`_apply_hero_separation`) rather than clumping synchronously onto the exact same pixel coordinates.
+- **The Inn Economy**: Heroes now pay a fractional loiter fee (0.5 gold/sec) to rest at the Inn and are forcefully ejected when their wallet reaches 0, returning them to the work pool.
+- **Dynamic F4 Dev Tools**: Toggle the `F4` developer overlay to view real-time AI/LLM requests, responses, and errors in a fully resizable, scrolling, word-wrapped matrix log window.
+- **Building Destructions**: Demolishing a building forcefully ejects any heroes resting or shopping inside onto the map.
+
 ## Prototype v1.4.2 — Playability Quality Reached
 
 ### WK17 Sprint: Quality, Logic, & Immersion

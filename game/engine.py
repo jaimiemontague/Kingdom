@@ -30,7 +30,7 @@ from game.world import World, Visibility
 from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
 from game.systems import CombatSystem, EconomySystem, EnemySpawner, BountySystem, LairSystem, NeutralBuildingSystem
 from game.systems.buffs import BuffSystem
-from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel
+from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel, DevToolsPanel
 from game.ui.building_list_panel import BuildingListPanel
 from game.ui.pause_menu import PauseMenu
 from game.ui.build_catalog_panel import BuildCatalogPanel
@@ -178,6 +178,7 @@ class GameEngine:
         self.building_menu = BuildingMenu()
         self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
         self.debug_panel = DebugPanel(self.window_width, self.window_height)
+        self.dev_tools_panel = DevToolsPanel(self.event_bus, self.window_width, self.window_height)
         self.building_panel = BuildingPanel(self.window_width, self.window_height)
         # WK7-BUG-001: PauseMenu requires audio_system, so it must be initialized after audio_system
         self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
@@ -707,8 +708,53 @@ class GameEngine:
         if self.ai_controller:
             self.ai_controller.update(dt, self.heroes, game_state)
 
+        # WK18: Drain LLM move_to requests into physical state so hero executes immediately.
+        from game.entities.hero import HeroState
+        for hero in self.heroes:
+            if getattr(hero, "llm_move_request", None) is not None:
+                wx, wy = hero.llm_move_request
+                hero.set_target_position(wx, wy)
+                hero.llm_move_request = None
+
         for hero in self.heroes:
             hero.update(dt, game_state)
+
+        self._apply_hero_separation(dt)
+
+    def _apply_hero_separation(self, dt: float) -> None:
+        """WK18: Soft collision / flocking separation so heroes do not stack exactly on top of each other."""
+        import math
+        # Tunables: min distance (px), nudge strength (px/s when overlapping).
+        min_dist_px = 32.0
+        strength_per_sec = 200.0
+        max_step = 120.0 * dt  # cap displacement per frame
+
+        alive = [h for h in self.heroes if getattr(h, "is_alive", True)]
+        for i, hero in enumerate(alive):
+            if getattr(hero, "is_inside_building", False):
+                continue
+            dx_sum, dy_sum = 0.0, 0.0
+            for j, other in enumerate(alive):
+                if i == j:
+                    continue
+                if getattr(other, "is_inside_building", False):
+                    continue
+                dx = hero.x - other.x
+                dy = hero.y - other.y
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist < min_dist_px and dist > 1e-6:
+                    # Push away; magnitude = (min_dist - dist) * strength
+                    push = (min_dist_px - dist) * strength_per_sec * dt / dist
+                    dx_sum += dx * push
+                    dy_sum += dy * push
+            if dx_sum != 0 or dy_sum != 0:
+                step = math.sqrt(dx_sum * dx_sum + dy_sum * dy_sum)
+                if step > max_step:
+                    scale = max_step / step
+                    dx_sum *= scale
+                    dy_sum *= scale
+                hero.x += dx_sum
+                hero.y += dy_sum
 
     def _update_world_systems(self, system_ctx: SystemContext, dt: float, game_state: dict):
         """Update fog, buffs, and early pacing logic."""
@@ -1289,7 +1335,9 @@ class GameEngine:
 
             # Render debug panel
             self.debug_panel.render(self.screen, self.get_game_state())
-            
+            # WK18: Dev Tools overlay (AI/LLM log stream)
+            self.dev_tools_panel.render(self.screen)
+
             # Render building panel
             self.building_panel.render(self.screen, self.heroes, self.economy)
             

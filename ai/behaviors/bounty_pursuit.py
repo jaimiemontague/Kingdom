@@ -283,7 +283,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
     # Check if reached destination.
     if hero.target_position:
         dist = hero.distance_to(hero.target_position[0], hero.target_position[1])
-        if dist < TILE_SIZE // 2:
+        if dist <= TILE_SIZE * 1.5:
             # Check if we were going home.
             if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
                 hero.transfer_taxes_to_home()
