@@ -392,24 +392,24 @@ class BasicAI:
         hero.state = HeroState.IDLE
 
     def handle_shopping(self, hero, game_state: dict):
-        """Handle shopping state - wait inside or buy at marketplace (WK11: deferred purchase on exit)."""
+        """Handle shopping state - wait inside or buy at marketplace/blacksmith (WK11: deferred purchase on exit)."""
         if hero.is_inside_building:
             return  # Wait for inside_timer to expire; finalize_deferred_task runs on pop-out
         buildings = game_state.get("buildings", [])
 
-        marketplace = None
+        shop = None
         for building in buildings:
-            if building.building_type == "marketplace":
+            if building.building_type in ["marketplace", "blacksmith"]:
                 dist = hero.distance_to(building.center_x, building.center_y)
                 if dist < TILE_SIZE * 2:
-                    marketplace = building
+                    shop = building
                     break
 
-        if not marketplace:
+        if not shop:
             hero.state = HeroState.IDLE
             return
 
-        started_journey = self.shopping_behavior.do_shopping(self, hero, marketplace, game_state)
+        started_journey = self.shopping_behavior.do_shopping(self, hero, shop, game_state)
         if started_journey:
             return
         hero.state = HeroState.IDLE
@@ -453,13 +453,14 @@ class BasicAI:
             hero.target = {"type": "going_home"}
 
     def handle_resting(self, hero, dt: float, game_state: dict):
-        """Handle hero resting at home."""
-        if hero.home_building and hero.home_building.is_damaged:
+        """Handle hero resting at home or inn."""
+        rest_building = hero.inside_building or hero.home_building
+        if rest_building and getattr(rest_building, "is_damaged", False):
             hero.pop_out_of_building()
             return
 
-        if hero.home_building:
-            dist = hero.distance_to(hero.home_building.center_x, hero.home_building.center_y)
+        if rest_building:
+            dist = hero.distance_to(rest_building.center_x, rest_building.center_y)
             if dist > TILE_SIZE * 2:
                 hero.finish_resting()
                 return

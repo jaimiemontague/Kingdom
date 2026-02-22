@@ -511,6 +511,41 @@ def _building_frame_sized(building_type: str, state: str, *, size_px: int) -> py
         pygame.draw.rect(s, OUT, aw, 0)
         pygame.draw.rect(s, cloth_yellow, aw.inflate(-2, -2), 0)
         pygame.draw.circle(s, (255, 80, 80), (aw.centerx, aw.centery), 3)
+    elif bt == "goblin_camp":
+        baseplate((100, 70, 40))
+        tent = pygame.Rect(pad*4, pad*8, w - pad*8, h - pad*10)
+        roof_poly([(tent.left, tent.bottom), (tent.centerx, tent.top), (tent.right, tent.bottom)], (130, 90, 50))
+        pygame.draw.circle(s, (40, 40, 40), (tent.centerx, tent.bottom - 4), pad*2)
+    elif bt == "wolf_den":
+        baseplate((70, 70, 70))
+        cave = pygame.Rect(pad*3, pad*6, w - pad*6, h - pad*8)
+        pygame.draw.ellipse(s, (80, 80, 80), cave)
+        pygame.draw.ellipse(s, OUT, cave, 2)
+        pygame.draw.ellipse(s, (10, 10, 15), cave.inflate(-pad*4, -pad*4))
+    elif bt == "skeleton_crypt":
+        baseplate((50, 40, 60))
+        crypt = pygame.Rect(pad*5, pad*7, w - pad*10, h - pad*10)
+        wall_rect(crypt, (80, 70, 90))
+        roof_poly([(crypt.left, crypt.top), (crypt.centerx, crypt.top - pad*3), (crypt.right, crypt.top)], (60, 50, 70))
+        pygame.draw.rect(s, (20, 15, 25), pygame.Rect(crypt.centerx - pad, crypt.bottom - pad*4, pad*2, pad*4))
+    elif bt == "spider_nest":
+        baseplate((30, 30, 30))
+        pygame.draw.circle(s, (40, 40, 45), (w//2, h//2 + pad), w//3)
+        # web lines
+        for r in (w//6, w//4, w//3):
+            pygame.draw.circle(s, (200, 200, 210, 100), (w//2, h//2 + pad), r, 1)
+        pygame.draw.line(s, (200, 200, 210, 100), (w//2, h//2 + pad - w//3), (w//2, h//2 + pad + w//3), 1)
+        pygame.draw.line(s, (200, 200, 210, 100), (w//2 - w//3, h//2 + pad), (w//2 + w//3, h//2 + pad), 1)
+    elif bt == "bandit_camp":
+        baseplate((90, 60, 40))
+        # two tents
+        t1 = pygame.Rect(pad*4, pad*10, w//2 - pad*2, h//2 - pad*2)
+        roof_poly([(t1.left, t1.bottom), (t1.centerx, t1.top), (t1.right, t1.bottom)], (160, 110, 70))
+        t2 = pygame.Rect(w//2, pad*8, w//2 - pad*4, h//2)
+        roof_poly([(t2.left, t2.bottom), (t2.centerx, t2.top), (t2.right, t2.bottom)], (140, 90, 60))
+        # campfire
+        pygame.draw.circle(s, (200, 100, 40), (w//2, h - pad*6), pad)
+        pygame.draw.circle(s, (250, 180, 50), (w//2, h - pad*6), pad - 1)
     else:
         # Generic hut
         baseplate(wood)

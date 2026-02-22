@@ -75,6 +75,10 @@ def main():
             ai_controller = BasicAI(llm_brain=None)
     
     game.ai_controller = ai_controller
+    # WK18: Wire event bus to LLM brain so dev tools overlay can subscribe to LLM prompt/response stream.
+    llm_brain = getattr(ai_controller, "llm_brain", None)
+    if llm_brain is not None and hasattr(llm_brain, "set_event_bus") and hasattr(game, "event_bus"):
+        llm_brain.set_event_bus(game.event_bus)
     
     print()
     print("Controls:")

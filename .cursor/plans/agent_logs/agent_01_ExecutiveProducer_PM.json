@@ -4238,6 +4238,176 @@
           }
         }
       }
+    },
+    "wk18-llm-merger-and-mechanics": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+        "notes": "WK18: The LLM-AI Merger, Physicality, & Dev Tools. Pushing agency to the LLM via tool use, adding collision and building mechanics, and providing dev tools."
+      },
+      "rounds": {
+        "wk18_r1_kickoff": {
+          "round_meta": {
+            "prompt_set_id": "wk18_r1_kickoff_v1",
+            "build_target": "BuildA_midweek",
+            "pm_authored_at_local": "2026-02-20T17:00:00",
+            "visibility": "WK18 Round 1: Foundation. Agents 03 stands by for Round 2."
+          },
+          "pm_status_summary": {
+            "overall_status": "Round 1 - Foundation and UI/UX",
+            "focus": [
+              "Define LLM Tool Use Architecture",
+              "Build AI/LLM Dev Tool Data Stream",
+              "Implement Inn Economy and Ejection System",
+              "Design UI Panel for Dev Tools"
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK18-BUG-001",
+              "title": "Heroes do not physically enter the Blacksmith",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Observe hero going to blacksmith for dagger."
+              ],
+              "expected": "Hero disappears from map and is registered inside the building, similar to Inn mechanics.",
+              "actual": "Hero gets item without disappearing/entering.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK18-BUG-002",
+              "title": "Heroes do not pop out when building destroyed",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Destroy a building with a hero inside."
+              ],
+              "expected": "Occupants forcefully evicted to adjacent map tiles.",
+              "actual": "Occupants stuck in limbo or bug out.",
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK18-FEAT-001",
+              "title": "LLM Tool-Use Agency Workflow",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "specs": [
+                "Inject hero stats into LLM context prompt (match left panel UI).",
+                "Provide a structured ActionTool schema (e.g. JSON or function string) for 'leave_building', 'move_to', etc.",
+                "LLM must output 'Obey' or 'Defy' reasoning alongside the tool action."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK18-FEAT-002",
+              "title": "Inn Entry Fee Economy",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "specs": [
+                "Deduct gold to enter or loiter in the Inn.",
+                "If hero hits 0 gold, eject them to map."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK18-FEAT-003",
+              "title": "AI/LLM Monitoring Data Tap",
+              "owner_agent": "12_ToolsDevEx_Lead",
+              "specs": [
+                "Capture all outgoing LLM requests and incoming responses.",
+                "Broadcast data via EventBus or dedicated Logger for Dev UI consumption."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK18-FEAT-004",
+              "title": "Dev Tools Overlay UI",
+              "owner_agent": "08_UX_UI_Director",
+              "specs": [
+                "Create togglable window (e.g. F3 or HUD button) to display real-time stream of AI/LLM logs.",
+                "Use clean color-coding."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "stand_by",
+              "asks": [
+                "Stand by for Round 2 to implement collision boxes and connect Agent 06's LLM tools into Engine actions."
+              ],
+              "acceptance_criteria": []
+            },
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Inn Entry Fee (bounce broke heroes out).",
+                "Ensure heroes physically enter the Blacksmith (disappear from map).",
+                "Trigger forceful occupant ejection when a building reaches 0 HP."
+              ],
+              "acceptance_criteria": [
+                "All 3 mechanics functional.",
+                "qa_smoke PASS"
+              ]
+            },
+            "06": {
+              "status": "assigned_active",
+              "asks": [
+                "Inject hero stat block into prompt context.",
+                "Define tool-use schema for Obey/Defy and physical actions (e.g., leave_building).",
+                "Update the response parser to read these tool intents."
+              ],
+              "acceptance_criteria": [
+                "Structured LLM intents generated.",
+                "qa_smoke PASS"
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Hook into Agent 12's data streaming (or mockup if not ready).",
+                "Build the Dev Tools Monitoring Overlay window."
+              ],
+              "acceptance_criteria": [
+                "Togglable UI window displaying text stream.",
+                "qa_smoke PASS"
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "asks": [
+                "Build the AI Monitoring Data Tap to capture all LLM prompts/responses and send them to the UX layer."
+              ],
+              "acceptance_criteria": [
+                "Data accurately captured without lag.",
+                "qa_smoke PASS"
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "05",
+              "06",
+              "08",
+              "12"
+            ],
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "09",
+              "10",
+              "11",
+              "13",
+              "14"
+            ],
+            "rationale": "Round 1 kicks off Systems, Behavior, UI, and Tools. Geometry/Engine (Agent 03) will follow in Round 2."
+          }
+        }
+      }
     }
   }
 }

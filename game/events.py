@@ -27,6 +27,12 @@ class GameEventType(str, Enum):
     QUEST_STARTED = "quest_started"
     QUEST_COMPLETED = "quest_completed"
     QUEST_HERO_RETURNED = "quest_hero_returned"
+    # wk18: AI/LLM monitoring dev tools — capture prompts and responses for Dev Overlay
+    LLM_PROMPT_SENT = "llm_prompt_sent"
+    LLM_RESPONSE_RECEIVED = "llm_response_received"
+    # wk18: AI/LLM monitoring data tap (Agent 12 emits; Agent 08 Dev Tools overlay consumes)
+    LLM_REQUEST = "llm_request"
+    LLM_RESPONSE = "llm_response"
 
 
 class EventBus:

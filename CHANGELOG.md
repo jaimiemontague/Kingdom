@@ -7,7 +7,8 @@
 - **Physical Soft-Collisions**: Heroes physically push each other apart (`_apply_hero_separation`) rather than clumping synchronously onto the exact same pixel coordinates.
 - **The Inn Economy**: Heroes now pay a fractional loiter fee (0.5 gold/sec) to rest at the Inn and are forcefully ejected when their wallet reaches 0, returning them to the work pool.
 - **Dynamic F4 Dev Tools**: Toggle the `F4` developer overlay to view real-time AI/LLM requests, responses, and errors in a fully resizable, scrolling, word-wrapped matrix log window.
-- **Building Destructions**: Demolishing a building forcefully ejects any heroes resting or shopping inside onto the map.
+- **Dev Tools Performance**: Cached the text-wrapping array in the F4 DevOverlay, completely eliminating game thread stutter when the AI makes an API request.
+- **Lair Pixel Art**: Generated fully textured and distinct CC0 placeholder pixel art for the 5 hostile lairs (Goblin Camp, Wolf Den, Skeleton Crypt, Spider Nest, and Bandit Camp).
 
 ## Prototype v1.4.2 — Playability Quality Reached
 

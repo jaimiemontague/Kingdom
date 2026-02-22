@@ -1,0 +1,47 @@
+{
+  "05": {
+    "status": "done",
+    "agent_fields": {
+      "what_i_changed": [
+        "config.py: INN_ENTRY_FEE=2, INN_LOITER_FEE_GOLD_PER_SEC=0.5.",
+        "game/entities/buildings/economic.py: Inn.on_hero_enter deducts entry fee (hero.gold, up to INN_ENTRY_FEE); Blacksmith.on_hero_enter/on_hero_exit call super() for occupant tracking (WK18-BUG-001).",
+        "game/entities/hero.py: In update_resting and in update (brief inside), when inside_building is Inn: deduct loiter fee each tick; if hero.gold < 1 call pop_out_of_building() (WK18-FEAT-002).",
+        "game/cleanup_manager.py: Before removing destroyed buildings, eject all occupants via hero.pop_out_of_building() (WK18-BUG-002).",
+        "tests/test_hero.py: test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate sets hero.gold=20 so hero can rest with Inn fee."
+      ],
+      "how_to_test": [
+        "python tools/qa_smoke.py --quick",
+        "Manual: hero at Inn with low gold gets ejected when gold < 1; destroy building with hero inside, hero pops to adjacent tile."
+      ],
+      "evidence": {
+        "qa_smoke_quick": {
+          "command": "python tools/qa_smoke.py --quick",
+          "status": "PASS",
+          "exit_code": 0
+        }
+      },
+      "blockers": []
+    }
+  },
+  "06": "NO RESPONSE YET",
+  "08": {
+    "status": "done",
+    "what_i_changed": [
+      "game/events.py: GameEventType.LLM_REQUEST, LLM_RESPONSE for Agent 12 data tap.",
+      "game/ui/dev_tools_panel.py: DevToolsPanel subscribes to llm_request/llm_response, shows scrolling color-coded log (request=blue, response=green, error=red), F4 toggle.",
+      "game/engine.py: create dev_tools_panel with event_bus; render after debug_panel.",
+      "game/input_handler.py: F4 toggles dev_tools_panel; handle_click consumes clicks inside panel.",
+      "game/display_manager.py: dev_tools_panel.on_resize on display change.",
+      "game/ui/__init__.py: export DevToolsPanel."
+    ],
+    "how_to_test": [
+      "Run game, press F4: Dev Tools overlay appears (bottom-right) with title 'AI/LLM Log (F4 to close)'. Press F4 again to close.",
+      "When Agent 12 wires data tap: events llm_request/llm_response will stream into the panel with color-coding."
+    ],
+    "evidence": {
+      "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+    },
+    "blockers": []
+  },
+  "12": "NO RESPONSE YET"
+}

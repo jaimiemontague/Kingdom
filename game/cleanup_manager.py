@@ -34,6 +34,12 @@ class CleanupManager:
         destruction_events = []
 
         for building in destroyed:
+            # WK18-BUG-002: Eject occupants to adjacent tile before removing building
+            occupants = getattr(building, "occupants", [])
+            for hero in list(occupants):
+                if hasattr(hero, "pop_out_of_building"):
+                    hero.pop_out_of_building()
+
             # Capture building position/type for debris before removal
             building_x = getattr(building, "center_x", getattr(building, "x", 0.0))
             building_y = getattr(building, "center_y", getattr(building, "y", 0.0))

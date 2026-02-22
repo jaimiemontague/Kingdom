@@ -314,10 +314,9 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                     duration_sec = roll_duration_seconds("rest_inn", rng)
                     setattr(hero, "pending_task", "rest_inn")
                     setattr(hero, "pending_task_building", inn)
-                    hero.enter_building_briefly(inn, duration_sec=float(duration_sec))
+                    hero.start_resting_at_building(inn, duration_sec=float(duration_sec))
                 hero.target = None
                 hero.target_position = None
-                hero.state = HeroState.IDLE
                 return
 
             # Get a drink at Inn (WK11): enter, pay on exit.

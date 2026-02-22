@@ -186,8 +186,29 @@ class ContextBuilder:
             context["building_context"] = ""
         context["player_is_present"] = game_state.get("micro_view_building") is getattr(hero, "inside_building", None)
 
+        # WK18: Hero stat block matching left panel UI for LLM prompt.
+        context["hero_stat_block"] = ContextBuilder.build_hero_stat_block(context)
         return context
     
+    @staticmethod
+    def build_hero_stat_block(context: dict) -> str:
+        """Build a compact hero stat block matching the left panel UI (WK18 LLM context)."""
+        hero = context["hero"]
+        inv = context["inventory"]
+        state = context.get("current_state", "IDLE")
+        location = context.get("current_location", "outdoors")
+        lines = [
+            f"{hero['name']} | {hero['class'].title()} Lv{hero['level']}",
+            f"HP: {hero['hp']}/{hero['max_hp']} ({hero['health_percent']}%)",
+            f"ATK: {hero['attack']}  DEF: {hero['defense']}",
+            f"Gold: {hero['gold']}",
+            f"Potions: {inv['potions']}  W: {inv['weapon']}  A: {inv['armor']}",
+            f"State: {state}",
+        ]
+        if location != "outdoors":
+            lines.append(f"Inside: {location}")
+        return "\n".join(lines)
+
     @staticmethod
     def build_summary(context: dict) -> str:
         """Build a human-readable summary of the context."""

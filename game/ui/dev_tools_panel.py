@@ -39,7 +39,13 @@ class DevToolsPanel:
         self._scroll_y = 0
         self._is_dragging_scrollbar = False
         self._is_dragging_resize = False
+        self._is_dragging_panel = False
+        self._drag_offset = (0, 0)
         self._hover_scrollbar = False
+
+        margin = 12
+        self._panel_x = max(margin, self.screen_width - self._panel_w - margin)
+        self._panel_y = max(margin, self.screen_height - self._panel_h - margin - 80)
         
         self._subscribe(event_bus)
 
@@ -87,14 +93,17 @@ class DevToolsPanel:
 
     def _rebuild_wrapped_lines(self):
         self._wrapped_lines = []
-        max_w = max(50, self._panel_w - 24) # 8 left padding, 16 right scrollbar spacing
         for raw in self._raw_lines:
-            wrapped = self._wrap_text(raw["text"], self._font, max_w)
-            for line in wrapped:
+            if "wrapped" not in raw:
+                max_w = max(50, self._panel_w - 24)
+                raw["wrapped"] = self._wrap_text(raw["text"], self._font, max_w)
+            for line in raw["wrapped"]:
                 self._wrapped_lines.append({"kind": raw["kind"], "text": line})
 
     def _append(self, kind: str, text: str) -> None:
-        self._raw_lines.append({"kind": kind, "text": text})
+        max_w = max(50, self._panel_w - 24)
+        wrapped = self._wrap_text(text, self._font, max_w)
+        self._raw_lines.append({"kind": kind, "text": text, "wrapped": wrapped})
         if len(self._raw_lines) > MAX_LINES:
             self._raw_lines.pop(0)
             
@@ -128,6 +137,12 @@ class DevToolsPanel:
         # Re-clamp panel size if window gets too small
         self._panel_w = max(200, min(self._panel_w, self.screen_width - 24))
         self._panel_h = max(100, min(self._panel_h, self.screen_height - 100))
+        self._panel_x = max(0, min(self._panel_x, self.screen_width - self._panel_w))
+        self._panel_y = max(0, min(self._panel_y, self.screen_height - self._panel_h))
+        
+        max_w = max(50, self._panel_w - 24)
+        for raw in self._raw_lines:
+            raw["wrapped"] = self._wrap_text(raw["text"], self._font, max_w)
         self._rebuild_wrapped_lines()
 
     def handle_event(self, event: pygame.event.Event) -> bool:
@@ -135,10 +150,7 @@ class DevToolsPanel:
         if not self.visible:
             return False
 
-        margin = 12
-        panel_x = max(margin, self.screen_width - self._panel_w - margin)
-        panel_y = max(margin, self.screen_height - self._panel_h - margin - 80)
-        rect = pygame.Rect(panel_x, panel_y, self._panel_w, self._panel_h)
+        rect = pygame.Rect(self._panel_x, self._panel_y, self._panel_w, self._panel_h)
         
         content_top = 28
         content_h = rect.height - content_top - 4
@@ -148,6 +160,7 @@ class DevToolsPanel:
         
         resize_rect = pygame.Rect(rect.right - 16, rect.bottom - 16, 16, 16)
         scrollbar_rect = pygame.Rect(rect.right - 14, rect.y + content_top, 8, content_h)
+        top_bar_rect = pygame.Rect(rect.x, rect.y, rect.width, content_top)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -163,6 +176,10 @@ class DevToolsPanel:
                     pct = mouse_y / max(1, content_h)
                     self._scroll_y = int(pct * max_scroll)
                     self._scroll_y = max(0, min(self._scroll_y, max_scroll))
+                    return True
+                elif top_bar_rect.collidepoint(event.pos):
+                    self._is_dragging_panel = True
+                    self._drag_offset = (event.pos[0] - self._panel_x, event.pos[1] - self._panel_y)
                     return True
                 elif rect.collidepoint(event.pos):
                     return True  # Consume click on panel
@@ -188,21 +205,33 @@ class DevToolsPanel:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
-                if self._is_dragging_resize or self._is_dragging_scrollbar:
+                if self._is_dragging_resize or self._is_dragging_scrollbar or self._is_dragging_panel:
                     self._is_dragging_resize = False
                     self._is_dragging_scrollbar = False
+                    self._is_dragging_panel = False
                     return True
 
         elif event.type == pygame.MOUSEMOTION:
             mouse_pos = event.pos
             self._hover_scrollbar = scrollbar_rect.collidepoint(mouse_pos)
             
-            if self._is_dragging_resize:
-                new_w = mouse_pos[0] - panel_x + 8
-                new_h = mouse_pos[1] - panel_y + 8
+            if self._is_dragging_panel:
+                self._panel_x = mouse_pos[0] - self._drag_offset[0]
+                self._panel_y = mouse_pos[1] - self._drag_offset[1]
+                self._panel_x = max(0, min(self._panel_x, self.screen_width - self._panel_w))
+                self._panel_y = max(0, min(self._panel_y, self.screen_height - self._panel_h))
+                return True
+            elif self._is_dragging_resize:
+                new_w = mouse_pos[0] - self._panel_x + 8
+                new_h = mouse_pos[1] - self._panel_y + 8
                 self._panel_w = max(200, min(new_w, self.screen_width - 24))
                 self._panel_h = max(100, min(new_h, self.screen_height - 100))
+                
+                max_w = max(50, self._panel_w - 24)
+                for raw in self._raw_lines:
+                    raw["wrapped"] = self._wrap_text(raw["text"], self._font, max_w)
                 self._rebuild_wrapped_lines()
+                
                 # Keep scroll in bounds
                 content_h_new = self._panel_h - content_top - 4
                 num_visible_new = max(1, content_h_new // line_h)
@@ -221,10 +250,7 @@ class DevToolsPanel:
         if not self.visible:
             return
         
-        margin = 12
-        panel_x = max(margin, self.screen_width - self._panel_w - margin)
-        panel_y = max(margin, self.screen_height - self._panel_h - margin - 80)
-        rect = pygame.Rect(panel_x, panel_y, self._panel_w, self._panel_h)
+        rect = pygame.Rect(self._panel_x, self._panel_y, self._panel_w, self._panel_h)
         
         line_h = self._font.get_height() + 2
         content_top = 28

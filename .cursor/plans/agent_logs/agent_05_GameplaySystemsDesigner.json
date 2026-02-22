@@ -1277,6 +1277,46 @@
           }
         }
       }
+    },
+    "wk18-llm-merger-and-mechanics": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+        "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools."
+      },
+      "rounds": {
+        "wk18_r1_kickoff": {
+          "round_id": "wk18_r1_kickoff",
+          "sprint_id": "wk18-llm-merger-and-mechanics",
+          "round_meta": {
+            "prompt_set_id": "wk18_r1_kickoff_v1",
+            "build_target": "BuildA_midweek"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "config.py: INN_ENTRY_FEE=2, INN_LOITER_FEE_GOLD_PER_SEC=0.5.",
+                "game/entities/buildings/economic.py: Inn.on_hero_enter deducts entry fee (hero.gold, up to INN_ENTRY_FEE); Blacksmith.on_hero_enter/on_hero_exit call super() for occupant tracking (WK18-BUG-001).",
+                "game/entities/hero.py: In update_resting and in update (brief inside), when inside_building is Inn: deduct loiter fee each tick; if hero.gold < 1 call pop_out_of_building() (WK18-FEAT-002).",
+                "game/cleanup_manager.py: Before removing destroyed buildings, eject all occupants via hero.pop_out_of_building() (WK18-BUG-002).",
+                "tests/test_hero.py: test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate sets hero.gold=20 so hero can rest with Inn fee."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: hero at Inn with low gold gets ejected when gold < 1; destroy building with hero inside, hero pops to adjacent tile."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -10,6 +10,34 @@ from game.entities.hero import HeroState
 from game.sim.timebase import now_ms as sim_now_ms
 
 
+def _resolve_move_target(target: str, game_state: dict, hero: Any) -> tuple[float, float] | None:
+    """Resolve LLM move_to target string to world (x, y). WK18: used to hook move_to into physical engine."""
+    if not target or not isinstance(target, str):
+        return None
+    t = target.strip().lower()
+    buildings = game_state.get("buildings", []) or []
+    # Map common names to building_type.
+    type_map = {
+        "castle": "castle",
+        "market": "marketplace",
+        "marketplace": "marketplace",
+        "inn": "inn",
+        "tavern": "inn",
+        "blacksmith": "blacksmith",
+        "smith": "blacksmith",
+        "safety": "castle",  # retreat-like
+    }
+    btype = type_map.get(t)
+    if not btype:
+        return None
+    candidates = [b for b in buildings if getattr(b, "building_type", None) == btype]
+    if not candidates:
+        return None
+    # Nearest to hero.
+    best = min(candidates, key=lambda b: (hero.x - getattr(b, "center_x", 0)) ** 2 + (hero.y - getattr(b, "center_y", 0)) ** 2)
+    return (float(getattr(best, "center_x", 0)), float(getattr(best, "center_y", 0)))
+
+
 def should_consult_llm(ai: Any, hero: Any, game_state: dict) -> bool:
     """Determine if we should ask the LLM for a decision."""
     current_time = sim_now_ms()
@@ -64,9 +92,11 @@ def apply_llm_decision(
     source: str = "llm",
     context: dict | None = None,
 ) -> None:
-    """Apply an LLM decision to the hero."""
+    """Apply an LLM decision to the hero (WK18: supports obey_defy and tool_action)."""
     action = decision.get("action", "")
     target = decision.get("target", "")
+    tool_action = decision.get("tool_action") or action
+    obey_defy = decision.get("obey_defy", "Obey")
 
     hero.last_llm_action = decision
 
@@ -133,6 +163,46 @@ def apply_llm_decision(
         ai.exploration_behavior.explore(ai, hero, game_state)
     elif action == "accept_bounty":
         pass
+    elif tool_action == "leave_building" or action == "leave_building":
+        if getattr(hero, "is_inside_building", False):
+            hero.pop_out_of_building()
+            setattr(hero, "pending_task", None)
+            setattr(hero, "pending_task_building", None)
+        ai.set_intent(hero, "idle")
+        ai.record_decision(
+            hero,
+            action="leave_building",
+            reason=reason or "Leaving building",
+            intent="idle",
+            inputs_summary=inputs_summary,
+            source=source,
+        )
+        hero.state = HeroState.IDLE
+    elif tool_action == "move_to" or action == "move_to":
+        # WK18: Resolve target to (x,y) and set llm_move_request; engine drains into physical state.
+        dest = _resolve_move_target(target or "", game_state, hero)
+        if dest is not None:
+            hero.llm_move_request = dest
+            ai.set_intent(hero, "moving_to_destination")
+            ai.record_decision(
+                hero,
+                action="move_to",
+                reason=reason or f"Moving to {target or 'destination'}",
+                intent="moving_to_destination",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+        else:
+            ai.set_intent(hero, "idle")
+            ai.record_decision(
+                hero,
+                action="move_to",
+                reason=reason or f"Moving to {target or 'destination'}",
+                intent="idle",
+                inputs_summary=inputs_summary,
+                source=source,
+            )
+            ai.exploration_behavior.explore(ai, hero, game_state)
     else:
         ai._debug_log(
             f"{hero.name} received unknown LLM action={action!r}; ignoring",

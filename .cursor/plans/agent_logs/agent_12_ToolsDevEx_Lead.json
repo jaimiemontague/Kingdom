@@ -2134,6 +2134,30 @@
         }
       }
     }
+  },
+  "wk18-llm-merger-and-mechanics": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+      "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools"
+    },
+    "rounds": {
+      "wk18_r1_kickoff": {
+        "round_id": "wk18_r1_kickoff",
+        "status": "done",
+        "what_i_changed": {
+          "files": ["game/events.py", "ai/llm_brain.py", "main.py"],
+          "summary": "Built AI Monitoring Data Tap: EventBus events LLM_PROMPT_SENT and LLM_RESPONSE_RECEIVED; LLMBrain emits before/after provider.complete(); main.py wires event_bus to llm_brain for Dev Overlay consumption."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Run game with LLM (e.g. python main.py --provider mock), trigger hero decisions; Agent 08 subscribes to LLM_PROMPT_SENT / LLM_RESPONSE_RECEIVED for Dev Tools Overlay."
+        ],
+        "evidence": {
+          "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

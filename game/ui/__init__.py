@@ -5,4 +5,5 @@ from .hud import HUD
 from .building_menu import BuildingMenu
 from .debug_panel import DebugPanel
 from .building_panel import BuildingPanel
+from .dev_tools_panel import DevToolsPanel
 

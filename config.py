@@ -281,6 +281,12 @@ BUILDING_SIZES = {
     "house": (1, 1),
     "farm": (2, 2),
     "food_stand": (1, 1),
+    # Lairs
+    "goblin_camp": (2, 2),
+    "wolf_den": (2, 2),
+    "skeleton_crypt": (3, 3),
+    "spider_nest": (2, 2),
+    "bandit_camp": (3, 3),
 }
 
 BUILDING_COLORS = {
@@ -320,6 +326,12 @@ BUILDING_COLORS = {
     "house": (120, 100, 80),  # warm brown
     "farm": (200, 170, 90),  # wheat
     "food_stand": (210, 120, 60),  # orange/brown
+    # Lairs
+    "goblin_camp": (120, 80, 40),
+    "wolf_den": (90, 90, 90),
+    "skeleton_crypt": (70, 60, 90),
+    "spider_nest": (20, 20, 20),
+    "bandit_camp": (110, 70, 40),
 }
 
 # Building constraints (mutually exclusive buildings)

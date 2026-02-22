@@ -6,7 +6,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from config import RESEARCH_POTIONS_DURATION_MS, RESEARCH_DURATION_MS_PER_100_GOLD
+from config import (
+    INN_ENTRY_FEE,
+    RESEARCH_POTIONS_DURATION_MS,
+    RESEARCH_DURATION_MS_PER_100_GOLD,
+)
 from game.sim.timebase import now_ms as sim_now_ms
 
 from .base import Building, is_research_unlocked, unlock_research
@@ -195,6 +199,14 @@ class Blacksmith(Building):
         """Check if any upgrades are available (researched and affordable for heroes)."""
         return is_research_unlocked("Weapon Upgrades") or is_research_unlocked("Armor Upgrades")
 
+    def on_hero_enter(self, hero: Hero) -> None:
+        """Track occupants so hero physically enters (disappears from map) like Inn. WK18-BUG-001."""
+        super().on_hero_enter(hero)
+
+    def on_hero_exit(self, hero: Hero) -> None:
+        """Remove hero from occupants when they leave."""
+        super().on_hero_exit(hero)
+
 
 class Inn(Building):
     """Building where heroes can rest and recover HP faster."""
@@ -220,8 +232,13 @@ class Inn(Building):
         self.drink_income_gold = max(0, int(value))
 
     def on_hero_enter(self, hero: Hero) -> None:
-        """Track heroes currently inside the inn (resting or drinking)."""
+        """Track heroes currently inside the inn; deduct entry fee. WK18-FEAT-002."""
         super().on_hero_enter(hero)
+        entry_fee = max(0, int(getattr(hero, "gold", 0)))
+        entry_fee = min(entry_fee, INN_ENTRY_FEE)
+        if entry_fee > 0:
+            hero.gold -= entry_fee
+            self.drink_income_gold += entry_fee
 
     def on_hero_exit(self, hero: Hero) -> None:
         """Remove hero from current inn occupants when they leave."""

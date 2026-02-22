@@ -2684,6 +2684,36 @@
           }
         }
       }
+    },
+    "wk18-llm-merger-and-mechanics": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+        "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools. Agent 08: Dev Tools Overlay UI."
+      },
+      "rounds": {
+        "wk18_r1_kickoff": {
+          "sprint_id": "wk18-llm-merger-and-mechanics",
+          "round_id": "wk18_r1_kickoff",
+          "round_meta": { "build_target": "BuildA_midweek", "sent_at_local": "2026-02-20" },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/events.py: GameEventType.LLM_REQUEST, LLM_RESPONSE for Agent 12 data tap.",
+              "game/ui/dev_tools_panel.py: DevToolsPanel subscribes to llm_request/llm_response, shows scrolling color-coded log (request=blue, response=green, error=red), F4 toggle.",
+              "game/engine.py: create dev_tools_panel with event_bus; render after debug_panel.",
+              "game/input_handler.py: F4 toggles dev_tools_panel; handle_click consumes clicks inside panel.",
+              "game/display_manager.py: dev_tools_panel.on_resize on display change.",
+              "game/ui/__init__.py: export DevToolsPanel."
+            ],
+            "how_to_test": [
+              "Run game, press F4: Dev Tools overlay appears (bottom-right) with title 'AI/LLM Log (F4 to close)'. Press F4 again to close.",
+              "When Agent 12 wires data tap: events llm_request/llm_response will stream into the panel with color-coding."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

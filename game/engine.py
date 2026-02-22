@@ -626,6 +626,7 @@ class GameEngine:
         enemy_ranged_events = self._update_enemies(dt)
         self._update_guards(dt)
         self._spawn_enemies(dt)
+        self._apply_entity_separation(dt)
         events = self._process_combat(system_ctx, dt, enemy_ranged_events)
         self._route_combat_events(events)
         self._cleanup_after_combat()
@@ -719,19 +720,22 @@ class GameEngine:
         for hero in self.heroes:
             hero.update(dt, game_state)
 
-        self._apply_hero_separation(dt)
-
-    def _apply_hero_separation(self, dt: float) -> None:
-        """WK18: Soft collision / flocking separation so heroes do not stack exactly on top of each other."""
+    def _apply_entity_separation(self, dt: float) -> None:
+        """WK18: Soft collision / flocking separation for all mobile entities."""
         import math
         # Tunables: min distance (px), nudge strength (px/s when overlapping).
-        min_dist_px = 32.0
-        strength_per_sec = 200.0
+        min_dist_px = 16.0
+        strength_per_sec = 250.0
         max_step = 120.0 * dt  # cap displacement per frame
 
-        alive = [h for h in self.heroes if getattr(h, "is_alive", True)]
-        for i, hero in enumerate(alive):
-            if getattr(hero, "is_inside_building", False):
+        alive = []
+        for lst in (self.heroes, self.enemies, self.peasants, self.guards):
+            alive.extend([e for e in lst if getattr(e, "is_alive", True)])
+        if self.tax_collector and getattr(self.tax_collector, "is_alive", True):
+            alive.append(self.tax_collector)
+
+        for i, ent in enumerate(alive):
+            if getattr(ent, "is_inside_building", False):
                 continue
             dx_sum, dy_sum = 0.0, 0.0
             for j, other in enumerate(alive):
@@ -739,8 +743,8 @@ class GameEngine:
                     continue
                 if getattr(other, "is_inside_building", False):
                     continue
-                dx = hero.x - other.x
-                dy = hero.y - other.y
+                dx = ent.x - other.x
+                dy = ent.y - other.y
                 dist = math.sqrt(dx * dx + dy * dy)
                 if dist < min_dist_px and dist > 1e-6:
                     # Push away; magnitude = (min_dist - dist) * strength
@@ -753,8 +757,8 @@ class GameEngine:
                     scale = max_step / step
                     dx_sum *= scale
                     dy_sum *= scale
-                hero.x += dx_sum
-                hero.y += dy_sum
+                ent.x += dx_sum
+                ent.y += dy_sum
 
     def _update_world_systems(self, system_ctx: SystemContext, dt: float, game_state: dict):
         """Update fog, buffs, and early pacing logic."""

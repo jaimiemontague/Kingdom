@@ -1,0 +1,43 @@
+{
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+    "notes": "WK18 LLM-AI Merger, Physicality, & Dev Tools. Agent 03: collision/separation + LLM tools into engine."
+  },
+  "rounds": {
+    "wk18_r1_kickoff": {
+      "sprint_id": "wk18-llm-merger-and-mechanics",
+      "round_id": "wk18_r1_kickoff",
+      "round_meta": {
+        "prompt_set_id": "wk18_r1_kickoff_v1",
+        "build_target": "BuildA_midweek",
+        "sent_at_local": "2026-02-20T00:00:00"
+      },
+      "prompt_text": "Implement soft collision/flocking separation for heroes; hook Agent 06 LLM tools (leave_building, move_to) into engine physical state.",
+      "response": {
+        "received_at_local": "2026-02-20T00:00:00",
+        "status": "complete",
+        "summary_bullets": [
+          "Soft collision: _apply_hero_separation(dt) in engine after hero updates; min_dist 22px, strength 90px/s; heroes no longer stack exactly on top of each other.",
+          "LLM move_to hook: hero.llm_move_request added; engine drains it after AI update into hero.set_target_position(); llm_bridge resolves target string (castle, marketplace, inn, blacksmith) to (x,y) and sets llm_move_request so hero executes move physically.",
+          "leave_building already applied in bridge (pop_out_of_building); no engine change needed."
+        ],
+        "files_changed": [
+          "game/engine.py",
+          "game/entities/hero.py",
+          "ai/behaviors/llm_bridge.py"
+        ],
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: multiple heroes near same spot separate; LLM/mock move_to to castle/marketplace moves hero there"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        }
+      }
+    }
+  }
+}

@@ -103,6 +103,7 @@ def test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate() -> None:
     hero = Hero(0, 0, hero_class="warrior")
     hero.max_hp = 100
     hero.hp = 90
+    hero.gold = 20  # WK18: Inn loiter fee; need gold to stay inside
     inn = Inn(2, 3)
 
     started = hero.start_resting_at_building(inn)

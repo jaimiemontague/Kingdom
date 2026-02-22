@@ -140,6 +140,11 @@ class DisplayManager:
                 engine.building_list_panel.on_resize(engine.window_width, engine.window_height)
             except Exception:
                 pass
+        if hasattr(engine, "dev_tools_panel") and hasattr(engine.dev_tools_panel, "on_resize"):
+            try:
+                engine.dev_tools_panel.on_resize(engine.window_width, engine.window_height)
+            except Exception:
+                pass
         # Clamp camera to new view bounds after mode change
         if hasattr(engine, "clamp_camera"):
             try:

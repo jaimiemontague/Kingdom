@@ -47,26 +47,43 @@ def find_blacksmith_with_upgrades(buildings: list[Any], hero: Any = None) -> obj
 
 
 def go_shopping(ai: Any, hero: Any, item_name: str, game_state: dict) -> None:
-    """Send hero to marketplace to buy an item."""
+    """Send hero to marketplace or blacksmith to buy an item."""
     buildings = game_state.get("buildings", [])
     world = game_state.get("world")
 
-    for building in buildings:
-        if building.building_type == "marketplace":
-            if world:
-                adj = best_adjacent_tile(world, buildings, building, hero.x, hero.y)
-                if adj:
-                    hero.target_position = (
-                        adj[0] * TILE_SIZE + TILE_SIZE / 2,
-                        adj[1] * TILE_SIZE + TILE_SIZE / 2,
-                    )
-                else:
-                    hero.target_position = (building.center_x, building.center_y)
+    target_building = None
+    item_lower = (item_name or "").lower()
+    if "potion" in item_lower:
+        target_building = find_marketplace_with_potions(buildings)
+    else:
+        target_building = find_blacksmith_with_upgrades(buildings, hero)
+        
+    if not target_building:
+        for building in buildings:
+            if building.building_type == "marketplace":
+                target_building = building
+                break
+
+    if target_building:
+        if world:
+            adj = best_adjacent_tile(world, buildings, target_building, hero.x, hero.y)
+            if adj:
+                hero.target_position = (
+                    adj[0] * TILE_SIZE + TILE_SIZE / 2,
+                    adj[1] * TILE_SIZE + TILE_SIZE / 2,
+                )
             else:
-                hero.target_position = (building.center_x, building.center_y)
-            hero.state = HeroState.MOVING
-            hero.target = {"type": "shopping", "item": item_name}
-            break
+                hero.target_position = (target_building.center_x, target_building.center_y)
+        else:
+            hero.target_position = (target_building.center_x, target_building.center_y)
+        hero.state = HeroState.MOVING
+        hero.target = {
+            "type": "shopping",
+            "item": item_name,
+            "marketplace": target_building if target_building.building_type == "marketplace" else None,
+            "blacksmith": target_building if target_building.building_type == "blacksmith" else None,
+            "shop_building": target_building,
+        }
 
 
 def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:

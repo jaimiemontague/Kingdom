@@ -914,6 +914,41 @@
             }
           }
         }
+      },
+      "wk18-llm-merger-and-mechanics": {
+        "sprint_meta": {
+          "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
+          "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools. Tool-use schema, hero stat block, Obey/Defy."
+        },
+        "rounds": {
+          "wk18_r1_kickoff": {
+            "sprint_id": "wk18-llm-merger-and-mechanics",
+            "round_id": "wk18_r1_kickoff",
+            "round_meta": {
+              "prompt_set_id": "wk18_r1_kickoff_v1",
+              "build_target": "BuildA_midweek",
+              "sent_at_local": "2026-02-20"
+            },
+            "prompt_text": "Inject hero stat block into prompt context. Define tool-use schema for Obey/Defy and physical actions (e.g. leave_building). Update the response parser to read these tool intents.",
+            "response": {
+              "status": "done",
+              "what_i_changed": [
+                "ai/context_builder.py: build_hero_stat_block(context) added — compact stat block matching left panel (name, class, level, HP, ATK, DEF, gold, potions, weapon, armor, state, inside). Injected into context['hero_stat_block'].",
+                "ai/prompt_templates.py: TOOL_ACTIONS (leave_building, move_to, fight, retreat, buy_item, use_potion, explore), OBEY_DEFY_VALUES. SYSTEM_PROMPT extended with obey_defy and tool_action in JSON schema. DECISION_PROMPT now includes hero_stat_block. VALID_ACTIONS extended with leave_building, move_to.",
+                "ai/llm_brain.py: _parse_response now extracts obey_defy and tool_action; accepts tool_action as action when valid; returns dict with action, target, reasoning, obey_defy, tool_action.",
+                "ai/behaviors/llm_bridge.py: apply_llm_decision reads tool_action and obey_defy; handles leave_building (pop_out_of_building, clear pending_task); handles move_to (explore for now)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: Run with --provider mock; LLM decisions should include structured intents; hero inside building given leave_building should pop out."
+              ],
+              "evidence": [
+                "python tools/qa_smoke.py --quick => PASS (exit_code=0)"
+              ],
+              "blockers": []
+            }
+          }
+        }
       }
     }
   }

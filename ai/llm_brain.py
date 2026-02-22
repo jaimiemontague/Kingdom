@@ -10,11 +10,19 @@ from ai.context_builder import ContextBuilder
 from ai.prompt_templates import (
     SYSTEM_PROMPT,
     VALID_ACTIONS,
+    TOOL_ACTIONS,
+    OBEY_DEFY_VALUES,
     build_decision_prompt,
     build_conversation_prompt,
     get_fallback_decision,
 )
 from config import LLM_PROVIDER, LLM_TIMEOUT, CONVERSATION_TIMEOUT
+
+# WK18: Optional event bus for dev tools — capture LLM prompts/responses (game.events is safe to import here).
+try:
+    from game.events import GameEventType
+except ImportError:
+    GameEventType = None
 
 
 class LLMBrain:
@@ -40,8 +48,15 @@ class LLMBrain:
         self.worker_thread = None
         self.running = False
         
+        # WK18: Optional event bus for AI monitoring dev tools (set by engine/main).
+        self._event_bus = None
+        
         # Start the worker
         self.start()
+    
+    def set_event_bus(self, event_bus) -> None:
+        """Set EventBus for emitting LLM prompt/response events (called by engine/main)."""
+        self._event_bus = event_bus
     
     def _create_provider(self):
         """Create the appropriate LLM provider."""
@@ -121,12 +136,30 @@ class LLMBrain:
             summary = ContextBuilder.build_summary(context)
             prompt = build_decision_prompt(context, summary)
             
+            # WK18: Emit for dev tools overlay (non-blocking; bus queues and flushes on main thread).
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit({
+                    "type": GameEventType.LLM_PROMPT_SENT.value,
+                    "hero_key": hero_key,
+                    "system_prompt": SYSTEM_PROMPT,
+                    "user_prompt": prompt,
+                    "mode": "decision",
+                })
+            
             # Call the LLM
             response_text = self.provider.complete(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=prompt,
                 timeout=LLM_TIMEOUT
             )
+            
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit({
+                    "type": GameEventType.LLM_RESPONSE_RECEIVED.value,
+                    "hero_key": hero_key,
+                    "response_text": response_text or "",
+                    "mode": "decision",
+                })
             
             # Parse the response
             decision = self._parse_response(response_text)
@@ -142,35 +175,47 @@ class LLMBrain:
             return get_fallback_decision(context)
     
     def _parse_response(self, response_text: str) -> Optional[dict]:
-        """Parse the LLM response into a decision dict."""
+        """Parse the LLM response into a decision dict (WK18: includes obey_defy and tool_action)."""
         try:
-            # Try to extract JSON from the response
             text = response_text.strip()
-            
-            # Find JSON in the response
             start = text.find('{')
             end = text.rfind('}') + 1
-            
+
             if start >= 0 and end > start:
                 json_str = text[start:end]
                 decision = json.loads(json_str)
-                
-                # Validate required fields
+
                 action = decision.get("action", None)
                 if isinstance(action, str):
                     action = action.strip()
+                # Accept tool_action as action fallback when valid
+                tool_action = decision.get("tool_action", "")
+                if isinstance(tool_action, str):
+                    tool_action = tool_action.strip()
+                if not action and tool_action and tool_action in TOOL_ACTIONS:
+                    action = tool_action
+                if not action:
+                    return None
+                if action not in VALID_ACTIONS and action not in TOOL_ACTIONS:
+                    return None
 
-                if action and action in VALID_ACTIONS:
-                    target = decision.get("target", "")
-                    reasoning = decision.get("reasoning", "")
-                    return {
-                        "action": action,
-                        "target": target if isinstance(target, str) else "",
-                        "reasoning": reasoning if isinstance(reasoning, str) else "",
-                    }
-            
+                target = decision.get("target", "")
+                reasoning = decision.get("reasoning", "")
+                obey_defy = decision.get("obey_defy", "")
+                if isinstance(obey_defy, str):
+                    obey_defy = obey_defy.strip()
+                if obey_defy not in OBEY_DEFY_VALUES:
+                    obey_defy = "Obey"
+
+                out = {
+                    "action": action,
+                    "target": target if isinstance(target, str) else "",
+                    "reasoning": reasoning if isinstance(reasoning, str) else "",
+                    "obey_defy": obey_defy,
+                    "tool_action": tool_action if tool_action in TOOL_ACTIONS else action,
+                }
+                return out
             return None
-            
         except json.JSONDecodeError:
             return None
     
@@ -183,11 +228,26 @@ class LLMBrain:
             system_prompt, user_prompt = build_conversation_prompt(
                 hero_context, conversation_history, player_message
             )
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit({
+                    "type": GameEventType.LLM_PROMPT_SENT.value,
+                    "hero_key": hero_key,
+                    "system_prompt": system_prompt,
+                    "user_prompt": user_prompt,
+                    "mode": "conversation",
+                })
             response_text = self.provider.complete(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 timeout=CONVERSATION_TIMEOUT,
             )
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit({
+                    "type": GameEventType.LLM_RESPONSE_RECEIVED.value,
+                    "hero_key": hero_key,
+                    "response_text": (response_text or "").strip(),
+                    "mode": "conversation",
+                })
             text = (response_text or "").strip()
             if not text:
                 return "I am thinking, Sovereign... ask me again in a moment."
