@@ -72,20 +72,14 @@ def test_find_marketplace_with_potions_returns_only_researched_market() -> None:
     assert found is with_potions
 
 
-def test_find_blacksmith_with_upgrades_respects_hero_needs() -> None:
+def test_find_blacksmith_ignores_unconstructed() -> None:
     hero = _Hero()
-    hero.weapon = {"attack": 4}
-    blacksmith = SimpleNamespace(
-        building_type="blacksmith",
-        weapon_upgrades_researched=True,
-        armor_upgrades_researched=False,
-        has_better_weapon=lambda _hero: True,
-        has_better_armor=lambda _hero: False,
-    )
+    unconstructed = SimpleNamespace(building_type="blacksmith", is_constructed=False)
+    constructed = SimpleNamespace(building_type="blacksmith", is_constructed=True)
 
-    found = shopping.find_blacksmith_with_upgrades([blacksmith], hero)
+    found = shopping.find_blacksmith([unconstructed, constructed], hero)
 
-    assert found is blacksmith
+    assert found is constructed
 
 
 def test_do_shopping_buys_potion_and_records_economy_purchase() -> None:
@@ -150,5 +144,11 @@ def test_go_shopping_uses_adjacent_tile_when_available(monkeypatch) -> None:
     )
 
     assert hero.state == HeroState.MOVING
-    assert hero.target == {"type": "shopping", "item": "potion"}
+    assert hero.target == {
+        "type": "shopping",
+        "item": "potion",
+        "marketplace": marketplace,
+        "blacksmith": None,
+        "shop_building": marketplace,
+    }
     assert hero.target_position == (3 * TILE_SIZE + TILE_SIZE / 2, 4 * TILE_SIZE + TILE_SIZE / 2)

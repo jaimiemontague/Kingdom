@@ -18,31 +18,13 @@ def find_marketplace_with_potions(buildings: list[Any]) -> Any | None:
     return None
 
 
-def find_blacksmith_with_upgrades(buildings: list[Any], hero: Any = None) -> object | None:
-    """V1.3 extension: find a blacksmith with available upgrades for the hero."""
+def find_blacksmith(buildings: list[Any], hero: Any = None) -> object | None:
+    """Find a blacksmith for weapon/armor purchases."""
     for building in buildings:
         if building.building_type == "blacksmith":
-            # Check if upgrades are researched (Agent 05 will implement this).
-            # For now, assume upgrades are available if weapon/armor upgrades are researched.
-            if hero is not None:
-                # Check if hero needs weapon upgrade.
-                if hasattr(building, "weapon_upgrades_researched") and building.weapon_upgrades_researched:
-                    if not hero.weapon or (
-                        hasattr(building, "has_better_weapon") and building.has_better_weapon(hero)
-                    ):
-                        return building
-                # Check if hero needs armor upgrade.
-                if hasattr(building, "armor_upgrades_researched") and building.armor_upgrades_researched:
-                    if not hero.armor or (
-                        hasattr(building, "has_better_armor") and building.has_better_armor(hero)
-                    ):
-                        return building
-            else:
-                # Legacy: just check if upgrades are researched (no hero check).
-                if hasattr(building, "weapon_upgrades_researched") and building.weapon_upgrades_researched:
-                    return building
-                if hasattr(building, "armor_upgrades_researched") and building.armor_upgrades_researched:
-                    return building
+            if hasattr(building, "is_constructed") and not building.is_constructed:
+                continue
+            return building
     return None
 
 
@@ -56,7 +38,7 @@ def go_shopping(ai: Any, hero: Any, item_name: str, game_state: dict) -> None:
     if "potion" in item_lower:
         target_building = find_marketplace_with_potions(buildings)
     else:
-        target_building = find_blacksmith_with_upgrades(buildings, hero)
+        target_building = find_blacksmith(buildings, hero)
         
     if not target_building:
         for building in buildings:

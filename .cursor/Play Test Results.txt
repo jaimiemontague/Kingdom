@@ -1,20 +1,18 @@
 AGENTS - DO NOT EDIT.  HUMAN ONLY DOC
 
 #Improvements to make:
+	-when you click on a hero, the right chat menu should appear on the right, regardless of where you click on them.
+	-can you make the right chat menu only take half the height of the menu box and open a second map (similar to the main window) as a small pane that takes up the other half of the right menu, and make this map centered on the selected hero, and make the map stay centered on the hero even as they move around the map.  The player cannot control this map.
+	-Heroes still dont appear to enter blacksmith, probably just is because they are popping in and out instantly or the white circle animation that indicates when heros are in buildings isnt appearing.
+
+
+#Prior requests (informational purposes only.  May or may not be fulfilled, section may not be up to date):
 	-LLM-AI Merger - LLM gets control of their character.
 		-When I say "hey, would you leave the inn?", the LLM should make a decision on what to do - obey their lord, or defy and face the consequences?  They have free will and it is a monarchy not a dictatorship, but defy shouldn't be used commonly as its a scary move to make for all but the bravest and most lone wolf of characters.  And yeah, if they decide to leave, they should have the tools needed to control their character and make it actually leave the inn and seek to protect the kingdom or do whatever the llm commands next.  Please plan out the tooling to provide the LLM agent before implementing, as this is a major ask.  Present me with the plan and wait for me to approve before implementing.
 		-AI/LLM Monitoring Dev Tools: Make it so i can drag this box around by clicking and holding on the top bar.  
 	-Collision Boxes - lets apply collision boxes to all the entities in the game so that they dont clip through each other.
-	-Heroes still dont appear to enter blacksmith.
+
 	-Heroes glitch out next to the inn, probably when entering, where they jitter in place in a rapid loop instead of entering.  Doesnt happen every time.
 	-The game lags slightly when LLM messages either get sent, or are received, or both.
 	-Heroes dont appear to leave the inn.
 	-Bandit Camp needs pixel art.  Check other spawn buildings for pixel art too.
-	
-#Prior requests (informational purposes only.  May or may not be fulfilled, section may not be up to date):
-	-Lairs/Waves need more monsters to be coming my way to make the game more challenging.
-	-Gold accumulation / collection by debt collectors needs to either be increased in rate, in amount, or both; This in part would be solved by the last point about adding more monsters, but right now it takes too long to acquire gold to make more money.  Starting gold should also get a 40% increase.
-	-Castle under attack needs to be more of an urgent demand that can cause heros to abandoned what they are doing inside of nearby buildings and come out to defend the castle.
-	-When clicking "Research" (in places like the Market for Healing Potions), that task should take some time depending on the item (30 seconds for healing potions, other items adjust relative to their value and cost), and the Research button should change pixels such that a loading bar takes the place of the button.
-	-Right menu should vanish when nothing is selected in it to allow for a larger map view.
-	-Warriors should defend nearby buildings like farms when under attack instead of ignoring at the rate they do now.

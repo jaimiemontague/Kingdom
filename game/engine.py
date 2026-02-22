@@ -352,6 +352,8 @@ class GameEngine:
                 if hasattr(self, "hud"):
                     try:
                         self.hud.right_panel_visible = True
+                        if hasattr(self.hud, "_micro_view"):
+                            self.hud._micro_view.enter_hero_focus(hero)
                     except Exception:
                         pass
                 return True
@@ -1337,6 +1339,15 @@ class GameEngine:
                 self.audio_system.stop_interior_ambient()
             self._previous_micro_view_mode = now_mode
 
+            # WK18: Hero Focus Minimap
+            if now_mode == ViewMode.HERO_FOCUS and getattr(self.micro_view, "quest_hero", None):
+                right_rect = getattr(self.hud, "_right_rect", None)
+                if right_rect:
+                    minimap_rect = pygame.Rect(
+                        right_rect.x, right_rect.y, right_rect.width, right_rect.height // 2
+                    )
+                    self._render_hero_minimap(self.screen, minimap_rect, self.micro_view.quest_hero)
+
             # Render debug panel
             self.debug_panel.render(self.screen, self.get_game_state())
             # WK18: Dev Tools overlay (AI/LLM log stream)
@@ -1375,6 +1386,55 @@ class GameEngine:
         except Exception as e:
             raise
 
+
+    def _render_hero_minimap(self, surface: pygame.Surface, rect: pygame.Rect, hero):
+        """Render a secondary map view centered on a specific hero (WK18)."""
+        from game.graphics.render_context import set_render_zoom
+        from game.world import Visibility
+        old_zoom = self.zoom if self.zoom else 1.0
+        try:
+            set_render_zoom(1.0)
+        except Exception:
+            pass
+
+        mini_surf = pygame.Surface((rect.width, rect.height))
+        mini_surf.fill(COLOR_BLACK)
+
+        cam_x = hero.x - rect.width / 2
+        cam_y = hero.y - rect.height / 2
+        camera_offset = (int(cam_x), int(cam_y))
+
+        # Map contents
+        self.world.render(mini_surf, camera_offset)
+        for b in self.buildings:
+            self.renderer_registry.render_building(mini_surf, b, camera_offset)
+        for e in self.enemies:
+            gx, gy = self.world.world_to_grid(getattr(e, "x", 0.0), getattr(e, "y", 0.0))
+            if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
+                if self.world.visibility[gy][gx] == Visibility.VISIBLE:
+                    self.renderer_registry.render_enemy(mini_surf, e, camera_offset)
+        for h in self.heroes:
+            self.renderer_registry.render_hero(mini_surf, h, camera_offset)
+        for g in self.guards:
+            self.renderer_registry.render_guard(mini_surf, g, camera_offset)
+        for p in self.peasants:
+            self.renderer_registry.render_peasant(mini_surf, p, camera_offset)
+        if self.tax_collector:
+            self.renderer_registry.render_tax_collector(mini_surf, self.tax_collector, camera_offset)
+            
+        if hasattr(self.world, "render_fog"):
+            self.world.render_fog(mini_surf, camera_offset)
+
+        # Border
+        pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)
+        pygame.draw.rect(mini_surf, (40, 40, 40), mini_surf.get_rect().inflate(-4, -4), 1)
+
+        surface.blit(mini_surf, (rect.x, rect.y))
+
+        try:
+            set_render_zoom(old_zoom)
+        except Exception:
+            pass
 
     def render_perf_overlay(self, surface: pygame.Surface):
         now_ms = pygame.time.get_ticks()

@@ -216,7 +216,11 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
             hero.target = {"type": "shopping", "marketplace": marketplace}
             return
 
-        blacksmith = ai.shopping_behavior.find_blacksmith_with_upgrades(buildings, hero)
+        if isinstance(hero, dict) or not hasattr(hero, "gold"):
+            return
+
+        # WK15: Base shopping on available items
+        blacksmith = ai.shopping_behavior.find_blacksmith(buildings, hero)
         if blacksmith and hero.gold >= 50:  # Assume upgrades cost at least 50 gold.
             ai._debug_log(f"{hero.name} -> going to Blacksmith for upgrades")
             world = game_state.get("world")

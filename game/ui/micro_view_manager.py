@@ -22,6 +22,7 @@ class ViewMode(Enum):
     OVERVIEW = "overview"   # Hero panel / building summary / empty
     INTERIOR = "interior"   # Building interior (Enter Building)
     QUEST = "quest"         # wk14: remote exploration (travelogue panel)
+    HERO_FOCUS = "hero_focus" # wk18: ad-hoc chat + map focus
 
 
 class MicroViewManager:
@@ -74,6 +75,16 @@ class MicroViewManager:
         self.quest_hero = None
         self.quest_data = None
 
+    def enter_hero_focus(self, hero: Any) -> None:
+        """Switch to hero focus view (minimap + chat)."""
+        self.mode = ViewMode.HERO_FOCUS
+        self.quest_hero = hero
+
+    def exit_hero_focus(self) -> None:
+        """Return to OVERVIEW."""
+        self.mode = ViewMode.OVERVIEW
+        self.quest_hero = None
+
     def get_and_clear_exit_message(self) -> str | None:
         """Return and clear any exit message (for HUD.add_message)."""
         msg, self._exit_message = self._exit_message, None
@@ -102,6 +113,24 @@ class MicroViewManager:
                 name = getattr(self.quest_hero, "name", "Hero")
                 txt = font.render(f"Quest: {name}", True, (200, 200, 200))
                 surface.blit(txt, (right_rect.x + 12, right_rect.y + pad))
+            return None
+        if self.mode == ViewMode.HERO_FOCUS and self.quest_hero is not None:
+            # We defer rendering the minimap and chat to hud.py directly for layout simplicity,
+            # or we can ask the chat_panel to render in the bottom half.
+            if chat_panel is not None:
+                # Tell chat panel to activate if it isn't already for this hero
+                if not getattr(chat_panel, "is_active", lambda: False)():
+                    if hasattr(chat_panel, "start_conversation"):
+                        chat_panel.start_conversation(self.quest_hero)
+                
+                # Split rect into top (minimap) and bottom (chat)
+                chat_rect = pygame.Rect(
+                    right_rect.x,
+                    right_rect.y + right_rect.height // 2,
+                    right_rect.width,
+                    right_rect.height // 2
+                )
+                chat_panel.render(surface, chat_rect, game_state)
             return None
         if self.mode == ViewMode.INTERIOR and self.interior_building is not None:
             if getattr(self.interior_building, "hp", 1) <= 0:
@@ -145,6 +174,20 @@ class MicroViewManager:
                 action = quest_panel.handle_click(mouse_pos, right_rect)
                 if action == "exit_quest":
                     return "exit_quest"
+            return None
+        if self.mode == ViewMode.HERO_FOCUS:
+            if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+                chat_rect = pygame.Rect(
+                    right_rect.x,
+                    right_rect.y + right_rect.height // 2,
+                    right_rect.width,
+                    right_rect.height // 2
+                )
+                action = chat_panel.handle_click(mouse_pos, chat_rect)
+                if action == "end_conversation":
+                    return "exit_hero_focus"
+                if action is not None:
+                    return action
             return None
         if self.mode == ViewMode.INTERIOR:
             if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
