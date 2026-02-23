@@ -1,5 +1,23 @@
 # Changelog
 
+## Prototype v1.4.4 — Playtest Fixes & Hero Agency
+
+### Hero Interaction & Chat
+- **Hero Focus Mode**: Clicking any hero now opens a split right panel with a hero-centric minimap (top half) and the chat panel (bottom half), regardless of whether the hero is in a building or in the wild.
+- **Chat History Persistence**: Conversation history is now stored per-hero. Clicking away and reselecting a hero picks up the chat where you left off.
+- **LLM Physical Agency**: Heroes now respond to chat commands with JSON containing both a `spoken_response` and a `tool_action`. When the LLM says they'll leave a building or move somewhere, they actually do it.
+
+### UI & UX Fixes
+- **Activity text overlap fix**: HUD messages in the top-left no longer render behind the hero detail panel; they dynamically offset when the left panel is visible.
+- **ESC key fix**: Pressing ESC now correctly exits Hero Focus mode first, then opens the pause menu on the next press (previously got trapped).
+- **Minimap performance**: Cached the Surface allocation in `_render_hero_minimap` to eliminate per-frame memory churn that caused random lag spikes.
+- **UI rendering restored**: Fixed a regression where the entire HUD disappeared due to a missing `if` guard in the render loop.
+
+### AI & Shopping
+- **Blacksmith AI fix**: Refactored `find_blacksmith_with_upgrades` → `find_blacksmith` so heroes can target any constructed blacksmith for base item purchases, not just those with researched upgrades.
+
+---
+
 ## Prototype v1.4.3 — The LLM-AI Merger Update
 
 ### WK18 Sprint: LLM-AI Merger, Physicality, & Dev Tools
