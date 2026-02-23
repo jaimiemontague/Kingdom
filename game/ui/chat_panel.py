@@ -95,7 +95,9 @@ class ChatPanel:
 
     def start_conversation(self, hero: Any) -> None:
         self.hero_target = hero
-        self.conversation_history = []
+        if not hasattr(hero, "conversation_history"):
+            hero.conversation_history = []
+        self.conversation_history = hero.conversation_history
         self.waiting_for_response = False
         self._scroll_offset = 0
         self._input_text = ""

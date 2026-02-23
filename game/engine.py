@@ -668,9 +668,24 @@ class GameEngine:
         hero_target = getattr(chat_panel, "hero_target", None)
         if not hero_target:
             return
-        response = llm.get_conversation_response(hero_target.name)
-        if response is not None:
-            chat_panel.receive_response(response)
+        response_dict = llm.get_conversation_response(hero_target.name)
+        if response_dict is not None:
+            spoken = response_dict.get("spoken_response", response_dict.get("text", "I'm thinking..."))
+            chat_panel.receive_response(spoken)
+            
+            tool_action = response_dict.get("tool_action")
+            if tool_action:
+                from ai.behaviors.llm_bridge import apply_llm_decision
+                game_state = self.get_game_state()
+                # apply_llm_decision expects 'action', so map tool_action to it
+                response_dict["action"] = tool_action 
+                apply_llm_decision(
+                    self.ai_controller,
+                    hero_target,
+                    response_dict,
+                    game_state,
+                    source="chat"
+                )
 
     def _prepare_sim_and_camera(self, dt: float) -> bool:
         """Apply deterministic timing and update camera when world input is allowed."""
@@ -1397,7 +1412,9 @@ class GameEngine:
         except Exception:
             pass
 
-        mini_surf = pygame.Surface((rect.width, rect.height))
+        if getattr(self, "_minimap_surface", None) is None or self._minimap_surface.get_size() != (rect.width, rect.height):
+            self._minimap_surface = pygame.Surface((rect.width, rect.height))
+        mini_surf = self._minimap_surface
         mini_surf.fill(COLOR_BLACK)
 
         cam_x = hero.x - rect.width / 2

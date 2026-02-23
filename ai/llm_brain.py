@@ -127,7 +127,7 @@ class LLMBrain:
                 print(f"LLM worker error: {e}")
                 if hero_key and mode == "conversation":
                     with self.response_lock:
-                        self.conversation_responses[hero_key] = "I'm at a loss for words right now."
+                        self.conversation_responses[hero_key] = {"spoken_response": "I'm at a loss for words right now."}
     
     def _process_request(self, hero_key, context: dict) -> dict:
         """Process a single LLM request."""
@@ -219,8 +219,8 @@ class LLMBrain:
         except json.JSONDecodeError:
             return None
     
-    def _process_conversation(self, hero_key, payload: dict) -> str:
-        """Process a conversation request; returns raw response text."""
+    def _process_conversation(self, hero_key, payload: dict) -> dict:
+        """Process a conversation request; returns a dict with spoken_response and tool_action."""
         try:
             hero_context = payload.get("hero_context", {})
             conversation_history = payload.get("conversation_history", [])
@@ -250,11 +250,19 @@ class LLMBrain:
                 })
             text = (response_text or "").strip()
             if not text:
-                return "I am thinking, Sovereign... ask me again in a moment."
-            return text
+                return {"spoken_response": "I am thinking, Sovereign... ask me again in a moment."}
+                
+            start = text.find('{')
+            end = text.rfind('}') + 1
+            if start >= 0 and end > start:
+                json_str = text[start:end]
+                decision = json.loads(json_str)
+                return decision
+                
+            return {"spoken_response": text}
         except Exception as e:
             print(f"Conversation request failed for {hero_key}: {e}")
-            return "I'm at a loss for words right now."
+            return {"spoken_response": "I'm at a loss for words right now."}
 
     def request_decision(self, hero_key, context: dict):
         """Queue a decision request for a hero."""
@@ -275,7 +283,7 @@ class LLMBrain:
         }
         self.request_queue.put((hero_key, payload, "conversation"))
 
-    def get_conversation_response(self, hero_key) -> Optional[str]:
+    def get_conversation_response(self, hero_key) -> Optional[dict]:
         """Get and consume a conversation response for the hero, if ready."""
         with self.response_lock:
             return self.conversation_responses.pop(hero_key, None)

@@ -125,6 +125,19 @@ class InputHandler:
 
         # ESC menu takes priority
         if event.key == pygame.K_ESCAPE:
+            from game.ui.micro_view_manager import ViewMode
+            micro_view = getattr(engine, "micro_view", None)
+            mode = getattr(micro_view, "mode", None) if micro_view else None
+
+            # wk18: If in HERO_FOCUS, exit the mode + chat entirely
+            if mode == ViewMode.HERO_FOCUS:
+                if micro_view:
+                    micro_view.exit_hero_focus()
+                chat_panel = getattr(engine.hud, "_chat_panel", None)
+                if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+                    chat_panel.end_conversation()
+                return
+
             # wk14: close chat first if active
             chat_panel = getattr(engine.hud, "_chat_panel", None)
             if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
@@ -348,6 +361,8 @@ class InputHandler:
                         if hero is not None:
                             engine.selected_hero = hero
                             engine.selected_building = None
+                            if hasattr(engine.hud, "_micro_view"):
+                                engine.hud._micro_view.enter_hero_focus(hero)
                         chat_panel = getattr(engine.hud, "_chat_panel", None)
                         if chat_panel is not None:
                             chat_panel.start_conversation(action["hero"])
@@ -357,6 +372,8 @@ class InputHandler:
                         if hero is not None:
                             engine.selected_hero = hero
                             engine.selected_building = None
+                            if hasattr(engine.hud, "_micro_view"):
+                                engine.hud._micro_view.enter_hero_focus(hero)
                         return
                     if action == "end_conversation":
                         chat_panel = getattr(engine.hud, "_chat_panel", None)

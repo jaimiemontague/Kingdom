@@ -628,7 +628,8 @@ class HUD:
         except Exception:
             pass
 
-        self.render_messages(surface, left)
+        show_left = selected_hero is not None or selected_peasant is not None
+        self.render_messages(surface, left if show_left else None)
         self._command_bar.render(surface, cmd)
         self._speed_bar.render(surface, speed_rect, pygame.mouse.get_pos())
         self._speed_rect = speed_rect
