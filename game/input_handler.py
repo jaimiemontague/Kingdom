@@ -32,26 +32,28 @@ class InputHandler:
             engine._skip_event_processing_frames = skip_frames - 1
             return
 
-        events = pygame.event.get()
+        events = engine.input_manager.get_events()
 
         for event in events:
+            # Note: Because the DevToolsPanel still expects Pygame events natively, we pass raw_event 
+            # if we are still using Pygame under the hood, but this is a temporary bridge.
             if getattr(engine, "dev_tools_panel", None) and engine.dev_tools_panel.visible:
-                if engine.dev_tools_panel.handle_event(event):
+                if event.raw_event and engine.dev_tools_panel.handle_event(event.raw_event):
                     continue
 
-            if event.type == pygame.QUIT:
+            if event.type == 'QUIT':
                 engine.running = False
 
-            elif event.type == pygame.KEYDOWN:
+            elif event.type == 'KEYDOWN':
                 self.handle_keydown(event)
 
-            elif event.type == pygame.VIDEORESIZE:
-                engine.apply_display_settings(engine.display_mode, (event.w, event.h))
+            elif event.type == 'VIDEORESIZE':
+                engine.apply_display_settings(engine.display_mode, event.pos)
 
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == 'MOUSEDOWN':
                 self.handle_mousedown(event)
 
-            elif event.type == pygame.MOUSEBUTTONUP:
+            elif event.type == 'MOUSEUP':
                 # Menu slider drag end
                 if engine.pause_menu.visible and event.button == 1:
                     engine.pause_menu.handle_mouseup(event.pos)
@@ -61,18 +63,17 @@ class InputHandler:
                     engine._borderless_drag_start_pos = None
                     engine._borderless_drag_window_offset = None
 
-            elif event.type == pygame.MOUSEMOTION:
+            elif event.type == 'MOUSEMOTION':
                 self.handle_mousemove(event)
 
-            # Pygame 2 mouse wheel event
-            elif hasattr(pygame, "MOUSEWHEEL") and event.type == pygame.MOUSEWHEEL:
+            elif event.type == 'WHEEL':
                 # Do not zoom while paused / menu open.
                 if engine.paused or engine.pause_menu.visible:
                     continue
-                # event.y: +1 scroll up, -1 scroll down
-                if event.y > 0:
+                # event.wheel_y: +1 scroll up, -1 scroll down
+                if event.wheel_y > 0:
                     engine.zoom_by(ZOOM_STEP)
-                elif event.y < 0:
+                elif event.wheel_y < 0:
                     engine.zoom_by(1.0 / ZOOM_STEP)
 
     def select_building_for_placement(self, building_type: str) -> bool:
@@ -124,7 +125,7 @@ class InputHandler:
         engine = self.engine
 
         # ESC menu takes priority
-        if event.key == pygame.K_ESCAPE:
+        if event.key == 'esc':
             from game.ui.micro_view_manager import ViewMode
             micro_view = getattr(engine, "micro_view", None)
             mode = getattr(micro_view, "mode", None) if micro_view else None
@@ -174,13 +175,14 @@ class InputHandler:
         # Must run before pause/menu checks so chat works even at low speed tiers.
         chat_panel = getattr(engine.hud, "_chat_panel", None)
         if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
-            result = chat_panel.handle_keydown(event)
-            if result == "send_message":
-                text = getattr(chat_panel, "get_pending_message", lambda: "")()
-                if text and getattr(chat_panel, "hero_target", None) is not None:
-                    engine.send_player_message(chat_panel.hero_target, text)
-            elif result == "end_conversation":
-                chat_panel.end_conversation()
+            if event.raw_event:
+                result = chat_panel.handle_keydown(event.raw_event)
+                if result == "send_message":
+                    text = getattr(chat_panel, "get_pending_message", lambda: "")()
+                    if text and getattr(chat_panel, "hero_target", None) is not None:
+                        engine.send_player_message(chat_panel.hero_target, text)
+                elif result == "end_conversation":
+                    chat_panel.end_conversation()
             return
 
         # Block world input when menu is open
@@ -191,94 +193,94 @@ class InputHandler:
         if engine.paused:
             return
 
-        if event.key == pygame.K_TAB:
+        if event.key == 'tab':
             # Toggle right-side panel
             if hasattr(engine.hud, "toggle_right_panel"):
                 engine.hud.toggle_right_panel()
             return
 
-        elif event.key == pygame.K_1:
+        elif event.key == '1':
             self.select_building_for_placement("warrior_guild")
-        elif event.key == pygame.K_2:
+        elif event.key == '2':
             self.select_building_for_placement("marketplace")
-        elif event.key == pygame.K_3:
+        elif event.key == '3':
             self.select_building_for_placement("ranger_guild")
-        elif event.key == pygame.K_4:
+        elif event.key == '4':
             self.select_building_for_placement("rogue_guild")
-        elif event.key == pygame.K_5:
+        elif event.key == '5':
             self.select_building_for_placement("wizard_guild")
-        elif event.key == pygame.K_6:
+        elif event.key == '6':
             self.select_building_for_placement("blacksmith")
-        elif event.key == pygame.K_7:
+        elif event.key == '7':
             self.select_building_for_placement("inn")
-        elif event.key == pygame.K_8:
+        elif event.key == '8':
             self.select_building_for_placement("trading_post")
-        elif event.key == pygame.K_t:
+        elif event.key == 't':
             self.select_building_for_placement("temple_agrela")
-        elif event.key == pygame.K_g:
+        elif event.key == 'g':
             self.select_building_for_placement("gnome_hovel")
-        elif event.key == pygame.K_e:
+        elif event.key == 'e':
             self.select_building_for_placement("elven_bungalow")
-        elif event.key == pygame.K_v:
+        elif event.key == 'v':
             self.select_building_for_placement("dwarven_settlement")
-        elif event.key == pygame.K_u:
+        elif event.key == 'u':
             self.select_building_for_placement("guardhouse")
-        elif event.key == pygame.K_y:
+        elif event.key == 'y':
             self.select_building_for_placement("ballista_tower")
-        elif event.key == pygame.K_o:
+        elif event.key == 'o':
             self.select_building_for_placement("wizard_tower")
-        elif event.key == pygame.K_f:
+        elif event.key == 'f':
             self.select_building_for_placement("fairgrounds")
-        elif event.key == pygame.K_i:
+        elif event.key == 'i':
             self.select_building_for_placement("library")
-        elif event.key == pygame.K_r:
+        elif event.key == 'r':
             self.select_building_for_placement("royal_gardens")
 
-        elif event.key == pygame.K_h:
+        elif event.key == 'h':
             # Hire a hero
             engine.try_hire_hero()
 
-        elif event.key == pygame.K_SPACE:
+        elif event.key == 'space':
             # Center view on castle and reset to starting zoom
             engine.center_on_castle(reset_zoom=True)
 
-        elif event.key == pygame.K_F1:
+        elif event.key == 'f1':
             # Toggle debug panel
             engine.debug_panel.toggle()
-        elif event.key == pygame.K_F2:
+        elif event.key == 'f2':
             # Toggle perf overlay
             engine.show_perf = not engine.show_perf
-        elif event.key == pygame.K_F3:
+        elif event.key == 'f3':
             # Toggle HUD help/controls overlay
             if hasattr(engine.hud, "toggle_help"):
                 engine.hud.toggle_help()
-        elif event.key == pygame.K_F4:
+        elif event.key == 'f4':
             # WK18: Toggle Dev Tools overlay (AI/LLM log)
             if hasattr(engine, "dev_tools_panel") and hasattr(engine.dev_tools_panel, "toggle"):
                 engine.dev_tools_panel.toggle()
 
-        elif event.key == pygame.K_F12:
+        elif event.key == 'f12':
             # Manual screenshot capture
             engine.capture_screenshot()
 
-        elif event.key == pygame.K_b:
+        elif event.key == 'b':
             # Place a bounty at mouse position
             engine.place_bounty()
 
-        elif event.key == pygame.K_p:
+        elif event.key == 'p':
             # Use potion for selected hero
             if engine.selected_hero and getattr(engine.selected_hero, "is_alive", False) and hasattr(engine.selected_hero, "use_potion"):
                 if engine.selected_hero.use_potion():
                     engine.hud.add_message(f"{engine.selected_hero.name} used a potion!", (100, 255, 100))
 
         # Zoom controls (+/- and keypad)
-        elif event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+        elif event.key in ('=', '+'):
             engine.zoom_by(ZOOM_STEP)
-        elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+        elif event.key in ('-',):
             engine.zoom_by(1.0 / ZOOM_STEP)
 
         # Speed controls (wk12 Chronos): [ slower, ] faster, ` pause toggle
-        elif event.key == pygame.K_BACKQUOTE:
+        elif event.key == '`':
             current = get_time_multiplier()
             if current <= 0.0:
                 before = getattr(engine, "_speed_before_pause", DEFAULT_SPEED_TIER)
@@ -286,12 +288,12 @@ class InputHandler:
             else:
                 engine._speed_before_pause = current
                 set_time_multiplier(0.0)
-        elif event.key == pygame.K_LEFTBRACKET:
+        elif event.key == '[':
             current = get_time_multiplier()
             idx = next((i for i, m in enumerate(SPEED_TIERS) if abs(m - current) < 0.01), 0)
             idx = max(0, idx - 1)
             set_time_multiplier(SPEED_TIERS[idx])
-        elif event.key == pygame.K_RIGHTBRACKET:
+        elif event.key == ']':
             current = get_time_multiplier()
             idx = next((i for i, m in enumerate(SPEED_TIERS) if abs(m - current) < 0.01), len(SPEED_TIERS) - 1)
             idx = min(len(SPEED_TIERS) - 1, idx + 1)

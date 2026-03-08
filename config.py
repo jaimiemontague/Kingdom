@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.4.4"
-    game_title: str = "Kingdom Sim (Prototype v1.4.4) — Playtest Fixes & Hero Agency"
+    prototype_version: str = "1.4.5"
+    game_title: str = "Kingdom Sim (Prototype v1.4.5) — Ursina 3D Viewer"
     default_borderless: bool = True
 
 

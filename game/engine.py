@@ -49,12 +49,17 @@ from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
 from ai.context_builder import ContextBuilder
 
+from game.input_manager import InputManager
+
 class GameEngine:
     """Main game engine class."""
     
-    def __init__(self, early_nudge_mode: str | None = None):
+    def __init__(self, early_nudge_mode: str | None = None, input_manager: InputManager | None = None, headless: bool = False):
+        self.headless = headless
         pygame.init()
         pygame.font.init()
+        
+        self.input_manager = input_manager
 
         # Determinism knobs (future multiplayer enablement).
         # Seed early so world gen + initial lairs are reproducible when enabled.
@@ -72,76 +77,75 @@ class GameEngine:
         self._early_nudge_starter_bounty_done = False
         self._early_nudge_mode = (early_nudge_mode or EARLY_PACING_NUDGE_MODE or "auto").strip().lower()
         
-        # -----------------------------
-        # Display / window mode (WK7: runtime switching)
-        # -----------------------------
-        # WK7: User settings model (UI-only, non-sim)
-        # Initialize with default (borderless if DEFAULT_BORDERLESS, else windowed)
-        initial_mode = "borderless" if DEFAULT_BORDERLESS else "windowed"
-        self.display_mode = initial_mode  # "fullscreen" | "borderless" | "windowed"
-        # WK7 Mid-Sprint: make windowed obviously windowed by default
-        self.window_size = (1280, 720)  # Saved size for windowed mode
-        # Defer display mode changes to the main loop to avoid SDL re-entrancy during event handling
-        # (fixes intermittent Windows crash inside pygame.event.get after mode switches).
-        self._pending_display_settings: tuple[str, tuple[int, int] | None] | None = None
-        
-        # Borderless drag state (WK7)
-        self._borderless_drag_active = False
-        self._borderless_drag_start_pos = None
-        self._borderless_drag_window_offset = None
-
-        # Camera (initialize before display settings for clamp safety)
+        # Camera state (always needed for simulation coordinate queries)
         self.camera_x = 0
         self.camera_y = 0
         self.zoom = 1.0
         self.default_zoom = 1.0
-        self.display_manager = DisplayManager(self)
-        
-        # Apply initial display settings
-        self.apply_display_settings(self.display_mode, self.window_size)
         self.clock = pygame.time.Clock()
         self.running = True
         self.paused = False
 
-        # Screenshot tooling hook: when True, skip UI layers for clean world captures.
-        # (Used by tools/capture_screenshots.py scenarios; normal gameplay leaves this False.)
-        self.screenshot_hide_ui = False
-
-        # Perf overlay
-        self.show_perf = True
+        # Perf counters (diagnostic, always safe to init)
+        self.show_perf = False
         self._perf_last_ms = 0
         self._perf_pf_calls = 0
         self._perf_pf_failures = 0
         self._perf_pf_total_ms = 0.0
-        # Cached overlay panel (avoid per-frame Surface allocations)
         self._perf_overlay_next_update_ms = 0
         self._perf_overlay_panel = None
         self._perf_overlay_dirty = True
-        self._perf_snapshot = {
-            "fps": 0.0,
-            "heroes": 0,
-            "enemies": 0,
-            "peasants": 0,
-            "guards": 0,
-        }
-        # Loop timings (diagnostic only; EMA smoothing)
+        self._perf_snapshot = {"fps": 0.0, "heroes": 0, "enemies": 0, "peasants": 0, "guards": 0}
         self._perf_events_ms = 0.0
         self._perf_update_ms = 0.0
         self._perf_render_ms = 0.0
-        
-        # Initialize game world
+
+        # Initialize game world (pure simulation, no Pygame dependency)
         self.world = World()
         self.event_bus = EventBus()
-        self.renderer_registry = RendererRegistry()
+        self.renderer_registry = None if headless else RendererRegistry()
         self._renderer_prune_accum_s = 0.0
 
-        # Render surfaces (avoid per-frame allocations).
-        self._view_surface = None
-        self._view_surface_size = (0, 0)
-        self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
-        self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
-        self._pause_overlay.fill((0, 0, 0, 128))
-        self._pause_font = None  # WK17: cache PAUSED overlay font to avoid per-frame allocation
+        if not headless:
+            # -----------------------------
+            # Display / window mode (WK7: runtime switching)
+            # -----------------------------
+            initial_mode = "borderless" if DEFAULT_BORDERLESS else "windowed"
+            self.display_mode = initial_mode
+            self.window_size = (1280, 720)
+            self._pending_display_settings: tuple[str, tuple[int, int] | None] | None = None
+            self._borderless_drag_active = False
+            self._borderless_drag_start_pos = None
+            self._borderless_drag_window_offset = None
+            self.display_manager = DisplayManager(self)
+            self.apply_display_settings(self.display_mode, self.window_size)
+            self.screenshot_hide_ui = False
+            self.show_perf = True
+            # Render surfaces
+            self._view_surface = None
+            self._view_surface_size = (0, 0)
+            self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
+            self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+            self._pause_overlay.fill((0, 0, 0, 128))
+            self._pause_font = None
+        else:
+            # Headless stubs so attribute access doesn't crash
+            self.display_mode = "headless"
+            self.window_size = (1, 1)
+            self._pending_display_settings = None
+            self._borderless_drag_active = False
+            self._borderless_drag_start_pos = None
+            self._borderless_drag_window_offset = None
+            self.display_manager = None
+            self.screenshot_hide_ui = True
+            self.window_width = 1
+            self.window_height = 1
+            self._view_surface = None
+            self._view_surface_size = (0, 0)
+            self._scaled_surface = None
+            self._pause_overlay = None
+            self._pause_font = None
+            self.screen = None
         
         # Game objects
         self.buildings = []
@@ -161,62 +165,74 @@ class GameEngine:
         self.buff_system = BuffSystem()
         self.building_factory = BuildingFactory()
         
-        # WK7-BUG-001 FIX: Audio system MUST be initialized before PauseMenu
-        # (PauseMenu constructor requires audio_system parameter)
-        # Audio system (WK6: non-authoritative, event-driven sound effects and ambient music).
-        # Expected interface:
-        # - on_event(event: dict) -> None
-        # - set_ambient(track_name: str, volume: float) -> None
-        self.audio_system = AudioSystem(enabled=True)
-
-        # UI (must be initialized after audio_system - see WK7-BUG-001)
-        self.hud = HUD(self.window_width, self.window_height)
-        self.micro_view = self.hud._micro_view  # wk13: right-panel state (OVERVIEW / INTERIOR)
-        self._last_conversation_request_ms = -CONVERSATION_COOLDOWN_MS  # wk14: allow first message immediately
-        self._previous_micro_view_mode = None  # wk14: detect interior exit for audio
-        self._last_interior_rumble_sim_ms: float | None = None  # wk14: throttle building-under-attack SFX
-        self.building_menu = BuildingMenu()
-        self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
-        self.debug_panel = DebugPanel(self.window_width, self.window_height)
-        self.dev_tools_panel = DevToolsPanel(self.event_bus, self.window_width, self.window_height)
-        self.building_panel = BuildingPanel(self.window_width, self.window_height)
-        # WK7-BUG-001: PauseMenu requires audio_system, so it must be initialized after audio_system
-        self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
-        self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
-        
-        # Selection
+        # Selection (always needed for simulation queries)
         self.selected_building = None
         self.selected_peasant = None
+        self.selected_hero = None
         
         # Bounty system
         self.bounty_system = BountySystem()
         
-        # Selection
-        self.selected_hero = None
-        self.input_handler = InputHandler(self)
-        self.cleanup_manager = CleanupManager(self)
-        
         # AI controller (will be set from main.py)
         self.ai_controller = None
-
-        # VFX system (lightweight particles for hits/kills).
-        # Expected interface:
-        # - update(dt: float) -> None
-        # - render(surface: pygame.Surface, camera_offset: tuple[int,int]) -> None
-        # - on_event(event: dict) -> None
-        self.vfx_system = VFXSystem()
-
-        # EventBus subscribers (deterministic registration order).
-        self.event_bus.subscribe("*", self.audio_system.on_event)
-        self.event_bus.subscribe("*", self.vfx_system.on_event)
         
         # Tax collector (created after castle is placed)
         self.tax_collector = None
-        
-        # Initialize starting buildings
+
+        if not headless:
+            # Audio, UI, VFX — only needed for Pygame rendering
+            self.audio_system = AudioSystem(enabled=True)
+            self.hud = HUD(self.window_width, self.window_height)
+            self.micro_view = self.hud._micro_view
+            self._last_conversation_request_ms = -CONVERSATION_COOLDOWN_MS
+            self._previous_micro_view_mode = None
+            self._last_interior_rumble_sim_ms: float | None = None
+            self.building_menu = BuildingMenu()
+            self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
+            self.debug_panel = DebugPanel(self.window_width, self.window_height)
+            self.dev_tools_panel = DevToolsPanel(self.event_bus, self.window_width, self.window_height)
+            self.building_panel = BuildingPanel(self.window_width, self.window_height)
+            self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
+            self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
+            self.input_handler = InputHandler(self)
+            self.cleanup_manager = CleanupManager(self)
+            self.vfx_system = VFXSystem()
+            self.event_bus.subscribe("*", self.audio_system.on_event)
+            self.event_bus.subscribe("*", self.vfx_system.on_event)
+        else:
+            # Headless stubs: _NullStub silently absorbs any .method() or .attr access
+            class _NullStub:
+                """Swallows all attribute access and method calls."""
+                def __getattr__(self, name):
+                    return _NullStub()
+                def __call__(self, *a, **kw):
+                    return _NullStub()
+                def __bool__(self):
+                    return False
+                def __iter__(self):
+                    return iter([])
+            _s = _NullStub()
+            self.audio_system = None  # Keep None so event_bus doesn't subscribe
+            self.hud = _s
+            self.micro_view = _s
+            self._last_conversation_request_ms = 0
+            self._previous_micro_view_mode = None
+            self._last_interior_rumble_sim_ms = None
+            self.building_menu = _s
+            self.building_list_panel = _s
+            self.debug_panel = _s
+            self.dev_tools_panel = _s
+            self.building_panel = _s
+            self.pause_menu = _s
+            self.build_catalog_panel = _s
+            self.input_handler = None
+            self.cleanup_manager = CleanupManager(self)
+            self.vfx_system = None
+
+        # Initialize starting buildings (pure simulation)
         self.setup_initial_state()
         
-        # WK6: Start ambient loop on game start (Build A: single neutral loop)
+        # Start ambient loop on game start (audio only if present)
         if self.audio_system is not None:
             self.audio_system.set_ambient("ambient_loop", volume=0.4)
 
@@ -318,6 +334,10 @@ class GameEngine:
         
     def handle_events(self):
         """Process input events."""
+        if not self.input_manager:
+            return
+        if self.input_handler is None:
+            return
         self.input_handler.process_events()
 
     def request_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
@@ -503,14 +523,18 @@ class GameEngine:
     
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
-        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
         world_x, world_y = self.screen_to_world(mouse_pos[0], mouse_pos[1])
         
         # Bounty reward tiers (player-paid; cost == reward).
-        mods = pygame.key.get_mods()
-        if mods & pygame.KMOD_CTRL:
+        mods = self.input_manager.get_key_mods() if getattr(self, "input_manager", None) else {'shift': False, 'ctrl': False, 'alt': False}
+        if not getattr(self, "input_manager", None): # Fallback
+            pg_mods = pygame.key.get_mods()
+            mods = {'ctrl': bool(pg_mods & pygame.KMOD_CTRL), 'shift': bool(pg_mods & pygame.KMOD_SHIFT)}
+            
+        if mods.get('ctrl'):
             reward = int(BOUNTY_REWARD_HIGH)
-        elif mods & pygame.KMOD_SHIFT:
+        elif mods.get('shift'):
             reward = int(BOUNTY_REWARD_MED)
         else:
             reward = int(BOUNTY_REWARD_LOW)
@@ -1002,6 +1026,8 @@ class GameEngine:
 
     def _update_render_animations(self, dt: float):
         """Advance render-only entity animation state."""
+        if self.headless:
+            return
         self.renderer_registry.update_animations(
             dt=dt,
             heroes=self.heroes,
@@ -1013,6 +1039,9 @@ class GameEngine:
 
     def _finalize_update(self, dt: float):
         """Finalize per-frame UI and VFX updates."""
+        if self.headless:
+            self._flush_event_bus()
+            return
         # wk14: Interior building-under-attack rumble (throttled by sim time)
         from game.ui.micro_view_manager import ViewMode
         from game.events import GameEventType
@@ -1053,8 +1082,8 @@ class GameEngine:
     def _flush_event_bus(self):
         """Flush queued events once per frame after updating listener context."""
         if self.audio_system is not None:
-            win_w = int(getattr(self, "window_width", self.screen.get_width()))
-            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            win_w = int(self.window_width)
+            win_h = int(self.window_height)
             self.audio_system.set_listener_view(
                 self.camera_x, self.camera_y, self.zoom,
                 win_w, win_h, self.world
@@ -1076,8 +1105,8 @@ class GameEngine:
 
     def clamp_camera(self):
         """Clamp camera to world bounds given current zoom."""
-        win_w = int(getattr(self, "window_width", self.screen.get_width()))
-        win_h = int(getattr(self, "window_height", self.screen.get_height()))
+        win_w = int(self.window_width)
+        win_h = int(self.window_height)
         view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
         view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
         world_w = MAP_WIDTH * TILE_SIZE
@@ -1102,8 +1131,8 @@ class GameEngine:
         if not castle:
             return
 
-        win_w = int(getattr(self, "window_width", self.screen.get_width()))
-        win_h = int(getattr(self, "window_height", self.screen.get_height()))
+        win_w = int(self.window_width)
+        win_h = int(self.window_height)
         self.camera_x = castle.center_x - win_w // 2
         self.camera_y = castle.center_y - win_h // 2
         self.clamp_camera()
@@ -1143,7 +1172,7 @@ class GameEngine:
         if factor <= 0:
             return
 
-        mouse_x, mouse_y = pygame.mouse.get_pos()
+        mouse_x, mouse_y = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
         before_x, before_y = self.screen_to_world(mouse_x, mouse_y)
 
         self.set_zoom(self.zoom * factor)
@@ -1162,33 +1191,37 @@ class GameEngine:
             if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
                 return
 
-        keys = pygame.key.get_pressed()
+        keys = self.input_manager.get_key_mods() if getattr(self, "input_manager", None) else {'shift': False, 'ctrl': False, 'alt': False}
         speed = float(CAMERA_SPEED_PX_PER_SEC) * float(dt)
 
         dx = 0.0
         dy = 0.0
 
         # WASD pan (world-space pixels)
-        if keys[pygame.K_a]:
-            dx -= speed
-        if keys[pygame.K_d]:
-            dx += speed
-        if keys[pygame.K_w]:
-            dy -= speed
-        if keys[pygame.K_s]:
-            dy += speed
+        if getattr(self, "input_manager", None):
+            if self.input_manager.is_key_pressed('a'): dx -= speed
+            if self.input_manager.is_key_pressed('d'): dx += speed
+            if self.input_manager.is_key_pressed('w'): dy -= speed
+            if self.input_manager.is_key_pressed('s'): dy += speed
+        else:
+            pg_keys = pygame.key.get_pressed()
+            if pg_keys[pygame.K_a]: dx -= speed
+            if pg_keys[pygame.K_d]: dx += speed
+            if pg_keys[pygame.K_w]: dy -= speed
+            if pg_keys[pygame.K_s]: dy += speed
 
         # Mouse edge scroll (still in world-space pixels)
-        if pygame.mouse.get_focused():
-            mouse_x, mouse_y = pygame.mouse.get_pos()
-            if mouse_x < CAMERA_EDGE_MARGIN_PX:
+        has_focus = self.input_manager.is_mouse_focused() if getattr(self, "input_manager", None) else pygame.mouse.get_focused()
+        if has_focus:
+            mx, my = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
+            if mx < CAMERA_EDGE_MARGIN_PX:
                 dx -= speed
-            elif mouse_x > int(getattr(self, "window_width", self.screen.get_width())) - CAMERA_EDGE_MARGIN_PX:
+            elif mx > int(self.window_width) - CAMERA_EDGE_MARGIN_PX:
                 dx += speed
 
-            if mouse_y < CAMERA_EDGE_MARGIN_PX:
+            if my < CAMERA_EDGE_MARGIN_PX:
                 dy -= speed
-            elif mouse_y > int(getattr(self, "window_height", self.screen.get_height())) - CAMERA_EDGE_MARGIN_PX:
+            elif my > int(self.window_height) - CAMERA_EDGE_MARGIN_PX:
                 dy += speed
 
         if dx or dy:
@@ -1200,8 +1233,8 @@ class GameEngine:
         """Get current game state for AI and UI."""
         castle = next((b for b in self.buildings if b.building_type == "castle"), None)
         return {
-            "screen_w": int(getattr(self, "window_width", self.screen.get_width())),
-            "screen_h": int(getattr(self, "window_height", self.screen.get_height())),
+            "screen_w": int(self.window_width),
+            "screen_h": int(self.window_height),
             # WK7: Display mode state for ESC Graphics menu
             "display_mode": getattr(self, "display_mode", "windowed"),
             "window_size": getattr(self, "window_size", (WINDOW_WIDTH, WINDOW_HEIGHT)),
@@ -1253,8 +1286,8 @@ class GameEngine:
             view_surface = self.screen
         else:
             # Render world + entities to a zoomed "camera view" surface, then scale to window.
-            win_w = int(getattr(self, "window_width", self.screen.get_width()))
-            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            win_w = int(self.window_width)
+            win_h = int(self.window_height)
             view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
             view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
             if self._view_surface is None or self._view_surface_size != (view_w, view_h):
@@ -1335,8 +1368,8 @@ class GameEngine:
         # Scale the world to the actual window (reusing a destination surface)
         if view_surface is not self.screen:
             # Pixel art: nearest-neighbor scaling (no blur).
-            win_w = int(getattr(self, "window_width", self.screen.get_width()))
-            win_h = int(getattr(self, "window_height", self.screen.get_height()))
+            win_w = int(self.window_width)
+            win_h = int(self.window_height)
             try:
                 pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
                 self.screen.blit(self._scaled_surface, (0, 0))
@@ -1389,8 +1422,8 @@ class GameEngine:
                 if self._pause_font is None:
                     self._pause_font = pygame.font.Font(None, 72)
                 text = self._pause_font.render("PAUSED", True, (255, 255, 255))
-                win_w = int(getattr(self, "window_width", self.screen.get_width()))
-                win_h = int(getattr(self, "window_height", self.screen.get_height()))
+                win_w = int(self.window_width)
+                win_h = int(self.window_height)
                 text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
                 self.screen.blit(text, text_rect)
         
@@ -1538,52 +1571,77 @@ class GameEngine:
         size = 18
         self._perf_close_rect = pygame.Rect(px + panel.get_width() - size - 4, py + 4, size, size)
     
+    def get_game_state(self) -> dict:
+        """Return a snapshot dict of the current simulation state for external renderers."""
+        return {
+            'buildings': list(self.buildings),
+            'heroes': list(self.heroes),
+            'enemies': list(self.enemies),
+            'peasants': list(self.peasants),
+            'guards': list(self.guards),
+            'bounties': list(self.bounties),
+            'gold': self.economy.player_gold,
+        }
+
+    def tick_simulation(self, dt: float) -> tuple[float, float]:
+        """
+        Advance the game simulation by one logical step.
+        Returns a tuple of (events_ms, update_ms) for profiling.
+        """
+        # Apply any queued display settings change at a safe point (outside event polling).
+        pending = getattr(self, "_pending_display_settings", None)
+        if pending:
+            try:
+                dm, ws = pending
+                self._pending_display_settings = None
+                self.apply_display_settings(dm, ws)
+            except Exception:
+                # If anything goes wrong, clear the pending request and continue.
+                self._pending_display_settings = None
+
+        self._camera_dt = dt
+        sim_dt = dt * get_time_multiplier()
+
+        t0 = time.perf_counter()
+        self.handle_events()
+        t1 = time.perf_counter()
+
+        self.update(sim_dt)
+        t2 = time.perf_counter()
+
+        evt_ms = (t1 - t0) * 1000.0
+        upd_ms = (t2 - t1) * 1000.0
+        return evt_ms, upd_ms
+
+    def render_pygame(self) -> float:
+        """
+        Execute the standard Pygame rendering pipeline and UI overlays.
+        Returns render_ms for profiling.
+        """
+        t2 = time.perf_counter()
+        self.render()
+        t3 = time.perf_counter()
+        return (t3 - t2) * 1000.0
+
     def run(self):
-        """Main game loop."""
+        """Main game loop for standard Pygame playback."""
         while self.running:
-            # Apply any queued display settings change at a safe point (outside event polling).
-            pending = getattr(self, "_pending_display_settings", None)
-            if pending:
-                try:
-                    dm, ws = pending
-                    self._pending_display_settings = None
-                    self.apply_display_settings(dm, ws)
-                except Exception:
-                    # If anything goes wrong, clear the pending request and continue.
-                    self._pending_display_settings = None
-
-
             if DETERMINISTIC_SIM:
                 # Keep realtime pacing, but do not use wall-clock delta for simulation.
-                tick_ms = self.clock.tick(FPS)
+                self.clock.tick(FPS)
                 dt = 1.0 / max(1, int(SIM_TICK_HZ))
             else:
                 tick_ms = self.clock.tick(FPS)
                 dt = tick_ms / 1000.0  # Delta time in seconds
 
-            # wk12 Chronos: camera uses raw dt; sim uses dt * multiplier (pause = 0).
-            self._camera_dt = dt
-            sim_dt = dt * get_time_multiplier()
+            # Step 1: Simulate
+            evt_ms, upd_ms = self.tick_simulation(dt)
 
-            t0 = time.perf_counter()
-            self.handle_events()
-            t1 = time.perf_counter()
-
-
-            self.update(sim_dt)
-            t2 = time.perf_counter()
-
-
-            self.render()
-            t3 = time.perf_counter()
-
+            # Step 2: Render
+            rnd_ms = self.render_pygame()
 
             # Perf timings (EMA). Diagnostic only: must not affect simulation state.
-            if self.show_perf:
-                evt_ms = (t1 - t0) * 1000.0
-                upd_ms = (t2 - t1) * 1000.0
-                rnd_ms = (t3 - t2) * 1000.0
-
+            if getattr(self, "show_perf", False):
                 alpha = 0.12
                 self._perf_events_ms = evt_ms if self._perf_events_ms <= 0 else (self._perf_events_ms * (1 - alpha) + evt_ms * alpha)
                 self._perf_update_ms = upd_ms if self._perf_update_ms <= 0 else (self._perf_update_ms * (1 - alpha) + upd_ms * alpha)

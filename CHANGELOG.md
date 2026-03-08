@@ -1,5 +1,36 @@
 # Changelog
 
+## Prototype v1.4.5 — Ursina 3D Viewer (Phase 2.1v2)
+
+### Engine Decoupling (Phase 1)
+- **InputManager abstraction**: Created a generic `InputManager` interface (`game/input_manager.py`) and `PygameInputManager` implementation, removing all direct `pygame.event` / `pygame.key` / `pygame.mouse` calls from the core engine.
+- **Simulation/render split**: `GameEngine.run()` decomposed into `tick_simulation(dt)` and `render_pygame()`, allowing external loops (Ursina, headless) to drive the simulation independently.
+- **Headless mode**: `GameEngine(headless=True)` skips all Pygame display, UI, audio, VFX, and sprite initialization while keeping the full simulation core (world, economy, combat, spawner, buildings, heroes).
+- **`get_game_state()` API**: New method returns a snapshot dict of all simulation entities for external renderers.
+- **`_NullStub` pattern**: Headless UI stubs silently absorb all method calls and attribute access, eliminating ~20 potential `AttributeError` crashes in the simulation path.
+
+### Ursina 3D Viewer MVP (Phase 2)
+- **`--renderer ursina` flag**: `main.py` now accepts `--renderer ursina` to launch the Ursina 3D viewer instead of the Pygame renderer.
+- **Ursina MVP viewer**: View-only 3D diorama showing the simulation as colored primitives — castle (gold), lairs (brown), enemies (red), heroes (blue circles), peasants (orange), guards (yellow).
+- **Tile-unit coordinate system**: Game pixel coordinates divided by `TILE_SIZE` (32) for proper Ursina orthographic scaling.
+- **Panda3D background**: Green map background via native `setBackgroundColor()` API.
+- **Camera controls**: WASD to pan, Q/E to zoom in/out.
+- **Status overlay**: Real-time HUD showing Gold, Heroes, Enemies, and Buildings count.
+
+### Tech Debt Fixed
+- **16 eager `getattr` fallbacks**: Replaced all `getattr(self, "window_width", self.screen.get_width())` patterns with `self.window_width` — Python evaluates defaults eagerly, causing crashes when `self.screen` is `None`.
+- **`RendererRegistry` guarded**: Set to `None` in headless mode to prevent sprite loading (`pygame.image.load().convert_alpha()`) without a display.
+
+### New Files
+- `game/input_manager.py` — Abstract InputManager interface + InputEvent dataclass
+- `game/pygame_input_manager.py` — Pygame implementation of InputManager
+- `game/ursina_input_manager.py` — Ursina implementation of InputManager
+- `game/graphics/ursina_renderer.py` — Simulation-to-Ursina entity translator
+- `game/graphics/ursina_app.py` — Ursina application wrapper
+- `tools/run_headless_sim.py` — Headless simulation test harness
+
+---
+
 ## Prototype v1.4.4 — Playtest Fixes & Hero Agency
 
 ### Hero Interaction & Chat
