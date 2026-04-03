@@ -2,8 +2,9 @@
 Basic 3D Viewer application using Ursina.
 Wraps the core headless simulation and visualizes it.
 """
-from ursina import Ursina, window, camera, color, time, scene
+from ursina import Ursina, window, camera, color, time, scene, Entity, Texture
 import pygame
+from PIL import Image
 import os
 
 from game.engine import GameEngine
@@ -44,9 +45,19 @@ class UrsinaApp:
         camera.clip_plane_near = -100
         camera.clip_plane_far = 100
 
-        # Create the underlying simulation engine with Ursina inputs
+        # Create the underlying simulation engine with PyMux UI enabled
         self.input_manager = UrsinaInputManager()
-        self.engine = GameEngine(input_manager=self.input_manager, headless=True)
+        self.engine = GameEngine(input_manager=self.input_manager, headless=False, headless_ui=True)
+        
+        # UI Overlay Quad covering the screen space
+        self.ui_overlay = Entity(
+            parent=camera.ui,
+            model='quad',
+            texture=None,
+            scale=(camera.aspect_ratio, 1), # Full screen coverage for camera.ui
+            position=(0, 0),
+            z=-1 # Bring to front of UI
+        )
         
         # Assign the AI
         if ai_controller_factory:
@@ -66,6 +77,12 @@ class UrsinaApp:
             
             # Sync the visual state
             self.renderer.update()
+            
+            # Draw UI to virtual Pygame screen, extract, and bridge to Ursina texture
+            self.engine.render_pygame()
+            raw_data = pygame.image.tostring(self.engine.screen, 'RGBA')
+            img = Image.frombytes('RGBA', self.engine.screen.get_size(), raw_data)
+            self.ui_overlay.texture = Texture(img)
             
             # Basic camera panning for the MVP
             from ursina import held_keys

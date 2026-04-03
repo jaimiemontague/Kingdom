@@ -88,8 +88,11 @@ def load_png_frames(folder: str | Path, scale_to: Optional[tuple[int, int]] = No
 
     files = sorted([f for f in p.iterdir() if f.is_file() and f.suffix.lower() == ".png"])
     frames: List[pygame.Surface] = []
+    display_surface = pygame.display.get_surface()
     for f in files:
-        img = pygame.image.load(str(f)).convert_alpha()
+        img = pygame.image.load(str(f))
+        if display_surface is not None:
+            img = img.convert_alpha()
         if scale_to is not None:
             # Pixel art should remain crisp; avoid filtered scaling.
             img = pygame.transform.scale(img, scale_to)

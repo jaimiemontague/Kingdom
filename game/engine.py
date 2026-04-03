@@ -54,8 +54,9 @@ from game.input_manager import InputManager
 class GameEngine:
     """Main game engine class."""
     
-    def __init__(self, early_nudge_mode: str | None = None, input_manager: InputManager | None = None, headless: bool = False):
+    def __init__(self, early_nudge_mode: str | None = None, input_manager: InputManager | None = None, headless: bool = False, headless_ui: bool = False):
         self.headless = headless
+        self.headless_ui = headless_ui
         pygame.init()
         pygame.font.init()
         
@@ -103,10 +104,10 @@ class GameEngine:
         # Initialize game world (pure simulation, no Pygame dependency)
         self.world = World()
         self.event_bus = EventBus()
-        self.renderer_registry = None if headless else RendererRegistry()
+        self.renderer_registry = None if headless and not headless_ui else RendererRegistry()
         self._renderer_prune_accum_s = 0.0
 
-        if not headless:
+        if not headless and not headless_ui:
             # -----------------------------
             # Display / window mode (WK7: runtime switching)
             # -----------------------------
@@ -125,6 +126,28 @@ class GameEngine:
             self._view_surface = None
             self._view_surface_size = (0, 0)
             self._scaled_surface = pygame.Surface((self.window_width, self.window_height))
+            self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+            self._pause_overlay.fill((0, 0, 0, 128))
+            self._pause_font = None
+        elif headless_ui:
+            # Virtual screen for PyMux rendering
+            self.display_mode = "headless_ui"
+            self.window_size = (1920, 1080)
+            self._pending_display_settings = None
+            self._borderless_drag_active = False
+            self._borderless_drag_start_pos = None
+            self._borderless_drag_window_offset = None
+            self.display_manager = None
+            self.screenshot_hide_ui = False
+            self.show_perf = True
+            self.window_width = 1920
+            self.window_height = 1080
+            self._view_surface = None
+            self._view_surface_size = (0, 0)
+            
+            # Use SRCALPHA so the background is transparent and Ursina shows through
+            self.screen = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
+            self._scaled_surface = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
             self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
             self._pause_overlay.fill((0, 0, 0, 128))
             self._pause_font = None
@@ -179,7 +202,7 @@ class GameEngine:
         # Tax collector (created after castle is placed)
         self.tax_collector = None
 
-        if not headless:
+        if not headless or headless_ui:
             # Audio, UI, VFX — only needed for Pygame rendering
             self.audio_system = AudioSystem(enabled=True)
             self.hud = HUD(self.window_width, self.window_height)
@@ -1429,10 +1452,11 @@ class GameEngine:
         
         # NOTE (WK7): On some Windows setups, rapid mode switches can intermittently crash inside
         # SDL/driver during flip(). update() has proven more robust in practice.
-        try:
-            pygame.display.update()
-        except Exception as e:
-            raise
+        if not getattr(self, "headless_ui", False):
+            try:
+                pygame.display.update()
+            except Exception as e:
+                raise
 
 
     def _render_hero_minimap(self, surface: pygame.Surface, rect: pygame.Rect, hero):
@@ -1571,18 +1595,6 @@ class GameEngine:
         size = 18
         self._perf_close_rect = pygame.Rect(px + panel.get_width() - size - 4, py + 4, size, size)
     
-    def get_game_state(self) -> dict:
-        """Return a snapshot dict of the current simulation state for external renderers."""
-        return {
-            'buildings': list(self.buildings),
-            'heroes': list(self.heroes),
-            'enemies': list(self.enemies),
-            'peasants': list(self.peasants),
-            'guards': list(self.guards),
-            'bounties': list(self.bounties),
-            'gold': self.economy.player_gold,
-        }
-
     def tick_simulation(self, dt: float) -> tuple[float, float]:
         """
         Advance the game simulation by one logical step.

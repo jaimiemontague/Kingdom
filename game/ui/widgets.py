@@ -41,7 +41,9 @@ def load_image_cached(path: str, size: tuple[int, int] | None = None) -> pygame.
     if cached is not None:
         return cached
     try:
-        img = pygame.image.load(str(path)).convert_alpha()
+        img = pygame.image.load(str(path))
+        if pygame.display.get_surface() is not None:
+            img = img.convert_alpha()
         if size is not None and img.get_size() != size:
             img = pygame.transform.scale(img, size)
         _cache_put_bounded(_IMAGE_CACHE, key, img, max_items=_IMAGE_CACHE_MAX)
