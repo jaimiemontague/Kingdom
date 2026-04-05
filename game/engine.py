@@ -1292,8 +1292,16 @@ class GameEngine:
     
     def render(self):
         """Render the game."""
-        # Clear screen
-        self.screen.fill(COLOR_BLACK)
+        # Ursina viewer: 3D world is drawn by Ursina; pygame only composites HUD. Keep the
+        # surface transparent where we skip drawing so the 3D layer shows through.
+        skip_pygame_world = bool(
+            getattr(self, "headless_ui", False)
+            and getattr(self, "_ursina_skip_world_render", False)
+        )
+        if skip_pygame_world:
+            self.screen.fill((0, 0, 0, 0))
+        else:
+            self.screen.fill(COLOR_BLACK)
 
         # Pixel art: quantize camera to integer pixels to reduce shimmer.
         camera_offset = (int(self.camera_x), int(self.camera_y))
@@ -1304,8 +1312,10 @@ class GameEngine:
         except Exception:
             pass
 
-        # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
-        if abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:
+        if skip_pygame_world:
+            view_surface = self.screen
+        elif abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:
+            # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
             view_surface = self.screen
         else:
             # Render world + entities to a zoomed "camera view" surface, then scale to window.
@@ -1319,86 +1329,94 @@ class GameEngine:
             view_surface = self._view_surface
             view_surface.fill(COLOR_BLACK)
 
-        # Render world
-        self.world.render(view_surface, camera_offset)
+        if not skip_pygame_world:
+            # Render world
+            self.world.render(view_surface, camera_offset)
 
-        # Render buildings
-        for building in self.buildings:
-            self.renderer_registry.render_building(view_surface, building, camera_offset)
+            # Render buildings
+            for building in self.buildings:
+                self.renderer_registry.render_building(view_surface, building, camera_offset)
 
-        # Render enemies
-        for enemy in self.enemies:
-            # Fog-of-war: enemies should only be visible when currently in vision (VISIBLE),
-            # not in explored-but-dim (SEEN) tiles.
-            gx, gy = self.world.world_to_grid(getattr(enemy, "x", 0.0), getattr(enemy, "y", 0.0))
-            if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
-                if self.world.visibility[gy][gx] != Visibility.VISIBLE:
+            # Render enemies
+            for enemy in self.enemies:
+                # Fog-of-war: enemies should only be visible when currently in vision (VISIBLE),
+                # not in explored-but-dim (SEEN) tiles.
+                gx, gy = self.world.world_to_grid(getattr(enemy, "x", 0.0), getattr(enemy, "y", 0.0))
+                if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
+                    if self.world.visibility[gy][gx] != Visibility.VISIBLE:
+                        continue
+                else:
                     continue
-            else:
-                continue
-            self.renderer_registry.render_enemy(view_surface, enemy, camera_offset)
+                self.renderer_registry.render_enemy(view_surface, enemy, camera_offset)
 
-        # Render heroes
-        for hero in self.heroes:
-            self.renderer_registry.render_hero(view_surface, hero, camera_offset)
+            # Render heroes
+            for hero in self.heroes:
+                self.renderer_registry.render_hero(view_surface, hero, camera_offset)
 
-        # Render guards
-        for guard in self.guards:
-            self.renderer_registry.render_guard(view_surface, guard, camera_offset)
+            # Render guards
+            for guard in self.guards:
+                self.renderer_registry.render_guard(view_surface, guard, camera_offset)
 
-        # Render peasants
-        for peasant in self.peasants:
-            self.renderer_registry.render_peasant(view_surface, peasant, camera_offset)
+            # Render peasants
+            for peasant in self.peasants:
+                self.renderer_registry.render_peasant(view_surface, peasant, camera_offset)
 
-        # Render tax collector
-        if self.tax_collector:
-            self.renderer_registry.render_tax_collector(view_surface, self.tax_collector, camera_offset)
+            # Render tax collector
+            if self.tax_collector:
+                self.renderer_registry.render_tax_collector(view_surface, self.tax_collector, camera_offset)
 
-        # Render building preview
-        self.building_menu.render(view_surface, camera_offset)
-        
-        # Render building list panel (if visible)
-        if self.building_list_panel.visible:
-            selected_type = getattr(self.building_menu, "selected_building", None)
-            self.building_list_panel.render(view_surface, self.economy, self.buildings, selected_type)
+            # Render building preview
+            self.building_menu.render(view_surface, camera_offset)
+            
+            # Render building list panel (if visible)
+            if self.building_list_panel.visible:
+                selected_type = getattr(self.building_menu, "selected_building", None)
+                self.building_list_panel.render(view_surface, self.economy, self.buildings, selected_type)
 
-        # Render VFX overlay (world-space) if present.
-        if self.vfx_system is not None and hasattr(self.vfx_system, "render"):
-            try:
-                self.vfx_system.render(view_surface, camera_offset)
-            except Exception:
-                pass
+            # Render VFX overlay (world-space) if present.
+            if self.vfx_system is not None and hasattr(self.vfx_system, "render"):
+                try:
+                    self.vfx_system.render(view_surface, camera_offset)
+                except Exception:
+                    pass
 
-        # Fog-of-war overlay (covers world + entities/markers in unrevealed areas)
-        # Draw AFTER world/entities/VFX so hidden areas remain hidden.
-        if hasattr(self.world, "render_fog"):
-            self.world.render_fog(view_surface, camera_offset)
+            # Fog-of-war overlay (covers world + entities/markers in unrevealed areas)
+            # Draw AFTER world/entities/VFX so hidden areas remain hidden.
+            if hasattr(self.world, "render_fog"):
+                self.world.render_fog(view_surface, camera_offset)
 
-        # Hotfix: Bounties must be visible even in black fog (UNSEEN). Render AFTER fog overlay so
-        # the solid-black fog pass does not hide bounty flags.
-        # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
-        if hasattr(self.bounty_system, "update_ui_metrics"):
-            try:
-                self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
-            except Exception:
-                pass
-        self.renderer_registry.render_bounties(
-            view_surface,
-            getattr(self.bounty_system, "bounties", []),
-            camera_offset,
-        )
+            # Hotfix: Bounties must be visible even in black fog (UNSEEN). Render AFTER fog overlay so
+            # the solid-black fog pass does not hide bounty flags.
+            # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
+            if hasattr(self.bounty_system, "update_ui_metrics"):
+                try:
+                    self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
+                except Exception:
+                    pass
+            self.renderer_registry.render_bounties(
+                view_surface,
+                getattr(self.bounty_system, "bounties", []),
+                camera_offset,
+            )
 
-        # Scale the world to the actual window (reusing a destination surface)
-        if view_surface is not self.screen:
-            # Pixel art: nearest-neighbor scaling (no blur).
-            win_w = int(self.window_width)
-            win_h = int(self.window_height)
-            try:
-                pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
-                self.screen.blit(self._scaled_surface, (0, 0))
-            except Exception as e:
-                raise
-        
+            # Scale the world to the actual window (reusing a destination surface)
+            if view_surface is not self.screen:
+                # Pixel art: nearest-neighbor scaling (no blur).
+                win_w = int(self.window_width)
+                win_h = int(self.window_height)
+                try:
+                    pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
+                    self.screen.blit(self._scaled_surface, (0, 0))
+                except Exception as e:
+                    raise
+        else:
+            # Bounty UI metrics still used by HUD/minimap; keep in sync without drawing world layers.
+            if hasattr(self.bounty_system, "update_ui_metrics"):
+                try:
+                    self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
+                except Exception:
+                    pass
+
         # Render HUD
         if not bool(getattr(self, "screenshot_hide_ui", False)):
             self.hud.render(self.screen, self.get_game_state())

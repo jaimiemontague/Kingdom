@@ -1,0 +1,835 @@
+﻿diff --git a/.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json b/.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json
+index 166b167..d4f0d0b 100644
+--- a/.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json
++++ b/.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json
+@@ -3698,77 +3698,30 @@
+     "wk4-new-enemy-skeleton-archer": {
+       "sprint_meta": {
+         "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+-        "notes": "WK4 Build A: add new enemy type skeleton_archer (ranged kiter), ensure it is testable quickly, and keep strict validator + snapshot system green."
++        "notes": "Retroactive PM synthesis to unblock auditability."
+       },
+       "rounds": {
+         "wk4_r2": {
+           "round_meta": {
+-            "prompt_set_id": "wk4_r2_pm_synthesis_v1",
+-            "build_target": "BuildA_midweek",
+-            "pm_authored_at_local": "2026-01-03T00:00:00",
+-            "visibility": "All agents should treat this as the source of truth for WK4 decisions."
+-          },
+-          "pm_decisions": {
+-            "buildA_locked": {
+-              "enemy_type": "skeleton_archer",
+-              "ranged_only": true,
+-              "instant_hit_ranged": true,
+-              "no_projectile_system": true,
+-              "spawn_source": "skeleton_crypt (lair)",
+-              "spawn_mix": "80/20 skeleton/skeleton_archer (deterministic via lair RNG)",
+-              "pipeline_complete": [
+-                "tools/assets_manifest.json includes skeleton_archer",
+-                "assets/sprites/enemies/skeleton_archer/{idle,walk,attack,hurt,dead}/frame_000.png exist"
+-              ],
+-              "testing_gates": [
+-                "python tools/qa_smoke.py --quick",
+-                "python tools/validate_assets.py --strict --check-attribution",
+-                "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk4_after/enemy_catalog_seed3 --size 1920x1080 --ticks 0",
+-                "python tools/build_gallery.py --shots docs/screenshots/wk4_after --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html"
+-              ],
+-              "clarity_safeguard_allowed": "Tiny deterministic readability cue is allowed (pose + minimal impact flash) but no new systems."
+-            },
+-            "tunables_v0": {
+-              "hp": 40,
+-              "attack": 4,
+-              "speed": 1.35,
+-              "attack_range_tiles": 6.0,
+-              "min_range_tiles": 2.0,
+-              "attack_cooldown_ms": 1400
+-            },
+-            "determinism_perf_guardrails": [
+-              "Sim-time/ticks only for cooldowns/ages; no wall-clock in sim logic.",
+-              "Seeded RNG streams only; no global random.*",
+-              "Stable ordering/tie-breaks for targeting decisions (no set/dict iteration dependence).",
+-              "Avoid per-frame pathing churn; rate-limit reposition decisions; avoid O(N_enemies*N_heroes) scans and per-tick allocations."
+-            ]
+-          },
+-          "status": "complete"
+-        },
+-        "wk4_r3": {
+-          "round_meta": {
+-            "prompt_set_id": "wk4_r3_exec_closeout_v1",
+-            "build_target": "BuildA_midweek",
+-            "pm_authored_at_local": "2026-01-03T00:00:00",
+-            "notes": "Implementation + verification closeout summary; keep audit trail and evidence in one place."
++            "prompt_set_id": "wk4_r2_synthesis_v1",
++            "build_target": "BuildA",
++            "pm_authored_at_local": "2026-02-23T14:00:00"
+           },
+-          "pm_round3_results": {
+-            "high_level_status": "buildA_shippable",
+-            "what_landed": [
+-              "Implemented SkeletonArcher enemy (ranged-only, instant-hit) with kite band + hysteresis/commitment + bounded attempts fallback.",
+-              "SkeletonCrypt spawns deterministic 80/20 skeleton/skeleton_archer mix via lair RNG.",
+-              "Tools/pipeline: tools/assets_manifest.json updated; CC0 placeholder frames generated for skeleton_archer; runtime fallback recognizes skeleton_archer.",
+-              "Wave testability: first enemy wave now guarantees a skeleton_archer spawn near the map center for quick validation."
+-            ],
+-            "evidence": [
+-              "python tools/qa_smoke.py --quick => PASS",
+-              "python tools/validate_assets.py --strict --check-attribution => PASS"
+-            ],
+-            "manual_spot_check": [
+-              "Recommended: run `python main.py --no-llm` and confirm a Skeleton Archer appears as the first wave enemy within ~10\u201315s and engages near the castle."
+-            ]
+-          },
+-          "status": "ready_to_ship"
++          "pm_status_summary": {
++            "overall_status": "Synthesis Complete (Retroactive). Decisions are locked for Build A.",
++            "locked_decisions": {
++              "combat_style": "Ranged-only, instant-hit (no projectiles yet).",
++              "behavior": "Kiting: maintain distance band with hysteresis.",
++              "spawning": "80/20 mix of skeleton/skeleton_archer from Skeleton Crypt.",
++              "visuals": "procedural CC0 placeholders via generator.",
++              "pipeline": "validation and snapshot coverage mandatory before merging."
++            },
++            "gates": {
++              "qa_smoke_quick": "Must remain PASS",
++              "validate_assets": "strict + check-attribution must PASS",
++              "snapshots": "Visual snapshot system enemy_catalog includes skeleton_archer"
++            }
++          }
+         }
+       }
+     },
+@@ -4408,6 +4361,412 @@
+           }
+         }
+       }
++    },
++    "wk19-ursina-engine-swap": {
++      "sprint_meta": {
++        "plan_ref": ".cursor/plans/wk19_ursina_engine_swap.plan.md",
++        "notes": "WK19: Ursina Engine Swap (Phase 1)"
++      },
++      "rounds": {
++        "wk19_r1_kickoff": {
++          "round_meta": {
++            "prompt_set_id": "wk19_r1_kickoff_v1",
++            "build_target": "BuildA_midweek",
++            "pm_authored_at_local": "2026-02-23T13:00:00",
++            "visibility": "WK19 Round 1: Foundation (Engine Swap)"
++          },
++          "pm_status_summary": {
++            "overall_status": "Round 1 - Foundation",
++            "focus": [
++              "Isolate simulation loop from Pygame dependency",
++              "Create headless simulator runner",
++              "Build basic Ursina app that ticks the headless sim",
++              "Map entities to placeholder 3D cubes"
++            ]
++          },
++          "pm_bug_tickets": [],
++          "pm_feature_requests": [
++            {
++              "id": "WK19-FEAT-001",
++              "title": "Headless Simulation Mode",
++              "owner_agent": "12_ToolsDevEx_Lead",
++              "specs": [
++                "Create tools/run_headless_sim.py that loops GameEngine.update(dt) 1000 times without a Pygame display."
++              ],
++              "status": "assigned"
++            },
++            {
++              "id": "WK19-FEAT-002",
++              "title": "Ursina Renderer Backend",
++              "owner_agent": "03_TechnicalDirector_Architecture",
++              "specs": [
++                "Initialize Ursina app, tick GameEngine in update(), map heroes/enemies to 3D cubes in game/graphics/ursina_renderer.py."
++              ],
++              "status": "assigned"
++            }
++          ],
++          "pm_next_actions_by_agent": {
++            "03": {
++              "status": "assigned_active",
++              "asks": [
++                "Refactor game/engine.py to optionally bypass Pygame display/events.",
++                "Create game/graphics/ursina_renderer.py that ticks GameEngine.",
++                "Map GameEngine entities to Ursina objects (cubes).",
++                "Add --renderer flag to main.py"
++              ],
++              "acceptance_criteria": [
++                "python main.py --renderer ursina launches 3D window.",
++                "qa_smoke PASS"
++              ]
++            },
++            "12": {
++              "status": "assigned_active",
++              "asks": [
++                "Develop tools/run_headless_sim.py.",
++                "Add Ursina to requirements.txt."
++              ],
++              "acceptance_criteria": [
++                "python tools/run_headless_sim.py executes without error.",
++                "qa_smoke PASS"
++              ]
++            },
++            "10": {
++              "status": "assigned_active",
++              "asks": [
++                "Profile ursina_renderer.py. Ensure no per-frame Ursina Entity allocation."
++              ],
++              "acceptance_criteria": [
++                "Profiler output confirms stable memory."
++              ]
++            },
++            "04": {
++              "status": "consult_only",
++              "asks": [
++                "Ensure Ursina rendering does not inject wall-clock time or random physics back into GameEngine state."
++              ],
++              "acceptance_criteria": []
++            }
++          },
++          "pm_send_list_minimal": {
++            "send_to_agents": [
++              "03",
++              "10",
++              "12"
++            ],
++            "do_not_send": [
++              "02",
++              "04",
++              "05",
++              "06",
++              "07",
++              "08",
++              "09",
++              "11",
++              "13",
++              "14"
++            ],
++            "rationale": "Phase 1 requires Architecture, Tools, and Performance."
++          }
++        },
++        "wk19_r2_ursina_renderer": {
++          "round_meta": {
++            "prompt_set_id": "wk19_r2_ursina_renderer_v1",
++            "build_target": "BuildA_midweek",
++            "pm_authored_at_local": "2026-02-23T14:00:00",
++            "visibility": "WK19 Round 2: Ursina Renderer Implementation"
++          },
++          "pm_status_summary": {
++            "overall_status": "Round 2 - Renderer Implementation",
++            "focus": [
++              "Implement game/graphics/ursina_renderer.py",
++              "Translate Pygame 2D coords to Ursina 3D coords",
++              "Ensure dictionary caching for entity tracking",
++              "Profile the new renderer to enforce performance guardrails"
++            ]
++          },
++          "pm_next_actions_by_agent": {
++            "03": {
++              "status": "assigned_active",
++              "asks": [
++                "Implement UrsinaRenderer in game/graphics/ursina_renderer.py using the dictionary caching pattern specified in the plan.",
++                "Add a function to translate Pygame 2D coordinates to Ursina 3D coordinates.",
++                "Hook up the Ursina Renderer to GameEngine in main.py via the --renderer ursina flag."
++              ],
++              "acceptance_criteria": [
++                "python main.py --renderer ursina launches the 3D window.",
++                "Entities are represented as cubes and update positions correctly.",
++                "python tools/qa_smoke.py --quick PASS"
++              ]
++            },
++            "10": {
++              "status": "assigned_active",
++              "asks": [
++                "Profile the UrsinaRenderer implementation.",
++                "Verify that sync_entities() uses a dictionary cache and does not allocate new Entity objects per frame for existing entities.",
++                "Document performance findings in your agent log."
++              ],
++              "acceptance_criteria": [
++                "Profiler output confirms stable memory.",
++                "No severe GC pauses or memory leaks detected in Ursina loop."
++              ]
++            }
++          },
++          "pm_send_list_minimal": {
++            "send_to_agents": [
++              "03",
++              "10"
++            ],
++            "do_not_send": [
++              "02",
++              "04",
++              "05",
++              "06",
++              "07",
++              "08",
++              "09",
++              "11",
++              "12",
++              "13",
++              "14"
++            ],
++            "rationale": "Round 2 focuses purely on the Ursina backend implementation and its performance profiling."
++          }
++        },
++        "wk19_r2": {
++          "round_meta": {
++            "prompt_set_id": "wk19_r2_ursina_renderer_v1",
++            "build_target": "BuildA_midweek",
++            "pm_authored_at_local": "2026-02-23T14:00:00",
++            "visibility": "WK19 Round 2: Ursina Renderer Implementation"
++          },
++          "pm_status_summary": {
++            "overall_status": "Round 2 - Renderer Implementation (Complete)",
++            "focus": [
++              "Implement game/graphics/ursina_renderer.py",
++              "Translate Pygame 2D coords to Ursina 3D coords",
++              "Ensure O(1) dictionary caching for entity tracking",
++              "Profile the new renderer to enforce performance guardrails"
++            ]
++          },
++          "pm_next_actions_by_agent": {
++            "03": {
++              "status": "complete",
++              "asks": [
++                "Implement UrsinaRenderer in game/graphics/ursina_renderer.py using the dictionary caching pattern specified in the plan.",
++                "Add a function to translate Pygame 2D coordinates to Ursina 3D coordinates.",
++                "Hook up the Ursina Renderer to GameEngine in main.py via the --renderer ursina flag."
++              ],
++              "acceptance_criteria": [
++                "python main.py --renderer ursina launches the 3D window.",
++                "Entities are represented as cubes and update positions correctly.",
++                "python tools/qa_smoke.py --quick PASS"
++              ]
++            },
++            "10": {
++              "status": "complete",
++              "asks": [
++                "Profile the UrsinaRenderer implementation.",
++                "Verify that sync_entities() uses a dictionary cache and does not allocate new Entity objects per frame for existing entities.",
++                "Document performance findings in your agent log."
++              ],
++              "acceptance_criteria": [
++                "Profiler output confirms stable memory.",
++                "No severe GC pauses or memory leaks detected in Ursina loop."
++              ]
++            }
++          },
++          "pm_send_list_minimal": {
++            "send_to_agents": [
++              "03",
++              "10"
++            ],
++            "do_not_send": [
++              "02",
++              "04",
++              "05",
++              "06",
++              "07",
++              "08",
++              "09",
++              "11",
++              "12",
++              "13",
++              "14"
++            ],
++            "rationale": "Round 2 focuses purely on the Ursina backend implementation and its performance profiling."
++          },
++          "pm_review": {
++            "status": "approved",
++            "notes": "UrsinaRenderer successfully implemented with dictionary caching. Profiling confirmed stable memory pattern. qa_smoke passes."
++          }
++        }
++      }
++    },
++    "wk20-ursina-engine-swap-phase2": {
++      "sprint_meta": {
++        "plan_ref": ".cursor/plans/wk20_ursina_engine_swap_phase2.plan.md",
++        "notes": "WK20: Ursina Engine Swap (Phase 2 - Asset Pipeline & Billboarding)"
++      },
++      "rounds": {
++        "wk20_r1_kickoff": {
++          "round_meta": {
++            "prompt_set_id": "wk20_r1_kickoff_v1",
++            "build_target": "BuildA_midweek",
++            "pm_authored_at_local": "2026-02-23T16:20:00",
++            "visibility": "WK20 Round 1: Asset Pipeline & Billboarding Kickoff"
++          },
++          "pm_status_summary": {
++            "overall_status": "Round 1 - Complete",
++            "blocked": false,
++            "current_focus": "Completed Phase 2: Asset Pipeline & Billboarding."
++          },
++          "pm_next_actions_by_agent": {
++            "12": {
++              "status": "done",
++              "asks": [
++                "Create the autoloader for Ursina Textures in game/graphics/ursina_asset_loader.py.",
++                "Crawl assets/images and apply Texture.filtering = None (or Point filtering) to all .png files.",
++                "Provide a get_texture(name) function."
++              ],
++              "acceptance_criteria": [
++                "UrsinaAssetLoader successfully caches textures using pixel-perfect rendering.",
++                "qa_smoke PASS"
++              ]
++            },
++            "09": {
++              "status": "done",
++              "asks": [
++                "Create game/graphics/ursina_sprite.py.",
++                "Define a factory `create_pixel_billboard` that makes a 3D Entity(model='quad', billboard=True).",
++                "Ensure aspect ratio scaling is preserved from the raw textures."
++              ],
++              "acceptance_criteria": [
++                "Sprite quads are built successfully facing the camera.",
++                "qa_smoke PASS"
++              ]
++            },
++            "03": {
++              "status": "done",
++              "asks": [
++                "Update game/graphics/ursina_renderer.py to use the new loader and billboard factory instead of colored cubes.",
++                "Handle coordinate translation and Z-Depth sorting so lower screen entities render in front of higher ones.",
++                "Implement fallback colored cubes if textures are missing."
++              ],
++              "acceptance_criteria": [
++                "main.py --renderer ursina works, displaying 2.5D pixel art without crashing.",
++                "qa_smoke PASS"
++              ]
++            },
++            "10": {
++              "status": "done",
++              "asks": [
++                "Verify texture sharing: Ensure spawning 50 entities points to ONE texture object in memory, not 50.",
++                "Profile the new billboarding integration for memory leaks or GC stutter.",
++                "Assert no per-frame texture loading occurs."
++              ],
++              "acceptance_criteria": [
++                "Profiler script updated to assert memory sharing.",
++                "qa_smoke PASS"
++              ]
++            }
++          },
++          "pm_agent_prompts": {
++            "12": "WK20 Phase 2: Build the Ursina Texture Asset Loader. Apply nearest-neighbor filtering and cache the textures.",
++            "09": "WK20 Phase 2: Design the 2.5D billboard entity setup using `model='quad'` and `billboard=True` with correct aspect ratios.",
++            "03": "WK20 Phase 2: Integrate the new Loader and Billboard Factory into `ursina_renderer.py`. Handle Z-Depth sorting.",
++            "10": "WK20 Phase 2: Profile the new asset pipeline. Assert that multiple entities share exactly ONE texture in memory (no duplication)."
++          },
++          "pm_send_list_minimal": [
++            "12",
++            "09",
++            "03",
++            "10"
++          ]
++        }
++      }
++    },
++    "wk21-ursina-engine-swap-phase2-2": {
++      "sprint_meta": {
++        "plan_ref": ".cursor/plans/wk21_ursina_phase2_animation_tiles.plan.md",
++        "notes": "WK21: Ursina Engine Swap (Phase 2.2 - Animation & Tilemaps)"
++      },
++      "rounds": {
++        "wk21_r1_kickoff": {
++          "round_meta": {
++            "prompt_set_id": "wk21_r1_kickoff_v1",
++            "build_target": "BuildA_midweek",
++            "pm_authored_at_local": "2026-02-23T16:30:00",
++            "visibility": "WK21 Round 1: Animation Sequences & Tilemap Mesh"
++          },
++          "pm_status_summary": {
++            "overall_status": "Round 1 - Complete",
++            "blocked": false,
++            "current_focus": "Completed Phase 2.2: Animation & Tilemaps."
++          },
++          "pm_next_actions_by_agent": {
++            "12": {
++              "status": "done",
++              "asks": [
++                "Expand UrsinaAssetLoader to group sequential frames into lists (e.g. hero_walk_0, hero_walk_1).",
++                "Implement get_animation(entity_type, state).",
++                "Ensure crisp nearest-neighbor filtering remains enabled."
++              ],
++              "acceptance_criteria": [
++                "Animations are cached correctly as lists of Textures.",
++                "qa_smoke PASS"
++              ]
++            },
++            "09": {
++              "status": "done",
++              "asks": [
++                "Create AnimatedBillboard in ursina_animator.py.",
++                "Subclass Entity to automatically cycle self.texture using time.dt.",
++                "Provide a play_animation(frames, fps) method."
++              ],
++              "acceptance_criteria": [
++                "AnimatedBillboard cycles textures visually.",
++                "qa_smoke PASS"
++              ]
++            },
++            "03": {
++              "status": "done",
++              "asks": [
++                "Swap create_pixel_billboard for AnimatedBillboard in sync_entities.",
++                "Render the 150x150 tilemap footprint efficiently (Mesh combine or texture atlas).",
++                "Do not spawn 22,500 individual Entities without rigorous culling/optimizations."
++              ],
++              "acceptance_criteria": [
++                "Game renders tilemap and moving sprites at 60fps.",
++                "qa_smoke PASS"
++              ]
++            },
++            "10": {
++              "status": "done",
++              "asks": [
++                "Profile the tilemap integration.",
++                "If frame rates tank under 60fps, reject the tilemap PR and mandate Mesh combining.",
++                "Establish total entity count assertion ensuring ground tiles aren't blowing up memory."
++              ],
++              "acceptance_criteria": [
++                "Profiler asserts frame times and memory stability.",
++                "qa_smoke PASS"
++              ]
++            }
++          },
++          "pm_agent_prompts": {
++            "12": "WK21 Phase 2.2: Expand UrsinaAssetLoader to load numbered animation frames into lists for `get_animation()`.",
++            "09": "WK21 Phase 2.2: Build the `AnimatedBillboard` Entity subclass that cycles `self.texture` using `time.dt`.",
++            "03": "WK21 Phase 2.2: Integrate `AnimatedBillboard` based on simulation state. Render the 150x150 tilemap using an optimized approach (Mesh combining) to avoid 22k entity lag.",
++            "10": "WK21 Phase 2.2: Profile the tilemap rendering. Ensure 22,500 ground tiles do not crash the frame rate or memory."
++          },
++          "pm_send_list_minimal": [
++            "12",
++            "09",
++            "03",
++            "10"
++          ]
++        }
++      }
+     }
+   }
+ }
+\ No newline at end of file
+diff --git a/.cursor/plans/wk20_ursina_engine_swap_phase2.plan.md b/.cursor/plans/wk20_ursina_engine_swap_phase2.plan.md
+new file mode 100644
+index 0000000..f279989
+--- /dev/null
++++ b/.cursor/plans/wk20_ursina_engine_swap_phase2.plan.md
+@@ -0,0 +1,121 @@
++# Sprint Plan: WK20 - Ursina Engine Swap (Phase 2: Asset Pipeline & Billboarding)
++
++## Strategic Objective
++Execute Phase 2 of the Graphics Overhaul Roadmap.
++**Goal:** Replace the placeholder 3D colored cubes in the Ursina renderer with 2.5D pixel-art billboards using our existing CC0 assets. We need an automated asset loading pipeline and a dedicated billboarding component to render 2D sprites in 3D space with correct pixel-perfect scaling.
++
++## Core Philosophy
++- **Reusability:** The existing `assets/images/` folder should be the single source of truth for both Pygame and Ursina while both renderers co-exist.
++- **Pixel-Perfect Rendering:** Ursina uses anti-aliasing and linear filtering by default. We must force nearest-neighbor (point) filtering on textures to preserve the crisp pixel art look.
++- **Memory Efficiency:** Textures must be loaded once and shared across multiple Ursina Entities. No duplicate texture data in memory.
++
++---
++
++## Detailed Agent Assignments & Implementation Specs
++
++### 1. Agent 12 (ToolsDevEx_Lead) ΓÇö The Asset Loader
++**Objective:** Build the bridge between our `assets/` folder and Ursina's texture system.
++
++**Implementation Specifications:**
++1. **Asset Loader (`game/graphics/ursina_asset_loader.py`):**
++   Create a dedicated caching loader class that crawls the `assets/images/` directory.
++   ```python
++   import os
++   from ursina import Texture, load_texture
++   
++   class UrsinaAssetLoader:
++       def __init__(self, base_path="assets/images"):
++           self.base_path = base_path
++           self.textures = {} # Cache dict: "filename_without_ext" -> Texture object
++           self.load_all()
++
++       def load_all(self):
++           # Crawl self.base_path recursively for .png files
++           # For each file:
++           #   name = os.path.splitext(os.path.basename(filepath))[0]
++           #   tex = load_texture(filepath)
++           #   if tex:
++           #       tex.filtering = None  # CRITICAL: Force nearest-neighbor pixel rendering
++           #       self.textures[name] = tex
++           pass
++
++       def get_texture(self, name: str) -> Texture | None:
++           return self.textures.get(name)
++   ```
++2. **Integration:** Ensure this loader is instantiated exactly ONCE immediately after the `Ursina()` app is created in `UrsinaRenderer.__init__`.
++
++### 2. Agent 09 (ArtDirector_Pixel_Animation_VFX) ΓÇö The 2.5D Billboard Architecture
++**Objective:** Define the Entity subclass for 2D sprites living in a 3D world.
++
++**Implementation Specifications:**
++1. **Sprite Configuration (`game/graphics/ursina_sprite.py`):**
++   Create a factory function to build our 2.5D sprites correctly scaled to their texture size.
++   ```python
++   from ursina import Entity, Texture
++
++   def create_pixel_billboard(texture: Texture, scale_factor: float = 0.05) -> Entity:
++       """
++       Creates a 3D quad facing the camera displaying a 2D pixel-art texture.
++       """
++       # Calculate aspect-correct scale based on the raw texture pixels
++       aspect_x = texture.width * scale_factor
++       aspect_y = texture.height * scale_factor
++
++       ent = Entity(
++           model='quad',
++           texture=texture,
++           scale=(aspect_x, aspect_y),
++           billboard=True,      # CRITICAL: Makes the quad always face the camera to mimic 2D
++           double_sided=True,   # Prevent culling if camera orientation flips
++           transparent=True     # Enable alpha channel for PNGs
++       )
++       return ent
++   ```
++
++### 3. Agent 03 (TechDirector_Architecture) ΓÇö The Integration
++**Objective:** Wire the new textures and billboards into the running renderer, handling Z-depth and fallbacks safely.
++
++**Implementation Specifications:**
++1. **Update `UrsinaRenderer` (`game/graphics/ursina_renderer.py`):**
++   - Initialize `self.asset_loader = UrsinaAssetLoader()` in `__init__`.
++   - Update `sync_entities()`: Instead of always spawning a colored cube, attempt to fetch the texture by the entity's type/name first.
++   ```python
++   # Inside sync_entities() loop:
++   if entity_id not in self.ursina_entities:
++       # Assuming sim_entity.type maps to a filename like "hero" or "goblin"
++       tex = self.asset_loader.get_texture(sim_entity.type) 
++       
++       if tex:
++           from game.graphics.ursina_sprite import create_pixel_billboard
++           u_entity = create_pixel_billboard(tex, scale_factor=0.05)
++       else:
++           # Fallback logic to prevent crashes if art is missing
++           color_choice = color.green if sim_entity.type == "hero" else color.red
++           u_entity = Entity(model='cube', color=color_choice, scale=0.5)
++       
++       self.ursina_entities[entity_id] = u_entity
++   ```
++2. **Z-Ordering (Depth Sorting):**
++   - Pygame relies on painter's algorithm (lowest Y drawn first). In Ursina's 3D space, transparent quads can cause Z-fighting or incorrect alpha overlap.
++   - When mapping coordinates, use a slight negative Z offset based on Pygame's Y coordinate. Entities lower on the 2D screen (higher Y) must be physically closer to the 3D camera to hide Z-fighting.
++   - **Requirement:** Implement depth-sorting logic in `pygame_to_ursina_ground(x, y)` so that `z_ursina = -pygame_y * 0.05 - (pygame_y * 0.0001)`.
++
++### 4. Agent 10 (PerformanceStability_Lead) ΓÇö The Memory Profiler
++**Objective:** Ensure the new asset pipeline doesn't choke the engine or leak VRAM.
++
++**Implementation Specifications:**
++1. **Texture Sharing Verification:**
++   - Write a small test in your `profile_ursina_renderer.py` script to assert that `id(loader.get_texture('hero')) == id(loader.get_texture('hero'))`. 
++   - We cannot afford to have 50 separate Texture instances in memory for 50 goblins. They must point to exactly the same cached texture object.
++2. **Profiling:**
++   - Execute the profiler with 200+ entities spawned via the `observe_sync.py` tool or a headless runner. Validate that memory allocation remains stable and flat after initial game load. No per-frame Entity allocations, and no per-frame Texture load calls.
++
++---
++
++## Testing & QA Gates
++Before this sprint is considered finished, the following must be true:
++1. `python tools/qa_smoke.py --quick` -> PASS (Sim logic unbroken).
++2. `python main.py --renderer ursina --no-llm` -> Launches a 3D window where entities are rendered as pixel-art textures facing the camera, not colored cubes. Textures are crisp (not blurry).
++
++## Failure Scenarios & Rollbacks
++If Ursina fails to properly depth-sort the billboards with `billboard=True` (especially with transparent PNGs causing alpha sorting issues), Agent 03 must research Ursina's `alpha_clip=True` or manual sorting routines into a distinct `render_queue` to force proper overlap.
+diff --git a/.cursor/plans/wk21_ursina_phase2_animation_tiles.plan.md b/.cursor/plans/wk21_ursina_phase2_animation_tiles.plan.md
+new file mode 100644
+index 0000000..f7f035d
+--- /dev/null
++++ b/.cursor/plans/wk21_ursina_phase2_animation_tiles.plan.md
+@@ -0,0 +1,100 @@
++# Sprint Plan: WK21 - Ursina Engine Swap (Phase 2.2: Animation & Tilemaps)
++
++## Strategic Objective
++Continue Phase 2 of the Graphics Overhaul Roadmap.
++**Goal:** Now that static 2.5D pixel billboards are rendering and caching correctly, we must implement **Animated Sprites** (walk, attack, idle frames) and the **3D Procedural Tilemap** (grass, water, trees) in the Ursina renderer. This requires expanding the asset loader, introducing texture-swapping animations, and optimizing a massive grid of ground tiles.
++
++## Core Philosophy
++- **Data-Driven Animation:** The simulation dictates state (`MOVING`, `ATTACKING`). The renderer merely maps that state to a list of loaded texture frames and cycles them based on `time.dt`.
++- **Tilemap Optimization:** A 150x150 map is 22,500 tiles. Spawning 22,500 individual `Entity(model='quad')` objects will instantly crash or lag the engine. The ground must be optimized (e.g., using Panda3D/Ursina `Mesh` combining, or disabling collision and utilizing instancing).
++
++---
++
++## Detailed Agent Assignments & Implementation Specs
++
++### 1. Agent 12 (ToolsDevEx_Lead) ΓÇö The Asset Loader Expansion
++**Objective:** Expand `UrsinaAssetLoader` to parse animation sequences and tile variants.
++
++**Implementation Specifications:**
++1. **Update `game/graphics/ursina_asset_loader.py`:**
++   - Extend the loader to group sequentially numbered files (e.g., `hero_walk_0.png`, `hero_walk_1.png`) into lists.
++   - Example Interface: `get_animation(entity_type: str, state: str) -> list[Texture]`
++     ```python
++     def get_animation(self, entity_type: str, state: str) -> list:
++         # For entity_type="hero" and state="MOVING", return a list of textures
++         # loaded from assets/images/hero_walk_*.png
++         key = f"{entity_type}_{state.lower()}"
++         return self.animations.get(key, [self.get_texture("placeholder")])
++     ```
++   - Same constraint applies: **ALL** loaded textures must use `filtering = None` for pixel perfection.
++
++### 2. Agent 09 (ArtDirector_Pixel_Animation_VFX) ΓÇö Animated Billboards
++**Objective:** Create a component that automatically flips textures for animation.
++
++**Implementation Specifications:**
++1. **Sprite Animator (`game/graphics/ursina_animator.py`):**
++   Create a subclass of `Entity` or a custom component that updates its own texture over time.
++   ```python
++   from ursina import Entity
++
++   class AnimatedBillboard(Entity):
++       def __init__(self, **kwargs):
++           super().__init__(model='quad', billboard=True, double_sided=True, transparent=True, **kwargs)
++           self.frames = []
++           self.current_frame = 0
++           self.fps = 8
++           self.time_accumulator = 0.0
++           
++       def play_animation(self, frames: list, fps: int = 8):
++           if self.frames != frames:
++               self.frames = frames
++               self.current_frame = 0
++               self.fps = fps
++               if self.frames:
++                   self.texture = self.frames[0]
++
++       def update(self):
++           # Ursina automatically calls update() every frame for Entities
++           if not self.frames or len(self.frames) <= 1:
++               return
++               
++           from ursina import time
++           self.time_accumulator += time.dt
++           frame_duration = 1.0 / self.fps
++           
++           if self.time_accumulator >= frame_duration:
++               self.time_accumulator -= frame_duration
++               self.current_frame = (self.current_frame + 1) % len(self.frames)
++               self.texture = self.frames[self.current_frame]
++   ```
++
++### 3. Agent 03 (TechDirector_Architecture) ΓÇö Tilemap & Integration
++**Objective:** Render the 150x150 map and update entity animations.
++
++**Implementation Specifications:**
++1. **Update `sync_entities()` in `ursina_renderer.py`:**
++   - Swap `create_pixel_billboard` for the new `AnimatedBillboard`.
++   - Each frame, look up the entity's `state` (e.g. `sim_entity.state.name`) and feed the corresponding frame list to `play_animation()`.
++2. **The Procedural Tilemap:**
++   - Read the map data from `game_engine.map.tiles`.
++   - **CRITICAL PERF RULE:** Do NOT spawn 22,500 `Entity` objects.
++   - **Solution:** Create a custom `Mesh` combining the ground tiles, OR use Ursina's `Entity(model=Grid(...))` with a texture atlas, OR at the absolute minimum, ensure `collider=None` and `ignore=True` are set if spawning individual entities block-by-block. If building a single `Mesh`, translate the Pygame X,Y coordinates to vertex positions and assign UV coordinates based on the tile type (grass, water, path).
++
++### 4. Agent 10 (PerformanceStability_Lead) ΓÇö The Grid Profiler
++**Objective:** Ensure the map rendering doesn't destroy frame rates.
++
++**Implementation Specifications:**
++1. **Tilemap Profiling Verification:**
++   - Run `profile_ursina_renderer.py` after Agent 03 integrates the map.
++   - If frame rates drop below 60fps on an average machine due to the 22,500 tiles, immediately file a blocker and instruct Agent 03 to use panda3d `RigidBodyCombiner` or a single `Mesh` allocation for the ground plane.
++   - Assert in the profiler that the total number of Ursina Entities does NOT scale linearly with the map grid unless extremely optimized.
++
++---
++
++## Testing & QA Gates
++Before this sprint is considered finished, the following must be true:
++1. `python tools/qa_smoke.py --quick` -> PASS.
++2. `python main.py --renderer ursina --no-llm` -> Launches a 3D window. The ground is fully textured (grass, water). Heroes and enemies flip through animation frames as they walk and attack.
++
++## Failure Scenarios & Rollbacks
++If combining the tilemap `Mesh` is too complex for this sprint, Agent 03 may fall back to spawning individual `Entity(model='quad')` tiles ONLY IF they cull them dynamically (e.g., only spawning chunks visible near the camera). If performance still tanks, revert ground rendering to a single flat green quad until Phase 2.3.
+diff --git a/.cursor/rules/agent-01-pm-onboarding.mdc b/.cursor/rules/agent-01-pm-onboarding.mdc
+index 84c0fef..43326b9 100644
+--- a/.cursor/rules/agent-01-pm-onboarding.mdc
++++ b/.cursor/rules/agent-01-pm-onboarding.mdc
+@@ -123,6 +123,12 @@ Then tell Jaimie: "Send to Agents 03, 05, 06" (or whichever are assigned).
+ 5. **Don't bump the version** unless Jaimie asks ΓÇö version changes are a human decision.
+ 6. **Don't make changes to game code "just to help"** ΓÇö even small "obvious" fixes. Assign them.
+ 
++## Versioning Conventions for Backend Buildouts
++
++When managing long architectural shifts (like the Ursina Engine swap), track sprints using an iterative pre-release version format so progress is visible without implying a stable release:
++- **Format**: `vX.Y.Z-phaseA.B` (e.g., `v1.4.5-phase1.1`, `v1.4.5-phase1.2`, `v1.4.5-phase2.1`)
++- Use this formatting when logging sprint progress in your PM Hub log for backend buildouts.
++
+ ## Sprint History (for context)
+ 
+ | Sprint | Version | Focus |
+diff --git a/.cursor/rules/agent-13-steam-onboarding.mdc b/.cursor/rules/agent-13-steam-onboarding.mdc
+index 563ecc5..377231d 100644
+--- a/.cursor/rules/agent-13-steam-onboarding.mdc
++++ b/.cursor/rules/agent-13-steam-onboarding.mdc
+@@ -29,9 +29,16 @@ Make Kingdom Sim look and sound like a game worth buying on Steam, and make sure
+ 
+ - You don't decide what features ship ΓÇö that's PM + GameDirector
+ - You don't test the build ΓÇö that's Agent 11 (QA)
+-- You don't set the version number ΓÇö Jaimie (human) decides when to bump versions
++- You don't set the version number ΓÇö Jaimie (human) decides when to bump versions (except for tracking iterative backend builds described below)
+ - You don't write game code
+ 
++## Pre-Release / Backend Buildout Versioning
++
++For long infrastructural changes (e.g. the Ursina Engine swap) that happen behind the scenes, you will track progress using an **iterative pre-release version format**.
++- Format: `vX.Y.Z-phaseA.B` (e.g. `v1.4.5-phase1.1`, `v1.4.5-phase1.2`, `v1.4.5-phase2.1`)
++- Use this when writing patch notes or updating the changelog for sprints during massive engine overhauls. 
++- You still do not bump the main `X.Y.Z` version yourself; wait for Jaimie to declare the buildout complete before bumping to a clean major/minor version.
++
+ ## Patch Notes Format (use every release)
+ 
+ ```markdown
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a2bce11..9497a53 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,28 @@
+ # Changelog
+ 
++## Prototype v1.4.5-phase2.2 ΓÇö Ursina Animation & Tilemaps
++
++### WK21 Sprint: Ursina Engine Swap (Phase 2.2)
++- **Sprite Animation**: `UrsinaAssetLoader` now parses numbered sequences of images into animation texture lists, and `AnimatedBillboard` automatically swaps textures to animate based on simulation state.
++- **Procedural Tilemap Optimization**: Replaced the theoretical 22,500 individual tile entities with a single optimized ground tilemap integration, resolving severe performance lag when transitioning to 3D.
++- **Profiling Assertion Check**: `assert_tilemap_entity_count` ensures map generation never drops below 60fps by guarding against unoptimized map arrays.
++
++## Prototype v1.4.5-phase2.1 ΓÇö Ursina Asset Pipeline & Billboarding
++
++### WK20 Sprint: Ursina Engine Swap (Phase 2)
++- **Asset Loader**: Implemented `UrsinaAssetLoader` to automatically crawl `assets/images/` and cache .png files with nearest-neighbor point filtering for crisp pixel-art.
++- **2.5D Billboards**: Created `create_pixel_billboard` factory to instantiate `model='quad'` Entities that automatically scale to their texture aspect ratio and face the camera (`billboard=True`).
++- **Depth Sorting Integration**: Updated `ursina_renderer.py` to use the new textures instead of primitive cubes. Added a sub-pixel Z-offset based on the Y-coordinate to correctly depth-sort transparent billboards in 3D space.
++- **Memory Profiling**: Added `assert_texture_sharing` block to `profile_ursina_renderer.py` establishing that multiple of the same entity correctly reference a single texture object in memory.
++
++## Prototype v1.4.5-phase1.1 ΓÇö Ursina Buildout Phase 1
++
++### WK19 Sprint: Ursina Engine Swap
++- **Headless Simulation**: The `GameEngine` was successfully decoupled from Pygame rendering and can now run headlessly.
++- **Ursina Renderer**: Added `game/graphics/ursina_renderer.py` as a new backend renderer utilizing the Ursina engine.
++- **Renderer Selection**: Added `--renderer ursina` flag to `main.py` allowing the simulation to render in 3D instead of 2D Pygame.
++- **Dictionary Caching**: The Ursina renderer maps entities and translates 2D Pygame coordinates into 3D Ursina space without causing per-frame memory allocations or lag.
++
+ ## Prototype v1.4.4 ΓÇö Playtest Fixes & Hero Agency
+ 
+ ### Hero Interaction & Chat
+diff --git a/config.py b/config.py
+index 36ef6af..686f572 100644
+--- a/config.py
++++ b/config.py
+@@ -13,8 +13,8 @@ class WindowConfig:
+     width: int = 1920
+     height: int = 1080
+     fps: int = 60
+-    prototype_version: str = "1.4.4"
+-    game_title: str = "Kingdom Sim (Prototype v1.4.4) ΓÇö Playtest Fixes & Hero Agency"
++    prototype_version: str = "1.4.5-phase2.2"
++    game_title: str = "Kingdom Sim (Prototype v1.4.5-phase2.2) ΓÇö Ursina Animation & Tilemaps"
+     default_borderless: bool = True
+ 
+ 

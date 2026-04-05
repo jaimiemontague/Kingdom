@@ -2714,6 +2714,32 @@
           }
         }
       }
+    },
+    "wk20-ui-input-bridge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+        "notes": "WK20 R2: Ursina mouse → fixed 1080p virtual engine.screen"
+      },
+      "rounds": {
+        "wk20_r2_implementation": {
+          "sprint_id": "wk20-ui-input-bridge",
+          "round_id": "wk20_r2_implementation",
+          "round_meta": { "build_target": "UrsinaInputManager get_mouse_pos", "sent_at_local": "2026-04-05" },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ursina_input_manager.py: Implemented get_mouse_pos() — inverse of Ursina mouse.Mouse (window.aspect_ratio, window.size), then linear scale to virtual framebuffer (default 1920×1080 per PM). Optional constructor virtual_screen_size=(1920,1080).",
+              "Constants: _DEFAULT_VIRTUAL_SCREEN aligned with GameEngine headless_ui surface."
+            ],
+            "how_to_test": [
+              "Run Ursina viewer; move cursor to corners — HUD hit tests should align with stretched camera.ui quad (manual).",
+              "With KINGDOM_URSINA_DEBUG_INPUT=1 (Agent 12), verify printed coords vs expected virtual pixels."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

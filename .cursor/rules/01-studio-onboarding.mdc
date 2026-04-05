@@ -46,3 +46,5 @@ This has your full history. Skim the latest sprint/round entry to understand wha
 ## Step 4: Do the work, update your log, run the gates
 
 See the other rules files for coding standards, QA gates, and log conventions.
+
+**Human testing:** When you ask Jaimie to run something by hand, always give the **exact terminal command** from the project root (see `06-workflow-sop.mdc` Phase 5 and `04-qa-gates.mdc`).

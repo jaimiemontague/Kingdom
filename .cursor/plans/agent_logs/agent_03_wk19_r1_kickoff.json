@@ -1,0 +1,80 @@
+{
+  "sprint_id": "wk19-ursina-true-3d",
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk19_ursina_true_3d.plan.md",
+    "notes": "Round 1 specs only — no code changes. Agent 03: UrsinaRenderer coordinate contract and 2D→3D floor mapping."
+  },
+  "round_id": "wk19_r1_kickoff",
+  "round_meta": {
+    "prompt_set_id": "wk19_ursina_true_3d_r1",
+    "build_target": "Specs_and_contracts_UrsinaRenderer_perspective_XZ_floor",
+    "sent_at_local": "2026-04-03T00:00:00"
+  },
+  "prompt_text": "WK19 R1: Define UrsinaRenderer code contract; scale X/Z floor, map vertical Y; math from 2D pixel coords to 3D floor plane; acceptance criteria and risks.",
+  "response": {
+    "received_at_local": "2026-04-03T12:00:00",
+    "status": "complete",
+    "raw": "Agent 03 (TechnicalDirector_Architecture) — UrsinaRenderer contract for true 3D (perspective, volumetric primitives).\n\n## Coordinate contract (locked for implementation rounds)\n\n1. **Simulation boundary (unchanged)**\n   - The engine exposes 2D pixel positions only: `px_x`, `px_y` (and building centers via `b.x + b.width/2`, `b.y + b.height/2`).\n   - `UrsinaRenderer` is a read-only view: it may only read `engine.get_game_state()` and mutate Ursina `Entity` instances it owns. No writes to sim state, RNG, or timebase.\n\n2. **World scale (retain current intent)**\n   - Keep a single scalar `SCALE` (today `32.0`): **1 world unit along the floor == 1 tile == 32 px** unless a future round explicitly retunes for camera distance.\n   - All horizontal positions are derived as rational multiples of `1/SCALE` from pixel coords.\n\n3. **3D axis convention (Y-up floor on XZ)**\n   - **Horizontal plane** = Ursina **X** and **Z** (ground). **Vertical** = Ursina **Y** (height of primitives, stacking, and camera height).\n   - This replaces the current MVP mapping `(wx, wy, z)` where the flat view lived in XY with Z as a draw-order shim.\n\n4. **Pixel → floor math (core mapping)**\n   - Let `(px_x, px_y)` be simulation pixel coordinates in the same space as today (`ursina_renderer.px_to_world`).\n   - **Floor position** (before per-entity vertical offset):\n     - `world_x = px_x / SCALE`\n     - `world_z = px_y / SCALE` **or** `world_z = -px_y / SCALE` — **one** of these must be chosen and fixed in Round 2 so that screen-left/right and screen-up/down match pygame’s 2D convention when viewed from the chosen camera bearing. Pygame’s Y increases downward; 3D “north” on the map must be visually verified once perspective is enabled.\n   - **Vertical placement**:\n     - Ground reference plane: `y = 0` (or a named constant `FLOOR_Y`) for the logical terrain.\n     - Volumetric primitives use **Y for extent**: e.g. a cube of height `h` centered on the floor should sit at `y = h/2` if Ursina primitive origin is geometric center (verify per model in Agent 09’s primitive table); if origin is bottom-aligned, `y = 0` at the base.\n\n5. **Public helpers (recommended API surface on UrsinaRenderer or a small `ursina_coords` module colocated in `game/graphics/`)**\n   - `sim_px_to_world_xz(px_x: float, px_y: float) -> tuple[float, float]` — returns `(world_x, world_z)` using the signed-Z rule above.\n   - `building_center_px(b) -> tuple[float, float]` — unchanged formula from current renderer.\n   - Optional: `clamp_world_to_map_bounds(wx, wz)` if camera or culling needs margin; not required for R1.\n   - **Do not** expose sim pixel Y as “height” for flat entities — both sim axes map to the floor; **height** comes only from primitive scale / Agent 09 art choices, not from `px_y`.\n\n6. **Entity lifecycle contract**\n   - `_entities: dict[int, Entity]` keyed by `id(sim_obj)` remains valid.\n   - Each frame: sync position/rotation/scale from sim; destroy Ursina entities for objects no longer in active lists (current pattern preserved).\n   - New: per-entity **model** and **scale** may be 3D tuples `(sx, sy, sz)`; contract requires document anchor (center vs base) per category (hero, building, enemy) — finalized with Agent 09.\n\n7. **Camera interaction (architecture note for Agent 08)**\n   - Panning today adjusts `camera.x` / `camera.y` in orthographic tile space. Under perspective, pan should move the camera **parallel to the XZ floor** (e.g. adjust position’s X and Z components, or a rig parent), not the old ortho “slide in screen pixel space” unless deliberately mapped. This is a Round 2 implementation detail but is part of renderer–camera contract.\n\n8. **Determinism**\n   - Renderer remains non-authoritative; no `time.time()` or unseeded RNG in `ursina_renderer.py` for any future logic. Visual-only animation may use frame time only if added later — out of scope for R1.\n",
+    "summary_bullets": [
+      "Lock Y-up world: sim pixel (x,y) maps to floor (world_x, world_z); Ursina Y is vertical only.",
+      "Keep SCALE=32.0 as 1 world unit = 1 tile unless PM retunes; expose sim_px_to_world_xz(px_x, px_y).",
+      "Choose and document a single sign rule for world_z vs pygame y-down (verify with one camera angle in Round 2).",
+      "Volumetric heights come from primitive geometry/scale (Agent 09), not from sim y as altitude.",
+      "UrsinaRenderer stays read-only on sim state; entity pool keyed by id(sim_obj) unchanged in spirit.",
+      "Pan/zoom under perspective must move the camera relative to the XZ floor — coordinate with Agent 08 on camera.ui stability."
+    ],
+    "proposed_changes": [
+      "Round 2+: Replace px_to_world returning (wx, wy) with sim_px_to_world_xz(px_x, px_y) -> (world_x, world_z); set Entity.position = (world_x, world_y, world_z) with world_y from primitive anchor rules.",
+      "Round 2+: Switch UrsinaApp camera from orthographic to perspective; reposition/orient for ~45–60° pitch; update WASD pan to translate along floor plane.",
+      "Round 2+: Document in-module constant for FLOOR_Y and Z-sign for north/south consistency.",
+      "Coordinate with Agent 09: table of (model, scale_xyz, y_offset) per entity category so world_y is consistent.",
+      "Coordinate with Agent 08: confirm camera.ui overlay remains parented to UI camera and independent of perspective world camera."
+    ],
+    "acceptance_criteria": [
+      "A single written mapping rule exists: (px_x, px_y) -> (world_x, world_z) with explicit SCALE and documented Z sign.",
+      "All drawable sim objects that today use px_to_world have a defined floor point (center or anchor) in XZ before adding vertical offset.",
+      "Vertical axis is exclusively Ursina Y; no sim axis is overloaded as both floor and height unless a future sprint adds true elevation in sim (out of scope for WK19 plan).",
+      "UrsinaRenderer contract doc states: no mutation of GameEngine/sim state; only Ursina entities owned by the renderer.",
+      "Integration smoke (Round 2+): after perspective switch, a hero moving +sim_x/+sim_y traces motion on the ground plane with stable UI overlay (Agent 08 sign-off).",
+      "No regression to headless sim: files outside game/graphics/ursina_app.py and game/graphics/ursina_renderer.py remain untouched per sprint plan."
+    ],
+    "risks": [
+      "Axis/sign error: pygame Y-down vs 3D Z-forward/back can invert perceived map north; fix is one-time sign flip but easy to get wrong across pan + rotation.",
+      "Primitive origin mismatch: Ursina cubes/cylinders may be center-pivoted; wrong world_y causes floating or sunken units — mitigate with Agent 09 anchor table.",
+      "Perspective + large map: z-fighting or clipping if near/far planes and entity Y offsets are not tuned — may need clip_plane and scale review in Round 2.",
+      "Camera pan code currently adjusts camera.x/y in ortho tile units; direct port to perspective can skew or climb off the floor — requires explicit XZ pan math.",
+      "Performance: many 3D meshes vs quads — watch draw count on full 150×150 map (consult Agent 10 if needed in later rounds).",
+      "Scope creep: adding sim-side elevation or slopes would breach 'sim untouched' — flag if art requests terrain height from sim data."
+    ],
+    "dependencies": [
+      "Agent 09: primitive choice and per-category scale/y_anchor so world_y placement is consistent.",
+      "Agent 08: verification that camera.ui full-screen quad and texture update path are independent of perspective camera transform.",
+      "PM/plan: confirmation that SCALE=32.0 remains valid for chosen camera distance and FOV."
+    ],
+    "questions_back_to_pm": [
+      "Should minimap or future compass imply a fixed world +Z direction matching documentation, or is visual acceptance only?",
+      "If Round 2 needs a slight SCALE retune for legibility at 45°, is that allowed without changing sim?"
+    ],
+    "recommended_next_actions": [
+      "Agent 09: deliver primitive + scale + anchor table for heroes, buildings, enemies, peasants, guards, lairs.",
+      "Agent 08: document camera.ui hierarchy and any required overlay scale if aspect_ratio or window resize behavior changes under perspective.",
+      "Round 2 implementation: implement sim_px_to_world_xz, perspective camera rig, and entity position sync using agreed anchors; run manual Ursina viewer smoke."
+    ],
+    "agent_fields": {
+      "role": "03_TechnicalDirector_Architecture",
+      "ursina_renderer_contract_version": "wk19_r1_draft_1",
+      "floor_plane": "XZ",
+      "vertical_axis": "Y",
+      "scale_constant": "SCALE = 32.0 (px per world unit along floor; subject to PM retune)",
+      "sim_to_floor": {
+        "world_x": "px_x / SCALE",
+        "world_z": "px_y / SCALE or -px_y / SCALE (to be fixed after visual parity check)"
+      },
+      "sim_y_is_not_altitude": true,
+      "files_in_scope_later": [
+        "game/graphics/ursina_renderer.py",
+        "game/graphics/ursina_app.py"
+      ]
+    }
+  }
+}

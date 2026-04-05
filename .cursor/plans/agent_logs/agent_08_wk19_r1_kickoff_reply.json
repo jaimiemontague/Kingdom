@@ -1,0 +1,83 @@
+{
+  "sprint_id": "wk19-ursina-true-3d",
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk19_ursina_true_3d.plan.md",
+    "notes": "WK19 Round 1 — Agent 08 (UX/UI): hybrid Pygame overlay vs perspective camera (spec only)"
+  },
+  "round_id": "wk19_r1_kickoff",
+  "round_meta": {
+    "prompt_set_id": "wk19_ursina_true_3d_r1",
+    "build_target": "Specs & contracts — no implementation this round",
+    "sent_at_local": "2026-04-03T12:00:00"
+  },
+  "prompt_text": "Agent 08: Verify perspective camera shift does not break camera.ui full-screen Pygame overlay; guardrails; acceptance criteria and risks (Round 1 spec).",
+  "response": {
+    "received_at_local": "2026-04-03T12:00:00",
+    "status": "complete",
+    "raw": "Onboarded as Agent 08 (UX_UI_Director). Reviewed game/graphics/ursina_app.py: the hybrid UI is an Entity parented to camera.ui with model='quad', scale=(camera.aspect_ratio, 1), z=-1; each frame the Pygame framebuffer (engine.screen) is copied to Texture and assigned to ui_overlay.texture. In Ursina/Panda3D, camera.ui is the dedicated 2D screen-space overlay tree: children are laid out in UI/NDC-style space and are not transformed by the main 3D camera’s projection. Switching the scene camera from orthographic to perspective therefore should not, by itself, distort or “lose” the full-screen Pygame quad as long as it remains parented to camera.ui and scaling uses the current camera.aspect_ratio. Risks are mostly indirect: wrong parenting, stale aspect after resize, or future code attaching HUD elements to the 3D scene instead of camera.ui. UrsinaInputManager.get_mouse_pos currently returns (0,0) — perspective does not change that limitation, but when mouse is wired for clicks, coordinates must be mapped from window/UI space into the same pixel space as engine.screen for hit tests.",
+    "summary_bullets": [
+      "camera.ui is screen-space overlay: 3D camera orthographic vs perspective does not apply to children of camera.ui.",
+      "Current overlay (ursina_app.py): Entity(parent=camera.ui, model='quad', scale=(camera.aspect_ratio, 1), z=-1); texture from pygame.image.tostring(engine.screen) — contract is sound for perspective world camera.",
+      "Guardrails: keep Pygame bridge quad strictly under camera.ui; refresh scale if aspect_ratio changes on resize; do not parent UI quads to scene or world entities.",
+      "Secondary Ursina Text in UrsinaRenderer (status line) should remain explicit parent=camera.ui (or Ursina default UI parent) so it is not confused with 3D world text.",
+      "Pre-existing gap: mouse position not yet mapped to pygame pixels — independent of perspective but blocks precise HUD clicking in Ursina mode."
+    ],
+    "proposed_changes": [
+      "Round 2+ (implementation): When window resize is supported, set ui_overlay.scale = (camera.aspect_ratio, 1) (or equivalent) on resize so full-screen coverage stays correct.",
+      "Round 2+: Optionally document in ursina_app.py one-line comment that camera.ui ignores scene camera projection mode.",
+      "Coordinate with Agent 03: if any input pipeline maps window pixels to engine.screen, ensure same mapping after perspective (should be unchanged for overlay).",
+      "If Ursina Text widgets are added for debug, parent to camera.ui explicitly for consistent stacking with the Pygame quad."
+    ],
+    "acceptance_criteria": [
+      "After perspective camera is enabled for the 3D scene, the Pygame-driven HUD/minimap/panels still fill the visible window with no letterboxing introduced solely by the camera mode change (same as pre-change behavior for a fixed window size).",
+      "ui_overlay remains a direct child of camera.ui with model quad; no regression in texture upload path (RGBA from pygame surface to Texture).",
+      "World camera pan/zoom/rotation (if any) does not change ui_overlay position, scale, or visibility except via intentional resize/aspect updates.",
+      "ESC/pause and other UI routes that depend on engine.render_pygame() still receive the same logical layout: layout is driven by surface.get_size() in game/ui, not by 3D projection.",
+      "Visual stacking: Pygame overlay remains the topmost full-screen UI layer (z ordering within camera.ui preserved relative to any other UI entities).",
+      "Regression check (manual, Ursina run): run with --ursina or equivalent entry, confirm no blank strips at edges and UI text readable at 1080p window."
+    ],
+    "risks": [
+      {
+        "id": "R-UI-01",
+        "severity": "low",
+        "description": "Mis-parenting: If future edits parent the Pygame quad to scene or to a 3D entity, it would inherit perspective transforms and break full-screen alignment.",
+        "mitigation": "Code review guardrail: only camera.ui for hybrid overlay; comment + optional assert in dev builds."
+      },
+      {
+        "id": "R-UI-02",
+        "severity": "low",
+        "description": "Aspect ratio: scale uses camera.aspect_ratio at init only; window resize could desync quad coverage from viewport.",
+        "mitigation": "Hook window resize to update ui_overlay.scale; verify camera.aspect_ratio updates on Ursina window events."
+      },
+      {
+        "id": "R-UI-03",
+        "severity": "medium",
+        "description": "Input mapping: get_mouse_pos returns (0,0); perspective change does not fix this — click-through accuracy for HUD is still future work.",
+        "mitigation": "Track as separate UX task: map mouse.position/window size to engine.screen pixel coords for Ursina mode."
+      },
+      {
+        "id": "R-UI-04",
+        "severity": "low",
+        "description": "Performance: full framebuffer to texture each frame may cost more at higher resolutions; unrelated to perspective but caps max FPS.",
+        "mitigation": "Monitor in Round 2+; consider dirty regions only if needed."
+      }
+    ],
+    "dependencies": [
+      "Agent 03: UrsinaRenderer world coordinate contract (X/Z floor, Y height) — orthogonal to UI overlay; no change to pygame surface size contract expected.",
+      "Agent 09: volumetric entities in world space — must not draw UI in world space; art debug primitives stay under scene, not camera.ui."
+    ],
+    "questions_back_to_pm": [
+      "Should WK19 include a minimal window-resize handler for the Ursina viewer, or defer to a follow-up round?"
+    ],
+    "recommended_next_actions": [
+      "Agent 08 (Round 2): After Agent 03 lands perspective camera in ursina_app.py, visually verify overlay full-bleed and document any resize hook.",
+      "Optionally file follow-up ticket: Ursina mouse pixel mapping for HUD hit testing."
+    ],
+    "agent_fields": {
+      "agent_id": "08",
+      "role": "UX_UI_Director",
+      "verification_basis": "game/graphics/ursina_app.py lines 52-60 (camera.ui quad), game/graphics/ursina_renderer.py Text overlay, game/ursina_input_manager.py get_mouse_pos",
+      "conclusion": "Shifting the main scene camera to perspective should not break the camera.ui Pygame full-screen quad, provided overlay stays parented to camera.ui and aspect scaling stays in sync with the viewport."
+    }
+  }
+}

@@ -2158,6 +2158,34 @@
         "blockers": []
       }
     }
+  },
+  "wk20-ui-input-bridge": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+      "notes": "WK20 UI Input Bridge — Ursina debug input telemetry"
+    },
+    "rounds": {
+      "wk20_r2_implementation": {
+        "round_id": "wk20_r2_implementation",
+        "status": "done",
+        "what_i_changed": {
+          "files": ["tools/__init__.py", "tools/ursina_input_debug.py", "game/graphics/ursina_app.py"],
+          "summary": "Implemented PM WK20 R2: KINGDOM_URSINA_DEBUG_INPUT=1 gates print() of one WK20_INPUT line per LMB rising edge (raw_ursina, pygame from get_mouse_pos, ui_hit/world_xz/tile na until wired). Core helpers in tools/ursina_input_debug.py; UrsinaApp imports hook after render_pygame."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual Ursina: set env KINGDOM_URSINA_DEBUG_INPUT=1, launch 3D viewer, click — one WK20_INPUT line per click; pygame tuple tracks Agent 08 get_mouse_pos when implemented."
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

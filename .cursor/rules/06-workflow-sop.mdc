@@ -53,8 +53,12 @@ Follow these steps in order every time you receive a task.
 
 13. **Report back** with a concise summary: what you did, what passed, what's left.
 
+14. **Human verification — exact commands (required)**  
+    Whenever you tell Jaimie (the human) to run a **manual** test, build, or game mode — in chat, in your agent log `how_to_test`, or in `recommended_next_actions` — you MUST include the **exact terminal command(s)** as a copy-paste block, **as if run from the project root** (`Kingdom/`). Do not say only “run the smoke suite” or “launch Ursina”; give e.g. `python tools/qa_smoke.py --quick` or `python main.py --renderer ursina`. If env vars or flags matter, include them on the same line or immediately below.
+
 ## Common Mistakes to Avoid
 
+- **Don't ask the human to test without exact commands** — always paste the full `python ...` line(s) from repo root
 - **Don't dive into code before reading your assignment** — you'll solve the wrong problem
 - **Don't make changes without running the QA gate** — broken gates block everyone
 - **Don't forget to update your log** — if it's not written down, it didn't happen

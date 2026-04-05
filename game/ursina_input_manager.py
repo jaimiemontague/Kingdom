@@ -5,6 +5,9 @@ Translates Ursina's input state (held_keys, mouse) into our generic InputEvent p
 from ursina import held_keys, mouse, window
 from game.input_manager import InputManager, InputEvent
 
+# Headless Ursina + Pygame HUD uses a fixed virtual framebuffer (see GameEngine headless_ui).
+_DEFAULT_VIRTUAL_SCREEN = (1920, 1080)
+
 # General map of Ursina key strings to our generic representations
 _URSINA_KEY_MAP = {
     'escape': 'esc',
@@ -14,11 +17,14 @@ _URSINA_KEY_MAP = {
 }
 
 class UrsinaInputManager(InputManager):
-    def __init__(self):
+    def __init__(self, virtual_screen_size: tuple[int, int] = _DEFAULT_VIRTUAL_SCREEN):
         # We need to queue events since Ursina handles events via callbacks 
         # (input(key) function) rather than a pollable event queue.
         # However, for our engine, we will try to mimic standard key states.
         self._event_queue = []
+        # PM WK20: fixed virtual resolution; map window pixels → engine.screen (stretch).
+        self._virtual_w = max(1, int(virtual_screen_size[0]))
+        self._virtual_h = max(1, int(virtual_screen_size[1]))
         
         # We'll hook into Ursina's global input callback if needed later, 
         # but for an MVP headless viewer, we might not even need to generate dynamic 
@@ -35,18 +41,33 @@ class UrsinaInputManager(InputManager):
         return events
 
     def get_mouse_pos(self) -> tuple[int, int]:
-        # Ursina mouse.position is a relative Vec2 from center (-0.5 to 0.5 roughly)
-        # We must convert it to screen pixels for the engine if it relies on pixels.
+        """Map Ursina window pointer → pygame-style pixels on the virtual engine.screen.
+
+        Ursina (see ursina.mouse.Mouse): x = ((px/W) - 0.5) * aspect_ratio,
+        y = -((py/H) - 0.5). Invert to window pixels, then scale to virtual 1920×1080 HUD.
+        """
         if not window:
             return (0, 0)
-        
-        # window.resolution is (width, height)
-        # mouse.x goes from approx -0.5 (left) to 0.5 (right) depending on aspect ratio
-        # Actually window.top_left, etc. are used, but typically:
-        # pixel_x = (mouse.x + 0.5) * window.size[0] (roughly, if 0,0 is center)
-        # Ursina UI space: (0,0) is center. x goes -0.5 to 0.5 (if aspect ratio 1:1, usually -0.5*aspect to 0.5*aspect)
-        # To avoid complex math for the MVP (which doesn't use the mouse yet), we return 0,0
-        return (0, 0)
+        W = int(window.size[0])
+        H = int(window.size[1])
+        if W <= 0 or H <= 0:
+            return (0, 0)
+        ar = float(window.aspect_ratio)
+        if ar <= 1e-9:
+            ar = 1.0
+        mx = float(mouse.x)
+        my = float(mouse.y)
+        # Inverse of Ursina's mapping from pixel → normalized
+        px_x = (mx / ar + 0.5) * W
+        px_y = (0.5 - my) * H
+        px_x = max(0.0, min(float(W - 1), px_x))
+        px_y = max(0.0, min(float(H - 1), px_y))
+        ew, eh = self._virtual_w, self._virtual_h
+        sx = int(round(px_x * ew / W))
+        sy = int(round(px_y * eh / H))
+        sx = max(0, min(ew - 1, sx))
+        sy = max(0, min(eh - 1, sy))
+        return (sx, sy)
 
     def is_key_pressed(self, key_str: str) -> bool:
         # Map our generic key back to Ursina's key names if necessary

@@ -1,0 +1,17 @@
+﻿commit ba614a223ee5ca24475c58ac1476192c0d0045af
+Author: jaimiemontague <95182505+jaimiemontague@users.noreply.github.com>
+Date:   Mon Feb 23 16:48:49 2026 -0700
+
+    Bump version to v1.4.5-phase2.2 - Ursina Phase 2.2 Animation & Tilemaps
+
+commit 3d314de675e89ae3e297b1f8aafc02e6634f3479
+Author: jaimiemontague <95182505+jaimiemontague@users.noreply.github.com>
+Date:   Mon Feb 23 16:28:05 2026 -0700
+
+    Bump version to v1.4.5-phase2.1 - Ursina Phase 2.1 Billboarding and Textures
+
+commit 13e721e774657ca699dd71fbe01233a969f20d68
+Author: jaimiemontague <95182505+jaimiemontague@users.noreply.github.com>
+Date:   Mon Feb 23 15:38:39 2026 -0700
+
+    Bump version to v1.4.5-phase1.1 - Ursina Buildout Phase 1

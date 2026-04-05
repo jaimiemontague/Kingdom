@@ -52,5 +52,5 @@ This is YOUR file. Only you write to it. Other agents read it.
 
 - **Append, don't rewrite** — add new rounds, don't edit old ones
 - **Be specific** — "fixed hero click" is useless; "added 20px click radius buffer to try_select_hero in game/engine.py line 640" is useful
-- **Include test commands** — so anyone can verify your work
+- **Include test commands** — so anyone can verify your work. Every `how_to_test` entry must be a **copy-paste-ready** command from the repo root (e.g. `python tools/qa_smoke.py --quick`), not a prose description. If manual play is needed, include the exact `python main.py ...` line(s) and any env vars.
 - **Keep it concise** — bullet points, not essays

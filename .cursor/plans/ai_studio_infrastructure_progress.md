@@ -259,6 +259,19 @@ Think of Round 1 as the async “meeting stage,” but with outputs.
 - **Round 5 (Release + wrap-up)**\n  - “Silent unless blocked” final call.\n  - PM bumps version/changelog/patch notes.\n  - Postmortem: what shipped, what slipped, follow-ups.\n
 You can compress or expand rounds based on scope. The important part is that **Round 1 produces stable contracts** before heavy implementation.
 
+#### Alternative: The TDD "Red-Green-Refactor" Sequence (For Logic/Mechanics Sprints)
+When modifying complex logic, economy rules, or pathing, we enforce a strict Test-Driven Development (TDD) loop. This prevents AI agents from generating massive, untested blocks of code.
+
+- **Round 1 (Specs & Contracts)**
+  - Output is *decisions and interfaces*, not code.
+- **Round 2 (The "RED" Phase - Failing Tests Only)**
+  - The assigned Developer/QA agent writes **ONLY** the automated unit tests or the `qa_smoke.py` deterministic repro scenario.
+  - **Crucial Rule:** The agent MUST STOP here without writing implementation code. The human will run the test and paste the failing output.
+- **Round 3 (The "GREEN" Phase - Minimum Implementation)**
+  - Once the failure is confirmed, the Developer agent writes the **absolute minimum code necessary** to make that specific test pass. No extra features. No over-engineering.
+- **Round 4 (The "REFACTOR" Phase - Clean Up)**
+  - Once the test is green, the agent reviews the implementation for performance, readability, and determinism cleanup.
+
 #### Default sequencing (who “goes first”)
 
 It’s usually wrong to say “Agent 2 always goes first.” Better rule:

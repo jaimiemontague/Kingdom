@@ -1,0 +1,85 @@
+{
+  "sprints": {
+    "wk19-ursina-true-3d": {
+      "rounds": {
+        "wk19_r1_kickoff": {
+          "sprint_id": "wk19-ursina-true-3d",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk19_ursina_true_3d.plan.md",
+            "notes": "Agent 09 — Art/VFX volumetric primitive spec (Round 1, no code)."
+          },
+          "round_id": "wk19_r1_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk19_r1_true_3d",
+            "build_target": "Specs & contracts only — implementation in later rounds",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Define visual volumetric mapping using Ursina built-in primitives; sizes for ~45° perspective; acceptance criteria and risks.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "raw": "Art direction for WK19 R1: map sim entities to simple 3D primitives with Y-up volumes on the X/Z floor plane (contract owned by Agent 03). Use Ursina stock models only for this MVP: cube for structures and most units, cylinder for heroes (capsule-like read) unless Ursina exposes a first-class capsule in our version—in that case prefer capsule for heroes. Scale in world units assuming 1 unit ≈ 1 tile on the ground (matches existing SCALE=32 px→world in ursina_renderer). Building footprint in X/Z must derive from BUILDING_SIZES × tile in world units (e.g. castle 3×3). Vertical extents: castle tallest (~2.0–2.5 units), 2×2 buildings mid (~1.2–1.6), lair slightly squat (~1.0), heroes ~1.0 height with ~0.25–0.3 radius, enemies red cubes ~0.5 on a side, peasants smallest. Class colors unchanged from current MVP (azure + ranger/wizard/rogue tints). Ground contact: entity origin at vertical center requires position.y = half_height + epsilon above floor. 45° pitch favors slightly taller than wide heroes and chunky enemies for silhouette.",
+            "summary_bullets": [
+              "Coordinate system: floor = X/Z, vertical = Y (Ursina default); all footprint sizes tie to Agent 03’s px→(x,z) mapping and BUILDING_SIZES in tiles.",
+              "Structures: `cube` only — gold for castle, light_gray for generic buildings, brown for lairs; X/Z scale = footprint in world units, Y = tiered height (castle > 3×3 temples/fairgrounds > 2×2 > 1×1).",
+              "Heroes: `cylinder` (8–12 height segments) as the capsule stand-in — class tint on color; diameter ~0.5–0.6 world units, height ~1.0 for readable silhouette at ~45°.",
+              "Enemies: `cube`, color.red, ~0.5 uniform scale (chunky, readable).",
+              "Peasants / guards: `cube`, orange / yellow, smaller than enemies (peasant ~0.3, guard ~0.5) with guard slightly taller on Y if needed.",
+              "If Ursina version provides `Capsule` or equivalent one-liner, heroes may switch from cylinder to capsule without changing the size intent.",
+              "Keep unlit/flat appearance until lighting is explicitly in scope; avoid materials that fight the Pygame UI overlay contrast."
+            ],
+            "proposed_changes": [
+              "Document a single lookup table (entity kind → model name, base color, footprint scale X/Z, height Y) for UrsinaRenderer once Agent 03’s contract is frozen.",
+              "Replace `_get_or_create_entity` default `quad`/`circle` with primitive-specific creation paths; per-type height and pivot rules (center-origin primitives sit half-height above ground).",
+              "Optional later: subtle class variant (e.g. ranger = slightly thinner cylinder) — out of scope for R1 contract text only."
+            ],
+            "acceptance_criteria": [
+              "From a perspective camera pitched ~45–60°, player can distinguish heroes (tall cylinder/capsule), enemies (red cubes), castle (large gold cube), and generic buildings (gray prisms) without labels.",
+              "Footprint of every building primitive matches sim tile footprint in world X/Z (no shrinking castles vs guild halls when both are 3×3 or 2×2 per BUILDING_SIZES).",
+              "Vertical hierarchy reads: castle (and other 3×3 landmarks) ≥ smaller multi-tile buildings > units > peasants.",
+              "Class color language from current Ursina MVP is preserved (azure hero + ranger/wizard/rogue accents).",
+              "No entity intersects the conceptual ground plane (no sinking/over-floating beyond one small epsilon); minimal Z-fighting between overlapping units at same tile (acceptable MVP; note if stacks occur).",
+              "All primitives remain Ursina built-ins (cube, cylinder, sphere if needed for prototyping) — no custom meshes in WK19 R1 spec."
+            ],
+            "risks": [
+              "Axis confusion: Ursina `scale` on cubes/cylinders applies per-axis; wrong axis mapped to height breaks the 45° read — must follow Agent 03’s Y=up contract strictly.",
+              "Cylinder default orientation may align height on wrong axis — may require rotation=(90,0,0) or equivalent so height is world Y; verify once in engine.",
+              "Perspective foreshortening: footprints measured on X/Z may look smaller at map edges; camera framing is Agent 03/08 — art sizes assume centered-ish view.",
+              "Replacing quads with 3D volumes increases overlap clutter in dense fights; readability may need slight unit scale reduction vs current flat MVP.",
+              "If dynamic lighting is enabled by default in perspective mode, flat colors may change — risk to HUD legibility; prefer unlit or consistent ambient until specified.",
+              "Lairs detected by `stash_gold` in current code — art must still read as distinct (brown, lower profile) without sim changes."
+            ],
+            "dependencies": [
+              "Agent 03: frozen UrsinaRenderer contract for px → (world_x, world_z) and entity origin rules (center vs feet).",
+              "Agent 08: confirmation that camera.ui overlay and input mapping remain valid under perspective (parallel track).",
+              "Ursina/Panda3D version in use: confirms which primitive names and optional shapes (e.g. Capsule) are available."
+            ],
+            "questions_back_to_pm": [
+              "Confirm target pitch angle band (plan says ~45–60°) — art proportions are tuned for mid-range (~50°).",
+              "Should ballista_tower (1×1) get a distinct primitive variant or same cube family as other 2×2 buildings scaled down?"
+            ],
+            "recommended_next_actions": [
+              "Agent 03 publishes the coordinate contract; Agent 09 reviews cylinder orientation with one spike screenshot in Ursina.",
+              "Round 2: implement primitive table in UrsinaRenderer only (per plan isolation), no sim changes."
+            ],
+            "agent_fields": {
+              "role": "09_ArtDirector_Pixel_Animation_VFX",
+              "volumetric_mapping_table": {
+                "units": "world units; 1 unit = 1 tile on X/Z unless Agent 03 revises SCALE",
+                "castle": { "model": "cube", "color": "gold", "footprint_xz": "3 × 3", "height_y": "2.0–2.5" },
+                "building_2x2": { "model": "cube", "color": "light_gray", "footprint_xz": "2 × 2", "height_y": "1.2–1.6" },
+                "building_3x3_non_castle": { "model": "cube", "color": "light_gray", "footprint_xz": "3 × 3", "height_y": "1.4–1.8" },
+                "building_1x1": { "model": "cube", "color": "light_gray", "footprint_xz": "1 × 1", "height_y": "0.8–1.0" },
+                "lair": { "model": "cube", "color": "brown", "footprint_xz": "2 × 2", "height_y": "~1.0" },
+                "hero": { "model": "cylinder_or_capsule", "color": "class_tint", "diameter_xz": "~0.5–0.6", "height_y": "~1.0" },
+                "enemy": { "model": "cube", "color": "red", "size_uniform": "~0.5" },
+                "peasant": { "model": "cube", "color": "orange", "size_uniform": "~0.3" },
+                "guard": { "model": "cube", "color": "yellow", "footprint_xz": "~0.5", "height_y": "~0.7" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

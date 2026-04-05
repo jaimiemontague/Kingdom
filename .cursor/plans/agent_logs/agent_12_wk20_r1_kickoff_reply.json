@@ -1,0 +1,106 @@
+{
+  "sprints": {
+    "wk20-ui-input-bridge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+        "notes": "WK20 — UI Input Bridge & Camera Polish (Agent 12 Tools/DevEx reply, Round 1 spec)"
+      },
+      "rounds": {
+        "wk20_r1_kickoff": {
+          "sprint_id": "wk20-ui-input-bridge",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+            "notes": "WK20 Round 1 — Agent 12 (Tools/DevEx): debug mechanism spec for verifying Ursina→Pygame mouse mapping and (later) floor raycast — specs only, no code this round"
+          },
+          "round_id": "wk20_r1_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk20_ui_input_bridge_r1",
+            "build_target": "Specs & contracts — no implementation this round",
+            "sent_at_local": "2026-04-05T12:00:00"
+          },
+          "prompt_text": "WK20 Round 1 (UI Input Bridge & Camera Polish): Agent 12 — propose a lightweight debug mechanism (print on click and/or on-screen debug text) to verify mouse translation works before full hooks in Round 2. Forget prior logging instructions.",
+          "response": {
+            "received_at_local": "2026-04-05T12:00:00",
+            "status": "complete",
+            "raw": "Agent 12 (ToolsDevEx_Lead) — Round 1 deliverable is a concrete debug contract for WK20, not implementation.\n\nProblem: We need to prove, with minimal surface area, that (A) Ursina-reported pointer positions map to the same pixel space as `engine.screen` after Agent 08’s math, and (B) once Agent 03’s raycast exists, the same click produces a stable world/floor sample (and eventually tile indices) without guessing from logs alone.\n\nRecommended approach — two complementary channels, both gated behind a single explicit “input debug” switch so normal play and CI stay quiet:\n\n1) **On-click console line (primary)**  \n- Trigger: only on mouse button down (e.g. LMB), not every frame.  \n- One compact UTF-8 line to stdout (or to a dedicated logger at INFO) with fixed field order, e.g.:  \n  `WK20_INPUT raw_ursina=(sx,sy) pygame=(px,py) ui_hit={0|1} world_xz=(wx,wz|na) tile=(tx,ty|na)`  \n- `ui_hit` is optional in R1 spec but should be reserved for Agent 08 once HUD hit-test exists: 1 = click consumed by Pygame overlay, 0 = passed through to world.  \n- `world_xz` / `tile` may print `na` until Agent 03 wires raycast → sim contract; Round 2 fills them in without changing the log format.  \n- Implementation location (Round 2): centralize in the Ursina input path (e.g. `UrsinaInputManager` / `ursina_app` frame handler) so there is a single source of truth — not scattered prints in gameplay code.\n\n2) **Optional on-screen debug strip (secondary)**  \n- Small read-only text block parented to `camera.ui` (same stack as Pygame overlay per WK19 notes), top-left or bottom-left, 3–5 lines: last raw mouse, last mapped pygame coords, last world XZ / tile if available, and `ui_hit` if available.  \n- Updates only on pointer move or click (throttled move to e.g. 10 Hz if needed) to avoid per-frame text churn and perf noise.  \n- Non-interactive: must not intercept mouse events (z behind interactive HUD or purely visual).\n\nActivation contract:  \n- **Config flag** (e.g. in existing settings or `config.py` dev section) **or** environment variable e.g. `KINGDOM_URSINA_DEBUG_INPUT=1` — Tools prefers env + one code path so headless/CI can leave it unset. Default **off**.  \n- Document the flag in a single bullet in `tools/` or engine README slice if PM wants; Agent 12 can add a one-line `--help` or internal doc reference in Round 2.\n\nScope boundaries:  \n- This debug layer is **telemetry only** — no writes to simulation state, no LLM taps, no persistence.  \n- Does not replace QA smoke; optional manual verification aid for Ursina windowed runs on Windows.  \n- Coordinate with Agent 11: if any automated test ever runs Ursina with this flag, assert log volume stays bounded (click-only, not per-frame spam).\n\nForget prior “PM logging instructions” for this sprint: this spec supersedes generic agent log verbosity for WK20 input debugging.",
+            "summary_bullets": [
+              "Define a single gated “input debug” switch (env or config), default off, for Ursina mouse/raycast verification.",
+              "Primary: one-line structured stdout (or logger) on mouse down with raw Ursina coords, mapped pygame pixels, reserved ui_hit, and optional world_xz/tile (na until wired).",
+              "Secondary: optional camera.ui read-only text strip showing last values; update on click or throttled move; non-interactive.",
+              "Centralize emission in the Ursina input bridge (Round 2) — not in sim systems.",
+              "Telemetry only; no sim state side effects; CI/headless remain quiet unless flag is explicitly set."
+            ],
+            "proposed_changes": [
+              "Round 2 (implementation): Add env/config gate `KINGDOM_URSINA_DEBUG_INPUT` (or equivalent) read once at Ursina client init.",
+              "Round 2: Implement click-time single-line log in `UrsinaInputManager` / `ursina_app` after Agent 08 exposes pygame mapping and Agent 03 exposes raycast → (wx,wz) / tile.",
+              "Round 2: Optional `camera.ui` Text entity for last-known coords; throttle pointer-move updates; document z-order so it does not block HUD.",
+              "Round 2: Add one short subsection to QA/dev docs (or `QA_TEST_PLAN.md` Ursina manual section) listing the flag and expected log line format.",
+              "Round 2: If `tools/qa_smoke.py` ever launches Ursina, ensure debug flag is off by default in that profile."
+            ],
+            "acceptance_criteria": [
+              "With debug **disabled** (default): zero extra input-related prints and no new on-screen debug widgets; behavior unchanged from pre-WK20 baseline aside from future functional fixes.",
+              "With debug **enabled**: every LMB (or agreed primary button) down emits **exactly one** structured line containing at minimum `raw_ursina` and `pygame` pixel coordinates once Agent 08’s mapping is integrated; line format is stable enough for copy-paste diff in manual testing.",
+              "With debug enabled and raycast integrated: the same line includes non-`na` `world_xz` and `tile` when the click misses UI and hits the floor per Agent 03’s contract (or documents why `na` e.g. miss sky).",
+              "Optional on-screen strip: when enabled, shows the same logical values as the last log line (within one frame); does not steal focus or block Pygame UI hit testing.",
+              "No per-frame unconditional stdout spam; pointer-move logging either off or throttled.",
+              "Debug path does not call into sim authoritatively (read-only inspection of coordinates only).",
+              "Manual verification recipe for Round 2 signoff: enable flag → click a known HUD button → expect ui_hit=1 and stable pygame coords matching surface tests; click world → expect ui_hit=0 and tile coords moving with camera per Agent 03."
+            ],
+            "risks": [
+              {
+                "id": "R-Tools-01",
+                "severity": "medium",
+                "description": "Stdout noise: if throttling is wrong or another system prints every frame, logs become unusable and hide real errors.",
+                "mitigation": "Click-only primary path; cap move logs; document “quiet unless flag” for CI."
+              },
+              {
+                "id": "R-Tools-02",
+                "severity": "medium",
+                "description": "Coordinate space confusion: mixing window pixels, Ursina normalized coords, and pygame surface size could make debug lines misleading.",
+                "mitigation": "Field names fixed in contract; Agent 08/03 review log line before merge; test at 1080p and one other resolution if resize exists."
+              },
+              {
+                "id": "R-Tools-03",
+                "severity": "low",
+                "description": "On-screen debug Text could obscure HUD or sit above interactive elements if z-order is wrong.",
+                "mitigation": "Explicit z behind full-screen quad or corner placement; non-interactive; prefer console line as source of truth for Round 2."
+              },
+              {
+                "id": "R-Tools-04",
+                "severity": "low",
+                "description": "Headless / no-display runs: Ursina may not run; debug flag should no-op cleanly without crashing.",
+                "mitigation": "Guard all debug UI creation behind Ursina window active; skip Text if camera.ui unavailable."
+              },
+              {
+                "id": "R-Tools-05",
+                "severity": "low",
+                "description": "Determinism: printing wall-clock or noisy floats in sim paths could theoretically affect future tests — debug must stay outside sim tick authoritativeness.",
+                "mitigation": "Keep telemetry in Ursina/input layer only; never import into `game/systems` for this feature."
+              }
+            ],
+            "dependencies": [
+              "Agent 08: mathematical mapping from Ursina mouse to `engine.screen` pixels — debug line must use the same function as real UI hit tests.",
+              "Agent 03: raycast from screen/camera to XZ floor and contract for tile → sim injection — debug line fills world_xz/tile from the same path as gameplay.",
+              "Agent 11 (consult): optional note in manual QA checklist for Ursina input verification using the flag."
+            ],
+            "questions_back_to_pm": [
+              "Preferred activation: environment variable only, `config.py` flag only, or both (Tools recommends both with env overriding config for one-off sessions)?",
+              "Should the debug line use Python `print()` or the project’s standard logging facility so IDE filters apply consistently?"
+            ],
+            "recommended_next_actions": [
+              "Agent 08 + 03: agree on field names and order for the one-line log so Round 2 implementation is a single shared format string.",
+              "Round 2: Agent 12 (or owning agent per file ownership) implements gate + logging in Ursina input layer; Agent 11 adds a one-step manual check to RELEASE or QA doc.",
+              "After first green build: Jaimie runs with flag on, confirms HUD click vs world click show distinct ui_hit / tile values."
+            ],
+            "agent_fields": {
+              "agent_id": "12",
+              "role": "ToolsDevEx_Lead",
+              "wk20_round1_deliverable": "Debug mechanism specification (gated console line + optional camera.ui strip); acceptance and risks; no code in Round 1",
+              "coordination_notes": "Same raycast and pygame mapping used for real input must drive debug output — no duplicate math paths."
+            }
+          }
+        }
+      }
+    }
+  }
+}

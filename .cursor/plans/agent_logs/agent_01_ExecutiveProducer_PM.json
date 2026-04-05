@@ -4408,6 +4408,150 @@
           }
         }
       }
+    },
+    "wk19-ursina-true-3d": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk19_ursina_true_3d.plan.md",
+        "notes": "WK19: Transition to true 3D perspective and volumetric primitives inside Ursina."
+      },
+      "rounds": {
+        "wk19_r1_kickoff": {
+          "round_meta": {
+            "build_target": "BuildA",
+            "visibility": "Kickoff Round: active agents 03, 08, 09"
+          },
+          "pm_status_summary": {
+            "overall_status": "Round 1 - Investigation and Foundation",
+            "focus": "Transitioning Ursina to perspective camera and 3D primitives while preserving engine isolation."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Define 2D (X/Y) to 3D (X/Z) mapping contracts for the renderer."
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Ensure hybrid Pygame UI quad remains visually intact when camera perspective changes."
+              ]
+            },
+            "09": {
+              "status": "assigned_active",
+              "asks": [
+                "Map entities (Castle, Hero, Enemy) to Ursina primitive models (cube, cylinder) with correct scale/color."
+              ]
+            }
+          },
+          "pm_open_questions_resolved": [
+            "Sign of Z axis: Agent 03 will implement -world_z mapping if needed during visual verification to keep North facing up.",
+            "Primitive choices: Agent 09 volumetric mapping table is APPROVED (Cubes for buildings/enemies, Cylinders for heroes).",
+            "Window resize handler: Defer window resize logic to a later polishing sprint to minimize risk right now."
+          ]
+        },
+        "wk19_r2_implementation": {
+          "round_meta": {
+            "build_target": "Ursina 3D Client (Perspective View)",
+            "visibility": "Implementation Round (NO TDD needed for visual positioning changes)"
+          },
+          "pm_decisions": [
+            "AGENT 03 has clearance to implement the camera swap and coordinate math in ursina_app.py and ursina_renderer.py.",
+            "AGENT 09 volumetric mapping is approved for UrsinaRenderer entity creation.",
+            "AGENT 08 is consult-only and observing the UI overlay integrity."
+          ],
+          "pm_integration_order": [
+            "Agent 03 updates px_to_world and camera setup.",
+            "Agent 03/09 implements the primitive mapping in update() rendering loop."
+          ],
+          "pm_responses_by_agent": {
+            "03": "ACK. Floor mapping (X/Z) contract established. Clearance granted to execute perspective transform.",
+            "08": "ACK. Good catch on camera.ui insulation. Stand by to verify after R2 code drops.",
+            "09": "ACK. The primitive sizing table is great. It will be implemented together with Agent 03."
+          }
+        }
+      }
+    },
+    "wk20-ui-input-bridge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+        "notes": "WK20: Route Ursina mouse events back to the Pygame UI, setup 3D floor raycasting, and fix default camera framing."
+      },
+      "rounds": {
+        "wk20_r1_kickoff": {
+          "round_meta": {
+            "build_target": "Input routing specs",
+            "visibility": "Kickoff Round: active agents 03, 08, 12"
+          },
+          "pm_status_summary": {
+            "overall_status": "Round 1 - Investigation and Foundation",
+            "focus": "Solving the input lag/disconnection between the 3D Ursina viewport and the underlying 2D simulation tools."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Define 3D ground-plane raycasting for clicks, and fix default camera position."
+              ]
+            },
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Define math translation from Ursina window space to internal Pygame screen pixel space."
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "asks": [
+                "Provide debug logging spec so we can physically verify mouse hit scans before full hooks."
+              ]
+            }
+          }
+        },
+        "wk20_r2_implementation": {
+          "pm_status_summary": {
+            "overall_status": "Round 2 - Implementation Pipeline",
+            "focus": "Implementing the input bridge specs from Round 1. Agent 08 maps mouse to Pygame screen, Agent 03 adds floor raycasting, Agent 12 adds the debug telemetry."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [],
+          "pm_integration_order": [
+            "1. Agent 08: Implement Ursina window to Pygame screen coordinate mapping.",
+            "2. Agent 03: Implement 3D floor raycast and connect it to Pygame coordinate generation.",
+            "3. Agent 12: Implement the debug log line to test the inputs."
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement `get_mouse_pos()` in `UrsinaInputManager`. Use fixed 1080p virtual screen scale strategy. Keep Pygame screen resolution fixed and map the Ursina mouse into it."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Build the floor raycast method. Focus default camera on the Castle + surrounding tiles. DO NOT move the 2D engine camera when panning in 3D yet."
+              ]
+            },
+            "12": {
+              "status": "assigned_active",
+              "asks": [
+                "Add the `KINGDOM_URSINA_DEBUG_INPUT=1` env var debug print. Simple `print()` is fine for now."
+              ]
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "WK20 Round 2: Implement get_mouse_pos() in UrsinaInputManager. PM Decision: Keep the fixed 1080p virtual screen and apply scaling from current Ursina window size to the 1920x1080 virtual engine screen.",
+            "03": "WK20 Round 2: Implement floor raycast in Ursina (y=0) and convert into simulated screen coordinates to feed Pygame. PM Decision: Default camera should see Castle + margin. Do NOT sync 2D engine camera with 3D pans for now.",
+            "12": "WK20 Round 2: Implement debug print. PM Decision: Use KINGDOM_URSINA_DEBUG_INPUT=1 env var for activation, and standard print() is fine. No logger needed."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "08",
+            "12"
+          ]
+        }
+      }
     }
   }
 }

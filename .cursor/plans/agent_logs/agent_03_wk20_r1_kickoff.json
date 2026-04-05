@@ -1,0 +1,80 @@
+{
+  "sprint_id": "wk20-ui-input-bridge",
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+    "notes": "WK20 R1 — Agent 03 architecture specs only (no code). Raycast → sim, camera defaults."
+  },
+  "round_id": "wk20_r1_kickoff",
+  "round_meta": {
+    "prompt_set_id": "wk20_r1_ui_bridge",
+    "build_target": "Specs_for_raycast_input_and_camera_defaults",
+    "sent_at_local": "2026-04-03T12:00:00"
+  },
+  "prompt_text": "Define 3D raycast to XZ floor, how tile/world pick feeds the simulation, default camera position/FOV.",
+  "response": {
+    "received_at_local": "2026-04-03T12:00:00",
+    "status": "complete",
+    "raw": "Agent 03 (TechnicalDirector_Architecture) — WK20 Round 1 contracts.\n\n## 1) Coordinate recap (WK19)\n- Sim positions live in **2D pixel space** over the map: `px_x`, `px_y` (origin top-left of map, same as pygame view).\n- Ursina floor plane: `sim_px_to_world_xz(px_x, px_y) → (world_x, world_z)` with `world_x = px_x/SCALE`, `world_z = -px_y/SCALE`, `SCALE = 32`, **Y-up**, ground at `y = 0`.\n- **Inverse** (ray hit on floor): `px_x = world_x * SCALE`, `px_y = -world_z * SCALE`.\n\n## 2) Raycast contract (3D → floor)\n- **Plane**: `y = 0` (same ground as entity bases). If we add terrain height later, replace with a single shared “ground height” constant.\n- **Ray**: from Ursina `camera` through the mouse position on the **world** (main) camera lens — **not** the UI camera. Use Panda3D/Ursina lens math: `CollisionRay` / `camera.get_mouse_ray()` / `Lens.extrude` pattern so the ray matches the perspective frustum.\n- **Hit**: first intersection of the infinite line with plane `y=0` in front of the camera (reject hits behind the camera).\n- **Output**: `(world_x, world_z)` in the same space as `ursina_renderer` (then convert to sim pixels via §1).\n\n## 3) Feeding picks into the simulation (minimal coupling)\n- The engine already maps **screen pixels** → **sim world pixels** via `GameEngine.screen_to_world(screen_x, screen_y)` = `camera_x + screen_x/zoom`, `camera_y + screen_y/zoom` (see `engine.py`).\n- **Preferred integration path (Round 2)**: After UI-vs-world classification (Agent 08), when the click is **world** (not on opaque HUD):\n  1. Raycast → `(world_x, world_z)`.\n  2. Convert to sim world pixels: `wx_sim = world_x * SCALE`, `wy_sim = -world_z * SCALE`.\n  3. **Synthesize** pygame-equivalent screen coordinates that would reproduce this pick under the **current** `camera_x`, `camera_y`, `zoom`:\n     - `screen_x = (wx_sim - camera_x) * zoom`\n     - `screen_y = (wy_sim - camera_y) * zoom`\n  4. For the frame that processes the click, ensure `InputManager.get_mouse_pos()` returns this `(screen_x, screen_y)` (or queue `InputEvent`s that carry the same numbers the handlers read).\n- This reuses existing `handle_mousedown` / selection / placement code paths without new sim APIs. **Do not** write to sim entities from Ursina except through existing engine methods.\n- **Alternative** (larger change, only if synthesis is too fragile): add an optional `InputEvent` field `world_pick_px: tuple[float, float] | None` and teach `input_handler` to prefer it when set — PM approval needed if it touches many files.\n\n## 4) UI vs world (split responsibility)\n- **Agent 08**: Hit-test in **pygame surface space** (1920×1080) for panels; transparent pixels = “world” for purposes of overlay.\n- **Agent 03**: Only run §2–§3 when the click is classified as **world**.\n- Order of operations each frame on click: (a) map Ursina mouse → pygame pixel; (b) if opaque UI → route as today; (c) else raycast + §3.\n\n## 5) Default camera (Ursina) — “see the town,” not one cube\n- Today’s startup `(mc_x+12, 58, mc_z+52)` + `fov=52` yields a **tight** perspective on a small part of a **150×150 tile** map in world units — reads as “zoomed in.”\n- **Goal**: First frame shows **most of the playable map** (or castle neighborhood + margin), similar in *readability* to the old ortho “see full height” intent.\n- **Prescription**:\n  - Keep `look_at(Vec3(mc_x, 0, mc_z))` toward map center (or **castle** center in world XZ once available — optional polish).\n  - Choose **horizontal FOV** in the **38–48°** range (narrower = less fish-eye at edges); tune by eye in Round 2.\n  - Position the camera on a **diagonal above** the center: offset along **+X and +Z** (same hemisphere as today) so the frustum covers roughly `[-margin, MAP_WIDTH + margin]` in `world_x` and corresponding `world_z` for negative-Z map half.\n  - **Rule of thumb for Round 2 implementation**: compute distance `d` from `(mc_x, mc_z)` so the **visible ground width** at `y=0` is ≥ `MAP_WIDTH` world units (with aspect correction). Approximate: half-extent at distance `d` is `d * tan(hfov/2)` in X — set `d` so `2 * d * tan(hfov/2) >= MAP_WIDTH * k` with `k ≈ 1.05` margin. Repeat for vertical vs `MAP_HEIGHT` and take the **larger** required `d`.\n  - **Numeric starting point for implementers** (tune in-engine): `fov ≈ 42`, camera at roughly `(mc_x + 95, 120, mc_z + 95)` then `look_at(mc_x, 0, mc_z)` — expect to adjust ±20% after one run.\n- **Engine camera** (`camera_x`, `camera_y`, `zoom`): On Ursina boot, call existing **`center_on_castle()`** (or equivalent) so **sim** picking in §3 matches player expectation at the castle; keep `zoom` at default unless PM wants full-map 2D zoom-out too.\n\n## 6) Files likely touched in Round 2 (for traceability)\n- `game/graphics/ursina_app.py` — ray helper, camera init, click routing order.\n- `game/ursina_input_manager.py` — with Agent 08: mouse pixel + queued events.\n- Possibly `game/engine.py` — only if PM approves alternate event field (§3 alternative).\n- **Sim/gameplay modules unchanged** if §3 synthesis path is used.\n",
+    "summary_bullets": [
+      "Raycast: perspective world camera → ray vs plane y=0 → (world_x, world_z); invert WK19 mapping to sim px (wx_sim, wy_sim).",
+      "Sim feed: prefer synthesizing screen coords via inverse of screen_to_world so existing engine click code stays unchanged.",
+      "UI vs world: classify in pygame pixel space first (Agent 08); raycast only for non-UI clicks.",
+      "Ursina camera: look at map (or castle) center; pick FOV ~38–48° and distance d from tan(hfov/2) so ~full map width visible; boot engine camera with center_on_castle for aligned picks.",
+      "Optional later: InputEvent.world_pick_px if synthesis proves brittle — needs PM scope approval."
+    ],
+    "proposed_changes": [
+      "Round 2: Add floor ray-plane intersection utility (Ursina/Panda lens) in ursina_app or small game/graphics/ursina_pick.py.",
+      "Round 2: On world click, set transient mouse position or event payload so get_mouse_pos() + existing handlers match ray target.",
+      "Round 2: Replace ad-hoc camera position/FOV with computed d from MAP_WIDTH/HEIGHT and aspect.",
+      "Round 2: After engine init, center_on_castle() for default sim camera alignment."
+    ],
+    "acceptance_criteria": [
+      "Written formula: (world_x, world_z) at y=0 from mouse + perspective lens; rejection when parallel to plane or behind camera.",
+      "Written formula: sim pixels (wx_sim, wy_sim) from (world_x, world_z) using SCALE and Z sign consistent with WK19.",
+      "Written formula: synthetic (screen_x, screen_y) from (wx_sim, wy_sim) given camera_x, camera_y, zoom matching engine.screen_to_world inverse.",
+      "Default Ursina camera/FOV documented with a numeric starting band and a geometric rule (tan/fov) for full-map readability.",
+      "Explicit statement: simulation state mutation only through existing engine/input_handler paths, not from renderer.",
+      "Dependency on Agent 08: pygame pixel mapping and opaque-vs-transparent UI classification before raycast."
+    ],
+    "risks": [
+      "Mismatch between 3D ray hit and 2D sim if engine camera_x/y/zoom diverge from what the 3D view implies — mitigate with center_on_castle + same window dimensions as engine.screen.",
+      "Perspective distortion: edge clicks map to sim coords correctly in math but *feel* offset from prerendered HUD — may need UX tolerance or future ortho overlay alignment.",
+      "Full-screen UI quad may still steal events if collision/picking order wrong — coordination with Agent 08.",
+      "If synthesis rounds screen coords to ints, tiny drift on selection — document rounding rule (floor vs round).",
+      "Alternative API on InputEvent increases merge surface with pygame path — keep synthesis path unless proven insufficient."
+    ],
+    "dependencies": [
+      "Agent 08: pygame (0..W-1, 0..H-1) mapping from Ursina mouse and UI hit-test rules.",
+      "Agent 12: debug readout of pygame coords + ray hit + synthesized screen coords for validation.",
+      "WK19: sim_px_to_world_xz / SCALE unchanged unless PM approves."
+    ],
+    "questions_back_to_pm": [
+      "Should the first click on “world” also move the 2D engine camera to follow the 3D pan, or is 3D-only camera movement until a later sprint?",
+      "Is full-map visibility at boot required, or is “castle + surrounding tiles” enough for WK20?"
+    ],
+    "recommended_next_actions": [
+      "Agent 08: finalize pixel mapping doc; define list of HUD rects that block raycast.",
+      "Round 2 implementers: spike ray + one debug print of (world_x, world_z) and (wx_sim, wy_sim) on click.",
+      "Tune Ursina camera d/FOV against MAP_WIDTH/HEIGHT with Agent 09 visual sanity pass (consult-only)."
+    ],
+    "agent_fields": {
+      "role": "03_TechnicalDirector_Architecture",
+      "floor_plane_equation": "y = 0",
+      "sim_px_from_ray_hit": {
+        "wx_sim": "world_x * SCALE",
+        "wy_sim": "-world_z * SCALE"
+      },
+      "synthetic_screen_from_sim_px": {
+        "screen_x": "(wx_sim - camera_x) * zoom",
+        "screen_y": "(wy_sim - camera_y) * zoom"
+      },
+      "default_ursina_camera": {
+        "look_at": "(map_center_x, 0, map_center_z) or castle center in XZ",
+        "fov_deg_suggested_range": "38–48",
+        "distance_rule": "Choose camera distance d from mc so 2*d*tan(hfov/2) spans ≥ MAP_WIDTH (and vertical constraint) with margin k≈1.05; take max required d.",
+        "example_start": "fov≈42, position offset ~(mc_x+95, 120, mc_z+95) — tune ±20%"
+      },
+      "engine_boot_alignment": "center_on_castle() after load for camera_x/camera_y/zoom consistency with picks"
+    }
+  }
+}

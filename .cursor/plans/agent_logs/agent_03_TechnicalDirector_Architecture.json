@@ -2418,6 +2418,86 @@
           }
         }
       }
+    },
+    "wk19-ursina-true-3d": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk19_ursina_true_3d.plan.md",
+        "notes": "WK19: Perspective Ursina + volumetric primitives; sim isolated."
+      },
+      "rounds": {
+        "wk19_r2_implementation": {
+          "sprint_id": "wk19-ursina-true-3d",
+          "round_id": "wk19_r2_implementation",
+          "round_meta": {
+            "prompt_set_id": "wk19_r2_implementation",
+            "build_target": "Ursina perspective + XZ floor + Agent 09 primitive table",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Implement perspective camera and volumetric primitives in ursina_app.py / ursina_renderer.py per PM greenlight and Agent 09 table.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "sim_px_to_world_xz(px_x, px_y) -> (px_x/SCALE, -px_y/SCALE); px_to_world alias returns floor XZ. PM north-up Z sign applied.",
+              "Buildings: cube prisms; footprint (b.width/SCALE, b.height/SCALE) on X/Z; height Y from castle / 3×3 / 2×2 / 1×1 / lair rules matching Agent 09; position y = hy/2.",
+              "Heroes: shared Cylinder(12, r=0.28, h=1.0) mesh; position (wx, 0.5, wz). Enemies/peasants/guards: cubes at Agent 09 scales.",
+              "ursina_app: perspective camera FOV ~52, look_at map center on ground; pan moves camera.x/z; Q/E adjust FOV zoom; ui_overlay scale refreshes from camera.aspect_ratio each frame.",
+              "Scope: only game/graphics/ursina_app.py and game/graphics/ursina_renderer.py touched."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py or Ursina entry if present — verify 3D view, WASD pan, Q/E zoom, pygame HUD on overlay"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            }
+          }
+        }
+      }
+    },
+    "wk20-ui-input-bridge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+        "notes": "WK20: Floor raycast, synthetic screen coords, castle camera; PM: no 2D sync on 3D pan."
+      },
+      "rounds": {
+        "wk20_r2_implementation": {
+          "sprint_id": "wk20-ui-input-bridge",
+          "round_id": "wk20_r2_implementation",
+          "round_meta": {
+            "prompt_set_id": "wk20_r2",
+            "build_target": "Ursina floor pick + MOUSEDOWN queue + default camera",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Floor raycast y=0, feed sim via inverse screen_to_world; castle+margin camera; debug via KINGDOM_URSINA_DEBUG_INPUT.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Added game/graphics/ursina_pick.py: CollisionRay set_from_lens + camera net transform → intersect plane y=0 → (world_x, world_z).",
+              "ursina_app: __main__.input routes left mouse down → alpha test on engine.screen (opaque = UI pixel) else raycast; synthetic screen = (wx_sim-camera_x)*zoom per WK20 R1 spec; queue InputEvent MOUSEDOWN.",
+              "_setup_ursina_camera_for_castle: FOV 42, span~58 world units, diagonal offset from castle center XZ (fallback map center); 3D pan does not move engine camera_x/y (PM).",
+              "WK20 debug: delegates to tools/ursina_input_debug.print_wk20_input_line when KINGDOM_URSINA_DEBUG_INPUT=1; removed duplicate edge print from update loop.",
+              "UrsinaInputManager.get_mouse_pos unchanged (Agent 08 virtual 1920×1080 mapping)."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_pick.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina; click HUD vs green; KINGDOM_URSINA_DEBUG_INPUT=1 for WK20_INPUT lines"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            }
+          }
+        }
+      }
     }
   }
 }

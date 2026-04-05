@@ -41,6 +41,15 @@ python main.py --provider mock   # Play for 5 minutes
 
 Check: no crashes, heroes move, combat works, buildings construct, UI responsive.
 
+## Exact commands for the human (all agents)
+
+Whenever you ask **Jaimie** to verify something manually — in Cursor chat, agent logs, or PM prompts — include the **full terminal command** (from project root), not a vague instruction.
+
+- **Good**: `python main.py --renderer ursina`
+- **Bad**: “run the Ursina build” / “start the game and check placement”
+
+Use fenced code blocks or a single line per command. Include env vars when required, e.g. `set KINGDOM_URSINA_DEBUG_INPUT=1` (Windows) or `export KINGDOM_URSINA_DEBUG_INPUT=1` (Unix), then the `python ...` line on the next line if the shell needs two steps.
+
 ## What to do if a gate fails
 
 1. Fix the issue if it's in your domain

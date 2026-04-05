@@ -1,0 +1,78 @@
+﻿commit 13e721e774657ca699dd71fbe01233a969f20d68
+Author: jaimiemontague <95182505+jaimiemontague@users.noreply.github.com>
+Date:   Mon Feb 23 15:38:39 2026 -0700
+
+    Bump version to v1.4.5-phase1.1 - Ursina Buildout Phase 1
+
+diff --git a/.cursor/rules/agent-01-pm-onboarding.mdc b/.cursor/rules/agent-01-pm-onboarding.mdc
+index 84c0fef..43326b9 100644
+--- a/.cursor/rules/agent-01-pm-onboarding.mdc
++++ b/.cursor/rules/agent-01-pm-onboarding.mdc
+@@ -123,6 +123,12 @@ Then tell Jaimie: "Send to Agents 03, 05, 06" (or whichever are assigned).
+ 5. **Don't bump the version** unless Jaimie asks ΓÇö version changes are a human decision.
+ 6. **Don't make changes to game code "just to help"** ΓÇö even small "obvious" fixes. Assign them.
+ 
++## Versioning Conventions for Backend Buildouts
++
++When managing long architectural shifts (like the Ursina Engine swap), track sprints using an iterative pre-release version format so progress is visible without implying a stable release:
++- **Format**: `vX.Y.Z-phaseA.B` (e.g., `v1.4.5-phase1.1`, `v1.4.5-phase1.2`, `v1.4.5-phase2.1`)
++- Use this formatting when logging sprint progress in your PM Hub log for backend buildouts.
++
+ ## Sprint History (for context)
+ 
+ | Sprint | Version | Focus |
+diff --git a/.cursor/rules/agent-13-steam-onboarding.mdc b/.cursor/rules/agent-13-steam-onboarding.mdc
+index 563ecc5..377231d 100644
+--- a/.cursor/rules/agent-13-steam-onboarding.mdc
++++ b/.cursor/rules/agent-13-steam-onboarding.mdc
+@@ -29,9 +29,16 @@ Make Kingdom Sim look and sound like a game worth buying on Steam, and make sure
+ 
+ - You don't decide what features ship ΓÇö that's PM + GameDirector
+ - You don't test the build ΓÇö that's Agent 11 (QA)
+-- You don't set the version number ΓÇö Jaimie (human) decides when to bump versions
++- You don't set the version number ΓÇö Jaimie (human) decides when to bump versions (except for tracking iterative backend builds described below)
+ - You don't write game code
+ 
++## Pre-Release / Backend Buildout Versioning
++
++For long infrastructural changes (e.g. the Ursina Engine swap) that happen behind the scenes, you will track progress using an **iterative pre-release version format**.
++- Format: `vX.Y.Z-phaseA.B` (e.g. `v1.4.5-phase1.1`, `v1.4.5-phase1.2`, `v1.4.5-phase2.1`)
++- Use this when writing patch notes or updating the changelog for sprints during massive engine overhauls. 
++- You still do not bump the main `X.Y.Z` version yourself; wait for Jaimie to declare the buildout complete before bumping to a clean major/minor version.
++
+ ## Patch Notes Format (use every release)
+ 
+ ```markdown
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a2bce11..b359d84 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,13 @@
+ # Changelog
+ 
++## Prototype v1.4.5-phase1.1 ΓÇö Ursina Buildout Phase 1
++
++### WK19 Sprint: Ursina Engine Swap
++- **Headless Simulation**: The `GameEngine` was successfully decoupled from Pygame rendering and can now run headlessly.
++- **Ursina Renderer**: Added `game/graphics/ursina_renderer.py` as a new backend renderer utilizing the Ursina engine.
++- **Renderer Selection**: Added `--renderer ursina` flag to `main.py` allowing the simulation to render in 3D instead of 2D Pygame.
++- **Dictionary Caching**: The Ursina renderer maps entities and translates 2D Pygame coordinates into 3D Ursina space without causing per-frame memory allocations or lag.
++
+ ## Prototype v1.4.4 ΓÇö Playtest Fixes & Hero Agency
+ 
+ ### Hero Interaction & Chat
+diff --git a/config.py b/config.py
+index 36ef6af..b16ac7b 100644
+--- a/config.py
++++ b/config.py
+@@ -13,8 +13,8 @@ class WindowConfig:
+     width: int = 1920
+     height: int = 1080
+     fps: int = 60
+-    prototype_version: str = "1.4.4"
+-    game_title: str = "Kingdom Sim (Prototype v1.4.4) ΓÇö Playtest Fixes & Hero Agency"
++    prototype_version: str = "1.4.5-phase1.1"
++    game_title: str = "Kingdom Sim (Prototype v1.4.5-phase1.1) ΓÇö Ursina Buildout Phase 1"
+     default_borderless: bool = True
+ 
+ 

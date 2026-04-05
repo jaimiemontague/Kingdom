@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.4.6 — Ursina Input Bridge
+
+### WK20 Sprint: Input Routing and Playability
+- **Pygame UI Input Routing**: Mapped Ursina's center-origin cursor coords directly into our virtual 1080p Pygame screen space, allowing interactive elements (buttons, ESC menu, panels) to work directly inside the true 3D viewer.
+- **3D Floor Raycasting**: Clicking the transparent "world" now accurately raycasts from the 3D perspective camera down to the `y=0` floor plane, yielding stable tile selections for simulating placing/selecting entities.
+- **Camera Initialization**: Modified default 3D camera to frame the Castle and surrounding map, getting rid of the initial "zoomed-in single cube" issue.
+- **Telemetry / Debug UI**: Implemented specific input debugging behind `KINGDOM_URSINA_DEBUG_INPUT=1` env arg to help verify Ursina raycast and input translations.
+
 ## Prototype v1.4.5 — Ursina 3D Viewer (Phase 2.1v2)
 
 ### Engine Decoupling (Phase 1)

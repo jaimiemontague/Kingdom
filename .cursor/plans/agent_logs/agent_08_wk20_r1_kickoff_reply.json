@@ -1,0 +1,106 @@
+{
+  "sprint_id": "wk20-ui-input-bridge",
+  "sprint_meta": {
+    "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+    "notes": "WK20 Round 1 — Agent 08 (UX/UI): Ursina → engine.screen mouse mapping (spec only)"
+  },
+  "round_id": "wk20_r1_kickoff",
+  "round_meta": {
+    "prompt_set_id": "wk20_ui_input_bridge_r1",
+    "build_target": "Specs & contracts — no implementation this round",
+    "sent_at_local": "2026-04-03T14:00:00"
+  },
+  "prompt_text": "Agent 08: Define mathematical translation in UrsinaInputManager to map Ursina mouse to engine.screen pixel space for interactive Pygame overlay; acceptance criteria and risks (Round 1 spec).",
+  "response": {
+    "received_at_local": "2026-04-03T14:00:00",
+    "status": "complete",
+    "raw": "Reviewed game/ursina_input_manager.py (get_mouse_pos currently returns (0,0)), game/graphics/ursina_app.py (fullscreen UI quad under camera.ui, texture = engine.screen each frame), and game/engine.py (headless_ui path: self.screen is pygame.Surface((window_width, window_height)) — currently 1920×1080 fixed). The engine’s input path (input_handler, HUD handle_click, pause menu) expects pygame-style pixel coordinates: origin top-left, x right, y down, in the same space as self.screen. Ursina exposes mouse in normalized “UI” space with origin at screen center: mouse.x spans approximately [-camera.aspect_ratio/2, +camera.aspect_ratio/2] and mouse.y approximately [-0.5, +0.5], with +y upward (opposite to pygame). Step 1: convert Ursina mouse to window client pixels (W, H) = window.size or equivalent. Standard mapping: px_x = (mouse.x + camera.aspect_ratio * 0.5) / camera.aspect_ratio * W  — equivalently px_x = (mouse.x / camera.aspect_ratio + 0.5) * W when the documented range is [-ar/2,+ar/2]; px_y = (0.5 - mouse.y) * H to flip to top-left y-down. Clamp to [0, W-1] and [0, H-1]. Step 2 (critical for this project): if W×H ≠ engine.window_width×engine.window_height (e.g. Ursina default window vs fixed 1920×1080 virtual surface), the quad stretches the pygame texture to fill the window, so hit-testing must rescale: sx = px_x * engine.window_width / W, sy = px_y * engine.window_height / H, then int() with clamp to engine bounds. Alternative contract fix (Agent 03): resize engine.screen to match the live window each frame or on resize — then Step 2 becomes identity. get_mouse_pos must be callable every frame where pygame.mouse.get_pos() is used today. Coordinate with input events: if mousedown passes event.pos, that pos should use the same mapping (queue from Ursina input() with same formulas).",
+    "summary_bullets": [
+      "Target space: pygame top-left pixels matching engine.screen size (window_width × window_height), same as HUD/minimap/pause hit tests.",
+      "Ursina mouse: center-based normalized coordinates; flip Y with (0.5 - mouse.y) * H for pygame y-down.",
+      "X mapping: (mouse.x + camera.aspect_ratio * 0.5) / camera.aspect_ratio * W — verify exact ranges against installed Ursina (see risks).",
+      "If window size ≠ engine.screen size, apply proportional scale from window pixels to virtual screen pixels so clicks line up with stretched camera.ui quad.",
+      "Implementation home: UrsinaInputManager.get_mouse_pos(); optional constructor/ref to engine dimensions or window size provider for DRY scaling."
+    ],
+    "proposed_changes": [
+      "Round 2: Implement get_mouse_pos() using window.size, camera.aspect_ratio, mouse.x/mouse.y, then optional second-stage scale to engine.window_width/height.",
+      "Round 2: If Ursina provides direct pixel mouse API for the client area, prefer it + single scale step to engine — reduces duplicate math and version drift.",
+      "Round 2: Wire Ursina global input() to queue pygame-compatible MOUSEBUTTONDOWN/MOUSEBUTTONUP/MOUSEMOTION with positions from the same helper (avoid drift between poll and event).",
+      "Align with Agent 03: single source of truth for (W,H) vs engine.screen — either match sizes or document the stretch scale as canonical."
+    ],
+    "acceptance_criteria": [
+      "get_mouse_pos() returns integers in [0, engine.window_width-1] × [0, engine.window_height-1] (after clamping) for any cursor position over the window client area.",
+      "Hover/click hit tests on HUD, minimap frame, command bar, pause menu, and panels match the same regions as in native pygame mode when UI layout is identical at the same virtual resolution.",
+      "Moving the mouse along the left edge reports x≈0; along the top edge y≈0; bottom-right reports values near (engine_w-1, engine_h-1) after scaling.",
+      "No systematic vertical or horizontal offset (e.g. half-screen shift) when clicking a known button center; Agent 12 debug can print mapped coords vs expected rect center.",
+      "When the window is resized (if supported), either mouse mapping updates with new W/H and scale, or engine.screen is resized to match so mapping stays 1:1.",
+      "Documented fallback: if window is None or size zero, return (0,0) without crashing."
+    ],
+    "risks": [
+      {
+        "id": "R-MOUSE-01",
+        "severity": "medium",
+        "description": "Ursina/Panda3D mouse range conventions may differ slightly by version; off-by-one or wrong aspect if formulas assume wrong endpoints.",
+        "mitigation": "Round 2: unit-test or debug-print corners (center, four edges); compare with Agent 12 on-screen coordinates."
+      },
+      {
+        "id": "R-MOUSE-02",
+        "severity": "medium",
+        "description": "Virtual 1920×1080 surface stretched to arbitrary window aspect ratio distorts non-square UI; clicks scale linearly but visual aspect may not match pygame-native mode.",
+        "mitigation": "Prefer matching window client size to engine.screen, or letterbox policy decided with Agent 03 (out of scope for mapping math itself)."
+      },
+      {
+        "id": "R-MOUSE-03",
+        "severity": "low",
+        "description": "HiDPI / OS scaling on Windows can make window.size differ from physical pixels.",
+        "mitigation": "Use Ursina-reported client dimensions; document if physical DPI issues appear."
+      },
+      {
+        "id": "R-MOUSE-04",
+        "severity": "low",
+        "description": "Some UI code still calls pygame.mouse.get_pos() directly (e.g. dev_tools_panel, hud lines); Ursina mode may read wrong coordinates.",
+        "mitigation": "Audit pygame.mouse.get_pos() in hot paths for headless_ui; route through input_manager or inject engine.get_mouse_pos() helper."
+      }
+    ],
+    "dependencies": [
+      "Agent 03: Raycast + sim injection — orthogonal to pygame overlay coords; ensure “UI eats click” uses same pixel test before world raycast.",
+      "Agent 12: Debug overlay/print to validate mapped (sx, sy) against button rects — listed in sprint for Round 2.",
+      "Engine: headless_ui window_width/height must be the authority for pygame hit tests unless refactored to match live window."
+    ],
+    "questions_back_to_pm": [
+      "Should WK20 mandate engine.screen resolution = Ursina window client size (eliminating stretch scale), or keep fixed 1080p virtual and always scale mouse?"
+    ],
+    "recommended_next_actions": [
+      "Agent 08 (Round 2): Implement get_mouse_pos + optional pygame.mouse audit under headless_ui.",
+      "Agent 08: Add one-line comment in UrsinaInputManager citing coordinate systems (Ursina center-normalized → pygame TL pixels)."
+    ],
+    "agent_fields": {
+      "agent_id": "08",
+      "role": "UX_UI_Director",
+      "math_reference": {
+        "ursina_normalized_to_window_pixels": {
+          "assumption": "mouse.x in [-camera.aspect_ratio/2, +camera.aspect_ratio/2], mouse.y in [-0.5, +0.5], +y is up",
+          "W": "window.size[0]",
+          "H": "window.size[1]",
+          "ar": "camera.aspect_ratio",
+          "px_x": "clamp( round((mouse.x + ar * 0.5) / ar * W), 0, W-1 )",
+          "px_y": "clamp( round((0.5 - mouse.y) * H), 0, H-1 )",
+          "note": "If Ursina uses a slightly different range, adjust numerators to match edge-invariant mapping; verify empirically in Round 2."
+        },
+        "window_pixels_to_engine_screen": {
+          "ew": "engine.window_width",
+          "eh": "engine.window_height",
+          "sx": "clamp( round(px_x * ew / W), 0, ew-1 )",
+          "sy": "clamp( round(px_y * eh / H), 0, eh-1 )",
+          "when_identity": "W == ew and H == eh → (sx, sy) = (px_x, px_y)"
+        }
+      },
+      "files_reviewed": [
+        "game/ursina_input_manager.py",
+        "game/graphics/ursina_app.py",
+        "game/engine.py (headless_ui screen sizing)",
+        "game/input_handler.py (event.pos usage)"
+      ]
+    }
+  }
+}
