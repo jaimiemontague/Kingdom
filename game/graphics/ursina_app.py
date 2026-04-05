@@ -111,7 +111,7 @@ class UrsinaApp:
         span = 58.0
         hfov = math.radians(float(camera.fov))
         d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
-        camera.position = Vec3(cx + d * 0.78, d * 0.52, cz + d * 0.78)
+        camera.position = Vec3(cx, d * 0.8, cz - d)
         camera.look_at(Vec3(cx, 0, cz))
 
     def _install_ursina_input_hook(self) -> None:
