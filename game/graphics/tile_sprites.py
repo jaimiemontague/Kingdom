@@ -37,7 +37,10 @@ class TileSpriteLibrary:
     tileset art without changing the world renderer.
     """
 
-    _cache: Dict[Tuple[int, int, int], pygame.Surface] = {}  # (tile_type, variant, size) -> Surface
+    # Bump _CACHE_VERSION when procedural art changes so cached Surfaces refresh (WK21 path/grass fixes).
+    _CACHE_VERSION = 2
+
+    _cache: Dict[Tuple[int, int, int, int], pygame.Surface] = {}  # (tile_type, variant, size, rev) -> Surface
 
     @staticmethod
     def _hash32(tile_type: int, x: int, y: int) -> int:
@@ -65,7 +68,7 @@ class TileSpriteLibrary:
             3: 8,   # tree 
         }
         v = cls._variant(tile_type, x, y, variant_counts.get(int(tile_type), 1))
-        key = (int(tile_type), int(v), s)
+        key = (int(tile_type), int(v), s, cls._CACHE_VERSION)
         surf = cls._cache.get(key)
         if surf is not None:
             return surf
@@ -176,50 +179,42 @@ class TileSpriteLibrary:
                 pygame.draw.line(surf, pal.water_dark, (wx, wy + 2), (wx + 4, wy + 2), 1)
             return surf
 
-        if tile_type == 2:  # path
+        if tile_type == 2:  # path — deterministic cobble (WK21: no per-edge random noise; reads clean in 3D + nearest filter)
             surf.fill(pal.path)
-            # 4x Detail: cobblestone edge & dirt ruts
-            
-            # Thick, textured border
             edge_dark = pal.path_dark
             edge_light = pal.path_light
+            # Solid 1px frame (no random gaps — avoids "scattered pixel" look when mip/blur)
             for i in range(s):
-                # top/bottom edge noise
-                if rnd.random() < 0.8:
-                    surf.set_at((i, 0), (*edge_dark, 255))
-                    surf.set_at((i, 1), (*(edge_dark if rnd.random() < 0.5 else pal.path), 255))
-                if rnd.random() < 0.8:
-                    surf.set_at((i, s-1), (*edge_dark, 255))
-                    surf.set_at((i, s-2), (*(edge_dark if rnd.random() < 0.5 else pal.path), 255))
-                # left/right edge noise
-                if rnd.random() < 0.8:
-                    surf.set_at((0, i), (*edge_dark, 255))
-                    surf.set_at((1, i), (*(edge_dark if rnd.random() < 0.5 else pal.path), 255))
-                if rnd.random() < 0.8:
-                    surf.set_at((s-1, i), (*edge_dark, 255))
-                    surf.set_at((s-2, i), (*(edge_dark if rnd.random() < 0.5 else pal.path), 255))
-
-            # Ruts / wheel tracks for specific variants
+                surf.set_at((i, 0), (*edge_dark, 255))
+                surf.set_at((i, s - 1), (*edge_dark, 255))
+                surf.set_at((0, i), (*edge_dark, 255))
+                surf.set_at((s - 1, i), (*edge_dark, 255))
+            # Cobble grid: variant shifts phase so tiles don't all look identical
+            ox = (variant * 2) % 5
+            oy = (variant * 3) % 5
+            cell = max(6, s // 5)
+            y = 2 + oy
+            while y < s - 3:
+                x = 2 + ox
+                while x < s - 3:
+                    rw = min(cell - 1, s - 2 - x)
+                    rh = min(cell - 1, s - 2 - y)
+                    if rw >= 3 and rh >= 3:
+                        pygame.draw.rect(surf, edge_light, pygame.Rect(x, y, rw, rh), 0)
+                        pygame.draw.rect(surf, edge_dark, pygame.Rect(x, y, rw, rh), 1)
+                    x += cell
+                y += cell
+            # Ruts / wheel tracks (variant-based, deterministic)
             if variant % 3 == 1:
-                # Vertical ruts
-                pygame.draw.line(surf, edge_light, (s//3, 2), (s//3, s-3), 1)
-                pygame.draw.line(surf, edge_dark, (s//3+1, 2), (s//3+1, s-3), 1)
-                pygame.draw.line(surf, edge_light, (2*s//3, 2), (2*s//3, s-3), 1)
-                pygame.draw.line(surf, edge_dark, (2*s//3+1, 2), (2*s//3+1, s-3), 1)
+                pygame.draw.line(surf, edge_light, (s // 3, 3), (s // 3, s - 4), 1)
+                pygame.draw.line(surf, edge_dark, (s // 3 + 1, 3), (s // 3 + 1, s - 4), 1)
+                pygame.draw.line(surf, edge_light, (2 * s // 3, 3), (2 * s // 3, s - 4), 1)
+                pygame.draw.line(surf, edge_dark, (2 * s // 3 + 1, 3), (2 * s // 3 + 1, s - 4), 1)
             elif variant % 3 == 2:
-                # Horizontal ruts
-                pygame.draw.line(surf, edge_light, (2, s//3), (s-3, s//3), 1)
-                pygame.draw.line(surf, edge_dark, (2, s//3+1), (s-3, s//3+1), 1)
-                pygame.draw.line(surf, edge_light, (2, 2*s//3), (s-3, 2*s//3), 1)
-                pygame.draw.line(surf, edge_dark, (2, 2*s//3+1), (s-3, 2*s//3+1), 1)
-            
-            # Occasional cobblestone blocks
-            for _ in range(2 + variant % 3):
-                cx, cy = rnd.randrange(4, s-6), rnd.randrange(4, s-6)
-                pygame.draw.rect(surf, edge_light, pygame.Rect(cx, cy, 3, 2))
-                pygame.draw.rect(surf, edge_dark, pygame.Rect(cx, cy+2, 3, 1))
-                surf.set_at((cx+3, cy), (*edge_dark, 255))
-                surf.set_at((cx+3, cy+1), (*edge_dark, 255))
+                pygame.draw.line(surf, edge_light, (3, s // 3), (s - 4, s // 3), 1)
+                pygame.draw.line(surf, edge_dark, (3, s // 3 + 1), (s - 4, s // 3 + 1), 1)
+                pygame.draw.line(surf, edge_light, (3, 2 * s // 3), (s - 4, 2 * s // 3), 1)
+                pygame.draw.line(surf, edge_dark, (3, 2 * s // 3 + 1), (s - 4, 2 * s // 3 + 1), 1)
 
             return surf
 

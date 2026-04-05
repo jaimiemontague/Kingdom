@@ -2203,6 +2203,85 @@
           ]
         }
       }
+    },
+    "wk21-3d-visual-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
+        "notes": "WK21 R2: UrsinaTextureBridge — pygame surfaces to cached Ursina Texture; Agent 03 wires ursina_renderer."
+      },
+      "rounds": {
+        "wk21_r2_implementation": {
+          "sprint_id": "wk21-3d-visual-polish",
+          "round_id": "wk21_r2_implementation",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Implemented UrsinaTextureBridge: pygame Surface → PIL Image → Ursina Texture with string-key cache. Helpers for terrain (TileSpriteLibrary), buildings (BuildingSpriteLibrary), and idle frames for heroes, enemies, and workers.",
+            "files": [
+              "game/graphics/ursina_texture_bridge.py"
+            ],
+            "details": [
+              "pygame_surface_to_ursina_texture(surface, cache_key) — core path matching ursina_app UI overlay pattern (RGBA tobytes).",
+              "get_tile_texture(tile_type, tx, ty), get_building_texture(building_type, state, size_px), get_hero_idle_texture, get_enemy_idle_texture, get_worker_idle_texture.",
+              "clear_texture_cache() and texture_cache_size() for debugging.",
+              "Ursina Texture lazy-imported inside conversion so headless imports of this module do not require Panda3D until a texture is built.",
+              "Per PM integration order, ursina_renderer startup bake and Entity wiring is Agent 03; no blockers from Art side."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"import pygame; pygame.init(); from game.graphics.ursina_texture_bridge import get_tile_texture, texture_cache_size; t = get_tile_texture(0, 5, 5); print('tex', type(t).__name__, 'cache', texture_cache_size())\""
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03 (WK21 R2): import game.graphics.ursina_texture_bridge in UrsinaApp/renderer; startup-bake terrain and assign textures to ground quads / building cubes / unit billboards per PM hub."
+          ]
+        },
+        "wk21_r3_bug_hunt": {
+          "sprint_id": "wk21-3d-visual-polish",
+          "round_id": "wk21_r3_bug_hunt",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK21 R3: Path procedural art — replaced random edge speckle with deterministic cobble grid + border + ruts; TileSpriteLibrary._CACHE_VERSION=2 so caches refresh. Grass/roads: terrain quad scale (w,d,1) + nearest filter; unit billboards use sprite_unlit_shader (alpha discard) + M_alpha. F12 → tools/ursina_screenshot + ursina_app.",
+            "files": [
+              "game/graphics/tile_sprites.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_sprite_unlit_shader.py",
+              "game/graphics/terrain_texture_bridge.py",
+              "game/graphics/ursina_app.py",
+              "tools/ursina_screenshot.py"
+            ],
+            "details": [
+              "Terrain: Ursina quad local X/Y; rotation_x=90 → scale (w,d,1); double_sided + texture.filtering=None.",
+              "Path tiles: no rnd.random() edge noise; cobble reads cleanly at nearest filter in 3D.",
+              "Billboards: sprite_unlit_shader discards low-alpha texels; _apply_pixel_billboard_settings on first create.",
+              "F12: save_ursina_window_screenshot(application.base) → docs/screenshots/ursina_*.png"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — confirm grass tiles, crisp paths, unit sprites with transparent background; press F12 → PNG in docs/screenshots/"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 12: F12 + tools/ursina_screenshot.py present; HUD message on capture if hud available.",
+            "If billboards still show artifacts on some GPUs, try TransparencyAttrib.M_dual or adjust render_queue."
+          ]
+        }
+      }
     }
   }
 }

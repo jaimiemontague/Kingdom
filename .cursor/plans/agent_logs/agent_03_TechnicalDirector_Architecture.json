@@ -2498,6 +2498,80 @@
           }
         }
       }
+    },
+    "wk21-3d-visual-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
+        "notes": "WK21 R2: terrain bake + textured buildings + unit billboards via TerrainTextureBridge"
+      },
+      "rounds": {
+        "wk21_r2_implementation": {
+          "sprint_id": "wk21-3d-visual-polish",
+          "round_id": "wk21_r2_implementation",
+          "round_meta": {
+            "prompt_set_id": "wk21_r2",
+            "build_target": "Ursina textured terrain/buildings + sprite billboards",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Implement Ursina rendering: startup terrain bake, map buildings/units with bridge textures; 4GB VRAM target.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Added game/graphics/terrain_texture_bridge.py: pygame Surface → Ursina Texture via PIL, cached by Surface id (dedupes TileSpriteLibrary/BuildingSpriteLibrary).",
+              "UrsinaRenderer: startup _bake_terrain_floor() builds one pygame sheet from world tiles + TileSpriteLibrary, single quad (rot 90°) at map center; avoids per-tile entity spam.",
+              "Buildings: BuildingSpriteLibrary.get(type, state, size_px) on cubes; state construction/damaged vs built; fixed world placement to use building center (b.x, b.y) only — was double-offsetting by half footprint.",
+              "Heroes/enemies/peasants/guards: textured quads with billboard=True; idle frame from HeroSpriteLibrary / EnemySpriteLibrary / WorkerSpriteLibrary.",
+              "Scope: game/graphics/terrain_texture_bridge.py, game/graphics/ursina_renderer.py only."
+            ],
+            "files_changed": [
+              "game/graphics/terrain_texture_bridge.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — terrain art, building facades, unit sprites face camera"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        },
+        "wk21_r3_bug_hunt": {
+          "sprint_id": "wk21-3d-visual-polish",
+          "round_id": "wk21_r3_bug_hunt",
+          "round_meta": {
+            "prompt_set_id": "wk21_r3",
+            "build_target": "Ursina visual fixes + nearest terrain filtering",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Apply transparency/filtering fixes per Agent 09; F12 already in tools/ursina_screenshot + ursina_app.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "terrain_texture_bridge: Texture(..., filtering=None) for nearest-neighbor on baked atlas.",
+              "ursina_renderer: terrain quad double_sided=True + explicit texture.filtering=None; unit billboards use game/graphics/ursina_sprite_unlit_shader (alpha discard) + per-frame shader assignment; billboard settings retain M_alpha / no depth write.",
+              "Coordinate with Agent 09: path tile art + cache revision in tile_sprites.py."
+            ],
+            "files_changed": [
+              "game/graphics/terrain_texture_bridge.py",
+              "game/graphics/ursina_sprite_unlit_shader.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/tile_sprites.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — grass/roads visible; workers not black silhouettes; F12 → docs/screenshots/"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.4.6"
-    game_title: str = "Kingdom Sim (Prototype v1.4.6) — Ursina Input Bridge"
+    prototype_version: str = "1.4.7"
+    game_title: str = "Kingdom Sim (Prototype v1.4.7) — 3D Visual Polish"
     default_borderless: bool = True
 
 

@@ -1,0 +1,82 @@
+{
+  "sprints": {
+    "wk21-3d-visual-polish": {
+      "rounds": {
+        "wk21_r1_kickoff": {
+          "sprint_id": "wk21-3d-visual-polish",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
+            "notes": "Agent 09 — 3D visual mapping: billboards vs textures, tile_sprites integration (Round 1, no code)."
+          },
+          "round_id": "wk21_r1_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk21_r1_3d_visual_polish",
+            "build_target": "Specs & contracts only — implementation in later rounds",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Spec visual mapping: textured primitives vs pixel-art billboards; how game/graphics/tile_sprites.py feeds ursina_renderer.py; acceptance criteria and risks.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "raw": "Scope clarity: game/graphics/tile_sprites.py is TileSpriteLibrary — procedural pygame Surfaces for terrain categories (grass, water, path, tree) keyed by tile_type and map (x,y) with deterministic variants. It does not contain building or unit sprites; those live elsewhere (e.g. building_sprites.py, hero_sprites.py). WK21 utilization of tile_sprites.py in Ursina is therefore primarily the ENVIRONMENT: a ground layer whose texels match the 2D game’s tile grid. Recommended split: (1) Terrain — per-tile textures sampled from TileSpriteLibrary.get(tile_type, tx, ty, size=TILE_SIZE) mapped onto floor-aligned quads or a batched/atlas approach (perf contract with Agent 03). Tree tiles can render as the same tile texture on a floor quad, or optionally a vertical billboard/crossed planes at tile center for height (Phase 2 polish). (2) Buildings & lairs — hybrid: keep volumetric boxes for silhouette; apply textures via UV-mapped prism (best consistency with 3D camera) using building art surfaces when wired — if only terrain is ready first, interim Y-locked or multi-face billboards from building_sprites renders. Pure camera-facing billboards for large bases read as cardboard and flatten depth; prefer textured boxes once facades exist. (3) Mobile units (heroes, enemies, peasants, guards) — camera-facing billboards (or cylindrically constrained billboards) with pixel frames give the strongest match to existing 32×32 art direction; textured cylinders/cubes fight pixel aspect and animation. Bridge pattern: pygame Surface → PIL Image → Ursina Texture (same family as camera.ui overlay), with aggressive caching of Texture objects per variant/atlas region — never rebuild per entity per frame.",
+            "summary_bullets": [
+              "tile_sprites.py → Ursina: terrain-only contract. Each sim tile (tx, ty) resolves to the same tile_type as the pygame world; TileSpriteLibrary.get(...) produces the albedo for that cell on the X/Z floor.",
+              "Environment: prefer a visible ground grid (one quad per tile at y≈0 or a stitched subtexture/atlas) over a single solid color plane — matches plan objective 2 and reuses existing pixel art.",
+              "Buildings/lairs: default to textured 3D prisms (existing cube footprint) with facades from building_sprites / future atlas — not from tile_sprites. If textures slip, fallback is crossed billboards or Y-axis-only billboards; avoid full camera billboards for wide footprints.",
+              "Units: billboards facing the active camera (Billboard component or manual look-at) using hero/enemy sprite pipeline — orthogonal to tile_sprites.",
+              "Performance: cache Surfaces from TileSpriteLibrary (already cached) and cache Ursina Texture handles per discrete variant; avoid 150×150 unique textures per frame — batching/atlas is an architecture decision for Agent 03.",
+              "Transparency: tile surfaces use SRCALPHA; ground quads should respect alpha where art uses it; tree tiles may need separate treatment (floor decal vs vertical sprite)."
+            ],
+            "proposed_changes": [
+              "Define a TerrainTextureBridge API (spec only): inputs (tile_type, tx, ty) → cached Ursina Texture or UV rect in atlas.",
+              "Document entity-class visual path: terrain → tile_sprites; buildings → building_sprites UV or billboard; units → billboard sprites.",
+              "Add QA visual checklist: side-by-side pygame vs Ursina screenshot at same seed/camera region for terrain parity."
+            ],
+            "acceptance_criteria": [
+              "Ground visually matches the 2D game’s terrain vocabulary (grass/water/path/tree) at the per-tile level when comparing the same map region — driven by TileSpriteLibrary, not ad hoc colors.",
+              "Buildings remain readable as volumes from the current perspective camera (not paper-thin cards) once textured; lairs distinguishable from player buildings by art or color pass.",
+              "Heroes/enemies read as pixel characters (billboard path) or approved interim — not muddy stretched bitmaps on cylinders.",
+              "Frame time stays within agreed budget after caching (exact ms threshold per Agent 10/03 — no per-frame full-map texture uploads).",
+              "No regression to sim determinism: tile_sprites remains deterministic by (tile_type, x, y); Ursina only displays, never feeds sim."
+            ],
+            "risks": [
+              "150×150 tiles × unique Texture objects = memory and creation spikes — must atlas or tile-chunk LOD.",
+              "Pygame → PIL → Ursina path is CPU-heavy if done lazily; startup bake vs incremental streaming risk.",
+              "Billboard units can intersect terrain or each other; need Y offset and depth bias/sorting artifacts at shallow angles.",
+              "Textured building boxes need consistent UV layout or seams show; authoring burden if done per-building-type.",
+              "Tree tiles as flat ground art may look like ‘painted bushes’ in 3D — acceptable MVP; vertical tree representation is extra scope.",
+              "Mixing billboard units with perspective can expose empty sides if rotation is wrong — test with camera orbit/pan."
+            ],
+            "dependencies": [
+              "Agent 03: texture atlas vs instanced quads, entity budget, and when to rebuild terrain if map mutates.",
+              "Read access to world tile grid from GameEngine/game state in Ursina tick — same truth as pygame renderer.",
+              "Future: building_sprites.py and hero_sprites surfaces for non-terrain entities; WK21 R1 can spec without implementing."
+            ],
+            "questions_back_to_pm": [
+              "Is WK21 strictly terrain + colored primitives until building textures land, or is building UV art in scope for the same milestone?",
+              "Target hardware floor for atlas size / texture memory?"
+            ],
+            "recommended_next_actions": [
+              "Agent 03 reviews terrain batching options against Ursina/Panda3D constraints.",
+              "Spike: one chunk of map (e.g. 32×32 tiles) as textured quads + cached textures — measure ms and VRAM.",
+              "Round 2: implement TerrainTextureBridge + ground grid only; then buildings; then unit billboards."
+            ],
+            "agent_fields": {
+              "role": "09_ArtDirector_Pixel_Animation_VFX",
+              "visual_strategy": {
+                "terrain": "TileSpriteLibrary → floor quads or atlas; primary use of tile_sprites.py",
+                "buildings_lairs": "Textured volumetric prisms preferred; billboards secondary fallback",
+                "units": "Camera-facing pixel billboards (hero/enemy art), not tile_sprites"
+              },
+              "tile_sprites_to_ursina_flow": [
+                "Sim/world provides (tile_x, tile_y, tile_type) aligned with pygame map.",
+                "TileSpriteLibrary.get(tile_type, tile_x, tile_y, size=TILE_SIZE) → pygame.Surface",
+                "Surface → Image → Ursina Texture (cached); assign to floor Entity model='quad' per tile or atlas subrect"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

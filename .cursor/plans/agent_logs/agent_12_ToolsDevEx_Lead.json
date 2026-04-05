@@ -2186,6 +2186,34 @@
         "blockers": []
       }
     }
+  },
+  "wk21-3d-visual-polish": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk21_3d_visual_polish.plan.md",
+      "notes": "WK21 — F12 Ursina window screenshot to docs/screenshots/"
+    },
+    "rounds": {
+      "wk21_r3_bug_hunt": {
+        "round_id": "wk21_r3_bug_hunt",
+        "status": "done",
+        "what_i_changed": {
+          "files": ["tools/ursina_screenshot.py", "game/graphics/ursina_app.py"],
+          "summary": "WK21 R3: Added tools/ursina_screenshot.save_ursina_window_screenshot() using ShowBase.screenshot (main GraphicsWindow = full 3D + UI overlay). UrsinaApp _handle_ursina_input handles f12 before LMB path; writes docs/screenshots/ursina_<ts>.png, prints [screenshot], HUD message."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: launch Ursina viewer, press F12 — PNG under docs/screenshots/, HUD confirms filename."
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

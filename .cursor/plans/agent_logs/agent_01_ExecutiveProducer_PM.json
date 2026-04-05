@@ -4552,6 +4552,169 @@
           ]
         }
       }
+    },
+    "wk21-3d-visual-polish": {
+      "rounds": {
+        "wk21_r1_kickoff": {
+          "pm_status_summary": {
+            "overall_status": "Round 1 - Specs & Conventions",
+            "focus": "Defining how to map the existing 2D pixel art onto the 3D Ursina viewport."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "title": "3D Visual Polish Pipeline",
+              "specs": "Replace the basic primitives in the 3D renderer with textured 3D elements or 2D billboards based on art direction."
+            }
+          ],
+          "pm_integration_order": [
+            "1. Agent 09: Spec out the approach for billboards vs 3D models."
+          ],
+          "pm_next_actions_by_agent": {
+            "09": {
+              "status": "assigned_active",
+              "asks": [
+                "Define the visual mapping conventions for Ursina. How will we transition the cubes in ursina_renderer.py into something beautiful?"
+              ]
+            }
+          },
+          "pm_agent_prompts": {
+            "09": "WK21 Round 1: Spec the transition from basic cubes to polished art. Do we use textured 3D primitives, or 2D billboards that always face the camera? How will we map our existing pixel art from game/graphics/tile_sprites.py into the Ursina renderer?"
+          },
+          "pm_send_list_minimal": [
+            "09"
+          ]
+        },
+        "wk21_r2_implementation": {
+          "pm_status_summary": {
+            "overall_status": "Round 2 - Implementation Pipeline",
+            "focus": "Replacing basic 3D cubes with textured primitives and billboards using our existing pixel art."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "SPRINT-BUG-WK21-01",
+              "title": "Grass texture missing in Ursina renderer",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Launch game with --renderer ursina",
+                "Observe grass tiles on the map"
+              ],
+              "expected": "Grass should have a texture.",
+              "actual": "Grass texture is missing/broken.",
+              "status": "open"
+            },
+            {
+              "id": "SPRINT-BUG-WK21-02",
+              "title": "Road tiles appear as random pixels",
+              "severity": "major",
+              "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Launch game with --renderer ursina",
+                "Observe road tiles"
+              ],
+              "expected": "Road should look like cobblestones/dirt.",
+              "actual": "Road looks like random scattered pixels.",
+              "status": "open"
+            },
+            {
+              "id": "SPRINT-BUG-WK21-03",
+              "title": "Worker billboards are black stick figures",
+              "severity": "major",
+              "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Launch game with --renderer ursina",
+                "Observe workers (peasants/tax collectors)"
+              ],
+              "expected": "Workers should render with proper colors/sprites and transparency.",
+              "actual": "Workers render as black stick figures (likely an alpha channel transparency bug).",
+              "status": "open"
+            }
+          ],
+          "pm_feature_requests": [],
+          "pm_integration_order": [
+            "1. Agent 09: Write the TerrainTextureBridge utility to pull Pygame surfaces into Ursina Textures.",
+            "2. Agent 03: Implement the terrain caching and rendering loop in ursina_renderer.py using the new bridge."
+          ],
+          "pm_next_actions_by_agent": {
+            "09": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement the texture bridge utility. Building UV art IS in scope for this milestone. Convert the existing pixel art into cached Ursina textures."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement the rendering logic. Use a startup bake for the terrain textures to avoid in-game lag spikes. We are targeting mainstream PC specs (4GB VRAM), so don't over-engineer memory constraints right now unless it crashes."
+              ]
+            }
+          },
+          "pm_agent_prompts": {
+            "09": "WK21 Round 2: Implement the Texture Bridge logic. PM Decision: Building UV art and Unit billboards ARE in scope for this sprint. We want it fully visibly mapped.",
+            "03": "WK21 Round 2: Implement the Ursina rendering updates. PM Decision: Target standard PC hardware (4GB VRAM). Feel free to use a startup bake for the terrain to avoid frame drops. Map the terrain, buildings, and billboard units using the new textures."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "09"
+          ]
+        },
+        "wk21_r3_bug_hunt": {
+          "pm_status_summary": {
+            "overall_status": "Round 3 - Visual Bug Hunt & Tools Expansion",
+            "focus": "Fixing the missing grass, noisy road tiles, and black background on stick figures. Also adding a screenshot tool for future automated QA."
+          },
+          "pm_bug_tickets": [
+            "SPRINT-BUG-WK21-01 (Missing Grass)",
+            "SPRINT-BUG-WK21-02 (Noisy Road Pixels)",
+            "SPRINT-BUG-WK21-03 (Black Stick Figures)"
+          ],
+          "pm_feature_requests": [
+            {
+              "title": "Automated Screenshot QA",
+              "specs": "Bind F12 to take a screenshot and save it to the docs/screenshots/ directory with a timestamp so the PM can visually inspect the Ursina renderer output without manual human uploads."
+            }
+          ],
+          "pm_integration_order": [
+            "1. Agent 12: Add F12 screenshot binding.",
+            "2. Agent 09 / Agent 03: Fix the transparency on unit billboards (black boxes).",
+            "3. Agent 09 / Agent 03: Fix the missing grass texture and force Nearest-Neighbor filtering on the road tiles so they aren't noisy scattered pixels."
+          ],
+          "pm_next_actions_by_agent": {
+            "12": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement a screenshot tool (F12) that saves PNG files to the docs/screenshots/ folder. Make sure it grabs the Ursina window."
+              ]
+            },
+            "09": {
+              "status": "assigned_active",
+              "asks": [
+                "Diagnose why the road tiles are noisy/scattered pixels and the grass is entirely missing. Also confirm unit billboards need their alpha/transparency flag fixed so they don't render as black stick figures."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Agent 09's fixes. Ensure Ursina Entity or Texture uses `filtering=None` and `transparency=True` where needed."
+              ]
+            }
+          },
+          "pm_agent_prompts": {
+            "12": "WK21 Round 3: Implement an F12 screenshot hotkey in the Ursina wrapper that saves PNGs into `docs/screenshots/`.",
+            "09": "WK21 Round 3: Visual bugs reported! Grass is missing, road tiles are a noisy line of scattered pixels (filtering issue?), and units are black stick figures (alpha/transparency issue). Prescribe exact fixes.",
+            "03": "WK21 Round 3: Coordinate with Agent 09 to apply the transparency/filtering fixes to the Ursina rendering objects."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "09",
+            "12"
+          ]
+        }
+      }
     }
   }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.4.7 — 3D Visual Polish
+
+### WK21 Sprint: 3D Aesthetic Parity
+- **Terrain Textures:** Ground tiles now map accurately to the underlying Pygame simulation grid, allowing existing asset rendering as 3D floor quads. Forced Nearest-Neighbor filtering resolves noisy downscaling.
+- **Textured Prisms:** Buildings and lairs are explicitly textured 3D prisms using UV tile mapping.
+- **Unit Billboards:** Camera-facing sprites for dynamic units (heroes, workers, enemies) with correctly resolved alpha-transparency channels.
+- **Screenshot Tool:** Added F12 debug capture tool for visual QA in Ursina.
+
 ## Prototype v1.4.6 — Ursina Input Bridge
 
 ### WK20 Sprint: Input Routing and Playability

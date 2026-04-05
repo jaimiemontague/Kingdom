@@ -19,6 +19,7 @@ from game.graphics.ursina_renderer import UrsinaRenderer, SCALE, sim_px_to_world
 from game.input_manager import InputEvent
 from game.ursina_input_manager import UrsinaInputManager
 from tools.ursina_input_debug import is_ursina_debug_input_enabled, print_wk20_input_line
+from tools.ursina_screenshot import save_ursina_window_screenshot
 
 
 class UrsinaApp:
@@ -173,6 +174,19 @@ class UrsinaApp:
         self.input_manager.queue_event(InputEvent(type="MOUSEMOTION", pos=pos, key=None))
 
     def _handle_ursina_input(self, key: str) -> None:
+        # WK21: F12 — full Ursina window (3D + UI overlay) → docs/screenshots/
+        if str(key).lower() == "f12":
+            from ursina import application
+
+            path = save_ursina_window_screenshot(application.base)
+            if path and hasattr(self.engine, "hud") and self.engine.hud:
+                import os as _os
+
+                self.engine.hud.add_message(
+                    f"Screenshot: {_os.path.basename(str(path))}",
+                    (100, 200, 255),
+                )
+            return
         if key != "left mouse down":
             return
         # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
