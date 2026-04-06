@@ -2572,6 +2572,110 @@
           }
         }
       }
+    },
+    "wk22-3d-refinement": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+        "notes": "WK22 R1: Ursina directional shadows (SPRINT-BUG-002)"
+      },
+      "rounds": {
+        "wk22_r1_kickoff": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r1_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk22_r1",
+            "build_target": "DirectionalLight + shadow map; lit world shader",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "SPRINT-BUG-002: enable shadow casting; avoid catastrophic perf hit.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Entity.default_shader = lit_with_shadows_shader for world meshes; ui_overlay stays unlit_shader.",
+              "AmbientLight + DirectionalLight(shadows=True, shadow_map_resolution from config.URSINA_SHADOW_MAP_SIZE default 768).",
+              "Sun positioned above map center, look_at ground center; update_bounds(scene) once after first renderer.update() so terrain/buildings exist in bounds.",
+              "Billboards/text remain sprite_unlit_shader / text_shader — unaffected."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "config.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — shadows on terrain/buildings; lower URSINA_SHADOW_MAP_SIZE if GPU-bound"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        },
+        "wk22_r2_bug_hunt": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r2_bug_hunt",
+          "round_meta": {
+            "prompt_set_id": "wk22_r2",
+            "build_target": "SPRINT-BUG-007 building duplication; helps SPRINT-BUG-006 FPS",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "Stop per-frame model reload that stacked geometry; dedupe building Ursina entities.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: every update() set ent.model = 'cube' or 'quad' — Ursina model_setter reloads load_model() and removeNode() each time, which can leave stacked meshes and crushes FPS when many heroes exist.",
+              "Fix: remove redundant ent.model assignments; mesh is created once in _get_or_create_entity. Still update texture, scale, position, color, billboard each frame.",
+              "Scope: game/graphics/ursina_renderer.py only."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — single building volume; stable FPS after hiring heroes"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": [],
+            "coordination_notes": [
+              "SPRINT-BUG-005 terrain trees: Agent 09",
+              "SPRINT-BUG-006 if FPS still bad: Agent 10 may tune URSINA_SHADOW_MAP_SIZE / shadow bounds"
+            ]
+          }
+        },
+        "wk22_r3_building_quad_shader_skip": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_building_quad_shader_skip",
+          "round_meta": {
+            "prompt_set_id": "wk22_r3",
+            "build_target": "Single-faced buildings; skip per-frame texture/shader churn",
+            "sent_at_local": "2026-04-03T00:00:00"
+          },
+          "prompt_text": "User: buildings still look like two volumes; FPS tanks when hiring heroes.",
+          "response": {
+            "received_at_local": "2026-04-03T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Buildings: replace textured cube with one billboard quad (max(fx,fz) x hy) + same pixel-billboard settings as units — removes duplicate facade/roof read as stacked volumes.",
+              "FPS: Ursina texture_setter and shader_setter reapply GPU state every assignment; heroes/enemies/workers now use _set_texture_if_changed / _set_shader_if_changed. Stable cache_key for surface_to_texture (hero/enemy/worker/building).",
+              "One-time migration for old cube building entities: force quad + _apply_pixel_billboard_settings; _ks_billboard_configured on new billboard entities."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — hire heroes; FPS should stay steadier; buildings one card silhouette"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

@@ -2740,6 +2740,33 @@
           }
         }
       }
+    },
+    "wk22-3d-refinement": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk22_3d_refinement.plan.md",
+        "notes": "WK22 R1: SPRINT-BUG-004 hotkeys in Ursina"
+      },
+      "rounds": {
+        "wk22_r1_kickoff": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r1_kickoff",
+          "round_meta": { "build_target": "Ursina keyboard → engine InputEvent queue", "sent_at_local": "2026-04-05" },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ursina_input_manager.py: Added ursina_key_to_input_event() — maps Ursina input() strings to KEYDOWN/WHEEL (matches PygameInputManager generic keys); extended _URSINA_KEY_MAP for esc/space/tab/symbols.",
+              "game/graphics/ursina_app.py: _handle_ursina_input no longer drops all keys after F12/LMB; queues converted events so tick_simulation → process_events → handle_keydown receives hotkeys."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — press 1–8, h, b, esc, tab, f3, mouse wheel zoom — should match pygame behavior."
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": [
+              "Chat typing in Ursina still expects pygame raw_event on KEYDOWN; not fixed in this ticket."
+            ]
+          }
+        }
+      }
     }
   }
 }

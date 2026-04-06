@@ -1,0 +1,2 @@
+﻿['wk7-ui-polish', 'v1.3-visual-polish-journey-ai', 'wk6-audio-buildmenu-fogbounties-explorexp', 'wk1-broad-sweep-midweek-endweek', 'wk2-hero-polish-ai-sprites', 'wk3-ui-polish-1080p-pixelart', 'wk4-new-enemy-skeleton-archer', 'wk5-demolition-projectiles-workers', 'wk17-quality-logic-immersion', 'wk18-llm-merger-and-mechanics', 'wk19-ursina-true-3d', 'wk20-ui-input-bridge', 'wk21-3d-visual-polish']
+['wk21_r1_kickoff', 'wk21_r2_implementation', 'wk21_r3_bug_hunt']

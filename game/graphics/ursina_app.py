@@ -7,17 +7,20 @@ from __future__ import annotations
 
 import math
 import os
+import time as pytime
 
+import config
 import pygame
 from PIL import Image
-from ursina import Ursina, window, camera, time, Entity, Texture, Vec3, scene, mouse
-from ursina.shaders import unlit_shader
+from ursina import Ursina, Vec2, window, camera, time, Entity, Texture, Vec3, scene, mouse
+from ursina.lights import AmbientLight, DirectionalLight
+from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
 from game.engine import GameEngine
 from game.graphics.ursina_pick import pick_world_xz_on_floor_y0
 from game.graphics.ursina_renderer import UrsinaRenderer, SCALE, sim_px_to_world_xz
 from game.input_manager import InputEvent
-from game.ursina_input_manager import UrsinaInputManager
+from game.ursina_input_manager import UrsinaInputManager, ursina_key_to_input_event
 from tools.ursina_input_debug import is_ursina_debug_input_enabled, print_wk20_input_line
 from tools.ursina_screenshot import save_ursina_window_screenshot
 
@@ -37,8 +40,9 @@ class UrsinaApp:
         window.exit_button.visible = False
         window.fps_counter.enabled = True
 
-        # Flat colors for 3D primitives (no distance fog); keeps cubes/cylinders visible at map scale.
-        Entity.default_shader = unlit_shader
+        # Default shader: lit+shadows only when directional shadows are enabled (otherwise unlit = much cheaper).
+        _ursina_shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
+        Entity.default_shader = lit_with_shadows_shader if _ursina_shadows else unlit_shader
         scene.fog_density = (0, 1_000_000)
         from ursina import color as ucolor
 
@@ -52,7 +56,6 @@ class UrsinaApp:
         except Exception:
             pass
 
-        import config
         tiles_w = config.MAP_WIDTH
         tiles_h = config.MAP_HEIGHT
 
@@ -64,6 +67,23 @@ class UrsinaApp:
         camera.orthographic = False
         camera.clip_plane_near = 0.1
         camera.clip_plane_far = 10000
+
+        # WK22 SPRINT-BUG-002: directional sun + shadow caster (bounds fitted to scene after first frame).
+        from ursina import color as ucolor2
+
+        AmbientLight(parent=scene, color=ucolor2.rgba(0.42, 0.44, 0.48, 1))
+        sm = int(getattr(config, "URSINA_SHADOW_MAP_SIZE", 768))
+        sm = max(256, min(2048, sm))
+        cx, cz = self._map_center_xz
+        self._directional_light = DirectionalLight(
+            parent=scene,
+            shadows=_ursina_shadows,
+            shadow_map_resolution=Vec2(sm, sm),
+            color=ucolor2.rgba(0.98, 0.95, 0.88, 1),
+        )
+        self._directional_light.position = Vec3(cx + 55, 95, cz + 40)
+        self._directional_light.look_at(Vec3(cx, 0, cz))
+        self._shadow_bounds_initialized = False
 
         self.input_manager = UrsinaInputManager()
         self.engine = GameEngine(input_manager=self.input_manager, headless=False, headless_ui=True)
@@ -91,6 +111,12 @@ class UrsinaApp:
         # Left click deferred to start of update() so MOUSEMOTION is processed first (placement preview).
         self._pending_lmb = False
         self._last_engine_screen_pos: tuple[int, int] = (0, 0)
+        # Reuse one Texture for pygame HUD compositing (avoid new GPU alloc every frame; WK22 SPRINT-BUG-006).
+        self._hud_composite_texture: Texture | None = None
+        self._hud_composite_size: tuple[int, int] | None = None
+        self._hud_upload_interval_sec = float(getattr(config, "URSINA_UI_UPLOAD_INTERVAL_SEC", 0.1) or 0.0)
+        self._hud_next_upload_at = 0.0
+        self._last_ui_overlay_scale: tuple[float, float] | None = None
 
     def _setup_ursina_camera_for_castle(self) -> None:
         """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans."""
@@ -187,10 +213,44 @@ class UrsinaApp:
                     (100, 200, 255),
                 )
             return
-        if key != "left mouse down":
+        if key == "left mouse down":
+            # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
+            self._pending_lmb = True
             return
-        # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
-        self._pending_lmb = True
+        # WK22 SPRINT-BUG-004: forward keyboard / wheel to engine (was dropped by early return).
+        evt = ursina_key_to_input_event(key)
+        if evt is not None:
+            self.input_manager.queue_event(evt)
+
+    def _refresh_ui_overlay_texture(self) -> None:
+        """Upload the pygame HUD texture on a short cadence instead of every frame."""
+        scale = (camera.aspect_ratio, 1)
+        if self._last_ui_overlay_scale != scale:
+            self.ui_overlay.scale = scale
+            self._last_ui_overlay_scale = scale
+
+        sz = self.engine.screen.get_size()
+        now = pytime.perf_counter()
+        if (
+            self._hud_composite_texture is not None
+            and self._hud_composite_size == sz
+            and self._hud_upload_interval_sec > 0.0
+            and now < self._hud_next_upload_at
+        ):
+            return
+
+        raw_data = pygame.image.tostring(self.engine.screen, "RGBA")
+        img = Image.frombytes("RGBA", sz, raw_data)
+        if self._hud_composite_texture is None or self._hud_composite_size != sz:
+            self._hud_composite_texture = Texture(img, filtering=False)
+            self._hud_composite_size = sz
+            self.ui_overlay.texture = self._hud_composite_texture
+        else:
+            self._hud_composite_texture._cached_image = img
+            self._hud_composite_texture.apply()
+
+        if self._hud_upload_interval_sec > 0.0:
+            self._hud_next_upload_at = now + self._hud_upload_interval_sec
 
     def run(self):
         pan_speed = 55.0
@@ -227,12 +287,15 @@ class UrsinaApp:
             self.engine.tick_simulation(dt)
             self.renderer.update()
 
-            self.engine.render_pygame()
+            if not self._shadow_bounds_initialized:
+                try:
+                    self._directional_light.update_bounds(scene)
+                except Exception:
+                    pass
+                self._shadow_bounds_initialized = True
 
-            raw_data = pygame.image.tostring(self.engine.screen, 'RGBA')
-            img = Image.frombytes('RGBA', self.engine.screen.get_size(), raw_data)
-            self.ui_overlay.texture = Texture(img, filtering=False)
-            self.ui_overlay.scale = (camera.aspect_ratio, 1)
+            self.engine.render_pygame()
+            self._refresh_ui_overlay_texture()
 
             from ursina import held_keys
 

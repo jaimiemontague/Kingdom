@@ -423,6 +423,15 @@ LAIR_INITIAL_COUNT = LAIR.initial_count
 LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = LAIR.min_distance_from_castle_tiles
 LAIR_STASH_GROWTH_PER_SPAWN = LAIR.stash_growth_per_spawn
 ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
+
+# --- WK22 Ursina 3D viewer (directional shadows; lower = faster GPU) ---
+# Shadow maps are expensive; keep off by default for playable FPS (set True for screenshots).
+URSINA_DIRECTIONAL_SHADOWS = False
+URSINA_SHADOW_MAP_SIZE = 512
+# Min seconds between full-map fog texture rebuilds (heroes exploring can thrash visibility).
+URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
+# Min seconds between full-screen HUD texture uploads into Ursina; pygame UI still renders every frame.
+URSINA_UI_UPLOAD_INTERVAL_SEC = 0.10
 LAIR_BOUNTY_COST = LAIR.bounty_cost
 
 # Bounty reward bands (player-paid; cost == reward). Used by Engine input + early pacing nudge.

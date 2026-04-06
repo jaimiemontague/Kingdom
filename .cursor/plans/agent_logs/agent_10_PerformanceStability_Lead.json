@@ -892,9 +892,8 @@
           }
         }
       }
-    }
-  },
-  "wk17-quality-logic-immersion": {
+    },
+    "wk17-quality-logic-immersion": {
     "sprint_meta": {
       "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
       "notes": "WK17: Quality, Logic, & Immersion. Memory leak profile for Agent 03."
@@ -928,6 +927,61 @@
             "primary_hotspot": "game/systems/pathfinding.py (get_neighbors, find_path — no path cache)",
             "secondary_hotspots": ["animation.py transform.scale", "enemy_renderer.py transform.flip", "engine.py line 1290 Font(None, 72)"],
             "handoff_to_agent_03": "docs/memory_leak_wk17.md"
+          }
+        }
+      }
+    }
+  },
+    "wk22-3d-refinement": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk22_3d_refinement.plan.md",
+        "notes": "WK22 R2 Bug Hunt: SPRINT-BUG-006 Ursina FPS regression"
+      },
+      "rounds": {
+        "wk22_r2_bug_hunt": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r2_bug_hunt",
+          "round_meta": {
+            "prompt_set_id": "wk22_r2_bug_hunt",
+            "build_target": "Ursina perf + shadow pass",
+            "sent_at_local": "2026-04-05"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "SPRINT-BUG-006: WK22 R1 lit_with_shadows default + directional shadow map made the full-map terrain quad and alpha billboards participate in the shadow pipeline; terrain alone is huge geometry for the shadow pass. Fixed: terrain uses unlit_shader + hide(0b0001) (already applied to fog; added missing unlit_shader import). Unit billboards already hid from shadow mask; confirmed. Reduced URSINA_SHADOW_MAP_SIZE 768→512. UrsinaApp now reuses the HUD composite texture and uploads it on a short cadence via URSINA_UI_UPLOAD_INTERVAL_SEC instead of forcing a full-screen texture upload every frame. Offscreen full-frame benchmark improved from ~90/94 ms (no hero/one hero) to ~46/49 ms.",
+            "summary_bullets": [
+              "Terrain: unlit_shader + exclude from shadow camera 0b0001 — avoids lit+shadows fragment work and shadow-map caster cost on map-sized quad.",
+              "config: URSINA_SHADOW_MAP_SIZE 512 (was 768) for cheaper shadow buffer.",
+              "ursina_app: cache pygame→HUD Texture and throttle full-screen uploads with URSINA_UI_UPLOAD_INTERVAL_SEC.",
+              "R3 follow-up (FPS still bad with heroes): URSINA_DIRECTIONAL_SHADOWS default False (no shadow-map pass); Entity.default_shader follows; fog overlay rebuild throttled (URSINA_FOG_MIN_UPDATE_INTERVAL_SEC); _sync_billboard_entity skips redundant billboard=True/scale/shader per frame.",
+              "qa_smoke --quick PASS (exit 0)."
+            ],
+            "what_i_changed": [
+              "game/graphics/ursina_renderer.py: import unlit_shader; terrain quad shader=unlit + hide(0b0001) after bake.",
+              "config.py: URSINA_SHADOW_MAP_SIZE = 512",
+              "game/graphics/ursina_app.py: _hud_composite_texture reuse + apply()",
+              "config.py: URSINA_DIRECTIONAL_SHADOWS, URSINA_FOG_MIN_UPDATE_INTERVAL_SEC, URSINA_UI_UPLOAD_INTERVAL_SEC",
+              "ursina_app.py: DirectionalLight(shadows=...); default shader when shadows off; _refresh_ui_overlay_texture cadence",
+              "ursina_renderer.py: fog throttle; _sync_billboard_entity for units/buildings"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — hire several heroes, pan/zoom ~1 min; FPS should stay usable (FPS counter enabled in Ursina)."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "ticket": "SPRINT-BUG-006"
+            },
+            "agent_fields": {
+              "root_cause": "R1 default lit_with_shadows + shadow map: terrain/fog-scale quads and per-frame full-screen HUD texture upload.",
+              "mitigations": [
+                "unlit terrain + shadow-mask exclude",
+                "smaller shadow map",
+                "HUD texture reuse + upload cadence throttle",
+                "directional shadows off by default + fog rebuild throttle + minimize Ursina billboard/shader churn"
+              ]
+            }
           }
         }
       }

@@ -8,13 +8,58 @@ from game.input_manager import InputManager, InputEvent
 # Headless Ursina + Pygame HUD uses a fixed virtual framebuffer (see GameEngine headless_ui).
 _DEFAULT_VIRTUAL_SCREEN = (1920, 1080)
 
-# General map of Ursina key strings to our generic representations
+# Ursina/Panda key name → generic key (matches PygameInputManager / handle_keydown).
 _URSINA_KEY_MAP = {
     'escape': 'esc',
     'space': 'space',
     'tab': 'tab',
-    # Note: Ursina provides '1', '2', 'a', 'b' natively as strings, which matches our generic format
+    'enter': 'enter',
+    'backspace': 'backspace',
+    'equals': '=',
+    'plus': '+',
+    'minus': '-',
+    'backquote': '`',
+    'left bracket': '[',
+    'right bracket': ']',
+    # Note: '1'–'9', 'a'–'z', 'f1'–'f12' are usually identical in both systems.
 }
+
+
+def ursina_key_to_input_event(key: str) -> InputEvent | None:
+    """Translate Ursina ``input(key)`` string to one engine InputEvent, or None to ignore."""
+    ks = str(key).strip()
+    kl = ks.lower()
+
+    if kl.endswith(' hold'):
+        return None
+    if kl.endswith(' up') and kl not in ('page up', 'gamepad dpad up'):
+        return None
+
+    if kl in ('left mouse down', 'right mouse down', 'middle mouse down',
+              'left mouse up', 'right mouse up', 'middle mouse up', 'double click'):
+        return None
+    if kl == 'scroll up':
+        return InputEvent(type='WHEEL', wheel_y=1)
+    if kl == 'scroll down':
+        return InputEvent(type='WHEEL', wheel_y=-1)
+    if 'mouse' in kl or 'gamepad' in kl or 'arrow' in kl:
+        return None
+
+    if kl in _URSINA_KEY_MAP:
+        return InputEvent(type='KEYDOWN', key=_URSINA_KEY_MAP[kl])
+    # Function keys
+    if len(kl) <= 3 and kl.startswith('f') and kl[1:].isdigit():
+        return InputEvent(type='KEYDOWN', key=kl)
+    # Single-character alnum (raw letter/digit keys)
+    if len(ks) == 1:
+        if ks.isalpha():
+            return InputEvent(type='KEYDOWN', key=ks.lower())
+        if ks.isdigit():
+            return InputEvent(type='KEYDOWN', key=ks)
+        # symbols used by hotkeys (+/-/=/`/[ ])
+        if ks in '=`+-[]':
+            return InputEvent(type='KEYDOWN', key=ks)
+    return None
 
 class UrsinaInputManager(InputManager):
     def __init__(self, virtual_screen_size: tuple[int, int] = _DEFAULT_VIRTUAL_SCREEN):

@@ -2282,6 +2282,80 @@
           ]
         }
       }
+    },
+    "wk22-3d-refinement": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json (wk22-3d-refinement)",
+        "notes": "SPRINT-BUG-001 terrain/tree UV; SPRINT-BUG-003 Ursina fog overlay"
+      },
+      "rounds": {
+        "wk22_r1_kickoff": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r1_kickoff",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK22 R1 (Agent 09): Removed extra terrain texture_scale/offset V-flip that fought Ursina's PIL→GPU flip and made tree tiles appear upside down. Added full-map fog overlay quad (UNSEEN=black opaque, SEEN=dark semi-transparent) driven by world.visibility, re-uploaded only when a zlib CRC of the visibility grid changes. TerrainTextureBridge.refresh_surface_texture for efficient GPU refresh of the reused pygame surface.",
+            "files": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/terrain_texture_bridge.py"
+            ],
+            "details": [
+              "SPRINT-BUG-001: terrain Entity uses default UVs + Texture() upload (no Vec2 texture_scale (1,-1)).",
+              "SPRINT-BUG-003: _ensure_fog_overlay() after _bake_terrain_floor; aligns with terrain scale/rotation; y=0.006; M_alpha + no depth write.",
+              "terrain_texture_bridge.refresh_surface_texture: reuses Ursina Texture.apply() for same pygame Surface id."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — trees upright vs 2D; fog darkens unexplored tiles"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 08: SPRINT-BUG-004 hotkeys remain UX scope.",
+            "Agent 03: SPRINT-BUG-002 shadows remain architecture scope."
+          ]
+        },
+        "wk22_r2_bug_hunt": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r2_bug_hunt",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK22 R2 (Agent 09): SPRINT-BUG-005 root cause — TerrainTextureBridge keyed GPU textures by id(pygame.Surface). The terrain bake sheet was unreferenced after upload, so Python reused that id for the fog surface; refresh_surface_texture then overwrote the same cached Texture object still bound to the terrain quad (transparent fog → green clear color, trees vanished). Fix: stable cache_key strings (kingdom_ursina_terrain_baked / kingdom_ursina_fog_overlay), keep self._terrain_sheet alive, and require cache_key for refresh. Restored terrain + fog UV texture_scale (1,-1) + offset (0,1) so atlas samples match 2D map. SPRINT-BUG-006: removing accidental terrain/fog texture aliasing stops catastrophic GPU misuse; remaining perf is Agent 10 if needed.",
+            "files": [
+              "game/graphics/terrain_texture_bridge.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "details": [
+              "surface_to_texture(..., cache_key=...) optional; refresh_surface_texture(..., cache_key=...) required.",
+              "_TERRAIN_TEX_KEY / _FOG_TEX_KEY constants in ursina_renderer.",
+              "Fog quad uses same UV scale/offset as terrain after fog entity exists."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — tree tiles visible on ground; fog does not replace terrain; hire heroes — FPS should not collapse from texture thrash alone"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: SPRINT-BUG-007 double buildings — separate cache/dedup issue if still repros.",
+            "Agent 10: SPRINT-BUG-006 — profile if FPS still bad after this fix (shadows/light loop)."
+          ]
+        }
+      }
     }
   }
 }
