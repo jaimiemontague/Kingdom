@@ -2705,6 +2705,61 @@
             },
             "blockers": []
           }
+        },
+        "wk22_r5_ursina_zoom_wheel_qe": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r5_ursina_zoom_wheel_qe",
+          "round_meta": {
+            "prompt_set_id": "wk22_r5",
+            "build_target": "WK22 R3: Ursina camera zoom — wheel + Q/E; engine.zoom ↔ FOV",
+            "sent_at_local": "2026-04-07T00:00:00"
+          },
+          "prompt_text": "PM WK22 Bug Hunt R3: scroll wheel dead; Q/E zoom; coordinate with UI coords.",
+          "response": {
+            "received_at_local": "2026-04-07T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: 3D camera.fov was tweaked in update() while wheel/+/- only changed engine.zoom — 3D view ignored scroll.",
+              "Fix: _sync_ursina_camera_fov_from_zoom() each frame: fov = clamp(reference_fov / (zoom/default_zoom), 18, 95). reference_fov captured after _setup_ursina_camera_for_castle.",
+              "Held Q/E call engine.zoom_by(ZOOM_STEP^±(3*dt)) (cursor-anchored); gated when paused or ESC menu visible.",
+              "input_handler: skip elven_bungalow on KEYDOWN 'e' when engine._ursina_viewer so E is zoom not building.",
+              "ursina_app: set engine._ursina_viewer = True; import held_keys at module level for pan block."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "game/input_handler.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — mouse wheel and +/- zoom 3D; hold Q/E zoom; HUD/world mapping stays consistent"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "coordination_notes": [
+              "Agent 08: crisp HUD texture / bounty click — separate; virtual 1920×1080 + get_mouse_pos unchanged",
+              "Agent 10: bounty lag / jitter — not touched here"
+            ],
+            "blockers": []
+          }
+        },
+        "wk22_r5b_scroll_up_wheel_fix": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r5b_scroll_up_wheel_fix",
+          "round_meta": { "build_target": "Ursina wheel zoom-in", "sent_at_local": "2026-04-07T00:00:00" },
+          "prompt_text": "Human: wheel zoom out works, zoom in / zoom back in does not.",
+          "response": {
+            "received_at_local": "2026-04-07T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Bug: ursina_key_to_input_event dropped any key ending with ' up' as KEYUP; 'scroll up' matched that rule so WHEEL wheel_y=+1 never queued.",
+              "Fix: exclude 'scroll up' from the endswith(' up') early return (game/ursina_input_manager.py)."
+            ],
+            "files_changed": ["game/ursina_input_manager.py"],
+            "how_to_test": ["python tools/qa_smoke.py --quick", "python main.py --renderer ursina — both wheel directions zoom"],
+            "evidence": { "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" } },
+            "blockers": []
+          }
         }
       }
     }

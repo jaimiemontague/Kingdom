@@ -12,6 +12,7 @@ from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, TAX_RATE
 )
+from game.sim.hero_guardrails_tunables import PATH_REPLAN_MIN_INTERVAL_MS
 
 if TYPE_CHECKING:
     from game.entities.buildings.base import Building
@@ -85,7 +86,9 @@ class Hero:
         self.target = None  # Could be position tuple, enemy, or building
         self.target_position = None
         self.path = []
-        self._path_goal = None  # (goal_x, goal_y) we last planned towards
+        # Grid tile (gx, gy) we last planned A* toward — avoids replanning every tick on sub-tile float jitter.
+        self._path_goal: tuple[int, int] | None = None
+        self._path_last_replan_ms: int = 0
         
         # Combat
         self.attack_cooldown = 0
@@ -642,11 +645,25 @@ class Hero:
                     self.move_towards(goal_x, goal_y, dt)
                     return
 
-                # Replan if needed
-                goal_key = (int(goal_x), int(goal_y))
-                if (not self.path) or (self._path_goal != goal_key):
-                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, goal_x, goal_y)
+                # Replan when we have no path or the *destination tile* changed (not every float nudge).
+                goal_gx, goal_gy = world.world_to_grid(goal_x, goal_y)
+                goal_key = (goal_gx, goal_gy)
+                path_empty = not self.path
+                goal_changed = self._path_goal != goal_key
+                need_replan = path_empty or goal_changed
+
+                if need_replan and self.path and goal_changed:
+                    now_ms = int(sim_now_ms())
+                    last = int(getattr(self, "_path_last_replan_ms", 0) or 0)
+                    if (now_ms - last) < int(PATH_REPLAN_MIN_INTERVAL_MS):
+                        need_replan = False
+
+                if need_replan:
+                    self.path = compute_path_worldpoints(
+                        world, buildings, self.x, self.y, goal_x, goal_y
+                    )
                     self._path_goal = goal_key
+                    self._path_last_replan_ms = int(sim_now_ms())
 
                 follow_path(self, dt)
             else:

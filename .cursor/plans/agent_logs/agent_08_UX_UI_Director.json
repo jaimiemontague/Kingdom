@@ -2765,6 +2765,45 @@
               "Chat typing in Ursina still expects pygame raw_event on KEYDOWN; not fixed in this ticket."
             ]
           }
+        },
+        "wk22_r3_bug_hunt_ui": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_bug_hunt_ui",
+          "round_meta": { "build_target": "WK22 R3 Ursina HUD crisp + bounty click", "sent_at_local": "2026-04-07" },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/graphics/ursina_app.py: _force_nearest_texture_filter on HUD composite Texture (filtering=None); pointer routing treats HUD layout chrome as UI so low-alpha pixels (icons) still get virtual 1920×1080 coords; sync engine._last_ui_cursor_pos from Ursina mouse before render_pygame.",
+              "game/ui/hud.py: _layout_rects_for_screen + virtual_pointer_in_hud_chrome(); CommandBar/SpeedBar use game_state ui_cursor_pos.",
+              "game/ui/command_bar.py: render(..., mouse_pos=) for Ursina (pygame.mouse dummy).",
+              "game/engine.py + game/input_handler.py: _last_ui_cursor_pos + get_game_state ui_cursor_pos; handle_mousemove updates cursor."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — HUD text/icons should look sharp (nearest-neighbor), Bounty command button click should place bounty / match hotkey B.",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
+        },
+        "wk22_r3_final_polish_dynamic_hud_canvas": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_final_polish_dynamic_hud_canvas",
+          "round_meta": { "build_target": "WK22 R3 PM: resize pygame HUD to Ursina window — native font raster", "sent_at_local": "2026-04-07" },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/display_manager.py: DisplayManager.apply_headless_ui_canvas_size(engine,w,h) — recreates engine.screen/_scaled_surface/_pause_overlay, HUD + panels on_resize, building_panel/debug_panel dimensions, clamp_camera; no pygame.display.set_mode (SDL dummy).",
+              "game/graphics/ursina_app.py: _sync_headless_ui_canvas_to_window() each frame from window.size; UrsinaInputManager.set_virtual_screen_size; invalidate HUD GPU texture when dimensions change; _hud_prefers_nearest_pixel_filter always True (1:1 texels).",
+              "game/ursina_input_manager.py: set_virtual_screen_size()."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — drag window corner; HUD should re-layout at new pixel size (not stretched 1080p).",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": { "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS" },
+            "blockers": []
+          }
         }
       }
     }

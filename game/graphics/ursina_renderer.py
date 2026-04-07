@@ -20,6 +20,7 @@ import config
 from ursina import Entity, Vec2, color, Text
 from ursina.shaders import unlit_shader
 
+from game.graphics.animation import AnimationClip
 from game.graphics.building_sprites import BuildingSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.hero_sprites import HeroSpriteLibrary
@@ -96,16 +97,41 @@ def _building_height_y(
     return H_BUILDING_2X2
 
 
-def _hero_idle_surface(hero):
-    hc = str(getattr(hero, "hero_class", "warrior") or "warrior").lower()
-    clips = HeroSpriteLibrary.clips_for(hc)
-    return clips["idle"].frames[0]
+def _frame_index_for_clip(clip: AnimationClip, elapsed: float) -> tuple[int, bool]:
+    """Match ``AnimationPlayer`` timing: non-looping finishes after n frame-times."""
+    n = len(clip.frames)
+    ft = clip.frame_time_sec
+    if n == 0:
+        return 0, True
+    if ft <= 0:
+        return 0, False
+    if clip.loop:
+        cycle = n * ft
+        if cycle <= 0:
+            return 0, False
+        t = elapsed % cycle
+        idx = int(t / ft) % n
+        return idx, False
+    steps = int(elapsed / ft)
+    if steps >= n:
+        return n - 1, True
+    return steps, False
 
 
-def _enemy_idle_surface(enemy):
-    et = str(getattr(enemy, "enemy_type", "goblin") or "goblin").lower()
-    clips = EnemySpriteLibrary.clips_for(et)
-    return clips["idle"].frames[0]
+def _hero_base_clip(hero) -> str:
+    if bool(getattr(hero, "is_inside_building", False)):
+        return "inside"
+    state = getattr(hero, "state", None)
+    state_name = str(getattr(state, "name", state))
+    if state_name in ("MOVING", "RETREATING"):
+        return "walk"
+    return "idle"
+
+
+def _enemy_base_clip(enemy) -> str:
+    state = getattr(enemy, "state", None)
+    state_name = str(getattr(state, "name", state))
+    return "walk" if state_name == "MOVING" else "idle"
 
 
 def _worker_idle_surface(worker_type: str):
@@ -141,6 +167,8 @@ class UrsinaRenderer:
         # Fog-of-war overlay quad (WK22): matches pygame render_fog tints per visibility tile.
         self._fog_entity: Entity | None = None
         self._fog_full_surf: pygame.Surface | None = None
+        # RGBA tile buffer reused for fog rebuilds (WK22 R3 perf: avoid 22k pygame.set_at calls).
+        self._fog_tile_buf: bytearray | None = None
         self._fog_vis_signature: int | None = None
         self._fog_next_allowed_at: float = 0.0
 
@@ -152,6 +180,67 @@ class UrsinaRenderer:
             color=color.black,
             background=True,
         )
+
+        # WK22 R3: per-sim-object billboard animation (wall clock; consumes _render_anim_trigger).
+        self._unit_anim_state: dict[int, dict] = {}
+
+    def _unit_anim_surface(
+        self,
+        obj_id: int,
+        entity,
+        clips: dict[str, AnimationClip],
+        base_clip_fn,
+        cache_prefix: str,
+        class_key: str,
+    ) -> tuple[pygame.Surface, tuple]:
+        """Pick hero/enemy frame from clips using triggers + base locomotion; time-based playback."""
+        trigger = getattr(entity, "_render_anim_trigger", None)
+        if trigger:
+            tname = str(trigger)
+            if tname in clips:
+                setattr(entity, "_render_anim_trigger", None)
+                base = base_clip_fn(entity)
+                self._unit_anim_state[obj_id] = {
+                    "clip": tname,
+                    "t0": time.time(),
+                    "base": base,
+                    "oneshot": not clips[tname].loop,
+                }
+            else:
+                setattr(entity, "_render_anim_trigger", None)
+
+        base = base_clip_fn(entity)
+        st = self._unit_anim_state.get(obj_id)
+        if st is None:
+            self._unit_anim_state[obj_id] = {
+                "clip": base,
+                "t0": time.time(),
+                "base": base,
+                "oneshot": False,
+            }
+            st = self._unit_anim_state[obj_id]
+        else:
+            st["base"] = base
+            if st.get("oneshot"):
+                oc = clips[st["clip"]]
+                elapsed_done = time.time() - st["t0"]
+                _i, finished = _frame_index_for_clip(oc, elapsed_done)
+                if finished:
+                    st["clip"] = st["base"]
+                    st["t0"] = time.time()
+                    st["oneshot"] = False
+            if not st.get("oneshot"):
+                if st["clip"] != base:
+                    st["clip"] = base
+                    st["t0"] = time.time()
+
+        clip_name = st["clip"]
+        clip = clips[clip_name]
+        elapsed = time.time() - st["t0"]
+        idx, _fin = _frame_index_for_clip(clip, elapsed)
+        surf = clip.frames[idx]
+        cache_key = (cache_prefix, "anim", class_key, clip_name, idx, int(config.TILE_SIZE))
+        return surf, cache_key
 
     def _ensure_fog_overlay(self) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
@@ -197,20 +286,33 @@ class UrsinaRenderer:
         # reduction in tobytes / PIL / GPU upload cost.  The GPU upscales
         # the texture to cover the terrain quad; nearest-neighbor filtering
         # keeps hard tile edges.
-        if self._fog_full_surf is None or self._fog_full_surf.get_size() != (tw, th):
-            self._fog_full_surf = pygame.Surface((tw, th), pygame.SRCALPHA)
-        surf = self._fog_full_surf
-
-        surf.fill((0, 0, 0, 255))  # start fully unseen (opaque black)
+        #
+        # WK22 R3 bug hunt: building the fog surface with set_at() per tile
+        # costs tens of ms (Python call overhead) and caused rhythmic hitches
+        # whenever visibility changed.  Fill a packed RGBA bytearray instead.
+        need = tw * th * 4
+        if self._fog_tile_buf is None or len(self._fog_tile_buf) != need:
+            self._fog_tile_buf = bytearray(need)
+        buf = self._fog_tile_buf
+        row_unseen = b"\x00\x00\x00\xff" * tw
+        for ty in range(th):
+            buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
+        vis_b = b"\x00\x00\x00\x00"
+        seen_b = b"\x00\x00\x00\xaa"  # 170 alpha — matches 2D fog "seen" tint
         for ty in range(th):
             row = world.visibility[ty]
+            base = ty * tw * 4
             for tx in range(tw):
                 st = row[tx]
                 if st == Visibility.VISIBLE:
-                    surf.set_at((tx, ty), (0, 0, 0, 0))
+                    o = base + tx * 4
+                    buf[o : o + 4] = vis_b
                 elif st == Visibility.SEEN:
-                    surf.set_at((tx, ty), (0, 0, 0, 170))
-                # UNSEEN = already black from the initial fill
+                    o = base + tx * 4
+                    buf[o : o + 4] = seen_b
+
+        surf = pygame.image.frombuffer(buf, (tw, th), "RGBA")
+        self._fog_full_surf = surf
 
         ftex = TerrainTextureBridge.refresh_surface_texture(surf, cache_key=_FOG_TEX_KEY)
         if ftex is None:
@@ -460,8 +562,10 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
-        # Heroes — pixel billboards
+        # Heroes — pixel billboards (WK22 R3: walk/idle/inside + attack/hurt from _render_anim_trigger)
         for h in gs["heroes"]:
+            if not getattr(h, "is_alive", True):
+                continue
             col = COLOR_HERO
             if HeroClass:
                 hc = getattr(h, "hero_class", None)
@@ -472,20 +576,21 @@ class UrsinaRenderer:
                 elif hc == HeroClass.ROGUE or str(hc).lower() == "rogue":
                     col = color.violet
 
-            hsurf = _hero_idle_surface(h)
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
-            htex = TerrainTextureBridge.surface_to_texture(
-                hsurf, cache_key=("hero_idle", hc_key, int(config.TILE_SIZE))
-            )
+            clips_h = HeroSpriteLibrary.clips_for(hc_key, size=int(config.TILE_SIZE))
             sy = UNIT_BILLBOARD_SCALE
             ent, obj_id = self._get_or_create_entity(
                 h,
                 model="quad",
                 col=color.white,
                 scale=(sy, sy, 1),
-                texture=htex,
+                texture=None,
                 billboard=True,
             )
+            hsurf, h_cache_key = self._unit_anim_surface(
+                obj_id, h, clips_h, _hero_base_clip, "hero", hc_key
+            )
+            htex = TerrainTextureBridge.surface_to_texture(hsurf, cache_key=h_cache_key)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             self._sync_billboard_entity(
                 ent,
@@ -497,23 +602,26 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
-        # Enemies — billboards
+        # Enemies — billboards (same animation contract as pygame EnemyRenderer)
         for e in gs["enemies"]:
+            if not getattr(e, "is_alive", True):
+                continue
             s = ENEMY_SCALE
             col = COLOR_ENEMY
-            esurf = _enemy_idle_surface(e)
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
-            etex = TerrainTextureBridge.surface_to_texture(
-                esurf, cache_key=("enemy_idle", et_key, int(config.TILE_SIZE))
-            )
+            clips_e = EnemySpriteLibrary.clips_for(et_key, size=int(config.TILE_SIZE))
             ent, obj_id = self._get_or_create_entity(
                 e,
                 model="quad",
                 col=color.white,
                 scale=(s, s, 1),
-                texture=etex,
+                texture=None,
                 billboard=True,
             )
+            esurf, e_cache_key = self._unit_anim_surface(
+                obj_id, e, clips_e, _enemy_base_clip, "enemy", et_key
+            )
+            etex = TerrainTextureBridge.surface_to_texture(esurf, cache_key=e_cache_key)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             self._sync_billboard_entity(
                 ent,
@@ -591,6 +699,7 @@ class UrsinaRenderer:
 
         dead_ids = set(self._entities.keys()) - active_ids
         for obj_id in dead_ids:
+            self._unit_anim_state.pop(obj_id, None)
             ent = self._entities.pop(obj_id)
             import ursina
 

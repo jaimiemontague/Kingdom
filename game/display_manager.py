@@ -18,6 +18,81 @@ class DisplayManager:
     def __init__(self, engine: "GameEngine"):
         self.engine = engine
 
+    @staticmethod
+    def apply_headless_ui_canvas_size(engine: "GameEngine", width: int, height: int) -> None:
+        """Ursina viewer: resize the offscreen pygame HUD to match the Ursina window (1:1, no fixed 1080p stretch).
+
+        ``engine.display_manager`` is normally None in this mode; this mirrors the surface/HUD
+        updates from ``apply_settings`` without calling ``pygame.display.set_mode`` (SDL dummy).
+        """
+        if not getattr(engine, "headless_ui", False):
+            return
+        w = max(320, min(int(width), 7680))
+        h = max(240, min(int(height), 4320))
+        if w == int(getattr(engine, "window_width", 0)) and h == int(getattr(engine, "window_height", 0)):
+            try:
+                if engine.screen is not None and engine.screen.get_size() == (w, h):
+                    return
+            except Exception:
+                pass
+
+        engine.window_width = w
+        engine.window_height = h
+        engine.window_size = (w, h)
+
+        engine.screen = pygame.Surface((w, h), pygame.SRCALPHA)
+        engine._scaled_surface = pygame.Surface((w, h), pygame.SRCALPHA)
+        engine._pause_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+        engine._pause_overlay.fill((0, 0, 0, 128))
+        engine._view_surface = None
+        engine._view_surface_size = (0, 0)
+
+        if hasattr(engine, "hud"):
+            engine.hud.screen_width = w
+            engine.hud.screen_height = h
+            if hasattr(engine.hud, "on_resize"):
+                try:
+                    engine.hud.on_resize(w, h)
+                except Exception:
+                    pass
+        if hasattr(engine, "pause_menu") and hasattr(engine.pause_menu, "on_resize"):
+            try:
+                engine.pause_menu.on_resize(w, h)
+            except Exception:
+                pass
+        if hasattr(engine, "build_catalog_panel") and hasattr(engine.build_catalog_panel, "on_resize"):
+            try:
+                engine.build_catalog_panel.on_resize(w, h)
+            except Exception:
+                pass
+        if hasattr(engine, "building_list_panel") and hasattr(engine.building_list_panel, "on_resize"):
+            try:
+                engine.building_list_panel.on_resize(w, h)
+            except Exception:
+                pass
+        if hasattr(engine, "dev_tools_panel") and hasattr(engine.dev_tools_panel, "on_resize"):
+            try:
+                engine.dev_tools_panel.on_resize(w, h)
+            except Exception:
+                pass
+        if hasattr(engine, "building_panel"):
+            try:
+                engine.building_panel.screen_width = w
+                engine.building_panel.screen_height = h
+            except Exception:
+                pass
+        if hasattr(engine, "debug_panel"):
+            try:
+                engine.debug_panel.screen_width = w
+                engine.debug_panel.screen_height = h
+            except Exception:
+                pass
+        if hasattr(engine, "clamp_camera"):
+            try:
+                engine.clamp_camera()
+            except Exception:
+                pass
+
     def apply_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
         """
         Apply display mode settings (fullscreen/borderless/windowed).

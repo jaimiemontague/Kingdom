@@ -8,14 +8,16 @@ from __future__ import annotations
 import math
 import os
 import time as pytime
+import zlib
 
 import config
 import pygame
 from PIL import Image
-from ursina import Ursina, Vec2, window, camera, time, Entity, Texture, Vec3, scene, mouse
+from ursina import Ursina, Vec2, window, camera, time, Entity, Texture, Vec3, scene, mouse, held_keys
 from ursina.lights import AmbientLight, DirectionalLight
 from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
+from game.display_manager import DisplayManager
 from game.engine import GameEngine
 from game.graphics.ursina_pick import pick_world_xz_on_floor_y0
 from game.graphics.ursina_renderer import UrsinaRenderer, SCALE, sim_px_to_world_xz
@@ -35,7 +37,9 @@ class UrsinaApp:
             title='Kingdom Sim - Ursina 3D Viewer',
             borderless=False,
             fullscreen=False,
-            development_mode=True,
+            # WK22 R3: dev mode runs extra bookkeeping that can hitch the main thread
+            # (and audiostream / music) on a steady cadence.
+            development_mode=False,
         )
         window.exit_button.visible = False
         window.fps_counter.enabled = True
@@ -91,6 +95,8 @@ class UrsinaApp:
 
         self.input_manager = UrsinaInputManager()
         self.engine = GameEngine(input_manager=self.input_manager, headless=False, headless_ui=True)
+        # InputHandler: 'e' selects elven bungalow — in Ursina we use E/Q as continuous zoom (held_keys).
+        self.engine._ursina_viewer = True
         # Let Ursina draw the map; pygame only draws HUD onto a transparent surface (see engine.render).
         self.engine._ursina_skip_world_render = True
 
@@ -125,9 +131,44 @@ class UrsinaApp:
         # Reuse one Texture for pygame HUD compositing (avoid new GPU alloc every frame; WK22 SPRINT-BUG-006).
         self._hud_composite_texture: Texture | None = None
         self._hud_composite_size: tuple[int, int] | None = None
-        self._hud_upload_interval_sec = float(getattr(config, "URSINA_UI_UPLOAD_INTERVAL_SEC", 0.1) or 0.0)
-        self._hud_next_upload_at = 0.0
         self._last_ui_overlay_scale: tuple[float, float] | None = None
+        # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
+        self._hud_quick_sig: int | None = None
+
+    @staticmethod
+    def _hud_quick_fingerprint(surf: pygame.Surface) -> int:
+        """~0.3–0.5 ms @ 1080p: sample every 16th row plus top/bottom chrome rows."""
+        w, h = surf.get_size()
+        mv = memoryview(surf.get_view("1"))
+        row = w * 4
+        acc = zlib.crc32(b"")
+        rows: set[int] = set(range(0, h, 16))
+        for y in (0, 1, 2, h - 3, h - 2, h - 1):
+            if 0 <= y < h:
+                rows.add(y)
+        for y in sorted(rows):
+            a = y * row
+            acc = zlib.crc32(mv[a : a + row], acc)
+        return acc & 0xFFFFFFFF
+
+    @staticmethod
+    def _hud_prefers_nearest_pixel_filter() -> bool:
+        """WK22 R3: Pygame HUD is sized to the Ursina window — 1:1 texels; nearest keeps UI text sharp."""
+        return True
+
+    @staticmethod
+    def _sync_hud_texture_filter_mode(tex: Texture | None) -> None:
+        if tex is None:
+            return
+        nearest = UrsinaApp._hud_prefers_nearest_pixel_filter()
+        try:
+            # Panda/Ursina: None → nearest; True → linear (smoother when window is scaled).
+            tex.filtering = None if nearest else True
+        except Exception:
+            try:
+                tex.filtering = False if nearest else True
+            except Exception:
+                pass
 
     def _setup_ursina_camera_for_castle(self) -> None:
         """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans."""
@@ -150,6 +191,19 @@ class UrsinaApp:
         d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
         camera.position = Vec3(cx, d * 0.8, cz - d)
         camera.look_at(Vec3(cx, 0, cz))
+
+        # Perspective FOV that matches engine.zoom==default_zoom (single source of truth: engine.zoom).
+        self._ursina_reference_fov = float(camera.fov)
+
+    def _sync_ursina_camera_fov_from_zoom(self) -> None:
+        """Keep perspective FOV tied to engine.zoom so wheel, +/-, and Q/E match HUD/world mapping."""
+        eng = self.engine
+        z = float(eng.zoom if eng.zoom else 1.0) / float(
+            eng.default_zoom if getattr(eng, "default_zoom", None) else 1.0
+        )
+        z = max(z, 1e-6)
+        ref = float(self._ursina_reference_fov)
+        camera.fov = max(18.0, min(95.0, ref / z))
 
     def _install_ursina_input_hook(self) -> None:
         app = self
@@ -185,7 +239,10 @@ class UrsinaApp:
         hit: tuple[float, float] | None = None
         wx_sim = wy_sim = 0.0
 
-        if self._pixel_hits_opaque_ui(px, py):
+        gs = eng.get_game_state()
+        if self._pixel_hits_opaque_ui(px, py) or eng.hud.virtual_pointer_in_hud_chrome(
+            (px, py), eng.screen, gs
+        ):
             pos = (px, py)
             kind = "ui"
         else:
@@ -234,26 +291,45 @@ class UrsinaApp:
             self.input_manager.queue_event(evt)
 
     def _refresh_ui_overlay_texture(self) -> None:
-        """Upload the pygame HUD texture on a short cadence instead of every frame."""
+        """Upload pygame HUD to GPU only when pixel data changes (WK22 R3 jitter fix).
+
+        Full-window ``tobytes`` + PIL + ``Texture.apply`` was running on a timer every
+        100ms even when the HUD was static, which produced periodic main-thread hitches
+        (audible as music glitches). A CRC32 of the packed framebuffer skips that work
+        entirely when nothing drew into ``engine.screen`` since the last upload.
+        """
         scale = (camera.aspect_ratio, 1)
         if self._last_ui_overlay_scale != scale:
             self.ui_overlay.scale = scale
             self._last_ui_overlay_scale = scale
 
-        sz = self.engine.screen.get_size()
-        now = pytime.perf_counter()
+        surf = self.engine.screen
+        sz = surf.get_size()
+
+        try:
+            quick = self._hud_quick_fingerprint(surf)
+        except Exception:
+            quick = None
+
         if (
-            self._hud_composite_texture is not None
+            quick is not None
+            and self._hud_composite_texture is not None
             and self._hud_composite_size == sz
-            and self._hud_upload_interval_sec > 0.0
-            and now < self._hud_next_upload_at
+            and self._hud_quick_sig is not None
+            and quick == self._hud_quick_sig
         ):
             return
 
-        raw_data = pygame.image.tobytes(self.engine.screen, "RGBA")
+        raw_data = pygame.image.tobytes(surf, "RGBA")
         img = Image.frombytes("RGBA", sz, raw_data)
+        try:
+            self._hud_quick_sig = self._hud_quick_fingerprint(surf)
+        except Exception:
+            self._hud_quick_sig = zlib.crc32(raw_data) & 0xFFFFFFFF
+
         if self._hud_composite_texture is None or self._hud_composite_size != sz:
             self._hud_composite_texture = Texture(img, filtering=False)
+            self._sync_hud_texture_filter_mode(self._hud_composite_texture)
             self._hud_composite_size = sz
             self.ui_overlay.texture = self._hud_composite_texture
         else:
@@ -261,20 +337,40 @@ class UrsinaApp:
             tex = self._hud_composite_texture
             if int(tex.width) != int(sz[0]) or int(tex.height) != int(sz[1]):
                 self._hud_composite_texture = Texture(img, filtering=False)
+                self._sync_hud_texture_filter_mode(self._hud_composite_texture)
                 self._hud_composite_size = sz
                 self.ui_overlay.texture = self._hud_composite_texture
             else:
                 tex._cached_image = img
                 tex.apply()
+                self._sync_hud_texture_filter_mode(tex)
 
-        if self._hud_upload_interval_sec > 0.0:
-            self._hud_next_upload_at = now + self._hud_upload_interval_sec
+    def _sync_headless_ui_canvas_to_window(self) -> None:
+        """Poll Ursina ``window.size`` and resize ``engine.screen`` to match — fonts/layout rasterize at native pixels."""
+        try:
+            W, H = int(window.size[0]), int(window.size[1])
+        except Exception:
+            return
+        if W < 32 or H < 32:
+            return
+        eng = self.engine
+        prev = (int(getattr(eng, "window_width", 0)), int(getattr(eng, "window_height", 0)))
+        DisplayManager.apply_headless_ui_canvas_size(eng, W, H)
+        cur = (int(eng.window_width), int(eng.window_height))
+        self.input_manager.set_virtual_screen_size(cur)
+        if prev != cur:
+            self._hud_quick_sig = None
+            self._hud_composite_texture = None
+            self._hud_composite_size = None
 
     def run(self):
         pan_speed = 55.0
 
         def update():
             dt = time.dt
+
+            # WK22 R3: dynamic HUD resolution — match pygame surface to Ursina window (no fixed 1080p GPU stretch).
+            self._sync_headless_ui_canvas_to_window()
 
             # 1) Motion every frame (HUD hover, building preview validity).
             self._queue_pointer_motion_event()
@@ -303,6 +399,23 @@ class UrsinaApp:
                     )
 
             self.engine.tick_simulation(dt)
+
+            # WK22 R3: Wheel / +/- already adjust engine.zoom in InputHandler — drive 3D FOV from that.
+            # Held Q/E apply the same multiplicative zoom (cursor-anchored via zoom_by) so coords stay consistent.
+            eng = self.engine
+            hk = held_keys
+            zstep = float(config.ZOOM_STEP)
+            # ~3 "UI zoom steps" per second while held (matches old ~35°/s FOV tweak feel).
+            rate = 3.0 * dt
+            _allow_zoom = not eng.paused and not getattr(eng.pause_menu, "visible", False)
+            if _allow_zoom:
+                if hk.get("e", 0):
+                    eng.zoom_by(zstep**rate)
+                if hk.get("q", 0):
+                    eng.zoom_by(zstep ** (-rate))
+
+            self._sync_ursina_camera_fov_from_zoom()
+
             self.renderer.update()
 
             if not self._shadow_bounds_initialized:
@@ -314,25 +427,18 @@ class UrsinaApp:
 
             self.engine.render_pygame()
             self._refresh_ui_overlay_texture()
-
-            from ursina import held_keys
+            # Fullscreen ↔ windowed toggles with a static HUD skip texture upload; still resync filter.
+            self._sync_hud_texture_filter_mode(self._hud_composite_texture)
 
             # Pan parallel to X/Z floor (world units / sec)
-            if held_keys['a']:
+            if hk["a"]:
                 camera.x -= pan_speed * dt
-            if held_keys['d']:
+            if hk["d"]:
                 camera.x += pan_speed * dt
-            if held_keys['w']:
+            if hk["w"]:
                 camera.z -= pan_speed * dt
-            if held_keys['s']:
+            if hk["s"]:
                 camera.z += pan_speed * dt
-
-            # Zoom via perspective FOV (smaller = tighter)
-            if held_keys['q']:
-                camera.fov += 35 * dt
-            if held_keys['e']:
-                camera.fov -= 35 * dt
-            camera.fov = max(18, min(95, camera.fov))
 
         import __main__
 

@@ -32,7 +32,12 @@ def ursina_key_to_input_event(key: str) -> InputEvent | None:
 
     if kl.endswith(' hold'):
         return None
-    if kl.endswith(' up') and kl not in ('page up', 'gamepad dpad up'):
+    # Do not treat mouse wheel events as key-up releases ('scroll up' ends with ' up').
+    if kl.endswith(' up') and kl not in (
+        'page up',
+        'gamepad dpad up',
+        'scroll up',
+    ):
         return None
 
     if kl in ('left mouse down', 'right mouse down', 'middle mouse down',
@@ -75,6 +80,11 @@ class UrsinaInputManager(InputManager):
         # but for an MVP headless viewer, we might not even need to generate dynamic 
         # mousedown/up events, just state-based polling.
 
+    def set_virtual_screen_size(self, size: tuple[int, int]) -> None:
+        """Match engine.screen / HUD size when Ursina window is resized (WK22 R3 dynamic canvas)."""
+        self._virtual_w = max(1, int(size[0]))
+        self._virtual_h = max(1, int(size[1]))
+
     def queue_event(self, event: InputEvent):
         """Called by Ursina's input() hook to push events to the engine."""
         self._event_queue.append(event)
@@ -89,7 +99,7 @@ class UrsinaInputManager(InputManager):
         """Map Ursina window pointer → pygame-style pixels on the virtual engine.screen.
 
         Ursina (see ursina.mouse.Mouse): x = ((px/W) - 0.5) * aspect_ratio,
-        y = -((py/H) - 0.5). Invert to window pixels, then scale to virtual 1920×1080 HUD.
+        y = -((py/H) - 0.5). Invert to window pixels, then scale to engine HUD size (matches ``engine.screen``).
         """
         if not window:
             return (0, 0)

@@ -2354,6 +2354,37 @@
             "Agent 03: SPRINT-BUG-007 double buildings — separate cache/dedup issue if still repros.",
             "Agent 10: SPRINT-BUG-006 — profile if FPS still bad after this fix (shadows/light loop)."
           ]
+        },
+        "wk22_r3_final_polish": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_final_polish",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK22 R3 (Agent 09): Ursina unit billboards honor _render_anim_trigger and locomotion base clips (idle/walk/inside for heroes; idle/walk for enemies). Renderer-owned _unit_anim_state[id] tracks clip, wall-clock t0, oneshot; frames indexed via time.time()-t0 with AnimationClip frame_time (matches AnimationPlayer non-loop semantics). TerrainTextureBridge cache keys include (hero|enemy, anim, class_key, clip_name, frame_idx, size). Dead heroes/enemies skipped (parity with pygame). Removed unused _hero_idle_surface/_enemy_idle_surface helpers.",
+            "files": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "details": [
+              "_frame_index_for_clip + _hero_base_clip / _enemy_base_clip (mirror HeroRenderer/EnemyRenderer).",
+              "Cleanup _unit_anim_state when Ursina entity mapping removed."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — melee heroes show attack swing; moving units show walk cycle"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 08: UI resize / display_manager — separate WK22 R3 task.",
+            "Agent 10: pathfinding throttle — separate WK22 R3 task."
+          ]
         }
       }
     }

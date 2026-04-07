@@ -220,7 +220,9 @@ class InputHandler:
         elif event.key == 'g':
             self.select_building_for_placement("gnome_hovel")
         elif event.key == 'e':
-            self.select_building_for_placement("elven_bungalow")
+            # Ursina viewer uses held E for zoom; elven bungalow hotkey would fight that (KEYDOWN).
+            if not getattr(engine, "_ursina_viewer", False):
+                self.select_building_for_placement("elven_bungalow")
         elif event.key == 'v':
             self.select_building_for_placement("dwarven_settlement")
         elif event.key == 'u':
@@ -545,6 +547,10 @@ class InputHandler:
     def handle_mousemove(self, event):
         """Handle mouse movement."""
         engine = self.engine
+        try:
+            engine._last_ui_cursor_pos = (int(event.pos[0]), int(event.pos[1]))
+        except Exception:
+            pass
 
         # Menu slider dragging
         if engine.pause_menu.visible:

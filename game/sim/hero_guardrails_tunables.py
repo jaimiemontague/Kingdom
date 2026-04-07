@@ -39,6 +39,10 @@ TARGET_COMMIT_WINDOW_S: float = 1.5
 # Minimum time (seconds, simulation time) to "commit" to a bounty before switching (unless invalid).
 BOUNTY_COMMIT_WINDOW_S: float = 2.5
 
+# Minimum sim-time between A* replans when the chase goal tile changes in quick succession
+# (reduces main-thread churn when targets jitter at tile boundaries or AI updates every tick).
+PATH_REPLAN_MIN_INTERVAL_MS: int = 120
+
 
 # -----------------------------
 # Override rules (documentation)

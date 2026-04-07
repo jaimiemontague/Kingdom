@@ -182,29 +182,25 @@ class HUD:
         self.messages: list[dict] = []
         self.message_duration = 3000
 
-    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
-        """Compute UI rects from current surface size. Returns top, bottom, left, right, minimap, command, speed_rect."""
-        w, h = surface.get_width(), surface.get_height()
-        self.screen_width = int(w)
-        self.screen_height = int(h)
-
+    def _layout_rects_for_screen(
+        self, w: int, h: int, *, show_right_panel: bool
+    ) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+        """Geometry only — shared by _compute_layout and Ursina pointer routing."""
         top_h = int(getattr(self.theme, "top_bar_h", 48))
         bottom_h = int(getattr(self.theme, "bottom_bar_h", 96))
         margin = int(getattr(self.theme, "margin", 8))
         gutter = int(getattr(self.theme, "gutter", 8))
 
-        right_w = int(
-            max(
-                getattr(self.theme, "right_panel_min_w", 320),
-                min(getattr(self.theme, "right_panel_max_w", 420), int(w * 0.24)),
-            )
-        )
-        right_w = int(max(280, min(right_w, w - 2 * margin)))
-        # Right panel only when visible and there is content (selected building or interior/quest view)
-        show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
-        if not show_right:
+        if not show_right_panel:
             right_w = 0
-        self.side_panel_width = right_w
+        else:
+            right_w = int(
+                max(
+                    getattr(self.theme, "right_panel_min_w", 320),
+                    min(getattr(self.theme, "right_panel_max_w", 420), int(w * 0.24)),
+                )
+            )
+            right_w = int(max(280, min(right_w, w - 2 * margin)))
 
         top = pygame.Rect(0, 0, w, top_h)
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
@@ -213,7 +209,6 @@ class HUD:
         left_w = 224  # 30% slimmer than previous 320 (hero/building detail panel)
         left = pygame.Rect(0, top_h, left_w, max(0, h - top_h - bottom_h))
 
-        # Speed bar: just above bottom bar, 100px left of right panel to avoid edge-scroll
         speed_bar_w = 200
         speed_bar_h = 50
         speed_gap_above_bar = 4
@@ -230,6 +225,48 @@ class HUD:
         cmd_w = max(0, speed_rect.left - cmd_x - gutter)
         command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
         return top, bottom, left, right, minimap, command, speed_rect
+
+    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+        """Compute UI rects from current surface size. Returns top, bottom, left, right, minimap, command, speed_rect."""
+        w, h = surface.get_width(), surface.get_height()
+        self.screen_width = int(w)
+        self.screen_height = int(h)
+        show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
+        top, bottom, left, right, minimap, command, speed_rect = self._layout_rects_for_screen(
+            w, h, show_right_panel=show_right
+        )
+        self.side_panel_width = right.width
+        return top, bottom, left, right, minimap, command, speed_rect
+
+    def virtual_pointer_in_hud_chrome(
+        self, pos: tuple[int, int], surface: pygame.Surface, game_state: dict
+    ) -> bool:
+        """True if virtual-screen coords lie over HUD chrome (use UI pixel coords, not world raycast).
+
+        Anti-aliased or icon pixels can have alpha < 24; alpha-only hit tests miss command buttons (e.g. Bounty).
+        """
+        x, y = int(pos[0]), int(pos[1])
+        w, h = surface.get_width(), surface.get_height()
+        if w <= 0 or h <= 0 or not (0 <= x < w and 0 <= y < h):
+            return False
+        has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
+        show_right = self.right_panel_visible and has_right_content
+        top, bottom, left, right, minimap, command, speed_rect = self._layout_rects_for_screen(
+            w, h, show_right_panel=show_right
+        )
+        regions = [top, bottom, minimap, command, speed_rect]
+        if show_right and right.width > 0:
+            regions.append(right)
+        if game_state.get("selected_hero") is not None or game_state.get("selected_peasant") is not None:
+            regions.append(left)
+        for r in regions:
+            if r.collidepoint(x, y):
+                return True
+        if self.show_help:
+            help_r = pygame.Rect(max(0, w - 320), 0, min(320, w), min(520, h))
+            if help_r.collidepoint(x, y):
+                return True
+        return False
 
     def _build_placing_banner(self, text_surf: pygame.Surface) -> pygame.Surface:
         pad_x = 14
@@ -630,8 +667,14 @@ class HUD:
 
         show_left = selected_hero is not None or selected_peasant is not None
         self.render_messages(surface, left if show_left else None)
-        self._command_bar.render(surface, cmd)
-        self._speed_bar.render(surface, speed_rect, pygame.mouse.get_pos())
+        _cur = game_state.get("ui_cursor_pos")
+        cursor_pos: tuple[int, int] | None
+        if _cur is not None and len(_cur) >= 2:
+            cursor_pos = (int(_cur[0]), int(_cur[1]))
+        else:
+            cursor_pos = pygame.mouse.get_pos()
+        self._command_bar.render(surface, cmd, mouse_pos=cursor_pos)
+        self._speed_bar.render(surface, speed_rect, cursor_pos)
         self._speed_rect = speed_rect
 
         selected_hero = game_state.get("selected_hero")

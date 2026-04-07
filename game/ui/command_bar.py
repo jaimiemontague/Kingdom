@@ -90,11 +90,17 @@ class CommandBar:
             self._button_actions.append(str(spec["action"]))
             x += button_w + gutter
 
-    def render(self, surface: pygame.Surface, cmd_rect: pygame.Rect) -> None:
+    def render(
+        self,
+        surface: pygame.Surface,
+        cmd_rect: pygame.Rect,
+        *,
+        mouse_pos: tuple[int, int] | None = None,
+    ) -> None:
         if cmd_rect.width <= 0 or cmd_rect.height <= 0:
             return
         self._ensure_buttons(cmd_rect)
-        mouse = pygame.mouse.get_pos()
+        mouse = mouse_pos if mouse_pos is not None else pygame.mouse.get_pos()
         hovered_button: Button | None = None
 
         for button in self._buttons:

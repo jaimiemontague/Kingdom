@@ -430,7 +430,7 @@ URSINA_DIRECTIONAL_SHADOWS = False
 URSINA_SHADOW_MAP_SIZE = 512
 # Min seconds between full-map fog texture rebuilds (heroes exploring can thrash visibility).
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
-# Min seconds between full-screen HUD texture uploads into Ursina; pygame UI still renders every frame.
+# Legacy: Ursina HUD GPU upload is now skipped via row-sampled CRC when pixels are unchanged (ursina_app).
 URSINA_UI_UPLOAD_INTERVAL_SEC = 0.10
 LAIR_BOUNTY_COST = LAIR.bounty_cost
 

@@ -129,6 +129,7 @@ class GameEngine:
             self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
             self._pause_overlay.fill((0, 0, 0, 128))
             self._pause_font = None
+            self._last_ui_cursor_pos = (0, 0)
         elif headless_ui:
             # Virtual screen for PyMux rendering
             self.display_mode = "headless_ui"
@@ -151,6 +152,7 @@ class GameEngine:
             self._pause_overlay = pygame.Surface((self.window_width, self.window_height), pygame.SRCALPHA)
             self._pause_overlay.fill((0, 0, 0, 128))
             self._pause_font = None
+            self._last_ui_cursor_pos = (0, 0)
         else:
             # Headless stubs so attribute access doesn't crash
             self.display_mode = "headless"
@@ -1345,6 +1347,8 @@ class GameEngine:
             "micro_view_quest_data": getattr(self.micro_view, "quest_data", None),
             "right_panel_rect": getattr(self.hud, "_right_rect", None),
             "llm_available": getattr(self.ai_controller, "llm_brain", None) is not None,
+            # Last MOUSEMOTION in engine.screen space — required when pygame.mouse is dummy (Ursina HUD).
+            "ui_cursor_pos": getattr(self, "_last_ui_cursor_pos", None),
         }
     
     def render(self):

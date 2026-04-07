@@ -1037,6 +1037,74 @@
               ]
             }
           }
+        },
+        "wk22_r3_jitter_bounty_lag": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_jitter_bounty_lag",
+          "round_meta": {
+            "prompt_set_id": "wk22_r3_bug_hunt_pm",
+            "build_target": "WK22 R3 playability: periodic hitches + bounty lag",
+            "sent_at_local": "2026-04-07"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK22 final bug hunt (perf): Addressed rhythmic main-thread hitches and heavy spikes when fog/UI updated. Fog overlay rebuild used pygame.set_at in a 150x150 double loop (~22k Python calls) per visibility change — replaced with packed bytearray row fills + 4-byte patches + pygame.image.frombuffer (same pixels, orders of magnitude less overhead). UrsinaApp: disabled development_mode (extra dev bookkeeping can hitch audio). HUD GPU path no longer uses a blind 100ms full-screen tobytes+PIL+apply timer; instead a cheap row-sampled CRC fingerprint (~every 16th row + top/bottom chrome) skips the upload when the virtual framebuffer is unchanged, so idle frames avoid ~8MB copies and GPU uploads. When the HUD does change (bounty UI, etc.), upload runs immediately without artificial delay. Removed unused URSINA_UI_UPLOAD_INTERVAL_SEC throttle fields from the hot path. qa_smoke --quick PASS.",
+            "summary_bullets": [
+              "Fog: bytearray + frombuffer instead of set_at per tile — removes multi-ms Python overhead on every fog texture rebuild.",
+              "Ursina: development_mode=False — less periodic main-thread work that could glitch the mixer.",
+              "HUD→GPU: row-sampled fingerprint skips tobytes/PIL/apply when pygame HUD pixels are unchanged; updates apply as soon as the fingerprint changes.",
+              "qa_smoke --quick PASS (exit 0)."
+            ],
+            "what_i_changed": [
+              "game/graphics/ursina_renderer.py: _fog_tile_buf, fog RGBA build via bytearray + frombuffer",
+              "game/graphics/ursina_app.py: development_mode False; _hud_quick_fingerprint; _refresh_ui_overlay_texture dedup; removed interval throttle state"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — idle 60s (music should not skip); place several bounties and confirm no multi-frame freeze beyond one compositing upload"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0
+            },
+            "agent_fields": {
+              "risks": "Row-sampled HUD fingerprint could theoretically miss a tiny mid-screen-only visual change between sampled rows; chrome rows 0–2 and bottom rows are always included."
+            }
+          }
+        },
+        "wk22_r3_path_hysteresis": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_path_hysteresis",
+          "round_meta": {
+            "prompt_set_id": "wk22_r3_final_polish_pm",
+            "build_target": "AI pathfinding hysteresis + A* throttle",
+            "sent_at_local": "2026-04-07"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK22 R3 Final Polish (Agent 10): Hero movement used (int(px), int(py)) as path goal key while AI set target_position from moving enemies every tick — sub-tile float jitter and pixel-boundary flicker forced compute_path_worldpoints repeatedly. Fix: _path_goal is now the destination grid tile from world.world_to_grid; replan only when that tile changes. Added PATH_REPLAN_MIN_INTERVAL_MS (120 sim ms) so rapid successive tile changes defer A* at most one interval while keeping the previous path. basic_ai handle_fighting: skip reassigning target_position when the chase goal tile is unchanged (same grid as previous target_position). Tunable in game/sim/hero_guardrails_tunables.py. qa_smoke --quick PASS; perf_benchmark sample ~1.34 ms/tick pathfinding line under load.",
+            "summary_bullets": [
+              "hero.py: grid goal key + sim-time min interval between A* replans when path exists and goal tile changed.",
+              "basic_ai.py: do not rewrite target_position each tick if chase goal tile unchanged.",
+              "hero_guardrails_tunables.py: PATH_REPLAN_MIN_INTERVAL_MS = 120"
+            ],
+            "what_i_changed": [
+              "game/entities/hero.py",
+              "ai/basic_ai.py",
+              "game/sim/hero_guardrails_tunables.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/perf_benchmark.py --seconds 10 --heroes 10 --enemies 15 --bounties 5 --seed 3"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0
+            },
+            "agent_fields": {
+              "note": "_target_commit_until_ms already used in behaviors for retargeting; chase micro-updates fixed separately via grid stability."
+            }
+          }
         }
       }
     }
