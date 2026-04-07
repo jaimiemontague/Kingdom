@@ -4901,6 +4901,13 @@
                         "09",
                         "10"
                     ]
+                },
+                "wk22_r3_mid_sprint_save": {
+                    "pm_status_summary": "WK22 R2 bugs verified fixed (trees, FPS, artifacts, duplications). Gates PASS. Performed mid-sprint commit. Holding off on version bump pending minor quality fixes.",
+                    "gates": {
+                        "qa_smoke": "PASS",
+                        "validate_assets": "PASS"
+                    }
                 }
             }
         }

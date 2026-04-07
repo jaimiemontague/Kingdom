@@ -43,16 +43,20 @@ class UrsinaApp:
         # Default shader: lit+shadows only when directional shadows are enabled (otherwise unlit = much cheaper).
         _ursina_shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
         Entity.default_shader = lit_with_shadows_shader if _ursina_shadows else unlit_shader
-        scene.fog_density = (0, 1_000_000)
-        from ursina import color as ucolor
+        # SPRINT-BUG-008: Ursina attaches linear Fog to the scene by default. Combined with
+        # lit_with_shadows_shader's own fog mix + a forest-green clear color, drivers often show
+        # thick horizontal banding in the upper view. Fog-of-war is handled by a floor quad in
+        # UrsinaRenderer — we do not need Panda scene fog here.
+        scene.clearFog()
 
-        scene.fog_color = ucolor.rgba(0, 0, 0, 0)
+        from ursina import color as ucolor
 
         from panda3d.core import LVecBase4f
         base = self.app
-        base.setBackgroundColor(LVecBase4f(34 / 255, 139 / 255, 34 / 255, 1))
+        # Neutral sky/clear color (was forest green; green bands read as "broken terrain").
+        base.setBackgroundColor(LVecBase4f(0.06, 0.07, 0.09, 1))
         try:
-            window.color = ucolor.rgb(34 / 255, 139 / 255, 34 / 255)
+            window.color = ucolor.rgb(0.06, 0.07, 0.09)
         except Exception:
             pass
 
@@ -100,6 +104,13 @@ class UrsinaApp:
             shader=unlit_shader,
             collision=False,
         )
+        # SPRINT-BUG-008: HUD is RGBA over the 3D layer — need proper alpha blend and no depth
+        # fighting with ui_render's depth buffer (otherwise half-screen black / garbage).
+        from panda3d.core import TransparencyAttrib
+
+        self.ui_overlay.setTransparency(TransparencyAttrib.M_alpha)
+        self.ui_overlay.set_depth_test(False)
+        self.ui_overlay.set_depth_write(False)
 
         if ai_controller_factory:
             self.engine.ai_controller = ai_controller_factory()
@@ -239,15 +250,22 @@ class UrsinaApp:
         ):
             return
 
-        raw_data = pygame.image.tostring(self.engine.screen, "RGBA")
+        raw_data = pygame.image.tobytes(self.engine.screen, "RGBA")
         img = Image.frombytes("RGBA", sz, raw_data)
         if self._hud_composite_texture is None or self._hud_composite_size != sz:
             self._hud_composite_texture = Texture(img, filtering=False)
             self._hud_composite_size = sz
             self.ui_overlay.texture = self._hud_composite_texture
         else:
-            self._hud_composite_texture._cached_image = img
-            self._hud_composite_texture.apply()
+            # If GPU texture size ever diverges, recreating avoids row-stride corruption (stripes).
+            tex = self._hud_composite_texture
+            if int(tex.width) != int(sz[0]) or int(tex.height) != int(sz[1]):
+                self._hud_composite_texture = Texture(img, filtering=False)
+                self._hud_composite_size = sz
+                self.ui_overlay.texture = self._hud_composite_texture
+            else:
+                tex._cached_image = img
+                tex.apply()
 
         if self._hud_upload_interval_sec > 0.0:
             self._hud_next_upload_at = now + self._hud_upload_interval_sec

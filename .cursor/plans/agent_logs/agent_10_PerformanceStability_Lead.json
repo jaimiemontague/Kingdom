@@ -983,6 +983,60 @@
               ]
             }
           }
+        },
+        "wk22_r3_hero_hire_fps_fix": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_hero_hire_fps_fix",
+          "round_meta": {
+            "prompt_set_id": "wk22_r3_antigravity",
+            "build_target": "SPRINT-BUG-006 hero-hire FPS cliff fix",
+            "sent_at_local": "2026-04-07T14:00:00"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "SPRINT-BUG-006 (hero-hire FPS cliff) RESOLVED. Root cause was NOT render-side shader/shadow costs (R2 addressed those). The actual bottleneck was the fog-of-war texture pipeline: (1) _update_fog_of_war rebuilt the full 22,500-tile visibility grid every tick even when no vision source moved; (2) _visibility_signature computed CRC32 over 22,500 tiles every Ursina frame; (3) the fog surface was 4800x4800 pixels (92MB per tobytes/PIL/GPU cycle). Fix was 4 layers: engine fog dirty-check with _fog_revision counter, renderer revision gate to skip CRC, tile-resolution fog surface (150x150 = 90KB, 1000x smaller), and grid-based entity separation (O(N^2)->O(N)). User confirmed smooth FPS after hero hire. qa_smoke --quick PASS.",
+            "summary_bullets": [
+              "Root cause: fog-of-war texture pipeline was the dominant cost — 92MB pygame surface rebuilt ~8 times/sec when heroes move.",
+              "Engine: _update_fog_of_war now caches revealer grid positions, skips world.update_visibility when no vision source crossed a tile boundary. Increments _fog_revision counter on actual changes.",
+              "Ursina renderer: _ensure_fog_overlay checks engine._fog_revision first — most frames are a single integer comparison (instant return, no CRC).",
+              "Fog texture shrunk from 4800x4800 (92MB) to 150x150 (90KB) — 1000x reduction in tobytes/PIL/GPU upload cost per rebuild.",
+              "Entity separation: O(N^2) nested loop replaced with spatial grid binning — each entity checks only 3x3 neighborhood cells.",
+              "Created tools/ursina_frame_profiler.py — differential profiler that measures per-subsystem costs before/after hero hires.",
+              "User confirmed fix resolves the FPS drop. qa_smoke --quick PASS (exit 0)."
+            ],
+            "what_i_changed": [
+              "game/engine.py: _update_fog_of_war dirty-check with _fog_revealers_snapshot + _fog_revision counter",
+              "game/engine.py: _apply_entity_separation O(N^2) -> spatial grid O(N)",
+              "game/graphics/ursina_renderer.py: _ensure_fog_overlay revision gate + tile-resolution fog surface (150x150 instead of 4800x4800)",
+              "game/graphics/ursina_renderer.py: _visibility_signature docstring update",
+              "tools/ursina_frame_profiler.py: NEW — differential frame profiler for hero-hire performance isolation"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/ursina_frame_profiler.py --max-hires 6",
+              "Manual: python main.py --renderer ursina — hire heroes, verify smooth FPS"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "ticket": "SPRINT-BUG-006",
+              "profiler_baseline_ms": 0.044,
+              "profiler_6heroes_ms": 0.570,
+              "fog_surface_before": "4800x4800 (92MB)",
+              "fog_surface_after": "150x150 (90KB)",
+              "user_confirmed": true
+            },
+            "agent_fields": {
+              "root_cause": "Fog-of-war texture pipeline: 92MB pygame surface (4800x4800) rebuilt per tile-crossing via tobytes+PIL+GPU upload. CRC32 over 22,500 tiles ran every frame. Engine rebuilt visibility every tick regardless of movement.",
+              "mitigations": [
+                "Engine fog dirty-check: skip visibility rebuild when no revealer crosses tile boundary",
+                "Engine _fog_revision counter: signals renderer when grid actually changes",
+                "Renderer revision gate: skip CRC32 + rebuild when engine reports no change",
+                "Tile-resolution fog: 150x150 surface (1px/tile) instead of 4800x4800 (TILE_SIZE px/tile) — 1000x smaller",
+                "Spatial grid entity separation: O(N) with small constant vs O(N^2)"
+              ]
+            }
+          }
         }
       }
     }

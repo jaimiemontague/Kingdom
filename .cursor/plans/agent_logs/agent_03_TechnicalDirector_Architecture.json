@@ -2674,6 +2674,37 @@
             },
             "blockers": []
           }
+        },
+        "wk22_r4_sprint_bug_008_ursina_stripes": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r4_sprint_bug_008_ursina_stripes",
+          "round_meta": {
+            "prompt_set_id": "wk22_r4",
+            "build_target": "SPRINT-BUG-008 Ursina green horizontal banding + half-screen black",
+            "sent_at_local": "2026-04-07T00:00:00"
+          },
+          "prompt_text": "PM: fix thick horizontal green lines (upper screen) and black lower half — camera/background, UI bridge, fog quad.",
+          "response": {
+            "received_at_local": "2026-04-07T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause 1: Panda3D scene Fog (linear) + lit_with_shadows_shader fog + forest-green clear produced driver-visible horizontal banding; removed with scene.clearFog().",
+              "Root cause 2: terrain floor y=0.002 vs fog quad y=0.006 — nearly coplanar at map scale → z-fighting stripes; terrain y=0, fog y=0.12 (config URSINA_FOG_QUAD_Y), fog render_queue=2.",
+              "UI: M_alpha + depth_test/depth_write off on camera.ui HUD quad; pygame.image.tobytes for RGBA upload; recreate Texture if GPU w/h != pygame size (stride corruption)."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: python main.py --renderer ursina — sky/clear neutral dark; no green stripe banding; HUD over full viewport; fog still darkens unseen tiles"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
         }
       }
     }
