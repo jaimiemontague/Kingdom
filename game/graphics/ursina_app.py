@@ -435,10 +435,11 @@ class UrsinaApp:
                 camera.x -= pan_speed * dt
             if hk["d"]:
                 camera.x += pan_speed * dt
+            # WK23 R1: W = pan north (up-screen / +world Z); S = south — matches player expectation.
             if hk["w"]:
-                camera.z -= pan_speed * dt
-            if hk["s"]:
                 camera.z += pan_speed * dt
+            if hk["s"]:
+                camera.z -= pan_speed * dt
 
         import __main__
 

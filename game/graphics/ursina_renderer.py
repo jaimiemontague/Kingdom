@@ -27,6 +27,7 @@ from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.tile_sprites import TileSpriteLibrary
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
+from game.graphics.vfx import get_projectile_billboard_surface
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 from game.world import Visibility
 
@@ -60,6 +61,9 @@ ENEMY_SCALE = 0.5
 PEASANT_SCALE = 0.3
 GUARD_SCALE_XZ = 0.5
 GUARD_SCALE_Y = 0.7
+
+# Ranged VFX billboards — keep smaller than hero sprites (~UNIT_BILLBOARD_SCALE 0.62)
+PROJECTILE_BILLBOARD_SCALE = 0.1
 
 
 def sim_px_to_world_xz(px_x: float, px_y: float) -> tuple[float, float]:
@@ -169,8 +173,6 @@ class UrsinaRenderer:
         self._fog_full_surf: pygame.Surface | None = None
         # RGBA tile buffer reused for fog rebuilds (WK22 R3 perf: avoid 22k pygame.set_at calls).
         self._fog_tile_buf: bytearray | None = None
-        self._fog_vis_signature: int | None = None
-        self._fog_next_allowed_at: float = 0.0
 
         # Status Text UI (2D overlay, not affected by world camera)
         self.status_text = Text(
@@ -183,6 +185,8 @@ class UrsinaRenderer:
 
         # WK22 R3: per-sim-object billboard animation (wall clock; consumes _render_anim_trigger).
         self._unit_anim_state: dict[int, dict] = {}
+        # WK23: single shared GPU texture for VFX projectiles (arrow-shaped, not yellow fallback).
+        self._projectile_tex = None
 
     def _unit_anim_surface(
         self,
@@ -194,10 +198,14 @@ class UrsinaRenderer:
         class_key: str,
     ) -> tuple[pygame.Surface, tuple]:
         """Pick hero/enemy frame from clips using triggers + base locomotion; time-based playback."""
-        trigger = getattr(entity, "_render_anim_trigger", None)
+        # Prefer snapshot from engine (see _update_render_animations): pygame clears _render_anim_trigger first.
+        trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
+            entity, "_render_anim_trigger", None
+        )
         if trigger:
             tname = str(trigger)
             if tname in clips:
+                setattr(entity, "_ursina_anim_trigger", None)
                 setattr(entity, "_render_anim_trigger", None)
                 base = base_clip_fn(entity)
                 self._unit_anim_state[obj_id] = {
@@ -207,6 +215,7 @@ class UrsinaRenderer:
                     "oneshot": not clips[tname].loop,
                 }
             else:
+                setattr(entity, "_ursina_anim_trigger", None)
                 setattr(entity, "_render_anim_trigger", None)
 
         base = base_clip_fn(entity)
@@ -245,38 +254,21 @@ class UrsinaRenderer:
     def _ensure_fog_overlay(self) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
 
-        WK22 Agent-10 perf fix:  The engine increments ``_fog_revision`` only when
-        the visibility grid actually changes (a hero crosses a tile boundary).
-        We compare against our cached revision to skip the expensive CRC32 and
-        surface rebuild on frames where nothing moved.  Combined with the
-        URSINA_FOG_MIN_UPDATE_INTERVAL_SEC throttle, this reduces fog cost from
-        ~0.5 ms/frame to near zero on idle frames.
+        WK22: Rebuild only when ``engine._fog_revision`` advances (revealer crossed a tile).
+
+        WK23 follow-up: removed throttle; removed CRC skip path; advance ``_fog_revision_seen`` only
+        after a successful GPU upload; fog quad uses ``set_depth_test(False)`` so the overlay tints
+        consistently (no depth rejects vs billboards).
         """
         if self._terrain_entity is None:
             return
 
         world = self.engine.world
 
-        # ---- Fast path: skip if engine reports no fog change ----
         engine_rev = getattr(self.engine, "_fog_revision", 0)
         my_rev = getattr(self, "_fog_revision_seen", -1)
         if engine_rev == my_rev and self._fog_entity is not None:
             return
-
-        # ---- Throttle: respect min update interval ----
-        now = time.perf_counter()
-        min_iv = float(getattr(config, "URSINA_FOG_MIN_UPDATE_INTERVAL_SEC", 0.0) or 0.0)
-        if self._fog_entity is not None and min_iv > 0.0 and now < self._fog_next_allowed_at:
-            return
-        self._fog_next_allowed_at = now + min_iv
-
-        # ---- Double-check with CRC (catches non-engine visibility mutations) ----
-        sig = _visibility_signature(world)
-        if sig == self._fog_vis_signature and self._fog_entity is not None:
-            self._fog_revision_seen = engine_rev
-            return
-        self._fog_vis_signature = sig
-        self._fog_revision_seen = engine_rev
 
         tw, th = int(world.width), int(world.height)
 
@@ -299,9 +291,17 @@ class UrsinaRenderer:
             buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
         vis_b = b"\x00\x00\x00\x00"
         seen_b = b"\x00\x00\x00\xaa"  # 170 alpha — matches 2D fog "seen" tint
+        # WK23 FIX: write rows in REVERSE sim-Y order so the texture's row-0
+        # corresponds to map-south (sim_py == th*ts).  sim_px_to_world_xz negates
+        # the Y axis (world_z = -py/SCALE), so map-south ends at world_z=0 (the
+        # +Z edge of the quad after rotation_x=90°).  Without this reversal the
+        # fog is mirrored North↔South and the lit circle tracks the wrong half of
+        # the map relative to where heroes actually stand.
         for ty in range(th):
             row = world.visibility[ty]
-            base = ty * tw * 4
+            # Map sim row ty → buf row (th-1-ty) to flip N/S in texture space.
+            buf_row = th - 1 - ty
+            base = buf_row * tw * 4
             for tx in range(tw):
                 st = row[tx]
                 if st == Visibility.VISIBLE:
@@ -316,14 +316,16 @@ class UrsinaRenderer:
 
         ftex = TerrainTextureBridge.refresh_surface_texture(surf, cache_key=_FOG_TEX_KEY)
         if ftex is None:
+            # Do not advance _fog_revision_seen — otherwise we never retry and fog stays stale.
             return
 
         ts = int(config.TILE_SIZE)
-        wpx, hpx = tw * ts, th * ts
-        w_world = wpx / SCALE
-        d_world = hpx / SCALE
-        cx_px = wpx * 0.5
-        cy_px = hpx * 0.5
+        # WK23 R1: Quad size + center MUST match _bake_terrain_floor() exactly — any drift
+        # misaligns fog vs terrain and makes FOW “slide” relative to heroes/units.
+        w_world = (tw * ts) / SCALE
+        d_world = (th * ts) / SCALE
+        cx_px = tw * ts * 0.5
+        cy_px = th * ts * 0.5
         wx, wz = sim_px_to_world_xz(cx_px, cy_px)
 
         from panda3d.core import TransparencyAttrib
@@ -347,6 +349,8 @@ class UrsinaRenderer:
             self._fog_entity.texture_offset = Vec2(0, 1)
             self._fog_entity.setTransparency(TransparencyAttrib.M_alpha)
             self._fog_entity.set_depth_write(False)
+            # Overlay must not depth-fail against billboards/terrain or FOW darkening desyncs visually.
+            self._fog_entity.set_depth_test(False)
             self._fog_entity.shader = unlit_shader
             self._fog_entity.hide(0b0001)
             self._fog_entity.render_queue = 2
@@ -356,6 +360,8 @@ class UrsinaRenderer:
             self._fog_entity.scale = (w_world, d_world, 1)
             self._fog_entity.texture_scale = Vec2(1, -1)
             self._fog_entity.texture_offset = Vec2(0, 1)
+
+        self._fog_revision_seen = engine_rev
 
     def _bake_terrain_floor(self) -> None:
         """One quad covering the map with a pygame terrain sheet → single texture."""
@@ -635,6 +641,8 @@ class UrsinaRenderer:
 
         # Peasants — billboards
         for p in gs["peasants"]:
+            if not getattr(p, "is_alive", True):
+                continue
             s = PEASANT_SCALE
             col = COLOR_PEASANT
             psurf = _worker_idle_surface("peasant")
@@ -662,6 +670,8 @@ class UrsinaRenderer:
 
         # Guards — billboards
         for g in gs["guards"]:
+            if not getattr(g, "is_alive", True):
+                continue
             col = COLOR_GUARD
             gsurf = _worker_idle_surface("guard")
             gtex = TerrainTextureBridge.surface_to_texture(
@@ -684,6 +694,42 @@ class UrsinaRenderer:
                 tint_col=col,
                 scale_xyz=(sxz, sy, 1),
                 pos_xyz=(wx, sy * 0.5, wz),
+                shader=sprite_unlit_shader,
+            )
+            active_ids.add(obj_id)
+
+        # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
+        if self._projectile_tex is None:
+            psurf = get_projectile_billboard_surface()
+            self._projectile_tex = TerrainTextureBridge.surface_to_texture(
+                psurf, cache_key=("ursina", "projectile_arrow_billboard_v1")
+            )
+        ptex = self._projectile_tex
+        vfx = getattr(self.engine, "vfx_system", None)
+        for proj in gs.get("projectiles") or (
+            vfx.get_active_projectiles() if vfx is not None else []
+        ):
+            s = PROJECTILE_BILLBOARD_SCALE
+            ent, obj_id = self._get_or_create_entity(
+                proj,
+                model="quad",
+                col=color.white,
+                scale=(s, s, 1),
+                texture=ptex,
+                billboard=True,
+            )
+            if not getattr(ent, "_ks_billboard_configured", False):
+                ent.model = "quad"
+                ent.billboard = True
+                self._apply_pixel_billboard_settings(ent)
+                ent._ks_billboard_configured = True
+            wx, wz = sim_px_to_world_xz(proj.x, proj.y)
+            self._sync_billboard_entity(
+                ent,
+                tex=ptex,
+                tint_col=color.white,
+                scale_xyz=(s, s, 1),
+                pos_xyz=(wx, s * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)

@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.4.7"
-    game_title: str = "Kingdom Sim (Prototype v1.4.7) — 3D Visual Polish"
+    prototype_version: str = "1.4.8"
+    game_title: str = "Kingdom Sim (Prototype v1.4.8) — The Stable Ursina Update"
     default_borderless: bool = True
 
 
@@ -428,7 +428,7 @@ ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
 # Shadow maps are expensive; keep off by default for playable FPS (set True for screenshots).
 URSINA_DIRECTIONAL_SHADOWS = False
 URSINA_SHADOW_MAP_SIZE = 512
-# Min seconds between full-map fog texture rebuilds (heroes exploring can thrash visibility).
+# Legacy (WK23): Ursina fog no longer throttles on this — stale 3D fog desynced from minimap/pygame.
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
 # Legacy: Ursina HUD GPU upload is now skipped via row-sampled CRC when pixels are unchanged (ursina_app).
 URSINA_UI_UPLOAD_INTERVAL_SEC = 0.10

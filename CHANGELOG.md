@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.4.8 — The Stable Ursina Update
+
+### WK23 Sprint: Final Bug Hunt & Polish
+- **Projectiles & Animations:** Added missing projectile rendering loop and ensured combat animations trigger correctly.
+- **Worker Sprites:** Added `is_alive` check to peasants and guards to prevent persistent dead duplicates.
+- **Camera Controls:** Inverted W/S pan keys to match North/South world navigation intuitively.
+- **Fog of War:** Corrected Fog quad coordinate alignments to flawlessly overlap the terrain mesh without offsets.
+
 ## Prototype v1.4.7 — 3D Visual Polish
 
 ### WK21 Sprint: 3D Aesthetic Parity

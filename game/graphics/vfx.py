@@ -34,6 +34,16 @@ class ProjectileVFX:
     tip_color: Tuple[int, int, int]  # Bright tip pixel
     size_px: int  # 1, 2, or 3 pixels (default 2)
 
+    @property
+    def x(self) -> float:
+        """World pixel X (matches VFX render interpolation; Ursina billboards use this)."""
+        return self.from_x + (self.to_x - self.from_x) * self.progress
+
+    @property
+    def y(self) -> float:
+        """World pixel Y (matches VFX render interpolation)."""
+        return self.from_y + (self.to_y - self.from_y) * self.progress
+
 
 @dataclass
 class DebrisDecal:
@@ -61,6 +71,10 @@ class VFXSystem:
         self._projectiles: List[ProjectileVFX] = []
         self._debris: List[DebrisDecal] = []  # WK5 Build B: building debris decals
         self.enabled = True
+
+    def get_active_projectiles(self) -> List[ProjectileVFX]:
+        """Snapshot for external renderers (e.g. Ursina 3D) without exposing private lists."""
+        return list(self._projectiles)
 
     def emit_from_events(self, events: list[dict]):
         if not self.enabled:
@@ -397,4 +411,24 @@ class VFXSystem:
                 size = 2 + rnd.randint(0, 1)  # 2-3px (was 1-2px)
                 pygame.draw.rect(surface, debris_color, pygame.Rect(px, py, size, size))
 
+
+# Cached 32×32 arrow for Ursina 3D billboards (WK5 palette: wood shaft + bright tip).
+_PROJ_BILLBOARD_CACHE: pygame.Surface | None = None
+
+
+def get_projectile_billboard_surface() -> pygame.Surface:
+    """RGBA sprite matching 2D ranged VFX (SaddleBrown shaft + near-white tip)."""
+    global _PROJ_BILLBOARD_CACHE
+    if _PROJ_BILLBOARD_CACHE is not None:
+        return _PROJ_BILLBOARD_CACHE
+    s = 32
+    surf = pygame.Surface((s, s), pygame.SRCALPHA)
+    brown = (139, 69, 19, 255)
+    tip = (245, 245, 245, 255)
+    cy = s // 2
+    pygame.draw.line(surf, brown, (4, cy), (18, cy), 4)
+    pygame.draw.polygon(surf, tip, [(18, cy), (28, cy - 8), (28, cy + 8)])
+    pygame.draw.polygon(surf, brown, [(16, cy), (22, cy - 5), (22, cy + 5)])
+    _PROJ_BILLBOARD_CACHE = surf
+    return surf
 

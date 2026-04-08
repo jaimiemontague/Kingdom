@@ -311,9 +311,10 @@ class GameEngine:
 
         # ---- Dirty check: skip update if no revealer moved a full tile ----
         # Build a canonical snapshot of (grid_x, grid_y, radius) for comparison.
+        # Sort so list order (heroes vs buildings iteration) cannot spuriously skip updates.
         w2g = self.world.world_to_grid
         grid_snapshot = tuple(
-            (w2g(wx, wy)[0], w2g(wx, wy)[1], r) for wx, wy, r in revealers
+            sorted((w2g(wx, wy)[0], w2g(wx, wy)[1], r) for wx, wy, r in revealers)
         )
         prev = getattr(self, "_fog_revealers_snapshot", None)
         if prev is not None and prev == grid_snapshot:
@@ -1110,6 +1111,17 @@ class GameEngine:
         """Advance render-only entity animation state."""
         if self.headless:
             return
+        # Ursina runs after this call; pygame HeroRenderer/EnemyRenderer clear
+        # _render_anim_trigger here. Snapshot one-shots so Ursina billboards can still play attack/hurt.
+        if getattr(self, "_ursina_skip_world_render", False):
+            for hero in self.heroes:
+                t = getattr(hero, "_render_anim_trigger", None)
+                if t:
+                    hero._ursina_anim_trigger = str(t)
+            for enemy in self.enemies:
+                t = getattr(enemy, "_render_anim_trigger", None)
+                if t:
+                    enemy._ursina_anim_trigger = str(t)
         self.renderer_registry.update_animations(
             dt=dt,
             heroes=self.heroes,

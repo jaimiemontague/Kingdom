@@ -2387,6 +2387,74 @@
           ]
         }
       }
+    },
+    "wk23-final-bug-hunt": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md",
+        "notes": "WK23 R1: Ursina projectiles; peasant/guard alive gating (Agent 09). Camera W/S and fog alignment: Agent 03."
+      },
+      "rounds": {
+        "wk23_r1_final_bug_hunt": {
+          "sprint_id": "wk23-final-bug-hunt",
+          "round_id": "wk23_r1_final_bug_hunt",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK23 R1 (Agent 09): Bug 1 — Ursina update() now draws VFX projectiles as yellow billboard quads (sprite_unlit_shader), positioned with ProjectileVFX interpolated x/y. Added ProjectileVFX.x/.y properties + VFXSystem.get_active_projectiles(); renderer uses gs.get('projectiles') or vfx snapshot. Ensures billboard settings on first frame (_ks_billboard_configured). Bug 2 — peasants and guards loops skip entities with is_alive False so dead workers do not leave stale Ursina quads.",
+            "files": [
+              "game/graphics/vfx.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "details": [
+              "ProjectileVFX: @property x/y = from + (to-from)*progress (matches pygame VFX render).",
+              "Ursina: projectile block immediately before heroes_alive status line."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — ranged combat shows yellow projectile billboards; kill peasant — billboard removed"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: WK23 plan Bug 3 (W/S pan) and Bug 4 (fog/terrain alignment) — not Agent 09 scope."
+          ]
+        },
+        "wk23_r2_ursina_melee_and_projectile_art": {
+          "sprint_id": "wk23-final-bug-hunt",
+          "round_id": "wk23_r2_ursina_melee_and_projectile_art",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Melee/hurt one-shots missing in Ursina: pygame HeroRenderer/EnemyRenderer ran in engine._update_render_animations and cleared _render_anim_trigger before UrsinaRenderer.update(). Fix: engine snapshots _render_anim_trigger to _ursina_anim_trigger (heroes+enemies) when _ursina_skip_world_render; Ursina _unit_anim_surface reads _ursina_anim_trigger first and clears both. Projectiles: replaced yellow fallback with get_projectile_billboard_surface() (WK5 brown+tip) uploaded once as _projectile_tex.",
+            "files": [
+              "game/engine.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/vfx.py"
+            ],
+            "details": [
+              "game/engine.py _update_render_animations: copy triggers before registry.update_animations."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina — melee swing visible; arrows show brown/white sprite"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": []
+        }
+      }
     }
   }
 }

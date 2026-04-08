@@ -2762,6 +2762,125 @@
           }
         }
       }
+    },
+    "wk23-r1-bug-hunt": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md",
+        "notes": "WK23 R1 Agent 03: Ursina W/S pan + fog quad alignment with terrain bake"
+      },
+      "rounds": {
+        "wk23_r1_agent03": {
+          "sprint_id": "wk23-r1-bug-hunt",
+          "round_id": "wk23_r1_agent03",
+          "round_meta": {
+            "prompt_set_id": "wk23_r1",
+            "build_target": "Bug 3 camera W/S; Bug 4 fog/terrain world extents + center match _bake_terrain_floor",
+            "sent_at_local": "2026-04-07T00:00:00"
+          },
+          "prompt_text": "PM WK23 R1: swap W/S pan; fog overlay dimensions/center match _bake_terrain_floor exactly.",
+          "response": {
+            "received_at_local": "2026-04-07T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Bug 3 (ursina_app): W increases camera.z, S decreases — pan north matches up-screen expectation.",
+              "Bug 4 (ursina_renderer _ensure_fog_overlay): w_world/d_world/cx_px/cy_px/wx,wz now use the same expressions as _bake_terrain_floor (tw*ts, th*ts) so fog quad aligns with terrain — no phantom offset vs units."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — W pans north; hero FOW disc tracks billboard"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "coordination_notes": [
+              "Plan Bugs 1–2 (projectiles, peasants/guards is_alive) owned by Agent 09 per plan"
+            ],
+            "blockers": []
+          }
+        },
+        "wk23_r2_fog_throttle_desync": {
+          "sprint_id": "wk23-r1-bug-hunt",
+          "round_id": "wk23_r2_fog_throttle_desync",
+          "round_meta": {
+            "build_target": "Ursina fog texture must match world.visibility same frame as pygame/minimap",
+            "sent_at_local": "2026-04-07T00:00:00"
+          },
+          "prompt_text": "Human: ranger half in 3D black fog while top-right minimap shows area visible.",
+          "response": {
+            "received_at_local": "2026-04-07T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: after engine_rev != my_rev, _ensure_fog_overlay still returned early on URSINA_FOG_MIN_UPDATE_INTERVAL_SEC (0.12s) — GPU fog lagged world.visibility used by render_fog/minimap.",
+              "Fix: remove wall-clock throttle for fog rebuild; keep revision fast path + CRC skip. config comment marks URSINA_FOG_MIN_UPDATE_INTERVAL_SEC legacy."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py",
+              "config.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — move ranger at fog edge; 3D cleared tiles match minimap"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        },
+        "wk23_r1_fow_ns_fix": {
+          "sprint_id": "wk23-final-bug-hunt",
+          "sprint_meta": { "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md" },
+          "round_id": "wk23_r1_fow_ns_fix",
+          "round_meta": { "sent_at_local": "2026-04-07T19:01:00" },
+          "prompt_text": "Bug 4: Fog of War circle does not track hero positions — lit circles appear at wrong location in Ursina. Fix N/S alignment.",
+          "response": {
+            "received_at_local": "2026-04-07T19:01:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: fog bytearray was written top-to-bottom (sim row 0 = north at buf offset 0).  sim_px_to_world_xz negates Y (world_z = -py/SCALE) so world-north is at larger Z. After rotation_x=90 the quad's local +Y becomes world +Z, meaning buf row 0 (north) landed at the south end of the quad — a complete N/S mirror.",
+              "Fix: write fog buffer rows in reverse sim-Y order (buf_row = th-1-ty) so texture row 0 = map-south, which correctly aligns with the quad's -Z edge after rotation.",
+              "No UV flip changes needed; existing texture_scale Vec2(1,-1) / texture_offset Vec2(0,1) pair is still correct for the Panda3D implicit flip."
+            ],
+            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — hire a hero, confirm the illuminated circle tracks the hero billboard precisely"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        },
+        "wk23_r1_camera_ws_confirmed": {
+          "sprint_id": "wk23-final-bug-hunt",
+          "sprint_meta": { "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md" },
+          "round_id": "wk23_r1_camera_ws_confirmed",
+          "round_meta": { "sent_at_local": "2026-04-07T19:26:00" },
+          "prompt_text": "Bug 3: W/S camera pan keys inverted — W should pan north (up-screen / +world Z), S should pan south.",
+          "response": {
+            "received_at_local": "2026-04-07T19:26:00",
+            "status": "complete",
+            "summary_bullets": [
+              "No code change required. Manual verification by Jaimie confirmed W pans north and S pans south correctly.",
+              "ursina_app.py lines 439-442 already contain the correct arithmetic (camera.z += pan_speed * dt for W; camera.z -= pan_speed * dt for S) — fix was landed in a prior session.",
+              "Bug 3 closed — no regression."
+            ],
+            "files_changed": [],
+            "how_to_test": [
+              "python main.py --renderer ursina — press W and confirm view pans north (up-screen); press S and confirm south."
+            ],
+            "evidence": {
+              "manual_verification": { "by": "Jaimie", "result": "PASS", "confirmed_at": "2026-04-07T19:26:00" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }
