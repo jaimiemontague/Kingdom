@@ -2881,6 +2881,38 @@
           }
         }
       }
+    },
+    "wk24-ui-and-renderer-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk24_ui_and_renderer_polish.plan.md",
+        "notes": "WK24 R1: try_hire_hero / H hotkey (WK24-BUG-008)"
+      },
+      "rounds": {
+        "wk24_r1_execution": {
+          "sprint_id": "wk24-ui-and-renderer-polish",
+          "round_id": "wk24_r1_execution",
+          "round_meta": { "sent_at_local": "2026-04-08T00:00:00" },
+          "prompt_text": "WK24-BUG-008: H hotkey / try_hire_hero — auto-pick valid constructed guild when none selected or selection unusable.",
+          "response": {
+            "received_at_local": "2026-04-08T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "try_hire_hero: single _is_hirable_guild predicate (guild type + getattr(is_constructed, True), aligned with Building base + building_panel).",
+              "Use selected guild only when hirable; if None, non-guild, or unconstructed guild, scan self.buildings for first hirable guild.",
+              "Removed dead under-construction branch after resolving guild through predicate."
+            ],
+            "files_changed": ["game/engine.py"],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --no-llm — with a finished guild on map, press H without selecting any building; hire should succeed"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

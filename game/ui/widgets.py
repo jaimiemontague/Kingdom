@@ -218,7 +218,14 @@ class Button:
         hotkey_border: tuple[int, int, int] = (80, 80, 100),
     ) -> bool:
         effective_enabled = self.enabled if enabled is None else bool(enabled)
-        hovered = bool(mouse_pos is not None and self.rect.collidepoint(mouse_pos))
+        if mouse_pos is not None:
+            try:
+                mx, my = int(mouse_pos[0]), int(mouse_pos[1])
+            except Exception:
+                mx, my = 0, 0
+            hovered = bool(self.rect.collidepoint((mx, my)))
+        else:
+            hovered = False
         draw_pressed = bool(pressed and hovered and effective_enabled)
 
         if not effective_enabled:
@@ -552,6 +559,13 @@ class Slider:
         thumb_x = int(self.rect.x + self.value * (self.rect.width - self.thumb_size))
         thumb_rect = pygame.Rect(thumb_x, self.rect.y, self.thumb_size, self.rect.height)
         return thumb_rect.collidepoint(pos)
+
+    def hit_test_interactive(self, pos: tuple[int, int]) -> bool:
+        """Thumb or full track, with extra vertical padding for easier grabs (WK24)."""
+        if self.hit_test_thumb(pos):
+            return True
+        expanded = self.rect.inflate(0, 18)
+        return expanded.collidepoint(pos)
     
     def set_value_from_x(self, x: int):
         """Set value from screen X coordinate."""
@@ -599,15 +613,20 @@ class RadioGroup:
     def render(self, surface: pygame.Surface, font: pygame.font.Font, x: int, y: int, width: int, 
                text_color: tuple[int, int, int] = (255, 255, 255),
                selected_color: tuple[int, int, int] = (100, 150, 200),
-               bg_color: tuple[int, int, int] = (50, 50, 60)):
-        """Render radio group options."""
+               bg_color: tuple[int, int, int] = (50, 50, 60),
+               mouse_pos: tuple[int, int] | None = None):
+        """Render radio group options. Optional mouse_pos enables hover highlight."""
+        hover_bg = (62, 62, 74)
         for i, (label, value) in enumerate(self.options):
             rect = self.get_option_rect(i, x, y, width)
             is_selected = (value == self.selected_value)
+            hovered = mouse_pos is not None and rect.collidepoint(mouse_pos[0], mouse_pos[1])
             
             # Background
             if is_selected:
                 pygame.draw.rect(surface, selected_color, rect)
+            elif hovered:
+                pygame.draw.rect(surface, hover_bg, rect)
             else:
                 pygame.draw.rect(surface, bg_color, rect)
             

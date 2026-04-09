@@ -1,6 +1,9 @@
 {
   "schema_version": "2.0",
-  "agent": { "id": "06", "name": "AIBehaviorDirector_LLM" },
+  "agent": {
+    "id": "06",
+    "name": "AIBehaviorDirector_LLM"
+  },
   "notes": [
     "This file is owned by Agent 06 only.",
     "Structure nests rounds inside sprints to keep history organized."
@@ -93,8 +96,7 @@
           }
         }
       }
-    }
-    ,
+    },
     "wk2-hero-polish-ai-sprites": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk2-hero-polish-ai-sprites_5318e148.plan.md",
@@ -166,8 +168,7 @@
               ]
             }
           }
-        }
-        ,
+        },
         "wk2_r2": {
           "sprint_id": "wk2-hero-polish-ai-sprites",
           "sprint_meta": {
@@ -236,8 +237,7 @@
               ]
             }
           }
-        }
-        ,
+        },
         "wk2_r3": {
           "sprint_id": "wk2-hero-polish-ai-sprites",
           "sprint_meta": {
@@ -766,8 +766,7 @@
             }
           }
         }
-      }
-      ,
+      },
       "v1.3.4-bug-fix-sprint": {
         "sprint_meta": {
           "plan_ref": ".cursor/plans/v1.3.4_bug_fix_sprint_09d3e38c.plan.md",
@@ -950,7 +949,38 @@
           }
         }
       }
+    },
+    "wk24-ui-and-renderer-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk24_ui_and_renderer_polish.plan.md",
+        "notes": "WK24 R1: WK24-BUG-007 marketplace dwell time (task durations + buy_potion roll)."
+      },
+      "rounds": {
+        "wk24_r1_execution": {
+          "sprint_id": "wk24-ui-and-renderer-polish",
+          "round_id": "wk24_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk24_r1_execution_v2",
+            "build_target": "Ursina Polish",
+            "sent_at_local": "2026-04-08"
+          },
+          "prompt_text": "WK24-BUG-007: Tighten TASK_DURATION_RANGES; use buy_potion roll for marketplace arrivals.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "ai/behaviors/task_durations.py: Documented WK24 targets buy_potion (3,6)s and shopping (4,8)s per plan; clarified shopping comment for blacksmith path.",
+              "ai/behaviors/bounty_pursuit.py: On shopping arrival, roll buy_potion duration when hero.target has marketplace; blacksmith uses shopping. pending_task remains shopping for do_shopping finalize."
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": [
+              "python tools/qa_smoke.py --quick => PASS (exit_code=0); determinism_guard PASS; pytest 85 passed; observe_sync profiles PASS"
+            ],
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }
-

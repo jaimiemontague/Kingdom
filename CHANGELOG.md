@@ -1,5 +1,14 @@
 # Changelog
 
+## Prototype v1.4.9 — Most Ursina Major Bugs Fixed
+
+### WK24 Sprint: UI & Renderer Polish
+- **Ursina visibility & units:** Enemies no longer draw on tiles that are not fully visible in fog; peasant billboards are larger for readability; tax collectors render as billboards; heroes using the “inside” presentation layer correctly composite over building façades.
+- **Ursina + pause / display:** Graphics mode changes from the ESC menu drive the real Ursina window (borderless desktop-sized “fullscreen”, borderless, or windowed) without relying on a dummy SDL surface; raycast routing treats pause/menu as HUD-only so clicks and hover stay reliable.
+- **HUD & panels:** End Conversation and close actions clear hero focus, chat, and selection consistently; chat works when input events lack raw pygame events (Ursina path); mouse wheel zoom is suppressed while chatting; pause menu sliders respect mouse button state, controls text wraps, and layout stays aligned on resize.
+- **Hire hotkey:** **H** can hire from a constructed guild even when no guild was pre-selected (auto-picks a valid guild like the command bar).
+- **Shopping pacing:** Shorter visit durations for marketplace and blacksmith interactions; potion runs use a dedicated shorter band so heroes do not idle excessively in shops.
+
 ## Prototype v1.4.8 — The Stable Ursina Update
 
 ### WK23 Sprint: Final Bug Hunt & Polish

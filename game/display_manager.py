@@ -12,11 +12,89 @@ if TYPE_CHECKING:
     from game.engine import GameEngine
 
 
+def _ursina_desktop_size() -> tuple[int, int]:
+    """Primary monitor size for borderless / faux-fullscreen (SDL dummy may lie — fall back)."""
+    try:
+        sizes = pygame.display.get_desktop_sizes()
+        if sizes:
+            w, h = int(sizes[0][0]), int(sizes[0][1])
+            if w > 100 and h > 100:
+                return max(800, w), max(600, h)
+    except Exception:
+        pass
+    try:
+        info = pygame.display.Info()
+        w = int(getattr(info, "current_w", 0) or 0)
+        h = int(getattr(info, "current_h", 0) or 0)
+        if w > 100 and h > 100:
+            return w, h
+    except Exception:
+        pass
+    return 1920, 1080
+
+
 class DisplayManager:
     """Apply and coordinate runtime display mode changes."""
 
     def __init__(self, engine: "GameEngine"):
         self.engine = engine
+
+    @staticmethod
+    def apply_ursina_window(engine: "GameEngine", display_mode: str, window_size: tuple[int, int] | None = None) -> None:
+        """Switch Ursina/Panda window mode when the game uses headless pygame (SDL dummy) + Ursina viewer."""
+        try:
+            from ursina import window
+        except Exception:
+            return
+
+        dm = str(display_mode).strip().lower()
+        if window_size is not None:
+            engine.window_size = (max(320, int(window_size[0])), max(240, int(window_size[1])))
+        engine.display_mode = dm
+
+        try:
+            engine._skip_event_processing_frames = 10
+        except Exception:
+            pass
+
+        try:
+            # Never use window.fullscreen=True here: on Windows it can leave a stray window,
+            # break Panda mouse routing to the pygame HUD, and duplicate taskbar entries.
+            # "Fullscreen" = borderless + desktop-sized client (same class of fix as many games).
+            if dm == "fullscreen":
+                window.fullscreen = False
+                window.borderless = True
+                dw, dh = _ursina_desktop_size()
+                window.size = (dw, dh)
+                if hasattr(window, "center_on_screen"):
+                    window.center_on_screen()
+            elif dm == "borderless":
+                window.fullscreen = False
+                window.borderless = True
+                dw, dh = _ursina_desktop_size()
+                window.size = (dw, dh)
+                if hasattr(window, "center_on_screen"):
+                    window.center_on_screen()
+            elif dm == "windowed":
+                window.fullscreen = False
+                window.borderless = False
+                w, h = int(engine.window_size[0]), int(engine.window_size[1])
+                window.size = (w, h)
+            if hasattr(window, "apply_settings"):
+                window.apply_settings()
+            if hasattr(window, "update_aspect_ratio"):
+                window.update_aspect_ratio()
+        except Exception:
+            pass
+
+        try:
+            w, h = int(window.size[0]), int(window.size[1])
+        except Exception:
+            w, h = int(getattr(engine, "window_width", 1280)), int(getattr(engine, "window_height", 720))
+        engine.window_width = w
+        engine.window_height = h
+        engine.window_size = (w, h)
+        DisplayManager.apply_headless_ui_canvas_size(engine, w, h)
 
     @staticmethod
     def apply_headless_ui_canvas_size(engine: "GameEngine", width: int, height: int) -> None:

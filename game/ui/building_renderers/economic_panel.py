@@ -9,6 +9,13 @@ from game.ui.building_renderers import render_occupants
 from game.ui.widgets import Button, HPBar
 
 
+def _request_live_hud_upload_for_ursina(panel) -> None:
+    """Ursina skips GPU HUD refresh when a row-sampled CRC is unchanged; thin progress bars often miss samples."""
+    eng = getattr(panel, "engine", None)
+    if eng is not None:
+        setattr(eng, "_ursina_hud_force_upload", True)
+
+
 class EconomicPanelRenderer:
     """Renderer for marketplace, blacksmith, inn, and trading post."""
 
@@ -68,6 +75,7 @@ class EconomicPanelRenderer:
                         "border": (20, 20, 25),
                     },
                 )
+                _request_live_hud_upload_for_ursina(panel)
                 panel.research_button_rect = None
                 y += 22
             else:
@@ -195,6 +203,7 @@ class EconomicPanelRenderer:
                         "border": (20, 20, 25),
                     },
                 )
+                _request_live_hud_upload_for_ursina(panel)
                 panel.blacksmith_research_rects[option["key"]] = pygame.Rect(0, 0, 0, 0)
                 y += 22
                 continue

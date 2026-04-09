@@ -296,3 +296,38 @@ class ChatPanel:
                 self._input_text = self._input_text[:200]
             return None
         return None
+
+    def handle_generic_keydown(self, key: str | None, mods: dict | None) -> str | None:
+        """Handle KEYDOWN when no pygame ``raw_event`` (e.g. Ursina InputEvent). Consumes game hotkeys."""
+        if not self.is_active():
+            return None
+        mods = mods or {}
+        k = (key or "").strip().lower()
+        if k in ("esc", "escape"):
+            return "end_conversation"
+        if k in ("enter", "return"):
+            if self._input_text.strip():
+                text = self._input_text.strip()
+                self._input_text = ""
+                self.send_message(text)
+                return "send_message"
+            return None
+        if k == "backspace":
+            self._input_text = self._input_text[:-1]
+            return None
+        if k == "tab":
+            return None
+        if k == "space":
+            self._input_text += " "
+            if len(self._input_text) > 200:
+                self._input_text = self._input_text[:200]
+            return None
+        if len(k) == 1:
+            ch = k
+            if ch.isalpha() and mods.get("shift"):
+                ch = ch.upper()
+            self._input_text += ch
+            if len(self._input_text) > 200:
+                self._input_text = self._input_text[:200]
+            return None
+        return None

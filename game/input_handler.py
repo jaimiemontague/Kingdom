@@ -67,8 +67,19 @@ class InputHandler:
                 self.handle_mousemove(event)
 
             elif event.type == 'WHEEL':
-                # Do not zoom while paused / menu open.
-                if engine.paused or engine.pause_menu.visible:
+                # Pause menu: Controls page uses wheel to scroll the keybind list.
+                if engine.pause_menu.visible:
+                    if getattr(engine.pause_menu, "current_page", "") == "controls":
+                        wy = int(event.wheel_y or 0)
+                        if wy != 0:
+                            engine.pause_menu.handle_wheel(wy)
+                    continue
+                # Chat typing: do not zoom the world (same as blocking hotkeys in handle_keydown).
+                _cp = getattr(engine.hud, "_chat_panel", None)
+                if _cp is not None and getattr(_cp, "is_active", lambda: False)():
+                    continue
+                # Do not zoom while paused without menu.
+                if engine.paused:
                     continue
                 # event.wheel_y: +1 scroll up, -1 scroll down
                 if event.wheel_y > 0:
@@ -130,13 +141,13 @@ class InputHandler:
             micro_view = getattr(engine, "micro_view", None)
             mode = getattr(micro_view, "mode", None) if micro_view else None
 
-            # wk18: If in HERO_FOCUS, exit the mode + chat entirely
+            # wk18: If in HERO_FOCUS, exit chat then hero focus (same order as _clear_hero_selection)
             if mode == ViewMode.HERO_FOCUS:
-                if micro_view:
-                    micro_view.exit_hero_focus()
                 chat_panel = getattr(engine.hud, "_chat_panel", None)
                 if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
                     chat_panel.end_conversation()
+                if micro_view:
+                    micro_view.exit_hero_focus()
                 return
 
             # wk14: close chat first if active
@@ -173,16 +184,25 @@ class InputHandler:
 
         # wk14: when chat is active, consume ALL keystrokes (typing, Enter, etc.)
         # Must run before pause/menu checks so chat works even at low speed tiers.
+        # Ursina queues InputEvent(KEYDOWN) without pygame raw_event — use generic key path.
         chat_panel = getattr(engine.hud, "_chat_panel", None)
         if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
+            result = None
             if event.raw_event:
                 result = chat_panel.handle_keydown(event.raw_event)
-                if result == "send_message":
-                    text = getattr(chat_panel, "get_pending_message", lambda: "")()
-                    if text and getattr(chat_panel, "hero_target", None) is not None:
-                        engine.send_player_message(chat_panel.hero_target, text)
-                elif result == "end_conversation":
-                    chat_panel.end_conversation()
+            else:
+                mods = (
+                    engine.input_manager.get_key_mods()
+                    if getattr(engine, "input_manager", None)
+                    else {}
+                )
+                result = chat_panel.handle_generic_keydown(event.key, mods)
+            if result == "send_message":
+                text = getattr(chat_panel, "get_pending_message", lambda: "")()
+                if text and getattr(chat_panel, "hero_target", None) is not None:
+                    engine.send_player_message(chat_panel.hero_target, text)
+            elif result == "end_conversation":
+                chat_panel.end_conversation()
             return
 
         # Block world input when menu is open
@@ -301,6 +321,16 @@ class InputHandler:
             idx = min(len(SPEED_TIERS) - 1, idx + 1)
             set_time_multiplier(SPEED_TIERS[idx])
 
+    def _clear_hero_selection(self):
+        """Helper to clear hero selection and close chat/focus panels."""
+        chat_panel = getattr(self.engine.hud, "_chat_panel", None)
+        if chat_panel is not None:
+            chat_panel.end_conversation()
+        micro_view = getattr(self.engine, "micro_view", None)
+        if micro_view is not None:
+            micro_view.exit_hero_focus()
+        self.engine.selected_hero = None
+
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
         engine = self.engine
@@ -326,12 +356,17 @@ class InputHandler:
         if engine.paused:
             return
 
+        _cp = getattr(engine.hud, "_chat_panel", None)
+        _chat_on = _cp is not None and getattr(_cp, "is_active", lambda: False)()
+
         # Mouse wheel zoom (older pygame uses buttons 4/5)
         if event.button == 4:
-            engine.zoom_by(ZOOM_STEP)
+            if not _chat_on:
+                engine.zoom_by(ZOOM_STEP)
             return
         if event.button == 5:
-            engine.zoom_by(1.0 / ZOOM_STEP)
+            if not _chat_on:
+                engine.zoom_by(1.0 / ZOOM_STEP)
             return
 
         if event.button == 1:  # Left click
@@ -345,7 +380,7 @@ class InputHandler:
                         engine.running = False
                         return
                     if action == "close_selection":
-                        engine.selected_hero = None
+                        self._clear_hero_selection()
                         engine.building_panel.deselect()
                         engine.selected_building = None
                         engine.selected_peasant = None
@@ -380,9 +415,7 @@ class InputHandler:
                                 engine.hud._micro_view.enter_hero_focus(hero)
                         return
                     if action == "end_conversation":
-                        chat_panel = getattr(engine.hud, "_chat_panel", None)
-                        if chat_panel is not None:
-                            chat_panel.end_conversation()
+                        self._clear_hero_selection()
                         return
                     if action == "build_menu_toggle":
                         # Open Build Catalog (centered grid) — same UI as castle "Build Buildings"
@@ -529,13 +562,13 @@ class InputHandler:
                     engine.selected_building = None
                     engine.selected_peasant = None
                 elif engine.try_select_peasant(event.pos):
-                    engine.selected_hero = None
+                    self._clear_hero_selection()
                 elif engine.try_select_building(event.pos):
-                    engine.selected_hero = None
+                    self._clear_hero_selection()
                     engine.selected_peasant = None
                 else:
                     # Clicked on empty space
-                    engine.selected_hero = None
+                    self._clear_hero_selection()
                     engine.building_panel.deselect()
                     engine.selected_building = None
                     engine.selected_peasant = None
@@ -552,9 +585,23 @@ class InputHandler:
         except Exception:
             pass
 
-        # Menu slider dragging
+        # Menu slider dragging (only while LMB held — matches pygame.buttons / Ursina mouse.left)
         if engine.pause_menu.visible:
-            engine.pause_menu.handle_mousemove(event.pos)
+            lmb_held = True
+            if getattr(event, "buttons", None) is not None:
+                lmb_held = bool(event.buttons[0])
+            elif getattr(event, "raw_event", None) is not None:
+                re = event.raw_event
+                if hasattr(re, "buttons") and re.buttons is not None:
+                    lmb_held = bool(re.buttons[0])
+            else:
+                try:
+                    import pygame
+
+                    lmb_held = bool(pygame.mouse.get_pressed()[0])
+                except Exception:
+                    lmb_held = True
+            engine.pause_menu.handle_mousemove(event.pos, lmb_held=lmb_held)
             return  # Consume mouse movement when menu is open
 
         # Borderless drag live-drag handling (only when already in windowed and past mode-switch cooldown)

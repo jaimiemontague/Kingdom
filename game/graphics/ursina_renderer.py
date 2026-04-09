@@ -58,7 +58,7 @@ _TERRAIN_TEX_KEY = "kingdom_ursina_terrain_baked"
 _FOG_TEX_KEY = "kingdom_ursina_fog_overlay"
 
 ENEMY_SCALE = 0.5
-PEASANT_SCALE = 0.3
+PEASANT_SCALE = 0.465
 GUARD_SCALE_XZ = 0.5
 GUARD_SCALE_Y = 0.7
 
@@ -431,6 +431,24 @@ class UrsinaRenderer:
         ent.hide(0b0001)
 
     @staticmethod
+    def _sync_inside_hero_draw_layer(ent: Entity, is_inside: bool) -> None:
+        """Stack order like a 2D top layer: same world position, drawn after buildings, no depth reject.
+
+        When a hero uses the ``inside`` clip (bubble/circle), the quad must composite over the
+        building façade pixels — not float in Y. Terrain/fog stay 0–2; inside heroes use queue 3.
+        """
+        want = bool(is_inside)
+        if getattr(ent, "_ks_inside_layer", None) is want:
+            return
+        ent._ks_inside_layer = want
+        if want:
+            ent.render_queue = 3
+            ent.set_depth_test(False)
+        else:
+            ent.render_queue = 1
+            ent.set_depth_test(True)
+
+    @staticmethod
     def _set_texture_if_changed(ent: Entity, tex) -> None:
         """Avoid model.setTexture every frame — Ursina's texture setter always reapplies (WK22 R3)."""
         if getattr(ent, "_texture", None) is tex:
@@ -598,19 +616,30 @@ class UrsinaRenderer:
             )
             htex = TerrainTextureBridge.surface_to_texture(hsurf, cache_key=h_cache_key)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
+            y_center = sy * 0.5
             self._sync_billboard_entity(
                 ent,
                 tex=htex,
                 tint_col=col,
                 scale_xyz=(sy, sy, 1),
-                pos_xyz=(wx, sy * 0.5, wz),
+                pos_xyz=(wx, y_center, wz),
                 shader=sprite_unlit_shader,
             )
+            # Layer compositing (not Y offset): draw after building billboards; skip depth so the
+            # "inside" bubble paints over the same footprint as the façade.
+            self._sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
             active_ids.add(obj_id)
 
         # Enemies — billboards (same animation contract as pygame EnemyRenderer)
+        world = self.engine.world
+        ts = float(config.TILE_SIZE)
         for e in gs["enemies"]:
-            if not getattr(e, "is_alive", True):
+            tx, ty = int(e.x / ts), int(e.y / ts)
+            is_visible = True
+            if 0 <= ty < world.height and 0 <= tx < world.width:
+                is_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)
+            
+            if not getattr(e, "is_alive", True) or not is_visible:
                 continue
             s = ENEMY_SCALE
             col = COLOR_ENEMY
@@ -694,6 +723,39 @@ class UrsinaRenderer:
                 tint_col=col,
                 scale_xyz=(sxz, sy, 1),
                 pos_xyz=(wx, sy * 0.5, wz),
+                shader=sprite_unlit_shader,
+            )
+            active_ids.add(obj_id)
+
+        # Tax Collectors — billboards (get_game_state may omit tax_collectors; fall back to engine singleton)
+        _tc_list = gs.get("tax_collectors")
+        if not _tc_list:
+            _singleton = getattr(self.engine, "tax_collector", None)
+            _tc_list = [_singleton] if _singleton is not None else []
+        for tc in _tc_list:
+            if not getattr(tc, "is_alive", True):
+                continue
+            col = COLOR_PEASANT
+            tcsurf = _worker_idle_surface("tax_collector")
+            tctex = TerrainTextureBridge.surface_to_texture(
+                tcsurf, cache_key=("worker_idle", "tax_collector", int(config.TILE_SIZE))
+            )
+            s = PEASANT_SCALE
+            ent, obj_id = self._get_or_create_entity(
+                tc,
+                model="quad",
+                col=color.white,
+                scale=(s, s, 1),
+                texture=tctex,
+                billboard=True,
+            )
+            wx, wz = sim_px_to_world_xz(tc.x, tc.y)
+            self._sync_billboard_entity(
+                ent,
+                tex=tctex,
+                tint_col=col,
+                scale_xyz=(s, s, 1),
+                pos_xyz=(wx, s * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)

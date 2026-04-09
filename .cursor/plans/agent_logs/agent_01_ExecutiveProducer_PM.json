@@ -4913,6 +4913,290 @@
                     "pm_status_summary": "Verified R3 agent fixes for UI scaling, animations, and AI lag. QA passed. Committed without version bump."
                 }
             }
+        },
+        "wk23-final-bug-hunt": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md",
+                "notes": "WK23 Sprint: Final Bug Hunt & Polish. Resolving critical regressions in 3D renderer."
+            },
+            "rounds": {
+                "wk23_r1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "wk23_r1_execution_v1",
+                        "build_target": "Ursina Polish",
+                        "visibility": "Active agents only (03, 09)."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Kickoff WK23 Final Bug Hunt",
+                        "focus": "Agents 03 and 09 executing fixes for Projectiles, Peasant duplication, Camera W/S inversion, and Fog of War offset.",
+                        "gates": {
+                            "qa_smoke_quick": "Must remain PASS after fixes."
+                        }
+                    },
+                    "pm_bug_tickets": [
+                        {
+                            "id": "WK23-BUG-001",
+                            "title": "Projectiles & Fighting Animations Missing",
+                            "severity": "major",
+                            "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+                            "reporter": "pm_plan",
+                            "repro_steps": [
+                                "Place bounty, observe ranger shooting in Ursina"
+                            ],
+                            "expected": "Projectiles are visible",
+                            "actual": "Projectiles are completely absent",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK23-BUG-002",
+                            "title": "Peasant duplicate / Dead sprite staying forever",
+                            "severity": "major",
+                            "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+                            "reporter": "pm_plan",
+                            "repro_steps": [
+                                "Let goblin kill a peasant"
+                            ],
+                            "expected": "Peasant disappears or leaves no idle sprite",
+                            "actual": "Idle peasant sprite stays forever",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK23-BUG-003",
+                            "title": "Camera W and S keys inverted",
+                            "severity": "major",
+                            "owner_agent": "03_TechnicalDirector_Architecture",
+                            "reporter": "pm_plan",
+                            "repro_steps": [
+                                "Press W in Ursina"
+                            ],
+                            "expected": "Camera moves Forward/North",
+                            "actual": "Camera moves Backward/South",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK23-BUG-004",
+                            "title": "Fog of War / Line of Sight Mismatch",
+                            "severity": "major",
+                            "owner_agent": "03_TechnicalDirector_Architecture",
+                            "reporter": "pm_plan",
+                            "repro_steps": [
+                                "Move hero near fog edge"
+                            ],
+                            "expected": "Revealed area tracks hero perfectly",
+                            "actual": "Offset observed between terrain and fog overlay",
+                            "status": "assigned"
+                        }
+                    ],
+                    "pm_feature_requests": [],
+                    "pm_next_actions_by_agent": {
+                        "03": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Fix W/S camera inversion in game/graphics/ursina_app.py.",
+                                "Fix Fog of War / Line of Sight mismatch in _ensure_fog_overlay in ursina_renderer.py."
+                            ],
+                            "acceptance_criteria": [
+                                "Pressing W moves North",
+                                "Fog accurately tracks billboard positions",
+                                "qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "09": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Add projectile rendering in game/graphics/ursina_renderer.py.",
+                                "Add is_alive checks to peasants and guards in ursina_renderer.py."
+                            ],
+                            "acceptance_criteria": [
+                                "Projectiles render",
+                                "Dead peasants/guards disappear",
+                                "qa_smoke.py --quick PASS"
+                            ]
+                        }
+                    },
+                    "pm_agent_prompts": {
+                        "03": "WK23 Round 1: Execute architecture fixes. Fix Camera W/S inversion in ursina_app.py and correct the Fog of War offset in ursina_renderer.py.",
+                        "09": "WK23 Round 1: Execute rendering fixes. Add the missing projectile render loop and filter out dead peasants/guards in ursina_renderer.py."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "03",
+                            "09"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "04",
+                            "05",
+                            "06",
+                            "07",
+                            "08",
+                            "10",
+                            "11",
+                            "12",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "WK23 bug hunt targeted purely at Agents 03 and 09 per the plan."
+                    }
+                }
+            }
+        },
+        "wk24-ui-and-renderer-polish": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk24_ui_and_renderer_polish.plan.md",
+                "notes": "WK24 Sprint: UI & Renderer Polish"
+            },
+            "rounds": {
+                "wk24_r1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "wk24_r1_execution_v2",
+                        "build_target": "Ursina Polish",
+                        "visibility": "Implementers: 03, 06, 08, 09. Consult: 11 (gate after merge).",
+                        "assignment_completed_at": "2026-04-08",
+                        "assignment_notes": "R1 routing corrected to role boundaries: UI/input/pause \u2192 Agent 08; ai/behaviors/task_durations \u2192 Agent 06. Earlier draft used 06 for UI and 11 for tuning\u2014updated in plan + hub."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "WK24 R1 assigned",
+                        "focus": "Ursina visibility + billboards (09), HUD/panels/pause UX (08), H hotkey guild auto-pick (03), shopping/potion task durations (06). Agent 11 runs qa_smoke when notified.",
+                        "gates": {
+                            "qa_smoke_quick": "Must remain PASS after fixes."
+                        }
+                    },
+                    "pm_bug_tickets": [
+                        {
+                            "id": "WK24-BUG-001",
+                            "title": "Enemies visible in greyed Fog",
+                            "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-002",
+                            "title": "End Conversation button click does not fully exit",
+                            "owner_agent": "08_UX_UI_Director",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-003",
+                            "title": "All right panels need an X close button",
+                            "owner_agent": "08_UX_UI_Director",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-004",
+                            "title": "Peasants are too small in Ursina",
+                            "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-005",
+                            "title": "Tax collector missing in Ursina",
+                            "owner_agent": "09_ArtDirector_Pixel_Animation_VFX",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-006",
+                            "title": "ESC menu broken with Ursina wrappers",
+                            "owner_agent": "08_UX_UI_Director",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-007",
+                            "title": "Heroes buying potions stay in market too long",
+                            "owner_agent": "06_AIBehaviorDirector_LLM",
+                            "status": "assigned"
+                        },
+                        {
+                            "id": "WK24-BUG-008",
+                            "title": "H hotkey sometimes doesn't work without selection",
+                            "owner_agent": "03_TechnicalDirector_Architecture",
+                            "status": "assigned"
+                        }
+                    ],
+                    "pm_feature_requests": [],
+                    "pm_next_actions_by_agent": {
+                        "03": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "In game/engine.py: fix try_hire_hero / H hotkey so hiring works without a pre-selected guild \u2014 auto-select first valid guild using same rules as HUD CommandBar (see plan)."
+                            ],
+                            "acceptance_criteria": [
+                                "H triggers hire when a guild exists even if selected_building is None",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "06": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "In ai/behaviors/task_durations.py: reduce TASK_DURATION_RANGES for shopping and buy_potion per .cursor/plans/wk24_ui_and_renderer_polish.plan.md (target ranges documented there)."
+                            ],
+                            "acceptance_criteria": [
+                                "Heroes no longer idle excessively long in market for potion shopping",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "08": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "game/input_handler.py: end_conversation clears hero selection and exits hero focus / micro_view per plan snippet",
+                                "game/ui/hud.py and/or panel modules: consistent X/close for right and left stack panels when selection active",
+                                "game/ui/pause_menu.py: wrap Controls text; widen audio slider hit areas; safe behavior for display settings under Ursina"
+                            ],
+                            "acceptance_criteria": [
+                                "End Conversation fully dismisses chat + selection state",
+                                "Close controls work without orphan UI",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "09": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "game/graphics/ursina_renderer.py: skip enemy billboards when tile visibility is not fully visible (see plan Visibility check)",
+                                "Set PEASANT_SCALE to 0.465",
+                                "Add tax_collectors billboard loop (mirror guards; texture from worker idle tax_collector)"
+                            ],
+                            "acceptance_criteria": [
+                                "No enemies visible in grey fog",
+                                "Tax collectors visible",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "11": {
+                            "status": "consult_after_r1_merge",
+                            "asks": [
+                                "Run python tools/qa_smoke.py --quick after Agents 03+06+08+09 land; file regressions to owners"
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are activated for sprint wk24-ui-and-renderer-polish, round wk24_r1_execution.\n\n1) Open .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json \u2192 sprints['wk24-ui-and-renderer-polish'].rounds['wk24_r1_execution'].\n2) Read pm_agent_prompts[YOUR_AGENT_NUMBER] and pm_next_actions_by_agent[YOUR_AGENT_NUMBER].\n3) Full spec + acceptance: .cursor/plans/wk24_ui_and_renderer_polish.plan.md\n\nWhen done: update your agent log, run `python tools/qa_smoke.py --quick` (must PASS), report files changed + evidence.",
+                    "pm_agent_prompts": {
+                        "03": "WK24 R1 (Technical Director): Implement WK24-BUG-008. In game/engine.py, update try_hire_hero (and any H-key path) so the player can hire from a guild without already having selected one\u2014mirror the HUD CommandBar\u2019s logic for finding a valid guild. Do not change sim determinism rules. Verify with python tools/qa_smoke.py --quick. Spec: .cursor/plans/wk24_ui_and_renderer_polish.plan.md (Bug Set C, engine).",
+                        "06": "WK24 R1 (AI Behavior): Implement WK24-BUG-007. In ai/behaviors/task_durations.py, tighten TASK_DURATION_RANGES for `shopping` and `buy_potion` to the target bands in the plan (buy_potion 3\u20136s, shopping 4\u20138s unless playtest says otherwise). Keep other task keys stable unless a regression appears. Run python tools/qa_smoke.py --quick and update your agent log.",
+                        "08": "WK24 R1 (UX/UI): Implement WK24-BUG-002, -003, -006. (1) input_handler: on end_conversation, end chat, exit hero focus via micro_view if present, set selected_hero None\u2014see plan code sketch. (2) Add/standardize X close affordances on relevant panels (hud.py and/or chat_panel, hero panel, quest/interior as needed). (3) pause_menu: wrap Controls text; improve audio slider hitboxes; ensure display/settings calls are safe when using --renderer ursina. Run python tools/qa_smoke.py --quick.",
+                        "09": "WK24 R1 (Art / Ursina): Implement WK24-BUG-001, -004, -005 in game/graphics/ursina_renderer.py. Hide enemy billboards when world visibility at enemy tile is not Visibility.VISIBLE. Set PEASANT_SCALE = 0.465. Add render loop for gs['tax_collectors'] parallel to guards/peasants using tax_collector worker texture. Render-only; no sim changes. Run python tools/qa_smoke.py --quick.",
+                        "11": "WK24 R1 (QA consult): No code ownership this round. When PM says R1 is merged, run python tools/qa_smoke.py --quick and python tools/validate_assets.py --report; log results in agent_11 log. If FAIL, bisect and assign bugs to 03/06/08/09."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "03",
+                            "06",
+                            "08",
+                            "09"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "04",
+                            "05",
+                            "07",
+                            "10",
+                            "11",
+                            "12",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "R1 implementers: engine (03), AI durations (06), UI (08), Ursina (09). Agent 11 consult-only for gate after integration."
+                    }
+                }
+            }
         }
     }
 }

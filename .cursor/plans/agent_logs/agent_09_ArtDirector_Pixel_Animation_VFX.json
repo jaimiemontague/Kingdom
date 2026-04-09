@@ -2455,6 +2455,44 @@
           "coordination_notes": []
         }
       }
+    },
+    "wk24-ui-and-renderer-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk24_ui_and_renderer_polish.plan.md",
+        "notes": "WK24 R1 Bug Set B: Ursina fog visibility for enemies, peasant scale, tax collector billboards."
+      },
+      "rounds": {
+        "wk24_r1_execution": {
+          "sprint_id": "wk24-ui-and-renderer-polish",
+          "round_id": "wk24_r1_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK24 R1 (Agent 09): WK24-BUG-001 enemy billboards only when world.visibility[ty][tx]==Visibility.VISIBLE; hoisted world lookup and use config.TILE_SIZE for tile indices. WK24-BUG-004 PEASANT_SCALE=0.465 (already set). WK24-BUG-005 tax collectors: get_game_state() does not include tax_collectors, so gs.get(...) was always empty — added fallback to engine.tax_collector when list missing/empty so billboards render.",
+            "files": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "details": [
+              "Enemy loop: single world reference + ts=float(config.TILE_SIZE) per enemy tile.",
+              "_tc_list = gs.get('tax_collectors') or wrap engine.tax_collector singleton."
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --provider mock"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "If sim later exposes tax_collectors in get_game_state(), the fallback still works when gs list is populated."
+          ]
+        }
+      }
     }
   }
 }

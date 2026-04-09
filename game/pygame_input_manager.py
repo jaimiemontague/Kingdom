@@ -50,8 +50,8 @@ class PygameInputManager(InputManager):
                 evt.pos = pg_event.pos
             elif pg_event.type == pygame.MOUSEMOTION:
                 evt.type = 'MOUSEMOTION'
-                evt.button = pg_event.buttons[0] if pg_event.buttons else None # Just grab first if exists
                 evt.pos = pg_event.pos
+                evt.buttons = tuple(pg_event.buttons) if pg_event.buttons else (0, 0, 0)
             elif hasattr(pygame, "MOUSEWHEEL") and pg_event.type == pygame.MOUSEWHEEL:
                 evt.type = 'WHEEL'
                 evt.wheel_y = pg_event.y

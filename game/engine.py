@@ -131,8 +131,8 @@ class GameEngine:
             self._pause_font = None
             self._last_ui_cursor_pos = (0, 0)
         elif headless_ui:
-            # Virtual screen for PyMux rendering
-            self.display_mode = "headless_ui"
+            # Virtual screen for Ursina overlay; match UrsinaApp default (windowed, bordered)
+            self.display_mode = "windowed"
             self.window_size = (1920, 1080)
             self._pending_display_settings = None
             self._borderless_drag_active = False
@@ -217,6 +217,7 @@ class GameEngine:
             self.debug_panel = DebugPanel(self.window_width, self.window_height)
             self.dev_tools_panel = DevToolsPanel(self.event_bus, self.window_width, self.window_height)
             self.building_panel = BuildingPanel(self.window_width, self.window_height)
+            self.building_panel.engine = self
             self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
             self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
             self.input_handler = InputHandler(self)
@@ -499,19 +500,31 @@ class GameEngine:
         return False
     
     def try_hire_hero(self):
-        """Try to hire a hero from the selected guild building."""
-        guild = self.selected_building
+        """Try to hire a hero from the selected guild building or auto-locate one."""
+        allowed = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"})
 
-        allowed = ["warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"]
-        if not guild or not hasattr(guild, "building_type") or guild.building_type not in allowed:
-            self.hud.add_message("Select a constructed guild (Warrior/Ranger/Rogue/Wizard) to hire from!", (255, 100, 100))
+        def _is_hirable_guild(b) -> bool:
+            bt = getattr(b, "building_type", "")
+            if bt not in allowed:
+                return False
+            # Match building_panel / navigation: missing is_constructed → treat as built (see Building base).
+            return getattr(b, "is_constructed", True) is True
+
+        guild = None
+        sel = self.selected_building
+        if sel is not None and _is_hirable_guild(sel):
+            guild = sel
+
+        if guild is None:
+            for b in self.buildings:
+                if _is_hirable_guild(b):
+                    guild = b
+                    break
+
+        if guild is None:
+            self.hud.add_message("Requires a constructed guild (Warrior/Ranger/Rogue/Wizard)!", (255, 100, 100))
             return
 
-        # Guild must be constructed before it can be used.
-        if hasattr(guild, "is_constructed") and not guild.is_constructed:
-            self.hud.add_message("Guild is under construction!", (255, 100, 100))
-            return
-        
         if not self.economy.can_afford_hero():
             self.hud.add_message("Not enough gold to hire!", (255, 100, 100))
             return
@@ -1190,6 +1203,12 @@ class GameEngine:
     
     def apply_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
         """Apply display mode settings (fullscreen/borderless/windowed)."""
+        # Ursina 3D viewer: pygame uses SDL dummy; real window is Ursina/Panda — use window.* APIs.
+        if getattr(self, "headless_ui", False) and getattr(self, "_ursina_viewer", False):
+            DisplayManager.apply_ursina_window(self, display_mode, window_size)
+            return
+        if self.display_manager is None:
+            return
         self.display_manager.apply_settings(display_mode, window_size)
     
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
@@ -1524,7 +1543,36 @@ class GameEngine:
 
             # WK7: Pause menu (rendered before pause overlay)
             if self.pause_menu.visible:
-                self.pause_menu.render(self.screen)
+                # Keep modal geometry in sync with the actual HUD surface (Ursina resizes can
+                # otherwise leave page_buttons rects misaligned vs mouse for hover/hit-test).
+                try:
+                    sw, sh = self.screen.get_size()
+                    if int(self.pause_menu.screen_width) != int(sw) or int(self.pause_menu.screen_height) != int(sh):
+                        self.pause_menu.on_resize(sw, sh)
+                except Exception:
+                    pass
+                # Prefer live input_manager coords (matches Ursina get_mouse_pos mapping) over
+                # last-event cursor so hover matches the pointer when the menu is open.
+                mp = None
+                if getattr(self, "input_manager", None) is not None:
+                    try:
+                        mp = self.input_manager.get_mouse_pos()
+                    except Exception:
+                        mp = None
+                if mp is not None and len(mp) >= 2:
+                    self._last_ui_cursor_pos = (int(mp[0]), int(mp[1]))
+                    self.pause_menu.render(
+                        self.screen, mouse_pos=(int(mp[0]), int(mp[1]))
+                    )
+                else:
+                    gs_pm = self.get_game_state()
+                    ucp = gs_pm.get("ui_cursor_pos")
+                    if ucp is not None and len(ucp) >= 2:
+                        self.pause_menu.render(
+                            self.screen, mouse_pos=(int(ucp[0]), int(ucp[1]))
+                        )
+                    else:
+                        self.pause_menu.render(self.screen)
 
             # Perf overlay (helps diagnose lag spikes)
             if self.show_perf:

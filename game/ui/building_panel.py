@@ -31,6 +31,8 @@ class BuildingPanel:
         self.font_normal = pygame.font.Font(None, 20)
         self.font_small = pygame.font.Font(None, 16)
 
+        self.close_button_rect: pygame.Rect | None = None
+        self.close_button_hovered = False
         self.research_button_rect: pygame.Rect | None = None
         self.research_button_hovered = False
         self.library_research_rects: dict[str, pygame.Rect] = {}
@@ -56,6 +58,8 @@ class BuildingPanel:
             (60, 179, 113),
             (255, 140, 0),
         ]
+        # Set by GameEngine after init — used to flag Ursina HUD GPU upload for thin animated bars.
+        self.engine = None
 
     def select_building(self, building, heroes: list) -> None:
         """Select a building to show details for."""
@@ -110,6 +114,10 @@ class BuildingPanel:
             return False
 
         building_type = self._building_type_key(self.selected_building)
+
+        if self.close_button_rect and self.close_button_rect.collidepoint(mouse_pos):
+            self.deselect()
+            return True
 
         if self.enter_building_button_rect and self.enter_building_button_rect.collidepoint(mouse_pos):
             building = self.selected_building
@@ -168,6 +176,10 @@ class BuildingPanel:
 
     def update_hover(self, mouse_pos: tuple[int, int]) -> None:
         """Update button hover state from screen-space mouse coordinates."""
+        if self.close_button_rect:
+            self.close_button_hovered = self.close_button_rect.collidepoint(mouse_pos)
+        else:
+            self.close_button_hovered = False
         if self.research_button_rect:
             self.research_button_hovered = self.research_button_rect.collidepoint(mouse_pos)
         if self.demolish_button_rect:
@@ -245,6 +257,30 @@ class BuildingPanel:
 
         bottom_padding = 20
         self.panel_height = min(scratch_h, max(400, y + bottom_padding))
+
+        # Add close button
+        close_size = 24
+        cb_rect = pygame.Rect(self.panel_width - close_size - 10, 10, close_size, close_size)
+        close_btn = Button(
+            rect=cb_rect,
+            text="X",
+            font=self.font_normal,
+            enabled=True,
+        )
+        close_btn.render(
+            panel_surf,
+            mouse_pos=(pygame.mouse.get_pos()[0] - self.panel_x, pygame.mouse.get_pos()[1] - self.panel_y) if self.close_button_hovered else None,
+            enabled=True,
+            bg_normal=(45, 45, 55),
+            bg_hover=(60, 60, 70),
+            bg_pressed=(70, 70, 85),
+            border_outer=(20, 20, 25),
+            border_inner=(80, 80, 100),
+            border_highlight=(107, 107, 132),
+            text_color=(240, 240, 240),
+        )
+        self.close_button_rect = pygame.Rect(self.panel_x + cb_rect.x, self.panel_y + cb_rect.y, cb_rect.width, cb_rect.height)
+
         visible = panel_surf.subsurface((0, 0, self.panel_width, self.panel_height))
         surface.blit(visible, (self.panel_x, self.panel_y))
 

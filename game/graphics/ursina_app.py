@@ -239,6 +239,18 @@ class UrsinaApp:
         hit: tuple[float, float] | None = None
         wx_sim = wy_sim = 0.0
 
+        # Paused / ESC menu: the center of the screen is pygame HUD (often semi-transparent
+        # backdrop). get_at() can be <24 alpha or stale → world-mapping breaks hover/clicks.
+        # Input is consumed by the menu while open; when paused, world clicks are blocked too.
+        if getattr(eng, "_ursina_viewer", False) and (
+            getattr(eng, "paused", False)
+            or (
+                getattr(eng, "pause_menu", None) is not None
+                and getattr(eng.pause_menu, "visible", False)
+            )
+        ):
+            return (px, py), "ui", None, 0.0, 0.0
+
         gs = eng.get_game_state()
         if self._pixel_hits_opaque_ui(px, py) or eng.hud.virtual_pointer_in_hud_chrome(
             (px, py), eng.screen, gs
@@ -265,7 +277,15 @@ class UrsinaApp:
         """Building placement needs update_preview() via MOUSEMOTION before MOUSEDOWN sets preview_valid."""
         pos, _kind, _hit, _wx, _wy = self._engine_screen_pos_for_pointer()
         self._last_engine_screen_pos = pos
-        self.input_manager.queue_event(InputEvent(type="MOUSEMOTION", pos=pos, key=None))
+        # Ursina: expose left-button hold state so UI sliders only drag while LMB is down.
+        try:
+            lmb = 1 if bool(mouse.left) else 0
+        except Exception:
+            lmb = 0
+        buttons = (lmb, 1 if bool(getattr(mouse, "right", False)) else 0, 0)
+        self.input_manager.queue_event(
+            InputEvent(type="MOUSEMOTION", pos=pos, key=None, buttons=buttons)
+        )
 
     def _handle_ursina_input(self, key: str) -> None:
         # WK21: F12 — full Ursina window (3D + UI overlay) → docs/screenshots/
@@ -284,6 +304,10 @@ class UrsinaApp:
         if key == "left mouse down":
             # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
             self._pending_lmb = True
+            return
+        if key == "left mouse up":
+            pos = self._last_engine_screen_pos
+            self.input_manager.queue_event(InputEvent(type="MOUSEUP", button=1, pos=pos, key=None))
             return
         # WK22 SPRINT-BUG-004: forward keyboard / wheel to engine (was dropped by early return).
         evt = ursina_key_to_input_event(key)
@@ -311,8 +335,14 @@ class UrsinaApp:
         except Exception:
             quick = None
 
+        # Building panel research bars are ~12px tall; row-sampled CRC often misses them → stale GPU texture.
+        force_upload = bool(getattr(self.engine, "_ursina_hud_force_upload", False))
+        if force_upload:
+            setattr(self.engine, "_ursina_hud_force_upload", False)
+
         if (
-            quick is not None
+            not force_upload
+            and quick is not None
             and self._hud_composite_texture is not None
             and self._hud_composite_size == sz
             and self._hud_quick_sig is not None
@@ -369,6 +399,13 @@ class UrsinaApp:
         def update():
             dt = time.dt
 
+            eng = self.engine
+
+            def _chat_captures_keyboard() -> bool:
+                """True while hero chat is open — block 3D pan/zoom so WASD/EQ type into chat."""
+                cp = getattr(getattr(eng, "hud", None), "_chat_panel", None)
+                return cp is not None and getattr(cp, "is_active", lambda: False)()
+
             # WK22 R3: dynamic HUD resolution — match pygame surface to Ursina window (no fixed 1080p GPU stretch).
             self._sync_headless_ui_canvas_to_window()
 
@@ -400,14 +437,30 @@ class UrsinaApp:
 
             self.engine.tick_simulation(dt)
 
+            # Pause menu Quit sets engine.running = False; Pygame's engine.run() exits the process —
+            # Ursina must stop app.run() explicitly or the window stays open forever.
+            if not getattr(self.engine, "running", True):
+                try:
+                    from ursina import application
+
+                    application.quit()
+                except Exception:
+                    import sys
+
+                    sys.exit(0)
+                return
+
             # WK22 R3: Wheel / +/- already adjust engine.zoom in InputHandler — drive 3D FOV from that.
             # Held Q/E apply the same multiplicative zoom (cursor-anchored via zoom_by) so coords stay consistent.
-            eng = self.engine
             hk = held_keys
             zstep = float(config.ZOOM_STEP)
             # ~3 "UI zoom steps" per second while held (matches old ~35°/s FOV tweak feel).
             rate = 3.0 * dt
-            _allow_zoom = not eng.paused and not getattr(eng.pause_menu, "visible", False)
+            _allow_zoom = (
+                not eng.paused
+                and not getattr(eng.pause_menu, "visible", False)
+                and not _chat_captures_keyboard()
+            )
             if _allow_zoom:
                 if hk.get("e", 0):
                     eng.zoom_by(zstep**rate)
@@ -430,16 +483,17 @@ class UrsinaApp:
             # Fullscreen ↔ windowed toggles with a static HUD skip texture upload; still resync filter.
             self._sync_hud_texture_filter_mode(self._hud_composite_texture)
 
-            # Pan parallel to X/Z floor (world units / sec)
-            if hk["a"]:
-                camera.x -= pan_speed * dt
-            if hk["d"]:
-                camera.x += pan_speed * dt
-            # WK23 R1: W = pan north (up-screen / +world Z); S = south — matches player expectation.
-            if hk["w"]:
-                camera.z += pan_speed * dt
-            if hk["s"]:
-                camera.z -= pan_speed * dt
+            # Pan parallel to X/Z floor (world units / sec). Skip while typing in hero chat.
+            if not _chat_captures_keyboard():
+                if hk["a"]:
+                    camera.x -= pan_speed * dt
+                if hk["d"]:
+                    camera.x += pan_speed * dt
+                # WK23 R1: W = pan north (up-screen / +world Z); S = south — matches player expectation.
+                if hk["w"]:
+                    camera.z += pan_speed * dt
+                if hk["s"]:
+                    camera.z -= pan_speed * dt
 
         import __main__
 

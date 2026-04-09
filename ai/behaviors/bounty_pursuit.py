@@ -297,7 +297,13 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                 shop_building = hero.target.get("marketplace") or hero.target.get("blacksmith")
                 if shop_building:
                     rng = get_rng("ai_basic")
-                    duration_sec = roll_duration_seconds("shopping", rng)
+                    # WK24: marketplace (potion) trips use shorter buy_potion band; blacksmith uses generic shopping.
+                    task_key = (
+                        "buy_potion"
+                        if hero.target.get("marketplace") is not None
+                        else "shopping"
+                    )
+                    duration_sec = roll_duration_seconds(task_key, rng)
                     setattr(hero, "pending_task", "shopping")
                     setattr(hero, "pending_task_building", shop_building)
                     hero.enter_building_briefly(shop_building, duration_sec=float(duration_sec))

@@ -176,6 +176,7 @@ class HUD:
 
         self.quit_rect: pygame.Rect | None = None
         self.right_close_rect: pygame.Rect | None = None
+        self.left_close_rect: pygame.Rect | None = None
         self._right_rect: pygame.Rect | None = None
         self._micro_view = MicroViewManager()
         self._speed_rect: pygame.Rect | None = None
@@ -384,9 +385,7 @@ class HUD:
     ) -> None:
         """Render OVERVIEW mode content: building summary, or empty hint (wk13 delegate from MicroViewManager)."""
         selected_building = game_state.get("selected_building")
-        self.right_close_rect = None
         if selected_building is not None:
-            self._render_right_close_button(surface, right)
             self._render_building_summary(surface, selected_building, right)
         else:
             pad = self._right_panel_top_pad(right)
@@ -431,6 +430,41 @@ class HUD:
             text_shadow_color=(20, 20, 30),
         )
         self.right_close_rect = pygame.Rect(self._right_close_button.rect)
+
+    def _render_left_close_button(self, surface: pygame.Surface, left_rect: pygame.Rect) -> None:
+        if getattr(self, "_left_close_button", None) is None:
+            self._left_close_button = Button(
+                rect=pygame.Rect(0, 0, 1, 1),
+                text="X",
+                font=self.theme.font_small,
+                enabled=True,
+            )
+        x_surf = TextLabel.get_surface(self.theme.font_small, "X", (240, 240, 240))
+        size = max(18, x_surf.get_height() + 6)
+        self._left_close_button.rect = pygame.Rect(
+            int(left_rect.right - size - 6),
+            int(left_rect.y + 6),
+            int(size),
+            int(size),
+        )
+        self._left_close_button.text = "X"
+        self._left_close_button.render(
+            surface,
+            pygame.mouse.get_pos(),
+            texture_normal=self._button_tex_normal,
+            texture_hover=self._button_tex_hover,
+            texture_pressed=self._button_tex_pressed,
+            slice_border=self._button_slice_border,
+            bg_normal=(45, 45, 55),
+            bg_hover=(60, 60, 70),
+            bg_pressed=(70, 70, 85),
+            border_outer=self._frame_outer,
+            border_inner=self._frame_inner,
+            border_highlight=self._frame_highlight,
+            text_color=(240, 240, 240),
+            text_shadow_color=(20, 20, 30),
+        )
+        self.left_close_rect = pygame.Rect(self._left_close_button.rect)
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
         x = rect.x + int(self.theme.margin)
@@ -592,8 +626,10 @@ class HUD:
         
         selected_hero = game_state.get("selected_hero")
         selected_peasant = game_state.get("selected_peasant")
+        self.left_close_rect = None
         if selected_hero is not None:
             self._panel_left.render(surface)
+            self._render_left_close_button(surface, left)
             self._hero_panel.render(
                 surface,
                 selected_hero,
@@ -603,6 +639,7 @@ class HUD:
             )
         elif selected_peasant is not None:
             self._panel_left.render(surface)
+            self._render_left_close_button(surface, left)
             self._render_peasant_summary(surface, selected_peasant, left)
 
         if self._show_right_panel:
@@ -688,6 +725,7 @@ class HUD:
             exit_msg = self._micro_view.render(
                 surface, right, game_state, self, interior_panel, quest_panel, chat_panel
             )
+            self._render_right_close_button(surface, right)
             if exit_msg:
                 self.add_message(exit_msg, (255, 180, 100))
         else:
@@ -702,12 +740,24 @@ class HUD:
             return "quit"
         if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
             return "close_selection"
+        if self.left_close_rect is not None and self.left_close_rect.collidepoint((x, y)):
+            return "close_selection"
         if self._right_rect is not None and self._right_rect.collidepoint((x, y)):
             interior_panel = getattr(self, "_interior_panel", None)
             quest_panel = getattr(self, "_quest_panel", None)
             chat_panel = getattr(self, "_chat_panel", None)
             if chat_panel is not None and chat_panel.is_active():
-                click_result = chat_panel.handle_click((x, y), self._right_rect)
+                # HERO_FOCUS renders chat in the bottom half only; hit-test must use the same rect.
+                if self._micro_view.mode == ViewMode.HERO_FOCUS:
+                    chat_hit_rect = pygame.Rect(
+                        self._right_rect.x,
+                        self._right_rect.y + self._right_rect.height // 2,
+                        self._right_rect.width,
+                        self._right_rect.height // 2,
+                    )
+                    click_result = chat_panel.handle_click((x, y), chat_hit_rect)
+                else:
+                    click_result = chat_panel.handle_click((x, y), self._right_rect)
                 if click_result is not None:
                     return click_result
             action = self._micro_view.handle_click(
@@ -719,6 +769,8 @@ class HUD:
                 return "exit_interior"
             if action == "exit_quest":
                 return "exit_quest"
+            if action == "exit_hero_focus":
+                return "end_conversation"
         action = self._command_bar.handle_click((x, y))
         if action:
             return action

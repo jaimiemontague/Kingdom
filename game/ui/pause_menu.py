@@ -8,6 +8,7 @@ from __future__ import annotations
 import pygame
 from game.ui.widgets import Button, ModalPanel, Slider, RadioGroup, load_image_cached
 from game.ui.theme import UITheme
+from game.ui.chat_panel import _wrap_text
 from config import COLOR_WHITE, COLOR_UI_BG, COLOR_UI_BORDER
 
 
@@ -32,9 +33,10 @@ class PauseMenu:
         self._icon_map = {
             "resume": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_play.png", (16, 16)) or _blank_16,
             "quit": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_quit.png", (16, 16)) or _blank_16,
-            "graphics": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png", (16, 16)),
-            "audio": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_audio.png", (16, 16)),
-            "controls": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_controls.png", (16, 16)),
+            # Missing files → None breaks hover hitbox vs texture in some builds; use blank slot.
+            "graphics": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png", (16, 16)) or _blank_16,
+            "audio": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_audio.png", (16, 16)) or _blank_16,
+            "controls": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_controls.png", (16, 16)) or _blank_16,
         }
         
         # Modal panel
@@ -55,39 +57,43 @@ class PauseMenu:
         # Controls page: keybinds list
         self.keybinds = self._build_keybinds_list()
         
-        # Graphics page (stub until Agent 03 API)
+        # Graphics page — short labels so text fits the modal; values match engine display_mode
         self.graphics_radio = RadioGroup(
             options=[
                 ("Fullscreen", "fullscreen"),
-                ("Borderless (Fullscreen Windowed)", "borderless"),
-                ("Windowed", "windowed")
+                ("Borderless", "borderless"),
+                ("Windowed", "windowed"),
             ],
-            selected_value="borderless"  # Default, will be updated from engine state
+            selected_value="windowed",  # Default; synced from engine when opening Graphics
+            option_height=36,
+            spacing=6,
         )
         
         # Audio page (stub until Agent 14 API)
         self.audio_master_slider = Slider(
-            rect=pygame.Rect(0, 0, 300, 24),
+            rect=pygame.Rect(0, 0, 300, 40),
             value=0.8,  # Default 80% (0.8)
             track_color=(60, 60, 70),
             fill_color=(100, 150, 200),
             thumb_color=(150, 200, 255)
         )
         self.audio_music_slider = Slider(
-            rect=pygame.Rect(0, 0, 300, 24),
+            rect=pygame.Rect(0, 0, 300, 40),
             value=0.8,
             track_color=(60, 60, 70),
             fill_color=(100, 150, 200),
             thumb_color=(150, 200, 255)
         )
         self.audio_sfx_slider = Slider(
-            rect=pygame.Rect(0, 0, 300, 24),
+            rect=pygame.Rect(0, 0, 300, 40),
             value=0.8,
             track_color=(60, 60, 70),
             fill_color=(100, 150, 200),
             thumb_color=(150, 200, 255)
         )
         self.audio_slider_dragging = None  # "master" | "music" | "sfx" | None
+        # Controls page: scroll long keybind list inside the modal
+        self.controls_scroll_px = 0
     
     def _update_page_buttons(self):
         """Update page button rectangles based on current panel size."""
@@ -108,9 +114,10 @@ class PauseMenu:
         self.page_button_widgets = {}
         for page_name, rect in self.page_buttons.items():
             if page_name == "resume":
-                text = "► Resume"
+                # ASCII only — default pygame font has no glyph for ► (shows tofu in Ursina HUD).
+                text = "Resume"
             elif page_name == "quit":
-                text = "■ Quit"
+                text = "Quit"
             else:
                 text = page_name.replace("_", " ").title()
             self.page_button_widgets[page_name] = Button(
@@ -149,6 +156,25 @@ class PauseMenu:
             ("Menu", ""),
             ("Esc", "Pause / Open Menu"),
         ]
+
+    def _measure_controls_content_height(self, inner_width: int) -> int:
+        """Total pixel height of the keybind column (for scroll bounds)."""
+        desc_max_w = max(80, inner_width - 130)
+        line_h = self.theme.font_small.get_height() + 2
+        y = 0
+        for key, desc in self.keybinds:
+            if not key and not desc:
+                y += 10
+                continue
+            if desc and not key:
+                y += 30
+            else:
+                if desc:
+                    lines = _wrap_text(self.theme.font_small, desc, desc_max_w)
+                    y += max(22, len(lines) * line_h)
+                else:
+                    y += 22
+        return y
     
     def open(self):
         """Open the menu."""
@@ -171,6 +197,7 @@ class PauseMenu:
         self.visible = False
         self.current_page = "main"
         self.audio_slider_dragging = None
+        self.controls_scroll_px = 0
     
     def toggle(self):
         """Toggle menu visibility."""
@@ -240,6 +267,8 @@ class PauseMenu:
                         return "quit"
                     else:
                         self.current_page = page_name
+                        if page_name == "controls":
+                            self.controls_scroll_px = 0
                         if page_name == "graphics":
                             # WK7: Update radio selection from engine state
                             if self.engine:
@@ -257,37 +286,35 @@ class PauseMenu:
                         return None
         
         elif self.current_page == "graphics":
-            # Graphics page: radio group selection
+            # Graphics page: radio group selection (geometry must match render())
             panel_rect = self.modal.get_panel_rect()
-            radio_x = panel_rect.x + 80
-            radio_y = panel_rect.y + 140
-            radio_w = panel_rect.width - 160
+            radio_x = panel_rect.x + 24
+            radio_y = panel_rect.y + 136
+            radio_w = max(120, panel_rect.width - 48)
             selected = self.graphics_radio.hit_test(pos, radio_x, radio_y, radio_w)
             if selected and self.engine:
-                # WK7: Queue display mode change (apply between frames to avoid SDL re-entrancy crash)
                 self.graphics_radio.selected_value = selected
                 game_state = self.engine.get_game_state()
                 window_size = game_state.get("window_size", None)
                 if hasattr(self.engine, "request_display_settings"):
                     self.engine.request_display_settings(selected, window_size)
                 else:
-                    # Fallback for older engines (should not happen): apply immediately.
                     self.engine.apply_display_settings(selected, window_size)
                 return f"graphics_select_{selected}"
         
         elif self.current_page == "audio":
-            # Audio page: slider drag start
-            if self.audio_master_slider.hit_test_thumb(pos):
+            # Audio page: slider drag start (track or thumb — WK24 wider hit area)
+            if self.audio_master_slider.hit_test_interactive(pos):
                 self.audio_slider_dragging = "master"
                 self.audio_master_slider.set_value_from_x(pos[0])
                 self._set_audio_volume("master", self.audio_master_slider.value)
                 return "audio_slider_drag"
-            if self.audio_music_slider.hit_test_thumb(pos):
+            if self.audio_music_slider.hit_test_interactive(pos):
                 self.audio_slider_dragging = "music"
                 self.audio_music_slider.set_value_from_x(pos[0])
                 self._set_audio_volume("music", self.audio_music_slider.value)
                 return "audio_slider_drag"
-            if self.audio_sfx_slider.hit_test_thumb(pos):
+            if self.audio_sfx_slider.hit_test_interactive(pos):
                 self.audio_slider_dragging = "sfx"
                 self.audio_sfx_slider.set_value_from_x(pos[0])
                 self._set_audio_volume("sfx", self.audio_sfx_slider.value)
@@ -298,13 +325,25 @@ class PauseMenu:
         back_rect = pygame.Rect(panel_rect.x + 10, panel_rect.y + 10, 60, 30)
         if back_rect.collidepoint(pos):
             self.current_page = "main"
+            self.controls_scroll_px = 0
             return "back"
         
         return None
     
-    def handle_mousemove(self, pos: tuple[int, int]):
-        """Handle mouse movement (for slider dragging)."""
-        if not self.visible or not self.audio_slider_dragging:
+    def handle_wheel(self, wheel_y: int) -> None:
+        """Scroll the Controls page keybind list (negative wheel_y = scroll down)."""
+        if not self.visible or self.current_page != "controls" or wheel_y == 0:
+            return
+        step = 28
+        self.controls_scroll_px = max(0, self.controls_scroll_px - wheel_y * step)
+
+    def handle_mousemove(self, pos: tuple[int, int], lmb_held: bool = True):
+        """Handle mouse movement (slider drag only while left button is held)."""
+        if not self.visible:
+            return None
+        if self.audio_slider_dragging and not lmb_held:
+            return self.handle_mouseup(pos)
+        if not self.audio_slider_dragging:
             return None
         
         if self.current_page == "audio":
@@ -334,11 +373,16 @@ class PauseMenu:
                 return "audio_slider_release"
         return None
     
-    def render(self, surface: pygame.Surface):
-        """Render the menu."""
+    def render(self, surface: pygame.Surface, mouse_pos: tuple[int, int] | None = None):
+        """Render the menu. Pass mouse_pos when the host uses a virtual UI cursor (e.g. Ursina)."""
         if not self.visible:
             return
-        
+        # Ursina: row-sampled HUD CRC can miss small vertical bands (e.g. top menu rows), so hover
+        # state updates never reach the GPU texture. Match economic_panel: force one upload this frame.
+        if self.engine is not None and getattr(self.engine, "_ursina_viewer", False):
+            setattr(self.engine, "_ursina_hud_force_upload", True)
+        cur_mouse = mouse_pos if mouse_pos is not None else pygame.mouse.get_pos()
+
         # Backdrop
         self.modal.render_backdrop(surface)
         
@@ -352,17 +396,22 @@ class PauseMenu:
             title_x = panel_rect.centerx - title.get_width() // 2
             surface.blit(title, (title_x, panel_rect.y + 20))
             
-            # Buttons
-            for page_name, rect in self.page_buttons.items():
+            # Buttons (draw bottom items first so Resume/Graphics stay on top for hover/stacking)
+            for page_name, rect in reversed(list(self.page_buttons.items())):
                 button = self.page_button_widgets.get(page_name)
                 if button is None:
                     continue
                 button.rect = pygame.Rect(rect)
                 button.icon = self._icon_map.get(page_name)
-                button.text = page_name.replace("_", " ").title()
+                if page_name == "resume":
+                    button.text = "Resume"
+                elif page_name == "quit":
+                    button.text = "Quit"
+                else:
+                    button.text = page_name.replace("_", " ").title()
                 button.render(
                     surface,
-                    pygame.mouse.get_pos(),
+                    cur_mouse,
                     texture_normal=self._button_tex_normal,
                     texture_hover=self._button_tex_hover,
                     texture_pressed=self._button_tex_pressed,
@@ -387,20 +436,31 @@ class PauseMenu:
             title_x = panel_rect.centerx - title.get_width() // 2
             surface.blit(title, (title_x, panel_rect.y + 20))
             
-            # Display mode options
+            # Display mode options (wide row for hit-testing + label fit)
             label = self.theme.font_body.render("Display Mode:", True, self.theme.text)
-            surface.blit(label, (panel_rect.x + 80, panel_rect.y + 110))
+            surface.blit(label, (panel_rect.x + 24, panel_rect.y + 108))
             
-            radio_x = panel_rect.x + 80
-            radio_y = panel_rect.y + 140
-            radio_w = panel_rect.width - 160
+            radio_x = panel_rect.x + 24
+            radio_y = panel_rect.y + 136
+            radio_w = max(120, panel_rect.width - 48)
             self.graphics_radio.render(
                 surface, self.theme.font_body,
                 radio_x, radio_y, radio_w,
                 text_color=self.theme.text,
                 selected_color=(100, 150, 200),
-                bg_color=(50, 50, 60)
+                bg_color=(50, 50, 60),
+                mouse_pos=cur_mouse,
             )
+            if self.engine and getattr(self.engine, "_ursina_viewer", False):
+                note_y = radio_y + len(self.graphics_radio.options) * (
+                    self.graphics_radio.option_height + self.graphics_radio.spacing
+                ) + 8
+                note = self.theme.font_small.render(
+                    "Changes apply to the game window (Ursina).",
+                    True,
+                    (130, 130, 145),
+                )
+                surface.blit(note, (radio_x, note_y))
             
             # Back button
             back_text = self.theme.font_small.render("< Back", True, self.theme.text)
@@ -440,33 +500,63 @@ class PauseMenu:
             surface.blit(back_text, (panel_rect.x + 10, panel_rect.y + 10))
         
         elif self.current_page == "controls":
-            # Controls page
+            # Controls page (clipped + scroll — long list stays inside the modal)
             title = self.theme.font_title.render("Controls", True, self.theme.text)
             title_x = panel_rect.centerx - title.get_width() // 2
             surface.blit(title, (title_x, panel_rect.y + 20))
-            
-            # Keybinds list
-            y = panel_rect.y + 60
-            for key, desc in self.keybinds:
-                if not key and not desc:
-                    y += 10  # Spacing
-                    continue
-                
-                if desc and not key:
-                    # Section header
-                    header = self.theme.font_body.render(desc, True, self.theme.accent)
-                    surface.blit(header, (panel_rect.x + 20, y))
-                    y += 30
-                else:
-                    # Keybind row
-                    key_text = self.theme.font_body.render(key, True, self.theme.text)
-                    surface.blit(key_text, (panel_rect.x + 30, y))
-                    
-                    if desc:
-                        desc_text = self.theme.font_small.render(desc, True, (200, 200, 200))
-                        surface.blit(desc_text, (panel_rect.x + 120, y + 2))
-                    y += 24
-            
+
+            content_total_h = self._measure_controls_content_height(
+                max(1, panel_rect.width - 16)
+            )
+            inner_pad = 8
+            list_top = panel_rect.y + 50
+            if content_total_h > panel_rect.height - 70:
+                wheel_hint = self.theme.font_small.render("Mouse wheel: scroll", True, (130, 130, 145))
+                surface.blit(wheel_hint, (panel_rect.x + 12, panel_rect.y + 42))
+                list_top = panel_rect.y + 58
+            viewport = pygame.Rect(
+                panel_rect.x + inner_pad,
+                list_top,
+                max(1, panel_rect.width - 2 * inner_pad),
+                max(1, panel_rect.y + panel_rect.height - 10 - list_top),
+            )
+            content_w = viewport.width
+            content_total_h = self._measure_controls_content_height(content_w)
+            max_scroll = max(0, content_total_h - viewport.height)
+            self.controls_scroll_px = max(0, min(self.controls_scroll_px, max_scroll))
+
+            desc_max_w = max(80, content_w - 130)
+            line_h = self.theme.font_small.get_height() + 2
+            clip_prev = surface.get_clip()
+            surface.set_clip(viewport)
+            try:
+                y = viewport.y - self.controls_scroll_px
+                for key, desc in self.keybinds:
+                    if not key and not desc:
+                        y += 10
+                        continue
+
+                    if desc and not key:
+                        header = self.theme.font_body.render(desc, True, self.theme.accent)
+                        surface.blit(header, (panel_rect.x + 20, y))
+                        y += 30
+                    else:
+                        key_text = self.theme.font_body.render(key, True, self.theme.text)
+                        surface.blit(key_text, (panel_rect.x + 30, y))
+
+                        if desc:
+                            lines = _wrap_text(self.theme.font_small, desc, desc_max_w)
+                            dy = y
+                            for line in lines:
+                                desc_text = self.theme.font_small.render(line, True, (200, 200, 200))
+                                surface.blit(desc_text, (panel_rect.x + 120, dy + 2))
+                                dy += line_h
+                            y = max(y + 22, dy)
+                        else:
+                            y += 22
+            finally:
+                surface.set_clip(clip_prev)
+
             # Back button
             back_text = self.theme.font_small.render("< Back", True, self.theme.text)
             surface.blit(back_text, (panel_rect.x + 10, panel_rect.y + 10))
