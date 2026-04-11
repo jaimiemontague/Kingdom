@@ -76,6 +76,9 @@ python tools/observe_sync.py --seconds 20 --heroes 10 --seed 3 --log-every 120 -
 
 # (QA) Headless smoke profiles (recommended before commits/releases)
 python tools/qa_smoke.py --quick
+
+# (Art) Standalone Ursina browser for everything under assets/models/ (by pack folder)
+python tools/model_viewer.py
 ```
 
 ## Controls
@@ -169,6 +172,8 @@ See: `docs/studio_gateway.md`
 ```bash
 python tools/qa_smoke.py --quick
 ```
+
+- **Model viewer (manual)**: After changing `tools/model_viewer.py`, run `python tools/model_viewer.py` from the repo root, confirm WASD pan and wheel zoom work, pack borders and labels are visible, then close with ESC. Use `python tools/model_viewer.py --max-total 30` for a quick smoke without loading every file.
 
 ## Customization
 
