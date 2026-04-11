@@ -5220,11 +5220,16 @@
                     "pm_next_actions_by_agent": {
                         "09": {
                             "status": "assigned_active",
-                            "asks": ["Rewrite .cursor/rules/07-asset-conventions.mdc for flat .glb/.obj asset standards."]
+                            "asks": [
+                                "Rewrite .cursor/rules/07-asset-conventions.mdc for flat .glb/.obj asset standards."
+                            ]
                         },
                         "12": {
                             "status": "assigned_active",
-                            "asks": ["Update tools/assets_manifest.json (remove 'states')", "Rewrite tools/validate_assets.py to check for assets/models/ instead of frame sequences"]
+                            "asks": [
+                                "Update tools/assets_manifest.json (remove 'states')",
+                                "Rewrite tools/validate_assets.py to check for assets/models/ instead of frame sequences"
+                            ]
                         }
                     },
                     "pm_universal_prompt": "You are assigned to the v1.5 Graphics Transition project. First, read the roadmap at .cursor/plans/master_plan_3d_graphics_v1_5.md. Next, review your specific instructions and execute the tasks assigned to you exactly as outlined here: .cursor/plans/wk25_sprint_1_1_3d_tooling.plan.md.",
@@ -5249,17 +5254,65 @@
                     "pm_next_actions_by_agent": {
                         "03": {
                             "status": "assigned_active",
-                            "asks": ["Deprecate _bake_terrain_floor() in ursina_renderer.py", "Spawn Entity(model='environment/grass') for all floor tiles."]
+                            "asks": [
+                                "Deprecate _bake_terrain_floor() in ursina_renderer.py",
+                                "Spawn Entity(model='environment/grass') for all floor tiles."
+                            ]
                         },
                         "09": {
                             "status": "assigned_active",
-                            "asks": ["Set up AmbientLight and DirectionalLight in ursina_renderer.py to properly shade the untextured meshes."]
+                            "asks": [
+                                "Set up AmbientLight and DirectionalLight in ursina_renderer.py to properly shade the untextured meshes."
+                            ]
                         }
                     },
                     "pm_universal_prompt": "You are assigned to the v1.5 Graphics Transition project. First, read the roadmap at .cursor/plans/master_plan_3d_graphics_v1_5.md. Next, review your specific instructions and execute the tasks assigned to you exactly as outlined here: .cursor/plans/wk26_sprint_1_2_base_terrain.plan.md.",
                     "pm_agent_prompts": {
                         "03": "Sprint 1.2 (Tech Director): Eradicate the old 2D TileSpriteLibrary bake inside ursina_renderer.py. Replace it with an Entity instantiation loop mapped to the world.tiles array, loading 'environment/grass', 'environment/path', 'environment/rock', and 'environment/tree_pine'.",
                         "09": "Sprint 1.2 (Art Director): The base terrain models are untextured. Hook them up to flat shading by creating a simple AmbientLight and shadow-casting DirectionalLight in ursina_renderer.py during __init__."
+                    }
+                }
+            }
+        },
+        "wk27-sprint-2-1-3d-buildings": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk27_sprint_2_1_buildings.plan.md",
+                "notes": "Execution of Sprint 2.1: Swapping 2D Castle, House, and Lair sprites for 3D primitives."
+            },
+            "rounds": {
+                "sprint_2_1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "sprint_2_1_r1",
+                        "build_target": "3D Castles and Houses",
+                        "visibility": "Implementers: 03, 09."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Assigned",
+                        "focus": "Replacing 2D billboard sprites with 3D models for Castles, Peasant Houses, and Lairs.",
+                        "gates": {
+                            "validation_pass": "python tools/qa_smoke.py --quick must pass."
+                        }
+                    },
+                    "pm_next_actions_by_agent": {
+                        "03": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Intercept castle, house, and lair types inside _sync_buildings loop in ursina_renderer.py.",
+                                "Instantiate them using Entity(model=...) mapped to their respective models in assets/models/environment/ instead of billboards."
+                            ]
+                        },
+                        "09": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Validate the exact footprint, scaling, and clipping of the new 3D buildings.",
+                                "Ensure they use the correct material shader to cast shadows natively (instead of sprite_unlit_shader)."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are assigned to the v1.5 Graphics Transition project for Sprint 2.1. First, consult .cursor/plans/wk27_sprint_2_1_buildings.plan.md for your formal requirements. Next, update ursina_renderer.py. Once done, ensure to push your agent log to reflect completion, and run the QA test sequence to proceed. Jaimie will manually verify the visual scale and placement bounds thereafter.",
+                    "pm_agent_prompts": {
+                        "03": "Sprint 2.1 (Tech Director): Target `ursina_renderer.py`. In `_sync_buildings`, intercept instances of `castle`, `house`, and lari entities. Disable their billboard rendering, instead mapping them to `Entity(model='assets/models/environment/castle.obj')` etc. You may use fallback generic primitive cubes if the models are missing, but load them correctly via code path.",
+                        "09": "Sprint 2.1 (Art Director): Polish the newly mapped `castle` and `house` models from Agent 03. Specifically, configure their scaling to match their designated tile boundaries, ensuring peasants do not clip through them. Check they emit drop shadows correctly in `ursina_renderer.py`."
                     }
                 }
             }

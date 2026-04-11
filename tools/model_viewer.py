@@ -25,14 +25,15 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_EXTS = {".glb", ".gltf", ".obj"}
+TEXTURE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".webp"}
 
 # Layout (world units)
 DEFAULT_CELL = 7.0
 DEFAULT_PACK_GAP = 14.0
 DEFAULT_MODEL_MAX_EXTENT = 5.0  # max axis-aligned size after uniform scale
 LABEL_Y = 0.08
-TEXT_SCALE = 6.0
-PACK_TITLE_SCALE = 9.0
+TEXT_SCALE = 13.0
+PACK_TITLE_SCALE = 20.0
 
 
 def _rel_posix(path: Path, root: Path) -> str:
@@ -117,6 +118,31 @@ def _pack_border_entity(
     )
 
 
+def _setup_scene_lighting(*, center_x: float, center_z: float, span: float) -> None:
+    """Use a simple key/fill rig so mixed asset packs are readable at a glance."""
+    from ursina import AmbientLight, DirectionalLight, Vec3, color, scene
+
+    focus = Vec3(center_x, 0.0, center_z)
+    lift = max(42.0, span * 0.55)
+    key = DirectionalLight(
+        parent=scene,
+        shadows=False,
+        color=color.rgba(1.0, 0.97, 0.92, 1.0),
+    )
+    key.position = Vec3(center_x - span * 0.35, lift, center_z - span * 0.7)
+    key.look_at(focus)
+
+    fill = DirectionalLight(
+        parent=scene,
+        shadows=False,
+        color=color.rgba(0.56, 0.62, 0.72, 1.0),
+    )
+    fill.position = Vec3(center_x + span * 0.55, lift * 0.75, center_z - span * 0.1)
+    fill.look_at(focus)
+
+    AmbientLight(parent=scene, color=color.rgba(0.56, 0.6, 0.68, 1.0))
+
+
 def _truncate_label(s: str, max_len: int = 42) -> str:
     if len(s) <= max_len:
         return s
@@ -124,6 +150,79 @@ def _truncate_label(s: str, max_len: int = 42) -> str:
     head = keep // 2
     tail = keep - head
     return s[:head] + "..." + s[-tail:]
+
+
+def _build_texture_index(search_root: Path) -> dict[str, Path]:
+    """Map lowercase texture basenames to files anywhere under the pack root."""
+    texture_index: dict[str, Path] = {}
+    if not search_root.is_dir():
+        return texture_index
+    for candidate in sorted(search_root.rglob("*"), key=lambda p: str(p).lower()):
+        if candidate.is_file() and candidate.suffix.lower() in TEXTURE_EXTS:
+            texture_index.setdefault(candidate.name.lower(), candidate)
+    return texture_index
+
+
+def _repair_texture_paths(
+    node: Any,
+    *,
+    search_root: Path,
+    texture_index_cache: dict[Path, dict[str, Path]],
+) -> int:
+    """
+    Rebind textures whose source files point at stale export-machine paths.
+
+    Several third-party OBJ/MTL packs reference author-local absolute paths.
+    Panda keeps the texture object but can't read the pixels, which leaves the
+    mesh flat white/black. Matching by basename within the same top-level pack
+    repairs those references without mutating the source files.
+    """
+    try:
+        from panda3d.core import Filename, TexturePool
+    except Exception:
+        return 0
+
+    if node is None:
+        return 0
+    if not hasattr(node, "find_all_textures") or not hasattr(node, "replaceTexture"):
+        return 0
+
+    texture_index = texture_index_cache.get(search_root)
+    if texture_index is None:
+        texture_index = _build_texture_index(search_root)
+        texture_index_cache[search_root] = texture_index
+    if not texture_index:
+        return 0
+
+    replacements = 0
+    for tex in node.find_all_textures():
+        try:
+            tex_filename = tex.get_filename()
+        except Exception:
+            tex_filename = None
+        if tex_filename is not None and not tex_filename.empty() and tex_filename.exists():
+            continue
+
+        basename = ""
+        if tex_filename is not None and not tex_filename.empty():
+            basename = tex_filename.get_basename()
+        if not basename:
+            try:
+                basename = Path(str(tex.get_name() or "")).name
+            except Exception:
+                basename = ""
+        if not basename:
+            continue
+
+        replacement_path = texture_index.get(basename.lower())
+        if replacement_path is None:
+            continue
+        replacement_tex = TexturePool.loadTexture(Filename.fromOsSpecific(str(replacement_path)))
+        if replacement_tex is None:
+            continue
+        node.replaceTexture(tex, replacement_tex)
+        replacements += 1
+    return replacements
 
 
 def _load_model_node_from_file(abs_path: Path) -> Any:
@@ -149,7 +248,7 @@ def _load_model_node_from_file(abs_path: Path) -> Any:
     try:
         if ext in (".glb", ".gltf"):
             gs = gltf.GltfSettings()
-            gs.no_srgb = bool(getattr(application, "gltf_no_srgb", True))
+            gs.no_srgb = False
             model_root = gltf.load_model(str(p), gltf_settings=gs)
             if model_root is None:
                 return None
@@ -206,10 +305,7 @@ def run_viewer(
         )
 
     from ursina import (
-        AmbientLight,
-        DirectionalLight,
         Entity,
-        Mesh,
         Text,
         Ursina,
         Vec3,
@@ -237,7 +333,6 @@ def run_viewer(
 
     window.exit_button.visible = False
     window.fps_counter.enabled = True
-    Entity.default_shader = unlit_shader
     try:
         scene.clearFog()
     except Exception:
@@ -246,9 +341,6 @@ def run_viewer(
         app.setBackgroundColor(LVecBase4f(0.06, 0.07, 0.09, 1))
     except Exception:
         pass
-
-    AmbientLight(color=color.rgba(0.38, 0.4, 0.46, 1))
-    DirectionalLight(direction=(0.35, -1.0, -0.25), shadows=False)
 
     # Large reference grid on XZ (Grid mesh is authored in XY; rotate to floor)
     try:
@@ -298,6 +390,7 @@ def run_viewer(
     gallery_max_x = float("-inf")
     gallery_min_z = float("inf")
     gallery_max_z = float("-inf")
+    texture_index_cache: dict[Path, dict[str, Path]] = {}
 
     for pi, pack_name in enumerate(pack_order):
         files = pack_files[pack_name]
@@ -347,7 +440,11 @@ def run_viewer(
 
             node = _load_model_node_from_file(fpath)
             if node is not None:
-                ext_l = fpath.suffix.lower()
+                _repair_texture_paths(
+                    node,
+                    search_root=pack_root,
+                    texture_index_cache=texture_index_cache,
+                )
                 ent = Entity(
                     parent=scene,
                     model=node,
@@ -355,8 +452,10 @@ def run_viewer(
                     double_sided=True,
                     position=(cx_i, 0.0, cz_i),
                 )
-                if ext_l in (".gltf", ".glb"):
-                    ent.model.setShaderAuto()
+                try:
+                    ent.setShaderAuto()
+                except Exception:
+                    pass
                 _fit_uniform_and_ground(ent, model_max_extent)
             else:
                 print(f"[model_viewer] Failed to load: {rel_game}", file=sys.stderr)
@@ -389,14 +488,17 @@ def run_viewer(
     center_x = (gallery_min_x + gallery_max_x) * 0.5
     center_z = (gallery_min_z + gallery_max_z) * 0.5
     span = max(gallery_max_x - gallery_min_x, gallery_max_z - gallery_min_z, cell * 3)
+    _setup_scene_lighting(center_x=center_x, center_z=center_z, span=span)
     camera.orthographic = False
-    camera.fov = 52
+    camera.fov = 46
     camera.clip_plane_near = 0.05
     camera.clip_plane_far = 50000.0
-    elev = max(35.0, span * 0.55)
-    back = max(45.0, span * 0.75)
-    camera.position = Vec3(center_x, elev, center_z + back)
-    camera.look_at(Vec3(center_x, 0.0, center_z))
+    elev = max(24.0, span * 0.42)
+    back = max(34.0, span * 0.72)
+    focus_y = max(1.5, model_max_extent * 0.45)
+    camera.position = Vec3(center_x, elev, center_z - back)
+    camera.look_at(Vec3(center_x, focus_y, center_z))
+    camera.rotation_z = 0.0
 
     Text(
         text="WASD pan | Wheel / +/- / Q E zoom | ESC quit",
