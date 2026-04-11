@@ -1,54 +1,87 @@
 ---
-description: Asset folder conventions, naming rules, and licensing requirements.
+description: 3D model and asset folder conventions (v1.5) — glTF/GLB/OBJ, naming, scale, and licensing.
 globs: "assets/**"
 alwaysApply: false
 ---
 
-# Asset Conventions
+# Asset Conventions (v1.5 — 3D pipeline)
 
-## Folder Structure
+This project is **transitioning off the legacy 2D PNG sprite pipeline** (`<state>/frame_NNN.png` under `assets/sprites/`). For **world content and animated entities**, do **not** add new 2D sprite sheets or frame sequences. Use **3D meshes** under `assets/models/` as validated by `tools/assets_manifest.json` and `tools/validate_assets.py`.
+
+**Exception (temporary):** HUD/UI raster assets (9-slice panels, small icons) may remain under `assets/ui/` until a dedicated UI 3D/vector pass. That is **not** permission to add new unit or terrain PNG frame sequences.
+
+---
+
+## Folder structure (`assets/models/`)
+
+Use a **flat file-per-kind** layout: one model file per logical id, not per-animation subfolders. Animations live **inside** the glTF/GLB (clips on the same rig).
 
 ```
 assets/
-├── sprites/
-│   ├── heroes/<class>/          # warrior/, ranger/, rogue/, wizard/
-│   │   └── <state>/frame_NNN.png   # idle/, walk/, attack/, hurt/, inside/
-│   ├── enemies/<type>/          # goblin/, wolf/, skeleton/, skeleton_archer/, etc.
-│   │   └── <state>/frame_NNN.png
-│   ├── buildings/<type>/        # castle/, warrior_guild/, marketplace/, etc.
-│   │   └── <state>.png            # built.png, construction.png, damaged.png
-│   └── workers/<type>/          # peasant/, tax_collector/
-│       └── <state>/frame_NNN.png
+├── models/
+│   ├── environment/          # Static props: terrain tiles, rocks, trees (see manifest `environment.types`)
+│   │   # e.g. grass.glb, path.glb, rock.glb, tree_pine.glb
+│   ├── heroes/               # Animated: one file per class
+│   │   # e.g. warrior.glb, ranger.glb, rogue.glb, wizard.glb
+│   ├── enemies/              # Animated: one file per enemy type
+│   ├── buildings/            # Static or animated per building type (often static .obj/.glb)
+│   └── workers/              # Animated: e.g. peasant.glb, tax_collector.glb
 ├── audio/
-│   ├── sfx/                     # Short sound effects (.wav or .ogg)
-│   └── ambient/                 # Ambient loops (.ogg)
-├── ui/                          # UI skin assets (9-slice panels, icons, buttons)
-└── ATTRIBUTION.md               # Required: license + source for every asset
+│   ├── sfx/
+│   └── ambient/
+├── ui/                       # UI skins / icons (2D allowed here only; see note above)
+└── ATTRIBUTION.md            # Required for every shipped asset file
 ```
 
-## Naming Rules
+Authoritative lists of **which** `kind` names exist per category are in **`tools/assets_manifest.json`** (must stay aligned with `config.py` building keys and entity types).
 
-- All lowercase, underscores for spaces: `warrior_guild`, `skeleton_archer`
-- Frame files: `frame_000.png`, `frame_001.png`, etc. (zero-padded to 3 digits)
-- State names match `tools/assets_manifest.json` exactly
-- Building types match `config.py` BUILDING_COSTS keys exactly
+---
 
-## Sprite Size Rules
+## File format rules
 
-- Heroes: 32x32 base (tile-multiple)
-- Enemies: 32x32 base
-- Buildings: tile-multiple sizes (e.g., castle = 96x96 = 3 tiles)
-- All sprites use nearest-neighbor scaling (no anti-aliasing)
+| Content | Allowed formats | Notes |
+|--------|-----------------|--------|
+| **Animated entities** (heroes, workers, enemies) | **`.glb` or `.gltf`** | Must include **embedded rigging** and animation clips. Prefer **`.glb`** for single-file deployment. |
+| **Static environment** (ground, rocks, trees) | **`.obj` or `.glb` / `.gltf`** | No rig required; optimize for low-poly, flat-shaded look. |
+| **Static buildings** (non-animated meshes) | **`.obj` or `.glb` / `.gltf`** | Match building type keys to simulation data; no footprint change without gameplay sign-off. |
 
-## Licensing (Non-negotiable)
+**Forbidden for v1.5 world/entity art:** PNG/JPEG **sprite strips**, per-state folders, and `frame_000.png`-style sequences for units, buildings, or terrain.
 
-- All assets must be **CC0 or permissive** (compatible with commercial Steam release)
-- Every new asset file must have a corresponding entry in `assets/ATTRIBUTION.md`
-- Source packs go in `.cursor/human_provided/` with their original license files
-- Run `python tools/validate_assets.py --check-attribution` after adding assets
+---
 
-## Fallback Safety
+## Naming rules
 
-- The game generates procedural placeholder sprites when asset files are missing
-- This means missing assets won't crash the game, but they look bad
-- Always test visually after adding assets: `python main.py`
+- **Lowercase** with **underscores** for spaces: `warrior_guild`, `skeleton_archer`, `tree_pine`.
+- **Model basename** matches the manifest key: `heroes/warrior.glb`, not nested `warrior/idle/...`.
+- **Building types** match `config.py` `BUILDING_COSTS` keys exactly.
+- **Only** use extensions: **`.glb`**, **`.gltf`**, **`.obj`** (plus sidecars like `.mtl` only when required by a chosen `.obj`).
+
+---
+
+## Scale and look (replaces legacy “32×32 sprite” rules)
+
+- Target a **low-poly, flat-shaded** look (Ursina basic lighting; avoid heavy PBR stacks unless explicitly approved).
+- **One standard engine grid unit ≈ one logical mesh unit** in authored assets unless Tech/Gameplay specifies otherwise—keep scales consistent so grid placement and renderer loading stay aligned.
+- **No** nearest-neighbor rules for textures on 3D meshes in the sense of pixel sprites; use **readable** UVs and materials that stay clean at runtime resolution.
+
+---
+
+## Licensing (non-negotiable)
+
+- All assets must be **CC0 or permissive** (compatible with commercial Steam release).
+- Every new asset file must have a corresponding entry in **`assets/ATTRIBUTION.md`**.
+- Source packs belong under **`.cursor/human_provided/`** with their original license files.
+- After adding assets, run: `python tools/validate_assets.py --check-attribution` (and **`--report`** as required by the current sprint).
+
+---
+
+## Legacy behavior (until fully removed)
+
+- Older code paths may still generate **procedural 2D placeholders** when a model is missing; that is a **fallback**, not a target art style.
+- Prefer fixing missing entries in `assets/models/` and the manifest over drawing new 2D stand-ins.
+
+---
+
+## Workspace hygiene (human + art)
+
+- Remove incompatible source formats from curated import folders (e.g. `.blend`, `.fbx`, `.dae`, `.stl`) per the **v1.5 master plan**; ship only **`.glb` / `.gltf` / `.obj`** for game runtime paths.

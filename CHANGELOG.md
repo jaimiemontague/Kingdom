@@ -1,5 +1,14 @@
 # Changelog
 
+## Prototype v1.5.0 — Phase 1: 3D Environment Transition
+
+### WK25 & WK26 Sprints: Asset Tooling & Base Terrain
+- **Asset Conventions Validations:** Upgraded `assets_manifest.json` and `validate_assets.py` to natively ingest standalone 3D meshes (`.glb`, `.gltf`, `.obj`) instead of searching for 2D pixel-art frame sequence directories.
+- **True 3D Base Terrain:** Eradicated the 2D pygame-canvas terrain renderer. Sourced low-poly `.glb` mesh primitives (path tile, rock, pine tree) from asset packs and seamlessly mapped them to the local `Ursina` Entity generation block.
+- **Dynamic Meadow Plane:** Rather than rigid dirt voxel blocks, organic grass tuft doodads now rest securely on top of an endlessly rendered flat green environment plane (`y=-0.05`) acting as a cohesive world floor. 
+- **Foundational Lighting:** Inserted an `AmbientLight` and a shadow-casting `DirectionalLight` to accurately cast flat-shaded geometry across all untextured `.glb` environment models.
+
+
 ## Prototype v1.4.9 — Most Ursina Major Bugs Fixed
 
 ### WK24 Sprint: UI & Renderer Polish

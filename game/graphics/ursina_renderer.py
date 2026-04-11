@@ -5,19 +5,27 @@ Perspective view: floor plane is X/Z (Y up). Simulation pixels (x, y) map to
 (world_x, world_z) with world_z = -px_y / SCALE so screen-north stays intuitive
 (PM WK19 decision).
 
-WK21: Terrain is startup-baked from TileSpriteLibrary into one floor quad.
-Buildings use BuildingSpriteLibrary on a single billboard quad (not a textured
-cube — avoids "two volumes" from facade + top face). Units use pixel-art
+v1.5 Sprint 1.2 (Agent 03): Terrain is built from discrete 3D meshes under
+``assets/models/environment/`` (grass/path/water tint + tree/rock props), parented
+under one root Entity — no TileSpriteLibrary bake or terrain atlas.
+
+Buildings use BuildingSpriteLibrary on a single billboard quad. Units use pixel-art
 billboards (Hero/Enemy/Worker sprite libraries).
+
+v1.5 Sprint 1.2 (Agent 09): Scene lighting (AmbientLight + shadow-casting
+DirectionalLight) is created in ``UrsinaRenderer.__init__`` so untextured 3D
+terrain/props read with simple flat-shaded dimensionality.
 """
 from __future__ import annotations
 
 import time
 import zlib
+from pathlib import Path
 
 import pygame
 import config
-from ursina import Entity, Vec2, color, Text
+from ursina import Entity, Vec2, Vec3, color, Text, scene
+from ursina.lights import AmbientLight, DirectionalLight
 from ursina.shaders import unlit_shader
 
 from game.graphics.animation import AnimationClip
@@ -25,11 +33,10 @@ from game.graphics.building_sprites import BuildingSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
-from game.graphics.tile_sprites import TileSpriteLibrary
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
 from game.graphics.vfx import get_projectile_billboard_surface
 from game.graphics.worker_sprites import WorkerSpriteLibrary
-from game.world import Visibility
+from game.world import TileType, Visibility
 
 # Fallback tints when a texture is missing
 COLOR_HERO = color.azure
@@ -43,6 +50,14 @@ COLOR_LAIR = color.brown
 # 1 world unit along the floor == 1 tile == 32 px (unchanged from ortho MVP)
 SCALE = 32.0
 
+# v1.5 Sprint 1.2: uniform scale for Kenney OBJ tiles (1×1 plane ≈ one sim tile).
+TERRAIN_SCALE_MULTIPLIER = 1.0
+# Props sit on the same grid; tune if authored mesh bounds drift.
+TREE_SCALE_MULTIPLIER = 1.15
+ROCK_SCALE_MULTIPLIER = 0.42
+# Grass tiles use organic scatter doodads on the base plane, not full-tile voxels.
+GRASS_SCATTER_SCALE_MULTIPLIER = 0.52
+
 # Vertical extents (world units), from Agent 09 volumetric mapping table
 H_CASTLE = 2.2
 H_BUILDING_3X3 = 1.6
@@ -54,7 +69,6 @@ H_LAIR = 1.0
 UNIT_BILLBOARD_SCALE = 0.62
 
 # Stable bridge keys — never use id(surface) alone for multi-megapixel sheets (see terrain_texture_bridge).
-_TERRAIN_TEX_KEY = "kingdom_ursina_terrain_baked"
 _FOG_TEX_KEY = "kingdom_ursina_fog_overlay"
 
 ENEMY_SCALE = 0.5
@@ -74,6 +88,27 @@ def sim_px_to_world_xz(px_x: float, px_y: float) -> tuple[float, float]:
 def px_to_world(px_x: float, px_y: float) -> tuple[float, float]:
     """Backward-compatible name: returns (world_x, world_z) for the floor plane."""
     return sim_px_to_world_xz(px_x, px_y)
+
+
+_ENV_MODEL_DIR = Path(__file__).resolve().parents[2] / "assets" / "models" / "environment"
+
+
+def _environment_model_path(kind: str) -> str:
+    """Resolve ``assets/models/environment/<kind>.{glb,gltf,obj}`` for Ursina ``Entity(model=...)``."""
+    for ext in (".glb", ".gltf", ".obj"):
+        p = _ENV_MODEL_DIR / f"{kind}{ext}"
+        if p.is_file():
+            return f"assets/models/environment/{kind}{ext}"
+    return "cube"
+
+
+def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
+    """Deterministic XZ offset + yaw (degrees) so grass doodads read as scattered foliage."""
+    h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
+    jx = ((h & 0xFFFF) / 65535.0 - 0.5) * 0.38
+    jz = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 0.38
+    yaw = float((tx * 127 + ty * 331) % 360)
+    return jx, jz, yaw
 
 
 def _building_type_str(bt) -> str:
@@ -163,10 +198,8 @@ class UrsinaRenderer:
         # Entity mappings: simulation object id() -> Ursina Entity
         self._entities = {}
 
-        # Single baked terrain quad (WK21 startup bake)
+        # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
-        # Keep the bake sheet alive so its address is never reused to collide with fog in TextureBridge.
-        self._terrain_sheet: pygame.Surface | None = None
 
         # Fog-of-war overlay quad (WK22): matches pygame render_fog tints per visibility tile.
         self._fog_entity: Entity | None = None
@@ -187,6 +220,47 @@ class UrsinaRenderer:
         self._unit_anim_state: dict[int, dict] = {}
         # WK23: single shared GPU texture for VFX projectiles (arrow-shaped, not yellow fallback).
         self._projectile_tex = None
+
+        # --- v1.5: base lighting for 3D meshes (flat-shaded, optional shadows) ---
+        self._directional_light = None
+        self._shadow_bounds_initialized = False
+        self._setup_scene_lighting()
+
+    def _setup_scene_lighting(self) -> None:
+        """Dim gray-blue ambient + warm directional sun; directional casts shadow maps when enabled.
+
+        Billboards keep unlit_shader + shadow-mask hide; lit 3D terrain/props use default_shader
+        from UrsinaApp (lit_with_shadows when URSINA_DIRECTIONAL_SHADOWS is True).
+        """
+        try:
+            from ursina import color as ucolor
+
+            world = self.engine.world
+            tw, th = int(world.width), int(world.height)
+            ts = float(config.TILE_SIZE)
+            cx_px = tw * ts * 0.5
+            cy_px = th * ts * 0.5
+            cx, cz = sim_px_to_world_xz(cx_px, cy_px)
+
+            # Slightly cool ambient so untextured meshes are not silhouette-black.
+            AmbientLight(parent=scene, color=ucolor.rgba(0.34, 0.38, 0.44, 1.0))
+
+            _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
+            sm = int(getattr(config, "URSINA_SHADOW_MAP_SIZE", 768))
+            sm = max(256, min(2048, sm))
+
+            dl = DirectionalLight(
+                parent=scene,
+                shadows=_shadows,
+                shadow_map_resolution=Vec2(sm, sm),
+                color=ucolor.rgba(0.98, 0.95, 0.88, 1.0),
+            )
+            # Downward angled sun toward map center (same framing as prior UrsinaApp setup).
+            dl.position = Vec3(cx + 55.0, 95.0, cz + 40.0)
+            dl.look_at(Vec3(cx, 0.0, cz))
+            self._directional_light = dl
+        except Exception:
+            self._directional_light = None
 
     def _unit_anim_surface(
         self,
@@ -320,7 +394,7 @@ class UrsinaRenderer:
             return
 
         ts = int(config.TILE_SIZE)
-        # WK23 R1: Quad size + center MUST match _bake_terrain_floor() exactly — any drift
+        # WK23 R1: Quad size + center MUST match _build_3d_terrain() map extent — any drift
         # misaligns fog vs terrain and makes FOW “slide” relative to heroes/units.
         w_world = (tw * ts) / SCALE
         d_world = (th * ts) / SCALE
@@ -363,59 +437,109 @@ class UrsinaRenderer:
 
         self._fog_revision_seen = engine_rev
 
-    def _bake_terrain_floor(self) -> None:
-        """One quad covering the map with a pygame terrain sheet → single texture."""
+    def _build_3d_terrain(self) -> None:
+        """Per-tile path/water meshes + scatter grass doodads on a full-map base plane (v1.5 Sprint 1.2)."""
         if self._terrain_entity is not None:
             return
 
         world = self.engine.world
         tw, th = int(world.width), int(world.height)
         ts = int(config.TILE_SIZE)
+        m = float(TERRAIN_SCALE_MULTIPLIER)
+        grass_model = _environment_model_path("grass")
+        path_model = _environment_model_path("path")
+        rock_model = _environment_model_path("rock")
+        tree_model = _environment_model_path("tree_pine")
+        tm = m * float(TREE_SCALE_MULTIPLIER)
+        rm = m * float(ROCK_SCALE_MULTIPLIER)
+        g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
 
-        sheet = pygame.Surface((tw * ts, th * ts), pygame.SRCALPHA)
-        for ty in range(th):
-            for tx in range(tw):
-                tile_type = int(world.tiles[ty][tx])
-                surf = TileSpriteLibrary.get(tile_type, tx, ty, size=ts)
-                if surf:
-                    sheet.blit(surf, (tx * ts, ty * ts))
+        root = Entity(name="terrain_3d_root")
+        water_tint = color.rgb(0.24, 0.48, 0.82)
 
-        self._terrain_sheet = sheet
-        tex = TerrainTextureBridge.surface_to_texture(sheet, cache_key=_TERRAIN_TEX_KEY)
-        if tex is None:
-            return
-
-        # World size in X/Z (same as legacy 2D tile stepping).
+        # Cohesive green ground plane under the grid (organic scatter sits on y≈0 above this).
         w_world = (tw * ts) / SCALE
         d_world = (th * ts) / SCALE
         cx_px = tw * ts * 0.5
         cy_px = th * ts * 0.5
-        wx, wz = sim_px_to_world_xz(cx_px, cy_px)
-
-        # Quad mesh lies in local X/Y (see ursina.models.procedural.quad). After rotation_x=90°,
-        # local Y becomes world depth (Z). Both axes must match map size — using (w, 1, d) left
-        # the quad only 1 unit tall in Y, stretching the atlas into a thin strip (noisy paths,
-        # grass apparently "missing" / wrong sampling).
-        self._terrain_entity = Entity(
+        base_wx, base_wz = sim_px_to_world_xz(cx_px, cy_px)
+        Entity(
+            parent=root,
             model="quad",
-            texture=tex,
+            color=color.rgb(0.2, 0.5, 0.2),
             scale=(w_world, d_world, 1),
             rotation=(90, 0, 0),
-            position=(wx, 0.0, wz),
-            color=color.white,
+            position=(base_wx, -0.05, base_wz),
+            collision=False,
             double_sided=True,
+            shader=unlit_shader,
         )
-        if self._terrain_entity.texture:
-            self._terrain_entity.texture.filtering = None
-        # WK22 R2: Terrain atlas must stay on its own Texture object (see bridge cache_key).
-        # UV: V-flip + offset aligns world north with 2D map after Ursina's PIL upload flip — without
-        # this, only the "wrong" band of the atlas can dominate (looked like solid grass / missing trees).
-        self._terrain_entity.texture_scale = Vec2(1, -1)
-        self._terrain_entity.texture_offset = Vec2(0, 1)
-        # WK22 SPRINT-BUG-006: full-map terrain must not use lit+shadows or cast into the shadow pass.
-        self._terrain_entity.shader = unlit_shader
-        self._terrain_entity.hide(0b0001)
-        self._terrain_entity.render_queue = 0
+
+        for ty in range(th):
+            for tx in range(tw):
+                tile = int(world.tiles[ty][tx])
+                cx_px = tx * ts + ts * 0.5
+                cy_px = ty * ts + ts * 0.5
+                wx, wz = px_to_world(cx_px, cy_px)
+
+                if tile == TileType.PATH:
+                    Entity(
+                        parent=root,
+                        model=path_model,
+                        position=(wx, 0.0, wz),
+                        scale=(m, m, m),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                    )
+                elif tile == TileType.WATER:
+                    Entity(
+                        parent=root,
+                        model=grass_model,
+                        position=(wx, 0.0, wz),
+                        scale=(m, m, m),
+                        color=water_tint,
+                        collision=False,
+                        double_sided=True,
+                    )
+
+                if tile == TileType.GRASS or tile == TileType.TREE:
+                    jx, jz, yaw = _grass_scatter_jitter(tx, ty)
+                    Entity(
+                        parent=root,
+                        model=grass_model,
+                        position=(wx + jx, 0.0, wz + jz),
+                        scale=(g_sc, g_sc, g_sc),
+                        rotation=(0, yaw, 0),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                    )
+
+                if tile == TileType.TREE:
+                    Entity(
+                        parent=root,
+                        model=tree_model,
+                        position=(wx, 0.0, wz),
+                        scale=(tm, tm, tm),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                    )
+                elif tile == TileType.GRASS:
+                    h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
+                    if h % 503 == 0:
+                        Entity(
+                            parent=root,
+                            model=rock_model,
+                            position=(wx, 0.0, wz),
+                            scale=(rm, rm, rm),
+                            color=color.white,
+                            collision=False,
+                            double_sided=True,
+                        )
+
+        self._terrain_entity = root
 
     @staticmethod
     def _apply_pixel_billboard_settings(ent: Entity) -> None:
@@ -519,7 +643,17 @@ class UrsinaRenderer:
         except Exception:
             HeroClass = None
 
-        self._bake_terrain_floor()
+        if (
+            not self._shadow_bounds_initialized
+            and self._directional_light is not None
+        ):
+            try:
+                self._directional_light.update_bounds(scene)
+            except Exception:
+                pass
+            self._shadow_bounds_initialized = True
+
+        self._build_3d_terrain()
         self._ensure_fog_overlay()
 
         gs = self.engine.get_game_state()

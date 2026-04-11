@@ -426,7 +426,8 @@ ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
 
 # --- WK22 Ursina 3D viewer (directional shadows; lower = faster GPU) ---
 # Shadow maps are expensive; keep off by default for playable FPS (set True for screenshots).
-URSINA_DIRECTIONAL_SHADOWS = False
+# v1.5 Sprint 1.2: enable so 3D terrain/props cast/receive simple directional shadows (tune off if GPU-bound).
+URSINA_DIRECTIONAL_SHADOWS = True
 URSINA_SHADOW_MAP_SIZE = 512
 # Legacy (WK23): Ursina fog no longer throttles on this — stale 3D fog desynced from minimap/pygame.
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12

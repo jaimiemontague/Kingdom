@@ -14,7 +14,6 @@ import config
 import pygame
 from PIL import Image
 from ursina import Ursina, Vec2, window, camera, time, Entity, Texture, Vec3, scene, mouse, held_keys
-from ursina.lights import AmbientLight, DirectionalLight
 from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
 from game.display_manager import DisplayManager
@@ -76,22 +75,7 @@ class UrsinaApp:
         camera.clip_plane_near = 0.1
         camera.clip_plane_far = 10000
 
-        # WK22 SPRINT-BUG-002: directional sun + shadow caster (bounds fitted to scene after first frame).
-        from ursina import color as ucolor2
-
-        AmbientLight(parent=scene, color=ucolor2.rgba(0.42, 0.44, 0.48, 1))
-        sm = int(getattr(config, "URSINA_SHADOW_MAP_SIZE", 768))
-        sm = max(256, min(2048, sm))
-        cx, cz = self._map_center_xz
-        self._directional_light = DirectionalLight(
-            parent=scene,
-            shadows=_ursina_shadows,
-            shadow_map_resolution=Vec2(sm, sm),
-            color=ucolor2.rgba(0.98, 0.95, 0.88, 1),
-        )
-        self._directional_light.position = Vec3(cx + 55, 95, cz + 40)
-        self._directional_light.look_at(Vec3(cx, 0, cz))
-        self._shadow_bounds_initialized = False
+        # v1.5 Sprint 1.2: Ambient + Directional lights live in UrsinaRenderer._setup_scene_lighting().
 
         self.input_manager = UrsinaInputManager()
         self.engine = GameEngine(input_manager=self.input_manager, headless=False, headless_ui=True)
@@ -470,13 +454,6 @@ class UrsinaApp:
             self._sync_ursina_camera_fov_from_zoom()
 
             self.renderer.update()
-
-            if not self._shadow_bounds_initialized:
-                try:
-                    self._directional_light.update_bounds(scene)
-                except Exception:
-                    pass
-                self._shadow_bounds_initialized = True
 
             self.engine.render_pygame()
             self._refresh_ui_overlay_texture()

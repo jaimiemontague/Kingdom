@@ -2913,6 +2913,49 @@
           }
         }
       }
+    },
+    "v1_5-sprint-1-2-base-terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk26_sprint_1_2_base_terrain.plan.md",
+        "notes": "v1.5 Phase 1.2: per-tile 3D terrain meshes; Agent 03 renderer + environment assets"
+      },
+      "rounds": {
+        "sprint_1_2_execution": {
+          "sprint_id": "v1_5-sprint-1-2-base-terrain",
+          "round_id": "sprint_1_2_execution",
+          "round_meta": { "sent_at_local": "2026-04-11T00:00:00" },
+          "prompt_text": "Remove _bake_terrain_floor / TileSpriteLibrary; add _build_3d_terrain with assets/models/environment grass, path, rock, tree_pine.",
+          "response": {
+            "received_at_local": "2026-04-11T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Deleted terrain atlas bake: removed TileSpriteLibrary terrain usage, _terrain_sheet, _TERRAIN_TEX_KEY.",
+              "Added TERRAIN_SCALE_MULTIPLIER + TREE_SCALE_MULTIPLIER + ROCK_SCALE_MULTIPLIER; _environment_model_path() resolves assets/models/environment/*.{glb,gltf,obj}.",
+              "_build_3d_terrain(): parent Entity terrain_3d_root; per-tile grass/path; water tint on grass; TREE tiles get grass + tree_pine; sparse deterministic rocks on GRASS.",
+              "Populated assets/models/environment/ from Kenney OBJ pack (grass, path, rock, tree_pine) with mtllib fixes; rock.mtl uses flat Kd (no missing colormap.png)."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py",
+              "assets/models/environment/grass.obj",
+              "assets/models/environment/grass.mtl",
+              "assets/models/environment/path.obj",
+              "assets/models/environment/path.mtl",
+              "assets/models/environment/rock.obj",
+              "assets/models/environment/rock.mtl",
+              "assets/models/environment/tree_pine.obj",
+              "assets/models/environment/tree_pine.mtl"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — verify 3D floor tiles, paths, trees, no 2D terrain atlas"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

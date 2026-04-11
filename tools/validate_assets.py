@@ -1,12 +1,15 @@
 """
-Asset validation (WK3).
+Asset validation (WK3 + v1.5 3D).
 
 Build A policy: report-only (do not block UI work).
 Build B policy: strict + attribution checks become failing gates.
 
+v1.5: validates flat model files under assets/models/<category>/ (*.glb, *.gltf, *.obj)
+instead of PNG frame sequences under assets/sprites/.
+
 This tool is intentionally FAST:
+- no mesh decoding
 - no image decoding
-- no scaling
 - only filesystem checks
 """
 
@@ -14,8 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,8 +27,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = PROJECT_ROOT / "tools" / "assets_manifest.json"
 DEFAULT_ASSETS_ROOT = PROJECT_ROOT / "assets"
 
-
-FRAME_RE = re.compile(r"^frame_(\d+)\.(png|PNG)$")
+# Prefer glTF binary first; static meshes may use .obj.
+MODEL_EXTS_ORDER = (".glb", ".gltf", ".obj")
 
 
 @dataclass(frozen=True)
@@ -45,79 +46,62 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def _list_png_frames(dir_path: Path) -> list[str]:
-    if not dir_path.exists() or not dir_path.is_dir():
-        return []
-    names = []
-    for p in dir_path.iterdir():
-        if not p.is_file():
-            continue
-        if FRAME_RE.match(p.name):
-            names.append(p.name)
-    names.sort()
-    return names
+def _resolve_model_file(category_dir: Path, kind: str) -> tuple[Path | None, str | None]:
+    """Return (path, ext) if assets/models/<category>/<kind>.{glb,gltf,obj} exists."""
+    for stem in (kind, kind.lower()):
+        for ext in MODEL_EXTS_ORDER:
+            p = category_dir / f"{stem}{ext}"
+            if p.is_file():
+                return p, ext
+    return None, None
 
 
-def _has_sortable_frames(names: list[str]) -> bool:
-    # We only require that names match frame_###.png; ordering is filename-sort order.
-    # If there are duplicates or gaps, we still accept in report mode; strict may choose to tighten later.
-    return bool(names)
-
-
-def _validate_sprite_tree(
+def _validate_model_tree(
     *,
     assets_root: Path,
     category: str,
     kinds: Iterable[str],
-    states: Iterable[str],
     strict: bool,
 ) -> tuple[list[Finding], dict[str, Any]]:
     """
-    Validate directory structure like:
-      assets/sprites/<category>/<kind>/<state>/frame_###.png
+    Validate flat files under:
+      assets/models/<category>/<kind>.glb|.gltf|.obj
     """
     findings: list[Finding] = []
     report: dict[str, Any] = {"category": category, "kinds": {}}
 
-    base = assets_root / "sprites" / category
+    base = assets_root / "models" / category
     if not base.exists():
-        findings.append(Finding("error", "missing_dir", f"Missing base directory for {category}", str(base)))
+        findings.append(
+            Finding(
+                "error",
+                "missing_model_category_dir",
+                f"Missing models directory for {category}",
+                str(base),
+            )
+        )
+        return findings, report
+
+    if not base.is_dir():
+        findings.append(
+            Finding("error", "model_category_not_dir", f"Expected directory for {category}", str(base))
+        )
         return findings, report
 
     for kind in kinds:
-        kind_report: dict[str, Any] = {"states": {}, "missing_states": [], "present_states": 0}
-        kind_dir = base / kind
-        if not kind_dir.exists():
+        resolved, ext = _resolve_model_file(base, kind)
+        if resolved is not None:
+            report["kinds"][kind] = {"file": resolved.name, "ext": ext, "ok": True}
+        else:
+            report["kinds"][kind] = {"file": None, "ok": False}
             findings.append(
                 Finding(
                     "error" if strict else "warn",
-                    "missing_kind_dir",
-                    f"Missing {category} kind directory: {kind}",
-                    str(kind_dir),
+                    "missing_model_file",
+                    f"Missing model file for {category}:{kind} (expected {kind}.glb, .gltf, or .obj in {base})",
+                    str(base),
                 )
             )
-        for st in states:
-            st_dir = kind_dir / st
-            frames = _list_png_frames(st_dir)
-            if not frames:
-                kind_report["missing_states"].append(st)
-                kind_report["states"][st] = {"frames": 0, "ok": False}
-                # In strict mode, missing required state frames is a hard error.
-                findings.append(
-                    Finding(
-                        "error" if strict else "warn",
-                        "missing_state_frames",
-                        f"Missing frames for {category}:{kind}:{st} (expected frame_###.png)",
-                        str(st_dir),
-                    )
-                )
-            else:
-                kind_report["present_states"] += 1
-                ok = _has_sortable_frames(frames)
-                kind_report["states"][st] = {"frames": len(frames), "ok": bool(ok), "sample": frames[:3]}
-                if not ok:
-                    findings.append(Finding("warn", "bad_frame_naming", f"Frames not sortable/named correctly for {category}:{kind}:{st}", str(st_dir)))
-        report["kinds"][kind] = kind_report
 
     return findings, report
 
@@ -133,7 +117,7 @@ def _validate_audio_tree(
     Validate audio file structure (WK6 flat structure):
       assets/audio/sfx/<name>.wav (or .ogg)
       assets/audio/ambient/<name>.ogg (or .wav)
-    
+
     WK6 Final: Flat contract keys (building_place, building_destroy, etc.).
     """
     findings: list[Finding] = []
@@ -257,7 +241,7 @@ def _validate_attribution(*, assets_root: Path, strict: bool) -> list[Finding]:
         # Minimal "fully populated" check: the rollup must be non-empty and mention each pack dir name.
         try:
             txt = attribution.read_text(encoding="utf-8", errors="replace")
-        except Exception as e:
+        except OSError as e:
             findings.append(Finding("error", "attribution_read_error", f"Failed to read assets/ATTRIBUTION.md: {e}", str(attribution)))
             txt = ""
 
@@ -289,7 +273,7 @@ def _print_findings(findings: list[Finding]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate sprite folders + attribution (fast, no image decoding).")
+    ap = argparse.ArgumentParser(description="Validate 3D model paths + audio + attribution (fast, no decoding).")
     ap.add_argument("--manifest", type=str, default=str(DEFAULT_MANIFEST), help="path to assets manifest JSON")
     ap.add_argument("--assets-root", type=str, default=str(DEFAULT_ASSETS_ROOT), help="assets root directory")
     ap.add_argument("--report", action="store_true", help="print human-readable report (default behavior)")
@@ -318,46 +302,52 @@ def main() -> int:
     enemies = manifest.get("enemies", {})
     buildings = manifest.get("buildings", {})
     workers = manifest.get("workers", {})
+    environment = manifest.get("environment", {})
 
-    h_findings, h_report = _validate_sprite_tree(
+    h_findings, h_report = _validate_model_tree(
         assets_root=assets_root,
         category="heroes",
         kinds=heroes.get("classes", []),
-        states=heroes.get("states", []),
         strict=bool(ns.strict),
     )
     findings.extend(h_findings)
     full_report["categories"]["heroes"] = h_report
 
-    e_findings, e_report = _validate_sprite_tree(
+    e_findings, e_report = _validate_model_tree(
         assets_root=assets_root,
         category="enemies",
         kinds=enemies.get("types", []),
-        states=enemies.get("states", []),
         strict=bool(ns.strict),
     )
     findings.extend(e_findings)
     full_report["categories"]["enemies"] = e_report
 
-    b_findings, b_report = _validate_sprite_tree(
+    b_findings, b_report = _validate_model_tree(
         assets_root=assets_root,
         category="buildings",
         kinds=buildings.get("types", []),
-        states=buildings.get("states", []),
         strict=bool(ns.strict),
     )
     findings.extend(b_findings)
     full_report["categories"]["buildings"] = b_report
 
-    w_findings, w_report = _validate_sprite_tree(
+    w_findings, w_report = _validate_model_tree(
         assets_root=assets_root,
         category="workers",
         kinds=workers.get("types", []),
-        states=workers.get("states", []),
         strict=bool(ns.strict),
     )
     findings.extend(w_findings)
     full_report["categories"]["workers"] = w_report
+
+    env_findings, env_report = _validate_model_tree(
+        assets_root=assets_root,
+        category="environment",
+        kinds=environment.get("types", []),
+        strict=bool(ns.strict),
+    )
+    findings.extend(env_findings)
+    full_report["categories"]["environment"] = env_report
 
     # Validate audio assets (WK6)
     audio = manifest.get("audio", {})
@@ -401,5 +391,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

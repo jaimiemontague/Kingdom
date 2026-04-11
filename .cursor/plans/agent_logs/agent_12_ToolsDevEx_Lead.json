@@ -2214,6 +2214,49 @@
         "blockers": []
       }
     }
+  },
+  "v1_5-sprint-1_1-3d-tooling": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk25_sprint_1_1_3d_tooling.plan.md",
+      "notes": "v1.5 Phase 1 — 3D manifest + validate_assets; master_plan_3d_graphics_v1_5.md"
+    },
+    "rounds": {
+      "sprint_1_1_execution": {
+        "round_id": "sprint_1_1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json",
+            "tools/validate_assets.py",
+            "tools/generate_cc0_placeholders.py",
+            "assets/models/heroes/.gitkeep",
+            "assets/models/enemies/.gitkeep",
+            "assets/models/buildings/.gitkeep",
+            "assets/models/workers/.gitkeep",
+            "assets/models/environment/.gitkeep"
+          ],
+          "summary": "Schema 1.5: removed per-entity states arrays; added environment.types; validator now checks assets/models/<category>/<kind>.glb|.gltf|.obj (no PNG/frame paths). CC0 placeholder script uses fixed legacy state lists so it still runs. Added empty model category dirs with .gitkeep for flat drop-in layout."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "0 errors, 50 warns (expected until .glb/.gltf/.obj files land per manifest)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

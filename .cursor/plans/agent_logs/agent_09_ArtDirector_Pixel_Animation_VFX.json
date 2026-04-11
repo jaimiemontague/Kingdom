@@ -2493,6 +2493,77 @@
           ]
         }
       }
+    },
+    "v1_5_3d_graphics_transition": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk25_sprint_1_1_3d_tooling.plan.md",
+        "notes": "Sprint 1.1 (Tooling & Rules): 3D asset conventions per master_plan_3d_graphics_v1_5.md"
+      },
+      "rounds": {
+        "sprint_1_1_execution": {
+          "sprint_id": "v1_5_3d_graphics_transition",
+          "round_id": "sprint_1_1_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Rewrote .cursor/rules/07-asset-conventions.mdc for v1.5: deprecate 2D PNG frame pipeline for world/entities; mandate assets/models/ flat layout (<kind>.glb|gltf|obj); animated entities must use glTF/GLB with embedded rigging; static env/buildings may be .obj or glTF; replaced sprite pixel rules with scale/low-poly guidance; kept licensing + ATTRIBUTION; noted temporary exception for assets/ui/ HUD skins; aligned with roadmap Phase 1 flat shading.",
+            "files": [
+              ".cursor/rules/07-asset-conventions.mdc"
+            ]
+          },
+          "how_to_test": [
+            "Read .cursor/rules/07-asset-conventions.mdc for consistency with .cursor/plans/master_plan_3d_graphics_v1_5.md and wk25_sprint_1_1_3d_tooling.plan.md",
+            "After Agent 12 lands manifest + validate_assets: python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "Sprint-wide asset gate is validate_assets.py --report after Agent 12 updates tooling."
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 12: update tools/assets_manifest.json + tools/validate_assets.py per sprint plan so validation matches new conventions."
+          ]
+        }
+      }
+    },
+    "wk26-sprint-1-2-base-terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk26_sprint_1_2_base_terrain.plan.md",
+        "notes": "Sprint 1.2 (Base Terrain): Agent 09 lighting in UrsinaRenderer; Agent 03 terrain mesh loop."
+      },
+      "rounds": {
+        "sprint_1_2_execution": {
+          "sprint_id": "wk26-sprint-1-2-base-terrain",
+          "round_id": "sprint_1_2_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "v1.5 Sprint 1.2 (Agent 09): Moved scene lighting from UrsinaApp into UrsinaRenderer._setup_scene_lighting() — cool gray-blue AmbientLight + warm DirectionalLight (angled toward map center), shadow map resolution from config, DirectionalLight.update_bounds(scene) once on first update. Removed duplicate lights from ursina_app.py. Set config.URSINA_DIRECTIONAL_SHADOWS=True so lit 3D meshes use lit_with_shadows_shader default and props can cast shadows; billboards remain unlit + shadow-mask excluded.",
+            "files": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py",
+              "config.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: _build_3d_terrain / Entity(model=environment/*) not in repo yet; lighting is ready for those entities."
+          ]
+        }
+      }
     }
   }
 }

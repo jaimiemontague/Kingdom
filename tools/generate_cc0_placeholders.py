@@ -22,6 +22,14 @@ import pygame
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 MANIFEST = ROOT / "tools" / "assets_manifest.json"
+
+# 2D frame-state lists for CC0 PNG output (decoupled from assets_manifest.json v1.5+,
+# which tracks one 3D model file per kind instead of per-state folders).
+_LEGACY_HERO_STATES = ["idle", "walk", "attack", "hurt", "inside"]
+_LEGACY_ENEMY_STATES = ["idle", "walk", "attack", "hurt", "dead"]
+_LEGACY_BUILDING_STATES = ["built", "construction", "damaged"]
+_LEGACY_WORKER_STATES = ["idle", "walk", "work", "collect", "return", "hurt", "dead"]
+
 try:
     # Optional import for native-size building sprites (avoids scaling artifacts).
     from config import BUILDING_SIZES, TILE_SIZE
@@ -639,13 +647,13 @@ def main() -> int:
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
     heroes = data["heroes"]["classes"]
-    hero_states = data["heroes"]["states"]
+    hero_states = _LEGACY_HERO_STATES
     enemies = data["enemies"]["types"]
-    enemy_states = data["enemies"]["states"]
+    enemy_states = _LEGACY_ENEMY_STATES
     buildings = data["buildings"]["types"]
-    building_states = data["buildings"]["states"]
+    building_states = _LEGACY_BUILDING_STATES
     workers = data.get("workers", {}).get("types", [])
-    worker_states = data.get("workers", {}).get("states", [])
+    worker_states = _LEGACY_WORKER_STATES
 
     out = ASSETS / "sprites"
 
