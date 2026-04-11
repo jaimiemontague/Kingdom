@@ -9,8 +9,9 @@ v1.5 Sprint 1.2 (Agent 03): Terrain is built from discrete 3D meshes under
 ``assets/models/environment/`` (grass/path/water tint + tree/rock props), parented
 under one root Entity — no TileSpriteLibrary bake or terrain atlas.
 
-Buildings use BuildingSpriteLibrary on a single billboard quad. Units use pixel-art
-billboards (Hero/Enemy/Worker sprite libraries).
+Most buildings use BuildingSpriteLibrary on a single billboard quad; **castle**, **house**,
+and **lair** use static 3D meshes from ``assets/models/environment/`` (v1.5 Sprint 2.1).
+Units use pixel-art billboards (Hero/Enemy/Worker sprite libraries).
 
 v1.5 Sprint 1.2 (Agent 09): Scene lighting (AmbientLight + shadow-casting
 DirectionalLight) is created in ``UrsinaRenderer.__init__`` so untextured 3D
@@ -26,7 +27,7 @@ import pygame
 import config
 from ursina import Entity, Vec2, Vec3, color, Text, scene
 from ursina.lights import AmbientLight, DirectionalLight
-from ursina.shaders import unlit_shader
+from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
 from game.graphics.animation import AnimationClip
 from game.graphics.building_sprites import BuildingSpriteLibrary
@@ -64,6 +65,12 @@ H_BUILDING_3X3 = 1.6
 H_BUILDING_2X2 = 1.4
 H_BUILDING_1X1 = 0.9
 H_LAIR = 1.0
+
+# v1.5 Sprint 2.1 (Agent 09): XZ inset so 1×1 houses sit side-by-side; castle/lair
+# fill most of the sim footprint (matches BUILDING_SIZES × TILE_SIZE / SCALE).
+BUILDING_3D_HOUSE_XZ_INSET = 0.88
+BUILDING_3D_CASTLE_XZ_INSET = 0.98
+BUILDING_3D_LAIR_XZ_INSET = 0.94
 
 # Pixel billboard height in world units (32px sprite read at map scale)
 UNIT_BILLBOARD_SCALE = 0.62
@@ -120,6 +127,43 @@ def _building_type_str(bt) -> str:
 def _footprint_tiles(building_type) -> tuple[int, int]:
     key = getattr(building_type, "value", building_type)
     return config.BUILDING_SIZES.get(key, (2, 2))
+
+
+def _is_3d_mesh_building(bts: str, building) -> bool:
+    """Castle, peasant house, and monster lairs render as lit 3D meshes (not sprite billboards)."""
+    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+        return True
+    return bts in ("castle", "house")
+
+
+def _mesh_kind_for_building(bts: str, building) -> str:
+    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+        return "lair"
+    if bts == "castle":
+        return "castle"
+    return "house"
+
+
+def _building_3d_origin_y(model_path: str, sy: float) -> float:
+    """Ursina ``cube`` is centered on its local origin; scale ``sy`` is the world height."""
+    if model_path == "cube":
+        return sy * 0.5
+    # Authored meshes: assume pivot near ground (common for env exports); adjust per-asset if needed.
+    return 0.0
+
+
+def _footprint_scale_3d(
+    mesh_kind: str, fx: float, fz: float, hy: float
+) -> tuple[float, float, float]:
+    """Fill sim footprint in XZ with small insets so adjacent 1×1 houses do not overlap meshes."""
+    ix = iz = 1.0
+    if mesh_kind == "house":
+        ix = iz = BUILDING_3D_HOUSE_XZ_INSET
+    elif mesh_kind == "castle":
+        ix = iz = BUILDING_3D_CASTLE_XZ_INSET
+    elif mesh_kind == "lair":
+        ix = iz = BUILDING_3D_LAIR_XZ_INSET
+    return (fx * ix, hy, fz * iz)
 
 
 def _building_height_y(
@@ -636,6 +680,87 @@ class UrsinaRenderer:
             self._entities[obj_id] = ent
         return self._entities[obj_id], obj_id
 
+    @staticmethod
+    def _apply_lit_3d_building_settings(ent: Entity) -> None:
+        """Lit meshes use the same shader as world geometry (lit + shadows), not sprite_unlit."""
+        from panda3d.core import TransparencyAttrib
+
+        ent.billboard = False
+        _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
+        ent.shader = lit_with_shadows_shader if _shadows else unlit_shader
+        ent.double_sided = True
+        ent.render_queue = 1
+        ent.collision = False
+        try:
+            ent.setTransparency(TransparencyAttrib.M_none)
+        except Exception:
+            pass
+        ent.set_depth_test(True)
+        ent.set_depth_write(True)
+
+    def _get_or_create_3d_building_entity(
+        self, sim_obj, model_path: str, col
+    ) -> tuple:
+        """Replace a prior billboard entity for the same sim object if switching render mode."""
+        import ursina as u
+
+        obj_id = id(sim_obj)
+        if obj_id in self._entities:
+            ent = self._entities[obj_id]
+            if getattr(ent, "_ks_building_mode", None) != "mesh_3d":
+                u.destroy(ent)
+                del self._entities[obj_id]
+            elif getattr(ent, "_ks_mesh_model_path", None) != model_path:
+                u.destroy(ent)
+                del self._entities[obj_id]
+
+        if obj_id not in self._entities:
+            ent = Entity(
+                model=model_path,
+                color=col,
+                collider=None,
+                double_sided=True,
+            )
+            ent._ks_building_mode = "mesh_3d"
+            ent._ks_mesh_model_path = model_path
+            ent._ks_billboard_configured = False
+            self._apply_lit_3d_building_settings(ent)
+            self._entities[obj_id] = ent
+        return self._entities[obj_id], obj_id
+
+    @staticmethod
+    def _sync_3d_building_entity(
+        ent: Entity,
+        *,
+        mesh_kind: str,
+        model_path: str,
+        wx: float,
+        wz: float,
+        fx: float,
+        fz: float,
+        hy: float,
+        tint_col,
+        state: str,
+    ) -> None:
+        """Position/scale lit mesh to footprint; sim-agnostic (render only)."""
+        UrsinaRenderer._set_texture_if_changed(ent, None)
+        scale_xyz = _footprint_scale_3d(mesh_kind, fx, fz, hy)
+        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
+            ent.scale = scale_xyz
+            ent._ks_last_scale = scale_xyz
+        _sx, sy, _sz = scale_xyz
+        oy = _building_3d_origin_y(model_path, sy)
+        ent.position = (wx, oy, wz)
+        _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
+        want_shader = lit_with_shadows_shader if _shadows else unlit_shader
+        UrsinaRenderer._set_shader_if_changed(ent, want_shader)
+        if state == "damaged":
+            ent.color = color.rgb(0.78, 0.42, 0.42)
+        elif state == "construction":
+            ent.color = color.rgb(0.72, 0.72, 0.65)
+        else:
+            ent.color = tint_col
+
     def update(self):
         """Called every frame by the Ursina app loop."""
         try:
@@ -660,7 +785,7 @@ class UrsinaRenderer:
 
         active_ids = set()
 
-        # Buildings — single vertical billboard quad (center: b.x / b.y are building centers)
+        # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         for b in gs["buildings"]:
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
@@ -681,6 +806,27 @@ class UrsinaRenderer:
             state = "construction" if not getattr(b, "is_constructed", True) else "built"
             if getattr(b, "hp", 200) < getattr(b, "max_hp", 200) * 0.4:
                 state = "damaged"
+
+            wx, wz = sim_px_to_world_xz(b.x, b.y)
+
+            if _is_3d_mesh_building(bts, b):
+                mesh_kind = _mesh_kind_for_building(bts, b)
+                model_path = _environment_model_path(mesh_kind)
+                ent, obj_id = self._get_or_create_3d_building_entity(b, model_path, col)
+                self._sync_3d_building_entity(
+                    ent,
+                    mesh_kind=mesh_kind,
+                    model_path=model_path,
+                    wx=wx,
+                    wz=wz,
+                    fx=fx,
+                    fz=fz,
+                    hy=hy,
+                    tint_col=col,
+                    state=state,
+                )
+                active_ids.add(obj_id)
+                continue
 
             bw = max(1, int(b.width))
             bh = max(1, int(b.height))
@@ -709,7 +855,6 @@ class UrsinaRenderer:
                 ent._ks_billboard_configured = True
             # Do not assign ent.model every frame — model_setter reloads the mesh (WK22 R2).
             ent.rotation = (0, 0, 0)
-            wx, wz = sim_px_to_world_xz(b.x, b.y)
             self._sync_billboard_entity(
                 ent,
                 tex=b_tex if b_tex is not None else None,

@@ -2956,6 +2956,39 @@
           }
         }
       }
+    },
+    "wk27-sprint-2-1-3d-buildings": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk27_sprint_2_1_buildings.plan.md",
+        "notes": "v1.5 Sprint 2.1: castle, house, lair as lit 3D meshes vs billboards"
+      },
+      "rounds": {
+        "sprint_2_1_execution": {
+          "sprint_id": "wk27-sprint-2-1-3d-buildings",
+          "round_id": "sprint_2_1_execution",
+          "round_meta": { "sent_at_local": "2026-04-11T00:00:00" },
+          "prompt_text": "Intercept castle, house, lair in _sync_buildings; Entity(model=...) from assets/models/environment/; y=0 ground; no billboards; qa_smoke --quick.",
+          "response": {
+            "received_at_local": "2026-04-11T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Added _is_3d_mesh_building / _mesh_kind_for_building / _building_3d_origin_y helpers.",
+              "_get_or_create_3d_building_entity + _apply_lit_3d_building_settings: lit mesh uses Entity.default_shader (no sprite_unlit, no shadow-camera hide).",
+              "Building loop: castle, house, lair use _environment_model_path(castle|house|lair); footprint scale (fx, hy, fz); cube fallback when assets missing.",
+              "_sync_3d_building_entity clears billboard texture, positions center (wx, origin_y, wz), construction/damaged tint."
+            ],
+            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — confirm castle/house/lair render as 3D without crash"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }
