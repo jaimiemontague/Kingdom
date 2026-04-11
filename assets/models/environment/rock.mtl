@@ -1,5 +1,6 @@
 # Created by Kenney (www.kenney.nl)
-# Texture path removed so the model loads without a bundled colormap.png (flat gray).
+# Mesh from Survival Kit rock-flat.obj. No texture path: keep env self-contained
+# (Textures/colormap.png lives under Models/OBJ format/Textures/).
 
 newmtl colormap
 Kd 0.58 0.55 0.52
