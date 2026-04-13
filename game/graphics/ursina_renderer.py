@@ -517,6 +517,7 @@ class UrsinaRenderer:
             collision=False,
             double_sided=True,
             shader=unlit_shader,
+            add_to_scene_entities=False,
         )
 
         for ty in range(th):
@@ -535,6 +536,7 @@ class UrsinaRenderer:
                         color=color.white,
                         collision=False,
                         double_sided=True,
+                        add_to_scene_entities=False,
                     )
                 elif tile == TileType.WATER:
                     Entity(
@@ -545,6 +547,7 @@ class UrsinaRenderer:
                         color=water_tint,
                         collision=False,
                         double_sided=True,
+                        add_to_scene_entities=False,
                     )
 
                 if tile == TileType.GRASS or tile == TileType.TREE:
@@ -558,6 +561,7 @@ class UrsinaRenderer:
                         color=color.white,
                         collision=False,
                         double_sided=True,
+                        add_to_scene_entities=False,
                     )
 
                 if tile == TileType.TREE:
@@ -569,6 +573,7 @@ class UrsinaRenderer:
                         color=color.white,
                         collision=False,
                         double_sided=True,
+                        add_to_scene_entities=False,
                     )
                 elif tile == TileType.GRASS:
                     h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
@@ -581,8 +586,10 @@ class UrsinaRenderer:
                             color=color.white,
                             collision=False,
                             double_sided=True,
+                            add_to_scene_entities=False,
                         )
 
+        root.flattenStrong()
         self._terrain_entity = root
 
     @staticmethod

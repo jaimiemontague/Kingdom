@@ -5314,6 +5314,50 @@
                         "03": "Sprint 2.1 (Tech Director): Target `ursina_renderer.py`. In `_sync_buildings`, intercept instances of `castle`, `house`, and lari entities. Disable their billboard rendering, instead mapping them to `Entity(model='assets/models/environment/castle.obj')` etc. You may use fallback generic primitive cubes if the models are missing, but load them correctly via code path.",
                         "09": "Sprint 2.1 (Art Director): Polish the newly mapped `castle` and `house` models from Agent 03. Specifically, configure their scaling to match their designated tile boundaries, ensuring peasants do not clip through them. Check they emit drop shadows correctly in `ursina_renderer.py`."
                     }
+                },
+                "sprint_2_1_performance_hotfix": {
+                    "round_meta": {
+                        "prompt_set_id": "sprint_2_1_hotfix_v1",
+                        "build_target": "Ursina Renderer Performance",
+                        "visibility": "Implementers: 10."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Hotfix Kickoff",
+                        "focus": "Resolve severe FPS drop/lag in Ursina renderer before adding more 3D assets.",
+                        "gates": {
+                            "qa_smoke_quick": "Must remain PASS after fixes."
+                        }
+                    },
+                    "pm_bug_tickets": [
+                        {
+                            "id": "WK27-BUG-001",
+                            "title": "Severe FPS drop and lag in Ursina renderer during playtest",
+                            "severity": "blocker",
+                            "owner_agent": "10_PerformanceStability_Lead",
+                            "reporter": "human_playtest",
+                            "repro_steps": [
+                                "Launch main.py --renderer ursina",
+                                "Observe frame rate/lag during normal gameplay"
+                            ],
+                            "expected": "Smooth 60fps performance.",
+                            "actual": "Severe lag and low FPS.",
+                            "status": "assigned"
+                        }
+                    ],
+                    "pm_next_actions_by_agent": {
+                        "10": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Profile the ursina_renderer.py to identify the source of the severe lag.",
+                                "Implement targeted performance optimizations (e.g. caching, reducing entity counts, or adjusting update loops).",
+                                "Ensure any fixes do not break simulation determinism."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are assigned to the v1.5 Graphics Transition project for a mid-sprint performance hotfix. Jaimie reported severe lag in the Ursina renderer. Read your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n→ sprints[\"wk27-sprint-2-1-3d-buildings\"].rounds[\"sprint_2_1_performance_hotfix\"]\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER]. Once done, run qa_smoke.py --quick and report back.",
+                    "pm_agent_prompts": {
+                        "10": "Sprint 2.1 (Performance Lead): We have a critical blocker. Playtesting `main.py --renderer ursina` is yielding severe lag/low FPS. Profile the rendering loop in `ursina_renderer.py` or related files. We recently added 3D ground meshes and lighting. Identify the bottleneck and implement a fix to restore playable framerates before we continue adding 3D buildings."
+                    }
                 }
             }
         }
