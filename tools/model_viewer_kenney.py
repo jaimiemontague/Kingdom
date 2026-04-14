@@ -156,6 +156,94 @@ def _setup_scene_lighting(*, center_x: float, center_z: float, span: float) -> N
     _dir(Vec3(center_x, lift * 1.35, center_z), color.rgba(soft * 1.1, soft * 1.1, soft * 1.05, 1.0))
 
 
+def _apply_unlit_gltf_color_attribs(root: Any) -> None:
+    """Make Ursina's default unlit shader show glTF colors correctly.
+
+    That shader only multiplies ``texture(p3d_Texture0) * ColorScale * vertex_color``; it does not
+    read Material ``base_color``. Untextured PBR materials (``baseColorFactor`` only — e.g.
+    ``cliff_block_rock.glb``) would render white. We fold ``baseColorFactor`` into ``ColorAttrib``
+    per geom when there is no ``Base Color`` texture stage.
+
+    When the mesh has ``COLOR_0`` and no base texture, use ``ColorAttrib.make_vertex()`` so vertex
+    paint works (``baseColorFactor`` is usually white there).
+
+    Do **not** use ``clearShader`` / ``setShaderAuto`` here: that path broke scene lights and hid
+    most meshes (black silhouettes).
+    """
+    try:
+        from panda3d.core import (
+            ColorAttrib,
+            GeomNode,
+            InternalName,
+            LColor,
+            MaterialAttrib,
+            TextureAttrib,
+        )
+
+        if root is None or root.isEmpty():
+            return
+
+        def state_has_base_color_texture(state: Any) -> bool:
+            ta = state.get_attrib(TextureAttrib.get_class_type())
+            if not ta:
+                return False
+            for j in range(ta.get_num_on_stages()):
+                st = ta.get_on_stage(j)
+                if st.get_name() == "Base Color":
+                    tex = ta.get_on_texture(st)
+                    return tex is not None
+            return False
+
+        def material_base_color(mat: Any) -> Any:
+            if mat is None:
+                return LColor(1, 1, 1, 1)
+            try:
+                if mat.has_base_color():
+                    return mat.get_base_color()
+            except Exception:
+                pass
+            try:
+                return mat.get_diffuse()
+            except Exception:
+                return LColor(1, 1, 1, 1)
+
+        def walk(np: Any) -> None:
+            node = np.node()
+            if isinstance(node, GeomNode):
+                for gi in range(node.get_num_geoms()):
+                    geom = node.get_geom(gi)
+                    state = node.get_geom_state(gi)
+                    vdata = geom.get_vertex_data()
+                    fmt = vdata.get_format() if vdata else None
+                    has_vcolor = bool(fmt and fmt.has_column(InternalName.get_color()))
+
+                    ma = state.get_attrib(MaterialAttrib.get_class_type())
+                    mat = ma.get_material() if ma else None
+                    has_tex = state_has_base_color_texture(state)
+
+                    if has_tex:
+                        new_state = (
+                            state.set_attrib(ColorAttrib.make_vertex())
+                            if has_vcolor
+                            else state
+                        )
+                    else:
+                        if has_vcolor:
+                            new_state = state.set_attrib(ColorAttrib.make_vertex())
+                        else:
+                            bc = material_base_color(mat)
+                            new_state = state.set_attrib(ColorAttrib.make_flat(bc))
+
+                    node.set_geom_state(gi, new_state)
+
+            for i in range(np.getNumChildren()):
+                walk(np.getChild(i))
+
+        walk(root)
+    except Exception:
+        pass
+
+
 def _truncate_label(s: str, max_len: int = 42) -> str:
     if len(s) <= max_len:
         return s
@@ -344,8 +432,8 @@ def run_viewer(
                     double_sided=True,
                     position=(cx_i, 0.0, cz_i),
                 )
-                # Do not call setShaderAuto(): it replaces glTF/PBR materials and can yield wrong shading.
                 _fit_uniform_and_ground(ent, model_max_extent)
+                _apply_unlit_gltf_color_attribs(ent.model)
             else:
                 Entity(
                     parent=scene,
