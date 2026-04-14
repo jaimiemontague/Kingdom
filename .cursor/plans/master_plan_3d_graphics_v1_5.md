@@ -1,5 +1,7 @@
 # Master Plan: 3D Graphics Integration (Target v1.5)
 
+**Kenney glTF / Ursina integration (pitfalls, unlit vs PBR, baseColorFactor):** see [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md). Apply those lessons when wiring `Entity(model=…)` and materials in `game/graphics/ursina_renderer.py`.
+
 ## 1. Mission Statement
 > "Transition the Kingdom project to a fully 3D, low-poly stylized aesthetic suitable for a $15-$20 commercial Steam release. Emphasize visual cohesion, prioritize high-performance flat-shaded geometry over complex textures, and establish a scalable pipeline for importing static and animated 3D assets using Ursina."
 
@@ -8,6 +10,8 @@
 * **Commit Convention:** All commits for these upcoming sprints must use the naming convention: `"3D Graphics Phase #.#"` (e.g., `3D Graphics Phase 1.0`, `3D Graphics Phase 1.1`, progressing naturally as milestones are hit).
 
 ## 3. Core Rules & Pipeline Overhaul
+Before changing how meshes are loaded or shaded, read **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** (defaults entity shader, `baseColorFactor`-only materials, why naive `setShaderAuto` breaks scenes).
+
 To support this massive visual overhaul properly, we will delegate the structural pipeline updates to the Directors:
 
 * **Update Core Rules:** **Agent 09 (Art Director)** must rewrite `07-asset-conventions.txt` to explicitly deprecate 2D `.png` sprite rules. They will establish the new standard: `.obj` or `.gltf` for static environment/buildings, and `.gltf` exclusively for animated units (to utilize embedded rigging/animations).
@@ -20,7 +24,7 @@ We will tackle this transition in sequential phases to avoid breaking the core g
 
 ### Phase 1: Static Environments & Asset Pipeline Foundations
 * **Goal:** Build the 3D tooling foundation, update the rules, and successfully load/render static environments (terrain floor, trees, basic walls) before touching complex buildings or animated units.
-* **Lighting/Shaders Guideline:** **Agent 09** is instructed to rely exclusively on Ursina's basic lighting and flat shading. Avoid complex PBR materials to ensure the low-poly aesthetic remains clean and performant.
+* **Lighting/Shaders Guideline:** **Agent 09** is instructed to rely exclusively on Ursina's basic lighting and flat shading. Avoid complex PBR materials to ensure the low-poly aesthetic remains clean and performant. If you must adjust materials, follow **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** so factor-only and vertex-colored glTF assets do not render white or black incorrectly.
 
 **Sprints Outline:**
 - **Sprint 1.1 (Tooling & Rules):** Agent 12 updates `assets_manifest.json` and `validate_assets.py` to support `.gltf`/`.obj`. Agent 09 updates `07-asset-conventions.txt`.

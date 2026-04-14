@@ -1,4 +1,13 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # Kenney `assets/models` folder map
+
+**Implementing `.glb` / `.gltf` in Ursina or the game renderer?** Read **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** first (default unlit shader vs `baseColorFactor`, textures, vertex colors, lighting pitfalls, and the `model_viewer_kenney` reference implementation).
 
 This document maps **what lives where** under `assets/models` after non-Kenney packs were removed. Paths and pack names below are anchored to the **unmerged** Kenney downloads kept in-repo for reference.
 
@@ -128,11 +137,15 @@ Many **one-off** names (`statue_*`, `bridge_*`, `lily_*`, …) still map cleanly
 
 | Format | When to prefer |
 |--------|----------------|
-| **OBJ** | Panda/Ursina `loadModel`, `tools/model_viewer.py`, quick iteration; paired MTL + `Textures/`. |
-| **GLB** | Single-file import; textures under `GLB format/Textures/`. |
-| **glTF** | Split JSON + buffers; good for glTF tooling. |
+| **OBJ** | Panda/Ursina `loadModel`, quick iteration; paired MTL + `Textures/`. |
+| **GLB** | Single-file import; textures often embedded; **preferred** for glTF pipeline work and **`tools/model_viewer_kenney.py`**. |
+| **glTF** | Split JSON + buffers; good for glTF tooling; watch external image paths. |
 
 **Canonical for merged content in this repo:** OBJ under `assets/models/Models/OBJ format/`.
+
+**glTF integration pitfalls (unlit vs factors, etc.):** [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md).
+
+**Standalone GLB browser (dev):** `python tools/model_viewer_kenney.py` — see the integration guide §9.
 
 ---
 
