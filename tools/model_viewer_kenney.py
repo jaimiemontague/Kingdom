@@ -2,10 +2,18 @@
 Standalone Ursina model browser tailored exclusively for Kenney.nl GLB/GLTF assets.
 
 This tool resolves issues with duplicate models by strictly filtering out
-legacy .obj, .fbx, and .dae formats. It organizes them logically by their
-top-level folder under assets/models, utilizes an improved lighting rig to 
-properly display vertex-colored low-poly geometries without black shadows,
-and implements the Ursina EditorCamera for improved panning/orbiting controls.
+legacy .obj, .fbx, and .dae formats. It does **not** scan merged folders such as
+``Models/GLB format/`` or ``Models/GLTF format/`` (same basenames appear in multiple
+trees). Instead, GLB/GLTF are loaded only from:
+
+  * ``assets/models/environment/`` — promoted in-game environment meshes
+  * ``assets/models/Models/Kenny raw downloads (for exact paths)/kenney_*/`` —
+    one grid per Kenney download pack (see ``kenney_assets_models_mapping.plan.md``)
+
+Uses an improved lighting rig for vertex-colored low-poly geometry and the
+Ursina EditorCamera for panning/orbiting. See
+``.cursor/plans/kenney_gltf_ursina_integration_guide.md`` for shader/material
+pitfalls.
 
 Usage (from repo root):
   python tools/model_viewer_kenney.py
@@ -23,7 +31,6 @@ import argparse
 import math
 import os
 import sys
-from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +40,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
 
+# Canonical Kenney sources (no merged GLB/GLTF trees — avoids duplicate basenames).
+KENNEY_RAW_DOWNLOADS_DIR = "Kenny raw downloads (for exact paths)"
+# Order matches ``kenney_assets_models_mapping.plan.md`` §1; folder names match disk.
+# Cursor Pixel Pack last (far right): no GLB/GLTF in that download — keeps empty column out of the way.
+KENNEY_PACKS_ORDERED: tuple[tuple[str, str], ...] = (
+    ("kenney_blocky-characters_20", "Blocky Characters"),
+    ("kenney_nature-kit", "Nature Kit"),
+    ("kenney_retro-fantasy-kit", "Retro Fantasy Kit"),
+    ("kenney_survival-kit", "Survival Kit"),
+    ("kenney_cursor-pixel-pack", "Cursor Pixel Pack"),
+)
+
 # Layout (world units)
 DEFAULT_CELL = 7.0
 DEFAULT_PACK_GAP = 14.0
@@ -40,6 +59,7 @@ DEFAULT_MODEL_MAX_EXTENT = 5.0  # max axis-aligned size after uniform scale
 LABEL_Y = 0.08
 TEXT_SCALE = 13.0
 PACK_TITLE_SCALE = 20.0
+EMPTY_PACK_NOTE_SCALE = 11.0
 
 
 @dataclass
@@ -66,28 +86,51 @@ class MaterialDebugStats:
             self.ambiguous_textured += 1
 
 
-def scan_packs(assets_models: Path) -> dict[str, list[Path]]:
-    """Group model files by their top-level subfolder inside assets/models."""
-    packs: dict[str, list[Path]] = defaultdict(list)
-    if not assets_models.is_dir():
-        return dict(packs)
-        
-    for p in assets_models.rglob("*"):
+def _collect_gltf_under(root: Path) -> list[Path]:
+    """All .glb/.gltf under ``root`` (recursive)."""
+    out: list[Path] = []
+    if not root.is_dir():
+        return out
+    for p in root.rglob("*"):
         if p.is_file() and p.suffix.lower() in MODEL_EXTS:
-            try:
-                # Group by top level dir under assets_models (e.g. 'environment', 'heroes')
-                rel = p.relative_to(assets_models)
-                pack_name = rel.parts[0] if len(rel.parts) > 1 else "Root"
-            except ValueError:
-                pack_name = "Unknown"
-                
-            packs[pack_name].append(p)
-            
-    # Sort files within each pack
-    for k in packs:
-        packs[k] = sorted(packs[k], key=lambda x: str(x).lower())
-        
-    return dict(packs)
+            out.append(p)
+    return sorted(out, key=lambda x: str(x).lower())
+
+
+def collect_viewer_sections(assets_models: Path) -> tuple[list[tuple[str, list[Path]]], list[str]]:
+    """Build ordered sections: promoted environment, then each Kenney raw download pack.
+
+    GLB/GLTF are taken only from ``environment/`` and from each ``kenney_*`` folder
+    under ``Models/Kenny raw downloads (for exact paths)/`` — not from merged
+    ``Models/GLB format`` or ``Models/GLTF format`` (overlapping names).
+
+    Returns (sections, warnings) where each section is (title, file paths).
+    """
+    sections: list[tuple[str, list[Path]]] = []
+    warnings: list[str] = []
+
+    env_dir = assets_models / "environment"
+    env_files = _collect_gltf_under(env_dir)
+    if env_files:
+        sections.append(("Official environment", env_files))
+
+    raw_root = assets_models / "Models" / KENNEY_RAW_DOWNLOADS_DIR
+    if not raw_root.is_dir():
+        warnings.append(
+            f"Kenney raw downloads folder missing (expected): {raw_root} — "
+            "Kenney pack grids skipped."
+        )
+        return sections, warnings
+
+    for folder_name, title in KENNEY_PACKS_ORDERED:
+        pack_dir = raw_root / folder_name
+        if not pack_dir.is_dir():
+            warnings.append(f"Kenney pack folder missing: {pack_dir}")
+            sections.append((title, []))
+            continue
+        sections.append((title, _collect_gltf_under(pack_dir)))
+
+    return sections, warnings
 
 
 def _fit_uniform_and_ground(ent: Any, max_extent: float) -> None:
@@ -368,6 +411,13 @@ def _apply_gltf_color_and_shading(
         return False
 
 
+def _rel_for_label(assets_models: Path, fpath: Path) -> str:
+    try:
+        return str(fpath.relative_to(assets_models))
+    except ValueError:
+        return str(fpath)
+
+
 def _truncate_label(s: str, max_len: int = 42) -> str:
     if len(s) <= max_len:
         return s
@@ -410,22 +460,25 @@ def run_viewer(
 ) -> int:
     os.chdir(PROJECT_ROOT)
 
-    packs = scan_packs(assets_models)
-    if not packs:
-        print(f"[model_viewer_kenney] No .glb/.gltf models found under: {assets_models}", file=sys.stderr)
+    sections, layout_warnings = collect_viewer_sections(assets_models)
+    for w in layout_warnings:
+        print(f"[model_viewer_kenney] Warning: {w}", file=sys.stderr)
+
+    total_models = sum(len(files) for _, files in sections)
+    if not sections or total_models == 0:
+        print(f"[model_viewer_kenney] No .glb/.gltf models in viewer sections under: {assets_models}", file=sys.stderr)
         return 1
 
-    # Flatten with stable pack order
+    # Flatten in section order; optional global cap for dev (--max-total)
     items: list[tuple[str, Path]] = []
-    for pack_name in sorted(packs.keys(), key=lambda s: s.lower()):
-        for fpath in packs[pack_name]:
+    for pack_name, files in sections:
+        for fpath in files:
             items.append((pack_name, fpath))
             if max_total is not None and len(items) >= max_total:
                 break
         if max_total is not None and len(items) >= max_total:
             break
 
-    total_models = sum(len(v) for v in packs.values())
     if max_total is not None and len(items) < total_models:
         print(
             f"[model_viewer_kenney] Showing {len(items)} model(s) (--max-total={max_total}; out of {total_models}).",
@@ -481,14 +534,12 @@ def run_viewer(
     except Exception:
         pass
 
-    # Group items back by pack for layout
-    pack_order: list[str] = []
-    pack_files: dict[str, list[Path]] = {}
+    # One column per section, in ``collect_viewer_sections`` order (incl. empty packs)
+    pack_order = [title for title, _ in sections]
+    pack_files: dict[str, list[Path]] = {title: [] for title in pack_order}
     for pack_name, fpath in items:
-        if pack_name not in pack_files:
-            pack_order.append(pack_name)
-            pack_files[pack_name] = []
-        pack_files[pack_name].append(fpath)
+        if pack_name in pack_files:
+            pack_files[pack_name].append(fpath)
 
     cursor_x = 0.0
     palette = (
@@ -509,10 +560,15 @@ def run_viewer(
     for pi, pack_name in enumerate(pack_order):
         files = pack_files[pack_name]
         n = len(files)
-        cols = max(1, int(math.ceil(math.sqrt(n))))
-        rows = int(math.ceil(n / cols))
-        pack_width = cols * cell
-        pack_depth = rows * cell
+        if n == 0:
+            cols, rows = 1, 1
+            pack_width = cell * 4.0
+            pack_depth = cell * 3.0
+        else:
+            cols = max(1, int(math.ceil(math.sqrt(n))))
+            rows = int(math.ceil(n / cols))
+            pack_width = cols * cell
+            pack_depth = rows * cell
         ox = cursor_x
         oz_top = 0.0
         border_col = palette[pi % len(palette)]
@@ -542,6 +598,22 @@ def run_viewer(
         gallery_min_z = min(gallery_min_z, bottom_z, oz_top - pack_depth)
         gallery_max_z = max(gallery_max_z, oz_top)
 
+        if n == 0:
+            empty_note = (
+                "No GLB/GLTF in this pack (2D tilesheet only — see raw download)."
+                if pack_name == "Cursor Pixel Pack"
+                else "No GLB/GLTF found under this pack path."
+            )
+            Text(
+                text=empty_note,
+                parent=scene,
+                position=(cx, LABEL_Y + 0.06, oz_top - pack_depth * 0.5),
+                scale=EMPTY_PACK_NOTE_SCALE,
+                color=color.light_gray,
+                billboard=True,
+                origin=(0, 0.5),
+            )
+
         for i, fpath in enumerate(files):
             row = i // cols
             col = i % cols
@@ -562,7 +634,7 @@ def run_viewer(
                 _apply_gltf_color_and_shading(
                     ent.model,
                     debug_materials=debug_materials,
-                    model_label=str(fpath.relative_to(assets_models)),
+                    model_label=_rel_for_label(assets_models, fpath),
                     aggregate_stats=material_stats,
                 )
             else:
@@ -648,7 +720,12 @@ def run_viewer(
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Browse Kenney.nl models under assets/models in Ursina.")
+    p = argparse.ArgumentParser(
+        description=(
+            "Browse GLB/GLTF from assets/models/environment and from each Kenney pack under "
+            "Models/Kenny raw downloads (for exact paths)/ (not merged GLB/GLTF folders)."
+        ),
+    )
     p.add_argument(
         "--assets-models",
         type=str,
