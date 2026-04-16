@@ -554,6 +554,8 @@ def run_viewer(
     gallery_max_x = float("-inf")
     gallery_min_z = float("inf")
     gallery_max_z = float("-inf")
+    # Per-column (ox, width) for gap-based camera X (and same delta on Z — see below)
+    pack_column_layout: list[tuple[float, float]] = []
 
     material_stats = MaterialDebugStats() if debug_materials else None
 
@@ -582,6 +584,7 @@ def run_viewer(
         )
 
         cx = ox + pack_width * 0.5
+        pack_column_layout.append((ox, pack_width))
         bottom_z = oz_top - pack_depth - 3.0
         Text(
             text=_truncate_label(pack_name, 56),
@@ -677,25 +680,37 @@ def run_viewer(
     if not math.isfinite(gallery_min_z) or gallery_min_z > gallery_max_z:
         gallery_min_z = gallery_max_z = 0.0
         
-    center_x = (gallery_min_x + gallery_max_x) * 0.5
+    gallery_center_x = (gallery_min_x + gallery_max_x) * 0.5
     center_z = (gallery_min_z + gallery_max_z) * 0.5
     span = max(gallery_max_x - gallery_min_x, gallery_max_z - gallery_min_z, cell * 3)
-    
-    _setup_scene_lighting(center_x=center_x, center_z=center_z, span=span)
-    
+    # Orbit pivot: same idea as X on Z — full-gallery center vs gap-focused offset.
+    # X: move from gallery_center_x to the gap between columns 3 and 4 (that delta is what you saw as “left”).
+    # Z: apply that **same delta** to center_z so the pivot shifts along depth the same amount (screen “down/up”
+    # depends on view; this mirrors the horizontal math one-for-one).
+    camera_focus_x = gallery_center_x
+    camera_focus_z = center_z
+    if len(pack_column_layout) >= 4:
+        ox3, w3 = pack_column_layout[2]
+        camera_focus_x = ox3 + w3 + pack_gap * 0.5
+        delta_focus = camera_focus_x - gallery_center_x
+        camera_focus_z = center_z + delta_focus
+
+    _setup_scene_lighting(center_x=gallery_center_x, center_z=center_z, span=span)
+
     ec = EditorCamera()
     camera.fov = 50
     camera.clip_plane_near = 0.05
     camera.clip_plane_far = 50000.0
-    elev = max(24.0, span * 0.42)
+    elev = max(24.0, span * 0.01)
     back = max(34.0, span * 0.72)
-    focus_y = max(1.5, model_max_extent * 0.45)
-    
-    ec.y = focus_y
-    ec.x = center_x
-    ec.z = center_z
-    camera.position = Vec3(center_x, elev, center_z - back)
+
+    # Pivot on the ground (y=0) at the gap focus — one clear height for orbit; camera supplies elevation via local Y.
+    # Local offset only (EditorCamera parents the camera); do not put world X on both ec and camera.
+    ec.position = Vec3(camera_focus_x, 0.0, camera_focus_z)
+    camera.position = Vec3(0, elev, -back)
     ec.rotation_x = 35
+    # on_enable() sets target_z≈-20; without syncing, every frame lerps camera.z toward that and breaks distance.
+    ec.target_z = camera.z
 
     Text(
         text="Right-Drag orbit | Middle-Drag pan | Scroll zoom | ESC quit",
