@@ -78,7 +78,7 @@ python tools/observe_sync.py --seconds 20 --heroes 10 --seed 3 --log-every 120 -
 python tools/qa_smoke.py --quick
 
 # (Art) Standalone Ursina browser for everything under assets/models/ (by pack folder)
-python tools/model_viewer.py
+python tools/model_viewer_kenney.py
 ```
 
 ## Controls

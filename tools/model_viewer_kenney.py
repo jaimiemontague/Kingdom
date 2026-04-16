@@ -24,6 +24,7 @@ import math
 import os
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,30 @@ DEFAULT_MODEL_MAX_EXTENT = 5.0  # max axis-aligned size after uniform scale
 LABEL_Y = 0.08
 TEXT_SCALE = 13.0
 PACK_TITLE_SCALE = 20.0
+
+
+@dataclass
+class MaterialDebugStats:
+    geoms_total: int = 0
+    branch_textured: int = 0
+    branch_textured_vertex: int = 0
+    branch_vertex: int = 0
+    branch_flat: int = 0
+    ambiguous_textured: int = 0
+    errors: int = 0
+
+    def add_branch(self, branch: str, *, ambiguous: bool) -> None:
+        self.geoms_total += 1
+        if branch == "textured":
+            self.branch_textured += 1
+        elif branch == "textured_vertex":
+            self.branch_textured_vertex += 1
+        elif branch == "vertex":
+            self.branch_vertex += 1
+        elif branch == "flat":
+            self.branch_flat += 1
+        if ambiguous:
+            self.ambiguous_textured += 1
 
 
 def scan_packs(assets_models: Path) -> dict[str, list[Path]]:
@@ -132,16 +157,16 @@ def _setup_scene_lighting(*, center_x: float, center_z: float, span: float) -> N
     lift = max(48.0, span * 0.6)
     r = max(span * 0.85, 80.0)
 
-    # Strong hemispheric fill — primary fix for 'one lit stripe, rest black' when orbiting.
-    AmbientLight(parent=scene, color=color.rgba(0.82, 0.83, 0.86, 1.0))
+    # Ambient provides shadow-fill so no face is pure black when orbiting.
+    # Directionals provide the shading gradient that gives 3D depth.
+    AmbientLight(parent=scene, color=color.rgba(0.42, 0.43, 0.48, 1.0))
 
     def _dir(pos: Vec3, col) -> None:
         d = DirectionalLight(parent=scene, shadows=False, color=col)
         d.position = pos
         d.look_at(focus)
 
-    # Weak directionals from several compass points + above (wrap, not a single 'sun').
-    soft = 0.22
+    soft = 0.38
     cool = color.rgba(soft * 0.95, soft * 0.98, soft * 1.0, 1.0)
     warm = color.rgba(soft * 1.02, soft * 1.0, soft * 0.94, 1.0)
     neu = color.rgba(soft, soft, soft, 1.0)
@@ -156,19 +181,67 @@ def _setup_scene_lighting(*, center_x: float, center_z: float, span: float) -> N
     _dir(Vec3(center_x, lift * 1.35, center_z), color.rgba(soft * 1.1, soft * 1.1, soft * 1.05, 1.0))
 
 
-def _apply_unlit_gltf_color_attribs(root: Any) -> None:
-    """Make Ursina's default unlit shader show glTF colors correctly.
+_FACTOR_LIT_VERT = """
+#version 150
+uniform mat4 p3d_ModelViewProjectionMatrix;
+uniform mat3 p3d_NormalMatrix;
+in vec4 p3d_Vertex;
+in vec3 p3d_Normal;
+in vec4 p3d_Color;
+out vec3 vNormal;
+out vec4 vColor;
+void main() {
+    gl_Position = p3d_ModelViewProjectionMatrix * p3d_Vertex;
+    vNormal = normalize(p3d_NormalMatrix * p3d_Normal);
+    vColor = p3d_Color;
+}
+"""
 
-    That shader only multiplies ``texture(p3d_Texture0) * ColorScale * vertex_color``; it does not
-    read Material ``base_color``. Untextured PBR materials (``baseColorFactor`` only — e.g.
-    ``cliff_block_rock.glb``) would render white. We fold ``baseColorFactor`` into ``ColorAttrib``
-    per geom when there is no ``Base Color`` texture stage.
+_FACTOR_LIT_FRAG = """
+#version 150
+in vec3 vNormal;
+in vec4 vColor;
+out vec4 fragColor;
+void main() {
+    vec3 N = normalize(vNormal);
+    vec3 keyDir  = normalize(vec3( 0.4,  0.7, -0.5));
+    vec3 fillDir = normalize(vec3(-0.3,  0.4,  0.6));
+    float key  = max(dot(N, keyDir),  0.0);
+    float fill = max(dot(N, fillDir), 0.0);
+    float shade = 0.38 + 0.48 * key + 0.18 * fill;
+    fragColor = vec4(vColor.rgb * shade, vColor.a);
+}
+"""
 
-    When the mesh has ``COLOR_0`` and no base texture, use ``ColorAttrib.make_vertex()`` so vertex
-    paint works (``baseColorFactor`` is usually white there).
+_factor_lit_shader_cache: list[Any] = []
 
-    Do **not** use ``clearShader`` / ``setShaderAuto`` here: that path broke scene lights and hid
-    most meshes (black silhouettes).
+
+def _get_factor_lit_shader() -> Any:
+    if _factor_lit_shader_cache:
+        return _factor_lit_shader_cache[0]
+    from panda3d.core import Shader
+    s = Shader.make(Shader.SL_GLSL, vertex=_FACTOR_LIT_VERT, fragment=_FACTOR_LIT_FRAG)
+    _factor_lit_shader_cache.append(s)
+    return s
+
+
+def _apply_gltf_color_and_shading(
+    root: Any,
+    *,
+    debug_materials: bool = False,
+    model_label: str = "",
+    aggregate_stats: MaterialDebugStats | None = None,
+) -> bool:
+    """Classify each geom and select the correct shading path.
+
+    Textured geoms keep Ursina's default unlit shader (textures carry visual detail).
+
+    Factor-only geoms (``baseColorFactor`` with no texture, no vertex color) get a
+    lightweight custom lit shader that reads ``p3d_Color`` (from ``ColorAttrib``)
+    and applies key+fill Lambert lighting via vertex normals.  This avoids both the
+    flat-unlit look **and** the ``setShaderAuto`` black-silhouette regression.
+
+    Returns True if any geom was factor-only (i.e. lit shading was enabled).
     """
     try:
         from panda3d.core import (
@@ -181,18 +254,18 @@ def _apply_unlit_gltf_color_attribs(root: Any) -> None:
         )
 
         if root is None or root.isEmpty():
-            return
+            return False
 
-        def state_has_base_color_texture(state: Any) -> bool:
+        def state_has_base_texture(state: Any) -> tuple[bool, str]:
             ta = state.get_attrib(TextureAttrib.get_class_type())
             if not ta:
-                return False
+                return False, "no-texture-attrib"
             for j in range(ta.get_num_on_stages()):
                 st = ta.get_on_stage(j)
-                if st.get_name() == "Base Color":
-                    tex = ta.get_on_texture(st)
-                    return tex is not None
-            return False
+                tex = ta.get_on_texture(st)
+                if tex is not None:
+                    return True, st.get_name() or "<unnamed>"
+            return False, "no-stages-with-texture"
 
         def material_base_color(mat: Any) -> Any:
             if mat is None:
@@ -207,10 +280,23 @@ def _apply_unlit_gltf_color_attribs(root: Any) -> None:
             except Exception:
                 return LColor(1, 1, 1, 1)
 
+        factor_shader = _get_factor_lit_shader()
+
+        local = {
+            "geoms": 0,
+            "textured": 0,
+            "textured_vertex": 0,
+            "vertex": 0,
+            "flat": 0,
+        }
+
         def walk(np: Any) -> None:
             node = np.node()
+            node_has_flat = False
+
             if isinstance(node, GeomNode):
                 for gi in range(node.get_num_geoms()):
+                    local["geoms"] += 1
                     geom = node.get_geom(gi)
                     state = node.get_geom_state(gi)
                     vdata = geom.get_vertex_data()
@@ -219,29 +305,67 @@ def _apply_unlit_gltf_color_attribs(root: Any) -> None:
 
                     ma = state.get_attrib(MaterialAttrib.get_class_type())
                     mat = ma.get_material() if ma else None
-                    has_tex = state_has_base_color_texture(state)
+                    has_tex, tex_reason = state_has_base_texture(state)
+                    branch = "flat"
 
                     if has_tex:
-                        new_state = (
-                            state.set_attrib(ColorAttrib.make_vertex())
-                            if has_vcolor
-                            else state
-                        )
+                        if has_vcolor:
+                            new_state = state.set_attrib(ColorAttrib.make_vertex())
+                            branch = "textured_vertex"
+                            local["textured_vertex"] += 1
+                        else:
+                            new_state = state
+                            branch = "textured"
+                            local["textured"] += 1
                     else:
                         if has_vcolor:
                             new_state = state.set_attrib(ColorAttrib.make_vertex())
+                            branch = "vertex"
+                            local["vertex"] += 1
                         else:
                             bc = material_base_color(mat)
                             new_state = state.set_attrib(ColorAttrib.make_flat(bc))
+                            branch = "flat"
+                            local["flat"] += 1
+                            node_has_flat = True
+
+                    if aggregate_stats is not None:
+                        aggregate_stats.add_branch(branch, ambiguous=False)
 
                     node.set_geom_state(gi, new_state)
+                    if debug_materials:
+                        model_hdr = model_label or "<unknown>"
+                        print(
+                            f"[materials] {model_hdr} geom={gi}"
+                            f" branch={branch} tex={tex_reason}"
+                            f" vcolor={has_vcolor}"
+                        )
+
+                if node_has_flat and factor_shader is not None:
+                    np.setShader(factor_shader)
 
             for i in range(np.getNumChildren()):
                 walk(np.getChild(i))
 
         walk(root)
-    except Exception:
-        pass
+        if debug_materials:
+            model_hdr = model_label or "<unknown>"
+            print(
+                f"[materials][summary] {model_hdr}"
+                f" geoms={local['geoms']}"
+                f" textured={local['textured']}"
+                f" textured_vertex={local['textured_vertex']}"
+                f" vertex={local['vertex']}"
+                f" flat={local['flat']}"
+            )
+        return local["flat"] > 0
+    except Exception as exc:
+        if aggregate_stats is not None:
+            aggregate_stats.errors += 1
+        if debug_materials:
+            model_hdr = model_label or "<unknown>"
+            print(f"[materials][error] {model_hdr} {exc!r}")
+        return False
 
 
 def _truncate_label(s: str, max_len: int = 42) -> str:
@@ -282,6 +406,7 @@ def run_viewer(
     pack_gap: float,
     model_max_extent: float,
     max_total: int | None,
+    debug_materials: bool,
 ) -> int:
     os.chdir(PROJECT_ROOT)
 
@@ -316,7 +441,6 @@ def run_viewer(
         camera,
         color,
         scene,
-        sys,
         window,
         EditorCamera
     )
@@ -380,6 +504,8 @@ def run_viewer(
     gallery_min_z = float("inf")
     gallery_max_z = float("-inf")
 
+    material_stats = MaterialDebugStats() if debug_materials else None
+
     for pi, pack_name in enumerate(pack_order):
         files = pack_files[pack_name]
         n = len(files)
@@ -433,7 +559,12 @@ def run_viewer(
                     position=(cx_i, 0.0, cz_i),
                 )
                 _fit_uniform_and_ground(ent, model_max_extent)
-                _apply_unlit_gltf_color_attribs(ent.model)
+                _apply_gltf_color_and_shading(
+                    ent.model,
+                    debug_materials=debug_materials,
+                    model_label=str(fpath.relative_to(assets_models)),
+                    aggregate_stats=material_stats,
+                )
             else:
                 Entity(
                     parent=scene,
@@ -455,6 +586,18 @@ def run_viewer(
             )
 
         cursor_x += pack_width + pack_gap
+
+    if debug_materials and material_stats is not None:
+        print(
+            "[model_viewer_kenney][materials][aggregate]"
+            f" geoms={material_stats.geoms_total}"
+            f" textured={material_stats.branch_textured}"
+            f" textured_vertex={material_stats.branch_textured_vertex}"
+            f" vertex={material_stats.branch_vertex}"
+            f" flat={material_stats.branch_flat}"
+            f" ambiguous_tex={material_stats.ambiguous_textured}"
+            f" errors={material_stats.errors}"
+        )
 
     # Editor Camera setup: overview of gallery
     if not math.isfinite(gallery_min_x) or gallery_min_x > gallery_max_x:
@@ -527,6 +670,11 @@ def parse_args() -> argparse.Namespace:
         metavar="N",
         help="Load at most N models (dev/test; omit for full scan)",
     )
+    p.add_argument(
+        "--debug-materials",
+        action="store_true",
+        help="Print per-geom material classification and aggregate stats",
+    )
     return p.parse_args()
 
 
@@ -539,6 +687,7 @@ def main() -> int:
         pack_gap=float(args.pack_gap),
         model_max_extent=float(args.model_max_extent),
         max_total=args.max_total,
+        debug_materials=bool(args.debug_materials),
     )
 
 
