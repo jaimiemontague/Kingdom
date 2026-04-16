@@ -5360,6 +5360,306 @@
                     }
                 }
             }
+        },
+        "wk28-assembler-spike": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+                "notes": "Pre-1.5 spike. Stands up Agent 15 and ships MVP Kenney kit assembler tool. NO game code changes this sprint. WK27 Sprint 2.1 stays parked until wk29 playtest validates the pipeline."
+            },
+            "rounds": {
+                "wk28_r1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "wk28_r1",
+                        "build_target": "Assembler_Tool_MVP + Agent15_Spinup",
+                        "visibility": "Implementers: 12, 15. Consult: 09, 11."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Assigned",
+                        "focus": "MVP assembler tool delivered; Agent 15 stood up; prefab schema authored.",
+                        "gates": {
+                            "qa_smoke_quick": "python tools/qa_smoke.py --quick must remain PASS (no sim changes expected).",
+                            "tool_launch": "python tools/model_assembler_kenney.py --new must open without errors.",
+                            "round_trip": "Save a test prefab with 3+ pieces, reopen with --open <id>, confirm identical visual result."
+                        }
+                    },
+                    "pm_bug_tickets": [],
+                    "pm_feature_requests": [
+                        {
+                            "id": "WK28-FEAT-001",
+                            "title": "Ship Kenney kit assembler MVP tool",
+                            "owner_agent": "12_ToolsDevEx_Lead",
+                            "spec_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md section 4.4",
+                            "acceptance": [
+                                "tools/model_assembler_kenney.py launches via --new and --open <prefab_id>.",
+                                "Piece picker lists .glb from assets/models/Models/GLB format/ and GLTF format/.",
+                                "Click empty ground spawns selected piece snapped to 1.0-unit grid at ground_anchor_y.",
+                                "WASD nudge (1.0 unit), Q/E rotate 90 deg around Y, [ and ] move Y by 0.25, Delete removes.",
+                                "Save writes assets/prefabs/buildings/<prefab_id>.json matching assets/prefabs/schema.md.",
+                                "Reopen reproduces saved layout pixel-close (human visual check).",
+                                "Two-path shader classifier from kenney_gltf_ursina_integration_guide.md section 5 applied: textured pieces unlit; factor-only pieces render with factor_lit_shader (not flat white, not pitch black)."
+                            ]
+                        },
+                        {
+                            "id": "WK28-FEAT-002",
+                            "title": "Stand up Agent 15 prefab schema + round-trip acceptance test",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md section 4.3 and 4.5",
+                            "acceptance": [
+                                "assets/prefabs/schema.md exists, documents v0.1 schema (fields: prefab_id, building_type, footprint_tiles, ground_anchor_y, rotation_steps, attribution, pieces[{model,pos,rot,scale}], notes).",
+                                "assets/prefabs/buildings/ directory exists (empty this sprint; populated in wk29).",
+                                "Round-trip test evidence logged: place 3 pieces, save, reopen, confirm identical visual result."
+                            ]
+                        }
+                    ],
+                    "pm_next_actions_by_agent": {
+                        "12": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Build tools/model_assembler_kenney.py v0.1 per WK28-FEAT-001.",
+                                "Reuse piece scan and _apply_gltf_color_and_shading classifier patterns from tools/model_viewer_kenney.py.",
+                                "Read/write prefab JSON matching assets/prefabs/schema.md (Agent 15 authors).",
+                                "Coordinate with Agent 15 on schema to ensure round-trip correctness before closing the sprint."
+                            ],
+                            "acceptance_criteria": [
+                                "Tool launches via --new and --open <prefab_id> without errors.",
+                                "Two-path shader classifier applied; textured + factor-only pieces both render correctly in the tool.",
+                                "python tools/qa_smoke.py --quick PASS."
+                            ]
+                        },
+                        "15": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Draft assets/prefabs/schema.md v0.1 per the plan (section 4.3).",
+                                "Create empty assets/prefabs/buildings/ directory (add a .gitkeep or the schema doc nearby).",
+                                "Once Agent 12 ships the tool: place 3 Kenney pieces, rotate, delete one, save a test prefab, reopen via --open, confirm visual round-trip.",
+                                "Record any tool gaps (needed features, bugs) in your log as follow-ups for Agent 12 before wk28 closes."
+                            ],
+                            "acceptance_criteria": [
+                                "assets/prefabs/schema.md exists and matches the wk28 plan schema.",
+                                "Round-trip visual round-trip confirmed by human (note in log evidence.visual_review).",
+                                "python tools/qa_smoke.py --quick PASS."
+                            ]
+                        },
+                        "09": {
+                            "status": "consult",
+                            "asks": [
+                                "Review-only: when Agent 15 reports the tool is up, confirm textured (Retro Fantasy) AND factor-only (Nature Kit) pieces render correctly in the assembler. No code changes needed."
+                            ]
+                        },
+                        "11": {
+                            "status": "consult",
+                            "asks": [
+                                "After wk28 merges, run python tools/qa_smoke.py --quick and confirm PASS. No new scenarios needed this sprint."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are activated for sprint wk28-assembler-spike, round wk28_r1_execution.\n\n1) Open .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk28-assembler-spike\"].rounds[\"wk28_r1_execution\"].\n2) Read pm_agent_prompts[YOUR_AGENT_NUMBER] and pm_next_actions_by_agent[YOUR_AGENT_NUMBER].\n3) Full spec + acceptance: .cursor/plans/wk28_assembler_spike_41c2daeb.plan.md\n4) Agent 15 is NEW this sprint; role contract: .cursor/rules/agent-15-modelassembler-onboarding.mdc\n\nCritical references:\n- .cursor/plans/kenney_gltf_ursina_integration_guide.md (shader classifier + pitfalls)\n- .cursor/plans/kenney_assets_models_mapping.plan.md (Kenney pack folder map)\n- tools/model_viewer_kenney.py (reference implementation the assembler extends)\n\nScope lock: NO changes to game/, ai/, config.py, master plan, or wk27 sprint plan this round.\n\nWhen done: update your agent log, run `python tools/qa_smoke.py --quick` (must PASS), report files changed + evidence back to PM.",
+                    "pm_agent_prompts": {
+                        "12": "WK28 R1 (Tools Director): Build tools/model_assembler_kenney.py v0.1 per WK28-FEAT-001 (see .cursor/plans/wk28_assembler_spike_41c2daeb.plan.md section 4.4). Reuse the piece scan + _apply_gltf_color_and_shading classifier from tools/model_viewer_kenney.py. Controls: click ground to place selected piece (1.0-unit snap), WASD to nudge, Q/E rotate 90 deg Y, [ and ] move Y by 0.25, Delete removes. Toolbar: New / Open prefab / Save prefab / Set building_type / Set footprint_tiles. Prefab JSON format per assets/prefabs/schema.md (Agent 15 authors in parallel; coordinate with them to match fields). Do NOT bake to .glb, no multi-select, no undo stack. Run python tools/qa_smoke.py --quick before reporting. Update your log.",
+                        "15": "WK28 R1 (ModelAssembler - NEW ROLE): You were just stood up. Read .cursor/rules/agent-15-modelassembler-onboarding.mdc first, then .cursor/plans/kenney_gltf_ursina_integration_guide.md and .cursor/plans/kenney_assets_models_mapping.plan.md. Deliverables this sprint (WK28-FEAT-002): (1) Draft assets/prefabs/schema.md v0.1 per plan section 4.3. (2) Create assets/prefabs/buildings/ folder (empty this sprint). (3) Once Agent 12 ships tools/model_assembler_kenney.py, acceptance-test it: place 3 Kenney pieces, rotate one, delete one, save prefab, reopen via --open <prefab_id>, confirm identical visual result. (4) If the tool is missing anything, log it as a follow-up for Agent 12 in your log. Run python tools/qa_smoke.py --quick before reporting. Update .cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json with evidence.",
+                        "09": "WK28 R1 (Art Director - CONSULT ONLY): No code ownership this round. When Agent 12 has shipped the assembler and Agent 15 has tested round-trip, spend 5 minutes in the tool confirming that (a) Retro Fantasy Kit textured pieces (wall-*, roof-*) render with their textures and (b) Nature Kit factor-only pieces (tree_pine*, rock_*) render with visible 3D shading (not flat white, not pitch black). If either category is broken, file a note back to Agent 12. No log entry required unless you file a regression.",
+                        "11": "WK28 R1 (QA - CONSULT ONLY): No new scenarios this sprint. After wk28 changes merge, run python tools/qa_smoke.py --quick. Expected: PASS (no sim changes). If FAIL, bisect and assign back to Agent 12. Log result in agent_11 log as a simple 'wk28 post-merge gate' note."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "12",
+                            "15",
+                            "09",
+                            "11"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "03",
+                            "04",
+                            "05",
+                            "06",
+                            "07",
+                            "08",
+                            "10",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "Implementers: Agent 12 (tool), Agent 15 (schema + round-trip test). Consults: Agent 09 (visual classifier check), Agent 11 (post-merge gate). All others silent this sprint."
+                    }
+                },
+                "wk28_r2_close": {
+                    "round_meta": {
+                        "prompt_set_id": "wk28_r2_close",
+                        "build_target": "Sprint_Close",
+                        "visibility": "PM-authored close round. No agents activated.",
+                        "closed_at_local": "2026-04-16"
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Complete",
+                        "focus": "All wk28 Definition of Done items met. Pipeline validated; ready for wk29-first-house-playtest.",
+                        "gates": {
+                            "qa_smoke_quick": "PASS (post-merge re-run by PM on 2026-04-16; DONE: PASS)",
+                            "tool_launch": "PASS (smoke_test_v1.json on disk proves tool opened and saved successfully)",
+                            "round_trip": "PASS (human visual confirmation by Jaimie; substitutes for Agent 15 / Agent 09 consult log entries)"
+                        }
+                    },
+                    "pm_completion_audit": {
+                        "delivered": {
+                            "tool": "tools/model_assembler_kenney.py (Agent 12 — WK28-FEAT-001 all 7 acceptance items DONE; includes hotfix round wk28_r1_hotfix_launch_crash for Ursina text_entity bug)",
+                            "schema": "assets/prefabs/schema.md (Agent 15 — matches wk28 plan section 4.3)",
+                            "buildings_dir": "assets/prefabs/buildings/ created (.gitkeep + smoke_test_v1.json test artifact)",
+                            "agent_15_role": ".cursor/rules/agent-15-modelassembler-onboarding.mdc + .cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json",
+                            "studio_docs_updated": ["studio-agent-cards_c3880ea5.plan.md (TOC + card + collab map)", "ai_studio_infrastructure_progress.md (roster 14 -> 15 + Agent 15 case study)", ".cursor/rules/01-studio-onboarding.mdc (roster table row 15)"]
+                        },
+                        "human_visual_review": {
+                            "reviewer": "jaimie",
+                            "outcome": "confirmed",
+                            "note": "Jaimie ran the assembler end-to-end himself and produced assets/prefabs/buildings/smoke_test_v1.json (10 pieces, one rotated 90 deg, attribution auto-inferred). This substitutes for Agent 15 Ursina round-trip evidence and Agent 09 classifier review. Neither agent log will carry that evidence by design."
+                        },
+                        "agent_12_hotfix_relaunch": {
+                            "status": "resolved_implicitly",
+                            "note": "Agent 12 log marks ursina_launch status PENDING_HUMAN. Resolved by smoke_test_v1.json existing on disk (save path executed => window launched post-hotfix)."
+                        },
+                        "smoke_test_artifact_policy": "Leave assets/prefabs/buildings/smoke_test_v1.json in place per Jaimie. It is a regression artifact, not a playable building. Filename makes the purpose clear."
+                    },
+                    "pm_next_sprint": "wk29-first-house-playtest (this hub). Sprint plan: .cursor/plans/wk29_first_house_playtest.plan.md.",
+                    "pm_deferred_items": [
+                        "CHANGELOG v1.5.0 relabel — deferred until real v1.5.0 ships; per Jaimie, only PM + Jaimie read it currently."
+                    ]
+                }
+            }
+        },
+        "wk29-first-house-playtest": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+                "notes": "Pre-1.5. End-to-end pipeline validation: one kitbashed peasant house + one gated Ursina loader + one playtest + decision gate. Depends on wk28-assembler-spike (closed)."
+            },
+            "rounds": {
+                "wk29_r1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "wk29_r1",
+                        "build_target": "First_House_Prefab + Gated_Loader + Playtest",
+                        "visibility": "Implementers: 15, 03. Consult: 09, 10, 11."
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Assigned",
+                        "focus": "Kitbash one house prefab; add a gated prefab loader; playtest in-game; decide whether to scale the pipeline.",
+                        "gates": {
+                            "qa_smoke_quick": "python tools/qa_smoke.py --quick must remain PASS.",
+                            "env_off_no_regression": "With KINGDOM_URSINA_PREFAB_TEST unset, Ursina renderer must be unchanged from prior build.",
+                            "env_on_house_renders": "With KINGDOM_URSINA_PREFAB_TEST=1, the prefab loads at house building positions and passes the wk29 plan section 6 checklist.",
+                            "fps_sanity": "FPS with env var ON is within acceptable range of env var OFF (Agent 10 judgement; flag > 30% drop as blocker)."
+                        }
+                    },
+                    "pm_bug_tickets": [],
+                    "pm_feature_requests": [
+                        {
+                            "id": "WK29-FEAT-001",
+                            "title": "Kitbash peasant_house_small_v1 prefab",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk29_first_house_playtest.plan.md section 4.1",
+                            "acceptance": [
+                                "assets/prefabs/buildings/peasant_house_small_v1.json exists.",
+                                "building_type == 'house', footprint_tiles == [1,1], <= 8 pieces, ground_anchor_y == 0.0.",
+                                "attribution array lists every Kenney pack referenced.",
+                                "Opens cleanly via: python tools/model_assembler_kenney.py --open peasant_house_small_v1.",
+                                "Silhouette readable as 'small peasant house' from a distance."
+                            ]
+                        },
+                        {
+                            "id": "WK29-FEAT-002",
+                            "title": "Gated prefab loader in ursina_renderer.py",
+                            "owner_agent": "03_TechnicalDirector_Architecture",
+                            "spec_ref": ".cursor/plans/wk29_first_house_playtest.plan.md section 4.2",
+                            "acceptance": [
+                                "game/graphics/ursina_renderer.py contains a helper (e.g. _load_prefab_instance) that reads a prefab JSON and instantiates each piece as a child Entity with per-piece two-path shader classifier applied.",
+                                "Activation is strictly gated by env var KINGDOM_URSINA_PREFAB_TEST=1 AND building type 'house' AND prefab file exists.",
+                                "With env var UNSET, no change to existing render path for any building.",
+                                "Classifier logic uses or extends tools.model_viewer_kenney._apply_gltf_color_and_shading; factor-only pieces must use factor_lit_shader (not setShaderAuto).",
+                                "No wall-clock time or unseeded RNG introduced (sim boundary respected; determinism_guard PASS).",
+                                "python tools/qa_smoke.py --quick PASS."
+                            ]
+                        }
+                    ],
+                    "pm_next_actions_by_agent": {
+                        "15": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Run: python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1.",
+                                "Kitbash a readable small peasant house: <=8 pieces, 1x1 footprint, ground_anchor_y=0.0. Mix textured (Retro Fantasy walls/roofs) + optional factor-only accents (Nature Kit) to exercise both classifier paths.",
+                                "Hand-edit attribution if auto-inference is coarse; confirm assets/ATTRIBUTION.md has the relevant Kenney packs.",
+                                "Save, then reopen via --open peasant_house_small_v1 to confirm round-trip.",
+                                "Once Agent 03's loader lands, confirm the prefab loads in-game under the env var flag."
+                            ],
+                            "acceptance_criteria": [
+                                "WK29-FEAT-001 acceptance items.",
+                                "Reopen round-trip visually identical to save state.",
+                                "python tools/qa_smoke.py --quick PASS."
+                            ]
+                        },
+                        "03": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "In game/graphics/ursina_renderer.py, add _load_prefab_instance(prefab_path, world_pos) -> Entity (or similar).",
+                                "Gate on os.environ.get('KINGDOM_URSINA_PREFAB_TEST') == '1' AND building type == 'house' AND prefab file present. Otherwise existing render path is unchanged.",
+                                "Apply the two-path shader classifier per piece (reuse tools.model_viewer_kenney._apply_gltf_color_and_shading; either import or move to shared module).",
+                                "Keep loader render-only: no wall-clock, no unseeded RNG, no reading from sim state beyond the existing building snapshot.",
+                                "Document in agent_03 log which classifier-location choice you made and why."
+                            ],
+                            "acceptance_criteria": [
+                                "WK29-FEAT-002 acceptance items.",
+                                "Regression check: env var UNSET -> identical to prior behavior.",
+                                "determinism_guard and python tools/qa_smoke.py --quick both PASS."
+                            ]
+                        },
+                        "09": {
+                            "status": "consult",
+                            "asks": [
+                                "After Agents 15 and 03 land: style review on the assembled house in-game. Check silhouette readability, palette cohesion with existing 3D environment work (wk25/wk26), no severe clipping.",
+                                "Flag any cohesion concerns back to Agent 15; do not edit the prefab yourself."
+                            ]
+                        },
+                        "10": {
+                            "status": "consult",
+                            "asks": [
+                                "After Agents 15 and 03 land: launch main.py --renderer ursina twice (env var OFF then ON) and note ms/frame delta. No formal benchmark required.",
+                                "If FPS with env var ON is > 30% worse than OFF, flag as blocker for wk30 (Agent 12 will need a prefab baker)."
+                            ]
+                        },
+                        "11": {
+                            "status": "consult",
+                            "asks": [
+                                "After wk29 changes merge, run python tools/qa_smoke.py --quick and confirm PASS. No new scenarios required.",
+                                "If FAIL, bisect and assign regression to Agent 03 (loader) or Agent 15 (prefab schema deviation)."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are activated for sprint wk29-first-house-playtest, round wk29_r1_execution.\n\n1) Open .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk29-first-house-playtest\"].rounds[\"wk29_r1_execution\"].\n2) Read pm_agent_prompts[YOUR_AGENT_NUMBER] and pm_next_actions_by_agent[YOUR_AGENT_NUMBER].\n3) Full spec + acceptance: .cursor/plans/wk29_first_house_playtest.plan.md\n\nCritical references:\n- .cursor/plans/kenney_gltf_ursina_integration_guide.md (two-path shader classifier; do NOT use setShaderAuto)\n- assets/prefabs/schema.md (prefab JSON v0.1 contract)\n- tools/model_assembler_kenney.py (assembler; Agent 15 uses this)\n- tools/model_viewer_kenney.py (classifier reference implementation)\n\nScope lock: NO edits to wk27 sprint plan, master_plan_3d_graphics_v1_5.md, config.py, or the CHANGELOG this round.\n\nGate the prefab loader strictly by env var KINGDOM_URSINA_PREFAB_TEST=1 AND building type 'house'. With env var unset, the renderer must be unchanged from prior build.\n\nWhen done: update your agent log, run `python tools/qa_smoke.py --quick` (must PASS), report files changed + evidence back to PM.",
+                    "pm_agent_prompts": {
+                        "15": "WK29 R1 (ModelAssembler): Kitbash the first real prefab. Run `python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1`. Target: readable small peasant house, <=8 pieces, 1x1 footprint, ground_anchor_y=0.0. Prefer Retro Fantasy walls/roofs; mix in Nature Kit accents if they fit the style. Save, then reopen via `--open peasant_house_small_v1` to round-trip. Hand-edit attribution if auto-inference is coarse. After Agent 03 lands the loader, confirm the prefab renders in-game with `$env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina` (PowerShell). Spec: .cursor/plans/wk29_first_house_playtest.plan.md section 4.1. Run `python tools/qa_smoke.py --quick` and update your log.",
+                        "03": "WK29 R1 (Tech Director): Add a GATED prefab loader to game/graphics/ursina_renderer.py per WK29-FEAT-002. Helper: `_load_prefab_instance(prefab_path, world_pos) -> Entity` that reads prefab JSON, instantiates each piece as a child Entity, and applies the two-path shader classifier per piece (reuse `tools.model_viewer_kenney._apply_gltf_color_and_shading`; either import from tools/ or move to a shared module under game/graphics/ — document your choice). Gate strictly on `os.environ.get('KINGDOM_URSINA_PREFAB_TEST') == '1'` AND building type 'house' AND prefab file exists. With env var unset, NO change to existing render path. No wall-clock, no unseeded RNG. Full spec: .cursor/plans/wk29_first_house_playtest.plan.md section 4.2. Run `python tools/qa_smoke.py --quick` (must PASS) and update agent_03 log.",
+                        "09": "WK29 R1 (Art Director - CONSULT): After Agents 15 and 03 have landed, spend 5 minutes in-game with env var ON reviewing the assembled peasant_house_small_v1. Check silhouette readability, palette cohesion with wk25/wk26 environment work, no severe clipping. If cohesion concerns, file them back to Agent 15; do NOT edit the prefab yourself.",
+                        "10": "WK29 R1 (Performance Lead - CONSULT): After Agents 15 and 03 have landed, launch `python main.py --renderer ursina` twice — once with `$env:KINGDOM_URSINA_PREFAB_TEST='1'`, once unset. Note ms/frame delta (F2 perf overlay). If FPS with env var ON is > 30% worse than OFF, flag as blocker for wk30 (prefab baker needed). Log result in agent_10.",
+                        "11": "WK29 R1 (QA - CONSULT): After wk29 changes merge, run `python tools/qa_smoke.py --quick`. Expected PASS. If FAIL, bisect and assign regression to Agent 03 (loader) or Agent 15 (prefab schema deviation). Log in agent_11."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "15",
+                            "03",
+                            "09",
+                            "10",
+                            "11"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "04",
+                            "05",
+                            "06",
+                            "07",
+                            "08",
+                            "12",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "Implementers: Agent 15 (prefab) + Agent 03 (loader). Consults: Agent 09 (style), Agent 10 (FPS), Agent 11 (post-merge gate). All others silent this sprint."
+                    }
+                }
+            }
         }
     }
 }

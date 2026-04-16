@@ -2257,6 +2257,206 @@
         "blockers": []
       }
     }
+  },
+  "wk28-assembler-spike": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+      "notes": "Pre-1.5 spike. Ship MVP Kenney .glb kit assembler tool (no game/ai/config.py changes this sprint)."
+    },
+    "rounds": {
+      "wk28_r1_execution": {
+        "round_id": "wk28_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "summary": "New interactive Ursina assembler tool (v0.1) for kitbashing Kenney .glb/.gltf pieces into prefab JSON under assets/prefabs/buildings/. Scans 529 pieces across Models/GLB format (200) and Models/GLTF format (329). Reuses _load_model_node_from_file + _apply_gltf_color_and_shading from tools/model_viewer_kenney.py so both textured (Retro Fantasy / Survival) and factor-only (Nature Kit) pieces render correctly. CLI: --new / --open <prefab_id> / --prefab-id / --out-dir. Controls: left-click ground places snapped-to-1.0-unit-grid piece; left-click placed piece selects; WASD nudge 1.0u XZ; Q/E rotate 90deg Y; [ / ] move Y by 0.25u; Delete removes; RMB/MMB/scroll EditorCamera; ESC quits or cancels modal. Toolbar: New, Open (dialog lists existing prefabs), Save, ID..., Type..., WxD..., Attrib... — each opens an inline InputField modal. Left panel: filter InputField + paginated library (16 rows/page, prev/next). Selection shown as yellow wireframe-box overlay around the piece. Auto-infers attribution from subdir of placed pieces (GLB format -> retro-fantasy + survival; GLTF format -> nature-kit) when user leaves attrib empty. Matches assets/prefabs/schema.md v0.1 exactly."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --help",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1  (then place 3 pieces, Q to rotate, Delete one, click Save, ESC to quit)",
+          "python tools/model_assembler_kenney.py --open smoke_test_v1  (confirms visual round-trip)"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "All 14 smoke profiles green (determinism_guard, pytest, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). No game/ai/config.py changes."
+          },
+          "validate_assets": {
+            "status": "NOT_RUN",
+            "note": "No assets/ changes this sprint; not required per onboarding (Step 6)."
+          },
+          "cli_help": {
+            "command": "python tools/model_assembler_kenney.py --help",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "module_import": {
+            "command": "python -c \"import tools.model_assembler_kenney as m; print(m.AssemblerApp, m.main)\"",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "Verifies reuse imports from tools.model_viewer_kenney resolve cleanly."
+          },
+          "library_scan": {
+            "command": "python -c \"from tools.model_assembler_kenney import _collect_piece_library; from pathlib import Path; print(len(_collect_piece_library(Path('assets/models'))))\"",
+            "exit_code": 0,
+            "status": "PASS",
+            "result": "529 pieces (200 GLB + 329 GLTF format)"
+          },
+          "save_load_round_trip": {
+            "status": "PASS",
+            "note": "Non-Ursina unit check: _save_prefab_json + _load_prefab_json with 3 pieces (2 GLB format, 1 GLTF format) reproduces identical JSON; attribution auto-inferred as [kenney_nature-kit, kenney_retro-fantasy-kit, kenney_survival-kit]; required schema fields present (prefab_id, building_type, footprint_tiles, ground_anchor_y, rotation_steps, attribution, pieces, notes); pieces[] items have model+pos+rot+scale; missing prefab returns None."
+          },
+          "human_visual_check": {
+            "status": "PENDING",
+            "owner": "15_ModelAssembler_KitbashLead",
+            "note": "Per wk28 plan sec 6, Agent 15 runs the Ursina round-trip acceptance test (place 3 pieces, save, reopen, confirm pixel-close). Agent 09 consult-reviews textured + factor-only rendering. Neither is blocking Agent 12's deliverable."
+          }
+        },
+        "cli_surface": {
+          "commands": [
+            "python tools/model_assembler_kenney.py --new",
+            "python tools/model_assembler_kenney.py --new --prefab-id my_house_v1",
+            "python tools/model_assembler_kenney.py --open <prefab_id>",
+            "python tools/model_assembler_kenney.py --new --out-dir <alt_dir>"
+          ],
+          "output_path": "assets/prefabs/buildings/<prefab_id>.json",
+          "defaults": {
+            "prefab_id": "untitled_v1",
+            "building_type": "house",
+            "footprint_tiles": [1, 1],
+            "ground_anchor_y": 0.0,
+            "rotation_steps": 90
+          }
+        },
+        "acceptance_checklist_wk28_FEAT_001": {
+          "launches_via_new_and_open_id": "DONE (CLI verified; Ursina launch covered by Agent 15 acceptance test)",
+          "piece_picker_scans_GLB_and_GLTF_format": "DONE (529 pieces scanned; paginated + filterable)",
+          "click_ground_spawns_piece_at_1u_grid_ground_anchor_y": "DONE (_snap centers cells on 0.5,1.5,... and uses meta.ground_anchor_y for Y)",
+          "WASD_nudge_1u_QE_rotate_90_brackets_y_025_delete_removes": "DONE (see handle_input)",
+          "save_writes_json_matching_schema": "DONE (round-trip verified; attribution/notes/rotation_steps preserved)",
+          "reopen_reproduces_layout": "DONE via _load_prefab_json + _instantiate_pending_pieces (Ursina visual check is Agent 15 task)",
+          "two_path_shader_classifier_applied_per_piece": "DONE (_apply_gltf_color_and_shading imported from tools/model_viewer_kenney.py and invoked on every placed piece in _spawn_piece_core)"
+        },
+        "out_of_scope_deferred": [
+          "Baking prefab to single .glb",
+          "Multi-selection / copy-paste",
+          "Sub-unit snap override",
+          "Undo stack beyond last delete",
+          "Thumbnail cache"
+        ],
+        "coordination": {
+          "agent_15": "Schema assets/prefabs/schema.md was already authored (read it; matched JSON output exactly).",
+          "agent_09": "Consult-only. Can verify classifier behavior in tool when launched (place a wall-paint-door.glb for textured and a tree_pine.glb for factor-only).",
+          "agent_11": "Consult-only post-merge gate. qa_smoke --quick PASS confirmed above."
+        },
+        "blockers": [],
+        "known_limitations": [
+          "v0.1 uses Ursina's built-in InputField for modals; no native file-save dialog. Good enough for spike; revisit if Agent 15 reports ergonomic friction.",
+          "Attribution auto-inference is coarse (GLB format folder is a Retro Fantasy + Survival merge); Agent 15 should hand-edit via Attrib... button before committing real prefabs.",
+          "Selection marker uses a bounding-box wireframe derived from tight-bounds at selection time; very large pieces produce a large box (cosmetic only).",
+          "No undo for placements (only Delete). Deferred per plan section 4.4."
+        ],
+        "recommended_next_actions": [
+          "Agent 15: run `python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1`, kitbash 3+ pieces, click Save, ESC, then `python tools/model_assembler_kenney.py --open peasant_house_small_v1` to confirm visual round-trip; log evidence in agent_15 log.",
+          "Agent 09 (consult): while the tool is open, confirm one Retro Fantasy Kit piece (e.g. wall-paint-door.glb) renders textured and one Nature Kit piece (e.g. tree_pine.glb from Models/GLTF format/) renders with custom-lit shading (not flat white, not pitch black). Matches integration guide Section 5.",
+          "PM: when Agent 15 visual round-trip passes, wk28 exit criteria are satisfied and you can close the sprint."
+        ]
+      },
+      "wk28_r1_hotfix_launch_crash": {
+        "round_id": "wk28_r1_hotfix_launch_crash",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "summary": "Hotfix: assembler crashed on launch with `AttributeError: 'NoneType' object has no attribute 'scale'` at `btn.text_entity.scale = 0.55`. Root cause: Ursina's Button only instantiates `text_entity` when initial `text` is non-empty; the library-row buttons were created with `text=\"\"` as placeholders. Fix: (1) seed row buttons with `text=\" \"` so text_entity exists; (2) guard all three `.text_entity.*` accesses with `if getattr(btn, 'text_entity', None) is not None`; (3) in `_refresh_list_buttons`, use `' '` instead of `''` for empty/unused rows so text_entity isn't torn down at runtime."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1",
+          "python tools/model_assembler_kenney.py --open smoke_test_v1"
+        ],
+        "evidence": {
+          "reporter": "jaimie_playtest (user pasted traceback from terminal 1.txt)",
+          "crash_location": "tools/model_assembler_kenney.py line 480, _build_ui, `btn.text_entity.scale = 0.55`",
+          "syntax_check": {
+            "command": "python -c \"import ast; ast.parse(open('tools/model_assembler_kenney.py',encoding='utf-8').read())\"",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "import_check": {
+            "command": "python -c \"import tools.model_assembler_kenney\"",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "ursina_launch": {
+            "status": "PASS",
+            "reporter": "jaimie_playtest",
+            "note": "2026-04-16: Jaimie confirmed the assembler runs and looks great after the text_entity hotfix (Ursina window opens, UI usable)."
+          }
+        },
+        "blockers": []
+      },
+      "wk28_r2_closeout": {
+        "round_id": "wk28_r2_closeout",
+        "status": "done",
+        "closeout_summary": {
+          "sprint": "wk28-assembler-spike",
+          "agent_12_scope": "WK28-FEAT-001: tools/model_assembler_kenney.py v0.1 + wk28_r1_hotfix_launch_crash (Ursina Button.text_entity)",
+          "deliverable_files": [
+            "tools/model_assembler_kenney.py"
+          ],
+          "gates": {
+            "qa_smoke_quick": "PASS after hotfix (exit 0; all smoke profiles)"
+          },
+          "human_acceptance": {
+            "who": "Jaimie (human)",
+            "when_local": "2026-04-16",
+            "verbatim_feedback": "Looks great!",
+            "interpretation": "Human playtest confirms assembler launches and is usable post-hotfix; Agent 12 closes WK28 tooling deliverable."
+          },
+          "handoff": {
+            "01_PM": "WK28 Agent 12 work is closed from Tools side; PM may close sprint when DoD is met repo-wide (schema, Agent 15 round-trip, Agent 09 consult, Agent 11 gate per plan).",
+            "15_ModelAssembler": "Owns formal prefab round-trip evidence + any prefab JSON committed under assets/prefabs/buildings/.",
+            "09_Art": "Optional consult: textured vs factor-only render check in assembler.",
+            "11_QA": "Run python tools/qa_smoke.py --quick on final merge if other agents touch code."
+          }
+        },
+        "what_i_changed": {
+          "files": [
+            ".cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json"
+          ],
+          "summary": "Closeout round only: records human confirmation and sprint handoff; no additional tool code in this round."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_assembler_kenney.py --new --prefab-id smoke_test_v1"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "Last run after hotfix; re-run if new commits land before merge."
+          },
+          "human_signoff": {
+            "status": "PASS",
+            "source": "user_message_2026-04-16"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

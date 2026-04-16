@@ -1,6 +1,6 @@
 ### AI Studio / Agents Infrastructure — Progress Log (Kingdom Sim)
 
-**Document purpose**: This is a detailed, “printable” record of what we’ve built so far to operationalize the **AI Studio** (14 department-lead agents) inside Cursor for Kingdom Sim, including planning structure, multi-agent coordination, logging formats, and PM synthesis patterns.
+**Document purpose**: This is a detailed, “printable” record of what we’ve built so far to operationalize the **AI Studio** (15 department-lead agents) inside Cursor for Kingdom Sim, including planning structure, multi-agent coordination, logging formats, and PM synthesis patterns.
 
 **Audience**: Jaimie (solo dev + studio operator), and future “you” returning after time away.
 
@@ -18,7 +18,7 @@
     - Required response format per agent (Status/Deliverables/Questions/Next actions).
 - **Legacy visual roster (historical)**:
   - `.cursor/plans/AI Studio Structure - 13 Directors.JPG`
-  - This screenshot shows the original 13-director roster; the live source of truth is the agent cards doc (now 14 directors, including SoundDirector_Audio).
+  - This screenshot shows the original 13-director roster; the live source of truth is the agent cards doc (now 15 directors; SoundDirector_Audio was added as Agent 14 when audio entered scope, and ModelAssembler_KitbashLead was added as Agent 15 during the pre-v1.5 3D transition).
 
 - **Project QA scaffolding already present** (important because it becomes the “release gate” for lightweight builds):
   - `QA_TEST_PLAN.md`
@@ -114,6 +114,7 @@ We switched to **agent-owned files** (one per director), placed under:
 - `.cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json`
 - `.cursor/plans/agent_logs/agent_13_SteamRelease_Ops_Marketing.json`
 - `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json` (added later when audio work entered scope)
+- `.cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json` (added during pre-v1.5 3D transition, when it became clear Kenney kits require dedicated kitbash work)
 
 #### Design goals for the new schema
 - **No collisions**: each agent edits only their own file.
@@ -323,7 +324,7 @@ This keeps coordination tight and avoids repeating guidance 13 times.
 ### 11) Key conventions established
 
 #### IDs
-- **Agents**: `01`..`14`
+- **Agents**: `01`..`15`
 - **Sprints**: descriptive string, stable (example: `wk1-broad-sweep-midweek-endweek`)
 - **Rounds**: `wkN_rM` (or similar)
 
@@ -377,7 +378,11 @@ These are not required, but will make future sprints smoother.
 
 **Agent logs**
 - `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` (PM hub)
-- `.cursor/plans/agent_logs/agent_02_...json` through `agent_14_...json`
+- `.cursor/plans/agent_logs/agent_02_...json` through `agent_15_...json`
+
+**Agent onboarding rules (one per agent)**
+- `.cursor/rules/agent-01-pm-onboarding.mdc` through `.cursor/rules/agent-15-modelassembler-onboarding.mdc`
+- Each rule file is the role contract: ownership table, quickstart, common mistakes. Agents read their rule first on every new session.
 
 **Template**
 - `.cursor/plans/agent_logs/REPLY_ENTRY_TEMPLATE.json`
@@ -397,20 +402,38 @@ These are not required, but will make future sprints smoother.
 
 ---
 
-### 16) Adding a new agent (example: Agent 14 SoundDirector_Audio)
+### 16) Adding a new agent (examples: Agent 14 SoundDirector_Audio, Agent 15 ModelAssembler_KitbashLead)
 
-When a new domain becomes important (e.g., audio), we add a dedicated director to keep decisions consistent and licensing safe.
+When a new domain becomes important (e.g., audio, 3D kitbashing), we add a dedicated director to keep decisions consistent and licensing safe.
 
-Checklist:
+Checklist (apply whenever adding an agent):
 - Update the agent cards doc:
   - Add the new role to the TOC in `.cursor/plans/studio-agent-cards_c3880ea5.plan.md`
-  - Add a full card section with: Mission, Responsibilities, Constraints, Typical deliverables, Interfaces
+  - Add a full card section with: Mission, Responsibilities, Authority & constraints, Typical deliverables, Interfaces, KPIs
+  - Add the new role to the Cross-Agent Collaboration Map at the bottom
 - Add a new agent-owned log file under:
-  - `.cursor/plans/agent_logs/agent_14_SoundDirector_Audio.json`
+  - `.cursor/plans/agent_logs/agent_NN_<Role>.json`
   - Schema must match v2.0 (nested sprints → rounds) and follow `REPLY_ENTRY_TEMPLATE.json`.
+- Add an agent onboarding rule under `.cursor/rules/agent-NN-<slug>-onboarding.mdc` following the pattern of existing agent rules (Who you are, Ownership table, Quickstart, Rules, Common mistakes, Quick reference).
+- Update `.cursor/rules/01-studio-onboarding.mdc` agent roster table with the new row.
+- Update this progress doc:
+  - Starting-point note that now says N directors
+  - Agent log list
+  - ID range (`01`..`NN`)
 - PM roster discipline:
-  - Only activate Agent 14 in sprints where audio is in scope; otherwise keep silent to reduce noise.
+  - Only activate the new agent in sprints where their domain is in scope; otherwise keep silent to reduce noise.
 - Tooling note:
-  - If the sprint adds new asset classes (audio), ToolsDevEx should extend the validator + attribution rules in the same sprint so release gates remain credible.
+  - If the new agent introduces new asset classes or file types, ToolsDevEx should extend the validator + attribution rules in the same sprint so release gates remain credible.
+
+**Agent 14 case (added mid-project):**
+- Trigger: audio work entered scope and licensing/determinism concerns needed a dedicated owner.
+- Domain: SFX + ambient audio, CC0 licensing, non-authoritative audio events.
+
+**Agent 15 case (added pre-v1.5):**
+- Trigger: the 3D transition revealed that the Kenney Retro Fantasy Kit ships as a **modular kit** (38 wall variants, 8 roof pieces, 5 tower parts, etc.), not as finished building `.glb` files. Every playable building (castle, house, inn, marketplace, blacksmith, guilds, farm, tower, lair) has to be kitbashed from kit pieces. This is neither a tool job (Agent 12) nor a pure art-style job (Agent 09) — it is its own sub-discipline with a human in the loop for every visual review.
+- Domain: assembled building prefabs (`assets/prefabs/buildings/*.json`), prefab schema, kitbash conventions.
+- Tool partner: Agent 12 owns `tools/model_assembler_kenney.py`; Agent 15 is its heaviest user.
+- Runtime partner: Agent 03 owns the prefab loader in `game/graphics/ursina_renderer.py`.
+- Sprint that stood it up: `wk28-assembler-spike` (spec: `.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md`).
 
 

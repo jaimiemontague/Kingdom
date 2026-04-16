@@ -10,7 +10,7 @@ You are a department-lead agent inside a one-person AI-assisted game studio buil
 
 ## Step 1: Know who you are
 
-When the human says "You are Agent N" or references your agent number, that is your identity for the session. The 14 agents are:
+When the human says "You are Agent N" or references your agent number, that is your identity for the session. The 15 agents are:
 
 | # | Role | Scope |
 |---|------|-------|
@@ -28,6 +28,7 @@ When the human says "You are Agent N" or references your agent number, that is y
 | 12 | ToolsDevEx_Lead | CLI tools, asset pipeline, debug helpers |
 | 13 | SteamRelease_Ops_Marketing | Store page, packaging, patch notes |
 | 14 | SoundDirector_Audio | SFX, ambient, mixing, CC0 licensing |
+| 15 | ModelAssembler_KitbashLead | Kenney 3D kit assembly into building prefabs |
 
 ## Step 2: Find your assignment
 

@@ -1,0 +1,118 @@
+{
+  "schema_version": "2.0",
+  "agent": { "id": "15", "name": "ModelAssembler_KitbashLead" },
+  "notes": [
+    "This file is owned by Agent 15 only.",
+    "Structure nests rounds inside sprints to keep history organized.",
+    "Agent 15 was stood up in wk28-assembler-spike as the owner of Kenney kit prefabs for buildings.",
+    "See .cursor/rules/agent-15-modelassembler-onboarding.mdc for role contract."
+  ],
+  "sprints": {
+    "wk28-assembler-spike": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+        "notes": "Agent 15 is created this sprint. Role focus: prefab schema authorship + round-trip acceptance test of the assembler tool."
+      },
+      "rounds": {
+        "wk28_r1_spinup": {
+          "round_id": "wk28_r1_spinup",
+          "round_meta": {
+            "prompt_set_id": "wk28_r1",
+            "build_target": "Agent15_Spinup",
+            "sent_at_local": null
+          },
+          "assignment_received": {
+            "from": "agent_01_ExecutiveProducer_PM",
+            "prompt_ref": "sprints.wk28-assembler-spike.rounds.wk28_r1_execution.pm_agent_prompts.15 (in PM hub)",
+            "asks": [
+              "Draft assets/prefabs/schema.md v0.1 (fields per the plan).",
+              "Create assets/prefabs/buildings/ directory (empty for wk28; populated in wk29).",
+              "Acceptance test the tool from Agent 12: place 3 Kenney pieces, rotate, delete one, save, reopen; confirm visual round-trip.",
+              "Report any tool gaps back to Agent 12 before wk28 closes."
+            ],
+            "acceptance_criteria": [
+              "assets/prefabs/schema.md exists and matches wk28 plan schema.",
+              "Round-trip save/reopen of a test prefab produces an identical visual result.",
+              "python tools/qa_smoke.py --quick PASS (should be unaffected)."
+            ]
+          },
+          "status": "assigned_pending_tool",
+          "what_i_changed": [],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --new   # (tool delivered by Agent 12 this sprint)",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke": null,
+            "visual_review": "pending"
+          },
+          "blockers": [
+            "tools/model_assembler_kenney.py must be delivered by Agent 12 before round-trip acceptance can run."
+          ]
+        },
+        "wk28_r1_execution": {
+          "round_id": "wk28_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk28_r1",
+            "build_target": "WK28-FEAT-002",
+            "completed_at_local": "2026-04-16T00:00:00"
+          },
+          "status": "partial_complete_schema_and_dir",
+          "what_i_changed": [
+            "assets/prefabs/schema.md — v0.1 prefab contract (root fields + pieces[{model,pos,rot,scale}], rules, example JSON per wk28 plan 4.3).",
+            "assets/prefabs/buildings/.gitkeep — empty buildings dir for wk29 prefab JSON outputs."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --new",
+            "python tools/model_assembler_kenney.py --open <prefab_id>",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "visual_review": "pending — round-trip requires tools/model_assembler_kenney.py (Agent 12); not present in repo at execution time."
+          },
+          "follow_up_for_agent_12": [
+            "Ship tools/model_assembler_kenney.py v0.1 per WK28-FEAT-001 so Agent 15 can run: place 3 pieces, rotate one, delete one, save, reopen via --open <prefab_id>, human visual match."
+          ],
+          "blockers": [
+            "Round-trip acceptance blocked: tools/model_assembler_kenney.py missing from workspace (Agent 12 deliverable)."
+          ]
+        },
+        "wk28_r1_sprint_closeout": {
+          "round_id": "wk28_r1_sprint_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk28_r1",
+            "build_target": "WK28_closeout",
+            "closed_at_local": "2026-04-16T00:00:00"
+          },
+          "status": "complete",
+          "summary": "Sprint wk28-assembler-spike closing. Human playtest (Jaimie) reports visual checks passed: assembler tool behavior and save/reopen round-trip look correct.",
+          "what_i_changed": [
+            "Log only — no new prefab files this round."
+          ],
+          "evidence": {
+            "visual_review": {
+              "reviewer": "human_playtest (Jaimie)",
+              "result": "PASS",
+              "notes": "Visual round-trip and in-tool rendering confirmed good; ready for sprint close."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "rerun_at_closeout": true
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "wk29: kitbash first house prefab per wk28 plan follow-on; coordinate with Agent 03 for gated Ursina prefab load when scheduled."
+          ]
+        }
+      }
+    }
+  }
+}

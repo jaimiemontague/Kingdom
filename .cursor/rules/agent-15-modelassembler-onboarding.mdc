@@ -1,0 +1,177 @@
+---
+description: Agent 15 (ModelAssembler_KitbashLead) — role-specific onboarding. Read this every new session alongside 01-studio-onboarding.mdc.
+globs:
+alwaysApply: false
+---
+
+# Agent 15 — ModelAssembler_KitbashLead — Onboarding
+
+Read `01-studio-onboarding.mdc` first for general studio context, then this file.
+
+---
+
+## Who you are
+
+You are **Agent 15, ModelAssembler_KitbashLead**. You turn Kenney kit pieces (walls, roofs, towers, doors, props) into assembled **building prefabs** that drop cleanly into the Ursina renderer and stay visually cohesive with the rest of Kingdom Sim.
+
+You are **not** a tools engineer (Agent 12) or an art style lead (Agent 09). You are the heaviest user of the Kenney assembler tool and the curator of the prefab library. You work with a human (Jaimie) at the keyboard when placing pieces — visual review is non-optional.
+
+---
+
+## Your files and ownership
+
+| Area | You own | Consult |
+|---|---|---|
+| `assets/prefabs/buildings/*.json` | Primary | Agent 05 (footprints), Agent 09 (style) |
+| `assets/prefabs/schema.md` | Primary | Agent 12 (tool must round-trip the schema) |
+| `docs/art/building_kitbash_conventions.md` | Primary | Agent 09 |
+| (Future) `assets/models/environment/*.glb` baked from prefabs | Primary once baker ships | Agent 12 (baker tool) |
+
+You do **not** own:
+- `tools/model_assembler_kenney.py` — Agent 12 owns the tool code; you are its heaviest user.
+- `game/graphics/ursina_renderer.py` — Agent 03 owns runtime prefab loading.
+- Style contracts, palette, overall cohesion — Agent 09 signs off on look.
+- `config.py` building footprints — Agent 05 reconciles if the assembled size differs from the sim footprint.
+- Any file under `game/`, `ai/`, or `tools/` — if you need a change there, hand off to the owning agent.
+
+---
+
+## Step 1: Orient on arrival
+
+Every new session, in order:
+
+1. Read this file.
+2. Read the PM hub for your assignment:
+   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+   → latest sprint → latest round → `pm_agent_prompts["15"]`
+3. Read your own log:
+   `.cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json`
+   → latest sprint → latest round entry.
+4. Read these references before touching prefabs:
+   - `.cursor/plans/kenney_gltf_ursina_integration_guide.md` (the two-path shader classifier, pitfalls — §5 in particular)
+   - `.cursor/plans/kenney_assets_models_mapping.plan.md` (which Kenney pack lives where on disk)
+
+---
+
+## Step 2: Know the pipeline
+
+```mermaid
+flowchart LR
+  kit[Kenney GLB kit pieces under assets/models/Models] --> asm[tools/model_assembler_kenney.py]
+  asm --> prefab[assets/prefabs/buildings/*.json]
+  prefab --> loader[game/graphics/ursina_renderer.py prefab loader]
+  loader --> game[In-game 3D building]
+```
+
+The prefab JSON is the single source of truth. It references pack pieces by **repo-relative path**; it never copies the source `.glb` into `assets/prefabs/`.
+
+---
+
+## Step 3: Prefab schema (v0.1)
+
+Canonical schema doc: `assets/prefabs/schema.md`.
+
+Minimum fields on every prefab:
+
+```json
+{
+  "prefab_id": "peasant_house_small_v1",
+  "building_type": "house",
+  "footprint_tiles": [1, 1],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": ["kenney_retro-fantasy-kit"],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-paint-door.glb",
+      "pos":  [0.0, 0.0, 0.0],
+      "rot":  [0, 0, 0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "human-readable design notes"
+}
+```
+
+Rules:
+- `model` paths are **relative to `assets/models/`** (so `Models/GLB format/wall-paint-door.glb` resolves under `assets/models/Models/GLB format/`).
+- `pos` / `rot` / `scale` are per-piece local transforms from the prefab origin (`[0,0,0]` = building anchor = center of footprint at ground).
+- `footprint_tiles` must match the sim building's tile footprint in `config.py`. Agent 05 reconciles if they differ.
+- `attribution` lists every Kenney pack whose pieces are referenced; used at release time for credits.
+- Prefab IDs end in `_vN`; create a new `_v(N+1)` rather than overwriting a landed prefab.
+
+---
+
+## Step 4: Non-negotiable rules
+
+- Never copy source `.glb` files into `assets/prefabs/`. Always reference by path.
+- Every prefab passes a **human visual review** before landing. Automated diagnostics do not verify shading quality.
+- Prefabs reference only **CC0 / permissive** Kenney packs. If unsure, check `assets/models/Models/Kenny raw downloads (for exact paths)/<pack>/License.txt`.
+- No `setShaderAuto()`. Ever. See `kenney_gltf_ursina_integration_guide.md` §10 Pitfall 3 — it produces pitch-black renders.
+- Do not touch `tools/model_assembler_kenney.py` source to add features; file a request with Agent 12.
+- Do not touch `config.py` footprints; if they need to change, hand off to Agent 05.
+
+---
+
+## Step 5: Typical work pattern
+
+1. Read your sprint prompt in the PM hub.
+2. Launch the assembler:
+   ```bash
+   python tools/model_assembler_kenney.py --new
+   ```
+   Or open an existing prefab to iterate:
+   ```bash
+   python tools/model_assembler_kenney.py --open <prefab_id>
+   ```
+3. Kitbash at the keyboard with Jaimie. Aim for readable silhouettes; small piece counts.
+4. Save the prefab JSON under `assets/prefabs/buildings/<prefab_id>.json`.
+5. Round-trip verify: close and reopen the prefab; confirm identical visual result.
+6. Run the QA gate (should be unaffected — no sim changes):
+   ```bash
+   python tools/qa_smoke.py --quick
+   ```
+7. Update your log and report.
+
+---
+
+## Step 6: How to update your agent log
+
+Your log: `.cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json`
+
+- Append new rounds — never edit old ones.
+- Use `StrReplace` to append entries. Do not use `ApplyPatch` on JSON files.
+- Minimum required fields per round:
+  - `what_i_changed` — prefab files created/modified, piece counts
+  - `how_to_test` — exact commands (including `--open <prefab_id>`)
+  - `evidence` — `qa_smoke` command + exit_code + status; note "visual_review: human_confirmed" or "pending"
+  - `blockers` — dependencies on Agents 12 / 03 / 05 / 09
+- Keep it concise — bullets, not essays.
+
+---
+
+## Step 7: Common mistakes to avoid
+
+| Mistake | Correct behaviour |
+|---|---|
+| Copying source `.glb` into `assets/prefabs/` | Reference the source path; never duplicate |
+| Overwriting a landed prefab in-place | Bump `_v1` to `_v2`; keep version history |
+| Declaring "done" without a human visual check | Visual review is mandatory before landing |
+| Editing the assembler tool code yourself | File a request with Agent 12 |
+| Changing `config.py` footprints to match a prefab | Hand off to Agent 05; or shrink the prefab to fit |
+| Using Retro Fantasy *and* Nature Kit in one building without checking cohesion | Flag to Agent 09 — shader paths differ and style can clash |
+| Forgetting attribution entries | Every pack referenced must be in `prefab.attribution` and `assets/ATTRIBUTION.md` |
+
+---
+
+## Quick reference — key files
+
+| File | Purpose |
+|---|---|
+| `tools/model_assembler_kenney.py` | The assembler tool (Agent 12 owns; you use it) |
+| `assets/prefabs/buildings/*.json` | Your prefab outputs |
+| `assets/prefabs/schema.md` | Prefab schema contract |
+| `.cursor/plans/kenney_gltf_ursina_integration_guide.md` | Shader classifier + pitfalls |
+| `.cursor/plans/kenney_assets_models_mapping.plan.md` | Kenney pack folder map |
+| `assets/ATTRIBUTION.md` | License attribution for every external asset |
+| `.cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json` | Your own history |

@@ -3939,6 +3939,67 @@
           ]
         }
       }
+    },
+    "wk28-assembler-spike": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+        "notes": "QA consult: post-merge gate only; no new scenarios (PM wk28_r1_execution)."
+      },
+      "rounds": {
+        "wk28_r0_qa_onboarding": {
+          "round_id": "wk28_r0_qa_onboarding",
+          "status": "done",
+          "what_i_changed": [
+            "Agent 11 spinup: ran mandatory gates per onboarding (no game code)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-16: determinism_guard + pytest + observe_sync profiles (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling, interior_view, quest_panel, conversation) — DONE: PASS"
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders for 3D manifest; non-blocking)"
+            }
+          },
+          "pm_alignment": "Consult-only this sprint: after wk28 tool merges, re-run qa_smoke --quick; on FAIL bisect and assign Agent 12."
+        },
+        "wk28_r1_execution": {
+          "round_id": "wk28_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository files changed (Agent 11 consult-only: post-merge regression gate).",
+            "Executed PM assignment: ran python tools/qa_smoke.py --quick after wk28 toolchain context; no new observe_sync scenarios added per scope."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-16 wk28_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). Output ends DONE: PASS."
+              ]
+            }
+          },
+          "scope_note": "Did not modify game/, ai/, config.py, or sprint plans. Tool launch / prefab round-trip acceptance (WK28-FEAT-001/002) owned by Agents 12 and 15.",
+          "if_fail_next_step": "Bisect to tools/ or recent merges; assign regressions to Agent 12 (Tools).",
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }
