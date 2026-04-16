@@ -1138,6 +1138,52 @@
           }
         }
       }
+    },
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "WK29 R1 consult: FPS env OFF vs ON for gated prefab house loader."
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "sprint_id": "wk29-first-house-playtest",
+          "round_id": "wk29_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk29_r1",
+            "sent_at_local": "2026-04-16"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK29 R1 (Agent 10 consult): Compared Ursina perf risk for KINGDOM_URSINA_PREFAB_TEST=1 vs unset after Agents 03/15 prefab + loader landed. assets/prefabs/buildings/peasant_house_small_v1.json has 2 pieces (wall-door + roof); _load_prefab_instance builds one root Entity + 2 children, applies _apply_gltf_color_and_shading once per piece at instantiation (not per frame). _get_or_create_prefab_house_entity caches per sim building id. Extra draw/state vs prior Sprint 2.1 single-mesh house path is O(pieces) per house instance and tiny relative to combined terrain batch. Automated CLI did not expose FPS numbers; launched python main.py --renderer ursina --no-llm for ~12s with env unset and with KINGDOM_URSINA_PREFAB_TEST=1 — both started cleanly (wgl) with no crash. Judgement: no evidence of >30% FPS regression from this feature alone; wk30 prefab baker not flagged as blocker. Recommend Jaimie spot-check Ursina corner FPS counter and optional F2 pygame perf overlay for numeric confirmation on her GPU.",
+            "summary_bullets": [
+              "Prefab path: 2 child meshes + load-time classifier; cached per building — no per-frame prefab load.",
+              "Short Ursina smoke (env OFF / ON): both launches OK; no numeric FPS from stdout.",
+              "Static analysis: >30% drop unlikely vs prior house mesh; wk30 baker blocker NOT triggered.",
+              "python tools/qa_smoke.py --quick PASS (exit 0)."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual FPS (repo root): python main.py --renderer ursina --no-llm",
+              "Manual FPS prefab ON (PowerShell): $env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina --no-llm",
+              "In session: Ursina window FPS counter (top-left); F2 toggles pygame perf overlay on HUD for sim ms breakdown."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "ursina_smoke_seconds": 12,
+              "wk30_prefab_baker_blocker": false
+            },
+            "agent_fields": {
+              "prefab_piece_count": 2,
+              "reviewed_files": [
+                "game/graphics/ursina_renderer.py (_use_wk29_prefab_house, _load_prefab_instance, _get_or_create_prefab_house_entity)",
+                "assets/prefabs/buildings/peasant_house_small_v1.json"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -52,6 +52,20 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: Kenney Retro Fantasy Kit (3D models, CC0)
+- **Author / publisher**: Kenney (`https://kenney.nl/`)
+- **License**: CC0 1.0 Universal (see `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_retro-fantasy-kit/License.txt`)
+- **Source**: `https://kenney.nl/assets/retro-fantasy-kit`
+- **Retrieved**: 2026-04-16
+- **Modifications**: none (GLB pieces referenced by path from building prefabs)
+- **Used for**: 3D building prefabs (walls, roofs, floors, doors) kitbashed via `tools/model_assembler_kenney.py`
+- **File locations**:
+  - `assets/models/Models/GLB format/*.glb` (merged pass-through tree; the piece picker reads from here)
+  - `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_retro-fantasy-kit/Models/GLB format/*.glb` (raw)
+  - Referenced by `assets/prefabs/buildings/*.json` via `pieces[].model` (prefab attribution: `kenney_retro-fantasy-kit`)
+
+---
+
 ### Pack: kingdomsim_cc0_placeholders
 - **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
 - **License**: CC0-1.0

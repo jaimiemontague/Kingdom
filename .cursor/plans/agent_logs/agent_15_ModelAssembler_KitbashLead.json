@@ -8,6 +8,116 @@
     "See .cursor/rules/agent-15-modelassembler-onboarding.mdc for role contract."
   ],
   "sprints": {
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "First real kitbashed prefab (peasant_house_small_v1) + gated Ursina loader (Agent 03) + playtest."
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "round_id": "wk29_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk29_r1",
+            "build_target": "WK29-FEAT-001 (peasant_house_small_v1 prefab)",
+            "started_at_local": "2026-04-16T00:00:00"
+          },
+          "assignment_received": {
+            "from": "agent_01_ExecutiveProducer_PM",
+            "prompt_ref": "sprints.wk29-first-house-playtest.rounds.wk29_r1_execution.pm_agent_prompts.15 (PM hub)",
+            "asks": [
+              "Kitbash assets/prefabs/buildings/peasant_house_small_v1.json via python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1.",
+              "Constraints: building_type=house, footprint_tiles=[1,1], ground_anchor_y=0.0, <=8 pieces.",
+              "Prefer Retro Fantasy walls/roofs; optional Nature Kit accent to exercise factor-only classifier path.",
+              "Hand-edit attribution if auto-inference is coarse; keep assets/ATTRIBUTION.md in sync.",
+              "Save, then reopen via --open peasant_house_small_v1 to confirm round-trip.",
+              "After Agent 03 lands the gated loader, confirm the prefab renders in-game with KINGDOM_URSINA_PREFAB_TEST=1.",
+              "Run python tools/qa_smoke.py --quick (must PASS) and update this log."
+            ]
+          },
+          "status": "awaiting_human_kitbash_session",
+          "what_i_changed": [],
+          "preflight_checks": {
+            "tool_present": "tools/model_assembler_kenney.py present; CLI supports --new --prefab-id <id> and --open <id>.",
+            "piece_picker_roots": [
+              "assets/models/Models/GLB format (Retro Fantasy + Survival — textured path)",
+              "assets/models/Models/GLTF format (Nature Kit — factor-only path)"
+            ],
+            "schema_doc": "assets/prefabs/schema.md v0.1 (from wk28) — fields aligned with PM acceptance.",
+            "output_dir": "assets/prefabs/buildings/ present (wk28 .gitkeep)."
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --new --prefab-id peasant_house_small_v1",
+            "python tools/model_assembler_kenney.py --open peasant_house_small_v1",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "suggested_piece_loadout_for_jaimie": [
+            "Models/GLB format/wall-pane-painted-wood-door.glb (front)",
+            "Models/GLB format/wall-pane-painted-wood-window.glb (sides, 2x)",
+            "Models/GLB format/wall-pane-painted-wood.glb (back)",
+            "Models/GLB format/roof-side.glb + roof-side-corner.glb (roof)",
+            "Optional: Models/GLB format/floor-flat.glb (base)",
+            "Optional: Models/GLTF format/tree_pineSmallB.glb or flower_yellowC.glb (Nature Kit accent to exercise factor_lit_shader)"
+          ],
+          "post_save_verification_plan": [
+            "Read assets/prefabs/buildings/peasant_house_small_v1.json; assert building_type=='house', footprint_tiles==[1,1], ground_anchor_y==0.0, len(pieces)<=8.",
+            "Assert all pieces[].model paths resolve under assets/models/.",
+            "Assert attribution is non-empty and includes every pack referenced; update assets/ATTRIBUTION.md to list Kenney retro-fantasy-kit (and nature-kit if used) under used_for: 3D building prefabs.",
+            "Run python tools/qa_smoke.py --quick and record exit_code."
+          ],
+          "blockers": [],
+          "awaiting": "Jaimie kitbash session in the Ursina assembler (interactive). Once saved, Agent 15 completes post-save verification and runs qa_smoke."
+        },
+        "wk29_r1_prefab_landed": {
+          "round_id": "wk29_r1_prefab_landed",
+          "round_meta": {
+            "prompt_set_id": "wk29_r1",
+            "build_target": "WK29-FEAT-001 (peasant_house_small_v1 prefab landed)",
+            "completed_at_local": "2026-04-16T00:00:00"
+          },
+          "status": "complete_prefab_landed_awaiting_agent_03_loader",
+          "what_i_changed": [
+            "assets/prefabs/buildings/peasant_house_small_v1.json — kitbashed by Jaimie in tools/model_assembler_kenney.py; 2 Retro Fantasy pieces (wall-door.glb at base, roof.glb lifted +1.0 on Y); saved and round-trip confirmed by reopening with --open.",
+            "assets/prefabs/buildings/peasant_house_small_v1.json — Agent 15 hand-trimmed attribution from ['kenney_retro-fantasy-kit','kenney_survival-kit'] (coarse auto-inference) down to ['kenney_retro-fantasy-kit'] only, since neither piece comes from the Survival kit.",
+            "assets/ATTRIBUTION.md — added 'Kenney Retro Fantasy Kit (3D models, CC0)' entry covering the 3D model use-case (existing Kenney entry only documented sprites)."
+          ],
+          "schema_acceptance": {
+            "prefab_id": "peasant_house_small_v1 (matches filename)",
+            "building_type": "house",
+            "footprint_tiles": "[1, 1]",
+            "ground_anchor_y": 0.0,
+            "rotation_steps": 90,
+            "piece_count": 2,
+            "piece_count_le_8": true,
+            "all_model_paths_resolve_under_assets_models": true,
+            "attribution_nonempty_and_trimmed_to_packs_actually_used": true
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open peasant_house_small_v1   # visual round-trip; confirmed by Jaimie",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "visual_review": {
+              "reviewer": "human_playtest (Jaimie)",
+              "result": "PASS",
+              "notes": "Saved prefab re-opened cleanly; roof sits on top of wall after Y-lift; round-trip visually identical to the authored state."
+            }
+          },
+          "follow_ups_for_agent_12": [
+            "Attribution auto-inference is coarse: any piece in Models/GLB format/ currently attributes BOTH kenney_retro-fantasy-kit AND kenney_survival-kit even when only one is used. Consider resolving pack-of-origin via the Kenny raw downloads tree (each raw pack has a per-pack GLB format subdir) so saved prefabs don't need post-save hand-trimming."
+          ],
+          "handoff_to_agent_03": [
+            "Prefab ready at assets/prefabs/buildings/peasant_house_small_v1.json (building_type=house, footprint=[1,1], 2 Retro Fantasy pieces).",
+            "Loader must be gated strictly on os.environ.get('KINGDOM_URSINA_PREFAB_TEST') == '1' AND building type 'house' AND prefab file exists; otherwise existing Ursina render path is unchanged.",
+            "Apply the two-path shader classifier per piece (reuse tools.model_viewer_kenney._apply_gltf_color_and_shading). Both pieces in this prefab are textured (GLB format), so the textured/unlit path must render them with visible textures, not flat white."
+          ]
+        }
+      }
+    },
     "wk28-assembler-spike": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",

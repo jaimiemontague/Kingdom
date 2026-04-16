@@ -11,6 +11,9 @@ under one root Entity — no TileSpriteLibrary bake or terrain atlas.
 
 Most buildings use BuildingSpriteLibrary on a single billboard quad; **castle**, **house**,
 and **lair** use static 3D meshes from ``assets/models/environment/`` (v1.5 Sprint 2.1).
+WK29: when ``KINGDOM_URSINA_PREFAB_TEST=1`` and ``peasant_house_small_v1.json`` exists,
+**house** uses a multi-piece prefab under ``assets/prefabs/buildings/`` instead of the
+single house mesh.
 Units use pixel-art billboards (Hero/Enemy/Worker sprite libraries).
 
 v1.5 Sprint 1.2 (Agent 09): Scene lighting (AmbientLight + shadow-casting
@@ -19,6 +22,8 @@ terrain/props read with simple flat-shaded dimensionality.
 """
 from __future__ import annotations
 
+import json
+import os
 import time
 import zlib
 from pathlib import Path
@@ -97,7 +102,11 @@ def px_to_world(px_x: float, px_y: float) -> tuple[float, float]:
     return sim_px_to_world_xz(px_x, px_y)
 
 
-_ENV_MODEL_DIR = Path(__file__).resolve().parents[2] / "assets" / "models" / "environment"
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_ENV_MODEL_DIR = _PROJECT_ROOT / "assets" / "models" / "environment"
+# WK29: gated prefab JSON for house playtest (Agent 15 authors the file).
+_PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
+_WK29_HOUSE_PREFAB_NAME = "peasant_house_small_v1.json"
 
 
 def _environment_model_path(kind: str) -> str:
@@ -178,6 +187,82 @@ def _building_height_y(
     if tw == 1 and th == 1:
         return H_BUILDING_1X1
     return H_BUILDING_2X2
+
+
+def _use_wk29_prefab_house(bts: str, building) -> bool:
+    """WK29: use JSON prefab only when env flag is set, type is house, and prefab file exists."""
+    if os.environ.get("KINGDOM_URSINA_PREFAB_TEST") != "1":
+        return False
+    if bts != "house":
+        return False
+    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+        return False
+    return (_PREFAB_BUILDINGS_DIR / _WK29_HOUSE_PREFAB_NAME).is_file()
+
+
+def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
+    """Instantiate a prefab JSON as a container Entity with one child model per piece.
+
+    Applies ``tools.model_viewer_kenney._apply_gltf_color_and_shading`` per piece (two-path
+    classifier: textured vs factor-only). Import kept in tools/ for WK29 spike (single source
+    of truth with the Kenney viewer).
+    """
+    from tools.model_viewer_kenney import _apply_gltf_color_and_shading
+
+    raw = json.loads(prefab_path.read_text(encoding="utf-8"))
+    pieces = raw.get("pieces") or []
+    ga = float(raw.get("ground_anchor_y", 0.0))
+
+    if isinstance(world_pos, Vec3):
+        wp = (world_pos.x, world_pos.y, world_pos.z)
+    else:
+        wp = (float(world_pos[0]), float(world_pos[1]), float(world_pos[2]))
+
+    root = Entity(position=wp, collider=None)
+    root._ks_prefab_container = True
+    root._ks_ground_anchor_y = ga
+    root._ks_prefab_source = str(prefab_path)
+
+    models_root = _PROJECT_ROOT / "assets" / "models"
+
+    for piece in pieces:
+        rel = str(piece.get("model", "")).replace("\\", "/").lstrip("/")
+        if not rel:
+            continue
+        abs_model = models_root / rel
+        if not abs_model.is_file():
+            continue
+        model_str = f"assets/models/{rel}"
+        ppos = piece.get("pos", [0, 0, 0])
+        prot = piece.get("rot", [0, 0, 0])
+        psc = piece.get("scale", [1, 1, 1])
+        child = Entity(
+            parent=root,
+            model=model_str,
+            position=(float(ppos[0]), float(ppos[1]), float(ppos[2])),
+            rotation=(float(prot[0]), float(prot[1]), float(prot[2])),
+            scale=(float(psc[0]), float(psc[1]), float(psc[2])),
+            collider=None,
+            double_sided=True,
+        )
+        child.collision = False
+        child.render_queue = 1
+        try:
+            child.set_depth_test(True)
+            child.set_depth_write(True)
+        except Exception:
+            pass
+        try:
+            if child.model is not None:
+                _apply_gltf_color_and_shading(
+                    child.model,
+                    debug_materials=False,
+                    model_label=rel,
+                )
+        except Exception:
+            pass
+
+    return root
 
 
 def _frame_index_for_clip(clip: AnimationClip, elapsed: float) -> tuple[int, bool]:
@@ -768,6 +853,57 @@ class UrsinaRenderer:
         else:
             ent.color = tint_col
 
+    def _get_or_create_prefab_house_entity(
+        self, sim_obj, prefab_path: Path, col
+    ) -> tuple:
+        """WK29: multi-piece prefab root; destroys prior billboard/mesh/prefab mismatch."""
+        import ursina as u
+
+        obj_id = id(sim_obj)
+        if obj_id in self._entities:
+            ent = self._entities[obj_id]
+            if getattr(ent, "_ks_building_mode", None) != "prefab_house" or getattr(
+                ent, "_ks_prefab_path", None
+            ) != str(prefab_path):
+                u.destroy(ent)
+                del self._entities[obj_id]
+
+        if obj_id not in self._entities:
+            root = _load_prefab_instance(prefab_path, Vec3(0, 0, 0))
+            root.color = col
+            root._ks_building_mode = "prefab_house"
+            root._ks_prefab_path = str(prefab_path)
+            root.collision = False
+            self._entities[obj_id] = root
+        return self._entities[obj_id], obj_id
+
+    @staticmethod
+    def _sync_prefab_house_entity(
+        ent: Entity,
+        *,
+        wx: float,
+        wz: float,
+        fx: float,
+        fz: float,
+        hy: float,
+        tint_col,
+        state: str,
+    ) -> None:
+        """Footprint scale + anchor; construction/damaged tint (no global shader on root)."""
+        UrsinaRenderer._set_texture_if_changed(ent, None)
+        scale_xyz = _footprint_scale_3d("house", fx, fz, hy)
+        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
+            ent.scale = scale_xyz
+            ent._ks_last_scale = scale_xyz
+        ga = float(getattr(ent, "_ks_ground_anchor_y", 0.0))
+        ent.position = (wx, ga, wz)
+        if state == "damaged":
+            ent.color = color.rgb(0.78, 0.42, 0.42)
+        elif state == "construction":
+            ent.color = color.rgb(0.72, 0.72, 0.65)
+        else:
+            ent.color = tint_col
+
     def update(self):
         """Called every frame by the Ursina app loop."""
         try:
@@ -818,6 +954,24 @@ class UrsinaRenderer:
 
             if _is_3d_mesh_building(bts, b):
                 mesh_kind = _mesh_kind_for_building(bts, b)
+                if _use_wk29_prefab_house(bts, b):
+                    prefab_path = _PREFAB_BUILDINGS_DIR / _WK29_HOUSE_PREFAB_NAME
+                    ent, obj_id = self._get_or_create_prefab_house_entity(
+                        b, prefab_path, col
+                    )
+                    self._sync_prefab_house_entity(
+                        ent,
+                        wx=wx,
+                        wz=wz,
+                        fx=fx,
+                        fz=fz,
+                        hy=hy,
+                        tint_col=col,
+                        state=state,
+                    )
+                    active_ids.add(obj_id)
+                    continue
+
                 model_path = _environment_model_path(mesh_kind)
                 ent, obj_id = self._get_or_create_3d_building_entity(b, model_path, col)
                 self._sync_3d_building_entity(

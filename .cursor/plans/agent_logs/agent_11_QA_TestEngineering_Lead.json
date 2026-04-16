@@ -4000,6 +4000,43 @@
           "bugs_found": []
         }
       }
+    },
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "QA consult: post-merge gate; WK29-FEAT-001/002 and Ursina env gating owned by Agents 15/03; manual playtest checklist section 6 is Jaimie + consult agents."
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "round_id": "wk29_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository files changed (Agent 11 consult-only).",
+            "Ran post-merge regression gate per PM: python tools/qa_smoke.py --quick. No new observe_sync scenarios added (WK29 scope)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "wk29_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). DONE: PASS."
+              ]
+            }
+          },
+          "pm_gates_acknowledged": {
+            "qa_smoke_quick": "PASS",
+            "env_off_no_regression": "Not automated by QA this round; Jaimie / Agent 10 per plan section 4.3–4.4",
+            "env_on_house_renders": "Manual; Agents 15/03 + plan section 6 checklist"
+          },
+          "if_fail_next_step": "Bisect: assign loader issues to Agent 03, prefab/schema to Agent 15.",
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

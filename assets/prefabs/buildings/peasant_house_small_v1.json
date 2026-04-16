@@ -1,0 +1,52 @@
+{
+  "prefab_id": "peasant_house_small_v1",
+  "building_type": "house",
+  "footprint_tiles": [
+    1,
+    1
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-door.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof.glb",
+      "pos": [
+        -0.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": ""
+}

@@ -2989,6 +2989,43 @@
           }
         }
       }
+    },
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "WK29 R1: gated prefab loader for house; WK29-FEAT-002"
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "sprint_id": "wk29-first-house-playtest",
+          "round_id": "wk29_r1_execution",
+          "round_meta": { "sent_at_local": "2026-04-16T00:00:00" },
+          "prompt_text": "Gated prefab loader: KINGDOM_URSINA_PREFAB_TEST=1 + house + peasant_house_small_v1.json; _load_prefab_instance; classifier from tools.model_viewer_kenney.",
+          "response": {
+            "received_at_local": "2026-04-16T00:00:00",
+            "status": "complete",
+            "summary_bullets": [
+              "Added _use_wk29_prefab_house() gate: env == '1', bts=='house', not lair, prefab file exists (assets/prefabs/buildings/peasant_house_small_v1.json).",
+              "_load_prefab_instance(prefab_path, world_pos): JSON load, one Entity per piece under root, skip missing model files; per-piece tools.model_viewer_kenney._apply_gltf_color_and_shading (import from tools — single source with Kenney viewer; no duplicate GLSL module this sprint).",
+              "_get_or_create_prefab_house_entity + _sync_prefab_house_entity: same footprint scale/tint pattern as _sync_3d_building_entity; mode tag prefab_house so switching env/mesh destroys correctly.",
+              "Building loop: prefab branch runs before default 3D mesh path; env unset or missing JSON → unchanged WK27 house mesh path.",
+              "Render-only: json/os.environ only; no sim RNG/wall-clock."
+            ],
+            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "After Agent 15 adds peasant_house_small_v1.json: $env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina",
+              "Regression: unset env — house still uses default assets/models/environment house mesh"
+            ],
+            "evidence": {
+              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            },
+            "blockers": [
+              "assets/prefabs/buildings/peasant_house_small_v1.json not in repo yet — prefab path inactive until Agent 15 lands file; behavior identical to pre-WK29 when file missing."
+            ]
+          }
+        }
+      }
     }
   }
 }

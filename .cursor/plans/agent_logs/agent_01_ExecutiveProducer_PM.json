@@ -5658,6 +5658,39 @@
                         ],
                         "rationale": "Implementers: Agent 15 (prefab) + Agent 03 (loader). Consults: Agent 09 (style), Agent 10 (FPS), Agent 11 (post-merge gate). All others silent this sprint."
                     }
+                },
+                "wk29_r2_close": {
+                    "round_meta": {
+                        "prompt_set_id": "wk29_r2_close",
+                        "build_target": "Sprint_Close",
+                        "visibility": "PM-authored close round.",
+                        "closed_at_local": "2026-04-16"
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Complete",
+                        "focus": "First Kenney kit prefab renders in-game as 3D house when KINGDOM_URSINA_PREFAB_TEST=1. Pipeline validated for scale-up.",
+                        "gates": {
+                            "qa_smoke_quick": "PASS (PM re-run 2026-04-16; DONE: PASS)",
+                            "wk29_plan_section_6": "Human playtest confirmed by Jaimie — house visible as 3D entity in Ursina."
+                        }
+                    },
+                    "pm_completion_audit": {
+                        "delivered": {
+                            "prefab": "assets/prefabs/buildings/peasant_house_small_v1.json (2 pieces: wall-door + roof; Retro Fantasy Kit attribution)",
+                            "loader": "game/graphics/ursina_renderer.py — _use_wk29_prefab_house, _load_prefab_instance, imports tools.model_viewer_kenney._apply_gltf_color_and_shading per piece",
+                            "attribution": "assets/ATTRIBUTION.md updated for prefab pipeline as applicable",
+                            "agent_logs": "03, 09, 10, 11, 15 updated with wk29 evidence",
+                            "pm_rule": ".cursor/rules/agent-01-pm-onboarding.mdc — intelligence-level recommendations for send lists"
+                        },
+                        "human_playtest": {
+                            "reviewer": "jaimie",
+                            "outcome": "confirmed — SO COOL seeing the house as a 3D entity"
+                        },
+                        "pm_next_actions": [
+                            "Amend master_plan_3d_graphics_v1_5.md and rescope wk27_sprint_2_1_buildings.plan.md around prefabs (after PM decision on timing).",
+                            "Optional wk30: prefab baker if Agent 10 flagged FPS regression (check agent_10 log)."
+                        ]
+                    }
                 }
             }
         }
