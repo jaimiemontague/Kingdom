@@ -4037,6 +4037,48 @@
           "bugs_found": []
         }
       }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "QA consult: post-merge qa_smoke + validate_assets; WK27 single-.glb approach deprecated per master plan Phase 2 Pipeline pivot (2026-04-16)."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "round_id": "wk30_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only).",
+            "Ran PM gates: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "wk30_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders for legacy manifest paths; per PM gate warnings acceptable)"
+            }
+          },
+          "context_ack": {
+            "master_plan_phase2_pivot": "Kitbash prefab JSON + per-piece loader; not one .glb per building (wk27 plan deprecated).",
+            "if_fail_next_step": "Agent 03 loader / Agent 15 prefab schema / Agent 12 validator"
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

@@ -11,9 +11,15 @@ under one root Entity — no TileSpriteLibrary bake or terrain atlas.
 
 Most buildings use BuildingSpriteLibrary on a single billboard quad; **castle**, **house**,
 and **lair** use static 3D meshes from ``assets/models/environment/`` (v1.5 Sprint 2.1).
-WK29: when ``KINGDOM_URSINA_PREFAB_TEST=1`` and ``peasant_house_small_v1.json`` exists,
-**house** uses a multi-piece prefab under ``assets/prefabs/buildings/`` instead of the
-single house mesh.
+WK30 (Agent 03): for any building whose ``building_type`` resolves to an existing
+``assets/prefabs/buildings/<file>.json`` (see ``_PREFAB_BUILDING_TYPE_TO_FILE`` + the
+``<building_type>_v1.json`` convention fallback), the prefab path loads **by default**
+via multi-piece instantiation, overriding the static mesh / billboard path. Explicit
+opt-out: set ``KINGDOM_URSINA_PREFAB_TEST=0`` to force the legacy render path for all
+buildings (any other value or unset = prefabs on). Piece clusters are **auto-centered**
+on the sim footprint-center and **fit-scaled** so their visible extent stays inside the
+sim footprint (schema v0.2). Optional debug: set ``KINGDOM_URSINA_GRID_DEBUG=1`` to draw
+tile gridlines on the terrain.
 Units use pixel-art billboards (Hero/Enemy/Worker sprite libraries).
 
 v1.5 Sprint 1.2 (Agent 09): Scene lighting (AmbientLight + shadow-casting
@@ -77,6 +83,12 @@ BUILDING_3D_HOUSE_XZ_INSET = 0.88
 BUILDING_3D_CASTLE_XZ_INSET = 0.98
 BUILDING_3D_LAIR_XZ_INSET = 0.94
 
+# WK30: XZ inset applied to prefab-backed buildings after fit-to-footprint scaling.
+# 1.0 = prefab's authored extent fills the sim footprint exactly; anything <1 leaves a
+# small margin so meshes never visually overlap grid lines / adjacent buildings. Tune
+# here rather than per-type — prefab authors pick their own authored extent already.
+_PREFAB_FIT_INSET = 1.0
+
 # Pixel billboard height in world units (32px sprite read at map scale)
 UNIT_BILLBOARD_SCALE = 0.62
 
@@ -104,9 +116,17 @@ def px_to_world(px_x: float, px_y: float) -> tuple[float, float]:
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _ENV_MODEL_DIR = _PROJECT_ROOT / "assets" / "models" / "environment"
-# WK29: gated prefab JSON for house playtest (Agent 15 authors the file).
+# WK29/WK30: prefab JSONs for kitbashed buildings (authored by Agent 15).
 _PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
-_WK29_HOUSE_PREFAB_NAME = "peasant_house_small_v1.json"
+
+# WK30 (Agent 03): single-source lookup table for ``building_type`` -> prefab filename.
+# Non-convention entries are listed explicitly; anything not in this table falls back to
+# the ``<building_type>_v1.json`` convention in ``_resolve_prefab_path``. Keep this table
+# sorted and minimal — the expectation is that new buildings land under the convention.
+_PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
+    # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
+    "house": "peasant_house_small_v1.json",
+}
 
 
 def _environment_model_path(kind: str) -> str:
@@ -189,15 +209,32 @@ def _building_height_y(
     return H_BUILDING_2X2
 
 
-def _use_wk29_prefab_house(bts: str, building) -> bool:
-    """WK29: use JSON prefab only when env flag is set, type is house, and prefab file exists."""
-    if os.environ.get("KINGDOM_URSINA_PREFAB_TEST") != "1":
-        return False
-    if bts != "house":
-        return False
+def _resolve_prefab_path(bts: str, building) -> Path | None:
+    """WK30: default-on prefab resolution by ``building_type``.
+
+    Returns the Path of the prefab JSON to load for this building, or ``None`` if the
+    legacy (static mesh / billboard) render path should be used instead.
+
+    Decision rules (short-circuit in order):
+
+    1. ``KINGDOM_URSINA_PREFAB_TEST=0`` (explicit zero) → force legacy path for everything.
+       Any other value, or env unset, keeps prefabs on.
+    2. No ``building_type`` string → legacy.
+    3. Lairs keep their dedicated ``lair`` mesh (no prefab contract yet). Detected via the
+       same ``is_lair`` / ``stash_gold`` hook used by ``_is_3d_mesh_building``.
+    4. Filename = explicit ``_PREFAB_BUILDING_TYPE_TO_FILE`` entry, else convention
+       ``<building_type>_v1.json``.
+    5. File must exist under ``_PREFAB_BUILDINGS_DIR``; otherwise → legacy.
+    """
+    if os.environ.get("KINGDOM_URSINA_PREFAB_TEST") == "0":
+        return None
+    if not bts:
+        return None
     if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-        return False
-    return (_PREFAB_BUILDINGS_DIR / _WK29_HOUSE_PREFAB_NAME).is_file()
+        return None
+    filename = _PREFAB_BUILDING_TYPE_TO_FILE.get(bts) or f"{bts}_v1.json"
+    path = _PREFAB_BUILDINGS_DIR / filename
+    return path if path.is_file() else None
 
 
 def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
@@ -206,22 +243,49 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
     Applies ``tools.model_viewer_kenney._apply_gltf_color_and_shading`` per piece (two-path
     classifier: textured vs factor-only). Import kept in tools/ for WK29 spike (single source
     of truth with the Kenney viewer).
+
+    Schema v0.2 (WK30 hotfix-to-R1): the loader **auto-centers** the piece XZ bounding box
+    onto the root origin, and stashes ``authored_footprint_tiles`` + piece XZ spread on the
+    root so ``_sync_prefab_building_entity`` can fit-scale the cluster to the sim footprint.
+    Piece Y values are honored verbatim (vertical stacking is an author intent we do not
+    distort). Effect: prefabs with different per-prefab anchors (WK28 assembler) all render
+    centered on the sim building's footprint-center, and the visible mesh extent fits
+    within the sim footprint.
     """
     from tools.model_viewer_kenney import _apply_gltf_color_and_shading
 
     raw = json.loads(prefab_path.read_text(encoding="utf-8"))
     pieces = raw.get("pieces") or []
     ga = float(raw.get("ground_anchor_y", 0.0))
+    authored_ft_raw = raw.get("footprint_tiles", [1, 1]) or [1, 1]
+    try:
+        authored_w = float(authored_ft_raw[0])
+        authored_d = float(authored_ft_raw[1])
+    except (TypeError, ValueError, IndexError):
+        authored_w = authored_d = 1.0
 
     if isinstance(world_pos, Vec3):
         wp = (world_pos.x, world_pos.y, world_pos.z)
     else:
         wp = (float(world_pos[0]), float(world_pos[1]), float(world_pos[2]))
 
+    # WK30: compute XZ bounding box from piece positions so the cluster can be centered.
+    xs = [float(pp.get("pos", [0, 0, 0])[0]) for pp in pieces] or [0.0]
+    zs = [float(pp.get("pos", [0, 0, 0])[2]) for pp in pieces] or [0.0]
+    min_x, max_x = min(xs), max(xs)
+    min_z, max_z = min(zs), max(zs)
+    centroid_x = (min_x + max_x) * 0.5
+    centroid_z = (min_z + max_z) * 0.5
+    spread_x = max_x - min_x
+    spread_z = max_z - min_z
+
     root = Entity(position=wp, collider=None)
     root._ks_prefab_container = True
     root._ks_ground_anchor_y = ga
     root._ks_prefab_source = str(prefab_path)
+    root._ks_prefab_authored_ft = (authored_w, authored_d)
+    root._ks_prefab_xz_spread = (spread_x, spread_z)
+    root._ks_prefab_xz_centroid = (centroid_x, centroid_z)
 
     models_root = _PROJECT_ROOT / "assets" / "models"
 
@@ -236,10 +300,14 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
         ppos = piece.get("pos", [0, 0, 0])
         prot = piece.get("rot", [0, 0, 0])
         psc = piece.get("scale", [1, 1, 1])
+        # WK30 auto-center: subtract the XZ centroid so the cluster is centered on (0, 0)
+        # in root-local space. Y is left alone (vertical stacking stays as authored).
+        cpos_x = float(ppos[0]) - centroid_x
+        cpos_z = float(ppos[2]) - centroid_z
         child = Entity(
             parent=root,
             model=model_str,
-            position=(float(ppos[0]), float(ppos[1]), float(ppos[2])),
+            position=(cpos_x, float(ppos[1]), cpos_z),
             rotation=(float(prot[0]), float(prot[1]), float(prot[2])),
             scale=(float(psc[0]), float(psc[1]), float(psc[2])),
             collider=None,
@@ -329,6 +397,9 @@ class UrsinaRenderer:
 
         # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
+
+        # WK30 debug: tile-gridline overlay entity (populated once when env flag is set).
+        self._grid_debug_entity: Entity | None = None
 
         # Fog-of-war overlay quad (WK22): matches pygame render_fog tints per visibility tile.
         self._fog_entity: Entity | None = None
@@ -565,6 +636,98 @@ class UrsinaRenderer:
             self._fog_entity.texture_offset = Vec2(0, 1)
 
         self._fog_revision_seen = engine_rev
+
+    def _ensure_grid_debug_overlay(self) -> None:
+        """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
+
+        Off by default. When enabled, renders one line-mesh Entity spanning a
+        configurable square region around the castle (smaller than the full map so the
+        lines read clearly from a close camera). The region size in tiles is controlled
+        by ``KINGDOM_URSINA_GRID_DEBUG_TILES`` (default 20). Slightly above ``y=0`` to
+        avoid z-fighting with the terrain quad.
+        """
+        if os.environ.get("KINGDOM_URSINA_GRID_DEBUG") != "1":
+            if self._grid_debug_entity is not None:
+                try:
+                    import ursina as u
+
+                    u.destroy(self._grid_debug_entity)
+                except Exception:
+                    pass
+                self._grid_debug_entity = None
+            return
+        if self._grid_debug_entity is not None:
+            return
+        try:
+            from ursina import Mesh
+        except Exception:
+            return
+
+        world = self.engine.world
+        tw, th = int(world.width), int(world.height)
+        ts = int(config.TILE_SIZE)
+
+        try:
+            radius_tiles = int(os.environ.get("KINGDOM_URSINA_GRID_DEBUG_TILES", "") or "0")
+        except ValueError:
+            radius_tiles = 0
+        # Anchor on the castle for debug focus; fall back to map center.
+        castle = next(
+            (
+                b
+                for b in getattr(self.engine, "buildings", [])
+                if getattr(b, "building_type", None) == "castle"
+            ),
+            None,
+        )
+        if castle is not None:
+            cx_tiles = int(castle.grid_x) + int(castle.size[0]) // 2
+            cy_tiles = int(castle.grid_y) + int(castle.size[1]) // 2
+        else:
+            cx_tiles = tw // 2
+            cy_tiles = th // 2
+
+        if radius_tiles <= 0:
+            tx_lo, tx_hi = 0, tw
+            ty_lo, ty_hi = 0, th
+        else:
+            tx_lo = max(0, cx_tiles - radius_tiles)
+            tx_hi = min(tw, cx_tiles + radius_tiles + 1)
+            ty_lo = max(0, cy_tiles - radius_tiles)
+            ty_hi = min(th, cy_tiles + radius_tiles + 1)
+
+        y = 0.02  # just above terrain to avoid z-fighting; still below building meshes.
+        x_min_world = (tx_lo * ts) / SCALE
+        x_max_world = (tx_hi * ts) / SCALE
+        z_max_world = -(ty_lo * ts) / SCALE
+        z_min_world = -(ty_hi * ts) / SCALE
+
+        verts: list[tuple[float, float, float]] = []
+        for tx in range(tx_lo, tx_hi + 1):
+            x = (tx * ts) / SCALE
+            verts.append((x, y, z_min_world))
+            verts.append((x, y, z_max_world))
+        for ty in range(ty_lo, ty_hi + 1):
+            z = -(ty * ts) / SCALE
+            verts.append((x_min_world, y, z))
+            verts.append((x_max_world, y, z))
+
+        grid_mesh = Mesh(vertices=verts, mode="line", thickness=2.5)
+        self._grid_debug_entity = Entity(
+            model=grid_mesh,
+            color=color.rgba(1.0, 0.95, 0.3, 0.95),
+            shader=unlit_shader,
+            collider=None,
+        )
+        try:
+            from panda3d.core import TransparencyAttrib
+
+            self._grid_debug_entity.setTransparency(TransparencyAttrib.M_alpha)
+        except Exception:
+            pass
+        self._grid_debug_entity.set_depth_write(False)
+        # Render above the terrain quad but below fog and billboards.
+        self._grid_debug_entity.render_queue = 3
 
     def _build_3d_terrain(self) -> None:
         """Per-tile path/water meshes + scatter grass doodads on a full-map base plane (v1.5 Sprint 1.2)."""
@@ -853,16 +1016,21 @@ class UrsinaRenderer:
         else:
             ent.color = tint_col
 
-    def _get_or_create_prefab_house_entity(
+    def _get_or_create_prefab_building_entity(
         self, sim_obj, prefab_path: Path, col
     ) -> tuple:
-        """WK29: multi-piece prefab root; destroys prior billboard/mesh/prefab mismatch."""
+        """WK30: multi-piece prefab root for any building type.
+
+        Replaces a prior billboard / static-mesh / mismatched-prefab entity for the same
+        sim object so mode switches (env flag flipped, prefab added/removed at runtime,
+        building type churn) destroy + rebuild cleanly.
+        """
         import ursina as u
 
         obj_id = id(sim_obj)
         if obj_id in self._entities:
             ent = self._entities[obj_id]
-            if getattr(ent, "_ks_building_mode", None) != "prefab_house" or getattr(
+            if getattr(ent, "_ks_building_mode", None) != "prefab" or getattr(
                 ent, "_ks_prefab_path", None
             ) != str(prefab_path):
                 u.destroy(ent)
@@ -871,16 +1039,17 @@ class UrsinaRenderer:
         if obj_id not in self._entities:
             root = _load_prefab_instance(prefab_path, Vec3(0, 0, 0))
             root.color = col
-            root._ks_building_mode = "prefab_house"
+            root._ks_building_mode = "prefab"
             root._ks_prefab_path = str(prefab_path)
             root.collision = False
             self._entities[obj_id] = root
         return self._entities[obj_id], obj_id
 
     @staticmethod
-    def _sync_prefab_house_entity(
+    def _sync_prefab_building_entity(
         ent: Entity,
         *,
+        mesh_kind: str,
         wx: float,
         wz: float,
         fx: float,
@@ -889,9 +1058,38 @@ class UrsinaRenderer:
         tint_col,
         state: str,
     ) -> None:
-        """Footprint scale + anchor; construction/damaged tint (no global shader on root)."""
+        """WK30 fit-scale: map authored prefab extent to the sim footprint (XZ only).
+
+        ``fx`` / ``fz`` are the sim footprint extents in world units (1 unit = 1 tile).
+        ``hy`` is the legacy sim-height hint; **we deliberately do not scale Y** — piece
+        vertical stacking stays as authored to avoid squashing roofs / towers.
+
+        Scale rule:
+          effective_w = max(authored_w, spread_x + 1.0)  # 1.0 = assumed Kenney piece width
+          effective_d = max(authored_d, spread_z + 1.0)
+          xz_scale    = min(fx / effective_w, fz / effective_d) * PREFAB_FIT_INSET
+
+        When authored_w / authored_d matches the sim footprint AND pieces fit inside the
+        authored extent, ``xz_scale`` is exactly PREFAB_FIT_INSET. When a prefab overflows
+        its own authored footprint (piece centroids span more than authored - 1 tiles),
+        the max(..) clamp shrinks the cluster uniformly so the visible mesh still fits
+        inside the sim footprint. This honors Jaimie's WK30-iter5 request: "shrink the
+        models to fit the map grid perfectly." Authors can avoid the auto-shrink by
+        keeping piece positions within ``[authored_w/2 - 0.5, authored_w/2 + 0.5]`` in X
+        (and same for Z) — i.e. one piece-width tighter than the authored footprint.
+
+        Combined with ``_load_prefab_instance`` auto-centering, every prefab renders
+        centered on the sim building's footprint-center and never extends past the sim
+        rect (to within the 1-tile piece-width approximation).
+        """
         UrsinaRenderer._set_texture_if_changed(ent, None)
-        scale_xyz = _footprint_scale_3d("house", fx, fz, hy)
+        authored_w, authored_d = getattr(ent, "_ks_prefab_authored_ft", (1.0, 1.0))
+        spread_x, spread_z = getattr(ent, "_ks_prefab_xz_spread", (0.0, 0.0))
+        effective_w = max(float(authored_w), float(spread_x) + 1.0)
+        effective_d = max(float(authored_d), float(spread_z) + 1.0)
+        xz_scale = min(fx / max(effective_w, 1e-6), fz / max(effective_d, 1e-6))
+        xz_scale *= _PREFAB_FIT_INSET
+        scale_xyz = (xz_scale, 1.0, xz_scale)
         if getattr(ent, "_ks_last_scale", None) != scale_xyz:
             ent.scale = scale_xyz
             ent._ks_last_scale = scale_xyz
@@ -923,6 +1121,7 @@ class UrsinaRenderer:
 
         self._build_3d_terrain()
         self._ensure_fog_overlay()
+        self._ensure_grid_debug_overlay()
 
         gs = self.engine.get_game_state()
 
@@ -952,26 +1151,29 @@ class UrsinaRenderer:
 
             wx, wz = sim_px_to_world_xz(b.x, b.y)
 
+            # WK30: prefab path wins over static mesh / billboard for any building_type with
+            # a resolvable prefab JSON. Lairs and env opt-out are handled inside the resolver.
+            prefab_path = _resolve_prefab_path(bts, b)
+            if prefab_path is not None:
+                ent, obj_id = self._get_or_create_prefab_building_entity(
+                    b, prefab_path, col
+                )
+                self._sync_prefab_building_entity(
+                    ent,
+                    mesh_kind=bts,
+                    wx=wx,
+                    wz=wz,
+                    fx=fx,
+                    fz=fz,
+                    hy=hy,
+                    tint_col=col,
+                    state=state,
+                )
+                active_ids.add(obj_id)
+                continue
+
             if _is_3d_mesh_building(bts, b):
                 mesh_kind = _mesh_kind_for_building(bts, b)
-                if _use_wk29_prefab_house(bts, b):
-                    prefab_path = _PREFAB_BUILDINGS_DIR / _WK29_HOUSE_PREFAB_NAME
-                    ent, obj_id = self._get_or_create_prefab_house_entity(
-                        b, prefab_path, col
-                    )
-                    self._sync_prefab_house_entity(
-                        ent,
-                        wx=wx,
-                        wz=wz,
-                        fx=fx,
-                        fz=fz,
-                        hy=hy,
-                        tint_col=col,
-                        state=state,
-                    )
-                    active_ids.add(obj_id)
-                    continue
-
                 model_path = _environment_model_path(mesh_kind)
                 ent, obj_id = self._get_or_create_3d_building_entity(b, model_path, col)
                 self._sync_3d_building_entity(

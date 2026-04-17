@@ -8,6 +8,267 @@
     "See .cursor/rules/agent-15-modelassembler-onboarding.mdc for role contract."
   ],
   "sprints": {
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "Phase 2.1 rescoped (replaces deprecated wk27). Scale WK29 gated house loader into default-on prefab renderer covering Castle + Warrior/Ranger/Rogue guilds (Wizard Guild optional). Economy buildings (wk31) held."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "round_id": "wk30_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk30_r1",
+            "build_target": "WK30-FEAT-001/002/005/006 (+007 optional)",
+            "started_at_local": "2026-04-16T00:00:00"
+          },
+          "assignment_received": {
+            "from": "agent_01_ExecutiveProducer_PM",
+            "prompt_ref": "sprints.wk30-buildings-pipeline.rounds.wk30_r1_execution.pm_agent_prompts.15 (PM hub)",
+            "intelligence_level": "high",
+            "asks": [
+              "Kitbash 4 required prefabs + 1 optional stretch in this order: castle_v1, warrior_guild_v1 (reference kit), ranger_guild_v1, rogue_guild_v1, (optional) wizard_guild_v1.",
+              "Warrior Guild FIRST among guilds so Ranger/Rogue can palette-swap its body silhouette.",
+              "Before saving each prefab, confirm footprint_tiles matches config.py exactly (Agent 05 audit).",
+              "Hand-edit attribution if auto-inference is coarse; update assets/ATTRIBUTION.md if any new pack is used.",
+              "After Agent 03 lands generalized loader, confirm each prefab renders in-game via python main.py --renderer ursina (no env var)."
+            ]
+          },
+          "status": "awaiting_human_kitbash_session",
+          "preflight": {
+            "config_py_footprints_confirmed": {
+              "source": "config.py BUILDING_SIZES",
+              "castle": "(3, 3) -> footprint_tiles [3, 3]",
+              "warrior_guild": "(2, 2) -> [2, 2]",
+              "ranger_guild": "(2, 2) -> [2, 2]",
+              "rogue_guild": "(2, 2) -> [2, 2]",
+              "wizard_guild": "(2, 2) -> [2, 2]",
+              "house": "(1, 1) -> [1, 1] (already matches peasant_house_small_v1)"
+            },
+            "piece_inventory_verified": {
+              "castle_family": "wall-fortified*, wall-fortified-paint*, tower*, tower-paint*, tower-base, tower-top, tower-edge, roof-high-side*, wall-fortified-gate(-half), wall-fortified-paint-door/window/gate.",
+              "guild_families": "wall-pane-*, wall-paint-*, wall-pane-painted-wood-*, wall-pane-wood-*, wall-pane-paint-*, wall-half, roof-side(-corner(-inner)), roof-corner, roof.",
+              "nature_accents": "Models/GLTF format/tree_pineSmallB, tree_pineRoundA, flower_yellowC, rock_*"
+            },
+            "existing_prefabs": [
+              "assets/prefabs/buildings/peasant_house_small_v1.json (wk29 — house [1,1])"
+            ],
+            "scope_locks_acknowledged": [
+              "No config.py footprint edits (shrink prefab instead).",
+              "No prefab baker this sprint (Agent 10 confirmed wk29 signal does not require baker).",
+              "No CHANGELOG / version bumps."
+            ]
+          },
+          "kitbash_recipes_handed_to_jaimie": {
+            "castle_v1": {
+              "id": "castle_v1",
+              "building_type": "castle",
+              "footprint_tiles": [3, 3],
+              "piece_budget": 20,
+              "palette": "heavy stone / fortified (Retro Fantasy fortified + tower family)",
+              "target_silhouette": "visual anchor of the kingdom: central gate front + two back towers + heavy walls on flanks; courtyard okay (no interior roof).",
+              "anchors": "1-unit snap; prefab origin = center. For 3x3 footprint, tile centers are at x,z in {-1, 0, 1}.",
+              "recipe_skeleton_pieces": [
+                "Models/GLB format/wall-fortified-paint-gate.glb  (front-center, pos [0,0,-1])",
+                "Models/GLB format/wall-fortified-paint.glb       (front-left, pos [-1,0,-1])",
+                "Models/GLB format/wall-fortified-paint.glb       (front-right, pos [1,0,-1])",
+                "Models/GLB format/wall-fortified-paint.glb       (mid-left, pos [-1,0,0])",
+                "Models/GLB format/wall-fortified-paint.glb       (mid-right, pos [1,0,0])",
+                "Models/GLB format/wall-fortified-paint.glb       (back-center, pos [0,0,1])",
+                "Models/GLB format/tower-base.glb                 (back-left, pos [-1,0,1])",
+                "Models/GLB format/tower-base.glb                 (back-right, pos [1,0,1])",
+                "Models/GLB format/tower-top.glb                  (on each back tower, lift Y by 1 unit = 4x ])",
+                "Optional extras (still <=20): wall-fortified-paint-window.glb on flanks, roof-high-side.glb + roof-high-side-corner.glb pitched across back, wall-fortified-paint-door.glb side entrances."
+              ]
+            },
+            "warrior_guild_v1": {
+              "id": "warrior_guild_v1",
+              "building_type": "warrior_guild",
+              "footprint_tiles": [2, 2],
+              "piece_budget": 12,
+              "palette": "painted plaster body (wall-paint-*) + imposing roofline (roof-high-side) — 'armory feel'",
+              "target_silhouette": "compact square body, pitched roof, one gate, flanks with window slits — distinct from peasant house via (a) roof-high-side instead of roof-side, (b) wall-paint family instead of wall-pane-painted-wood.",
+              "anchors": "2x2 footprint — tile centers at x,z in {-0.5, 0.5}.",
+              "recipe_skeleton_pieces": [
+                "Models/GLB format/wall-paint-door.glb    (front, pos [-0.5,0,-0.5])",
+                "Models/GLB format/wall-paint.glb         (front, pos [0.5,0,-0.5])",
+                "Models/GLB format/wall-paint-window.glb  (side, pos [-0.5,0,0.5] + rot Y 90)",
+                "Models/GLB format/wall-paint-window.glb  (side, pos [0.5,0,0.5]  + rot Y -90)",
+                "Models/GLB format/wall-paint.glb         (back, pos [-0.5,0,0.5])",
+                "Models/GLB format/wall-paint.glb         (back, pos [0.5,0,0.5])",
+                "Models/GLB format/roof-high-side.glb     (roof, pos [0,1,0] — lift 4x ])",
+                "Models/GLB format/roof-high-side-corner.glb (ridge, pos [0,1,0] — lift 4x ])",
+                "Optional: Models/GLB format/wall-detail.glb detail; Models/GLB format/floor-flat.glb base"
+              ],
+              "kit_family_note": "This is the REFERENCE kit for Ranger/Rogue. Save piece positions; Ranger/Rogue will reuse XZ layout with material-family swap."
+            },
+            "ranger_guild_v1": {
+              "id": "ranger_guild_v1",
+              "building_type": "ranger_guild",
+              "footprint_tiles": [2, 2],
+              "piece_budget": 12,
+              "palette": "plain wood walls (wall-pane-wood-*) + standard pitched roof (roof-side) + optional Nature Kit tree accent",
+              "target_silhouette": "hunter's lodge: same body shape as Warrior but wood-tone walls, less imposing roof, one green accent.",
+              "recipe_skeleton_pieces": [
+                "Models/GLB format/wall-pane-wood-door.glb   (front, pos [-0.5,0,-0.5])",
+                "Models/GLB format/wall-pane-wood.glb        (front, pos [0.5,0,-0.5])",
+                "Models/GLB format/wall-pane-wood-window.glb (side, pos [-0.5,0,0.5] + rot Y 90)",
+                "Models/GLB format/wall-pane-wood-window.glb (side, pos [0.5,0,0.5]  + rot Y -90)",
+                "Models/GLB format/wall-pane-wood.glb        (back, pos [-0.5,0,0.5])",
+                "Models/GLB format/wall-pane-wood.glb        (back, pos [0.5,0,0.5])",
+                "Models/GLB format/roof-side.glb             (roof, lift 4x ])",
+                "Models/GLB format/roof-side-corner.glb      (ridge, lift 4x ])",
+                "Optional Nature Kit accent: Models/GLTF format/tree_pineSmallB.glb placed adjacent to the front doorway (exercises factor-only shader path)."
+              ]
+            },
+            "rogue_guild_v1": {
+              "id": "rogue_guild_v1",
+              "building_type": "rogue_guild",
+              "footprint_tiles": [2, 2],
+              "piece_budget": 12,
+              "palette": "bare stone (wall.glb, wall-half.glb, wall-window.glb) — steel-gray, low-profile, asymmetric",
+              "target_silhouette": "lower profile than Warrior/Ranger; use wall-half for short segments; off-center doorway; shallow roof.",
+              "recipe_skeleton_pieces": [
+                "Models/GLB format/wall-door.glb     (off-center front, pos [-0.5,0,-0.5])",
+                "Models/GLB format/wall-half.glb     (front-right short, pos [0.5,0,-0.5])",
+                "Models/GLB format/wall.glb          (side, pos [-0.5,0,0.5] + rot Y 90)",
+                "Models/GLB format/wall-window.glb   (side, pos [0.5,0,0.5]  + rot Y -90)",
+                "Models/GLB format/wall-half.glb     (back, pos [-0.5,0,0.5])",
+                "Models/GLB format/wall.glb          (back, pos [0.5,0,0.5])",
+                "Models/GLB format/roof-side.glb     (shallow roof, lift 4x ])",
+                "Models/GLB format/roof-edge.glb     (accent edge)",
+                "Optional: Models/GLB format/wall-detail.glb near doorway."
+              ]
+            },
+            "wizard_guild_v1_optional": {
+              "id": "wizard_guild_v1",
+              "building_type": "wizard_guild",
+              "footprint_tiles": [2, 2],
+              "piece_budget": 14,
+              "palette": "tower motif on a 2x2 base; purple accent via paint-family pieces if any fit.",
+              "target_silhouette": "tall vertical punctuation point — one tower stacked centrally, walls wrap the base.",
+              "recipe_skeleton_pieces": [
+                "Models/GLB format/wall-paint-door.glb       (front, pos [-0.5,0,-0.5])",
+                "Models/GLB format/wall-paint.glb            (front, pos [0.5,0,-0.5])",
+                "Models/GLB format/wall-paint-window.glb     (side, pos [-0.5,0,0.5] + rot Y 90)",
+                "Models/GLB format/wall-paint-window.glb     (side, pos [0.5,0,0.5]  + rot Y -90)",
+                "Models/GLB format/wall-paint.glb            (back, pos [-0.5,0,0.5])",
+                "Models/GLB format/wall-paint.glb            (back, pos [0.5,0,0.5])",
+                "Models/GLB format/tower-paint-base.glb      (centered, pos [0,1,0], lift 4x ])",
+                "Models/GLB format/tower-paint.glb           (on top of tower-paint-base, lift another 4x ])",
+                "Models/GLB format/tower-top.glb             (crown, lift even higher)"
+              ],
+              "note": "Only attempt if energy remains after the core four. Not a sprint blocker."
+            }
+          },
+          "validation_i_run_after_each_save": [
+            "Read assets/prefabs/buildings/<prefab_id>.json; assert prefab_id matches file stem, building_type == expected, footprint_tiles == config.py value, ground_anchor_y == 0.0.",
+            "Assert len(pieces) <= piece_budget and every pieces[].model resolves under assets/models/.",
+            "Trim coarse auto-attribution (e.g., drop kenney_survival-kit if no Survival pieces used).",
+            "Update assets/ATTRIBUTION.md if a new pack is introduced."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --new --prefab-id castle_v1",
+            "python tools/model_assembler_kenney.py --new --prefab-id warrior_guild_v1",
+            "python tools/model_assembler_kenney.py --new --prefab-id ranger_guild_v1",
+            "python tools/model_assembler_kenney.py --new --prefab-id rogue_guild_v1",
+            "python tools/model_assembler_kenney.py --new --prefab-id wizard_guild_v1   # optional",
+            "python tools/model_assembler_kenney.py --open <prefab_id>   # round-trip after each save",
+            "python main.py --renderer ursina                            # after Agent 03 loader lands (no env var)",
+            "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina   # opt-out regression check",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "blockers": [],
+          "awaiting": "Interactive kitbash session with Jaimie — Castle first, then Warrior/Ranger/Rogue, Wizard optional. After each save, Agent 15 validates and trims attribution."
+        },
+        "wk30_r1_prefabs_landed": {
+          "round_id": "wk30_r1_prefabs_landed",
+          "round_meta": {
+            "prompt_set_id": "wk30_r1",
+            "build_target": "WK30-FEAT-001/002/005/006 (+007 stretch) — all 4 required prefabs + optional Wizard landed",
+            "completed_at_local": "2026-04-16T00:00:00"
+          },
+          "status": "complete_prefabs_landed_pending_loader_and_human_review",
+          "what_i_changed": [
+            "assets/prefabs/buildings/castle_v1.json — Jaimie kitbashed interactively (20 pieces, 4 corner towers, fortified perimeter with central gate). Agent 15 post-save: trimmed coarse attribution from [retro-fantasy-kit, survival-kit] to [retro-fantasy-kit] (no Survival pieces placed).",
+            "assets/prefabs/buildings/warrior_guild_v1.json — Agent 15 hand-authored (8 pieces). 2x2 painted-plaster armory with high-pitched gable roof. Reference kit for Ranger/Rogue palette swaps.",
+            "assets/prefabs/buildings/ranger_guild_v1.json — Agent 15 hand-authored (8 pieces). Same XZ layout as Warrior, swapped to wall-pane-wood-* + roof-side (lower pitch) — hunter's lodge.",
+            "assets/prefabs/buildings/rogue_guild_v1.json — Agent 15 hand-authored (8 pieces). Bare stone (wall, wall-door, wall-window, wall-half) + flat roof (roof.glb). Asymmetric back-right via wall-half.",
+            "assets/prefabs/buildings/wizard_guild_v1.json — Agent 15 hand-authored (11 pieces, OPTIONAL stretch). 2-story painted walls + central tower motif (tower-paint-base + tower-paint + tower-top stacked on front-left)."
+          ],
+          "authoring_mode": {
+            "castle_v1": "interactive (tools/model_assembler_kenney.py with Jaimie)",
+            "warrior_guild_v1": "hand-authored JSON (Agent 15)",
+            "ranger_guild_v1": "hand-authored JSON (Agent 15)",
+            "rogue_guild_v1": "hand-authored JSON (Agent 15)",
+            "wizard_guild_v1": "hand-authored JSON (Agent 15)",
+            "note": "Confirmed tools/model_assembler_kenney.py _load_from_disk accepts any schema-conformant JSON (reads prefab_id, building_type, footprint_tiles, ground_anchor_y, rotation_steps, attribution, notes, pieces[{model,pos,rot,scale}]). Hand-authored prefabs round-trip the same as tool-authored ones."
+          },
+          "xz_conventions_used": {
+            "1x1_footprint (house)": "piece at (-0.5, 0, 0.5) — wk29 peasant house pattern",
+            "2x2_footprint (guilds)": "tile centers at x,z in {0.5, 1.5}",
+            "3x3_footprint (castle)": "tile centers at x,z in {-0.5, 0.5, 1.5} x {0.5, 1.5, 2.5} — matches Jaimie's interactive placement",
+            "y_tiers": "integer Y levels where possible (y=0 base, y=1 roof/second-tier, y=2+ tower) so pieces stack on unit increments."
+          },
+          "schema_acceptance_summary": {
+            "validator_run": "in-repo ad-hoc validator (temporary script, deleted post-run) — checks prefab_id==filename stem, building_type matches config.py, footprint_tiles matches config.py BUILDING_SIZES, ground_anchor_y==0.0, piece_count<=budget, every pieces[].model resolves under assets/models/, attribution non-empty.",
+            "results": {
+              "peasant_house_small_v1 (house [1,1], budget 8)": "PASS (2 pieces)",
+              "castle_v1 (castle [3,3], budget 20)": "PASS (20 pieces)",
+              "warrior_guild_v1 (warrior_guild [2,2], budget 12)": "PASS (8 pieces)",
+              "ranger_guild_v1 (ranger_guild [2,2], budget 12)": "PASS (8 pieces)",
+              "rogue_guild_v1 (rogue_guild [2,2], budget 12)": "PASS (8 pieces)",
+              "wizard_guild_v1 (wizard_guild [2,2], budget 14)": "PASS (11 pieces)"
+            },
+            "overall": "PASS"
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open castle_v1",
+            "python tools/model_assembler_kenney.py --open warrior_guild_v1",
+            "python tools/model_assembler_kenney.py --open ranger_guild_v1",
+            "python tools/model_assembler_kenney.py --open rogue_guild_v1",
+            "python tools/model_assembler_kenney.py --open wizard_guild_v1",
+            "python main.py --renderer ursina                                          # (after Agent 03 loader lands; default-on)",
+            "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina      # opt-out regression check",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS (errors=0, warns=46 — all pre-existing warnings for per-building single-.glb paths that do not exist because we use prefabs; unrelated to wk30 changes)",
+              "note": "Agent 12 (WK30-FEAT-004) will add prefabs.buildings section to validate_assets that validates these new JSONs structurally; current gate already passes."
+            },
+            "visual_review_castle": {
+              "reviewer": "human_playtest (Jaimie)",
+              "result": "PASS (interactive session; round-trip via --open confirmed before save, then trim)"
+            },
+            "visual_review_guilds_and_wizard": "pending — hand-authored. Jaimie to open each via --open <prefab_id> for a visual review; adjust pieces/rotations via WASD/Q-E/[/] if needed, then re-save. Also needs in-game confirmation once Agent 03's generalized loader lands."
+          },
+          "flag_for_agent_03": "castle_v1 uses front-left-outer anchor convention (xz ∈ [-0.5..1.5] × [0.5..2.5]) rather than center-of-footprint. WK29 peasant house also used this (xz=(-0.5, 0.5) for 1x1). If the generalized loader in wk30 expects center-anchor, the castle will render shifted by (0.5, 1.5) from its building anchor. Either the loader should honor the schema.md 'center-of-footprint' clause and add a translation offset, or schema.md should be amended in a follow-up to match the assembler's actual convention. Non-blocking for this sprint — matches wk29 behavior.",
+          "follow_ups_for_agent_12": [
+            "Prefab pack inference (from wk29): auto-attribution still adds kenney_survival-kit to any piece under Models/GLB format/. Agent 15 had to hand-trim the castle_v1 attribution. Non-blocking but worth fixing."
+          ],
+          "handoff_to_agent_03": [
+            "5 prefab JSONs present under assets/prefabs/buildings/ (castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, wizard_guild_v1) plus existing peasant_house_small_v1.",
+            "All pass schema + PM acceptance; all use Retro Fantasy GLBs exclusively (textured path — unlit shader), no factor-only pieces, so classifier routes all through the textured path.",
+            "Loader must default-on when <type>_v1.json is present; KINGDOM_URSINA_PREFAB_TEST=0 forces legacy path for all buildings."
+          ],
+          "handoff_to_agent_12": [
+            "All 5 REQUIRED prefabs exist: peasant_house_small_v1, castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1.",
+            "OPTIONAL prefab wizard_guild_v1 also shipped (the stretch landed).",
+            "Once your prefabs.buildings section is wired into validate_assets, all six should validate clean."
+          ],
+          "blockers": []
+        }
+      }
+    },
     "wk29-first-house-playtest": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",

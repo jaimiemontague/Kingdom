@@ -71,6 +71,20 @@
       "tree_pine"
     ]
   },
+  "prefabs": {
+    "buildings": {
+      "required": [
+        "peasant_house_small_v1",
+        "castle_v1",
+        "warrior_guild_v1",
+        "ranger_guild_v1",
+        "rogue_guild_v1"
+      ],
+      "optional": [
+        "wizard_guild_v1"
+      ]
+    }
+  },
   "audio": {
     "sfx": [
       "building_place",

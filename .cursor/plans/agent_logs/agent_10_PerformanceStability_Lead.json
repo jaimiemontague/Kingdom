@@ -1184,6 +1184,65 @@
           }
         }
       }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "WK30 R1 consult: FPS vs WK29 baseline with full military prefab set; baker decision gate."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "sprint_id": "wk30-buildings-pipeline",
+          "round_id": "wk30_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk30_r1",
+            "sent_at_local": "2026-04-16"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK30 R1 (Agent 10 consult): After Agents 15/03/12 landed generalized default-on prefab loader (_resolve_prefab_path, KINGDOM_URSINA_PREFAB_TEST=0 opt-out) and military prefabs, recorded per-prefab piece counts from assets/prefabs/buildings/*.json. WK29 baseline reference: peasant_house_small_v1 = 2 pieces (single gated house). WK30 shipped: castle_v1=20, warrior_guild_v1=8, ranger_guild_v1=6, rogue_guild_v1=6, wizard_guild_v1=11 (stretch), peasant_house_small_v1=2. Sum of child mesh entities if all six types are simultaneously prefab-rendered: 63 pieces total (vs 2 in minimal WK29 test). Loader still instantiates once per building id with per-piece shading at load only; dominant cost remains batched terrain + fog/HUD path from prior work. Short Ursina smoke: python main.py --renderer ursina --no-llm ~12s default-on OK; $env:KINGDOM_URSINA_PREFAB_TEST='0'; same command OK (legacy path). No FPS numbers from CLI. Judgement: scaling from 2 to ~63 static prefab pieces across the full set is orders of magnitude smaller than terrain combine cost; >30% FPS drop vs WK29 single-house scenario is not a credible outcome from prefab draw count alone. WK31 perf-hedge prefab baker NOT flagged. Recommend Jaimie confirm with Ursina FPS counter / F2 when framing Castle + house + guilds in one view.",
+            "summary_bullets": [
+              "Piece counts: house 2, castle 20, warrior_guild 8, ranger_guild 6, rogue_guild 6, wizard_guild 11 (63 total if all types visible).",
+              "Loader: cached per building id; classifier at instantiation — same model as WK29.",
+              "Ursina smoke default-on + opt-out=0: both ~12s, no crash (wgl).",
+              "python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report exit 0 (errors=0, pre-existing WARNs on placeholder 3D manifest entries).",
+              "WK31 baker diversion: NOT triggered (Agent 10 judgement)."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm",
+              "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina --no-llm",
+              "Optional numeric FPS: Ursina fps_counter + F2 pygame perf overlay; pan until Castle + house + guilds in view."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "validate_assets": "python tools/validate_assets.py --report",
+              "validate_assets_exit_code": 0,
+              "validate_assets_summary": "errors=0 warns=46",
+              "ursina_smoke_seconds": 12,
+              "wk31_prefab_baker_perf_hedge": false,
+              "prefab_piece_counts": {
+                "peasant_house_small_v1": 2,
+                "castle_v1": 20,
+                "warrior_guild_v1": 8,
+                "ranger_guild_v1": 6,
+                "rogue_guild_v1": 6,
+                "wizard_guild_v1": 11
+              },
+              "prefab_piece_total_all_types": 63
+            },
+            "agent_fields": {
+              "wk29_baseline_house_pieces": 2,
+              "reviewed_files": [
+                "game/graphics/ursina_renderer.py (_resolve_prefab_path, _load_prefab_instance, prefab sync)"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

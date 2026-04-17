@@ -1317,6 +1317,58 @@
           }
         }
       }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "WK30 R1: footprint reconciliation audit (read-only); plan section 4.4."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "round_id": "wk30_r1_execution",
+          "sprint_id": "wk30-buildings-pipeline",
+          "round_meta": {
+            "prompt_set_id": "wk30_r1_execution_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "ticket_ref": "WK30-AUDIT-001"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "WK30-AUDIT-001: Read-only comparison of prefab footprint_tiles vs config.py BUILDING_SIZES for peasant_house_small_v1 (house), castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, wizard_guild_v1. No edits to config.py or prefabs."
+              ],
+              "footprint_audit_bullets": [
+                "house | config (1, 1) | prefab peasant_house_small_v1 [1, 1] | OK",
+                "castle | config (3, 3) | prefab castle_v1 [3, 3] | OK",
+                "warrior_guild | config (2, 2) | prefab warrior_guild_v1 [2, 2] | OK",
+                "ranger_guild | config (2, 2) | prefab ranger_guild_v1 [2, 2] | OK",
+                "rogue_guild | config (2, 2) | prefab rogue_guild_v1 [2, 2] | OK",
+                "wizard_guild | config (2, 2) | prefab wizard_guild_v1 [2, 2] | OK"
+              ],
+              "handoff_to_agent_15": "All footprints match BUILDING_SIZES; no prefab shrink request.",
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --report"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "validate_assets_report": {
+                  "command": "python tools/validate_assets.py --report",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "notes": "errors=0 warns=46 (legacy manifest missing single-file .glb stubs for many entity types; expected WARNs)"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

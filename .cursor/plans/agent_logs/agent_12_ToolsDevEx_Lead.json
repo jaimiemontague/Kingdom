@@ -2457,6 +2457,47 @@
         "blockers": []
       }
     }
+  },
+  "wk30-buildings-pipeline": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+      "notes": "WK30-FEAT-004 manifest + validator"
+    },
+    "rounds": {
+      "wk30_r1_execution": {
+        "round_id": "wk30_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json",
+            "tools/validate_assets.py",
+            "assets/prefabs/buildings/castle_v1.json",
+            "assets/prefabs/buildings/warrior_guild_v1.json",
+            "assets/prefabs/buildings/ranger_guild_v1.json",
+            "assets/prefabs/buildings/rogue_guild_v1.json"
+          ],
+          "summary": "Added prefabs.buildings required/optional lists. Implemented prefab JSON validation (file exists, parse, required keys, piece models resolve under assets/models/, non-empty attribution). Missing optional prefab = WARN; missing/malformed required = ERROR. Process exit code fails on any error-level finding. Added minimal valid stub prefabs for castle + three guilds (footprints match config.py; Agent 15 replaces with full kitbash). Optional wizard_guild_v1 not present — WARN only."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "WARN missing optional wizard_guild_v1.json; WARN missing flat models for manifest categories (non-strict, pre-existing)"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

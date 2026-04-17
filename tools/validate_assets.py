@@ -11,6 +11,9 @@ This tool is intentionally FAST:
 - no mesh decoding
 - no image decoding
 - only filesystem checks
+
+WK30: validates `prefabs.buildings` JSON under assets/prefabs/buildings/ (manifest section).
+Process exits non-zero if any finding has severity "error" (warnings never fail).
 """
 
 from __future__ import annotations
@@ -29,6 +32,12 @@ DEFAULT_ASSETS_ROOT = PROJECT_ROOT / "assets"
 
 # Prefer glTF binary first; static meshes may use .obj.
 MODEL_EXTS_ORDER = (".glb", ".gltf", ".obj")
+
+# WK30: prefab JSON under assets/prefabs/buildings/<id>.json
+PREFAB_BUILDING_REQUIRED_KEYS = frozenset(
+    {"prefab_id", "building_type", "footprint_tiles", "ground_anchor_y", "pieces", "attribution"}
+)
+PREFAB_PIECE_REQUIRED_KEYS = frozenset({"model", "pos", "rot", "scale"})
 
 
 @dataclass(frozen=True)
@@ -186,6 +195,191 @@ def _validate_audio_tree(
                         str(ambient_dir),
                     )
                 )
+
+    return findings, report
+
+
+def _resolve_prefab_model_path(models_root: Path, rel: str) -> tuple[Path | None, str | None]:
+    """
+    Resolve a prefab piece model path relative to assets/models/.
+    Returns (absolute_path, error_reason) — error_reason set if invalid or not under models_root.
+    """
+    if not isinstance(rel, str) or not rel.strip():
+        return None, "empty_or_non_string_model"
+    norm = rel.replace("\\", "/").strip()
+    if not norm or norm.startswith("/") or ".." in Path(norm).parts:
+        return None, "invalid_model_path"
+    candidate = (models_root / norm).resolve()
+    try:
+        candidate.relative_to(models_root.resolve())
+    except ValueError:
+        return None, "model_escapes_models_root"
+    return candidate, None
+
+
+def _validate_prefab_buildings(
+    *,
+    assets_root: Path,
+    manifest: dict[str, Any],
+) -> tuple[list[Finding], dict[str, Any]]:
+    """
+    Validate assets/prefabs/buildings/<prefab_id>.json per WK30 (manifest prefabs.buildings).
+    Missing optional prefab → warn; missing required or malformed → error.
+    """
+    findings: list[Finding] = []
+    report: dict[str, Any] = {"prefabs": {}}
+
+    prefabs = manifest.get("prefabs") or {}
+    buildings = prefabs.get("buildings") if isinstance(prefabs, dict) else None
+    if not isinstance(buildings, dict):
+        return findings, report
+
+    required = buildings.get("required") or []
+    optional = buildings.get("optional") or []
+    if not isinstance(required, list):
+        required = []
+    if not isinstance(optional, list):
+        optional = []
+
+    prefab_dir = assets_root / "prefabs" / "buildings"
+    models_root = (assets_root / "models").resolve()
+
+    def check_one(prefab_id: str, *, is_required: bool) -> None:
+        path = prefab_dir / f"{prefab_id}.json"
+        entry: dict[str, Any] = {"path": str(path), "ok": False}
+        start_idx = len(findings)
+
+        if not path.is_file():
+            msg = f"Missing prefab JSON: {prefab_id} (expected {path})"
+            if is_required:
+                findings.append(Finding("error", "missing_prefab_json", msg, str(path)))
+            else:
+                findings.append(Finding("warn", "missing_optional_prefab_json", msg, str(path)))
+            entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
+            report["prefabs"][prefab_id] = entry
+            return
+
+        try:
+            raw = path.read_text(encoding="utf-8")
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            findings.append(Finding("error", "prefab_json_invalid", f"{prefab_id}: {e}", str(path)))
+            entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
+            report["prefabs"][prefab_id] = entry
+            return
+        except OSError as e:
+            findings.append(Finding("error", "prefab_json_read_error", f"{prefab_id}: {e}", str(path)))
+            entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
+            report["prefabs"][prefab_id] = entry
+            return
+
+        if not isinstance(data, dict):
+            findings.append(Finding("error", "prefab_json_not_object", f"{prefab_id}: root must be an object", str(path)))
+            entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
+            report["prefabs"][prefab_id] = entry
+            return
+
+        missing_keys = PREFAB_BUILDING_REQUIRED_KEYS - set(data.keys())
+        if missing_keys:
+            findings.append(
+                Finding(
+                    "error",
+                    "prefab_missing_keys",
+                    f"{prefab_id}: missing keys: {sorted(missing_keys)}",
+                    str(path),
+                )
+            )
+
+        pid = data.get("prefab_id")
+        if isinstance(pid, str) and pid != prefab_id:
+            findings.append(
+                Finding(
+                    "warn",
+                    "prefab_id_filename_mismatch",
+                    f"{prefab_id}: prefab_id field {pid!r} does not match filename stem",
+                    str(path),
+                )
+            )
+
+        attr = data.get("attribution")
+        if not isinstance(attr, list) or len(attr) == 0:
+            findings.append(
+                Finding("error", "prefab_attribution_empty", f"{prefab_id}: attribution must be a non-empty array", str(path))
+            )
+        elif not all(isinstance(x, str) and x.strip() for x in attr):
+            findings.append(
+                Finding(
+                    "error",
+                    "prefab_attribution_invalid",
+                    f"{prefab_id}: attribution entries must be non-empty strings",
+                    str(path),
+                )
+            )
+
+        ft = data.get("footprint_tiles")
+        if not isinstance(ft, list) or len(ft) != 2 or not all(isinstance(x, (int, float)) for x in ft):
+            findings.append(
+                Finding(
+                    "error",
+                    "prefab_footprint_invalid",
+                    f"{prefab_id}: footprint_tiles must be [w, d] with two numbers",
+                    str(path),
+                )
+            )
+
+        pieces = data.get("pieces")
+        if not isinstance(pieces, list):
+            findings.append(Finding("error", "prefab_pieces_invalid", f"{prefab_id}: pieces must be an array", str(path)))
+        else:
+            if len(pieces) == 0:
+                findings.append(Finding("warn", "prefab_pieces_empty", f"{prefab_id}: pieces array is empty", str(path)))
+            for i, piece in enumerate(pieces):
+                if not isinstance(piece, dict):
+                    findings.append(
+                        Finding("error", "prefab_piece_not_object", f"{prefab_id}: pieces[{i}] must be an object", str(path))
+                    )
+                    continue
+                pk = PREFAB_PIECE_REQUIRED_KEYS - set(piece.keys())
+                if pk:
+                    findings.append(
+                        Finding(
+                            "error",
+                            "prefab_piece_missing_keys",
+                            f"{prefab_id}: pieces[{i}] missing keys: {sorted(pk)}",
+                            str(path),
+                        )
+                    )
+                rel = piece.get("model")
+                resolved, _err = _resolve_prefab_model_path(models_root, rel if isinstance(rel, str) else "")
+                if resolved is None:
+                    findings.append(
+                        Finding(
+                            "error",
+                            "prefab_piece_model_invalid",
+                            f"{prefab_id}: pieces[{i}] model path invalid or escapes assets/models: {rel!r}",
+                            str(path),
+                        )
+                    )
+                elif not resolved.is_file():
+                    findings.append(
+                        Finding(
+                            "error",
+                            "prefab_piece_model_missing",
+                            f"{prefab_id}: pieces[{i}] model file not found: {resolved}",
+                            str(path),
+                        )
+                    )
+
+        entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
+        report["prefabs"][prefab_id] = entry
+
+    for pid in required:
+        if isinstance(pid, str) and pid:
+            check_one(pid, is_required=True)
+
+    for pid in optional:
+        if isinstance(pid, str) and pid:
+            check_one(pid, is_required=False)
 
     return findings, report
 
@@ -361,6 +555,10 @@ def main() -> int:
         findings.extend(a_findings)
         full_report["categories"]["audio"] = a_report
 
+    p_findings, p_report = _validate_prefab_buildings(assets_root=assets_root, manifest=manifest)
+    findings.extend(p_findings)
+    full_report["categories"]["prefabs"] = p_report
+
     if ns.check_attribution:
         findings.extend(_validate_attribution(assets_root=assets_root, strict=bool(ns.strict)))
 
@@ -380,12 +578,9 @@ def main() -> int:
             warns = len([f for f in findings if f.severity == "warn"])
             print(f"[validate_assets] SUMMARY errors={errors} warns={warns}")
 
-    if ns.strict:
-        # Strict gate: errors are failing. (Build B should run strict; Build A should stay report-only.)
-        if any(f.severity == "error" for f in findings):
-            return 1
-
-    # Report-only default behavior: always succeed.
+    # Any error-level finding fails the run (report + strict). Warnings never fail.
+    if any(f.severity == "error" for f in findings):
+        return 1
     return 0
 
 

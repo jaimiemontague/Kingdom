@@ -107,6 +107,10 @@ class UrsinaApp:
 
         self.renderer = UrsinaRenderer(self.engine)
 
+        # WK30 debug: optional deterministic layout for prefab-fit iteration.
+        if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+            self._add_wk30_debug_prefab_layout()
+
         self._setup_ursina_camera_for_castle()
         self._install_ursina_input_hook()
         # Left click deferred to start of update() so MOUSEMOTION is processed first (placement preview).
@@ -118,6 +122,23 @@ class UrsinaApp:
         self._last_ui_overlay_scale: tuple[float, float] | None = None
         # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
         self._hud_quick_sig: int | None = None
+
+        # WK30 debug: auto-screenshot-then-exit for prefab fit iteration.
+        # Env vars:
+        #   KINGDOM_URSINA_AUTO_EXIT_SEC=<float>       — seconds after first update before exit.
+        #   KINGDOM_URSINA_AUTO_SCREENSHOT_PATH=<path> — if set, save screenshot to this path
+        #                                                just before quitting (overrides F12 dir).
+        try:
+            self._auto_exit_deadline_sec = float(
+                os.environ.get("KINGDOM_URSINA_AUTO_EXIT_SEC", "") or 0.0
+            )
+        except ValueError:
+            self._auto_exit_deadline_sec = 0.0
+        self._auto_screenshot_path = (
+            os.environ.get("KINGDOM_URSINA_AUTO_SCREENSHOT_PATH") or ""
+        ).strip()
+        self._auto_exit_elapsed = 0.0
+        self._auto_exit_triggered = False
 
     @staticmethod
     def _hud_quick_fingerprint(surf: pygame.Surface) -> int:
@@ -171,10 +192,24 @@ class UrsinaApp:
 
         camera.fov = 42
         span = 58.0
-        hfov = math.radians(float(camera.fov))
-        d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
-        camera.position = Vec3(cx, d * 0.8, cz - d)
-        camera.look_at(Vec3(cx, 0, cz))
+        # WK30 debug: when the prefab-test layout is active, frame the castle + prefab
+        # row. Optional ``KINGDOM_URSINA_CAM_TOPDOWN=1`` to switch to a top-down shot.
+        if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+            cx += 9.0  # midpoint between castle center and east end of test row
+            span = 26.0
+            hfov = math.radians(float(camera.fov))
+            d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
+            if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
+                camera.position = Vec3(cx, d * 1.6, cz)
+                camera.look_at(Vec3(cx, 0, cz))
+            else:
+                camera.position = Vec3(cx, d * 0.85, cz - d * 0.7)
+                camera.look_at(Vec3(cx, 0, cz + 1.0))
+        else:
+            hfov = math.radians(float(camera.fov))
+            d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
+            camera.position = Vec3(cx, d * 0.8, cz - d)
+            camera.look_at(Vec3(cx, 0, cz))
 
         # Perspective FOV that matches engine.zoom==default_zoom (single source of truth: engine.zoom).
         self._ursina_reference_fov = float(camera.fov)
@@ -377,6 +412,142 @@ class UrsinaApp:
             self._hud_composite_texture = None
             self._hud_composite_size = None
 
+    def _add_wk30_debug_prefab_layout(self) -> None:
+        """WK30 debug: place one of each prefab-backed building near the castle.
+
+        Used by Agent 03 + Jaimie for prefab-fit iteration. Places castle + warrior /
+        ranger / rogue / wizard guilds + a house fully constructed in a row east of the
+        castle so a single default-framed screenshot shows every prefab against the tile
+        grid. Uses ``engine.building_factory`` so any future building-subclass wiring
+        (occupancy, researchers, etc.) is consistent with the player-placed path.
+        """
+        engine = self.engine
+        castle = next(
+            (
+                b
+                for b in engine.buildings
+                if getattr(b, "building_type", None) == "castle"
+            ),
+            None,
+        )
+        if castle is None:
+            print("[wk30-debug-layout] no castle in engine; skipping prefab row")
+            return
+
+        factory = getattr(engine, "building_factory", None)
+        if factory is None:
+            print("[wk30-debug-layout] engine.building_factory missing; skipping")
+            return
+
+        # Anchor the row 2 tiles east of the castle's east edge, aligned with its north row.
+        base_x = int(castle.grid_x) + int(castle.size[0]) + 2
+        base_y = int(castle.grid_y)
+
+        # (building_type, dx) — dx chosen to leave one tile of gap between footprints
+        # (2x2 guilds at +0/+3/+6/+9, 1x1 house at +12). House is not in BuildingFactory
+        # (it's spawned by peasants, not the build menu), so build it via the base class.
+        layout = [
+            ("warrior_guild", 0),
+            ("ranger_guild", 3),
+            ("rogue_guild", 6),
+            ("wizard_guild", 9),
+            ("house", 12),
+        ]
+        from game.entities.buildings.base import Building
+        from game.entities.buildings.types import BuildingType
+
+        for bts, dx in layout:
+            try:
+                if bts == "house":
+                    b = Building(base_x + dx, base_y, BuildingType.HOUSE)
+                else:
+                    b = factory.create(bts, base_x + dx, base_y)
+                if b is None:
+                    print(f"[wk30-debug-layout] factory returned None for {bts}")
+                    continue
+                if hasattr(b, "is_constructed"):
+                    b.is_constructed = True
+                if hasattr(b, "construction_started"):
+                    b.construction_started = True
+                engine.buildings.append(b)
+                if hasattr(b, "set_event_bus") and getattr(engine, "event_bus", None):
+                    b.set_event_bus(engine.event_bus)
+            except Exception as exc:
+                print(f"[wk30-debug-layout] skipped {bts}: {exc}")
+
+        # Reveal the entire map so fog-of-war does not hide the test row.
+        try:
+            from game.world import Visibility
+
+            world = engine.world
+            for ty in range(int(world.height)):
+                for tx in range(int(world.width)):
+                    world.visibility[ty][tx] = Visibility.VISIBLE
+            engine._fog_revision = int(getattr(engine, "_fog_revision", 0)) + 1
+        except Exception as exc:
+            print(f"[wk30-debug-layout] fog reveal failed: {exc}")
+
+    def _maybe_auto_screenshot_then_quit(self) -> None:
+        """WK30 debug: save one screenshot (if a path was requested) and quit Ursina.
+
+        Uses the **synchronous** ``base.win.getScreenshot()`` + ``PNMImage.write()`` path
+        rather than ``base.screenshot(...)`` which queues the write for a later frame
+        (the async queue never drains before ``application.quit()`` exits the process).
+        """
+        try:
+            from ursina import application
+
+            base = getattr(application, "base", None)
+            if base is not None:
+                try:
+                    base.graphicsEngine.renderFrame()
+                    base.graphicsEngine.renderFrame()
+                except Exception:
+                    pass
+            if self._auto_screenshot_path and base is not None:
+                out_path = os.path.abspath(self._auto_screenshot_path)
+                out_dir = os.path.dirname(out_path)
+                if out_dir:
+                    os.makedirs(out_dir, exist_ok=True)
+                ok = self._save_window_screenshot_sync(base, out_path)
+                if ok and os.path.isfile(out_path):
+                    print(f"[auto-screenshot] Saved: {out_path}")
+                else:
+                    print(f"[auto-screenshot] Failed to write: {out_path}")
+            try:
+                application.quit()
+            except Exception:
+                import sys
+
+                sys.exit(0)
+        except Exception as exc:
+            print(f"[auto-exit] Aborted: {exc}")
+
+    @staticmethod
+    def _save_window_screenshot_sync(base, out_path: str) -> bool:
+        """Grab the main GraphicsWindow framebuffer into a PNMImage and write it now.
+
+        Unlike ``base.screenshot()`` this does not schedule a future write — the image
+        bytes are pulled synchronously and written in the same call. Works from a
+        shutdown path where we are about to ``application.quit()``.
+        """
+        try:
+            from panda3d.core import Filename, PNMImage
+
+            tex = base.win.getScreenshot()
+            if tex is None:
+                print("[auto-screenshot] getScreenshot returned None")
+                return False
+            img = PNMImage()
+            if not tex.store(img):
+                print("[auto-screenshot] Texture.store failed")
+                return False
+            fn = Filename.fromOsSpecific(out_path)
+            return bool(img.write(fn))
+        except Exception as exc:
+            print(f"[auto-screenshot] Sync capture failed: {exc}")
+            return False
+
     def run(self):
         pan_speed = 55.0
 
@@ -433,6 +604,17 @@ class UrsinaApp:
 
                     sys.exit(0)
                 return
+
+            # WK30 debug: auto-screenshot + auto-exit for prefab iteration.
+            if (
+                not self._auto_exit_triggered
+                and self._auto_exit_deadline_sec > 0.0
+            ):
+                self._auto_exit_elapsed += float(dt or 0.0)
+                if self._auto_exit_elapsed >= self._auto_exit_deadline_sec:
+                    self._auto_exit_triggered = True
+                    self._maybe_auto_screenshot_then_quit()
+                    return
 
             # WK22 R3: Wheel / +/- already adjust engine.zoom in InputHandler — drive 3D FOV from that.
             # Held Q/E apply the same multiplicative zoom (cursor-anchored via zoom_by) so coords stay consistent.

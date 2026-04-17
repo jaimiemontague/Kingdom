@@ -1,4 +1,4 @@
-# Building prefab JSON — schema v0.1
+# Building prefab JSON — schema v0.2
 
 Authoritative for **`assets/prefabs/buildings/*.json`**. The Kenney assembler (`tools/model_assembler_kenney.py`) reads and writes this shape; runtime loaders must accept the same fields.
 
@@ -21,6 +21,18 @@ Authoritative for **`assets/prefabs/buildings/*.json`**. The Kenney assembler (`
 | `pieces` | array | yes | Ordered list of kit pieces; see below. |
 | `notes` | string | no | Human-readable design notes (not read by sim). |
 
+### Anchor / origin convention (v0.2)
+
+**Authoring (assembler):** Piece `pos` values are whatever the tool wrote — often a **per-prefab ad-hoc origin** (e.g. pieces clustered in one corner of the footprint grid). Authors do **not** need to manually center the cluster in XZ for correct in-game placement.
+
+**Runtime (`game/graphics/ursina_renderer.py`):**
+
+1. **`_load_prefab_instance`** reads all `pieces[].pos`, builds the **XZ axis-aligned bounding box** of those positions, and computes its **centroid** `(centroid_x, centroid_z)`.
+2. Each child piece is placed with **XZ offset** `pos.x - centroid_x`, `pos.z - centroid_z` so the **mesh cluster is centered on the prefab root in local XZ**. **Y is unchanged** — vertical stacking and ground height are author intent.
+3. The prefab **root entity** is placed at the sim building’s **footprint-center** world position (see `_sync_prefab_building_entity`). The cluster is **fit-scaled** to match `footprint_tiles` vs the sim grid.
+
+**Contract:** After load, the visible geometry is centered on the building’s footprint in XZ regardless of how the JSON was authored in the assembler. Prefab JSON files are still valid if piece positions look “off-center” in raw coordinates.
+
 ## `pieces[]` item
 
 Each element is one placed kit piece:
@@ -28,15 +40,15 @@ Each element is one placed kit piece:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `model` | string | yes | Path relative to **`assets/models/`** (POSIX slashes). Example: `Models/GLB format/wall-paint-door.glb`. |
-| `pos` | `[x, y, z]` | yes | Translation from prefab origin. `[0, 0, 0]` = anchor at **center of footprint on the ground**. |
+| `pos` | `[x, y, z]` | yes | Translation in **assembler space** (as saved by the tool). At runtime, the Ursina loader applies **XZ auto-centering** (subtracts the piece-cluster XZ centroid); **Y is not re-centered**. |
 | `rot` | `[rx, ry, rz]` | yes | Rotation in **degrees** (Euler order as produced by the assembler; typically Y-up). |
 | `scale` | `[sx, sy, sz]` | yes | Uniform or per-axis scale (default `[1, 1, 1]`). |
 
 ## Rules
 
 1. **`model` paths** resolve under `assets/models/` only — no absolute paths.
-2. **Transforms** are **per-piece** local transforms in prefab space from the shared origin.
-3. **`footprint_tiles`** is a contract with the 2D sim; if the assembled mesh does not fit, shrink the prefab or ask **Agent 05** to change `config.py` (not Agent 15 alone).
+2. **Transforms** are **per-piece** in assembler space; the runtime derives centered local transforms for children as described above.
+3. **`footprint_tiles`** is a contract with the 2D sim; if the assembled mesh does not fit after fit-scaling, shrink the prefab or ask **Agent 05** to change `config.py` (not Agent 15 alone).
 4. **`attribution`** must list every Kenney pack used; keep `assets/ATTRIBUTION.md` in sync when adding packs.
 
 ## Example (minimal)
@@ -66,3 +78,4 @@ Each element is one placed kit piece:
 | Version | Summary |
 |---------|---------|
 | v0.1 | Initial WK28 spike — root fields + `pieces[{model,pos,rot,scale}]`. |
+| v0.2 | **Runtime:** `_load_prefab_instance` **auto-centers** the piece cluster in **XZ** on the prefab root (centroid subtraction); **Y** unchanged. Sim places root at footprint center; `_sync_prefab_building_entity` fit-scales to `footprint_tiles`. Schema doc aligned with `game/graphics/ursina_renderer.py` (WK30). Assembler may still save ad-hoc origins; authors need not manually center in XZ. |

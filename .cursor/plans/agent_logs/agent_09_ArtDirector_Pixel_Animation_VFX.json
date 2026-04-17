@@ -2636,6 +2636,51 @@
           ]
         }
       }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "WK30 R1: Agent 09 consult — silhouette + palette cohesion vs wk25/wk26; Agents 15/03/12 implement prefabs + default-on loader + validator."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "sprint_id": "wk30-buildings-pipeline",
+          "round_id": "wk30_r1_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Consult only (PM): no prefab or code edits. Confirmed Agents 15+03 landed: required prefabs under assets/prefabs/buildings/ (castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, peasant_house_small_v1) plus optional wizard_guild_v1; piece counts castle=20 (at budget), warrior=8, ranger=6, rogue=6, wizard=11, house=2. game/graphics/ursina_renderer.py uses _resolve_prefab_path (default-on; KINGDOM_URSINA_PREFAB_TEST=0 opt-out), _PREFAB_BUILDING_TYPE_TO_FILE house→peasant_house_small_v1.json, convention <type>_v1.json otherwise; _load_prefab_instance auto-centers XZ per WK30 hotfix notes. Style (data review): Castle mixes Retro Fantasy + Survival Kit — good visual anchor vs green terrain; guild set stays Retro Fantasy — cohesive low-poly fantasy with wk25/wk26 lighting. Silhouette differentiation: ranger uses fence/canvas vs warrior wall-paint stack; rogue uses door/window mix and rotated pieces; wizard taller multi-wall stack — likely distinct at default zoom; confirm in Ursina. Optional for Agent 15: if guilds still read too samey at distance, push stronger roof/banner/accent differentiation (do not edit prefabs from Agent 09). Full plan §6 checklist: Jaimie in-game.",
+            "files": []
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm",
+            "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 (missing placeholder building/hero model files — pre-existing pattern; prefab section clean)"
+            },
+            "style_review": {
+              "mode": "prefab_json_plus_loader_review",
+              "in_game_visual": "Ursina session not run here; Jaimie confirms plan section 6 (distinct guild silhouettes, textures vs factor-only, opt-out path)."
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 15: stronger accent differentiation only if playtest says guilds blur together.",
+            "Agent 10: FPS consult vs WK29 baseline per PM hub."
+          ]
+        }
+      }
     }
   }
 }

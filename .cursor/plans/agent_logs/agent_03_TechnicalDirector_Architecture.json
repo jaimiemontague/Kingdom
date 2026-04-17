@@ -1,6 +1,9 @@
 {
   "schema_version": "2.0",
-  "agent": { "id": "03", "name": "TechnicalDirector_Architecture" },
+  "agent": {
+    "id": "03",
+    "name": "TechnicalDirector_Architecture"
+  },
   "notes": [
     "This file is owned by Agent 03 only.",
     "Structure nests rounds inside sprints to keep history organized."
@@ -78,8 +81,7 @@
               "pm_acknowledged": true
             }
           }
-        }
-        ,
+        },
         "wk1_r2": {
           "sprint_id": "wk1-broad-sweep-midweek-endweek",
           "sprint_meta": {
@@ -373,8 +375,7 @@
               ]
             }
           }
-        }
-        ,
+        },
         "wk2_r2": {
           "sprint_id": "wk2-hero-polish-ai-sprites",
           "sprint_meta": {
@@ -592,8 +593,7 @@
               "qa_smoke_evidence": "[qa_smoke] DONE: PASS (see tool output; includes determinism_guard PASS)"
             }
           }
-        }
-        ,
+        },
         "wk3_final_release_closeout": {
           "sprint_id": "wk3-ui-polish-1080p-pixelart",
           "sprint_meta": {
@@ -641,8 +641,7 @@
           }
         }
       }
-    }
-    ,
+    },
     "wk4-new-enemy-skeleton-archer": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
@@ -1800,8 +1799,7 @@
                   "Agent 11: Ready for verification - qa_smoke passes, manual boot test should pass"
                 ]
               }
-            }
-            ,
+            },
             "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul": {
               "sprint_id": "wk7-ui-polish",
               "round_id": "wk7_r5_mid_sprint_ui_bugs_and_visual_overhaul",
@@ -1834,8 +1832,7 @@
                 ],
                 "blockers": []
               }
-            }
-            ,
+            },
             "wk7_r7_production_readiness_bugfixes_and_QA": {
               "sprint_id": "wk7-ui-polish",
               "round_id": "wk7_r7_production_readiness_bugfixes_and_QA",
@@ -1851,24 +1848,24 @@
                   "game/engine.py: use desktop display size for fullscreen/borderless sizing; update window_width/height from actual SDL surface",
                   "game/engine.py: clamp camera after mode changes so view bounds expand correctly",
                   "game/engine.py: ensure fullscreen uses actual desktop size to avoid world staying at old scale",
-                "game/engine.py: initialize camera/zoom before apply_display_settings to prevent WK7-BUG-008 boot crash",
-                "game/engine.py: make window mode toggles resilient (best-effort SDL2 centering, UI resize hooks, and clamp_camera are non-fatal)"
+                  "game/engine.py: initialize camera/zoom before apply_display_settings to prevent WK7-BUG-008 boot crash",
+                  "game/engine.py: make window mode toggles resilient (best-effort SDL2 centering, UI resize hooks, and clamp_camera are non-fatal)"
                 ],
                 "how_to_test": [
                   "python tools/qa_smoke.py --quick",
                   "python main.py",
-                "Manual: ESC → Graphics → switch Windowed/Borderless/Fullscreen repeatedly; it should not crash",
+                  "Manual: ESC → Graphics → switch Windowed/Borderless/Fullscreen repeatedly; it should not crash",
                   "Manual (Windows): switch Windowed → Fullscreen and confirm world/play area expands correctly (not stuck at old scale)"
                 ],
                 "evidence": {
-                "qa_smoke": "PASS (python tools/qa_smoke.py --quick)",
+                  "qa_smoke": "PASS (python tools/qa_smoke.py --quick)",
                   "manual_repro": "Pending manual Windows drag check by QA/human"
                 },
                 "risks_or_followups": [
                   "Manual Windows verification still required for world expansion and window move behavior",
                   "read_lints timed out in this session; no lints observed during qa_smoke",
-                "Boot smoke via python main.py not run in this session (QA/human can confirm)",
-                "If mode switching fails silently on some machines, we should surface a HUD toast (non-crashing) and/or add a small automated mode-switch smoke"
+                  "Boot smoke via python main.py not run in this session (QA/human can confirm)",
+                  "If mode switching fails silently on some machines, we should surface a HUD toast (non-crashing) and/or add a small automated mode-switch smoke"
                 ],
                 "blockers": []
               }
@@ -2314,10 +2311,21 @@
               "EnemyConfig: goblin_spawn_interval 5000→3500, max_alive_enemies 20→32. LairConfig: initial_count 2→4.",
               "QA gate: python tools/qa_smoke.py --quick PASS."
             ],
-            "files_changed": ["config.py", "game/entities/tax_collector.py", "game/entities/hero.py"],
-            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: verify higher starting gold, more lairs, faster waves"],
+            "files_changed": [
+              "config.py",
+              "game/entities/tax_collector.py",
+              "game/entities/hero.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: verify higher starting gold, more lairs, faster waves"
+            ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2346,10 +2354,21 @@
               "Input_handler: try_select_tax_collector() called after try_select_hero; use_potion guarded with getattr/hasattr so TaxCollector selection does not trigger hero hotkeys.",
               "HeroPanel: isinstance(hero, TaxCollector) branch; _render_tax_collector() draws left panel with Status, Carried gold, Total collected."
             ],
-            "files_changed": ["game/engine.py", "game/input_handler.py", "game/ui/hero_panel.py"],
-            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: click tax collector on map; left panel shows Tax Collector with status and gold"],
+            "files_changed": [
+              "game/engine.py",
+              "game/input_handler.py",
+              "game/ui/hero_panel.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: click tax collector on map; left panel shows Tax Collector with status and gold"
+            ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2378,10 +2397,20 @@
               "Memory: cached PAUSED overlay font in engine (_pause_font, created once) to avoid per-frame Font allocation.",
               "Memory: added bounded path cache in pathfinding.py (key (start,goal), max 256, FIFO); validate cached path before return; reduces A* allocation churn."
             ],
-            "files_changed": ["game/engine.py", "game/systems/pathfinding.py"],
-            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: run with neutral buildings/guards; fog clears around them; long session for memory plateau"],
+            "files_changed": [
+              "game/engine.py",
+              "game/systems/pathfinding.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: run with neutral buildings/guards; fog clears around them; long session for memory plateau"
+            ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2410,10 +2439,21 @@
               "LLM move_to hook: hero.llm_move_request added; engine drains it after AI update into hero.set_target_position(); llm_bridge resolves target string (castle, marketplace, inn, blacksmith) to (x,y) and sets llm_move_request so hero executes move physically.",
               "leave_building already applied in bridge (pop_out_of_building); no engine change needed."
             ],
-            "files_changed": ["game/engine.py", "game/entities/hero.py", "ai/behaviors/llm_bridge.py"],
-            "how_to_test": ["python tools/qa_smoke.py --quick", "Manual: multiple heroes near same spot separate; LLM/mock move_to to castle/marketplace moves hero there"],
+            "files_changed": [
+              "game/engine.py",
+              "game/entities/hero.py",
+              "ai/behaviors/llm_bridge.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "Manual: multiple heroes near same spot separate; LLM/mock move_to to castle/marketplace moves hero there"
+            ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2453,7 +2493,11 @@
               "Manual: python main.py or Ursina entry if present — verify 3D view, WASD pan, Q/E zoom, pygame HUD on overlay"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2493,7 +2537,11 @@
               "Manual: python main.py --renderer ursina; click HUD vs green; KINGDOM_URSINA_DEBUG_INPUT=1 for WK20_INPUT lines"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             }
           }
         }
@@ -2533,7 +2581,11 @@
               "Manual: python main.py --renderer ursina — terrain art, building facades, unit sprites face camera"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2566,7 +2618,11 @@
               "Manual: python main.py --renderer ursina — grass/roads visible; workers not black silhouettes; F12 → docs/screenshots/"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2606,7 +2662,11 @@
               "Manual: python main.py --renderer ursina — shadows on terrain/buildings; lower URSINA_SHADOW_MAP_SIZE if GPU-bound"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2636,7 +2696,11 @@
               "Manual: python main.py --renderer ursina — single building volume; stable FPS after hiring heroes"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": [],
             "coordination_notes": [
@@ -2670,7 +2734,11 @@
               "Manual: python main.py --renderer ursina — hire heroes; FPS should stay steadier; buildings one card silhouette"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2701,7 +2769,11 @@
               "Manual: python main.py --renderer ursina — sky/clear neutral dark; no green stripe banding; HUD over full viewport; fog still darkens unseen tiles"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2734,7 +2806,11 @@
               "Manual: python main.py --renderer ursina — mouse wheel and +/- zoom 3D; hold Q/E zoom; HUD/world mapping stays consistent"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "coordination_notes": [
               "Agent 08: crisp HUD texture / bounty click — separate; virtual 1920×1080 + get_mouse_pos unchanged",
@@ -2746,7 +2822,10 @@
         "wk22_r5b_scroll_up_wheel_fix": {
           "sprint_id": "wk22-3d-refinement",
           "round_id": "wk22_r5b_scroll_up_wheel_fix",
-          "round_meta": { "build_target": "Ursina wheel zoom-in", "sent_at_local": "2026-04-07T00:00:00" },
+          "round_meta": {
+            "build_target": "Ursina wheel zoom-in",
+            "sent_at_local": "2026-04-07T00:00:00"
+          },
           "prompt_text": "Human: wheel zoom out works, zoom in / zoom back in does not.",
           "response": {
             "received_at_local": "2026-04-07T00:00:00",
@@ -2755,9 +2834,20 @@
               "Bug: ursina_key_to_input_event dropped any key ending with ' up' as KEYUP; 'scroll up' matched that rule so WHEEL wheel_y=+1 never queued.",
               "Fix: exclude 'scroll up' from the endswith(' up') early return (game/ursina_input_manager.py)."
             ],
-            "files_changed": ["game/ursina_input_manager.py"],
-            "how_to_test": ["python tools/qa_smoke.py --quick", "python main.py --renderer ursina — both wheel directions zoom"],
-            "evidence": { "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" } },
+            "files_changed": [
+              "game/ursina_input_manager.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina — both wheel directions zoom"
+            ],
+            "evidence": {
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
             "blockers": []
           }
         }
@@ -2794,7 +2884,11 @@
               "python main.py --renderer ursina — W pans north; hero FOW disc tracks billboard"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "coordination_notes": [
               "Plan Bugs 1–2 (projectiles, peasants/guards is_alive) owned by Agent 09 per plan"
@@ -2826,16 +2920,24 @@
               "python main.py --renderer ursina — move ranger at fog edge; 3D cleared tiles match minimap"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
         },
         "wk23_r1_fow_ns_fix": {
           "sprint_id": "wk23-final-bug-hunt",
-          "sprint_meta": { "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md" },
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md"
+          },
           "round_id": "wk23_r1_fow_ns_fix",
-          "round_meta": { "sent_at_local": "2026-04-07T19:01:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-07T19:01:00"
+          },
           "prompt_text": "Bug 4: Fog of War circle does not track hero positions — lit circles appear at wrong location in Ursina. Fix N/S alignment.",
           "response": {
             "received_at_local": "2026-04-07T19:01:00",
@@ -2845,22 +2947,32 @@
               "Fix: write fog buffer rows in reverse sim-Y order (buf_row = th-1-ty) so texture row 0 = map-south, which correctly aligns with the quad's -Z edge after rotation.",
               "No UV flip changes needed; existing texture_scale Vec2(1,-1) / texture_offset Vec2(0,1) pair is still correct for the Panda3D implicit flip."
             ],
-            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
             "how_to_test": [
               "python tools/qa_smoke.py --quick",
               "python main.py --renderer ursina — hire a hero, confirm the illuminated circle tracks the hero billboard precisely"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
         },
         "wk23_r1_camera_ws_confirmed": {
           "sprint_id": "wk23-final-bug-hunt",
-          "sprint_meta": { "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md" },
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk23_r1_final_bug_hunt.plan.md"
+          },
           "round_id": "wk23_r1_camera_ws_confirmed",
-          "round_meta": { "sent_at_local": "2026-04-07T19:26:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-07T19:26:00"
+          },
           "prompt_text": "Bug 3: W/S camera pan keys inverted — W should pan north (up-screen / +world Z), S should pan south.",
           "response": {
             "received_at_local": "2026-04-07T19:26:00",
@@ -2875,7 +2987,11 @@
               "python main.py --renderer ursina — press W and confirm view pans north (up-screen); press S and confirm south."
             ],
             "evidence": {
-              "manual_verification": { "by": "Jaimie", "result": "PASS", "confirmed_at": "2026-04-07T19:26:00" }
+              "manual_verification": {
+                "by": "Jaimie",
+                "result": "PASS",
+                "confirmed_at": "2026-04-07T19:26:00"
+              }
             },
             "blockers": []
           }
@@ -2891,7 +3007,9 @@
         "wk24_r1_execution": {
           "sprint_id": "wk24-ui-and-renderer-polish",
           "round_id": "wk24_r1_execution",
-          "round_meta": { "sent_at_local": "2026-04-08T00:00:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-08T00:00:00"
+          },
           "prompt_text": "WK24-BUG-008: H hotkey / try_hire_hero — auto-pick valid constructed guild when none selected or selection unusable.",
           "response": {
             "received_at_local": "2026-04-08T00:00:00",
@@ -2901,13 +3019,19 @@
               "Use selected guild only when hirable; if None, non-guild, or unconstructed guild, scan self.buildings for first hirable guild.",
               "Removed dead under-construction branch after resolving guild through predicate."
             ],
-            "files_changed": ["game/engine.py"],
+            "files_changed": [
+              "game/engine.py"
+            ],
             "how_to_test": [
               "python tools/qa_smoke.py --quick",
               "python main.py --no-llm — with a finished guild on map, press H without selecting any building; hire should succeed"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2923,7 +3047,9 @@
         "sprint_1_2_execution": {
           "sprint_id": "v1_5-sprint-1-2-base-terrain",
           "round_id": "sprint_1_2_execution",
-          "round_meta": { "sent_at_local": "2026-04-11T00:00:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-11T00:00:00"
+          },
           "prompt_text": "Remove _bake_terrain_floor / TileSpriteLibrary; add _build_3d_terrain with assets/models/environment grass, path, rock, tree_pine.",
           "response": {
             "received_at_local": "2026-04-11T00:00:00",
@@ -2950,7 +3076,11 @@
               "python main.py --renderer ursina — verify 3D floor tiles, paths, trees, no 2D terrain atlas"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2966,7 +3096,9 @@
         "sprint_2_1_execution": {
           "sprint_id": "wk27-sprint-2-1-3d-buildings",
           "round_id": "sprint_2_1_execution",
-          "round_meta": { "sent_at_local": "2026-04-11T00:00:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-11T00:00:00"
+          },
           "prompt_text": "Intercept castle, house, lair in _sync_buildings; Entity(model=...) from assets/models/environment/; y=0 ground; no billboards; qa_smoke --quick.",
           "response": {
             "received_at_local": "2026-04-11T00:00:00",
@@ -2977,13 +3109,19 @@
               "Building loop: castle, house, lair use _environment_model_path(castle|house|lair); footprint scale (fx, hy, fz); cube fallback when assets missing.",
               "_sync_3d_building_entity clears billboard texture, positions center (wx, origin_y, wz), construction/damaged tint."
             ],
-            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
             "how_to_test": [
               "python tools/qa_smoke.py --quick",
               "python main.py --renderer ursina — confirm castle/house/lair render as 3D without crash"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": []
           }
@@ -2999,7 +3137,9 @@
         "wk29_r1_execution": {
           "sprint_id": "wk29-first-house-playtest",
           "round_id": "wk29_r1_execution",
-          "round_meta": { "sent_at_local": "2026-04-16T00:00:00" },
+          "round_meta": {
+            "sent_at_local": "2026-04-16T00:00:00"
+          },
           "prompt_text": "Gated prefab loader: KINGDOM_URSINA_PREFAB_TEST=1 + house + peasant_house_small_v1.json; _load_prefab_instance; classifier from tools.model_viewer_kenney.",
           "response": {
             "received_at_local": "2026-04-16T00:00:00",
@@ -3011,14 +3151,20 @@
               "Building loop: prefab branch runs before default 3D mesh path; env unset or missing JSON → unchanged WK27 house mesh path.",
               "Render-only: json/os.environ only; no sim RNG/wall-clock."
             ],
-            "files_changed": ["game/graphics/ursina_renderer.py"],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
             "how_to_test": [
               "python tools/qa_smoke.py --quick",
               "After Agent 15 adds peasant_house_small_v1.json: $env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina",
               "Regression: unset env — house still uses default assets/models/environment house mesh"
             ],
             "evidence": {
-              "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+              "qa_smoke": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
             },
             "blockers": [
               "assets/prefabs/buildings/peasant_house_small_v1.json not in repo yet — prefab path inactive until Agent 15 lands file; behavior identical to pre-WK29 when file missing."
@@ -3026,7 +3172,178 @@
           }
         }
       }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "WK30 R1: generalize WK29 gated prefab loader to default-on multi-type prefab renderer (WK30-FEAT-003)."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "sprint_id": "wk30-buildings-pipeline",
+          "round_id": "wk30_r1_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-17T11:46:46Z"
+          },
+          "prompt_text": "Generalize WK29 prefab path in game/graphics/ursina_renderer.py. Resolve prefab path by building_type; remove hard KINGDOM_URSINA_PREFAB_TEST=1 gate (prefabs default-on when JSON present); keep KINGDOM_URSINA_PREFAB_TEST=0 explicit opt-out. Preserve per-building-id cache. Keep tools.model_viewer_kenney._apply_gltf_color_and_shading classifier (no relocation this round). No wall-clock, no unseeded RNG. Run qa_smoke --quick and validate_assets --report.",
+          "response": {
+            "received_at_local": "2026-04-17T11:46:46Z",
+            "status": "complete",
+            "resolution_strategy": "Single lookup table _PREFAB_BUILDING_TYPE_TO_FILE with convention fallback. Rule: if building_type key is explicit in the table, use that filename; otherwise use convention '<building_type>_v1.json'. Only explicit entry is 'house' -> 'peasant_house_small_v1.json' because WK29 shipped that prefab under a descriptive filename (not house_v1). Castle/warrior_guild/ranger_guild/rogue_guild/wizard_guild all resolve via the convention, so Agent 15 authoring new prefabs at '<type>_v1.json' under assets/prefabs/buildings/ requires ZERO code edit to light them up. Lookup table is one dict in one place in ursina_renderer.py, as required.",
+            "summary_bullets": [
+              "Replaced _use_wk29_prefab_house gate with _resolve_prefab_path(bts, building) -> Path | None. Default-on: only returns None if KINGDOM_URSINA_PREFAB_TEST=='0' (explicit opt-out), no building_type, lair, or file missing.",
+              "Added _PREFAB_BUILDING_TYPE_TO_FILE lookup table with one explicit entry ('house' -> peasant_house_small_v1.json); all other types resolve via '<building_type>_v1.json' convention.",
+              "Renamed _get_or_create_prefab_house_entity -> _get_or_create_prefab_building_entity; mode tag 'prefab_house' -> 'prefab' (single tag for all prefab-backed buildings).",
+              "Renamed _sync_prefab_house_entity -> _sync_prefab_building_entity; threaded mesh_kind (the building_type string) into _footprint_scale_3d so house/castle/lair keep tuned XZ insets while new types default to 1.0 inset (full sim footprint) until tuned.",
+              "Restructured building loop: prefab resolver runs FIRST for any non-lair building; if resolved, takes the prefab branch. Otherwise falls through to the existing _is_3d_mesh_building static mesh branch, then billboard. Lairs always take the legacy lair mesh path (resolver returns None for them).",
+              "Updated module docstring to document WK30 default-on behavior and KINGDOM_URSINA_PREFAB_TEST=0 opt-out contract.",
+              "Per-building-id entity cache preserved (keyed on id(sim_obj) in self._entities as WK29). Mode-tag mismatch still triggers destroy+rebuild on the first frame after an upgrade, so switching env flag at runtime is clean.",
+              "Classifier tools.model_viewer_kenney._apply_gltf_color_and_shading NOT relocated this round. Kept as the single source in tools/ to avoid a cross-module refactor when the import is working. If a future sprint decides to move it into game/graphics/, both tools/model_viewer_kenney.py and tools/model_assembler_kenney.py must be updated in the same PR.",
+              "Determinism: only os.environ.get, Path.is_file, and json.loads in new code. No time.time / pygame.time.get_ticks / random in sim paths. Determinism guard PASS."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina",
+              "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina"
+            ],
+            "evidence": {
+              "determinism_guard": {
+                "command": "python tools/determinism_guard.py",
+                "exit_code": 0,
+                "status": "PASS",
+                "stdout_tail": "[determinism_guard] PASS: no violations found"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS",
+                "stdout_tail": "[qa_smoke] DONE: PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=47; all warns are pre-existing stub-model warnings for unit/building 3D placeholders plus the intended optional 'wizard_guild_v1' prefab WARN wired by Agent 12."
+              }
+            },
+            "notes_for_agent_15": [
+              "Authoring a prefab at assets/prefabs/buildings/<building_type>_v1.json lights it up automatically in the renderer - no code change needed.",
+              "The one exception is building_type='house', which still resolves to peasant_house_small_v1.json via the lookup table (preserves WK29 asset filename).",
+              "If you need a non-convention filename for a new type, add an entry to _PREFAB_BUILDING_TYPE_TO_FILE in game/graphics/ursina_renderer.py (flag me in the hub and I will land it)."
+            ],
+            "notes_for_agent_10": [
+              "Prefab path is default-on now. For FPS spot-check: run python main.py --renderer ursina with all WK30 prefabs present (baseline), then $env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina (opt-out reference). _load_prefab_instance is called once per building via the per-sim-id cache (no per-frame reloads), matching WK29 perf envelope."
+            ],
+            "blockers": [],
+            "risks": [
+              "Guild prefabs default to 1.0 XZ inset in _footprint_scale_3d. If Agent 09 sees crowding between 2x2 / 3x3 guilds at default camera, I (Agent 03) or Agent 15 will tune insets per type - one-line addition to _footprint_scale_3d.",
+              "Mode-tag change 'prefab_house' -> 'prefab' will destroy + rebuild any entity created under the WK29 gated path on the first frame after this lands. Harmless one-time reset; no save-state implications (entity cache is in-memory only)."
+            ],
+            "addenda": [
+              {
+                "added_at_local": "2026-04-17T14:19:44Z",
+                "topic": "Prefab anchor contract clarification (from Agent 15 flag)",
+                "trigger": "Agent 15 flagged: castle_v1 piece XZ range [-0.5..1.5, 0.5..2.5] centroid (0.5, 1.5); peasant_house_small_v1 piece cluster centroid ~(-0.5, 0.5). Neither matches schema v0.1's 'center of footprint' origin contract. Castle would render shifted ~(0.5, 1.5) tiles from its building anchor if loader honored schema strictly. Non-blocking; wk29 was already playtested OK under current (uncompensated) behavior.",
+                "options_considered": [
+                  "A) Amend schema.md to document actual assembler convention; no runtime change.",
+                  "B) Add auto-center translation in loader (compute XZ bounding-box centroid from piece pos fields; translate root by -centroid) so cluster always renders at footprint center regardless of authored anchor.",
+                  "C) Add optional 'prefab_anchor' field to JSON schema so each prefab declares its convention."
+                ],
+                "decision": "Option A for WK30 R1. Updated assets/prefabs/schema.md to clarify: loader positions prefab root at sim footprint center; piece pos values are honored verbatim; authors choose ad-hoc per-prefab anchors; loader does NOT re-center. Documented current examples (wk29 house and wk30 castle centroids) in the schema and in the _load_prefab_instance docstring. Option B flagged as a deferred schema v0.2 bump — would require re-playtesting all shipping prefabs at once.",
+                "rationale": [
+                  "Agent 15 explicitly labeled this non-blocking; wk29 visual is already accepted.",
+                  "Option B would shift the wk29 house on screen mid-sprint and likely require castle re-kitbash to look right after the shift — scope creep.",
+                  "Option C adds schema surface without solving anything concrete this sprint.",
+                  "Documenting reality is the minimum-risk, maximum-clarity move; keeps tightening as a deliberate future decision with a full prefab set to verify against."
+                ],
+                "files_changed": [
+                  "assets/prefabs/schema.md",
+                  "game/graphics/ursina_renderer.py"
+                ],
+                "followup_for_future_sprint": {
+                  "title": "Schema v0.2: auto-center prefab cluster on footprint",
+                  "owner_suggestion": "Agent 03 (loader change) + Agent 15 (re-playtest pass) + Agent 09 (visual review)",
+                  "trigger_condition": "Either (a) prefab count grows to 8+ so a batch re-playtest is cheap, or (b) Agent 09 flags castle/guild offset as visually wrong at final camera framing, or (c) rotation_steps feature lands and mis-centered clusters rotate around the wrong point.",
+                  "implementation_sketch": "In _load_prefab_instance, compute cx = mean of piece pos[0], cz = mean of piece pos[2] (or bbox midpoint). Subtract (cx, 0, cz) from every piece's pos before creating child entities, OR apply (-cx, 0, -cz) to the root container and keep piece pos as authored. Bump schema to v0.2 with strict 'center-of-footprint' guarantee."
+                },
+                "gates_rerun": {
+                  "determinism_guard": "PASS (exit 0)",
+                  "qa_smoke_quick": "PASS (exit 0)",
+                  "validate_assets_report": "PASS (exit 0, warns only; no new warns from schema edit)"
+                }
+              },
+              {
+                "added_at_local": "2026-04-17T15:38:27Z",
+                "topic": "Loader v0.2: auto-center + fit-to-footprint (Jaimie playtest hotfix)",
+                "trigger": "Jaimie playtested wk30 r1. Warrior guild model rendered mostly outside its sim footprint (red-box annotation) AND visibly 2-3x larger than the 2x2 grid rect. Root cause: (a) prefab cluster pivots were per-prefab-ad-hoc (wk30 r1 addendum 1 already documented this, non-blocking), and more critically (b) _sync_prefab_building_entity was scaling the prefab root by (fx, hy, fz) = sim footprint extent in world units, which for a 2x2 building = (2, 1.4, 2). Since Kenney pieces are authored at 1 unit = 1 tile, the root scale multiplied BOTH piece positions AND piece geometry by 2x, putting the rendered mesh 2x larger than the sim footprint. Jaimie explicitly requested: 'center the models after they're designed in prefab, and shrink the models to fit the map grid perfectly.'",
+                "decision": "Promoted the deferred schema v0.2 'auto-center' follow-up into wk30 r1 itself, plus added explicit fit-to-footprint scaling. Schema v0.1 stays as-is — the loader now just enforces it rather than relying on authors to keep pieces inside footprint_tiles.",
+                "changes": [
+                  "game/graphics/ursina_renderer.py::_load_prefab_instance: compute piece XZ bbox centroid at load time, translate each piece's authored pos by -(centroid_x, 0, centroid_z) so the cluster centers on the root origin. Stash authored_footprint_tiles and piece XZ spread on the root for the sync step.",
+                  "game/graphics/ursina_renderer.py::_sync_prefab_building_entity: replaced (fx, hy, fz) root scale with (xz_scale, 1.0, xz_scale). xz_scale = min(fx / effective_w, fz / effective_d) * _PREFAB_FIT_INSET, where effective = max(authored, spread + 1.0). Y scale is deliberately 1.0 to preserve authored piece heights (don't distort towers/roofs). _PREFAB_FIT_INSET = 1.0 for now.",
+                  "Added _PREFAB_FIT_INSET constant near the other building 3D tunables for future aesthetic tuning.",
+                  "Module docstring updated to v0.2 behavior.",
+                  "assets/prefabs/schema.md: existing v0.1 anchor-convention note is now obsolete for cluster centroid (loader auto-centers) but still accurately describes piece pos semantics (offset from root). Follow-up: schema.md will get a v0.2 bump in a future round to formalize the new contract."
+                ],
+                "debug_tooling_added": [
+                  "game/graphics/ursina_renderer.py::_ensure_grid_debug_overlay: tile-gridline overlay gated on KINGDOM_URSINA_GRID_DEBUG=1. Optional radius clamp via KINGDOM_URSINA_GRID_DEBUG_TILES=<N> (default 0 = full map). Yellow translucent lines, thickness 2.5, rendered just above the terrain quad. Off by default; no perf impact in production.",
+                  "game/graphics/ursina_app.py: KINGDOM_URSINA_PREFAB_TEST_LAYOUT=1 env flag places castle + warrior/ranger/rogue/wizard guilds + house in a row east of the castle so a single screenshot shows every WK30 prefab against the grid. Reveals fog for the debug run.",
+                  "game/graphics/ursina_app.py: KINGDOM_URSINA_AUTO_EXIT_SEC=<float> + KINGDOM_URSINA_AUTO_SCREENSHOT_PATH=<path> auto-screenshots via synchronous base.win.getScreenshot() + PNMImage.write (not the async base.screenshot() path — that queues writes that never drain before application.quit exits). Optional KINGDOM_URSINA_CAM_TOPDOWN=1 to switch the debug camera to a true top-down framing."
+                ],
+                "iteration_record": [
+                  "iter2 (oblique, fit scale=(fx,hy,fz)): prefabs rendered way outside their footprints — reproduced Jaimie's report.",
+                  "iter3 (near-top-down): confirmed fog and layout issues; added fog reveal + tighter camera framing.",
+                  "iter4 (oblique, spread+1 auto-fit): castle/warrior/wizard looked right; ranger/rogue shrunk to 0.667 of nominal.",
+                  "iter5 (oblique, trust-authored, no auto-shrink): ranger/rogue rendered full-size but overflowed their 2x2 sim footprint.",
+                  "iter6 (pure top-down, trust-authored): confirmed overflow visually.",
+                  "iter7 planned (oblique, reinstate spread+1 auto-fit) — interrupted after Jaimie noted rogue_guild has a misplaced piece authored one tile off, which explains its overflow. That authoring issue is on Agent 15 to fix; loader stays on the auto-shrink path because it degrades gracefully in both directions."
+                ],
+                "behavior_summary_per_prefab": {
+                  "castle_v1": "authored (3,3) == sim (3,3); spread (2,2); effective (3,3); xz_scale = 1.0 (full size).",
+                  "peasant_house_small_v1": "authored (1,1) == sim (1,1); spread (0,0); effective (1,1); xz_scale = 1.0.",
+                  "warrior_guild_v1": "authored (2,2) == sim (2,2); spread (1,1); effective (2,2); xz_scale = 1.0.",
+                  "wizard_guild_v1": "authored (2,2) == sim (2,2); spread (1,1); effective (2,2); xz_scale = 1.0.",
+                  "ranger_guild_v1": "authored (2,2) == sim (2,2); spread (2,1); effective (3,2); xz_scale = 2/3 (auto-shrink — pieces overflow 2x2 in X). Once Agent 15 re-centers pieces within 2x2, xz_scale auto-returns to 1.0.",
+                  "rogue_guild_v1": "authored (2,2) == sim (2,2); spread (2,1); effective (3,2); xz_scale = 2/3 (auto-shrink — Jaimie flagged that one piece is accidentally placed 1 tile off). Once Agent 15 fixes that piece, xz_scale auto-returns to 1.0."
+                },
+                "gates_rerun": {
+                  "determinism_guard": "PASS (exit 0)",
+                  "qa_smoke_quick": "PASS (exit 0, [qa_smoke] DONE: PASS)",
+                  "validate_assets_report": "PASS (exit 0, errors=0, warns=46 — all pre-existing stub-model warns; wizard_guild_v1 prefab now ships so no longer WARN)"
+                },
+                "files_changed": [
+                  "game/graphics/ursina_renderer.py",
+                  "game/graphics/ursina_app.py"
+                ],
+                "artifacts": [
+                  "docs/screenshots/wk30_debug/iter2.png  — pre-fix: models 2-3x larger than grid.",
+                  "docs/screenshots/wk30_debug/iter3.png  — camera reset; prefabs visible top-down.",
+                  "docs/screenshots/wk30_debug/iter5.png  — trust-authored scaling, oblique view.",
+                  "docs/screenshots/wk30_debug/iter6_topdown.png  — trust-authored top-down, showing ranger/rogue overflow.",
+                  "(Current code = spread+1 auto-fit; visual iteration interrupted cleanly by Jaimie after confirming the logic.)"
+                ],
+                "notes_for_agent_15": [
+                  "Rogue_guild_v1 flagged by Jaimie: one piece is placed 1 tile off authored footprint. Please re-open with `python tools/model_assembler_kenney.py --open rogue_guild_v1` and nudge that piece back into the 2x2 authored cluster.",
+                  "Ranger_guild_v1 has the same overflow pattern (pieces span 3 tiles in X inside a 2x2 authored footprint). Worth a review pass even though Jaimie did not explicitly flag it.",
+                  "No code change on your side is required to benefit from the auto-shrink fix. After your re-author, the loader automatically renders rogue and ranger at full size (xz_scale = 1.0) instead of the current 0.667 auto-shrink.",
+                  "Guideline for future prefabs: keep piece positions within [-(authored_w/2 - 0.5), +(authored_w/2 - 0.5)] in X (and same for Z). For a 2x2 prefab, that means piece pos.x in [-0.5, +0.5]. One piece-width tighter than the footprint edge."
+                ],
+                "human_test_commands_from_repo_root": {
+                  "default_play": "python main.py --renderer ursina",
+                  "opt_out_regression": "$env:KINGDOM_URSINA_PREFAB_TEST_PREFAB_TEST='0'; python main.py --renderer ursina",
+                  "debug_grid_default_camera": "$env:KINGDOM_URSINA_GRID_DEBUG='1'; $env:KINGDOM_URSINA_GRID_DEBUG_TILES='14'; python main.py --renderer ursina",
+                  "debug_grid_with_test_layout_oblique": "$env:KINGDOM_URSINA_GRID_DEBUG='1'; $env:KINGDOM_URSINA_GRID_DEBUG_TILES='14'; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; python main.py --renderer ursina",
+                  "debug_grid_with_test_layout_topdown": "$env:KINGDOM_URSINA_GRID_DEBUG='1'; $env:KINGDOM_URSINA_GRID_DEBUG_TILES='14'; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_CAM_TOPDOWN='1'; python main.py --renderer ursina",
+                  "auto_screenshot_and_exit": "$env:KINGDOM_URSINA_GRID_DEBUG='1'; $env:KINGDOM_URSINA_GRID_DEBUG_TILES='14'; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_AUTO_EXIT_SEC='5'; $env:KINGDOM_URSINA_AUTO_SCREENSHOT_PATH='docs/screenshots/wk30_debug/out.png'; python main.py --renderer ursina --no-llm"
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   }
 }
-

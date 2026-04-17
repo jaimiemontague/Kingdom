@@ -1,0 +1,214 @@
+{
+  "prefab_id": "wizard_guild_v1",
+  "building_type": "wizard_guild",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-paint-door.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint-window.glb",
+      "pos": [
+        0.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint-window.glb",
+      "pos": [
+        0.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint.glb",
+      "pos": [
+        1.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint.glb",
+      "pos": [
+        1.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tower-paint-base.glb",
+      "pos": [
+        0.5,
+        2.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tower-paint.glb",
+      "pos": [
+        0.5,
+        3.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tower-top.glb",
+      "pos": [
+        0.5,
+        4.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "Wizard tower: 2-story painted walls + central tower motif (tower-paint-base + tower-paint + tower-top stacked on the front-left corner). Optional WK30 stretch."
+}
