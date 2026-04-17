@@ -1,3 +1,27 @@
+> ## [DEPRECATED — superseded by WK28/WK29, kept for history only]
+>
+> **Status (as of 2026-04-16): this plan is obsolete as written and was NEVER executed in this form.**
+>
+> The approach below assumed we would drop single pre-made mesh files (`castle.glb`, `house.glb`, `lair.glb`) into `assets/models/environment/` and swap billboards for `Entity(model=...)` one-to-one. We did not use that approach. No such single-file meshes exist and we are not authoring them from thin air.
+>
+> **What we actually did instead (WK28 + WK29, pre-v1.5):**
+> - **WK28 (`wk28-assembler-spike`)** — Stood up Agent 15 (ModelAssembler / KitbashLead), shipped `tools/model_assembler_kenney.py` and `assets/prefabs/schema.md` v0.1 (Kenney `.glb` kit pieces kitbashed into JSON prefabs).
+> - **WK29 (`wk29-first-house-playtest`)** — Kitbashed the first real prefab `assets/prefabs/buildings/peasant_house_small_v1.json` and added a **gated** prefab loader to `game/graphics/ursina_renderer.py` (`_load_prefab_instance`, `_use_wk29_prefab_house`) behind `KINGDOM_URSINA_PREFAB_TEST=1` for building type `house` only.
+>
+> **Authoritative path forward:** Kenney kit prefabs + loader, per:
+> - `.cursor/plans/master_plan_3d_graphics_v1_5.md` (amended 2026-04-16 — see "Pipeline pivot" subsection in §4 Phase 2).
+> - `.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md` — tooling + schema that shipped.
+> - `.cursor/plans/wk29_first_house_playtest.plan.md` — first-house end-to-end validation that shipped.
+> - `.cursor/plans/wk30_buildings_pipeline.plan.md` — next sprint: generalize loader + assemble more prefabs.
+> - `assets/prefabs/schema.md` — prefab JSON contract.
+> - `.cursor/plans/kenney_gltf_ursina_integration_guide.md` — two-path shader classifier.
+>
+> **Do not implement the body below as written.** No sprint should reopen this plan. The WK27 intent (castle + house + lair in 3D) is now owned by WK30 onward, reframed as prefabs + generalized loader + footprint/QA reconciliation.
+>
+> The rest of this file is preserved unedited purely for history so everyone can move on.
+
+---
+
 # WK27 Sprint 2.1: 3D Castles & Peasant Houses
 
 This sprint initiates the actual replacement of the initial 2D building billboards with static 3D meshes for Castles, Houses, and enemy Lairs.

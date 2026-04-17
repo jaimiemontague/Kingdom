@@ -46,22 +46,43 @@ We will tackle this transition in sequential phases to avoid breaking the core g
 ### Phase 2: Static Buildings & Grid Alignment
 * **Goal:** Integrate static buildings into the new renderer layout and grid. Ensure scaling footprints match the collision spaces of our Pygame engine perfectly.
 
-**Sprints Outline:**
-- **Sprint 2.1 (Castle & Core):** Agents 03 and 09 swap the Castle and Lair 2D sprites for 3D primitives. Agent 05 recalculates physical footprint and collision data if the scale is off.
-- **Sprint 2.2 (Economy Buildings):** Swap the Marketplace, Inn, and Farms. Ensure doors/entrances align with the simulation grid.
-- **Sprint 2.3 (Military Buildings):** Swap all Guilds and defensive towers.
+#### Pipeline pivot (as of 2026-04-16)
+
+The original Phase 2 assumption — one pre-made `.glb` per building type (e.g. `castle.glb`, `house.glb`) dropped into `assets/models/environment/` and loaded as a single `Entity(model=...)` — **is deprecated**. See `.cursor/plans/wk27_sprint_2_1_buildings.plan.md` (kept as a deprecated stub, never executed as written).
+
+Instead, Kingdom Sim uses a **kitbash-and-load** pipeline for static buildings, proven end-to-end in WK28 and WK29 (both closed):
+
+1. **Pieces** — Kenney `.glb` kit pieces already live under `assets/models/Models/GLB format/` and `assets/models/Models/GLTF format/`. See [kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md) for the folder map.
+2. **Assembler** — `tools/model_assembler_kenney.py` (Agent 12, WK28). A human kitbashes kit pieces on a 1-unit grid: place / rotate / nudge / delete, save to prefab JSON. Applies the two-path shader classifier at assembly time so what you see is what you get in-game.
+3. **Prefab JSON** — `assets/prefabs/buildings/<prefab_id>.json`, contract documented in [assets/prefabs/schema.md](../../assets/prefabs/schema.md). Stores `building_type`, `footprint_tiles`, `ground_anchor_y`, `pieces[]` (per-piece `model` path + local `pos`/`rot`/`scale`), and a `attribution` list.
+4. **Loader** — `game/graphics/ursina_renderer.py` reads the prefab JSON and instantiates each piece as a child Entity, applying the per-piece classifier (`tools.model_viewer_kenney._apply_gltf_color_and_shading`). See [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md) §5 — textured vs factor-only pieces must **not** go through `setShaderAuto`.
+5. **Footprint reconciliation** — prefabs must fit the building's existing `footprint_tiles` in `config.py`. If a prefab overshoots, shrink the prefab, do not mutate `config.py`. Agent 05 audits; Agent 15 owns the prefab edit.
+
+**Status today:**
+- WK29 shipped a working gated path: with `KINGDOM_URSINA_PREFAB_TEST=1`, building type `house` renders from `assets/prefabs/buildings/peasant_house_small_v1.json` as a true 3D kitbashed object. With the env var unset, existing rendering is untouched.
+- Agent 10 post-WK29: no >30% FPS regression from the prefab path; **prefab baker (bake prefab JSON → single `.glb`) is NOT currently a blocker**, but stays on the backlog for when we scale up instance counts.
+
+**Implication for Phase 2 sprint outline (below):** each "swap" sprint is now: (a) Agent 15 kitbashes the prefab(s) with Jaimie at the keyboard, (b) Agent 03 generalizes the loader to cover the new building type(s) (or removes the env-gate for already-validated types), (c) Agent 05 confirms footprints, (d) Agents 09/10/11 consult on cohesion/FPS/gate.
+
+**Sprints Outline (prefab-based):**
+- **Sprint 2.1 (Castle & Core, superseded / rescoped):** original plan `.cursor/plans/wk27_sprint_2_1_buildings.plan.md` is **DEPRECATED**. Replaced by `.cursor/plans/wk30_buildings_pipeline.plan.md` — generalize the WK29 gated loader + assemble castle and at least one additional building as prefabs.
+- **Sprint 2.2 (Economy Buildings):** Agent 15 assembles Marketplace / Inn / Farms prefabs; Agent 03 extends loader coverage; Agent 05 audits footprints and grid alignment (doors/entrances).
+- **Sprint 2.3 (Military Buildings):** Agent 15 assembles Guild + defensive tower prefabs; Agent 03 wires them through the generalized loader.
+- **Sprint 2.X (Perf hedge, on-demand):** Agent 12 builds a prefab baker (prefab JSON → single `.glb`) **only if** Agent 10 flags a perf regression at scale. Not scheduled yet.
 
 **Success Criteria:**
-- Buildings load as 3D `.gltf`/`.obj` models.
-- Pygame Engine building size data matches the physical bounds in the Ursina viewer. 
-- Units can navigate between buildings without clipping through mesh geometry.
+- Buildings render in Ursina via prefab JSON loaded from `assets/prefabs/buildings/*.json`, not single-file meshes.
+- Pygame engine `footprint_tiles` (from `config.py`) match the visual bounds of each prefab; units do not clip through prefab geometry.
+- Textured Kenney kit pieces render with textures; factor-only pieces render with the `factor_lit_shader` (not pitch black, not flat white).
+- `tools/validate_assets.py` and `python tools/qa_smoke.py --quick` remain PASS; manual Ursina smoke shows each completed building as a 3D object.
 
 > **Tasks for the Human (Jaimie):**
-> - [ ] **Select Models:** Pick specific `.obj` or `.gltf` files to represent the `Castle`, `Marketplace`, `Inn`, and `Blacksmith`. 
+> - [ ] **Kitbash with Agent 15:** Pair with Agent 15 at the assembler (`python tools/model_assembler_kenney.py --new --prefab-id <id>`) to build prefab JSONs for the target buildings (Castle first, then Marketplace / Inn / Blacksmith). Keep piece counts small and silhouettes readable.
 > - [ ] **Playtest & Verify (Visual Checklist):** Open the terminal and run `python main.py --renderer ursina`. Look exactly for the following:
 >    - **Scale Check:** Do the buildings look like the right size compared to the trees? Are they impossibly tiny or massive screen-blockers?
 >    - **Grid/Floor Alignment:** Do the doors and bases of the buildings line up neatly with the floor tiles, or are they floating in the air / visibly sunk through the ground?
 >    - **Clipping:** Watch a hero or peasant walk past the building. Do they walk cleanly *around* the building walls, or do they clip straight through the solid masonry geometry? If they clip through, reject the sprint.
+>    - **Textured vs factor-only:** Retro Fantasy kit pieces (walls / roofs) should show their textures. Nature Kit accent pieces (rocks / plants) should show visible 3D shading, not pitch black or flat white.
 
 ### Phase 3: Animated Units (Entity Rigging)
 * **Goal:** Transition dynamic units (Peasants, Heroes, Enemies) to 3D and attach them to Ursina's animation system.
