@@ -1,0 +1,106 @@
+{
+  "prefab_id": "castle_build_20_v1",
+  "building_type": "castle",
+  "footprint_tiles": [
+    3,
+    3
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-paint-gate.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        -1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-fortified-paint.glb",
+      "pos": [
+        0.5,
+        0.0,
+        -1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-fortified-paint.glb",
+      "pos": [
+        0.5,
+        0.0,
+        -0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-fortified-paint.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-fortified-paint.glb",
+      "pos": [
+        -1.5,
+        0.0,
+        -1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK32 ~20%: gate + first perimeter wall segments (5/20 pieces)."
+}

@@ -98,6 +98,23 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: Kenney Nature Kit 2.1 (3D models, CC0)
+- **Author / publisher**: Kenney (`https://kenney.nl/`)
+- **License**: CC0 1.0 Universal (see `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit/License.txt`)
+- **Source**: `https://kenney.nl/assets/nature-kit`
+- **Retrieved**: 2026-04-18
+- **Modifications**: Selected `.glb` meshes copied into `assets/models/environment/` under stable names (e.g. `grass_tuft_a.glb` ← `Models/GLTF format/grass.glb`) for WK32 grass variety + nature doodad scatter sourcing; originals remain under `Models/GLTF format/`.
+- **Used for**: Terrain scatter (grass tufts, flowers, rocks, bushes, logs, stumps, mushrooms) alongside existing `environment/grass.obj` path; building prefab accents (logs, rocks) where referenced from prefab JSON.
+- **File locations**:
+  - `assets/models/Models/GLTF format/*.glb` (merged Nature Kit — factor-only shader path in tools/game)
+  - `assets/models/environment/grass_tuft_a.glb`, `grass_tuft_b.glb`, `grass_flower_red.glb`, `grass_flower_yellow.glb` (Nature Kit GLB copies; names match `ursina_renderer._environment_grass_and_doodad_model_lists` tokens)
+  - `assets/models/environment/bush_small.glb`, `bush_large.glb`, `rock_small_a.glb`, `rock_small_b.glb`, `rock_small_c.glb`, `log_wide.glb`, `stump_round.glb`, `mushroom_tan.glb` (scanner prefixes: `bush` / `rock` / `log` / `stump` / `mushroom`)
+  - `assets/models/environment/rock_gy_cluster.obj`, `rock_gy_tall.obj` (promoted from Kenney Graveyard Kit OBJ exports + `rocks-graveyard.mtl` / `rocks-tall-graveyard.mtl` in the same folder)
+  - `assets/models/environment/log_survival.obj`, `log_small.obj` (promoted from Kenney Survival Kit `tree-log.obj` / `tree-log-small.obj` + `tree-log.mtl` sidecars)
+  - Referenced by `assets/prefabs/buildings/*.json` via `pieces[].model` where applicable (prefab attribution: `kenney_nature-kit`)
+
+---
+
 ### Pack: kingdomsim_cc0_placeholders
 - **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
 - **License**: CC0-1.0

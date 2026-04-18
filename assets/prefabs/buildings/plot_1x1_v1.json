@@ -1,0 +1,71 @@
+{
+  "prefab_id": "plot_1x1_v1",
+  "building_type": "plot_1x1",
+  "footprint_tiles": [
+    1,
+    1
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit",
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/floor-flat.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-crate-ropes.glb",
+      "pos": [
+        -0.85,
+        0.0,
+        0.75
+      ],
+      "rot": [
+        0.0,
+        35.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tool-shovel.glb",
+      "pos": [
+        -0.15,
+        0.0,
+        0.2
+      ],
+      "rot": [
+        0.0,
+        -20.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK32 revised: empty 1x1 plot — leveled pad, rope crate, shovel (Retro + tools)."
+}

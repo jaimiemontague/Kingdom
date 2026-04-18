@@ -1,0 +1,107 @@
+{
+  "prefab_id": "plot_2x2_v1",
+  "building_type": "plot_2x2",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit",
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/resource-stone.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/resource-stone.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/resource-stone.glb",
+      "pos": [
+        0.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/resource-stone.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-poles.glb",
+      "pos": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK32 revised: 2x2 corner foundation stones + central scaffold (5 pieces)."
+}

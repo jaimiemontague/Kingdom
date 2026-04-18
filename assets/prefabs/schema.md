@@ -13,7 +13,7 @@ Authoritative for **`assets/prefabs/buildings/*.json`**. The Kenney assembler (`
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `prefab_id` | string | yes | Stable id; use suffix `_vN` and bump when changing a shipped prefab. |
-| `building_type` | string | yes | Matches sim building type key (e.g. `house`) — must align with `config.py` when used in-game. |
+| `building_type` | string | yes | Sim building type key (e.g. `house`) — must align with `config.py` when used in-game. **Exception (WK32):** empty-plot prefabs `plot_*x*_v1.json` use `plot_1x1` / `plot_2x2` / `plot_3x3` so they are not mistaken for playable buildings; the renderer loads them by filename for the construction ladder. |
 | `footprint_tiles` | `[int, int]` | yes | Width × depth in **tiles** `[w, d]`. Must match the sim footprint for that `building_type` when wired to gameplay. |
 | `ground_anchor_y` | number | yes | World **Y** of the building anchor / ground plane for placement (typically `0.0`). |
 | `rotation_steps` | number | yes | Degrees per toolbar “rotate step” in the tool (plan default: `90`). Stored for round-trip and future tooling. |

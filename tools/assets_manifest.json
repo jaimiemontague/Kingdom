@@ -73,14 +73,18 @@
       "grass_tuft_b",
       "grass_flower_red",
       "grass_flower_yellow",
-      "nature_bush_small",
-      "nature_bush_large",
-      "nature_rock_a",
-      "nature_rock_b",
-      "nature_rock_c",
-      "nature_log",
-      "nature_stump",
-      "nature_mushroom"
+      "bush_small",
+      "bush_large",
+      "rock_small_a",
+      "rock_small_b",
+      "rock_small_c",
+      "log_wide",
+      "stump_round",
+      "mushroom_tan",
+      "rock_gy_cluster",
+      "rock_gy_tall",
+      "log_survival",
+      "log_small"
     ]
   },
   "prefabs": {
