@@ -1,14 +1,6 @@
 # Created by Kenney (www.kenney.nl)
 
-newmtl stones
+newmtl colormap
 Kd 1 1 1
-map_Kd Textures/cobblestone.png
-
-newmtl bricks
-Kd 1 1 1
-map_Kd Textures/cobblestoneAlternative.png
-
-newmtl details
-Kd 1 1 1
-map_Kd Textures/details.png
+map_Kd Textures/colormap.png
 

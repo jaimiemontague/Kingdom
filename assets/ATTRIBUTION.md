@@ -66,6 +66,38 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: Kenney Fantasy Town Kit 2.0 (3D models, CC0)
+- **Author / publisher**: Kenney (`https://kenney.nl/`)
+- **License**: CC0 1.0 Universal (see `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_fantasy-town-kit_2.0/License.txt`)
+- **Source**: `https://kenney.nl/assets/fantasy-town-kit`
+- **Retrieved**: 2026-04-18
+- **Modifications**: All 167 `.glb` + 167 `.obj` + 167 `.mtl` files renamed with the `-fantasy-town` suffix (e.g. `cart.glb` → `cart-fantasy-town.glb`). The shared atlas `Textures/colormap.png` was renamed to `Textures/colormap-fantasy-town.png`, and every GLB's internal `images[].uri` + every OBJ `mtllib` + every MTL `map_Kd` was rewritten to match. Rationale: remove the `Textures/colormap.png` filename collision with Survival Kit + Graveyard Kit in the merged tree, and embed the pack id into each filename for easier identification in the model viewer / assembler. See `.cursor/plans/kenney_assets_models_mapping.plan.md` §3.
+- **Used for**: 3D civic / village building prefabs — walls, roofs, stairs, chimneys, banners, carts, fountains, hedges, fences, stalls, road / paving tiles, windmill / watermill, trees, rocks. Planned use: economy buildings (inn, farm, food stand, marketplace) in WK31 Part B.
+- **File locations**:
+  - `assets/models/Models/GLB format/*-fantasy-town.glb` (canonical merged path for prefab `model` fields)
+  - `assets/models/Models/GLB format/Textures/colormap-fantasy-town.png` (shared atlas)
+  - `assets/models/Models/OBJ format/*-fantasy-town.{obj,mtl}` (parallel legacy tree, kept in sync)
+  - `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_fantasy-town-kit_2.0/Models/{GLB,OBJ} format/*` (raw source of truth, identical byte-for-byte to the merged copies)
+  - Referenced by `assets/prefabs/buildings/*.json` via `pieces[].model` (prefab attribution: `kenney_fantasy-town-kit_2.0`)
+
+---
+
+### Pack: Kenney Graveyard Kit 5.0 (3D models, CC0)
+- **Author / publisher**: Kenney (`https://kenney.nl/`)
+- **License**: CC0 1.0 Universal (see `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_graveyard-kit_5.0/License.txt`)
+- **Source**: `https://kenney.nl/assets/graveyard-kit`
+- **Retrieved**: 2026-04-18
+- **Modifications**: All 91 `.glb` + 91 `.obj` + 91 `.mtl` files renamed with the `-graveyard` suffix (e.g. `altar-stone.glb` → `altar-stone-graveyard.glb`). The shared atlas `Textures/colormap.png` was renamed to `Textures/colormap-graveyard.png`, and every GLB's internal `images[].uri` + every OBJ `mtllib` + every MTL `map_Kd` was rewritten to match. Rationale: same as Fantasy Town — remove the `Textures/colormap.png` filename collision and embed the pack id into each filename. See `.cursor/plans/kenney_assets_models_mapping.plan.md` §3.
+- **Used for**: 3D gothic / cemetery props (altars, crypts, coffins, gravestones, iron fences, lanterns, pumpkins, pines) plus **5 animated-ready characters** (`character-ghost-graveyard`, `character-keeper-graveyard`, `character-skeleton-graveyard`, `character-vampire-graveyard`, `character-zombie-graveyard`) usable as enemy placeholders. Planned use: enemy lairs (skeleton_crypt, bandit_camp, etc.) and atmospheric prop dressing.
+- **File locations**:
+  - `assets/models/Models/GLB format/*-graveyard.glb` (canonical merged path for prefab `model` fields)
+  - `assets/models/Models/GLB format/Textures/colormap-graveyard.png` (shared atlas)
+  - `assets/models/Models/OBJ format/*-graveyard.{obj,mtl}` (parallel legacy tree, kept in sync)
+  - `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_graveyard-kit_5.0/Models/{GLB,OBJ} format/*` (raw source of truth, identical byte-for-byte to the merged copies)
+  - Referenced by `assets/prefabs/buildings/*.json` via `pieces[].model` (prefab attribution: `kenney_graveyard-kit_5.0`)
+
+---
+
 ### Pack: kingdomsim_cc0_placeholders
 - **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
 - **License**: CC0-1.0

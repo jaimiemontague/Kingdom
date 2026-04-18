@@ -40,7 +40,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
 
-# Canonical Kenney sources (no merged GLB/GLTF trees — avoids duplicate basenames).
+# Canonical Kenney sources (no merged GLB/GLTF trees — avoids duplicate basenames
+# when packs ship overlapping filenames). Reading per-pack from raw downloads
+# also means each piece resolves its own textures. Fantasy Town and Graveyard
+# have been renamed with pack suffixes (``*-fantasy-town.glb`` /
+# ``*-graveyard.glb``) + pack-suffixed colormaps since WK31 round-2, so their
+# raw-tree files are already disambiguated in the viewer's grid.
 KENNEY_RAW_DOWNLOADS_DIR = "Kenny raw downloads (for exact paths)"
 # Order matches ``kenney_assets_models_mapping.plan.md`` §1; folder names match disk.
 # Cursor Pixel Pack last (far right): no GLB/GLTF in that download — keeps empty column out of the way.
@@ -49,6 +54,8 @@ KENNEY_PACKS_ORDERED: tuple[tuple[str, str], ...] = (
     ("kenney_nature-kit", "Nature Kit"),
     ("kenney_retro-fantasy-kit", "Retro Fantasy Kit"),
     ("kenney_survival-kit", "Survival Kit"),
+    ("kenney_fantasy-town-kit_2.0", "Fantasy Town Kit"),
+    ("kenney_graveyard-kit_5.0", "Graveyard Kit"),
     ("kenney_cursor-pixel-pack", "Cursor Pixel Pack"),
 )
 

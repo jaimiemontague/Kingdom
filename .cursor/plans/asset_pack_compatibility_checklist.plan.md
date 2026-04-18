@@ -1,3 +1,10 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # Revised Asset Pack Compatibility Checklist
 
 Here’s the full revised checklist, assuming your current terrain foundation stays as the Kenney-derived set in `assets/models/environment` with the current visual language of:

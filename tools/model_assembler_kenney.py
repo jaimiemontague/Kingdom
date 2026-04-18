@@ -47,13 +47,41 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # Only .glb/.gltf pieces; OBJ/FBX/DAE are duplicate Kenney exports we avoid.
 MODEL_EXTS = {".glb", ".gltf"}
 
-# Folders scanned for the left-side piece library. Matches wk28 plan 4.4.
-# GLB format     -> mostly Retro Fantasy Kit + Survival Kit (textured)
-# GLTF format    -> Nature Kit (factor-only; needs custom lit shader)
+# Folders scanned for the left-side piece library.
+#
+# Merged trees:
+#   ``Models/GLB format``  -> Retro Fantasy (named textures) + Survival (shared
+#   ``colormap.png``) + Blocky Characters (``texture-a.png`` ... ``texture-r.png``)
+#   + Fantasy Town (``*-fantasy-town.glb`` + ``Textures/colormap-fantasy-town.png``)
+#   + Graveyard (``*-graveyard.glb`` + ``Textures/colormap-graveyard.png``). Since
+#   WK31 round-2 every Fantasy Town / Graveyard file carries a pack suffix and
+#   references a pack-suffixed colormap, so the merged tree is collision-free
+#   and each piece's textures resolve correctly.
+#   ``Models/GLTF format`` -> Nature Kit (factor-only; needs custom lit shader)
+#
+# See ``kenney_assets_models_mapping.plan.md`` §3 and §4 for the rename design.
 PIECE_LIB_SUBDIRS: tuple[str, ...] = (
     "Models/GLB format",
     "Models/GLTF format",
 )
+
+# Filename-suffix -> Kenney pack id for attribution inference on merged pieces.
+FILENAME_SUFFIX_PACK_IDS: dict[str, str] = {
+    "-fantasy-town": "kenney_fantasy-town-kit_2.0",
+    "-graveyard": "kenney_graveyard-kit_5.0",
+}
+
+# Raw-tree pack folder -> Kenney pack id (for prefab JSON ``attribution``) when
+# a human explicitly authors a prefab with a raw-tree ``Models/Kenny raw
+# downloads.../<pack>/...`` model path (uncommon after the WK31 rename).
+RAW_TREE_PACK_IDS: dict[str, str] = {
+    "kenney_fantasy-town-kit_2.0": "kenney_fantasy-town-kit_2.0",
+    "kenney_graveyard-kit_5.0": "kenney_graveyard-kit_5.0",
+    "kenney_retro-fantasy-kit": "kenney_retro-fantasy-kit",
+    "kenney_survival-kit": "kenney_survival-kit",
+    "kenney_nature-kit": "kenney_nature-kit",
+    "kenney_blocky-characters_20": "kenney_blocky-characters_20",
+}
 
 ASSETS_MODELS = PROJECT_ROOT / "assets" / "models"
 DEFAULT_OUT_DIR = PROJECT_ROOT / "assets" / "prefabs" / "buildings"
@@ -119,13 +147,31 @@ class PrefabState:
 # -- Library scan ---------------------------------------------------------------
 
 
+def _pack_id_for_filename_suffix(name: str) -> str | None:
+    """Return the Kenney pack id for a filename that carries a pack suffix.
+
+    E.g. ``cart-fantasy-town.glb`` -> ``kenney_fantasy-town-kit_2.0``.
+    Returns ``None`` for filenames that don't carry any known suffix.
+    """
+    stem = Path(name).stem
+    for sfx, pack_id in FILENAME_SUFFIX_PACK_IDS.items():
+        if stem.endswith(sfx):
+            return pack_id
+    return None
+
+
 def _collect_piece_library(assets_models: Path) -> list[tuple[str, str]]:
     """Return a sorted list of (display_name, rel_path_posix) for selectable pieces.
 
     rel_path_posix is relative to ``assets/models/`` (POSIX slashes) so it goes
     directly into the saved JSON ``model`` field.
+
+    Display names are the plain filename (the WK31 rename embedded the pack id
+    into the filename itself for Fantasy Town / Graveyard, e.g.
+    ``cart-fantasy-town.glb``, so no extra UI tag is needed).
     """
     out: list[tuple[str, str]] = []
+    seen_rel: set[str] = set()
     for sub in PIECE_LIB_SUBDIRS:
         sub_dir = assets_models / sub
         if not sub_dir.is_dir():
@@ -137,26 +183,58 @@ def _collect_piece_library(assets_models: Path) -> list[tuple[str, str]]:
                 rel = p.relative_to(assets_models).as_posix()
             except ValueError:
                 continue
+            if rel in seen_rel:
+                continue
+            seen_rel.add(rel)
             out.append((p.name, rel))
     return out
 
 
 def _guess_attribution(pieces: list[PlacedPiece]) -> list[str]:
-    """Infer a best-effort attribution list from the subdirs of placed pieces.
+    """Infer a best-effort attribution list from the placed pieces' rel paths.
 
-    v0.1: the merged ``Models/GLB format`` tree is ambiguous (Retro Fantasy +
-    Survival in the same folder), so we attribute both when any GLB-format
-    piece is used. The human (Agent 15) should trim this via the "Attrib" UI
-    before committing a real prefab.
+    Filename-suffixed pieces (``*-fantasy-town.glb`` / ``*-graveyard.glb``) are
+    attributed via :data:`FILENAME_SUFFIX_PACK_IDS` — this covers every piece
+    authored from the merged tree after the WK31 rename.
+
+    Raw-tree pieces (``Models/Kenny raw downloads (for exact paths)/kenney_*/...``)
+    attribute directly to their pack id via :data:`RAW_TREE_PACK_IDS`.
+
+    Other merged-tree pieces fall back to the well-known per-folder pair:
+    ``Models/GLB format`` -> Retro Fantasy + Survival (+ Blocky Characters if
+    any ``character-<a..r>.glb`` is placed), ``Models/GLTF format`` -> Nature
+    Kit. The human should trim via the "Attrib" UI before committing a real
+    prefab.
     """
-    subdirs = {Path(p.model_rel).parts[:2] for p in pieces}  # e.g. ("Models", "GLB format")
     out: set[str] = set()
-    for parts in subdirs:
-        joined = "/".join(parts)
-        if joined == "Models/GLB format":
-            out.add("kenney_retro-fantasy-kit")
-            out.add("kenney_survival-kit")
-        elif joined == "Models/GLTF format":
+    for piece in pieces:
+        rel = piece.model_rel
+        filename = Path(rel).name
+
+        pack_from_suffix = _pack_id_for_filename_suffix(filename)
+        if pack_from_suffix is not None:
+            out.add(pack_from_suffix)
+            continue
+
+        parts = Path(rel).parts
+        matched = False
+        for seg in parts:
+            if seg in RAW_TREE_PACK_IDS:
+                out.add(RAW_TREE_PACK_IDS[seg])
+                matched = True
+                break
+        if matched:
+            continue
+
+        head = "/".join(parts[:2])
+        if head == "Models/GLB format":
+            stem = Path(filename).stem
+            if stem.startswith("character-") and len(stem) == len("character-x"):
+                out.add("kenney_blocky-characters_20")
+            else:
+                out.add("kenney_retro-fantasy-kit")
+                out.add("kenney_survival-kit")
+        elif head == "Models/GLTF format":
             out.add("kenney_nature-kit")
     return sorted(out)
 

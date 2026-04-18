@@ -148,7 +148,7 @@ flowchart TD
 
 | Outcome | Next action |
 |---|---|
-| All checklist items green, FPS fine | Open WK31 Economy Buildings (see `.cursor/plans/wk31_economy_buildings.plan.md`): Inn + Farm + Food Stand + Gnome Hovel as prefabs. |
+| All checklist items green, FPS fine | Open WK31 combined plan (see `.cursor/plans/wk31_kingdom_perf_and_economy.plan.md`): Part A perf/scale first, then Part B — Inn + Farm + Food Stand + Gnome Hovel as prefabs. |
 | Visual OK, FPS drops >30% | Open WK31 as perf hedge instead: Agent 12 adds a prefab baker (`tools/bake_prefab.py` → `assets/models/buildings/<id>_baked.glb`); Agent 03 adds a "baked-first, JSON-second" resolution path. Economy buildings slide to WK32. |
 | Visual wrong (classifier, scale, footprint) | Targeted `wk30_rN_hotfix` round; no new building types until green. |
 
@@ -190,7 +190,7 @@ $env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina
 - [.cursor/plans/wk27_sprint_2_1_buildings.plan.md](./wk27_sprint_2_1_buildings.plan.md) — **DEPRECATED** header; kept for history only.
 - [.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md](./wk28_assembler_spike_41c2daeb.plan.md) — tool + schema (closed).
 - [.cursor/plans/wk29_first_house_playtest.plan.md](./wk29_first_house_playtest.plan.md) — first prefab + gated loader (closed).
-- [.cursor/plans/wk31_economy_buildings.plan.md](./wk31_economy_buildings.plan.md) — next sprint (skeleton): Inn + Farm + Food Stand + Gnome Hovel.
+- [.cursor/plans/wk31_kingdom_perf_and_economy.plan.md](./wk31_kingdom_perf_and_economy.plan.md) — WK31 combined: Part A FPS + pack scale; Part B economy buildings (Inn, Farm, Food Stand, Gnome Hovel).
 - [.cursor/plans/kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md) — two-path shader classifier.
 - [.cursor/plans/kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md) — Kenney pack folder map.
 - [assets/prefabs/schema.md](../../assets/prefabs/schema.md) — prefab JSON contract (v0.1).

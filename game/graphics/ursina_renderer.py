@@ -6,7 +6,7 @@ Perspective view: floor plane is X/Z (Y up). Simulation pixels (x, y) map to
 (PM WK19 decision).
 
 v1.5 Sprint 1.2 (Agent 03): Terrain is built from discrete 3D meshes under
-``assets/models/environment/`` (grass/path/water tint + tree/rock props), parented
+``assets/models/environment/`` (grass/path_stone road tiles + water tint + tree/rock props), parented
 under one root Entity — no TileSpriteLibrary bake or terrain atlas.
 
 Most buildings use BuildingSpriteLibrary on a single billboard quad; **castle**, **house**,
@@ -145,6 +145,27 @@ def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
     jz = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 0.38
     yaw = float((tx * 127 + ty * 331) % 360)
     return jx, jz, yaw
+
+
+def _apply_kenney_terrain_path_shading(ent: Entity, *, model_label: str) -> None:
+    """Kenney Nature Kit path tiles (path_stone) need the same glTF classifier as prefabs.
+
+    Otherwise factor-only / vertex materials read as flat white under the default lit shader.
+    See ``tools/model_viewer_kenney._apply_gltf_color_and_shading`` and
+    ``.cursor/plans/kenney_gltf_ursina_integration_guide.md`` §5.
+    """
+    try:
+        from tools.model_viewer_kenney import _apply_gltf_color_and_shading
+
+        if getattr(ent, "model", None) is None:
+            return
+        _apply_gltf_color_and_shading(
+            ent.model,
+            debug_materials=False,
+            model_label=model_label,
+        )
+    except Exception:
+        pass
 
 
 def _building_type_str(bt) -> str:
@@ -739,7 +760,8 @@ class UrsinaRenderer:
         ts = int(config.TILE_SIZE)
         m = float(TERRAIN_SCALE_MULTIPLIER)
         grass_model = _environment_model_path("grass")
-        path_model = _environment_model_path("path")
+        # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
+        path_model = _environment_model_path("path_stone")
         rock_model = _environment_model_path("rock")
         tree_model = _environment_model_path("tree_pine")
         tm = m * float(TREE_SCALE_MULTIPLIER)
@@ -776,7 +798,7 @@ class UrsinaRenderer:
                 wx, wz = px_to_world(cx_px, cy_px)
 
                 if tile == TileType.PATH:
-                    Entity(
+                    path_ent = Entity(
                         parent=root,
                         model=path_model,
                         position=(wx, 0.0, wz),
@@ -785,6 +807,9 @@ class UrsinaRenderer:
                         collision=False,
                         double_sided=True,
                         add_to_scene_entities=False,
+                    )
+                    _apply_kenney_terrain_path_shading(
+                        path_ent, model_label="environment/path_stone"
                     )
                 elif tile == TileType.WATER:
                     Entity(
@@ -837,7 +862,10 @@ class UrsinaRenderer:
                             add_to_scene_entities=False,
                         )
 
-        root.flattenStrong()
+        # Do not flattenStrong() the terrain root: Panda3D merge can strip per-tile glTF
+        # material state and turn Kenney path_stone (and similar) into uniform white strips.
+        # WK22 perf note: revisit batching once path meshes use a single atlas or baked strip.
+        # root.flattenStrong()
         self._terrain_entity = root
 
     @staticmethod

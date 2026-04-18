@@ -5939,6 +5939,158 @@
                     }
                 }
             }
+        },
+        "wk31-perf-fps-and-pack-scale": {
+            "sprint_meta": {
+                "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+                "notes": "Human-prioritized 2026-04-17: Combined plan — Part A: FPS + pack scale; Part B: economy prefabs (Inn/Farm/Food Stand/Gnome Hovel). See wk31_kingdom_perf_and_economy.plan.md."
+            },
+            "rounds": {
+                "wk31_r1_execution": {
+                    "round_meta": {
+                        "prompt_set_id": "wk31_r1",
+                        "build_target": "FPS_Restoration + PackScale_Tooling",
+                        "visibility": "Implementers: 03, 10, 12, 15. Consults: 09, 11. Silent: 02, 04, 05, 06, 07, 08, 13, 14.",
+                        "pm_authored_at_local": "2026-04-17T00:00:00"
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Assigned",
+                        "focus": "Restore playable Ursina frame times after recent prefab/3D work; normalize per-pack model scale so wall pieces and assembler grid placement match Retro Fantasy Kit quality (no large interior gaps in wall runs).",
+                        "human_request": "FPS has become laggy; only Retro pack tiles cleanly \u2014 other packs need resizing so pieces fill grid cells consistently in viewer, assembler, and in-game prefabs.",
+                        "economy_batch_deferred": "Economy/living prefabs (Inn, Farm, Food Stand, Gnome Hovel) are Part B of .cursor/plans/wk31_kingdom_perf_and_economy.plan.md — activate after Part A closes green.",
+                        "gates": {
+                            "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS",
+                            "validate_assets": "python tools/validate_assets.py --report exit 0",
+                            "determinism": "tools/determinism_guard expectations unchanged",
+                            "prefab_baker": "Out of scope unless Agent 10 concludes JSON prefabs cannot hit budget after mitigations \u2014 then PM opens a dedicated baker sprint"
+                        }
+                    },
+                    "pm_bug_tickets": [],
+                    "pm_feature_requests": [
+                        {
+                            "id": "WK31-PERF-001",
+                            "title": "Ursina FPS / frame time restoration",
+                            "owner_agent": "03_TechnicalDirector_Architecture",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md — Part A.1",
+                            "acceptance": [
+                                "Agent 10 delivers baseline + post-fix ms/frame (F2) on a representative kingdom view; prioritized hotspot list.",
+                                "Agent 03 implements mitigations; no determinism regressions.",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        {
+                            "id": "WK31-SCALE-001",
+                            "title": "Pack-aware default scale + grid alignment (viewer, assembler, runtime)",
+                            "owner_agent": "12_ToolsDevEx_Lead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md — Part A.2",
+                            "acceptance": [
+                                "Documented pack/folder \u2192 default scale policy; Retro Fantasy Kit is reference.",
+                                "model_viewer_kenney + model_assembler_kenney + ursina prefab path share one documented source of truth.",
+                                "Existing prefabs revisited by Agent 15 for gap fixes after defaults land."
+                            ]
+                        }
+                    ],
+                    "pm_integration_order": [
+                        "Agent 10: baseline + hotspot report (informs 03).",
+                        "Agent 12: pack scale table + tool/runtime wiring (informs 15).",
+                        "Agent 03: renderer/sim perf fixes from 10 findings.",
+                        "Agent 15: prefab touch-ups for wall/grid cohesion using new defaults.",
+                        "Agent 09: visual consult; Agent 11: gates."
+                    ],
+                    "pm_next_actions_by_agent": {
+                        "10": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Establish FPS baseline: F2 overlay on Ursina with a busy scene (castle + several guilds/houses + environment as available).",
+                                "Run python tools/perf_benchmark.py where useful to separate sim vs render suspicion.",
+                                "Deliver a short prioritized hotspot list with file/function pointers for Agent 03.",
+                                "Re-measure after Agent 03 lands fixes; log before/after in agent_10 log."
+                            ],
+                            "acceptance_criteria": [
+                                "WK31-PERF-001 measurement + recommendation narrative complete.",
+                                "If JSON prefab path cannot meet budget after reasonable fixes, flag baker sprint to PM (do not implement baker yourself)."
+                            ]
+                        },
+                        "03": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Implement performance mitigations from Agent 10 findings targeting Ursina renderer and any sim hot paths shown by profiling.",
+                                "Preserve determinism: no wall-clock, no unseeded RNG in sim paths.",
+                                "If classifier/helpers move, keep tools and game in sync per kenney integration guide."
+                            ],
+                            "acceptance_criteria": [
+                                "WK31-PERF-001 engineering acceptance.",
+                                "tools/determinism_guard and python tools/qa_smoke.py --quick both PASS"
+                            ]
+                        },
+                        "12": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Add pack-aware default uniform scale (or max_extent per pack) so non-Retro Kenney pieces approximate Retro grid usability.",
+                                "Align model_viewer_kenney grid cell behavior with model_assembler spawn defaults; document Retro = 1.0 reference.",
+                                "Ensure game-time prefab instantiation applies the same policy as tools (single source of truth).",
+                                "Update tools docs / comments so Agent 15 knows how to pick pieces without wall gaps."
+                            ],
+                            "acceptance_criteria": [
+                                "WK31-SCALE-001 acceptance items.",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "15": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "After Agent 12 lands pack defaults, revisit shipped prefabs (WK29 house + WK30 military set) and adjust per-piece scale/positions only as needed for visual wall continuity.",
+                                "Do not change config.py footprints; fix via prefab JSON only."
+                            ],
+                            "acceptance_criteria": [
+                                "Log notes + evidence screenshots or assembler confirmation for at least one revised prefab if gaps were visible pre-fix."
+                            ]
+                        },
+                        "09": {
+                            "status": "consult",
+                            "asks": [
+                                "After 12+15 land: ~5-minute review of wall readability and pack cohesion at default camera; file notes to Agent 15 if needed."
+                            ]
+                        },
+                        "11": {
+                            "status": "consult",
+                            "asks": [
+                                "Post-merge: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report; assign regressions to 03 / 12 / 15 by symptom."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are activated for sprint wk31-perf-fps-and-pack-scale, round wk31_r1_execution.\n\n1) Open .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk31-perf-fps-and-pack-scale\"].rounds[\"wk31_r1_execution\"].\n2) Read pm_agent_prompts[YOUR_AGENT_NUMBER] and pm_next_actions_by_agent[YOUR_AGENT_NUMBER].\n3) Full spec: .cursor/plans/wk31_kingdom_perf_and_economy.plan.md (Part A for this round)\n\nWhen done: update your agent log; run python tools/qa_smoke.py --quick (must PASS); report evidence back to PM.",
+                    "pm_agent_prompts": {
+                        "10": "WK31 R1 (Performance \u2014 HIGH): Baseline Ursina FPS using F2 overlay on a representative busy scene; optional perf_benchmark.py for sim/render split. Produce a prioritized hotspot list with pointers for Agent 03. Re-measure after fixes. Log before/after. If JSON prefabs cannot hit budget after reasonable mitigations, flag baker sprint to PM only.",
+                        "03": "WK31 R1 (Technical Director \u2014 HIGH): Implement perf fixes from Agent 10 hotspots (Ursina renderer focus; sim if profiled). No determinism regressions. determinism_guard + qa_smoke --quick must PASS.",
+                        "12": "WK31 R1 (Tools DevEx \u2014 MEDIUM): Pack-aware default scale / max_extent so non-Retro Kenney pieces tile like Retro in viewer and assembler; wire same policy into runtime prefab load. Single source of truth; document Retro reference. qa_smoke --quick PASS.",
+                        "15": "WK31 R1 (ModelAssembler \u2014 MEDIUM): After tool defaults land, touch up existing prefabs for wall/grid gaps using per-piece JSON scale/position only. No config.py footprint edits.",
+                        "09": "WK31 R1 (Art Director \u2014 LOW, CONSULT): Quick cohesion pass after scale work; notes to Agent 15 only.",
+                        "11": "WK31 R1 (QA \u2014 LOW, CONSULT): Post-merge qa_smoke --quick + validate_assets --report."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "10",
+                            "03",
+                            "12",
+                            "15",
+                            "09",
+                            "11"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "04",
+                            "05",
+                            "06",
+                            "07",
+                            "08",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "Agent 10 (HIGH intelligence): profile Ursina + baseline/measurement narrative and prioritized hotspots for engineering. Agent 03 (HIGH intelligence): implement renderer/sim mitigations from findings, determinism-safe. Agent 12 (MEDIUM intelligence): pack scale policy + tool/runtime alignment, schema/docs. Agent 15 (MEDIUM intelligence): prefab touch-ups after new defaults, silhouette/wall continuity. Agent 09 (LOW intelligence, consult): short cohesion review. Agent 11 (LOW intelligence, consult): gate runner."
+                    }
+                }
+            }
         }
     }
 }
