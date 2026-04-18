@@ -157,6 +157,16 @@ This produces a shading range of roughly 0.38 (deep shadow) to ~1.0 (full light)
 | **Ad-hoc axis fix** | Applying **`-90°` on X** to "fix Z-up vs Y-up" **laid models on their side** in our setup and made **thin** props nearly invisible from above. **Do not** apply a global rotation without verifying bounds and one known-good asset. |
 | **Scale** | Uniform scale from **tight bounds** to a max extent is fine; avoid **random Y translation** based on bounds unless you confirm the asset's ground plane in a DCC tool. |
 
+### 7.1 Pack scale vs pack color (WK31 / WK32 — single source: `tools/kenney_pack_scale.py`)
+
+| Policy | Role |
+|--------|------|
+| **`pack_extent_multiplier_for_rel(rel)`** | Uniform fit / prefab piece scale vs **Retro Fantasy Kit = 1.0** (grid feel). Used by `model_viewer_kenney`, `model_assembler_kenney`, `ursina_renderer._load_prefab_instance`, and wall-flush tools. |
+| **`pack_color_multiplier_for_rel(rel)`** | Albedo **tint** vs Retro = **1.0** (unchanged). Non-Retro packs use **0.75** (~25% darker): Survival, Nature, Fantasy Town, Graveyard, Blocky. **Retro** merged `Models/GLB format/` defaults and **cursor-pixel** stay **1.0**. **`environment/`** promoted meshes use the **Nature Kit** value (**0.75**) so grass / tree / rock in terrain match Nature-tinted kit pieces (WK32-BUG-005 retune 2026-04-18). |
+| **`apply_kenney_pack_color_tint_to_entity(entity, rel)`** | After `_apply_gltf_color_and_shading`, sets `Entity.color` to `(m,m,m)` from `pack_color_multiplier_for_rel` so textured + factor-only paths both modulate consistently. |
+
+Routing for **color** mirrors **extent** (same raw-folder names, merged `Models/GLB format` Survival vs Retro disambiguation, `Models/GLTF format` → Nature, suffix rules for Fantasy Town / Graveyard / Blocky). Paths may be passed either as `Models/...` / `environment/...` **or** with an `assets/models/` prefix (scatter entities use full `assets/models/environment/...` strings — the helper strips the prefix before classification). See WK32 workstream E in `wk32_camera_construction_nature_polish.plan.md`.
+
 ---
 
 ## 8. Debugging materials (`--debug-materials` flag)

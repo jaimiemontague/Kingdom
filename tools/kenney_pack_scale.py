@@ -29,10 +29,16 @@ pieces in prefabs get the Survival multiplier without raw paths.
 
 See: ``.cursor/plans/wk31_kingdom_perf_and_economy.plan.md`` Part A.2.1,
 ``.cursor/plans/kenney_assets_models_mapping.plan.md``.
+
+**WK32 / WK32-BUG-005:** ``pack_color_multiplier_for_rel`` + ``apply_kenney_pack_color_tint_to_entity`` —
+non-Retro Kenney packs use multiplier **0.75** (~25% darker vs Retro **1.00**); promoted
+``environment/`` meshes use the Nature Kit tint (also **0.75**). **Extent** for ``environment/``
+stays **1.0** in ``pack_extent_multiplier_for_rel``. See plan workstream E + PM revision 2026-04-18.
 """
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 # Grid fit reference: uniform-fit target (max axis length after fit) for Retro.
 RETRO_REFERENCE_MAX_EXTENT = 5.0
@@ -48,6 +54,19 @@ _PACK_EXTENT_MULTIPLIER_BY_FOLDER: dict[str, float] = {
     "kenney_fantasy-town-kit_2.0": 1.10,
     "kenney_graveyard-kit_5.0": 1.10,
     "kenney_blocky-characters_20": 1.0,
+    "kenney_cursor-pixel-pack": 1.0,
+}
+
+# WK32: RGB multiplier vs Retro (1.0 = unchanged). Applied as Ursina ``Entity.color``
+# modulate after ``_apply_gltf_color_and_shading`` (viewer, assembler, game).
+# WK32-BUG-005 retune (2026-04-18): 0.60 was too strong → **0.75** (~25% darker vs Retro).
+_PACK_COLOR_MULTIPLIER_BY_FOLDER: dict[str, float] = {
+    "kenney_retro-fantasy-kit": 1.0,
+    "kenney_survival-kit": 0.75,
+    "kenney_nature-kit": 0.75,
+    "kenney_fantasy-town-kit_2.0": 0.75,
+    "kenney_graveyard-kit_5.0": 0.75,
+    "kenney_blocky-characters_20": 0.75,
     "kenney_cursor-pixel-pack": 1.0,
 }
 
@@ -180,3 +199,63 @@ def pack_extent_multiplier_for_rel(rel: str) -> float:
 def pack_max_extent_for_rel(rel: str, *, base_max_extent: float = RETRO_REFERENCE_MAX_EXTENT) -> float:
     """Max axis length after uniform fit (viewer / wall-flush tools)."""
     return float(base_max_extent) * pack_extent_multiplier_for_rel(rel)
+
+
+def pack_color_multiplier_for_rel(rel: str) -> float:
+    """Per-pack albedo tint vs Retro (1.0 = no darkening). Mirrors ``pack_extent_multiplier_for_rel`` routing."""
+    r = _norm_rel(rel)
+    # Ursina ``Entity(model="assets/models/...")`` passes full repo-relative paths; prefab pieces use ``Models/...``.
+    if r.startswith("assets/models/"):
+        r = r[len("assets/models/") :]
+    if not r:
+        return 1.0
+    # Promoted env/ meshes (grass, tree_pine, etc.) match Nature Kit albedo — same tint as GLTF path.
+    if r.startswith("environment/"):
+        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_nature-kit"])
+
+    parts = tuple(Path(r).parts)
+    raw_mark = "Kenny raw downloads (for exact paths)"
+    if raw_mark in parts:
+        i = parts.index(raw_mark)
+        if i + 1 < len(parts):
+            folder = parts[i + 1]
+            return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER.get(folder, 1.0))
+
+    name = Path(r).name
+    nl = name.lower()
+    if nl.endswith("-fantasy-town.glb") or nl.endswith("-fantasy-town.gltf"):
+        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_fantasy-town-kit_2.0"])
+    if nl.endswith("-graveyard.glb") or nl.endswith("-graveyard.gltf"):
+        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_graveyard-kit_5.0"])
+
+    stem_l = Path(nl).stem
+    if stem_l.startswith("character-") and len(stem_l) == len("character-x"):
+        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_blocky-characters_20"])
+
+    if r.startswith("Models/GLB format/"):
+        bn = Path(r).name.lower()
+        if bn in _MERGED_COLLISION_PACK:
+            side = _MERGED_COLLISION_PACK[bn]
+            if side == "survival":
+                return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_survival-kit"])
+            return 1.0
+        if bn in _MERGED_SURVIVAL_ONLY_BASENAMES:
+            return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_survival-kit"])
+        return 1.0
+    if r.startswith("Models/GLTF format/"):
+        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_nature-kit"])
+
+    return 1.0
+
+
+def apply_kenney_pack_color_tint_to_entity(entity: Any, rel: str) -> None:
+    """WK32: modulate ``Entity.color`` by ``pack_color_multiplier_for_rel`` (lazy Ursina import)."""
+    m = float(pack_color_multiplier_for_rel(rel))
+    if m >= 0.9999:
+        return
+    try:
+        from ursina import color as uc
+
+        entity.color = uc.rgb(m, m, m)
+    except Exception:
+        pass

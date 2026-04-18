@@ -2572,6 +2572,112 @@
         "blockers": []
       }
     }
+  },
+  "wk32-camera-construction-nature-polish": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+      "notes": "WK32 E pack color tint; B.6 manifest optional construction prefab ids"
+    },
+    "rounds": {
+      "wk32_r1_execution": {
+        "round_id": "wk32_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            "tools/model_viewer_kenney.py",
+            "tools/model_assembler_kenney.py",
+            "tools/wall_flush_pair_kenney.py",
+            "game/graphics/ursina_renderer.py",
+            "tools/assets_manifest.json",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md"
+          ],
+          "summary": "Extended kenney_pack_scale with pack_color_multiplier_for_rel (mirrors extent routing) and apply_kenney_pack_color_tint_to_entity — sets Ursina Entity.color to (m,m,m) after _apply_gltf_color_and_shading. Defaults: Retro/merged Retro/cursor-pixel 1.0; Survival/Nature/Fantasy Town/Graveyard/Blocky 0.60. Wired in model_viewer_kenney, model_assembler_kenney, ursina_renderer _load_prefab_instance, wall_flush_pair_kenney. Integration guide §7.1. assets_manifest prefabs.buildings.optional: nine WK32 construction-stage ids (plots + pilot intermediates); validator warns until Agent 15 adds JSON files."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "WARN missing optional prefab JSON for new WK32 ids until Agent 15 lands; other WARNs pre-existing"
+          }
+        },
+        "blockers": [],
+        "screenshots": []
+      },
+      "wk32_r1_revision_2026_04_18": {
+        "round_id": "wk32_r1_revision_2026_04_18",
+        "status": "done",
+        "pm_ref": "pm_status_summary.revision_2026_04_18 + pm_agent_prompts[12] rewrite",
+        "pre_code_checklist": {
+          "file_map": [
+            "tools/kenney_pack_scale.py — pack_extent_multiplier_for_rel, pack_color_multiplier_for_rel, apply_kenney_pack_color_tint_to_entity; per-pack tables",
+            "tools/model_viewer_kenney.py — gallery loads models; apply tint after _apply_gltf_color_and_shading",
+            "tools/model_assembler_kenney.py — piece spawn; tint after shading",
+            "tools/wall_flush_pair_kenney.py — diagnostic pair spawn; tint after shading",
+            "game/graphics/ursina_renderer.py — prefab pieces + _finalize_kenney_scatter_entity(path) uses pack tint",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md — §7.1 policy doc",
+            "tools/assets_manifest.json — prefabs.buildings required/optional lists"
+          ],
+          "architecture_options": [
+            "OPT A — In pack_color_multiplier_for_rel: retune table 0.60→0.75; env/ → Nature kit value; normalize assets/models/ prefix. PROS: one module, matches PM. CONS: future non-Nature env assets get same tint. RISK: LOW. EFFORT: XS. CHOSEN.",
+            "OPT B — Filename pack suffixes for env/. PROS: precise per-file. CONS: renames, Agent 15 churn. RISK: MED. EFFORT: M. REJECTED this sprint.",
+            "OPT C — Separate _ENV_COLOR_MULTIPLIER constant. PROS: tunable. CONS: second knob. RISK: LOW. EFFORT: S. REJECTED — PM asked to tie env/ to Nature routing."
+          ],
+          "existing_code_conflicts": [
+            "pack_extent_multiplier_for_rel must keep environment/ → 1.0 — independent; do not change.",
+            "Scatter passes model paths as assets/models/environment/... — required stripping prefix in pack_color_multiplier_for_rel so env/ tint and classification apply (fixed in this revision).",
+            "None further: no tests snapshot 0.60 (pytest -q: 93 passed)."
+          ]
+        },
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            ".cursor/plans/kenney_gltf_ursina_integration_guide.md",
+            "tools/assets_manifest.json",
+            "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png"
+          ],
+          "summary": "WK32-BUG-005 / WK32-FEAT-009: _PACK_COLOR_MULTIPLIER_BY_FOLDER non-Retro 0.60→0.75; environment/ uses Nature value; strip leading assets/models/ so Ursina scatter paths classify as environment/. Manifest: plot_1x1_v1, plot_2x2_v1, plot_3x3_v1 moved from optional to required (Agent 15 JSON on disk). Six pilot intermediates remain optional. Albedo comparison PNG (three swatches: Retro 1.0, prior 0.60, retune 0.75)."
+        },
+        "how_to_test": [
+          "python -m pytest tests -q",
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "pytest": {
+            "command": "python -m pytest tests -q",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "93 passed"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing (flat models, some env manifest kinds not yet on disk)"
+          }
+        },
+        "screenshots": [
+          "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png — three-panel albedo modulate (white×1.0, ×0.60 prior policy, ×0.75 retune); in-game visual check still recommended for Agent 09"
+        ],
+        "blockers": []
+      }
+    }
   }
 }
 

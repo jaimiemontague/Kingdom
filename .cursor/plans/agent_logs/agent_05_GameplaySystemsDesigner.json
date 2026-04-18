@@ -1460,7 +1460,7 @@
                 "WK32-BUG-006": "verified (pm_note: code pre-existed; automated + evidence logged)"
               ],
               "screenshots": [
-                "docs/screenshots/wk32_nature/20260418_1630_agent05_verification/ — pygame deterministic capture (base_overview scenario, seed 7); manifest.json lists PNGs. Interactive Ursina mid-build peasant frame optional for human QA; sim contract covered by tests."
+                "docs/screenshots/wk32_nature/20260418_1630_agent05_verification/ — pygame deterministic capture (base_overview scenario, seed 7); manifest.json + 4 PNGs committed (git add -f; parent docs/screenshots/ is gitignored by default)."
               ],
               "coordination": [
                 "Agent 03: consume construction_progress in Ursina prefab resolver (WK32-BUG-002); PM emergency scatter/camera diffs are Agent 03 to commit or revert per pm_role_note.",
