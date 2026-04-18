@@ -4125,6 +4125,73 @@
           "bugs_found": []
         }
       }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "QA consult per PM hub wk32_r1_execution (revised 2026-04-18): run qa_smoke + validate_assets after 03/12/15 landings; mid-sprint sanity run; final close run."
+      },
+      "rounds": {
+        "wk32_r1_execution": {
+          "round_id": "wk32_r1_execution",
+          "status": "in_progress",
+          "pre_code_checklist_qa_subsystem": {
+            "1_file_map": [
+              "tools/qa_smoke.py — runs determinism_guard, pytest, and observe_sync headless profiles for merge gate",
+              "tools/determinism_guard.py — static scan for wall-clock and unseeded RNG in simulation code paths",
+              "tools/observe_sync.py — headless sim runner and --qa assertion collection",
+              "tools/validate_assets.py — manifest existence, attribution, and path validation for assets/",
+              "tools/assets_manifest.json — building prefab and model declarations consumed by validate_assets",
+              "tests/ — pytest invoked inside qa_smoke for regression coverage",
+              "QA_TEST_PLAN.md / RELEASE_QA_CHECKLIST.md — living human test docs (not part of automated exit codes)"
+            ],
+            "2_architecture_options": [
+              "OPT A — Run full qa_smoke --quick + validate_assets --report after each major merge (03, 12, 15) and once at sprint close: PROS early regression signal, matches PM prompt; CONS multiple runs; RISK low; EFFORT low — SELECTED",
+              "OPT B — Gate only at sprint end: PROS fewer runs; CONS late bisect; RISK medium; EFFORT low — rejected",
+              "OPT C — Add WK32-specific observe_sync scenario for construction/camera: PROS targeted; CONS scope creep for consult sprint; RISK medium; EFFORT medium — deferred unless PM requests new assertions"
+            ],
+            "3_existing_code_conflicts": "None identified for QA tooling. WK32 Ursina/renderer WIP could theoretically diverge headless vs game-only paths; if qa_smoke FAILs after a merge, triage per PM: 03 (renderer/camera/water/construction resolver), 12 (pack color / manifest / validate_assets), 15 (prefabs/environment meshes). pm_role_note: PM emergency edits to ursina_renderer.py / ursina_app.py are Agent 03 ownership for commit/refactor; gates run on current working tree including uncommitted WIP."
+          },
+          "what_i_changed": [
+            "Agent 11 log entry only (this file). No game or tool code edits."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_mid_sprint_2026_04_18": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "Mid-sprint run per pm_agent_prompts[11] revised 2026-04-18: determinism_guard PASS; pytest PASS; observe_sync profiles through speed_scaling, interior_view, quest_panel, conversation; DONE: PASS.",
+                "Working tree at run time contained uncommitted WK32 work (renderer, pack scale, prefabs, environment GLBs, tests) per git status — gate still green."
+              ]
+            },
+            "validate_assets_report_mid_sprint_2026_04_18": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (legacy missing_model_file placeholders; PM gate allows exit 0 with warnings)"
+            }
+          },
+          "delta_vs_prior": "Prior logged gate: wk31_r2_economy (2026-04-18) same PASS pattern; warn count unchanged at 46; qa_smoke profile set unchanged end state DONE: PASS.",
+          "next_actions": [
+            "Re-run both gates after Agent 03 formally commits/adopts PM scatter + EditorCamera + construction resolver + water quad.",
+            "Re-run after Agent 12 pack_color 0.75 + manifest + integration guide land.",
+            "Re-run after Agent 15 tracks environment GLBs + prefabs.",
+            "Final sprint-close duplicate of both gates; then mark round status done."
+          ],
+          "pm_gates_acknowledged": {
+            "qa_smoke_quick": "PASS (mid-sprint)",
+            "validate_assets": "PASS exit 0 (mid-sprint)",
+            "determinism": "Unchanged expectations; determinism_guard passed inside qa_smoke"
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }
