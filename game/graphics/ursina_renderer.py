@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import zlib
 from pathlib import Path
@@ -152,13 +153,68 @@ def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
     return jx, jz, yaw
 
 
-def _apply_kenney_terrain_path_shading(ent: Entity, *, model_label: str) -> None:
-    """Kenney Nature Kit path tiles (path_stone) need the same glTF classifier as prefabs.
+_ENV_SCATTER_MODELS: tuple[list[str], list[str]] | None = None
 
-    Otherwise factor-only / vertex materials read as flat white under the default lit shader.
-    See ``tools/model_viewer_kenney._apply_gltf_color_and_shading`` and
-    ``.cursor/plans/kenney_gltf_ursina_integration_guide.md`` §5.
-    """
+
+def _environment_grass_and_doodad_model_lists() -> tuple[list[str], list[str]]:
+    """WK32: scan ``assets/models/environment`` for grass vs other nature props (fallback to legacy names)."""
+    global _ENV_SCATTER_MODELS
+    if _ENV_SCATTER_MODELS is not None:
+        return _ENV_SCATTER_MODELS
+    grass: list[str] = []
+    doodad: list[str] = []
+    default_grass = _environment_model_path("grass")
+    default_rock = _environment_model_path("rock")
+    if _ENV_MODEL_DIR.is_dir():
+        for p in sorted(_ENV_MODEL_DIR.iterdir()):
+            if p.suffix.lower() not in (".glb", ".gltf", ".obj"):
+                continue
+            rel = f"assets/models/environment/{p.name}"
+            name = p.stem.lower()
+            if (
+                name.startswith("grass")
+                or "tuft" in name
+                or "wildflower" in name
+                or name.startswith("flower")
+            ):
+                grass.append(rel)
+            elif any(
+                name.startswith(x)
+                for x in ("bush", "log", "stump", "mushroom", "rock")
+            ):
+                doodad.append(rel)
+    if not grass:
+        grass = [default_grass]
+    if not doodad:
+        doodad = [default_rock]
+    _ENV_SCATTER_MODELS = (grass, doodad)
+    return _ENV_SCATTER_MODELS
+
+
+def _scatter_model_index(tx: int, ty: int, n: int, salt: int) -> int:
+    if n <= 1:
+        return 0
+    h = (tx * 92837111 ^ ty * 689287499 ^ int(salt) * 1009) & 0xFFFFFFFF
+    return int(h % n)
+
+
+def _building_occupied_tiles(engine) -> set[tuple[int, int]]:
+    """Grid cells covered by any building footprint (for scatter exclusion)."""
+    occ: set[tuple[int, int]] = set()
+    for b in getattr(engine, "buildings", []) or []:
+        try:
+            gx, gy = int(b.grid_x), int(b.grid_y)
+            sw, sh = int(b.size[0]), int(b.size[1])
+        except Exception:
+            continue
+        for dx in range(sw):
+            for dy in range(sh):
+                occ.add((gx + dx, gy + dy))
+    return occ
+
+
+def _apply_kenney_scatter_mesh_shading_only(ent: Entity, model_rel: str) -> None:
+    """Fix factor-only / flat materials on env meshes without changing ``entity.color``."""
     try:
         from tools.model_viewer_kenney import _apply_gltf_color_and_shading
 
@@ -167,8 +223,29 @@ def _apply_kenney_terrain_path_shading(ent: Entity, *, model_label: str) -> None
         _apply_gltf_color_and_shading(
             ent.model,
             debug_materials=False,
-            model_label=model_label,
+            model_label=model_rel.replace("\\", "/"),
         )
+    except Exception:
+        pass
+
+
+def _finalize_kenney_scatter_entity(
+    ent: Entity, model_rel: str, *, apply_pack_tint: bool = True
+) -> None:
+    """Grass/rock/tree/doodad scatter: same material path as path_stone + optional pack tint.
+
+    Without ``_apply_gltf_color_and_shading``, factor-only GLBs read as flat white; rocks look
+    unshaded. ``model_rel`` is a repo-relative path using forward slashes, e.g.
+    ``assets/models/environment/grass.obj``.
+
+    Set ``apply_pack_tint=False`` when ``entity.color`` is authored (e.g. water blue tint).
+    """
+    try:
+        from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity
+
+        _apply_kenney_scatter_mesh_shading_only(ent, model_rel)
+        if apply_pack_tint:
+            apply_kenney_pack_color_tint_to_entity(ent, model_rel.replace("\\", "/"))
     except Exception:
         pass
 
@@ -235,6 +312,74 @@ def _building_height_y(
     return H_BUILDING_2X2
 
 
+def _stage_prefab_path(base_prefab: Path, stage: str) -> Path:
+    """Intermediate build JSON: <core>_build_<stage>_v<ver>.json matching base version (WK32)."""
+    stem = base_prefab.stem
+    m = re.match(r"^(.+)_v(\d+)$", stem)
+    if m:
+        core, ver = m.group(1), m.group(2)
+        return _PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v{ver}.json"
+    return _PREFAB_BUILDINGS_DIR / f"{stem}_build_{stage}_v1.json"
+
+
+def _plot_prefab_path(tw: int, th: int) -> Path:
+    w = max(1, min(3, int(tw)))
+    h = max(1, min(3, int(th)))
+    return _PREFAB_BUILDINGS_DIR / f"plot_{w}x{h}_v1.json"
+
+
+def _first_existing(paths: list[Path]) -> Path | None:
+    for p in paths:
+        if p.is_file():
+            return p
+    return None
+
+
+def _resolve_construction_staged_prefab(
+    building,
+    base_prefab: Path,
+    tw: int,
+    th: int,
+) -> Path:
+    """WK32 (rev 2026-04-18): stage prefab from ``construction_progress`` + file fallback.
+
+    Thresholds (must match Agent 15 filenames):
+      progress == 0.0            -> plot_{w}x{h}_v1
+      0.0 < progress < 0.50      -> <base>_build_20_v*.json
+      0.50 <= progress < 1.0     -> <base>_build_50_v*.json
+      progress >= 1.0 (built)    -> final base prefab
+
+    Fallback when a stage file is missing (never crash): 50% → 20% → plot → final (last resort).
+    ``KINGDOM_URSINA_PREFAB_TEST=0`` skips the whole prefab path upstream (no staging).
+    """
+    if bool(getattr(building, "is_constructed", True)):
+        return base_prefab
+    prog = float(getattr(building, "construction_progress", 0.0) or 0.0)
+    prog = min(1.0, max(0.0, prog))
+    if prog >= 1.0:
+        return base_prefab
+
+    p_plot = _plot_prefab_path(tw, th)
+    p20 = _stage_prefab_path(base_prefab, "20")
+    p50 = _stage_prefab_path(base_prefab, "50")
+
+    # Only the initial instant (no build work yet) uses the empty plot; any HP gain uses 20%/50%.
+    at_plot = prog <= 1e-9
+    if at_plot:
+        order = [p_plot, p50, p20, base_prefab]
+    elif prog < 0.5:
+        order = [p20, p50, base_prefab, p_plot]
+    elif prog < 1.0:
+        order = [p50, base_prefab, p20, p_plot]
+    else:
+        order = [base_prefab]
+
+    picked = _first_existing(order)
+    if picked is not None:
+        return picked
+    return base_prefab if base_prefab.is_file() else p_plot
+
+
 def _resolve_prefab_path(bts: str, building) -> Path | None:
     """WK30: default-on prefab resolution by ``building_type``.
 
@@ -278,7 +423,7 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
     centered on the sim building's footprint-center, and the visible mesh extent fits
     within the sim footprint.
     """
-    from tools.kenney_pack_scale import pack_extent_multiplier_for_rel
+    from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack_extent_multiplier_for_rel
     from tools.model_viewer_kenney import _apply_gltf_color_and_shading
 
     raw = json.loads(prefab_path.read_text(encoding="utf-8"))
@@ -360,6 +505,7 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
                     debug_materials=False,
                     model_label=rel,
                 )
+                apply_kenney_pack_color_tint_to_entity(child, rel)
         except Exception:
             pass
 
@@ -771,11 +917,12 @@ class UrsinaRenderer:
         tw, th = int(world.width), int(world.height)
         ts = int(config.TILE_SIZE)
         m = float(TERRAIN_SCALE_MULTIPLIER)
-        grass_model = _environment_model_path("grass")
+        grass_models, doodad_models = _environment_grass_and_doodad_model_lists()
         # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
         path_model = _environment_model_path("path_stone")
         rock_model = _environment_model_path("rock")
         tree_model = _environment_model_path("tree_pine")
+        occupied_tiles = _building_occupied_tiles(self.engine)
         tm = m * float(TREE_SCALE_MULTIPLIER)
         rm = m * float(ROCK_SCALE_MULTIPLIER)
         g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
@@ -821,28 +968,38 @@ class UrsinaRenderer:
                         double_sided=True,
                         add_to_scene_entities=False,
                     )
-                    _apply_kenney_terrain_path_shading(
-                        path_ent, model_label="environment/path_stone"
-                    )
+                    _finalize_kenney_scatter_entity(path_ent, path_model)
                 elif tile == TileType.WATER:
+                    # WK32-BUG-007: flat water plane — not a tinted grass cross-mesh.
+                    tile_w = (float(ts) / SCALE) * m
                     Entity(
                         parent=root,
-                        model=grass_model,
-                        position=(wx, 0.0, wz),
-                        scale=(m, m, m),
+                        model="quad",
+                        rotation=(90, 0, 0),
+                        position=(wx, 0.005, wz),
+                        scale=(tile_w, tile_w, 1),
                         color=water_tint,
                         collision=False,
                         double_sided=True,
+                        shader=unlit_shader,
                         add_to_scene_entities=False,
                     )
 
                 # WK31: optional stride reduces grass-clutter entities (deterministic grid; trees unchanged).
+                # WK32: sample grass model index from expanded environment list.
                 on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
-                if (tile == TileType.GRASS or tile == TileType.TREE) and on_scatter_grid:
+                in_occ = (tx, ty) in occupied_tiles
+                if (
+                    (tile == TileType.GRASS or tile == TileType.TREE)
+                    and on_scatter_grid
+                    and not in_occ
+                ):
                     jx, jz, yaw = _grass_scatter_jitter(tx, ty)
-                    Entity(
+                    gi = _scatter_model_index(tx, ty, len(grass_models), salt=11)
+                    gm = grass_models[gi]
+                    g_ent = Entity(
                         parent=root,
-                        model=grass_model,
+                        model=gm,
                         position=(wx + jx, 0.0, wz + jz),
                         scale=(g_sc, g_sc, g_sc),
                         rotation=(0, yaw, 0),
@@ -851,9 +1008,10 @@ class UrsinaRenderer:
                         double_sided=True,
                         add_to_scene_entities=False,
                     )
+                    _finalize_kenney_scatter_entity(g_ent, gm)
 
                 if tile == TileType.TREE:
-                    Entity(
+                    tree_ent = Entity(
                         parent=root,
                         model=tree_model,
                         position=(wx, 0.0, wz),
@@ -863,10 +1021,33 @@ class UrsinaRenderer:
                         double_sided=True,
                         add_to_scene_entities=False,
                     )
-                elif tile == TileType.GRASS and on_scatter_grid:
+                    _finalize_kenney_scatter_entity(tree_ent, tree_model)
+                elif (
+                    tile == TileType.GRASS
+                    and on_scatter_grid
+                    and not in_occ
+                    and ((tx * 131 + ty * 17) % 11 == 0)
+                ):
+                    di = _scatter_model_index(tx, ty, len(doodad_models), salt=29)
+                    dm = doodad_models[di]
+                    jx, jz, yaw = _grass_scatter_jitter(tx + 101, ty + 67)
+                    dm_scale = rm * (0.85 if "bush" in Path(dm).stem.lower() else 1.0)
+                    doodad_ent = Entity(
+                        parent=root,
+                        model=dm,
+                        position=(wx + jx * 0.55, 0.0, wz + jz * 0.55),
+                        scale=(dm_scale, dm_scale, dm_scale),
+                        rotation=(0, yaw, 0),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                        add_to_scene_entities=False,
+                    )
+                    _finalize_kenney_scatter_entity(doodad_ent, dm)
+                elif tile == TileType.GRASS and on_scatter_grid and not in_occ:
                     h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
                     if h % 503 == 0:
-                        Entity(
+                        rock_ent = Entity(
                             parent=root,
                             model=rock_model,
                             position=(wx, 0.0, wz),
@@ -876,6 +1057,7 @@ class UrsinaRenderer:
                             double_sided=True,
                             add_to_scene_entities=False,
                         )
+                        _finalize_kenney_scatter_entity(rock_ent, rock_model)
 
         # Do not flattenStrong() the terrain root: Panda3D merge can strip per-tile glTF
         # material state and turn Kenney path_stone (and similar) into uniform white strips.
@@ -1192,10 +1374,12 @@ class UrsinaRenderer:
 
             # WK30: prefab path wins over static mesh / billboard for any building_type with
             # a resolvable prefab JSON. Lairs and env opt-out are handled inside the resolver.
+            # WK32: swap JSON by construction_progress (plots + intermediates + fallback).
             prefab_path = _resolve_prefab_path(bts, b)
             if prefab_path is not None:
+                staged = _resolve_construction_staged_prefab(b, prefab_path, tw, th)
                 ent, obj_id = self._get_or_create_prefab_building_entity(
-                    b, prefab_path, col
+                    b, staged, col
                 )
                 self._sync_prefab_building_entity(
                     ent,

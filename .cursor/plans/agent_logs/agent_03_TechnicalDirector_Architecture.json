@@ -3386,6 +3386,70 @@
           }
         }
       }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "WK32 r1 — Agent 03: EditorCamera, construction staging resolver, env scatter"
+      },
+      "rounds": {
+        "wk32_r1_execution": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r1_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-18"
+          },
+          "prompt_text": "WK32 r1 revised 2026-04-18: pre-code checklist, PM scatter handoff, water quad (BUG-007), construction thresholds aligned with Agent 15.",
+          "pre_code_checklist_2026_04_18": {
+            "file_map": [
+              "game/graphics/ursina_renderer.py — 3D terrain (_build_3d_terrain), prefab load/sync, construction staging resolver, scatter scanners + PM shading helpers.",
+              "game/graphics/ursina_app.py — UrsinaApp, EditorCamera setup, FOV↔engine.zoom, WASD pan vs orbit.",
+              "game/entities/buildings/base.py — Building.construction_progress (consumer only).",
+              "game/engine.py — get_game_state buildings_construction_progress (snapshot).",
+              "game/world.py — TileType enum for terrain tiles.",
+              "tools/kenney_pack_scale.py — apply_kenney_pack_color_tint_to_entity (scatter finalize; Agent 12 owns multipliers).",
+              "tools/model_viewer_kenney.py — _apply_gltf_color_and_shading reference (scatter shading-only path).",
+              "assets/models/environment/* — meshes scanned for grass/doodad lists.",
+              "assets/prefabs/buildings/*.json — plot + pilot intermediates (Agent 15)."
+            ],
+            "architecture_options": [
+              "OPT A destroy+recreate prefab entity on stage change — PM pick; LOW risk, S effort.",
+              "OPT B pre-spawn 4 sub-roots — rejected (memory/perf at kingdom scale).",
+              "OPT C hot-swap pieces inside loader — rejected this sprint (HIGH effort).",
+              "Water OPT A per-tile unlit quad — PM pick; LOW risk, S effort.",
+              "Water OPT B batched water mesh — deferred (M effort)."
+            ],
+            "architecture_chosen": "OPT A for construction staging and OPT A for water (flat quad per water tile, y=0.005, unlit_shader). PM emergency helpers _apply_kenney_scatter_mesh_shading_only + _finalize_kenney_scatter_entity adopted as-is (single shading/tint path for path/grass/tree/doodad/rock).",
+            "existing_code_conflicts_addressed": [
+              "KINGDOM_URSINA_PREFAB_TEST=0 already forces legacy path via _resolve_prefab_path returning None — staging not applied.",
+              "Entity.default_shader vs explicit unlit_shader on water quad — water uses explicit unlit_shader.",
+              "Intermediate filenames derive from base prefab stem (e.g. inn_v2 → inn_v2_build_20_v2.json via _stage_prefab_path).",
+              "Revision 2026-04-18: thresholds changed from <0.2 plot band to progress==0 only for plot; (0,0.5)→20%, [0.5,1)→50%."
+            ]
+          },
+          "response": {
+            "status": "complete",
+            "pm_edit_adoption": "Adopted PM’s _apply_kenney_scatter_mesh_shading_only + _finalize_kenney_scatter_entity and ursina_app EditorCamera rotation Vec3 + camera.editor_position sync; reviewed + kept with this commit.",
+            "summary_bullets": [
+              "EditorCamera (ursina_app): engine.zoom → camera.fov; EditorCamera zoom_speed=0; ec.target_z synced after FOV; WASD pans ec when not RMB orbiting; KINGDOM_URSINA_EDITORCAMERA=0 legacy.",
+              "Construction staging (_resolve_construction_staged_prefab): progress<=0 → plot; (0,0.5)→build_20; [0.5,1)→build_50; built/>=1→final. Fallback lists: plot→50→20→final; 20-stage→50→final→plot; 50-stage→final→20→plot.",
+              "WK32-BUG-007: water tiles use flat quad (unlit_shader) at y=0.005, not grass_models[0] tint.",
+              "Scatter: filename scanner unchanged; occupied tiles excluded; PM finalize applies shading + optional pack tint (water skipped).",
+              "Screenshots: folder docs/screenshots/wk32_nature/ reserved per PM; automated session did not capture F12 — Jaimie/Agent 15 should add before/after water + construction sequence PNGs."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "screenshot_folder_note": "PM target path docs/screenshots/wk32_nature/ — blocked by repo gitignore (docs/screenshots/); create locally for F12 evidence; force-add PNGs with git add -f if PM wants them versioned.",
+            "gates": {
+              "qa_smoke_quick": "PASS (exit 0)",
+              "validate_assets_report": "PASS (exit 0, errors=0, pre-existing warns)",
+              "determinism_guard": "PASS"
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -13,7 +13,20 @@ import zlib
 import config
 import pygame
 from PIL import Image
-from ursina import Ursina, Vec2, window, camera, time, Entity, Texture, Vec3, scene, mouse, held_keys
+from ursina import (
+    EditorCamera,
+    Entity,
+    Texture,
+    Ursina,
+    Vec2,
+    Vec3,
+    camera,
+    held_keys,
+    mouse,
+    scene,
+    time,
+    window,
+)
 from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
 from game.display_manager import DisplayManager
@@ -123,6 +136,9 @@ class UrsinaApp:
         # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
         self._hud_quick_sig: int | None = None
 
+        # WK32: Ursina EditorCamera (mouse orbit/pan); ``None`` when legacy free camera is forced.
+        self._editor_camera: EditorCamera | None = None
+
         # WK30 debug: auto-screenshot-then-exit for prefab fit iteration.
         # Env vars:
         #   KINGDOM_URSINA_AUTO_EXIT_SEC=<float>       — seconds after first update before exit.
@@ -176,7 +192,14 @@ class UrsinaApp:
                 pass
 
     def _setup_ursina_camera_for_castle(self) -> None:
-        """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans."""
+        """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans.
+
+        WK32: Default **EditorCamera** (same family as ``tools/model_viewer_kenney.py``): orbit with
+        right-drag, pan with middle-drag, wheel zoom disabled on the rig (``zoom_speed=0``) so
+        **engine.zoom** remains the single source of truth — we drive **camera.fov** from
+        ``_sync_ursina_camera_fov_from_zoom()`` every frame. Set ``KINGDOM_URSINA_EDITORCAMERA=0``
+        to restore the legacy unconstrained camera + WASD pan on ``camera`` directly.
+        """
         castle = next(
             (
                 b
@@ -197,22 +220,56 @@ class UrsinaApp:
         if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
             cx += 9.0  # midpoint between castle center and east end of test row
             span = 26.0
-            hfov = math.radians(float(camera.fov))
-            d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
-            if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
-                camera.position = Vec3(cx, d * 1.6, cz)
-                camera.look_at(Vec3(cx, 0, cz))
-            else:
-                camera.position = Vec3(cx, d * 0.85, cz - d * 0.7)
-                camera.look_at(Vec3(cx, 0, cz + 1.0))
-        else:
-            hfov = math.radians(float(camera.fov))
-            d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
-            camera.position = Vec3(cx, d * 0.8, cz - d)
-            camera.look_at(Vec3(cx, 0, cz))
+
+        hfov = math.radians(float(camera.fov))
+        d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
+        elev = d * 0.8
+        back = d
 
         # Perspective FOV that matches engine.zoom==default_zoom (single source of truth: engine.zoom).
         self._ursina_reference_fov = float(camera.fov)
+
+        legacy = os.environ.get("KINGDOM_URSINA_EDITORCAMERA", "1") == "0"
+        if legacy:
+            self._editor_camera = None
+            if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+                if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
+                    camera.position = Vec3(cx, d * 1.6, cz)
+                    camera.look_at(Vec3(cx, 0, cz))
+                else:
+                    camera.position = Vec3(cx, d * 0.85, cz - d * 0.7)
+                    camera.look_at(Vec3(cx, 0, cz + 1.0))
+            else:
+                camera.position = Vec3(cx, elev, cz - back)
+                camera.look_at(Vec3(cx, 0, cz))
+            return
+
+        # EditorCamera: pivot on floor at (cx, 0, cz); local camera offset matches prior span/elev.
+        ec = EditorCamera(
+            zoom_speed=0.0,
+            rotation_speed=200.0,
+            pan_speed=Vec2(5, 5),
+            ignore_scroll_on_ui=True,
+        )
+        ec.position = Vec3(cx, 0.0, cz)
+        if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+            if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
+                camera.position = Vec3(0.0, d * 1.6, -d * 0.02)
+                ec.rotation = Vec3(89.0, 0.0, 0.0)
+            else:
+                camera.position = Vec3(0.0, d * 0.85, -d * 0.7)
+                ec.rotation = Vec3(40.0, 0.0, 0.0)
+        else:
+            camera.position = Vec3(0.0, elev, -back)
+            ec.rotation = Vec3(35.0, 0.0, 0.0)
+        # EditorCamera.__init__ snapshots camera.editor_position before parenting; on_enable can
+        # leave stale state. Sync so orbit/pivot matches castle framing (same as model_viewer).
+        try:
+            camera.editor_position = camera.position
+        except Exception:
+            pass
+        ec.target_z = camera.z
+        self._editor_camera = ec
 
     def _sync_ursina_camera_fov_from_zoom(self) -> None:
         """Keep perspective FOV tied to engine.zoom so wheel, +/-, and Q/E match HUD/world mapping."""
@@ -647,6 +704,10 @@ class UrsinaApp:
                     eng.zoom_by(zstep ** (-rate))
 
             self._sync_ursina_camera_fov_from_zoom()
+            # Keep EditorCamera dolly target aligned — zoom is FOV-driven from engine.zoom, not trackball dolly.
+            ecam = getattr(self, "_editor_camera", None)
+            if ecam is not None:
+                ecam.target_z = camera.z
 
             self.renderer.update()
 
@@ -657,15 +718,30 @@ class UrsinaApp:
 
             # Pan parallel to X/Z floor (world units / sec). Skip while typing in hero chat.
             if not _chat_captures_keyboard():
-                if hk["a"]:
-                    camera.x -= pan_speed * dt
-                if hk["d"]:
-                    camera.x += pan_speed * dt
-                # WK23 R1: W = pan north (up-screen / +world Z); S = south — matches player expectation.
-                if hk["w"]:
-                    camera.z += pan_speed * dt
-                if hk["s"]:
-                    camera.z -= pan_speed * dt
+                ecam = getattr(self, "_editor_camera", None)
+                try:
+                    orbiting = bool(getattr(mouse, "right", False))
+                except Exception:
+                    orbiting = False
+                if ecam is not None and not orbiting:
+                    if hk["a"]:
+                        ecam.x -= pan_speed * dt
+                    if hk["d"]:
+                        ecam.x += pan_speed * dt
+                    if hk["w"]:
+                        ecam.z += pan_speed * dt
+                    if hk["s"]:
+                        ecam.z -= pan_speed * dt
+                elif ecam is None:
+                    if hk["a"]:
+                        camera.x -= pan_speed * dt
+                    if hk["d"]:
+                        camera.x += pan_speed * dt
+                    # WK23 R1: W = pan north (up-screen / +world Z); S = south — matches player expectation.
+                    if hk["w"]:
+                        camera.z += pan_speed * dt
+                    if hk["s"]:
+                        camera.z -= pan_speed * dt
 
         import __main__
 
