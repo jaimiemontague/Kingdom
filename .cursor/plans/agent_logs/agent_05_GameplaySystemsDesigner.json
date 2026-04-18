@@ -1458,7 +1458,7 @@
                 "WK32-FEAT-002": "verified",
                 "WK32-FEAT-010": "verified",
                 "WK32-BUG-006": "verified (pm_note: code pre-existed; automated + evidence logged)"
-              ],
+              },
               "screenshots": [
                 "docs/screenshots/wk32_nature/20260418_1630_agent05_verification/ — pygame deterministic capture (base_overview scenario, seed 7); manifest.json + 4 PNGs committed (git add -f; parent docs/screenshots/ is gitignored by default)."
               ],
