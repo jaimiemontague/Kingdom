@@ -8,7 +8,9 @@
   "ground_anchor_y": 0.0,
   "rotation_steps": 90,
   "attribution": [
-    "kenney_retro-fantasy-kit"
+    "kenney_retro-fantasy-kit",
+    "kenney_survival-kit",
+    "kenney_nature-kit"
   ],
   "pieces": [
     {

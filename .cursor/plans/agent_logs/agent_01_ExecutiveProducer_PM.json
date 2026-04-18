@@ -6016,7 +6016,8 @@
                             "asks": [
                                 "Implement performance mitigations from Agent 10 findings targeting Ursina renderer and any sim hot paths shown by profiling.",
                                 "Preserve determinism: no wall-clock, no unseeded RNG in sim paths.",
-                                "If classifier/helpers move, keep tools and game in sync per kenney integration guide."
+                                "If classifier/helpers move, keep tools and game in sync per kenney integration guide.",
+                                "If Agent 15 cannot place arbitrary duplicate wall/fence meshes side-by-side in Ursina for the flush pass (.cursor/plans/wk31_kingdom_perf_and_economy.plan.md A.2.2), add a minimal dev-only test hook or test scene \u2014 remove or gate behind env var when no longer needed."
                             ],
                             "acceptance_criteria": [
                                 "WK31-PERF-001 engineering acceptance.",
@@ -6039,11 +6040,12 @@
                         "15": {
                             "status": "assigned_active",
                             "asks": [
-                                "After Agent 12 lands pack defaults, revisit shipped prefabs (WK29 house + WK30 military set) and adjust per-piece scale/positions only as needed for visual wall continuity.",
-                                "Do not change config.py footprints; fix via prefab JSON only."
+                                "Read kenney_assets_models_mapping.plan.md; exhaustive non-Retro wall/fence flush pass per wk31_kingdom_perf_and_economy.plan.md section A.2.2 (Survival, Nature, Fantasy Town, Graveyard \u2014 not Retro). Inventory wall/fence candidates per pack; for each model place \u22652 identical instances side-by-side in Ursina, screenshot, iterate scale/rot/nudge until flush; log N/A with reason when a mesh is not meant to tile.",
+                                "Prioritize Fantasy Town (*-fantasy-town.glb) and Graveyard (*-graveyard.glb) new packs; checkpoint by pack; expect multiple sessions.",
+                                "After Agent 12 lands pack defaults, revisit shipped prefabs (WK29 + WK30) for per-piece JSON tweaks. No config.py footprint edits."
                             ],
                             "acceptance_criteria": [
-                                "Log notes + evidence screenshots or assembler confirmation for at least one revised prefab if gaps were visible pre-fix."
+                                "Agent 15 log: per-pack inventory + per-model flush evidence (screenshots), final alignment notes, prefab touch-up summary. See plan A.4 Part A."
                             ]
                         },
                         "09": {
@@ -6064,7 +6066,7 @@
                         "10": "WK31 R1 (Performance \u2014 HIGH): Baseline Ursina FPS using F2 overlay on a representative busy scene; optional perf_benchmark.py for sim/render split. Produce a prioritized hotspot list with pointers for Agent 03. Re-measure after fixes. Log before/after. If JSON prefabs cannot hit budget after reasonable mitigations, flag baker sprint to PM only.",
                         "03": "WK31 R1 (Technical Director \u2014 HIGH): Implement perf fixes from Agent 10 hotspots (Ursina renderer focus; sim if profiled). No determinism regressions. determinism_guard + qa_smoke --quick must PASS.",
                         "12": "WK31 R1 (Tools DevEx \u2014 MEDIUM): Pack-aware default scale / max_extent so non-Retro Kenney pieces tile like Retro in viewer and assembler; wire same policy into runtime prefab load. Single source of truth; document Retro reference. qa_smoke --quick PASS.",
-                        "15": "WK31 R1 (ModelAssembler \u2014 MEDIUM): After tool defaults land, touch up existing prefabs for wall/grid gaps using per-piece JSON scale/position only. No config.py footprint edits.",
+                        "15": "WK31 R1 (ModelAssembler \u2014 HIGH): Full spec .cursor/plans/wk31_kingdom_perf_and_economy.plan.md A.2.2. Non-Retro wall/fence flush pass: inventory per pack (Survival, Nature, Fantasy Town, Graveyard); place \u22652 same model side-by-side in Ursina, screenshot loop until flush; include new FT/Graveyard packs per kenney_assets_models_mapping.plan.md. Exhaustive \u2014 checkpoint by pack. Then prefab JSON touch-ups on WK29/WK30 after Agent 12 defaults. Coordinate with Agent 03 if in-game placement needs a dev hook.",
                         "09": "WK31 R1 (Art Director \u2014 LOW, CONSULT): Quick cohesion pass after scale work; notes to Agent 15 only.",
                         "11": "WK31 R1 (QA \u2014 LOW, CONSULT): Post-merge qa_smoke --quick + validate_assets --report."
                     },
@@ -6087,7 +6089,7 @@
                             "13",
                             "14"
                         ],
-                        "rationale": "Agent 10 (HIGH intelligence): profile Ursina + baseline/measurement narrative and prioritized hotspots for engineering. Agent 03 (HIGH intelligence): implement renderer/sim mitigations from findings, determinism-safe. Agent 12 (MEDIUM intelligence): pack scale policy + tool/runtime alignment, schema/docs. Agent 15 (MEDIUM intelligence): prefab touch-ups after new defaults, silhouette/wall continuity. Agent 09 (LOW intelligence, consult): short cohesion review. Agent 11 (LOW intelligence, consult): gate runner."
+                        "rationale": "Agent 10 (HIGH intelligence): profile Ursina + baseline/measurement narrative and prioritized hotspots for engineering. Agent 03 (HIGH intelligence): implement renderer/sim mitigations from findings, determinism-safe; dev hook for Agent 15 wall/fence test layout if needed. Agent 12 (MEDIUM intelligence): pack scale policy + tool/runtime alignment, schema/docs. Agent 15 (HIGH intelligence): exhaustive non-Retro wall/fence side-by-side flush pass + screenshots + shipped prefab touch-ups per wk31_kingdom_perf_and_economy A.2.2. Agent 09 (LOW intelligence, consult): short cohesion review. Agent 11 (LOW intelligence, consult): gate runner."
                     }
                 }
             }

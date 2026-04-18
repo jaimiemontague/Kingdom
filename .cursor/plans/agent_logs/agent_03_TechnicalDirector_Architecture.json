@@ -3344,6 +3344,48 @@
           }
         }
       }
+    },
+    "wk31-perf-fps-and-pack-scale": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+        "notes": "WK31 R1 Part A — Ursina FPS mitigations from Agent 10 hotspots"
+      },
+      "rounds": {
+        "wk31_r1_execution": {
+          "sprint_id": "wk31-perf-fps-and-pack-scale",
+          "round_id": "wk31_r1_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-18"
+          },
+          "prompt_text": "WK31 R1: perf fixes from Agent 10 list; determinism_guard + qa_smoke --quick PASS; log dev hooks only if needed for Agent 15.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "URSINA_DIRECTIONAL_SHADOWS defaults False (playable FPS); enable with KINGDOM_URSINA_DIRECTIONAL_SHADOWS=1. URSINA_SHADOW_MAP_SIZE default 384; optional KINGDOM_URSINA_SHADOW_MAP_SIZE=128-2048.",
+              "URSINA_TERRAIN_SCATTER_STRIDE default 2 (optional KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE) throttles small grass/rock scatter on a deterministic grid; trees and path/water unchanged.",
+              "UrsinaApp updates engine._ursina_window_fps_ema from frame dt; render_perf_overlay labels F2 as pygame/HUD vs top-left Ursina counter for 3D GPU smoothness.",
+              "No new wall/fence dev spawn hook: existing KINGDOM_URSINA_PREFAB_TEST_LAYOUT + tools/assembler remain the coordination surface for Agent 15 (plan A.2.2)."
+            ],
+            "files_changed": [
+              "config.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py",
+              "game/engine.py"
+            ],
+            "gates": {
+              "determinism_guard": "PASS (exit 0)",
+              "qa_smoke_quick": "PASS (exit 0, [qa_smoke] DONE: PASS)"
+            },
+            "agent_10_hotspot_mapping": [
+              "shadows + shader cost: default off + smaller default shadow map",
+              "terrain Entities: scatter stride reduces grass doodad + rock count",
+              "F2 overlay: explicit labeling + Ursina EMA line",
+              "HUD PIL upload: unchanged this round (CRC skip already; further work deferred)",
+              "prefab piece count / baker: deferred per PM until after these mitigations"
+            ]
+          }
+        }
+      }
     }
   }
 }

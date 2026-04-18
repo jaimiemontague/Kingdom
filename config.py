@@ -425,10 +425,24 @@ LAIR_STASH_GROWTH_PER_SPAWN = LAIR.stash_growth_per_spawn
 ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
 
 # --- WK22 Ursina 3D viewer (directional shadows; lower = faster GPU) ---
-# Shadow maps are expensive; keep off by default for playable FPS (set True for screenshots).
-# v1.5 Sprint 1.2: enable so 3D terrain/props cast/receive simple directional shadows (tune off if GPU-bound).
-URSINA_DIRECTIONAL_SHADOWS = True
-URSINA_SHADOW_MAP_SIZE = 512
+# Shadow maps + lit_with_shadows_shader are expensive; default off for playable FPS (WK31).
+# Enable for screenshots: KINGDOM_URSINA_DIRECTIONAL_SHADOWS=1 (or set True here for local dev).
+URSINA_DIRECTIONAL_SHADOWS = False
+_ursina_shadow_env = os.environ.get("KINGDOM_URSINA_DIRECTIONAL_SHADOWS", "").strip().lower()
+if _ursina_shadow_env in ("1", "true", "yes", "on"):
+    URSINA_DIRECTIONAL_SHADOWS = True
+elif _ursina_shadow_env in ("0", "false", "no", "off"):
+    URSINA_DIRECTIONAL_SHADOWS = False
+# When shadows are on, smaller maps cost less GPU (128–2048). Default a step down from 512 (WK31).
+URSINA_SHADOW_MAP_SIZE = 384
+_ursina_sm_env = os.environ.get("KINGDOM_URSINA_SHADOW_MAP_SIZE", "").strip()
+if _ursina_sm_env.isdigit():
+    URSINA_SHADOW_MAP_SIZE = max(128, min(2048, int(_ursina_sm_env)))
+# Grass/path scatter: 1 = legacy (every tile), 2 = place small grass doodad on a coarse grid (~4x fewer props).
+URSINA_TERRAIN_SCATTER_STRIDE = 2
+_ts_env = os.environ.get("KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE", "").strip()
+if _ts_env.isdigit():
+    URSINA_TERRAIN_SCATTER_STRIDE = max(1, min(8, int(_ts_env)))
 # Legacy (WK23): Ursina fog no longer throttles on this — stale 3D fog desynced from minimap/pygame.
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
 # Legacy: Ursina HUD GPU upload is now skipped via row-sampled CRC when pixels are unchanged (ursina_app).

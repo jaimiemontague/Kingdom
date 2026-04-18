@@ -2498,6 +2498,53 @@
         "blockers": []
       }
     }
+  },
+  "wk31-perf-fps-and-pack-scale": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+      "notes": "WK31 Part A.2.1 — pack scale single source of truth (viewer / assembler / runtime)"
+    },
+    "rounds": {
+      "wk31_r1_execution": {
+        "round_id": "wk31_r1_execution",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py",
+            "tools/model_viewer_kenney.py",
+            "tools/model_assembler_kenney.py",
+            "tools/wall_flush_pair_kenney.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "summary": "Added tools/kenney_pack_scale.py: RETRO_REFERENCE_MAX_EXTENT=5.0 as 1.0 calibration; per-pack multipliers keyed by raw-tree folder id plus merged-path inference (GLB format default Retro; GLTF format Nature; -fantasy-town / -graveyard suffixes; character- blocky). model_viewer uses pack_max_extent_for_rel per asset; assembler and ursina_renderer multiply authored JSON scale by pack_extent_multiplier_for_rel. wall_flush_pair defaults --max-extent from the same helper. Agent 15 can tune multipliers after flush pass."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/model_viewer_kenney.py --max-total 8",
+          "python tools/wall_flush_pair_kenney.py --model Models/GLB format/wall-door.glb"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": [],
+        "agent_fields": {
+          "pack_extent_multipliers_2026_04_18": {
+            "kenney_retro-fantasy-kit": 1.0,
+            "kenney_survival-kit": 1.14,
+            "kenney_nature-kit": 1.2,
+            "kenney_fantasy-town-kit_2.0": 1.1,
+            "kenney_graveyard-kit_5.0": 1.1,
+            "kenney_blocky-characters_20": 1.0,
+            "Models/GLB format unsuffixed": 1.0,
+            "environment": 1.0
+          }
+        }
+      }
+    }
   }
 }
 

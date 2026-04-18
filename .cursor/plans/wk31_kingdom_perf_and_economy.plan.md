@@ -1,3 +1,10 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # WK31 — Kingdom Performance, Pack Scale & Economy Buildings (Combined)
 
 > **Single plan:** Part A = FPS + Kenney pack scale; Part B = economy / living prefabs (Inn, Farm, Food Stand, Gnome Hovel).  
@@ -22,9 +29,57 @@ Ursina has become laggy over the last one or few sprints. Restore a **playable**
 
 Only **Retro Fantasy Kit** (GLB) pieces feel correctly sized for kitbash; other packs (e.g. Survival, Nature/GLTF) use different native scales. In the **model viewer** and **assembler**, pieces are **centered in the cell** and **uniform-fitted** to `model_max_extent`, which leaves **visible gaps** between intended wall segments.
 
-- **Agent 12** introduces **pack-aware defaults**: e.g. per top-level folder or per-pack multiplier so new pieces spawn closer to a **shared grid unit** (Retro remains the **reference 1.0** convention unless measurement says otherwise).
-- Align **`model_viewer_kenney`**, **`model_assembler_kenney`**, and **game-time prefab instantiation** (`ursina_renderer` / shared helper) so the same scale policy applies in tools and in-game (document the single source of truth).
-- **Agent 15** revisits existing shipped prefabs after defaults land; tweak **per-piece `scale` in JSON** only where needed for silhouette, not sim footprints.
+**Reference doc (read before touching assets):** [.cursor/plans/kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md) — merged paths, **Fantasy Town Kit** (`*-fantasy-town.glb`) and **Graveyard Kit** (`*-graveyard.glb`) as the two packs added between sprints, filename suffixes, and per-pack wall/fence families.
+
+#### A.2.1 Agent 12 (tooling)
+
+- Introduce **pack-aware defaults**: per top-level folder or per-pack multiplier so new pieces spawn closer to a **shared grid unit** (**Retro Fantasy Kit** remains the **reference 1.0** convention for calibration unless measurement proves otherwise).
+- Align **`model_viewer_kenney`**, **`model_assembler_kenney`**, and **game-time prefab instantiation** (`ursina_renderer` / shared helper) so the same scale policy applies in tools and in-game (document the **single source of truth**).
+- **Consume Agent 15’s empirical results:** where wall/fence flush passes prove a stable multiplier per pack (or per filename pattern), encode that in data or code so future pieces inherit it without repeating the full manual pass.
+
+#### A.2.2 Agent 15 — exhaustive wall & fence flush pass (non-Retro packs)
+
+**Scope — packs to treat (Retro explicitly out of scope for this pass):**
+
+| Pack | Merged location (typical) | Notes |
+|------|---------------------------|--------|
+| **Survival Kit** | `assets/models/Models/GLB format/*.glb` (no suffix) | Fewer modular walls than FT; still scan for anything that reads as **wall / fence / barrier** used in kitbash. |
+| **Nature Kit** | `assets/models/Models/GLTF format/*.glb` | Factor-only materials; walls may be `stone_*`, `rock_*`, hedges, or path edges — include pieces intended to **tile or abut** in rows. |
+| **Fantasy Town Kit** | `*-fantasy-town.glb` | **New pack (WK31).** Rich **wall-***, **fence-***, road-edge, hedge, and masonry sets — see mapping doc §2 *Fantasy Town Kit*. |
+| **Graveyard Kit** | `*-graveyard.glb` | **New pack (WK31).** **brick-wall-***, **stone-wall-***, **fence-***, **iron-fence-*** variants — see mapping doc §2 *Graveyard Kit*. |
+| **Blocky Characters** | `character-*.glb` | **Skip** for this pass unless a piece is clearly used as a modular wall (normally N/A). |
+
+Do **not** spend this pass re-proving Retro; use Retro only as a **visual reference** for what “flush” means when two copies sit side by side.
+
+**Where to work (“in game”):**
+
+- Primary acceptance is **in Ursina** so lighting and shaders match shipping: run **`python main.py --renderer ursina`** (or the project’s standard Ursina entry) and place pieces in a **minimal test layout** (empty meadow / dev scenario). If the live sim cannot place arbitrary GLBs without code support, **coordinate with Agent 03** to add a **temporary** dev-only spawn, test map, or reuse the **model assembler** as the same renderer path — the plan still requires **side-by-side duplicates** under real game conditions before marking a model “done.”
+- Use a **consistent camera** for before/after comparison (same zoom, same angle per model family). **F12** or the project screenshot tool if available.
+
+**Per-model loop (repeat until the pack’s wall/fence set is done):**
+
+1. **Pick one model file** (e.g. `wall-door-fantasy-town.glb`, `iron-fence-border-graveyard.glb`, a Nature `stone_wall_*` candidate). Build a short **inventory per pack** first (walls, fences, iron fences, brick/stone walls, gates that are meant to chain) so nothing is skipped; the mapping doc lists many FT/Graveyard names to seed the list.
+2. **Place at least two instances of the exact same asset** along a straight line — **side by side** in world space (same `rot_y` unless the piece is designed for 90° junctions; document if a piece is **corner-only** or **segment-only** and cannot flush on a straight run).
+3. **Capture screenshots** showing whether edges meet **flush** (no crack, no overlap, acceptable vertical alignment) vs **gaps** or **penetration**.
+4. **Analyze** the screenshot: decide whether the fix is **uniform scale**, **non-uniform scale**, **rotation** (e.g. 90°), **positional nudge** along X/Z, or a **pack default** that Agent 12 should own.
+5. **Apply adjustments** (prefab JSON per-piece fields, assembler default, or pack multiplier — per coordination with Agent 12), then **re-run step 2–3** with new screenshots.
+6. **Loop** until two copies are **acceptably flush** with each other for that model; only then move to the **next** wall/fence model.
+7. **Repeat the full loop** for every relevant model in the pack until that pack is fully sized/tuned for modular alignment.
+
+**Expectations:**
+
+- This is intentionally **long and exhaustive** — it may require **multiple work sessions** or PM follow-up rounds. **Checkpoint by pack** (e.g. Survival + Nature milestones, then Fantasy Town, then Graveyard) and log progress in **Agent 15’s hub log** so work can pause/resume without losing the inventory.
+- Some meshes are **not meant** to tile edge-to-edge (decorative props, broken walls). Log **N/A with reason** instead of forcing flush.
+
+**Deliverables (Agent 15):**
+
+- Per-pack subsection in the agent log: **model path → flush OK / N/A → iterations → final scale/rot/pos notes → screenshot filenames or folder**.
+- After Agent 12 lands defaults, **revisit shipped building prefabs** that use non-Retro pieces; tweak **per-piece `scale` / `pos` / `rot` in JSON** only where needed for silhouette and flush, **not** `config.py` footprints.
+
+#### A.2.3 Part A — coordination
+
+- **Agent 09** reviews readability after major pack milestones (optional mid-pass), not only at the end.
+- **Agent 03** unblocks **in-game placement** if the sim cannot currently instantiate arbitrary test meshes.
 
 ### A.3 Part A — out of scope
 
@@ -35,14 +90,15 @@ Only **Retro Fantasy Kit** (GLB) pieces feel correctly sized for kitbash; other 
 ### A.4 Part A — Definition of Done
 
 - [ ] Agent 10 log: baseline numbers + post-fix numbers + short hotspot/mitigation narrative.
-- [ ] Agent 03 log: list of code changes tied to Agent 10 findings; determinism + smoke green.
-- [ ] Agent 12 log: documented pack scale table + where it is applied (viewer / assembler / runtime).
-- [ ] Agent 15: at least one pass on existing prefabs for obvious gaps after scale defaults (note in log).
-- [ ] Agent 09: short cohesion note (walls readable, packs don’t fight each other).
+- [ ] Agent 03 log: list of code changes tied to Agent 10 findings; determinism + smoke green; note any dev-only test hooks added for Agent 15’s in-game wall/fence pass.
+- [ ] Agent 12 log: documented pack scale table + where it is applied (viewer / assembler / runtime); how Agent 15’s flush findings map into defaults.
+- [ ] Agent 15 log: **wall/fence flush pass** — per-pack inventory of non-Retro wall/fence candidates; for each model worked: side-by-side Ursina evidence (screenshots), iteration count, final alignment approach (scale/rot/nudge/pack default), N/A entries with reasons; checkpoint milestones; then **shipped prefab touch-up** after defaults land.
+- [ ] Agent 09: short cohesion note (walls readable, packs don’t fight each other); optional mid-pass if requested.
 - [ ] `python tools/qa_smoke.py --quick` **PASS**; `python tools/validate_assets.py --report` **exit 0** (warnings acceptable if pre-existing).
 
 ### A.5 Part A — related code/docs
 
+- `.cursor/plans/kenney_assets_models_mapping.plan.md` — **required** for pack locations, **Fantasy Town** / **Graveyard** suffixes, and wall/fence naming inventory seeds.
 - `.cursor/plans/wk30_buildings_pipeline.plan.md` — prior prefab pipeline sprint.
 - `.cursor/plans/kenney_gltf_ursina_integration_guide.md` — shader classifier (unchanged unless Agent 03 must relocate helpers).
 - `tools/model_viewer_kenney.py` — `_fit_uniform_and_ground`, grid placement.
@@ -140,5 +196,5 @@ Add a new round (e.g. `wk31_r2_economy` or `wk32_r1_economy`) **after** Part A g
 
 ## Combined checklist (both parts)
 
-**Part A:** perf baseline + fixes; pack scale tooling; existing prefab touch-ups; gates PASS.  
+**Part A:** perf baseline + fixes; pack scale tooling; Agent 15 **non-Retro wall/fence flush pass** (exhaustive, screenshot-driven, per mapping doc + new FT/Graveyard packs); shipped prefab touch-ups; gates PASS.  
 **Part B:** four economy prefabs; manifest; audit; playtest; FPS/baker decision; gates PASS.

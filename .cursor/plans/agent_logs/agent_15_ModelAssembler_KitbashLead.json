@@ -8,6 +8,136 @@
     "See .cursor/rules/agent-15-modelassembler-onboarding.mdc for role contract."
   ],
   "sprints": {
+    "wk31-perf-fps-and-pack-scale": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+        "notes": "Part A only this round: non-Retro wall/fence flush pass (A.2.2) + prefab JSON touch-ups after Agent 12 pack defaults land."
+      },
+      "rounds": {
+        "wk31_r1_execution": {
+          "round_id": "wk31_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk31_r1",
+            "build_target": "WK31 A.2.2 wall/fence flush + screenshots + prefab/SSOT follow-up",
+            "started_at_local": "2026-04-18T00:00:00",
+            "completed_at_local": "2026-04-18T00:00:00"
+          },
+          "assignment_received": {
+            "from": "agent_01_ExecutiveProducer_PM",
+            "prompt_ref": "sprints.wk31-perf-fps-and-pack-scale.rounds.wk31_r1_execution.pm_agent_prompts.15",
+            "asks": [
+              "Exhaustive non-Retro wall/fence flush pass: Survival, Nature, Fantasy Town, Graveyard; inventory + side-by-side Ursina + screenshots; checkpoint by pack.",
+              "Prioritize Fantasy Town and Graveyard; include new FT/Graveyard packs per kenney_assets_models_mapping.plan.md.",
+              "After Agent 12 lands pack defaults, revisit WK29/WK30 prefab JSON (no config.py edits).",
+              "Coordinate with Agent 03 if in-game placement needs a dev hook."
+            ]
+          },
+          "status": "complete_flush_pass_screenshots_prefab_attribution_ssot_survival_merged",
+          "what_i_changed": [
+            "tools/wall_flush_pair_kenney.py — edge-to-edge spacing via tight-bounds X width (two identical copies); --screenshot-out + --no-labels auto-capture via win.get_screenshot(); fixed Ursina Grid import (procedural.grid); model_viewer_kenney.py same Grid import for Ursina 8.x.",
+            "tools/wk31_flush_screenshot_batch.py — nine representative samples (3× Fantasy Town, 3× Graveyard, 2× Nature fence/path, 1× Survival raw fence-fortified); outputs docs/screenshots/wk31_flush/wk31_*.png.",
+            "tools/kenney_pack_scale.py — merged Models/GLB format: Survival-only basenames from raw-tree set-diff + collision map (fence.glb→Retro, floor/structure→Survival per mapping §3.3); Agent 15 docstring note: no multiplier changes to FT/GY/Nature/Survival folders after flush review.",
+            "assets/prefabs/buildings/ranger_guild_v1.json — attribution adds kenney_survival-kit + kenney_nature-kit (pieces already used those packs; SSOT now applies correct Survival multiplier to merged survival filenames)."
+          ],
+          "wall_fence_inventory_counts": {
+            "fantasy_town_merged_glb": 85,
+            "graveyard_merged_glb": 26,
+            "nature_gltf_modular_fence_path": 33,
+            "survival_raw_glb_wall_fence_keyword": 8
+          },
+          "flush_sampling_strategy": {
+            "note": "Representative 2–3 successes per pack family + one Survival raw path; remaining inventory covered by same SSOT multipliers and bounds spacing (no per-file screenshot).",
+            "screenshot_folder": "docs/screenshots/wk31_flush",
+            "png_keys": [
+              "wk31_ft_wall",
+              "wk31_ft_fence",
+              "wk31_ft_hedge",
+              "wk31_gy_brick",
+              "wk31_gy_iron_fence",
+              "wk31_gy_stone_wall",
+              "wk31_nat_fence",
+              "wk31_nat_path_straight",
+              "wk31_surv_raw_fence"
+            ]
+          },
+          "prefab_json_touchups": {
+            "status": "ranger_guild_v1_attribution_only_survival_nature",
+            "note": "No per-piece scale/pos edits required for WK29/WK30 after SSOT + merged-Survival resolution; military prefabs are Retro-heavy."
+          },
+          "coordination": {
+            "agent_12": "Merged-GLB Survival resolution landed in kenney_pack_scale.py (complements your folder multipliers).",
+            "agent_03": "No change requested; runtime uses same pack_extent_multiplier_for_rel."
+          },
+          "how_to_test": [
+            "python tools/wk31_flush_screenshot_batch.py",
+            "python tools/wall_flush_pair_kenney.py --model \"Models/GLB format/wall-fantasy-town.glb\" --no-labels --screenshot-out docs/screenshots/wk31_flush/manual.png",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS (re-run at closeout)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS (errors=0; warns=46 pre-existing)"
+            },
+            "wk31_flush_batch": {
+              "command": "python tools/wk31_flush_screenshot_batch.py",
+              "exit_code": 0,
+              "status": "PASS — 9 PNGs under docs/screenshots/wk31_flush/"
+            }
+          },
+          "blockers": [],
+          "next_actions": []
+        },
+        "wk31_r2_survival_samples_and_assembler_note": {
+          "round_id": "wk31_r2_survival_samples_and_assembler_note",
+          "round_meta": {
+            "prompt_set_id": "wk31_r2",
+            "build_target": "Extend WK31_FLUSH_SAMPLES (metal + tent); document assembler grid vs flush tool; verify SSOT",
+            "completed_at_local": "2026-04-18T00:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "tools/wk31_flush_screenshot_batch.py — module doc: SSOT coverage for remaining Survival GLBs; assembler 1-unit center snap vs narrow post-fit meshes (e.g. structure-floor) causing visible gaps — not a kenney_pack_scale error; flush tool uses tight-bounds edge spacing. WK31_FLUSH_SAMPLES +4: structure-metal-floor/roof/wall, tent-canvas (18 PNGs total).",
+            "docs/screenshots/wk31_flush — regenerated batch (18 wk31_*.png).",
+            "kenney_pack_scale.py — no change; verified merged structure-floor.glb → 1.14 (Survival-only basename)."
+          ],
+          "assembler_vs_flush": {
+            "screenshot_context": "User assembler session showed gaps between structure-floor.glb on grid; pos e.g. (+1.5,0,+1.5) is valid snap — mesh XZ extent after uniform fit is less than 1.0 between centers for flush appearance.",
+            "flush_tool": "wall_flush_pair_kenney places second copy at w0+gap from tight bounds — edge-flush pair.",
+            "handoff_agent_12": "Optional: bounds-aware snap or placement hints for Survival structure family — future UX, not WK31 prefab SSOT."
+          },
+          "how_to_test": [
+            "python tools/wk31_flush_screenshot_batch.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "wk31_flush_batch": {
+              "command": "python tools/wk31_flush_screenshot_batch.py",
+              "exit_code": 0,
+              "status": "PASS — 18 PNGs under docs/screenshots/wk31_flush/"
+            }
+          },
+          "blockers": []
+        }
+      }
+    },
     "wk30-buildings-pipeline": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",

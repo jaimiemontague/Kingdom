@@ -273,6 +273,7 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
     centered on the sim building's footprint-center, and the visible mesh extent fits
     within the sim footprint.
     """
+    from tools.kenney_pack_scale import pack_extent_multiplier_for_rel
     from tools.model_viewer_kenney import _apply_gltf_color_and_shading
 
     raw = json.loads(prefab_path.read_text(encoding="utf-8"))
@@ -321,6 +322,8 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
         ppos = piece.get("pos", [0, 0, 0])
         prot = piece.get("rot", [0, 0, 0])
         psc = piece.get("scale", [1, 1, 1])
+        # WK31: Kenney pack uniform scale vs Retro (single source: tools/kenney_pack_scale.py).
+        pf = pack_extent_multiplier_for_rel(rel)
         # WK30 auto-center: subtract the XZ centroid so the cluster is centered on (0, 0)
         # in root-local space. Y is left alone (vertical stacking stays as authored).
         cpos_x = float(ppos[0]) - centroid_x
@@ -330,7 +333,11 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
             model=model_str,
             position=(cpos_x, float(ppos[1]), cpos_z),
             rotation=(float(prot[0]), float(prot[1]), float(prot[2])),
-            scale=(float(psc[0]), float(psc[1]), float(psc[2])),
+            scale=(
+                float(psc[0]) * pf,
+                float(psc[1]) * pf,
+                float(psc[2]) * pf,
+            ),
             collider=None,
             double_sided=True,
         )
@@ -767,6 +774,7 @@ class UrsinaRenderer:
         tm = m * float(TREE_SCALE_MULTIPLIER)
         rm = m * float(ROCK_SCALE_MULTIPLIER)
         g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
+        scatter_stride = max(1, int(getattr(config, "URSINA_TERRAIN_SCATTER_STRIDE", 1)))
 
         root = Entity(name="terrain_3d_root")
         water_tint = color.rgb(0.24, 0.48, 0.82)
@@ -823,7 +831,9 @@ class UrsinaRenderer:
                         add_to_scene_entities=False,
                     )
 
-                if tile == TileType.GRASS or tile == TileType.TREE:
+                # WK31: optional stride reduces grass-clutter entities (deterministic grid; trees unchanged).
+                on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
+                if (tile == TileType.GRASS or tile == TileType.TREE) and on_scatter_grid:
                     jx, jz, yaw = _grass_scatter_jitter(tx, ty)
                     Entity(
                         parent=root,
@@ -848,7 +858,7 @@ class UrsinaRenderer:
                         double_sided=True,
                         add_to_scene_entities=False,
                     )
-                elif tile == TileType.GRASS:
+                elif tile == TileType.GRASS and on_scatter_grid:
                     h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
                     if h % 503 == 0:
                         Entity(

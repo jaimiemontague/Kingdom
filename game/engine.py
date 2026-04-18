@@ -1685,12 +1685,28 @@ class GameEngine:
             peasants_alive = int(self._perf_snapshot.get("peasants", 0))
             guards_alive = int(self._perf_snapshot.get("guards", 0))
 
-            lines = [
-                f"FPS: {fps:0.1f}",
-                f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
-                f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
-                f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
-            ]
+            ursina_ema = getattr(self, "_ursina_window_fps_ema", None)
+            if getattr(self, "_ursina_viewer", False):
+                lines = [
+                    f"FPS (pygame/HUD path): {fps:0.1f}",
+                    "3D GPU: use top-left Ursina fps counter (not this number).",
+                ]
+                if ursina_ema is not None:
+                    lines.append(f"Ursina dt EMA ~FPS (rough): {float(ursina_ema):0.1f}")
+                lines.extend(
+                    [
+                        f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
+                        f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
+                        f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
+                    ]
+                )
+            else:
+                lines = [
+                    f"FPS: {fps:0.1f}",
+                    f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
+                    f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
+                    f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
+                ]
 
             font = get_font(16)
             pad = 6

@@ -15,6 +15,10 @@ Ursina EditorCamera for panning/orbiting. See
 ``.cursor/plans/kenney_gltf_ursina_integration_guide.md`` for shader/material
 pitfalls.
 
+**WK31:** Per-pack uniform fit targets (Retro = 1.0 reference) live in
+``tools/kenney_pack_scale.py`` — viewer, assembler, and in-game prefab load share
+that module.
+
 Usage (from repo root):
   python tools/model_viewer_kenney.py
   python tools/model_viewer_kenney.py --max-total 120
@@ -36,6 +40,10 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from tools.kenney_pack_scale import pack_max_extent_for_rel
 # We strictly exclude .obj, .dae, .fbx because Kenney distributes copies in every format.
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
@@ -62,7 +70,9 @@ KENNEY_PACKS_ORDERED: tuple[tuple[str, str], ...] = (
 # Layout (world units)
 DEFAULT_CELL = 7.0
 DEFAULT_PACK_GAP = 14.0
-DEFAULT_MODEL_MAX_EXTENT = 5.0  # max axis-aligned size after uniform scale
+# Base max axis length after uniform fit for **Retro Fantasy** (reference 1.0);
+# other packs multiply via ``kenney_pack_scale.pack_max_extent_for_rel``.
+DEFAULT_MODEL_MAX_EXTENT = 5.0
 LABEL_Y = 0.08
 TEXT_SCALE = 13.0
 PACK_TITLE_SCALE = 20.0
@@ -527,7 +537,7 @@ def run_viewer(
 
     # Large reference grid on XZ
     try:
-        from ursina.models.procedural import Grid
+        from ursina.models.procedural.grid import Grid
         Entity(
             parent=scene,
             model=Grid(160, 160),
@@ -631,6 +641,10 @@ def run_viewer(
             cz_i = oz_top - row * cell - cell * 0.5
             label_txt = _truncate_label(fpath.name)
 
+            rel_posix = fpath.relative_to(assets_models).as_posix()
+            per_model_extent = pack_max_extent_for_rel(
+                rel_posix, base_max_extent=model_max_extent
+            )
             node = _load_model_node_from_file(fpath)
             if node is not None:
                 ent = Entity(
@@ -640,7 +654,7 @@ def run_viewer(
                     double_sided=True,
                     position=(cx_i, 0.0, cz_i),
                 )
-                _fit_uniform_and_ground(ent, model_max_extent)
+                _fit_uniform_and_ground(ent, per_model_extent)
                 _apply_gltf_color_and_shading(
                     ent.model,
                     debug_materials=debug_materials,
@@ -652,8 +666,8 @@ def run_viewer(
                     parent=scene,
                     model="cube",
                     color=color.red,
-                    position=(cx_i, model_max_extent * 0.5, cz_i),
-                    scale=model_max_extent * 0.35,
+                    position=(cx_i, per_model_extent * 0.5, cz_i),
+                    scale=per_model_extent * 0.35,
                     shader=unlit_shader,
                 )
 
@@ -760,7 +774,10 @@ def parse_args() -> argparse.Namespace:
         "--model-max-extent",
         type=float,
         default=DEFAULT_MODEL_MAX_EXTENT,
-        help="Uniform scale cap (max axis length) per preview model",
+        help=(
+            "Retro Fantasy reference: max axis length after uniform fit; "
+            "non-Retro packs multiply this via tools/kenney_pack_scale.py"
+        ),
     )
     p.add_argument(
         "--max-total",

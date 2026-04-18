@@ -17,6 +17,9 @@ Key design decisions (see ``.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md`
   no ``.glb`` export (deferred past v0.1).
 - Does NOT modify anything under ``game/``, ``ai/``, or ``config.py``.
 
+**WK31:** Display scale applies ``tools/kenney_pack_scale.pack_extent_multiplier_for_rel``
+per model path on top of authored JSON ``scale`` (Retro = 1.0); saved JSON stays logical.
+
 Usage (from repo root):
     python tools/model_assembler_kenney.py --new
     python tools/model_assembler_kenney.py --open peasant_house_small_v1
@@ -26,8 +29,10 @@ Controls (hover the 3D scene; UI clicks route to UI, not the scene):
     Left-click ground       - place currently selected library piece (1-unit grid snap)
     Left-click placed piece - select that piece
     WASD                    - nudge selected piece by 1.0 units on XZ
+    Shift+WASD              - nudge selected piece by 0.25 units on XZ (fine; flush kitbash)
     Q / E                   - rotate selected piece 90 deg around Y
     [ / ]                   - move selected piece Y by 0.25 units
+    Shift+[ / Shift+]       - move selected piece Y by 0.05 units (fine vertical)
     Delete / Backspace      - remove selected piece
     Right-drag / MMB drag   - orbit / pan camera (EditorCamera)
     Scroll wheel            - zoom
@@ -89,8 +94,10 @@ DEFAULT_OUT_DIR = PROJECT_ROOT / "assets" / "prefabs" / "buildings"
 GRID_HALF = 5  # ground grid extends +/-5 cells on X and Z (10x10 cells total)
 GRID_CELL = 1.0
 NUDGE_STEP = 1.0
+NUDGE_FINE_STEP = 0.25  # Shift+WASD; matches Y_STEP for consistent sub-grid placement
 ROT_STEP = 90.0
 Y_STEP = 0.25
+Y_STEP_FINE = 0.05  # Shift+[ / Shift+]
 
 DEFAULT_PREFAB_ID = "untitled_v1"
 DEFAULT_BUILDING_TYPE = "house"
@@ -104,6 +111,7 @@ DEFAULT_GROUND_Y = 0.0
 # Agent 12 (ToolsDevEx_Lead) and the shader classifier is the canonical piece
 # of logic we want to keep in lockstep between viewer and assembler.
 sys.path.insert(0, str(PROJECT_ROOT))
+from tools.kenney_pack_scale import pack_extent_multiplier_for_rel  # noqa: E402
 from tools.model_viewer_kenney import (  # noqa: E402
     _apply_gltf_color_and_shading,
     _load_model_node_from_file,
@@ -630,8 +638,9 @@ class AssemblerApp:
         # Help text (bottom-right).
         Text(
             text=(
-                "LMB=place/select  WASD=nudge  Q/E=rotate  [ / ]=y  Del=remove  "
-                "RMB=orbit  MMB=pan  Scroll=zoom  ESC=quit"
+                "LMB=place/select  WASD=nudge1  Shift+WASD=nudge0.25  Q/E=rotate  "
+                "[ / ]=y0.25  Shift+[ / ]=y0.05  Del=remove  RMB=orbit  MMB=pan  "
+                "Scroll=zoom  ESC=quit"
             ),
             parent=camera.ui,
             position=(-0.40, -0.49),
@@ -925,6 +934,7 @@ class AssemblerApp:
         if node is None:
             self._show_toast(f"load failed: {rel}", err=True)
             return None
+        pf = pack_extent_multiplier_for_rel(rel)
         ent = Entity(
             parent=scene,
             model=node,
@@ -932,7 +942,11 @@ class AssemblerApp:
             double_sided=True,
             position=Vec3(pos[0], pos[1], pos[2]),
             rotation_y=rot_y,
-            scale=Vec3(scale[0], scale[1], scale[2]),
+            scale=Vec3(
+                scale[0] * pf,
+                scale[1] * pf,
+                scale[2] * pf,
+            ),
         )
         try:
             _apply_gltf_color_and_shading(ent.model, debug_materials=False, model_label=rel)
@@ -1070,7 +1084,10 @@ class AssemblerApp:
         __main__.input = self.handle_input
 
     def handle_input(self, key: str) -> None:
-        from ursina import application, mouse
+        from ursina import application, held_keys, mouse
+
+        def _shift_held() -> bool:
+            return bool(held_keys.get("shift", 0) or held_keys.get("left shift", 0))
 
         # ESC: close modal if open, else quit.
         if key == "escape":
@@ -1095,17 +1112,18 @@ class AssemblerApp:
                 self._remove_piece(self.selected)
             return
 
+        xz_step = NUDGE_FINE_STEP if _shift_held() else NUDGE_STEP
         if key == "w":
-            self._move_selected(0.0, +NUDGE_STEP)
+            self._move_selected(0.0, +xz_step)
             return
         if key == "s":
-            self._move_selected(0.0, -NUDGE_STEP)
+            self._move_selected(0.0, -xz_step)
             return
         if key == "a":
-            self._move_selected(-NUDGE_STEP, 0.0)
+            self._move_selected(-xz_step, 0.0)
             return
         if key == "d":
-            self._move_selected(+NUDGE_STEP, 0.0)
+            self._move_selected(+xz_step, 0.0)
             return
         if key == "q":
             self._rotate_selected(+ROT_STEP)
@@ -1114,10 +1132,12 @@ class AssemblerApp:
             self._rotate_selected(-ROT_STEP)
             return
         if key == "[":
-            self._move_selected(0.0, 0.0, dy=-Y_STEP)
+            y_step = Y_STEP_FINE if _shift_held() else Y_STEP
+            self._move_selected(0.0, 0.0, dy=-y_step)
             return
         if key == "]":
-            self._move_selected(0.0, 0.0, dy=+Y_STEP)
+            y_step = Y_STEP_FINE if _shift_held() else Y_STEP
+            self._move_selected(0.0, 0.0, dy=+y_step)
             return
 
     def _handle_left_click(self) -> None:

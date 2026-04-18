@@ -592,6 +592,19 @@ class UrsinaApp:
 
             self.engine.tick_simulation(dt)
 
+            # WK31: EMA of 1/dt for F2 overlay — pygame clock FPS is not Panda3D/GPU FPS in this mode.
+            try:
+                d = float(dt or 0.0)
+                if d > 1e-9:
+                    inst = 1.0 / d
+                    prev = getattr(eng, "_ursina_window_fps_ema", None)
+                    if prev is None:
+                        eng._ursina_window_fps_ema = inst
+                    else:
+                        eng._ursina_window_fps_ema = prev * 0.92 + inst * 0.08
+            except Exception:
+                pass
+
             # Pause menu Quit sets engine.running = False; Pygame's engine.run() exits the process —
             # Ursina must stop app.run() explicitly or the window stays open forever.
             if not getattr(self.engine, "running", True):
