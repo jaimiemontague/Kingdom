@@ -78,10 +78,17 @@
         "castle_v1",
         "warrior_guild_v1",
         "ranger_guild_v1",
-        "rogue_guild_v1"
+        "rogue_guild_v1",
+        "inn_v1",
+        "farm_v1",
+        "food_stand_v1",
+        "gnome_hovel_v1"
       ],
       "optional": [
-        "wizard_guild_v1"
+        "wizard_guild_v1",
+        "inn_v2",
+        "farm_v2",
+        "food_stand_v2"
       ]
     }
   },

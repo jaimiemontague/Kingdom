@@ -4079,6 +4079,52 @@
           "bugs_found": []
         }
       }
+    },
+    "wk31-perf-fps-and-pack-scale": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+        "notes": "Part B economy prefabs (inn, farm, food_stand, gnome_hovel); QA consult post-merge gates per wk31_r2_economy."
+      },
+      "rounds": {
+        "wk31_r2_economy": {
+          "round_id": "wk31_r2_economy",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only per PM).",
+            "Ran PM gates: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report; triage note: no FAIL; prefabs assets/prefabs/buildings/{inn_v1,farm_v1,food_stand_v1,gnome_hovel_v1}.json and tools/assets_manifest.json prefabs.buildings entries present in tree at gate time."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-18 wk31_r2_economy: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file legacy placeholders; per plan B.5 / PM gate exit 0; warnings acceptable)"
+            }
+          },
+          "triage": {
+            "regressions_to_agent_15": "Prefab JSON / schema / attribution / footprint — if validate_assets ERROR on prefab paths or smoke fails after prefab edits.",
+            "regressions_to_agent_12": "tools/assets_manifest.json, validate_assets severity, tooling — if new ERROR paths or manifest contract breaks."
+          },
+          "part_b_ack": {
+            "plan_section": "wk31_kingdom_perf_and_economy.plan.md Part B",
+            "human_playtest_ursina": "Not automated by Agent 11 this round; Agents 15/05/09/10 per PM hub."
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

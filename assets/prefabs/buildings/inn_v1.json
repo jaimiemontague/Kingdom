@@ -1,0 +1,234 @@
+{
+  "prefab_id": "inn_v1",
+  "building_type": "inn",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit",
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_nature-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/roof-high-side.glb",
+      "pos": [
+        0.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side.glb",
+      "pos": [
+        1.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side.glb",
+      "pos": [
+        1.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/chimney-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.05,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/flower_yellowC.glb",
+      "pos": [
+        1.8,
+        0.0,
+        -0.1499999999999999
+      ],
+      "rot": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint-door.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-paint-window.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-paint-window.glb",
+      "pos": [
+        0.0,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-paint-window.glb",
+      "pos": [
+        0.5,
+        0.0,
+        2.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-paint-window.glb",
+      "pos": [
+        1.5,
+        0.0,
+        2.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-paint-window.glb",
+      "pos": [
+        2.0,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "Warm tavern: Retro painted-wood walls + high roof; Fantasy Town chimney; Nature flower by entrance. 2x2; <=14 pieces."
+}

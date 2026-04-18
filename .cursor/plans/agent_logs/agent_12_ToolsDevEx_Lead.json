@@ -2543,6 +2543,33 @@
             "environment": 1.0
           }
         }
+      },
+      "wk31_r2_economy": {
+        "round_id": "wk31_r2_economy",
+        "status": "done",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json"
+          ],
+          "summary": "Part B: moved inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 from prefabs.buildings.optional to required (WK31B-FEAT-005). Prefab JSONs already present under assets/prefabs/buildings/. No validator code changes."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "python tools/validate_assets.py --report"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
       }
     }
   }

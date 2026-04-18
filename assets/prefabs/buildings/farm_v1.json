@@ -1,0 +1,71 @@
+{
+  "prefab_id": "farm_v1",
+  "building_type": "farm",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": ["kenney_retro-fantasy-kit", "kenney_nature-kit"],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-pane-wood.glb",
+      "pos": [0.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-wood.glb",
+      "pos": [1.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-side.glb",
+      "pos": [0.5, 1.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-side.glb",
+      "pos": [1.5, 1.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-side.glb",
+      "pos": [0.5, 1.0, 1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-side.glb",
+      "pos": [1.5, 1.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-wood-door.glb",
+      "pos": [1.5, 0.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-pane-wood-window.glb",
+      "pos": [0.5, 0.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/crops_cornStageD.glb",
+      "pos": [0.5, 0.0, -0.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/crops_cornStageD.glb",
+      "pos": [1.5, 0.0, -0.2],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Low barn (wood walls + pitched roof-side) with corn rows just south of footprint edge; 2x2; <=10 pieces."
+}

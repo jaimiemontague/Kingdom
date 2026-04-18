@@ -184,7 +184,7 @@ With castle + house + guilds + 4 economy buildings visible, confirm JSON prefab 
 
 ### B.6 Part B — when to activate in the PM hub
 
-Add a new round (e.g. `wk31_r2_economy` or `wk32_r1_economy`) **after** Part A gates are green and WK30 is closed green. If a **baker sprint** is required first, PM defers Part B until after that sprint.
+**Active:** round `wk31_r2_economy` under sprint `wk31-perf-fps-and-pack-scale` in `agent_01_ExecutiveProducer_PM.json` (opened after Part A complete). If a **baker sprint** is required first per Agent 10, PM defers Part B.
 
 ### B.7 Part B — related docs
 

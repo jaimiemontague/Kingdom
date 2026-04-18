@@ -1,0 +1,65 @@
+{
+  "prefab_id": "gnome_hovel_v1",
+  "building_type": "gnome_hovel",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": ["kenney_fantasy-town-kit_2.0", "kenney_nature-kit"],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-wood-doorway-round-fantasy-town.glb",
+      "pos": [1.5, 0.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-rounded-fantasy-town.glb",
+      "pos": [0.5, 0.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-rounded-fantasy-town.glb",
+      "pos": [0.5, 0.0, 1.5],
+      "rot": [0.0, -90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-rounded-fantasy-town.glb",
+      "pos": [1.5, 0.0, 1.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-fantasy-town.glb",
+      "pos": [0.5, 1.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-fantasy-town.glb",
+      "pos": [1.5, 1.0, 0.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-fantasy-town.glb",
+      "pos": [0.5, 1.0, 1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/roof-fantasy-town.glb",
+      "pos": [1.5, 1.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/mushroom_tan.glb",
+      "pos": [1.45, 0.0, 0.28],
+      "rot": [0.0, -25.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Squat rounded Fantasy Town hut + roof tiles + Nature mushroom accent; racial housing read; 2x2; <=10 pieces."
+}

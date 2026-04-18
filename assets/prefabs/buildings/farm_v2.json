@@ -1,0 +1,41 @@
+{
+  "prefab_id": "farm_v2",
+  "building_type": "farm",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": ["kenney_fantasy-town-kit_2.0", "kenney_nature-kit"],
+  "pieces": [
+    {
+      "model": "Models/GLB format/windmill-fantasy-town.glb",
+      "pos": [1.0, 0.0, 1.35],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/crops_wheatStageB.glb",
+      "pos": [0.35, 0.0, 0.35],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/crops_wheatStageB.glb",
+      "pos": [1.65, 0.0, 0.35],
+      "rot": [0.0, 20.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLTF format/crops_dirtRow.glb",
+      "pos": [1.0, 0.0, 0.3],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/fence-fantasy-town.glb",
+      "pos": [0.22, 0.0, 0.85],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Redo: windmill hero (back-center) + Nature wheat + dirt row crops in foreground + FT fence side accent. Sells 'farm' identity vs v1 single-mesh windmill."
+}

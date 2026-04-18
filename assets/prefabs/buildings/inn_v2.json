@@ -1,0 +1,592 @@
+{
+  "prefab_id": "inn_v2",
+  "building_type": "inn",
+  "footprint_tiles": [
+    3,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-door-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
+        -0.75
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        -0.75
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        -0.75
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
+        2.25
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-right-fantasy-town.glb",
+      "pos": [
+        1.5,
+        2.05,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-right-fantasy-town.glb",
+      "pos": [
+        3.5,
+        2.05,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-left-fantasy-town.glb",
+      "pos": [
+        1.5,
+        2.05,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-left-fantasy-town.glb",
+      "pos": [
+        3.5,
+        2.05,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-window-fantasy-town.glb",
+      "pos": [
+        2.5,
+        2.05,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-window-fantasy-town.glb",
+      "pos": [
+        2.5,
+        2.05,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "Redo: cleaner watermill-wide hero (back-center); foreground = cart (front-right) + crate (front-left); fence on left perimeter. No trees. Matches Fantasy Town preview intent with smaller prop count for a readable silhouette."
+}

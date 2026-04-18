@@ -253,7 +253,7 @@ BUILDING_SIZES = {
     "marketplace": (2, 2),
     # Phase 1: Economic Buildings
     "blacksmith": (2, 2),
-    "inn": (2, 2),
+    "inn": (3, 2),
     "trading_post": (2, 2),
     # Phase 2: Temples
     "temple_agrela": (3, 3),

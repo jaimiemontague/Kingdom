@@ -124,8 +124,13 @@ _PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
 # the ``<building_type>_v1.json`` convention in ``_resolve_prefab_path``. Keep this table
 # sorted and minimal — the expectation is that new buildings land under the convention.
 _PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
+    # WK31 economy visual pass (Jaimie): inn_v2, farm_v1, food_stand_v2, gnome_hovel_v1.
+    "farm": "farm_v1.json",
+    "food_stand": "food_stand_v2.json",
+    "gnome_hovel": "gnome_hovel_v1.json",
     # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
     "house": "peasant_house_small_v1.json",
+    "inn": "inn_v2.json",
 }
 
 
@@ -1102,32 +1107,28 @@ class UrsinaRenderer:
         ``hy`` is the legacy sim-height hint; **we deliberately do not scale Y** — piece
         vertical stacking stays as authored to avoid squashing roofs / towers.
 
-        Scale rule:
+        Scale rule (WK31: anisotropic XZ for non-square sim footprints):
           effective_w = max(authored_w, spread_x + 1.0)  # 1.0 = assumed Kenney piece width
           effective_d = max(authored_d, spread_z + 1.0)
-          xz_scale    = min(fx / effective_w, fz / effective_d) * PREFAB_FIT_INSET
+          scale_x     = (fx / max(effective_w, 1e-6)) * PREFAB_FIT_INSET
+          scale_z     = (fz / max(effective_d, 1e-6)) * PREFAB_FIT_INSET
 
-        When authored_w / authored_d matches the sim footprint AND pieces fit inside the
-        authored extent, ``xz_scale`` is exactly PREFAB_FIT_INSET. When a prefab overflows
-        its own authored footprint (piece centroids span more than authored - 1 tiles),
-        the max(..) clamp shrinks the cluster uniformly so the visible mesh still fits
-        inside the sim footprint. This honors Jaimie's WK30-iter5 request: "shrink the
-        models to fit the map grid perfectly." Authors can avoid the auto-shrink by
-        keeping piece positions within ``[authored_w/2 - 0.5, authored_w/2 + 0.5]`` in X
-        (and same for Z) — i.e. one piece-width tighter than the authored footprint.
+        **Why not uniform** ``min(fx/ew, fz/ed)`` on both axes: for a 3×2 building, one
+        ratio is often smaller; uniform scaling under-fills the long edge (inn looked
+        squeezed into ~2×2). Independent X/Z mapping fills the sim ``fx × fz`` rect.
 
-        Combined with ``_load_prefab_instance`` auto-centering, every prefab renders
-        centered on the sim building's footprint-center and never extends past the sim
-        rect (to within the 1-tile piece-width approximation).
+        When the sim footprint is square and effective_w ≈ effective_d, scale_x ≈ scale_z.
+        When a prefab overflows its authored footprint, the max(..) effective_* terms
+        still apply; tighten piece layouts in JSON if stretching is undesirable.
         """
         UrsinaRenderer._set_texture_if_changed(ent, None)
         authored_w, authored_d = getattr(ent, "_ks_prefab_authored_ft", (1.0, 1.0))
         spread_x, spread_z = getattr(ent, "_ks_prefab_xz_spread", (0.0, 0.0))
         effective_w = max(float(authored_w), float(spread_x) + 1.0)
         effective_d = max(float(authored_d), float(spread_z) + 1.0)
-        xz_scale = min(fx / max(effective_w, 1e-6), fz / max(effective_d, 1e-6))
-        xz_scale *= _PREFAB_FIT_INSET
-        scale_xyz = (xz_scale, 1.0, xz_scale)
+        scale_x = (fx / max(effective_w, 1e-6)) * _PREFAB_FIT_INSET
+        scale_z = (fz / max(effective_d, 1e-6)) * _PREFAB_FIT_INSET
+        scale_xyz = (scale_x, 1.0, scale_z)
         if getattr(ent, "_ks_last_scale", None) != scale_xyz:
             ent.scale = scale_xyz
             ent._ks_last_scale = scale_xyz

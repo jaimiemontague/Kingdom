@@ -135,6 +135,92 @@
             }
           },
           "blockers": []
+        },
+        "wk31_r2_economy": {
+          "round_id": "wk31_r2_economy",
+          "round_meta": {
+            "prompt_set_id": "wk31_r2_economy",
+            "build_target": "WK31 Part B — inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 prefabs",
+            "completed_at_local": "2026-04-18T00:00:00"
+          },
+          "assignment_received": {
+            "from": "agent_01_ExecutiveProducer_PM",
+            "prompt_ref": "sprints.wk31-perf-fps-and-pack-scale.rounds.wk31_r2_economy.pm_agent_prompts.15",
+            "asks": [
+              "Kitbash four economy prefabs per wk31_kingdom_perf_and_economy.plan.md Part B.4",
+              "Footprints match config.py; ground_anchor_y 0.0; attribution; Ursina + --open round-trip"
+            ]
+          },
+          "status": "complete_prefab_json_handoff_agent_12_manifest",
+          "footprint_vs_config_py": {
+            "inn": "[2,2] == BUILDING_SIZES.inn (2,2)",
+            "farm": "[2,2] == BUILDING_SIZES.farm (2,2)",
+            "food_stand": "[1,1] == BUILDING_SIZES.food_stand (1,1)",
+            "gnome_hovel": "[2,2] == BUILDING_SIZES.gnome_hovel (2,2)"
+          },
+          "what_i_changed": [
+            "assets/prefabs/buildings/inn_v1.json — hand-authored 10 pieces: Retro painted-wood walls + roof-high-side + FT chimney + Nature flower; 2x2; attribution kenney_retro-fantasy-kit, kenney_fantasy-town-kit_2.0, kenney_nature-kit.",
+            "assets/prefabs/buildings/farm_v1.json — 10 pieces: Retro wood barn (same 2x2 layout as warrior_guild) + 2x Nature corn rows in front; attribution retro + nature.",
+            "assets/prefabs/buildings/food_stand_v1.json — 3 pieces: FT stall + banner + stool; 1x1; attribution kenney_fantasy-town-kit_2.0 only.",
+            "assets/prefabs/buildings/gnome_hovel_v1.json — 9 pieces: FT rounded/wood-rounded walls + 4x roof-fantasy-town + mushroom_tan; 2x2; attribution fantasy-town + nature.",
+            "tools/assets_manifest.json — NOT edited (WK31B-FEAT-005 left for Agent 12 after PM activation)."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v1",
+            "python tools/model_assembler_kenney.py --open farm_v1",
+            "python tools/model_assembler_kenney.py --open food_stand_v1",
+            "python tools/model_assembler_kenney.py --open gnome_hovel_v1",
+            "python main.py --renderer ursina",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "Hand-authored JSON; Jaimie to --open each and adjust in assembler if needed."
+            }
+          },
+          "handoff_agent_12": "Add inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 to tools/assets_manifest.json prefabs.buildings.required; re-run validate_assets.",
+          "blockers": []
+        },
+        "wk31_r2_economy_v2_ft_preview_heroes": {
+          "round_id": "wk31_r2_economy_v2_ft_preview_heroes",
+          "round_meta": {
+            "prompt_set_id": "wk31_r2_economy",
+            "build_target": "inn_v2 / farm_v2 / food_stand_v2 from Fantasy Town preview refs (watermill-wide, windmill, stall-green)",
+            "completed_at_local": "2026-04-18T00:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/inn_v2.json — watermill-wide-fantasy-town + cart + stall-bench + fence + planks (5 pieces); FT-only attribution.",
+            "assets/prefabs/buildings/farm_v2.json — windmill-fantasy-town.glb single hero (1 piece).",
+            "assets/prefabs/buildings/food_stand_v2.json — stall-green-fantasy-town.glb (1 piece).",
+            "game/graphics/ursina_renderer.py — _PREFAB_BUILDING_TYPE_TO_FILE: inn→inn_v2.json, farm→farm_v2.json, food_stand→food_stand_v2.json (defaults in-game).",
+            "tools/assets_manifest.json — prefabs.buildings.optional extended with inn/farm/food v1+v2 + gnome_hovel_v1 for validator coverage."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2",
+            "python tools/model_assembler_kenney.py --open farm_v2",
+            "python tools/model_assembler_kenney.py --open food_stand_v2",
+            "python main.py --renderer ursina",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" }
+          },
+          "blockers": []
         }
       }
     },

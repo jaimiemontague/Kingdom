@@ -5954,7 +5954,8 @@
                         "pm_authored_at_local": "2026-04-17T00:00:00"
                     },
                     "pm_status_summary": {
-                        "overall_status": "Assigned",
+                        "overall_status": "Complete",
+                        "closed_note": "Part A shipped; playtest green; committed. Round wk31_r2_economy opens Part B.",
                         "focus": "Restore playable Ursina frame times after recent prefab/3D work; normalize per-pack model scale so wall pieces and assembler grid placement match Retro Fantasy Kit quality (no large interior gaps in wall runs).",
                         "human_request": "FPS has become laggy; only Retro pack tiles cleanly \u2014 other packs need resizing so pieces fill grid cells consistently in viewer, assembler, and in-game prefabs.",
                         "economy_batch_deferred": "Economy/living prefabs (Inn, Farm, Food Stand, Gnome Hovel) are Part B of .cursor/plans/wk31_kingdom_perf_and_economy.plan.md — activate after Part A closes green.",
@@ -6090,6 +6091,166 @@
                             "14"
                         ],
                         "rationale": "Agent 10 (HIGH intelligence): profile Ursina + baseline/measurement narrative and prioritized hotspots for engineering. Agent 03 (HIGH intelligence): implement renderer/sim mitigations from findings, determinism-safe; dev hook for Agent 15 wall/fence test layout if needed. Agent 12 (MEDIUM intelligence): pack scale policy + tool/runtime alignment, schema/docs. Agent 15 (HIGH intelligence): exhaustive non-Retro wall/fence side-by-side flush pass + screenshots + shipped prefab touch-ups per wk31_kingdom_perf_and_economy A.2.2. Agent 09 (LOW intelligence, consult): short cohesion review. Agent 11 (LOW intelligence, consult): gate runner."
+                    }
+                },
+                "wk31_r2_economy": {
+                    "round_meta": {
+                        "prompt_set_id": "wk31_r2_economy",
+                        "build_target": "Inn_Farm_FoodStand_GnomeHovel_Prefabs + Manifest + Audit",
+                        "visibility": "Implementers: 15, 12. Consults: 05, 09, 10, 11. Silent unless needed: 03.",
+                        "pm_authored_at_local": "2026-04-18T00:00:00"
+                    },
+                    "pm_status_summary": {
+                        "overall_status": "Assigned",
+                        "focus": "Part B: four economy/living building prefabs (inn, farm, food_stand, gnome_hovel) with WK30-style manifest + footprint audit + kingdom FPS check.",
+                        "depends_on": "wk31_r1_execution Complete; generalized prefab loader from WK30.",
+                        "gates": {
+                            "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS",
+                            "validate_assets": "python tools/validate_assets.py --report exit 0",
+                            "config_footprints": "No config.py footprint edits; shrink prefabs to match config.py"
+                        }
+                    },
+                    "pm_bug_tickets": [],
+                    "pm_feature_requests": [
+                        {
+                            "id": "WK31B-FEAT-001",
+                            "title": "Prefab inn_v1",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md Part B.4",
+                            "acceptance": [
+                                "assets/prefabs/buildings/inn_v1.json; building_type inn; <=14 pieces; footprint_tiles matches config.py; round-trip --open inn_v1"
+                            ]
+                        },
+                        {
+                            "id": "WK31B-FEAT-002",
+                            "title": "Prefab farm_v1",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md Part B.4",
+                            "acceptance": [
+                                "assets/prefabs/buildings/farm_v1.json; building_type farm; <=10 pieces; footprint match; --open farm_v1"
+                            ]
+                        },
+                        {
+                            "id": "WK31B-FEAT-003",
+                            "title": "Prefab food_stand_v1",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md Part B.4",
+                            "acceptance": [
+                                "assets/prefabs/buildings/food_stand_v1.json; building_type food_stand; <=6 pieces; footprint match; --open food_stand_v1"
+                            ]
+                        },
+                        {
+                            "id": "WK31B-FEAT-004",
+                            "title": "Prefab gnome_hovel_v1",
+                            "owner_agent": "15_ModelAssembler_KitbashLead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md Part B.4",
+                            "acceptance": [
+                                "assets/prefabs/buildings/gnome_hovel_v1.json; building_type gnome_hovel; <=10 pieces; footprint match; --open gnome_hovel_v1"
+                            ]
+                        },
+                        {
+                            "id": "WK31B-FEAT-005",
+                            "title": "Manifest prefabs.buildings entries + validator green",
+                            "owner_agent": "12_ToolsDevEx_Lead",
+                            "spec_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md Part B.4",
+                            "acceptance": [
+                                "tools/assets_manifest.json prefabs.buildings: inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 (REQUIRED)",
+                                "validate_assets --report exit 0"
+                            ]
+                        }
+                    ],
+                    "pm_integration_order": [
+                        "Agent 15 + Jaimie: kitbash four prefabs (order flexible; log chosen order).",
+                        "Agent 12: manifest entries after JSON files exist.",
+                        "Agent 05: footprint audit when prefabs land.",
+                        "Agent 10: kingdom-scale FPS vs Part A baseline; baker flag only if >30% regression.",
+                        "Agent 09: civic/humble read vs military guilds.",
+                        "Agent 11: gates post-merge."
+                    ],
+                    "pm_next_actions_by_agent": {
+                        "15": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Kitbash four prefabs with Jaimie per plan Part B.4: inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1.",
+                                "footprint_tiles must match config.py per building_type; ground_anchor_y 0.0; complete attribution; use Part A pack scale conventions.",
+                                "Confirm each renders in Ursina via python main.py --renderer ursina; round-trip each via model_assembler_kenney.py --open <id>."
+                            ],
+                            "acceptance_criteria": [
+                                "WK31B-FEAT-001 through WK31B-FEAT-004 acceptance items.",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "12": {
+                            "status": "assigned_active",
+                            "asks": [
+                                "Add REQUIRED prefabs.buildings entries for inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 in tools/assets_manifest.json.",
+                                "Confirm tools/validate_assets.py accepts all four; fix severity if new ERROR paths appear."
+                            ],
+                            "acceptance_criteria": [
+                                "WK31B-FEAT-005 acceptance.",
+                                "python tools/qa_smoke.py --quick PASS"
+                            ]
+                        },
+                        "05": {
+                            "status": "consult",
+                            "asks": [
+                                "Read-only footprint audit: for inn, farm, food_stand, gnome_hovel compare prefab footprint_tiles to config.py; log OK or mismatch (mismatch \u2192 Agent 15 prefab shrink, not config edit)."
+                            ]
+                        },
+                        "09": {
+                            "status": "consult",
+                            "asks": [
+                                "~5 min review: economy buildings read civic/humble vs guild military set; palette cohesion with WK31 Part A environment."
+                            ]
+                        },
+                        "10": {
+                            "status": "consult",
+                            "asks": [
+                                "With ~10 prefabs visible (castle, house, guilds, +4 economy), compare F2 ms/frame to Part A baseline; if >30% worse flag baker sprint to PM; else log PASS."
+                            ]
+                        },
+                        "11": {
+                            "status": "consult",
+                            "asks": [
+                                "Post-merge: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report; triage regressions to 15 vs 12."
+                            ]
+                        },
+                        "03": {
+                            "status": "silent",
+                            "asks": [
+                                "Stand by unless loader/renderer needs adjustment for new building_types (unlikely)."
+                            ]
+                        }
+                    },
+                    "pm_universal_prompt": "You are activated for sprint wk31-perf-fps-and-pack-scale, round wk31_r2_economy (Part B \u2014 economy buildings).\n\n1) Open .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk31-perf-fps-and-pack-scale\"].rounds[\"wk31_r2_economy\"].\n2) Read pm_agent_prompts[YOUR_AGENT_NUMBER] and pm_next_actions_by_agent[YOUR_AGENT_NUMBER].\n3) Full spec: .cursor/plans/wk31_kingdom_perf_and_economy.plan.md \u2014 Part B only\n\nWhen done: update your agent log; run python tools/qa_smoke.py --quick (must PASS); report evidence back to PM.",
+                    "pm_agent_prompts": {
+                        "15": "WK31 R2 (ModelAssembler \u2014 HIGH): Kitbash inn_v1, farm_v1, food_stand_v1, gnome_hovel_v1 with Jaimie per wk31_kingdom_perf_and_economy.plan.md Part B.4. Footprints match config.py; attribution; Ursina verify; --open round-trip each. qa_smoke --quick PASS.",
+                        "12": "WK31 R2 (Tools DevEx \u2014 LOW): Add four REQUIRED prefabs.buildings manifest entries; validate_assets --report exit 0. qa_smoke --quick PASS.",
+                        "05": "WK31 R2 (Gameplay \u2014 LOW, CONSULT): Footprint audit inn/farm/food_stand/gnome_hovel vs config.py; log OK/mismatch.",
+                        "09": "WK31 R2 (Art \u2014 LOW, CONSULT): Civic/humble read vs guilds; cohesion note.",
+                        "10": "WK31 R2 (Performance \u2014 MEDIUM, CONSULT): Kingdom FPS vs Part A baseline; baker flag if >30% regression.",
+                        "11": "WK31 R2 (QA \u2014 LOW, CONSULT): Post-merge qa_smoke + validate_assets."
+                    },
+                    "pm_send_list_minimal": {
+                        "send_to_agents": [
+                            "15",
+                            "12",
+                            "05",
+                            "09",
+                            "10",
+                            "11"
+                        ],
+                        "do_not_send": [
+                            "02",
+                            "03",
+                            "04",
+                            "06",
+                            "07",
+                            "08",
+                            "13",
+                            "14"
+                        ],
+                        "rationale": "Implementers: Agent 15 (HIGH \u2014 four new kitbash prefabs), Agent 12 (LOW \u2014 manifest entries following WK30 pattern). Consults: Agent 05 (LOW \u2014 footprint audit), Agent 09 (LOW \u2014 style cohesion), Agent 10 (MEDIUM \u2014 kingdom-scale FPS / baker decision vs Part A baseline), Agent 11 (LOW \u2014 gates). Silent: 03 unless loader issues."
                     }
                 }
             }

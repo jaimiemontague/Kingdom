@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from config import BUILDING_SIZES
 from game.entities.buildings.base import Building, RESEARCH_UNLOCKS
 from game.entities.buildings.economic import Blacksmith, Marketplace
 from game.entities.buildings.guilds import WarriorGuild
@@ -68,6 +69,18 @@ def test_building_rect_hit_test_and_center_coordinates() -> None:
     assert rect.collidepoint(building.world_x - 1, building.world_y - 1) is False
     assert building.center_x == building.world_x + building.width / 2
     assert building.center_y == building.world_y + building.height / 2
+
+
+def test_inn_footprint_is_three_by_two_grid_occupancy() -> None:
+    """WK31: inn_v2 is authored for 3×2; sim footprint must match (non-square)."""
+    assert BUILDING_SIZES["inn"] == (3, 2)
+    inn = Building(10, 20, "inn")
+    assert inn.size == (3, 2)
+    assert inn.occupies_tile(10, 20)
+    assert inn.occupies_tile(12, 21)
+    assert not inn.occupies_tile(9, 20)
+    assert not inn.occupies_tile(13, 20)
+    assert not inn.occupies_tile(10, 22)
 
 
 def test_hiring_building_mixin_tracks_hires_and_taxes() -> None:
