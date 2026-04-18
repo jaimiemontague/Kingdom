@@ -25,6 +25,55 @@ def _overlaps_any(buildings: list, gx: int, gy: int, w: int, h: int) -> bool:
     return False
 
 
+def _min_chebyshev_between_footprints(
+    gx: int, gy: int, w: int, h: int,
+    ox: int, oy: int, ow: int, oh: int,
+) -> int:
+    """Minimum Chebyshev distance between any tile in the two footprints (grid tiles)."""
+    best = 10**9
+    for tx in range(gx, gx + w):
+        for ty in range(gy, gy + h):
+            for ux in range(ox, ox + ow):
+                for uy in range(oy, oy + oh):
+                    d = max(abs(tx - ux), abs(ty - uy))
+                    if d < best:
+                        best = d
+    return best
+
+
+def _violates_auto_spawn_gap(
+    buildings: list,
+    gx: int,
+    gy: int,
+    w: int,
+    h: int,
+    *,
+    pending: list[tuple[int, int, int, int]] | None = None,
+    min_tile_gap: int = 2,
+) -> bool:
+    """
+    WK32: auto-spawned buildings need at least one empty tile between footprints (Chebyshev).
+
+    Reject if the minimum Chebyshev distance between any tile of the candidate and any tile of
+    an existing building (or another same-tick placement) is strictly less than ``min_tile_gap``
+    (2 => adjacent footprints are rejected; one-tile gap is accepted).
+    """
+    pending = pending or []
+    for b in buildings or []:
+        if getattr(b, "hp", 1) <= 0:
+            continue
+        if not hasattr(b, "grid_x"):
+            continue
+        bw, bh = getattr(b, "size", (1, 1))
+        bx, by = int(b.grid_x), int(b.grid_y)
+        if _min_chebyshev_between_footprints(gx, gy, w, h, bx, by, int(bw), int(bh)) < int(min_tile_gap):
+            return True
+    for px, py, pw, ph in pending:
+        if _min_chebyshev_between_footprints(gx, gy, w, h, px, py, pw, ph) < int(min_tile_gap):
+            return True
+    return False
+
+
 def _ring_positions(cx: int, cy: int, r: int) -> list[tuple[int, int]]:
     """Chebyshev ring around (cx,cy) with radius r (top-left placements)."""
     out: list[tuple[int, int]] = []
@@ -70,6 +119,7 @@ class NeutralBuildingSystem(GameSystem):
         min_r: int,
         max_r: int,
         shuffle_within_ring: bool,
+        pending_same_tick: list[tuple[int, int, int, int]] | None = None,
     ) -> tuple[int, int] | None:
         cx, cy = self._castle_center_tile(castle)
         w, h = size
@@ -83,6 +133,8 @@ class NeutralBuildingSystem(GameSystem):
                 if not self.world.is_buildable(gx, gy, w, h):
                     continue
                 if _overlaps_any(buildings, gx, gy, w, h):
+                    continue
+                if _violates_auto_spawn_gap(buildings, gx, gy, w, h, pending=pending_same_tick):
                     continue
                 return (gx, gy)
         return None

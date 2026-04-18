@@ -1343,7 +1343,11 @@ class GameEngine:
             self.clamp_camera()
     
     def get_game_state(self) -> dict:
-        """Get current game state for AI and UI."""
+        """Get current game state for AI and UI.
+
+        WK32: each entry in ``buildings`` has ``construction_progress`` in [0, 1] for staged build visuals;
+        ``buildings_construction_progress`` matches ``buildings`` order for consumers that need parallel arrays.
+        """
         castle = next((b for b in self.buildings if b.building_type == "castle"), None)
         return {
             "screen_w": int(self.window_width),
@@ -1357,6 +1361,9 @@ class GameEngine:
             "guards": self.guards,
             "enemies": self.enemies,
             "buildings": self.buildings,
+            "buildings_construction_progress": tuple(
+                float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
+            ),
             "bounties": self.bounty_system.get_unclaimed_bounties(),
             "bounty_system": self.bounty_system,
             "wave": self.spawner.wave_number,

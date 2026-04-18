@@ -27,11 +27,30 @@ def test_mark_unconstructed_then_start_construction_changes_targetable_state() -
     assert building.is_constructed is False
     assert building.construction_started is False
     assert building.hp == 1
+    assert building.construction_progress == 0.0
     assert building.is_targetable is False
 
     building.start_construction()
     assert building.construction_started is True
     assert building.is_targetable is True
+
+
+def test_construction_progress_mid_build_matches_hp_curve() -> None:
+    """WK32: progress mirrors (hp-1)/(max_hp-1) while unconstructed."""
+    b = Building(0, 0, "inn")
+    b.mark_unconstructed()
+    b.start_construction()
+    b.hp = 1 + (b.max_hp - 1) // 2
+    expected = (float(b.hp) - 1.0) / float(b.max_hp - 1)
+    assert abs(b.construction_progress - expected) < 1e-9
+
+
+def test_construction_progress_damaged_but_built_stays_full() -> None:
+    """Repair damage must not rewind staged construction (still reads as fully built)."""
+    b = Building(0, 0, "inn")
+    assert b.is_constructed is True
+    b.hp = max(1, b.max_hp // 3)
+    assert b.construction_progress == 1.0
 
 
 def test_apply_work_completes_construction_and_caps_hp() -> None:

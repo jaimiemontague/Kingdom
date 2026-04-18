@@ -169,6 +169,23 @@ class Building:
             return True
         return bool(self.construction_started)
 
+    @property
+    def construction_progress(self) -> float:
+        """
+        Build progress for staged construction visuals (WK32): 0.0 at placement, 1.0 when fully built.
+
+        Derived from existing HP build curve (no new RNG): unconstructed buildings rise from hp=1 to max_hp;
+        damaged-but-built buildings read as 1.0 (repair does not rewind this metric).
+        """
+        if getattr(self, "is_constructed", True):
+            return 1.0
+        mh = int(self.max_hp)
+        if mh <= 1:
+            return 1.0 if self.hp >= mh else 0.0
+        span = float(mh - 1)
+        raw = (float(self.hp) - 1.0) / span
+        return min(1.0, max(0.0, raw))
+
     def mark_unconstructed(self):
         """Set this building to its just-placed construction state."""
         self.is_constructed = False

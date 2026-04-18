@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.1",
+  "run": {
+    "scenario": "base_overview",
+    "seed": 7,
+    "run_dir": "20260418_1630_agent05_verification",
+    "size": {
+      "w": 1280,
+      "h": 720
+    },
+    "ticks_per_shot": 180,
+    "dt": 0.016666666666666666
+  },
+  "outputs": [
+    {
+      "index": 0,
+      "filename": "base_overview__Z1__world_clean.png",
+      "relpath": "base_overview__Z1__world_clean.png",
+      "label": "Base Overview (Z1, world clean)",
+      "scenario": "base_overview",
+      "seed": 7,
+      "size": {
+        "w": 1280,
+        "h": 720
+      },
+      "camera": {
+        "center_x": 2416.0,
+        "center_y": 2416.0,
+        "zoom": 1.0
+      },
+      "sha256": "5c68e8373d907319e07441f1efa2bf10173e14adead6c9bd233c5cc964383d15",
+      "meta": {
+        "scenario": "base_overview",
+        "seed": 7,
+        "zoom": 1.0,
+        "ui": "world_clean"
+      }
+    },
+    {
+      "index": 1,
+      "filename": "base_overview__Z1__ui_default.png",
+      "relpath": "base_overview__Z1__ui_default.png",
+      "label": "Base Overview (Z1, UI default)",
+      "scenario": "base_overview",
+      "seed": 7,
+      "size": {
+        "w": 1280,
+        "h": 720
+      },
+      "camera": {
+        "center_x": 2416.0,
+        "center_y": 2416.0,
+        "zoom": 1.0
+      },
+      "sha256": "d41c55adc73333e7eb1f4123a8f53c07254a7d9423d6f074e19de9bac5109fd6",
+      "meta": {
+        "scenario": "base_overview",
+        "seed": 7,
+        "zoom": 1.0,
+        "ui": "ui_default"
+      }
+    },
+    {
+      "index": 2,
+      "filename": "base_overview__Z2__world_clean.png",
+      "relpath": "base_overview__Z2__world_clean.png",
+      "label": "Base Overview (Z2, world clean)",
+      "scenario": "base_overview",
+      "seed": 7,
+      "size": {
+        "w": 1280,
+        "h": 720
+      },
+      "camera": {
+        "center_x": 2416.0,
+        "center_y": 2416.0,
+        "zoom": 1.6
+      },
+      "sha256": "e2b2dc22c54d1ff77a25afc8f13fe9101b09572e09a6968170c541c94f738db4",
+      "meta": {
+        "scenario": "base_overview",
+        "seed": 7,
+        "zoom": 1.6,
+        "ui": "world_clean"
+      }
+    },
+    {
+      "index": 3,
+      "filename": "base_overview__Z2__ui_default.png",
+      "relpath": "base_overview__Z2__ui_default.png",
+      "label": "Base Overview (Z2, UI default)",
+      "scenario": "base_overview",
+      "seed": 7,
+      "size": {
+        "w": 1280,
+        "h": 720
+      },
+      "camera": {
+        "center_x": 2416.0,
+        "center_y": 2416.0,
+        "zoom": 1.6
+      },
+      "sha256": "7c5357e4a770e97371134b7c7416dc89403093baff95cdff3c692683bed2b7fd",
+      "meta": {
+        "scenario": "base_overview",
+        "seed": 7,
+        "zoom": 1.6,
+        "ui": "ui_default"
+      }
+    }
+  ]
+}
