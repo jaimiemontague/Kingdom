@@ -154,6 +154,55 @@ def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
 
 
 _ENV_SCATTER_MODELS: tuple[list[str], list[str]] | None = None
+_ENV_TREE_MODELS: list[str] | None = None
+
+
+def _environment_mesh_priority(suffix: str) -> int:
+    """Prefer ``.glb`` over ``.gltf`` over ``.obj`` when the same stem exists twice."""
+    s = suffix.lower()
+    if s == ".glb":
+        return 0
+    if s == ".gltf":
+        return 1
+    if s == ".obj":
+        return 2
+    return 9
+
+
+def _dedupe_env_rels_by_stem(rels: list[str]) -> list[str]:
+    """One file per basename; duplicate stems keep the highest-priority extension."""
+    best: dict[str, tuple[str, int]] = {}
+    for rel in rels:
+        stem = Path(rel).stem.lower()
+        pri = _environment_mesh_priority(Path(rel).suffix)
+        prev = best.get(stem)
+        if prev is None or pri < prev[1]:
+            best[stem] = (rel, pri)
+    return [best[k][0] for k in sorted(best.keys())]
+
+
+def _is_grass_scatter_stem(name: str) -> bool:
+    """Small ground foliage: grass tufts, flowers, Nature Kit ``plant_flat*``."""
+    return (
+        name.startswith("grass")
+        or "tuft" in name
+        or "wildflower" in name
+        or name.startswith("flower")
+        or name.startswith("plant_flat")
+    )
+
+
+def _is_doodad_scatter_stem(name: str) -> bool:
+    """Rocks, logs, stumps, mushrooms, bushes — includes Kenney ``plant_bush*`` and ``stone*``."""
+    return (
+        name.startswith("bush")
+        or name.startswith("plant_bush")
+        or name.startswith("log")
+        or name.startswith("stump")
+        or name.startswith("mushroom")
+        or name.startswith("rock")
+        or name.startswith("stone")
+    )
 
 
 def _environment_grass_and_doodad_model_lists() -> tuple[list[str], list[str]]:
@@ -171,24 +220,41 @@ def _environment_grass_and_doodad_model_lists() -> tuple[list[str], list[str]]:
                 continue
             rel = f"assets/models/environment/{p.name}"
             name = p.stem.lower()
-            if (
-                name.startswith("grass")
-                or "tuft" in name
-                or "wildflower" in name
-                or name.startswith("flower")
-            ):
+            if name.startswith("tree"):
+                continue
+            if _is_grass_scatter_stem(name):
                 grass.append(rel)
-            elif any(
-                name.startswith(x)
-                for x in ("bush", "log", "stump", "mushroom", "rock")
-            ):
+            elif _is_doodad_scatter_stem(name):
                 doodad.append(rel)
+    grass = _dedupe_env_rels_by_stem(grass)
+    doodad = _dedupe_env_rels_by_stem(doodad)
     if not grass:
         grass = [default_grass]
     if not doodad:
         doodad = [default_rock]
     _ENV_SCATTER_MODELS = (grass, doodad)
     return _ENV_SCATTER_MODELS
+
+
+def _environment_tree_model_list() -> list[str]:
+    """All ``tree_*`` meshes under environment (Kenney Nature pines/oaks/etc.); fallback to ``tree_pine``."""
+    global _ENV_TREE_MODELS
+    if _ENV_TREE_MODELS is not None:
+        return _ENV_TREE_MODELS
+    out: list[str] = []
+    default = _environment_model_path("tree_pine")
+    if _ENV_MODEL_DIR.is_dir():
+        for p in sorted(_ENV_MODEL_DIR.iterdir()):
+            if p.suffix.lower() not in (".glb", ".gltf", ".obj"):
+                continue
+            name = p.stem.lower()
+            if name.startswith("tree"):
+                out.append(f"assets/models/environment/{p.name}")
+    out = _dedupe_env_rels_by_stem(out)
+    if not out:
+        out = [default]
+    _ENV_TREE_MODELS = out
+    return _ENV_TREE_MODELS
 
 
 def _scatter_model_index(tx: int, ty: int, n: int, salt: int) -> int:
@@ -918,10 +984,10 @@ class UrsinaRenderer:
         ts = int(config.TILE_SIZE)
         m = float(TERRAIN_SCALE_MULTIPLIER)
         grass_models, doodad_models = _environment_grass_and_doodad_model_lists()
+        tree_models = _environment_tree_model_list()
         # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
         path_model = _environment_model_path("path_stone")
         rock_model = _environment_model_path("rock")
-        tree_model = _environment_model_path("tree_pine")
         occupied_tiles = _building_occupied_tiles(self.engine)
         tm = m * float(TREE_SCALE_MULTIPLIER)
         rm = m * float(ROCK_SCALE_MULTIPLIER)
@@ -1011,6 +1077,8 @@ class UrsinaRenderer:
                     _finalize_kenney_scatter_entity(g_ent, gm)
 
                 if tile == TileType.TREE:
+                    ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
+                    tree_model = tree_models[ti]
                     tree_ent = Entity(
                         parent=root,
                         model=tree_model,

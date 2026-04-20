@@ -111,7 +111,10 @@ DEFAULT_GROUND_Y = 0.0
 # Agent 12 (ToolsDevEx_Lead) and the shader classifier is the canonical piece
 # of logic we want to keep in lockstep between viewer and assembler.
 sys.path.insert(0, str(PROJECT_ROOT))
-from tools.kenney_pack_scale import pack_extent_multiplier_for_rel  # noqa: E402
+from tools.kenney_pack_scale import (  # noqa: E402
+    apply_kenney_pack_color_tint_to_entity,
+    pack_extent_multiplier_for_rel,
+)
 from tools.model_viewer_kenney import (  # noqa: E402
     _apply_gltf_color_and_shading,
     _load_model_node_from_file,
@@ -950,6 +953,7 @@ class AssemblerApp:
         )
         try:
             _apply_gltf_color_and_shading(ent.model, debug_materials=False, model_label=rel)
+            apply_kenney_pack_color_tint_to_entity(ent, rel)
         except Exception as exc:
             print(f"[assembler] shader classify failed for {rel}: {exc!r}")
         ent.assembler_role = "piece"

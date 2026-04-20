@@ -130,6 +130,7 @@ def run_pair(
 
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
+    from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity
     from tools.model_viewer_kenney import (
         _apply_gltf_color_and_shading,
         _fit_uniform_and_ground,
@@ -201,6 +202,7 @@ def run_pair(
             model_label=label_base,
             aggregate_stats=None,
         )
+        apply_kenney_pack_color_tint_to_entity(ent, rel_model)
         return ent
 
     e0 = spawn_one(0.0, 0.0)

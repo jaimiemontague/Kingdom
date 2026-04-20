@@ -15,8 +15,9 @@ Ursina EditorCamera for panning/orbiting. See
 ``.cursor/plans/kenney_gltf_ursina_integration_guide.md`` for shader/material
 pitfalls.
 
-**WK31:** Per-pack uniform fit targets (Retro = 1.0 reference) live in
-``tools/kenney_pack_scale.py`` — viewer, assembler, and in-game prefab load share
+**WK31 / WK32:** Per-pack uniform fit targets (Retro = 1.0 reference) and WK32 per-pack
+albedo tint (``pack_color_multiplier_for_rel`` / ``apply_kenney_pack_color_tint_to_entity``)
+live in ``tools/kenney_pack_scale.py`` — viewer, assembler, and in-game prefab load share
 that module.
 
 Usage (from repo root):
@@ -43,7 +44,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tools.kenney_pack_scale import pack_max_extent_for_rel
+from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack_max_extent_for_rel
 # We strictly exclude .obj, .dae, .fbx because Kenney distributes copies in every format.
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
@@ -661,6 +662,7 @@ def run_viewer(
                     model_label=_rel_for_label(assets_models, fpath),
                     aggregate_stats=material_stats,
                 )
+                apply_kenney_pack_color_tint_to_entity(ent, rel_posix)
             else:
                 Entity(
                     parent=scene,

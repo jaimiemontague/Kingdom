@@ -121,6 +121,31 @@
             "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" }
           },
           "blockers": []
+        },
+        "wk32_r2_nature_kit_inventory_and_scanner_fix": {
+          "round_id": "wk32_r2_nature_kit_inventory_and_scanner_fix",
+          "round_meta": {
+            "prompt_set_id": "wk32_r2_jaimie_nature_ref",
+            "build_target": "Kenney Nature GLB promotion + scanner fixes + tree variety; human in-game screenshot loop",
+            "completed_at_local": "2026-04-19T00:00:00"
+          },
+          "status": "complete_code_and_assets_pending_human_screenshot_loop",
+          "what_i_changed": [
+            "Copied 57 Nature Kit .glb from assets/models/Models/GLTF format/ → assets/models/environment/ (grass_*, plant_bush*, plant_flat*, mushroom_*, rock_*, stone_*, log*, stump_*, tree_pine* / tree_oak / tree_simple / tree_default per Jaimie's reference sheet).",
+            "game/graphics/ursina_renderer.py — classify plant_bush*, plant_flat*, stone*; dedupe same stem (.glb over .obj); skip tree_* from grass/doodad; new _environment_tree_model_list() + per-tile index for TREE tiles (pine/oak variety).",
+            "Visual loop (human): python main.py --renderer ursina → F12 → docs/screenshots/wk32_nature/ — repeat after each tweak; agent cannot automate Ursina capture."
+          ],
+          "how_to_test": [
+            "python main.py --renderer ursina",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" },
+            "visual_review": { "status": "pending_human", "note": "In-game meadow + tree tiles — confirm variety vs single grass/tuft; adjust copy list or stride if too dense." }
+          },
+          "blockers": []
         }
       }
     },

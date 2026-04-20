@@ -136,14 +136,18 @@ class UrsinaApp:
         # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
         self._hud_quick_sig: int | None = None
 
-        # WK32: Ursina EditorCamera (mouse orbit/pan); ``None`` when legacy free camera is forced.
-        self._editor_camera: EditorCamera | None = None
+        # WK32: ``_editor_camera`` is set by ``_setup_ursina_camera_for_castle()`` (EditorCamera if
+        # ``KINGDOM_URSINA_EDITORCAMERA=1``, else ``None`` for legacy world camera). Do not reassign
+        # here — a duplicate ``self._editor_camera = None`` after setup broke framing (WK32).
 
         # WK30 debug: auto-screenshot-then-exit for prefab fit iteration.
         # Env vars:
         #   KINGDOM_URSINA_AUTO_EXIT_SEC=<float>       — seconds after first update before exit.
         #   KINGDOM_URSINA_AUTO_SCREENSHOT_PATH=<path> — if set, save screenshot to this path
         #                                                just before quitting (overrides F12 dir).
+        #   KINGDOM_URSINA_AUTO_SCREENSHOT=1           — if PATH empty, use tools.ursina_screenshot
+        #                                                naming (KINGDOM_SCREENSHOT_SUBDIR / STEM).
+        # CLI: python tools/run_ursina_capture_once.py
         try:
             self._auto_exit_deadline_sec = float(
                 os.environ.get("KINGDOM_URSINA_AUTO_EXIT_SEC", "") or 0.0
@@ -153,6 +157,17 @@ class UrsinaApp:
         self._auto_screenshot_path = (
             os.environ.get("KINGDOM_URSINA_AUTO_SCREENSHOT_PATH") or ""
         ).strip()
+        # If auto-exit is set and caller asked for a capture but did not precompute a path,
+        # use the same naming as F12 (KINGDOM_SCREENSHOT_SUBDIR / KINGDOM_SCREENSHOT_STEM).
+        if (
+            self._auto_exit_deadline_sec > 0.0
+            and not self._auto_screenshot_path
+            and os.environ.get("KINGDOM_URSINA_AUTO_SCREENSHOT", "").strip().lower()
+            in ("1", "true", "yes", "on")
+        ):
+            from tools.ursina_screenshot import next_auto_screenshot_path
+
+            self._auto_screenshot_path = next_auto_screenshot_path()
         self._auto_exit_elapsed = 0.0
         self._auto_exit_triggered = False
 
@@ -194,11 +209,12 @@ class UrsinaApp:
     def _setup_ursina_camera_for_castle(self) -> None:
         """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans.
 
-        WK32: Default **EditorCamera** (same family as ``tools/model_viewer_kenney.py``): orbit with
-        right-drag, pan with middle-drag, wheel zoom disabled on the rig (``zoom_speed=0``) so
-        **engine.zoom** remains the single source of truth — we drive **camera.fov** from
-        ``_sync_ursina_camera_fov_from_zoom()`` every frame. Set ``KINGDOM_URSINA_EDITORCAMERA=0``
-        to restore the legacy unconstrained camera + WASD pan on ``camera`` directly.
+        WK32: **EditorCamera** (orbit/pan) is **opt-in** via ``KINGDOM_URSINA_EDITORCAMERA=1``.
+        Default is the **legacy** rig: world-space ``camera.position`` + ``look_at`` toward the
+        castle — this matches terrain placement and avoids a bad EditorCamera pose (pitch on the
+        rig + local offset was not equivalent to legacy ``look_at``, so the view could sit on the
+        map edge). When EditorCamera is enabled: pivot at castle, same local offset as legacy,
+        ``look_at(castle)``, ``zoom_speed=0``, FOV still from ``engine.zoom``.
         """
         castle = next(
             (
@@ -229,8 +245,8 @@ class UrsinaApp:
         # Perspective FOV that matches engine.zoom==default_zoom (single source of truth: engine.zoom).
         self._ursina_reference_fov = float(camera.fov)
 
-        legacy = os.environ.get("KINGDOM_URSINA_EDITORCAMERA", "1") == "0"
-        if legacy:
+        use_editor_camera = os.environ.get("KINGDOM_URSINA_EDITORCAMERA", "").strip() == "1"
+        if not use_editor_camera:
             self._editor_camera = None
             if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
                 if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
@@ -244,7 +260,8 @@ class UrsinaApp:
                 camera.look_at(Vec3(cx, 0, cz))
             return
 
-        # EditorCamera: pivot on floor at (cx, 0, cz); local camera offset matches prior span/elev.
+        # EditorCamera: pivot on the castle floor point; **local** offset matches legacy world pose
+        # (cx, elev, cz - back) when ec.rotation is identity — then look_at toward castle center.
         ec = EditorCamera(
             zoom_speed=0.0,
             rotation_speed=200.0,
@@ -252,7 +269,9 @@ class UrsinaApp:
             ignore_scroll_on_ui=True,
         )
         ec.position = Vec3(cx, 0.0, cz)
+        ec.rotation = Vec3(0.0, 0.0, 0.0)
         if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+            # Debug layout: fixed rig pitch (no look_at — avoids fighting ec.rotation for prefab shots).
             if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
                 camera.position = Vec3(0.0, d * 1.6, -d * 0.02)
                 ec.rotation = Vec3(89.0, 0.0, 0.0)
@@ -261,9 +280,12 @@ class UrsinaApp:
                 ec.rotation = Vec3(40.0, 0.0, 0.0)
         else:
             camera.position = Vec3(0.0, elev, -back)
-            ec.rotation = Vec3(35.0, 0.0, 0.0)
+            try:
+                camera.look_at(Vec3(cx, 0.0, cz))
+            except Exception:
+                pass
         # EditorCamera.__init__ snapshots camera.editor_position before parenting; on_enable can
-        # leave stale state. Sync so orbit/pivot matches castle framing (same as model_viewer).
+        # leave stale state. Sync so orbit/pivot matches castle framing.
         try:
             camera.editor_position = camera.position
         except Exception:
