@@ -310,7 +310,7 @@ class UrsinaApp:
         )
         z = max(z, 1e-6)
         ref = float(self._ursina_reference_fov)
-        camera.fov = max(18.0, min(95.0, ref / z))
+        camera.fov = max(8.0, min(95.0, ref / z))
 
     def _install_ursina_input_hook(self) -> None:
         app = self

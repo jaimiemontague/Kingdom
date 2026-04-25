@@ -46,6 +46,7 @@ Each element is one placed kit piece:
 | `rot` | `[rx, ry, rz]` | yes | Rotation in **degrees** (Euler order as produced by the assembler; typically Y-up). |
 | `scale` | `[sx, sy, sz]` | yes | Uniform or per-axis scale (default `[1, 1, 1]`). |
 | `texture_override` | string | no | Optional path relative to **`assets/`** for a curated PNG texture override. Example: `textures/buildings/inn/inn_roof_shingles.png`. Overrides are applied only to this prefab piece and do not mutate source Kenney GLBs. |
+| `texture_override_mode` | string | no | Optional mapping mode for `texture_override`. Default/object-space mode ignores source UVs and is best for Kenney atlas pieces. Use `"uv"` only for generated decal meshes with authored UVs, such as explicit window panels. |
 
 ## Rules
 
@@ -54,6 +55,7 @@ Each element is one placed kit piece:
 3. **`footprint_tiles`** is a contract with the 2D sim; if the assembled mesh does not fit after fit-scaling, shrink the prefab or ask **Agent 05** to change `config.py` (not Agent 15 alone).
 4. **`attribution`** must list every Kenney pack used; keep `assets/ATTRIBUTION.md` in sync when adding packs.
 5. **`texture_override` paths** must resolve under `assets/` and should use low-res, nearest-neighbor-friendly PNGs. Overrides are authored at final game value, so the renderer displays them without applying the source pack's albedo darkening on top.
+6. **`texture_override_mode: "uv"`** is for generated decal meshes only. Do not use it on Kenney atlas meshes unless their UVs are known to map the desired image.
 
 ## Example (minimal)
 
@@ -84,3 +86,4 @@ Each element is one placed kit piece:
 | v0.1 | Initial WK28 spike — root fields + `pieces[{model,pos,rot,scale}]`. |
 | v0.2 | **Runtime:** `_load_prefab_instance` **auto-centers** the piece cluster in **XZ** on the prefab root (centroid subtraction); **Y** unchanged. Sim places root at footprint center; `_sync_prefab_building_entity` fit-scales to `footprint_tiles`. Schema doc aligned with `game/graphics/ursina_renderer.py` (WK30). Assembler may still save ad-hoc origins; authors need not manually center in XZ. |
 | v0.3 | Added optional per-piece `texture_override` path relative to `assets/` for curated prefab-scoped texture polish (WK32 Inn pass). |
+| v0.4 | Added optional `texture_override_mode` for UV-mapped generated decals, used when object-space projection is not readable enough for doors/windows. |

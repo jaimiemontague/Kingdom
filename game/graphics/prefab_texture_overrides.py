@@ -16,6 +16,7 @@ ASSETS_ROOT = PROJECT_ROOT / "assets"
 
 _TEXTURE_CACHE: dict[str, Any] = {}
 _OBJECT_SHADER: list[Any] = []
+_UV_SHADER: list[Any] = []
 
 
 _OBJECT_TEX_VERT = """
@@ -59,6 +60,29 @@ void main() {
 }
 """
 
+_UV_TEX_VERT = """
+#version 150
+uniform mat4 p3d_ModelViewProjectionMatrix;
+in vec4 p3d_Vertex;
+in vec2 p3d_MultiTexCoord0;
+out vec2 vTexCoord;
+void main() {
+    vTexCoord = p3d_MultiTexCoord0;
+    gl_Position = p3d_ModelViewProjectionMatrix * p3d_Vertex;
+}
+"""
+
+
+_UV_TEX_FRAG = """
+#version 150
+uniform sampler2D tex;
+in vec2 vTexCoord;
+out vec4 fragColor;
+void main() {
+    fragColor = texture(tex, vTexCoord);
+}
+"""
+
 
 def _object_texture_shader():
     if _OBJECT_SHADER:
@@ -67,6 +91,16 @@ def _object_texture_shader():
 
     shader = Shader.make(Shader.SL_GLSL, vertex=_OBJECT_TEX_VERT, fragment=_OBJECT_TEX_FRAG)
     _OBJECT_SHADER.append(shader)
+    return shader
+
+
+def _uv_texture_shader():
+    if _UV_SHADER:
+        return _UV_SHADER[0]
+    from panda3d.core import Shader
+
+    shader = Shader.make(Shader.SL_GLSL, vertex=_UV_TEX_VERT, fragment=_UV_TEX_FRAG)
+    _UV_SHADER.append(shader)
     return shader
 
 
@@ -101,23 +135,24 @@ def load_prefab_texture_override(asset_rel: str):
     return tex
 
 
-def apply_prefab_texture_override(entity: Any, asset_rel: str | None) -> bool:
+def apply_prefab_texture_override(entity: Any, asset_rel: str | None, mode: str | None = None) -> bool:
     if not asset_rel:
         return False
     tex = load_prefab_texture_override(str(asset_rel))
     if tex is None:
         return False
+    mode_key = str(mode or "object").strip().lower()
     try:
         model = getattr(entity, "model", None)
         panda_tex = getattr(tex, "_texture", tex)
-        shader = _object_texture_shader()
+        shader = _uv_texture_shader() if mode_key == "uv" else _object_texture_shader()
 
         def _apply_to_node(node: Any) -> None:
             if hasattr(node, "clearTexture"):
                 node.clearTexture()
             if hasattr(node, "setTexture"):
                 node.setTexture(panda_tex, 1)
-            if hasattr(node, "setShader"):
+            if shader is not None and hasattr(node, "setShader"):
                 node.setShader(shader)
             if hasattr(node, "setShaderInput"):
                 node.setShaderInput("tex", panda_tex)

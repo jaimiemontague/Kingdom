@@ -3474,6 +3474,55 @@
               "Automated capture shows the castle centered on launch with EditorCamera default-on.",
               "Manual mouse orbit / middle-mouse pan / wheel zoom should still be spot-checked in the live window because automated screenshot capture cannot exercise mouse gestures."
             ]
+          },
+          "followup_2026_04_25_zoom_in_tuning": {
+            "status": "done",
+            "what_i_changed": [
+              "Raised shared camera zoom_max from 2.5 to 5.0 so wheel / +/- / held E can zoom closer.",
+              "Lowered the Ursina FOV floor from 18 degrees to 8 degrees so the full 5.0 engine zoom is visible in the 3D renderer.",
+              "Kept engine.zoom as the single source of truth for camera.fov to preserve picking and HUD coordinate math."
+            ],
+            "files_changed": [
+              "config.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "evidence": {
+              "zoom_values": "PASS - ZOOM_MAX=5.0, ursina_fov_at_max=8.40",
+              "py_compile": "PASS - python -m py_compile config.py game/graphics/ursina_app.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "config.py is shared; this is intentional user-requested camera tuning, not a footprint or sim contract change."
+            ]
+          },
+          "followup_2026_04_25_fog_perspective_visibility_fix": {
+            "status": "done",
+            "what_i_changed": [
+              "Corrected the incomplete render-order-only fog fix: ground fog now renders before buildings/props instead of last.",
+              "Added tile-visibility gating for vertical terrain props (grass, trees, doodads, rocks) so unseen props cannot protrude above the fog edge at oblique camera angles.",
+              "Kept the fog texture as the terrain darkening layer; object visibility now follows world.visibility by tile for vertical terrain meshes."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "evidence": {
+              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_visibility_gate --no-llm",
+              "screenshot": "docs/screenshots/wk32_fog_fix/fog_visibility_gate_20260425_103030_931.png",
+              "py_compile": "PASS - python -m py_compile game/graphics/ursina_renderer.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_visibility_gate --no-llm",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "Manual orbit/tilt around the castle and map edge is still the decisive check because automated capture cannot reproduce Jaimie's exact camera angle."
+            ]
           }
         }
       }

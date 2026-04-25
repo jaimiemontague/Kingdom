@@ -38,7 +38,7 @@ class CameraConfig:
     speed_px_per_sec: int = 900
     edge_margin_px: int = 40
     zoom_min: float = 0.5
-    zoom_max: float = 2.5
+    zoom_max: float = 5.0
     zoom_step: float = 1.15
 
 

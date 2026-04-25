@@ -1,0 +1,13 @@
+mtllib inn_window_panel.mtl
+o inn_window_panel
+
+v -0.20 0.00 0.00
+v 0.20 0.00 0.00
+v 0.20 0.46 0.00
+v -0.20 0.46 0.00
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+usemtl window_panel
+f 1/1 2/2 3/3 4/4

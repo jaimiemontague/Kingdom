@@ -136,6 +136,7 @@ class PlacedPiece:
     rot_y: float = 0.0  # Y rotation in degrees (Euler; only Y used by tool)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     texture_override: str | None = None
+    texture_override_mode: str | None = None
 
     def to_json(self) -> dict:
         out = {
@@ -146,6 +147,8 @@ class PlacedPiece:
         }
         if self.texture_override:
             out["texture_override"] = self.texture_override
+        if self.texture_override_mode:
+            out["texture_override_mode"] = self.texture_override_mode
         return out
 
 
@@ -395,6 +398,7 @@ class AssemblerApp:
                 rot_y=rot_y,
                 scale=scl_t,
                 texture_override=raw.get("texture_override"),
+                texture_override_mode=raw.get("texture_override_mode"),
                 select=False,
             )
         self._pending_pieces = []
@@ -960,6 +964,7 @@ class AssemblerApp:
         scale: tuple[float, float, float],
         select: bool,
         texture_override: str | None = None,
+        texture_override_mode: str | None = None,
     ) -> PlacedPiece | None:
         from ursina import Entity, Vec3, scene
         abs_path = self.assets_models / rel
@@ -989,7 +994,7 @@ class AssemblerApp:
             apply_kenney_pack_color_tint_to_entity(ent, rel)
         except Exception as exc:
             print(f"[assembler] shader classify failed for {rel}: {exc!r}")
-        apply_prefab_texture_override(ent, texture_override)
+        apply_prefab_texture_override(ent, texture_override, texture_override_mode)
         ent.assembler_role = "piece"
         piece = PlacedPiece(
             model_rel=rel,
@@ -998,6 +1003,7 @@ class AssemblerApp:
             rot_y=rot_y,
             scale=scale,
             texture_override=str(texture_override) if texture_override else None,
+            texture_override_mode=str(texture_override_mode) if texture_override_mode else None,
         )
         ent.assembler_piece_ref = piece
         self.pieces.append(piece)

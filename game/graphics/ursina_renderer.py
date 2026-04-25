@@ -576,7 +576,11 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
         except Exception:
             pass
         try:
-            apply_prefab_texture_override(child, piece.get("texture_override"))
+            apply_prefab_texture_override(
+                child,
+                piece.get("texture_override"),
+                piece.get("texture_override_mode"),
+            )
         except Exception:
             pass
 
@@ -656,6 +660,8 @@ class UrsinaRenderer:
         self._fog_full_surf: pygame.Surface | None = None
         # RGBA tile buffer reused for fog rebuilds (WK22 R3 perf: avoid 22k pygame.set_at calls).
         self._fog_tile_buf: bytearray | None = None
+        self._visibility_gated_terrain: list[tuple[Entity, int, int]] = []
+        self._terrain_visibility_revision_seen = -1
 
         # Status Text UI (2D overlay, not affected by world camera)
         self.status_text = Text(
@@ -781,8 +787,8 @@ class UrsinaRenderer:
         WK22: Rebuild only when ``engine._fog_revision`` advances (revealer crossed a tile).
 
         WK23 follow-up: removed throttle; removed CRC skip path; advance ``_fog_revision_seen`` only
-        after a successful GPU upload; fog quad uses ``set_depth_test(False)`` so the overlay tints
-        consistently (no depth rejects vs billboards).
+        after a successful GPU upload. In perspective, this quad is ground fog only; vertical
+        props are separately gated by tile visibility so camera angle cannot make them leak.
         """
         if self._terrain_entity is None:
             return
@@ -877,15 +883,36 @@ class UrsinaRenderer:
             self._fog_entity.set_depth_test(False)
             self._fog_entity.shader = unlit_shader
             self._fog_entity.hide(0b0001)
-            self._fog_entity.render_queue = 2
+            # Ground fog must render before buildings/props; vertical objects are hidden by tile visibility.
+            self._fog_entity.render_queue = 0
         else:
             self._fog_entity.texture = ftex
             self._fog_entity.position = (wx, fog_y, wz)
             self._fog_entity.scale = (w_world, d_world, 1)
             self._fog_entity.texture_scale = Vec2(1, -1)
             self._fog_entity.texture_offset = Vec2(0, 1)
+            self._fog_entity.render_queue = 0
 
         self._fog_revision_seen = engine_rev
+
+    def _track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
+        """Register vertical terrain props that should disappear unless their base tile is visible."""
+        self._visibility_gated_terrain.append((ent, int(tx), int(ty)))
+
+    def _sync_visibility_gated_terrain(self) -> None:
+        """Hide tall terrain props outside visible fog so they cannot protrude over the fog edge."""
+        world = self.engine.world
+        engine_rev = int(getattr(self.engine, "_fog_revision", 0))
+        if self._terrain_visibility_revision_seen == engine_rev:
+            return
+        for ent, tx, ty in self._visibility_gated_terrain:
+            is_visible = (
+                0 <= ty < world.height
+                and 0 <= tx < world.width
+                and world.visibility[ty][tx] == Visibility.VISIBLE
+            )
+            ent.enabled = bool(is_visible)
+        self._terrain_visibility_revision_seen = engine_rev
 
     def _ensure_grid_debug_overlay(self) -> None:
         """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
@@ -1080,6 +1107,7 @@ class UrsinaRenderer:
                         add_to_scene_entities=False,
                     )
                     _finalize_kenney_scatter_entity(g_ent, gm)
+                    self._track_visibility_gated_terrain(g_ent, tx, ty)
 
                 if tile == TileType.TREE:
                     ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
@@ -1095,6 +1123,7 @@ class UrsinaRenderer:
                         add_to_scene_entities=False,
                     )
                     _finalize_kenney_scatter_entity(tree_ent, tree_model)
+                    self._track_visibility_gated_terrain(tree_ent, tx, ty)
                 elif (
                     tile == TileType.GRASS
                     and on_scatter_grid
@@ -1117,6 +1146,7 @@ class UrsinaRenderer:
                         add_to_scene_entities=False,
                     )
                     _finalize_kenney_scatter_entity(doodad_ent, dm)
+                    self._track_visibility_gated_terrain(doodad_ent, tx, ty)
                 elif tile == TileType.GRASS and on_scatter_grid and not in_occ:
                     h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
                     if h % 503 == 0:
@@ -1131,6 +1161,7 @@ class UrsinaRenderer:
                             add_to_scene_entities=False,
                         )
                         _finalize_kenney_scatter_entity(rock_ent, rock_model)
+                        self._track_visibility_gated_terrain(rock_ent, tx, ty)
 
         # Do not flattenStrong() the terrain root: Panda3D merge can strip per-tile glTF
         # material state and turn Kenney path_stone (and similar) into uniform white strips.
@@ -1415,6 +1446,7 @@ class UrsinaRenderer:
 
         self._build_3d_terrain()
         self._ensure_fog_overlay()
+        self._sync_visibility_gated_terrain()
         self._ensure_grid_debug_overlay()
 
         gs = self.engine.get_game_state()

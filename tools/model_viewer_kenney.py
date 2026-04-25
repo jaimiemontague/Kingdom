@@ -437,7 +437,7 @@ def _rel_for_label(assets_models: Path, fpath: Path) -> str:
         return str(fpath)
 
 
-def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path], dict[str, str]]:
+def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path], dict[str, tuple[str, str | None]]]:
     prefab_path = PROJECT_ROOT / "assets" / "prefabs" / "buildings" / f"{prefab_id}.json"
     if not prefab_path.is_file():
         print(f"[model_viewer_kenney] Missing prefab: {prefab_path}", file=sys.stderr)
@@ -452,7 +452,7 @@ def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path]
 
     out: list[Path] = []
     seen: set[str] = set()
-    texture_overrides: dict[str, str] = {}
+    texture_overrides: dict[str, tuple[str, str | None]] = {}
     for piece in raw.get("pieces") or []:
         rel = str(piece.get("model") or "").replace("\\", "/").lstrip("/")
         if not rel or rel in seen:
@@ -460,7 +460,8 @@ def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path]
         seen.add(rel)
         tex = piece.get("texture_override")
         if isinstance(tex, str) and tex.strip():
-            texture_overrides[rel] = tex.strip()
+            mode = piece.get("texture_override_mode")
+            texture_overrides[rel] = (tex.strip(), mode.strip() if isinstance(mode, str) else None)
         p = assets_models / rel
         if p.is_file() and p.suffix.lower() in PREFAB_FOCUS_MODEL_EXTS:
             out.append(p)
@@ -492,7 +493,7 @@ def _load_model_node_from_file(abs_path: Path) -> Any:
         try:
             from ursina import application
 
-            return application.base.loader.loadModel(str(p))
+            return application.base.loader.loadModel(p3d.Filename.from_os_specific(str(p)))
         except Exception:
             return None
         
@@ -716,7 +717,8 @@ def run_viewer(
                 if rel_posix in texture_overrides_by_rel:
                     from game.graphics.prefab_texture_overrides import apply_prefab_texture_override
 
-                    apply_prefab_texture_override(ent, texture_overrides_by_rel[rel_posix])
+                    tex_override, tex_mode = texture_overrides_by_rel[rel_posix]
+                    apply_prefab_texture_override(ent, tex_override, tex_mode)
                 elif fpath.suffix.lower() == ".obj":
                     pass
             else:

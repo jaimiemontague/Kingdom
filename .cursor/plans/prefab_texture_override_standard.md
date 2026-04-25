@@ -132,16 +132,31 @@ Add `texture_override` only to pieces that need it.
 }
 ```
 
+For generated decal meshes with real UVs, add `texture_override_mode: "uv"`:
+
+```json
+{
+  "model": "buildings/inn_window_panel.obj",
+  "pos": [1.5, 0.28, -0.05],
+  "rot": [0.0, 180.0, 0.0],
+  "scale": [1.0, 1.0, 1.0],
+  "texture_override": "textures/buildings/inn/inn_window_panel.png",
+  "texture_override_mode": "uv"
+}
+```
+
 Rules:
 
 - Path is relative to `assets/`.
 - Use POSIX slashes.
 - Keep attribution updated if textures are generated or acquired.
 - Do not add overrides to pieces where it destroys necessary details unless you have a separate detail-preserving strategy.
+- Use `texture_override_mode: "uv"` only for generated decal meshes with authored UVs. Keep the default object-space mode for Kenney atlas pieces.
 - For the Inn, final successful assignments were:
   - `roof-*fantasy-town.glb` -> `textures/buildings/inn/inn_roof_shingles.png`
   - `wall-wood-*fantasy-town.glb` -> `textures/buildings/inn/inn_wood_planks.png`
   - `wall-*fantasy-town.glb` and `road-curb-fantasy-town.glb` -> `textures/buildings/inn/inn_stone_blocks.png`
+  - `buildings/inn_window_panel.obj` -> `textures/buildings/inn/inn_window_panel.png` with `texture_override_mode: "uv"`
 
 ## Runtime Implementation Rules
 
@@ -185,6 +200,22 @@ The proven shader strategy:
 - A small Lambert-style shade term keeps surfaces from becoming flat.
 
 Do not use `setShaderAuto()`. It has already failed with black/invisible renders in this Ursina/Panda setup.
+
+## UV-Mapped Decal Overrides
+
+Use UV-mapped generated decals when object-space projection is technically working but fails the actual screenshot test.
+
+Good candidates:
+
+- Window frames that must cover a solid wall panel rather than an existing cut-through window mesh.
+- Small door/window/sign decals where the texture needs exact placement.
+
+Rules:
+
+- Author a simple generated mesh under `assets/models/buildings/` with explicit UVs.
+- Use `texture_override_mode: "uv"` on that prefab piece.
+- Keep the source wall behind the decal solid if the goal is to cover a hole.
+- Capture both assembler and in-game screenshots before accepting the pass; close tool view alone is not enough.
 
 ## Tooling Requirements
 

@@ -148,12 +148,18 @@ Use this exact bullet structure (one bullet per pack):
 - **License**: CC0-1.0
 - **Source**: Generated in-repo by `tools/generate_inn_texture_overrides.py`; online low-poly fantasy references used for style only, with no third-party pixels copied.
 - **Retrieved**: 2026-04-25
-- **Modifications**: N/A (generated directly as 128x128 PNG texture overrides)
-- **Used for**: Inn building texture polish (wood planks, stone blocks, roof shingles)
+- **Modifications**: N/A (generated directly as 128x128 PNG texture overrides and small OBJ door/window overlays)
+- **Used for**: Inn building texture polish (wood planks, stone blocks, roof shingles, door/window/dormer detail, UV window decals)
 - **File locations**:
   - `assets/textures/buildings/inn/inn_wood_planks.png`
   - `assets/textures/buildings/inn/inn_stone_blocks.png`
   - `assets/textures/buildings/inn/inn_roof_shingles.png`
+  - `assets/textures/buildings/inn/inn_window_panel.png`
+  - `assets/textures/buildings/inn/inn_*_detail.png`
+  - `assets/models/buildings/inn_door_panel.obj`
+  - `assets/models/buildings/inn_door_panel.mtl`
+  - `assets/models/buildings/inn_window_panel.obj`
+  - `assets/models/buildings/inn_window_panel.mtl`
 
 ---
 

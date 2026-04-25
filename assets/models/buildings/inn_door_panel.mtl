@@ -1,0 +1,15 @@
+newmtl door_frame
+Kd 0.18 0.12 0.09
+Ka 0.18 0.12 0.09
+
+newmtl door_wood
+Kd 0.46 0.26 0.13
+Ka 0.46 0.26 0.13
+
+newmtl door_highlight
+Kd 0.66 0.39 0.19
+Ka 0.66 0.39 0.19
+
+newmtl door_knob
+Kd 0.86 0.66 0.30
+Ka 0.86 0.66 0.30

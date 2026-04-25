@@ -2885,6 +2885,287 @@
           "art_signoff": "Refinement pass accepted: stone is warmer and chunkier like the Retro Fantasy stone family, roof/window wall atlas bleed is removed, and the Inn still preserves its readable door/window silhouette.",
           "blockers": [],
           "coordination_notes": []
+        },
+        "wk32_inn_detail_polish_execution": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_detail_polish_execution",
+          "status": "done",
+          "prompt_text": "Further the Inn texture work: make door/window/roof-window frames distinct and retune Inn brick scale/value to match the adjacent Retro-style building; iterate with screenshots.",
+          "what_i_changed": {
+            "summary": "Refined the generated Inn texture override set with smaller, lighter tan-grey stone blocks and detail-specific door/window/dormer textures. Updated inn_v2 prefab assignments so Fantasy Town door, wall-window, upper wood-window, and roof-window pieces keep the Inn silhouette but receive generated high-contrast frame/glass detail instead of flat broad wall/roof overrides. Iterated through assembler and in-game prefab-row screenshots; rejected a Retro wall-piece swap because it over-darkened the Inn and changed the read too much.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json",
+              "assets/textures/buildings/inn/inn_stone_blocks.png",
+              "assets/textures/buildings/inn/inn_stone_window_detail.png",
+              "assets/textures/buildings/inn/inn_stone_door_detail.png",
+              "assets/textures/buildings/inn/inn_wood_window_detail.png",
+              "assets/textures/buildings/inn/inn_roof_window_detail.png",
+              "assets/textures/buildings/inn/README.md",
+              "tools/generate_inn_texture_overrides.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_detail_polish/tool_assembler --screenshot-stem final_inn_detail",
+            "$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_detail_polish --stem final_inn_detail_oblique --no-llm; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; $env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_iter1_rejected": "docs/screenshots/wk32_inn_detail_polish/tool_assembler/inn_detail_iter1_20260425_045531_148.png",
+              "tool_assembler_iter2_rejected": "docs/screenshots/wk32_inn_detail_polish/tool_assembler/inn_detail_iter2_20260425_045718_807.png",
+              "tool_assembler_final": "docs/screenshots/wk32_inn_detail_polish/tool_assembler/final_inn_detail_20260425_045931_612.png",
+              "in_game_prefab_row_final": "docs/screenshots/wk32_inn_detail_polish/final_inn_detail_oblique_20260425_045943_906.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: Inn stone now uses smaller lighter tan-grey blocks closer to the adjacent Retro-style masonry, while generated door/window/roof-window detail textures restore dark frame and pale glass reads at close tool view and default in-game row distance. Roof remains muted blue-grey and the Inn still reads as an Inn rather than a generic Retro guild building.",
+          "blockers": [],
+          "coordination_notes": [
+            "Kept generated in-repo texture ownership; no third-party pixels copied.",
+            "No prefab footprint, anchor, position, rotation, or scale changes."
+          ]
+        },
+        "wk32_inn_door_dormer_refinement": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_door_dormer_refinement",
+          "status": "done",
+          "prompt_text": "Follow-up polish: center the roof-window read on the dormer outcropping and make the front door visible.",
+          "what_i_changed": {
+            "summary": "Moved the visible entrance to the front-center ground panel by swapping that one facade piece to the Retro wall-door mesh, converted the hidden-side door panel back to a window, and enlarged/recentered the generated roof-window detail texture so the dormer window reads inside the roof outcropping. Kept the tuned Inn stone, wood, and roof texture treatment intact.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json",
+              "assets/textures/buildings/inn/inn_roof_window_detail.png",
+              "tools/generate_inn_texture_overrides.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_detail_polish/tool_assembler --screenshot-stem inn_door_dormer_fix_iter3",
+            "PowerShell: `$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; `$env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_detail_polish --stem inn_door_dormer_fix_iter3_oblique --no-llm; `$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; `$env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_door_dormer_fix": "docs/screenshots/wk32_inn_detail_polish/tool_assembler/inn_door_dormer_fix_iter3_20260425_091253_869.png",
+              "in_game_prefab_row_door_dormer_fix": "docs/screenshots/wk32_inn_detail_polish/inn_door_dormer_fix_iter3_oblique_20260425_091311_186.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: front facade now has a visible ground-level door, windows remain readable, and the roof-window detail sits with the dormer outcropping instead of floating off target.",
+          "blockers": [],
+          "coordination_notes": [
+            "One Retro Fantasy door piece is now used on the front facade; attribution was updated in inn_v2.json.",
+            "No footprint, anchor, position, rotation, or scale changes beyond swapping the facade model kind at the existing front-center slot."
+          ]
+        },
+        "wk32_inn_wrap_window_cleanup": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_wrap_window_cleanup",
+          "status": "done",
+          "prompt_text": "Follow-up polish: make generated stone wrap all around, remove the extra old roof-window mark, and eliminate old window geometry/frame mismatch.",
+          "what_i_changed": {
+            "summary": "Converted Inn ground-floor and upper wall window/detail pieces to plain Fantasy Town wall carriers with generated stone/wood/window textures so old window geometry no longer fights the painted frames and the stone treatment wraps around the building. Removed the duplicate rear roof-window piece that was leaving an old window mark on the roof. Added a tiny generated OBJ door overlay with the generated wood texture for a clear entrance without replacing the whole wall panel.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json",
+              "assets/models/buildings/inn_door_panel.obj",
+              "assets/models/buildings/inn_door_panel.mtl",
+              "assets/ATTRIBUTION.md",
+              "assets/textures/buildings/inn/inn_stone_door_detail.png",
+              "tools/generate_inn_texture_overrides.py",
+              "tools/model_viewer_kenney.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_detail_polish/tool_assembler --screenshot-stem inn_wrap_windows_iter12",
+            "$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_detail_polish --stem inn_wrap_windows_iter12_oblique --no-llm; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; $env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_final": "docs/screenshots/wk32_inn_detail_polish/tool_assembler/inn_wrap_windows_iter12_20260425_094253_229.png",
+              "in_game_prefab_row_final": "docs/screenshots/wk32_inn_detail_polish/inn_wrap_windows_iter12_oblique_20260425_094321_117.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: generated stone/wood texture treatment now wraps consistently around the Inn, the duplicate roof-window mark is removed, windows no longer show misaligned old mesh detail under the painted frames, and the facade has a readable brown door overlay.",
+          "blockers": [],
+          "coordination_notes": [
+            "Added generated OBJ/MTL door overlay under assets/models/buildings and attributed it under kingdomsim_generated_building_textures.",
+            "Fixed the tool OBJ loader to use Panda Filename.from_os_specific so Windows paths with spaces load in model viewer/assembler."
+          ]
+        },
+        "wk32_inn_regression_recovery": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_regression_recovery",
+          "status": "done",
+          "prompt_text": "Human regression report: after adding a door, the Inn roof has a hole, the door makes a hole in the wall, and all windows disappeared. Compare in game, use the model assembler screenshot loop, revise until it looks good.",
+          "what_i_changed": {
+            "summary": "Recovered the Inn by restoring real Fantasy Town window meshes for the stone and wood wall windows, reverting the roof-window piece to the normal shingle override instead of the oversized dormer detail texture, and reducing the generated door overlay to one front-facing wood-textured decal on a solid wall panel. This keeps the door readable without using a cut-through door mesh or replacing every window with projection-only painted details.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json"
+            ]
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_regression_fix/tool_assembler --screenshot-stem inn_fix_iter4",
+            "$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_regression_fix --stem inn_fix_iter4_oblique --no-llm; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; $env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_iter1": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_fix_iter1_20260425_101424_280.png",
+              "tool_assembler_iter3_rejected_black_door": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_fix_iter3_20260425_101612_590.png",
+              "tool_assembler_final": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_fix_iter4_20260425_101644_974.png",
+              "in_game_prefab_row_iter1": "docs/screenshots/wk32_inn_regression_fix/inn_fix_iter1_oblique_20260425_101438_726.png",
+              "in_game_prefab_row_final": "docs/screenshots/wk32_inn_regression_fix/inn_fix_iter4_oblique_20260425_101700_877.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: regression recovered. The roof no longer reads as punched through, real window geometry is visible again on stone and wood walls, and the visible entrance reads as a brown door panel on solid masonry rather than a black/cut-out hole.",
+          "blockers": [],
+          "coordination_notes": [
+            "Root cause was over-converting detailed window meshes to plain wall carriers plus projection-only detail textures; the real window meshes are more reliable for the Inn at current camera distance.",
+            "Kept the generated door overlay, but only as a front-facing wood-textured decal so it does not alter the prefab footprint or require a cut-through wall-door mesh."
+          ]
+        },
+        "wk32_inn_roof_window_frame_recovery": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_roof_window_frame_recovery",
+          "status": "done",
+          "prompt_text": "Human follow-up: the roof still had a missing middle block and the window frames looked good but were not covering the window holes.",
+          "what_i_changed": {
+            "summary": "Restored the second middle roof-window block that had been removed in cleanup, then moved the generated framed-window texture treatment onto solid Fantasy Town wall carriers so the frames/glass cover the whole panel instead of sitting around cut-through window geometry.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json"
+            ]
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_regression_fix/tool_assembler --screenshot-stem inn_window_frames_cover_iter1",
+            "$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_regression_fix --stem inn_window_frames_cover_iter1_oblique --no-llm; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; $env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_roof_frame_check": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_roof_window_frames_iter1_20260425_102639_370.png",
+              "in_game_roof_frame_check": "docs/screenshots/wk32_inn_regression_fix/inn_roof_window_frames_iter1_oblique_20260425_102702_500.png",
+              "tool_assembler_final": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_window_frames_cover_iter1_20260425_102819_587.png",
+              "in_game_prefab_row_final": "docs/screenshots/wk32_inn_regression_fix/inn_window_frames_cover_iter1_oblique_20260425_102835_173.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: the roof middle is filled again and the generated window frames now cover solid panels instead of exposing the old window cutouts.",
+          "blockers": [],
+          "coordination_notes": [
+            "The frame artwork was good; the issue was using it on cut-out window meshes. Solid wall carriers are the correct carrier for generated framed-window overrides."
+          ]
+        },
+        "wk32_inn_explicit_window_decals": {
+          "sprint_id": "wk32-inn-texture-polish",
+          "round_id": "wk32_inn_explicit_window_decals",
+          "status": "done",
+          "prompt_text": "Human correction: follow instructions and keep screenshot-testing in a loop; windows must be visibly present in the in-game screenshot, not just technically present in the prefab.",
+          "what_i_changed": {
+            "summary": "Replaced the fragile projected-window read with explicit generated UV window decal panels on the visible Inn facade. Added a UV texture override mode for generated decal meshes, a generated `inn_window_panel` OBJ/MTL plus texture, and prefab placements that make windows clearly readable in both assembler and in-game row screenshots. The first decal screenshot failed as gray panels; added a UV texture shader and re-shot until windows rendered correctly.",
+            "files": [
+              "assets/prefabs/buildings/inn_v2.json",
+              "assets/models/buildings/inn_window_panel.obj",
+              "assets/models/buildings/inn_window_panel.mtl",
+              "assets/textures/buildings/inn/inn_window_panel.png",
+              "tools/generate_inn_texture_overrides.py",
+              "game/graphics/prefab_texture_overrides.py",
+              "game/graphics/ursina_renderer.py",
+              "tools/model_assembler_kenney.py",
+              "tools/model_viewer_kenney.py",
+              "assets/prefabs/schema.md",
+              ".cursor/plans/prefab_texture_override_standard.md",
+              "assets/ATTRIBUTION.md",
+              "assets/textures/buildings/inn/README.md"
+            ]
+          },
+          "how_to_test": [
+            "python tools/generate_inn_texture_overrides.py",
+            "python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_regression_fix/tool_assembler --screenshot-stem inn_window_decals_iter2",
+            "$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'; $env:KINGDOM_URSINA_EDITORCAMERA='0'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_regression_fix --stem inn_window_decals_iter2_oblique --no-llm; $env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''; $env:KINGDOM_URSINA_EDITORCAMERA=''",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "tool_assembler_failed_gray_panels": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_window_decals_iter1_20260425_103753_386.png",
+              "tool_assembler_final": "docs/screenshots/wk32_inn_regression_fix/tool_assembler/inn_window_decals_iter2_20260425_103832_027.png",
+              "in_game_prefab_row_final": "docs/screenshots/wk32_inn_regression_fix/inn_window_decals_iter2_oblique_20260425_103856_523.png"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 existing missing placeholder model warnings"
+            }
+          },
+          "art_signoff": "Pass: windows are now visible at gameplay distance in the in-game prefab-row screenshot, with blue glass and dark frames on explicit decals over solid wall panels. Roof middle remains filled and the door remains readable.",
+          "blockers": [],
+          "coordination_notes": [
+            "Do not accept close tool screenshots alone for small facade details; the in-game row shot is the acceptance gate.",
+            "Use UV decal panels when object-space window projection does not prove readable in screenshots."
+          ]
         }
       }
     }
