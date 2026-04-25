@@ -146,6 +146,37 @@
             "visual_review": { "status": "pending_human", "note": "In-game meadow + tree tiles — confirm variety vs single grass/tuft; adjust copy list or stride if too dense." }
           },
           "blockers": []
+        },
+        "wk32_r2_visual_followup": {
+          "round_id": "wk32_r2_visual_followup",
+          "round_meta": {
+            "prompt_set_id": "wk32_r2",
+            "pm_ref": "sprints.wk32-camera-construction-nature-polish.rounds.wk32_r2_visual_followup",
+            "completed_at_local": "2026-04-25T00:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/plot_3x2_v1.json — 3×2 empty plot (7 pcs: corner stones + scaffold + planks) for Inn footprint; building_type plot_3x2.",
+            "assets/prefabs/buildings/inn_v2_build_20_v1.json — 10 piece subset: first 6 stone walls + 4 road-curbs (inn_v2 construction ~20%).",
+            "assets/prefabs/buildings/inn_v2_build_50_v1.json — 24 piece subset: full stone, partial wood, 3 roof corners, 6 curbs; no custom window/door OBJ panels.",
+            "assets/models/environment — promoted Kenney Nature OBJ+MTL: tree_meadow_tall/small/thin, rock_meadow_flat/spire/chunk; fixed mtllib names; removed tree_pine.obj + tree_pine.glb (legacy billboard pine — WK32-R2-BUG-002; scatter now uses 3× meadow trees + existing Nature GLB tree_* pool).",
+            "tools/assets_manifest.json — required plot_3x2_v1; optional inn_v2_build_20/50; env: tree_meadow_* + rock_meadow_*; dropped tree_pine kind.",
+            "assets/ATTRIBUTION.md — new promotion lines; docs/screenshots/wk32_r2_agent15_screenshot_note.txt — human Ursina capture instructions."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open plot_3x2_v1",
+            "python tools/model_assembler_kenney.py --open inn_v2_build_50_v1",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina"
+          ],
+          "evidence": {
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" },
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+            "bug_wk32_r2_bug_002": { "suspect_removed": "assets/models/environment/tree_pine.glb (and tree_pine.obj); replaced by tree_meadow_*.obj from Nature kit" },
+            "visual_review": { "status": "pending_human", "note": "Confirm meadow trees after tint; Inn construction stages once Agent 03 resolver is wired" }
+          },
+          "blockers": []
         }
       }
     },

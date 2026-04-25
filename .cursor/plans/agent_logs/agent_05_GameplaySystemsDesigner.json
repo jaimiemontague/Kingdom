@@ -1492,6 +1492,41 @@
               "blockers": []
             }
           }
+        },
+        "wk32_r2_visual_followup": {
+          "round_id": "wk32_r2_visual_followup",
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_meta": {
+            "prompt_set_id": "wk32_r2",
+            "build_target": "workstream_f_autospawn_gap"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "summary": "WK32 R2 Workstream F: Re-ran multi-seed and 200-hero stress on full GameEngine; 0 sim pairwise Chebyshev violations (all building footprints min distance >=2). Hardened NeutralBuildingSystem._count with _building_type_str so str-Enum building types count toward spawn caps. Clarified in _violates_auto_spawn_gap that min_tile_gap=2 is the usual one empty grid cell between two rectangles. Added real-GameEngine parametric pytest (seeds 1, 42, 1337) and _count str/enum test. If Ursina playtest still shows edge-touching, treat as 3D mesh/prefab extent vs grid (Agent 03/09), not NeutralBuildingSystem math.",
+              "what_i_changed": [
+                "game/systems/neutral_buildings.py — _building_type_str(); _count normalizes building_type; docstring for min_tile_gap",
+                "tests/test_neutral_buildings_wk32.py — test_neutral_count_matches_str_and_enum_building_type; test_neutral_autospawn_real_engine_pairwise_min_chebyshev_ge2"
+              ],
+              "repro": "No failing sim seed in local stress (13 seeds + 200 heroes) — pairwise d<2 count 0. Ticket WK32-R2-BUG-003: if issue persists, capture seed/SIM_SEED and confirm observation is sim grid vs render mesh.",
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "validate_assets": {
+                  "command": "python tools/validate_assets.py --report",
+                  "note": "exit 0 — no game assets changed this round"
+                },
+                "pytest": {
+                  "command": "python -m pytest -q tests/test_neutral_buildings_wk32.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              }
+            }
+          }
         }
       }
     }

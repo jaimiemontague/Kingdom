@@ -3525,6 +3525,148 @@
               "Manual orbit/tilt around the castle and map edge is still the decisive check because automated capture cannot reproduce Jaimie's exact camera angle."
             ]
           }
+        },
+        "wk32_r2_visual_followup": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r2_visual_followup",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r2_visual_followup]"
+          },
+          "status": "done",
+          "workstreams": [
+            "B",
+            "C"
+          ],
+          "summary_bullets": [
+            "Workstream B: _resolve_construction_staged_prefab now tries plot_{w}x{h} first (ordered _plot_prefab_candidates), then stage files via _stage_prefab_path_candidates — prefers inn_v2_build_20_v1 / inn_v2_build_50_v1 (full stem) before legacy core_build_20_v2 names.",
+            "Workstream C: grass tufts no longer thinned by URSINA_TERRAIN_SCATTER_STRIDE; _GRASS_CLUMPS_PER_TILE=3 per eligible tile with _grass_clump_offset deterministic sub-tile spread (reduces square-grid read). Doodads/rocks still use scatter_stride.",
+            "WK32-R2-FEAT-002 / BUG-001 addressed in ursina_renderer only; no config.py edits."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0; pre-existing warns for optional hero/enemy model placeholders)",
+            "screenshots": "Jaimie/PM: meadow before/after not re-captured in this session; run python main.py --renderer ursina and compare meadow near castle, or python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r2_grass --stem meadow --no-llm"
+          },
+          "how_to_test": [
+            "python main.py --renderer ursina",
+            "Inn 3x2: confirm construction 0% shows plot_3x2 (when assets present), 20% / 50% use inn_v2_build_*_v1",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "pm_tickets": [
+            "WK32-R2-BUG-001 (grass grid) — owner 03: addressed via density + clump offsets",
+            "WK32-R2-FEAT-002 (3x2 plot + inn stages) — owner 03: resolver candidate lists"
+          ]
+        },
+        "wk32_r3_preview_load_hotfix": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r3_preview_load_hotfix",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r3_preview_load_hotfix]"
+          },
+          "status": "done",
+          "workstreams": [
+            "C",
+            "Performance"
+          ],
+          "summary_bullets": [
+            "Added renderer-only KINGDOM_URSINA_GRASS_DENSITY=off|low|default|medium|high preview knob; no config.py or CHANGELOG edits.",
+            "Default grass budget is now 1 clump on a deterministic non-grid 1-in-4 tile sample (stride 2), low is 1-in-9, and high restores r2 screenshot density (3 clumps on every eligible tile).",
+            "Preserved r2 natural sub-tile jitter via _grass_clump_offset and kept exclusions for paths, water, and occupied building footprints."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "manual_preview_commands_powershell": {
+            "low": "$env:KINGDOM_URSINA_GRASS_DENSITY='low'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "default": "python main.py --renderer ursina --no-llm",
+            "high_screenshot_density": "$env:KINGDOM_URSINA_GRASS_DENSITY='high'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "off_debug": "$env:KINGDOM_URSINA_GRASS_DENSITY='off'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY"
+          },
+          "evidence": {
+            "py_compile": "PASS (exit 0) — python -m py_compile game/graphics/ursina_renderer.py",
+            "density_profile_check": "PASS (exit 0) — python -c \"from game.graphics import ursina_renderer as r; print('default', r._grass_density_budget()); import os; os.environ['KINGDOM_URSINA_GRASS_DENSITY']='low'; print('low', r._grass_density_budget()); os.environ['KINGDOM_URSINA_GRASS_DENSITY']='high'; print('high', r._grass_density_budget())\" -> default (1, 2), low (1, 3), high (3, 1)",
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "Not run; no assets, tools, or manifest files changed.",
+            "preview_capture": "PASS (exit 0) — python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r3_preview --stem default_density --no-llm",
+            "screenshot": "docs/screenshots/wk32_r3_preview/default_density_20260425_151227_441.png"
+          },
+          "how_to_test": [
+            "python -m py_compile game/graphics/ursina_renderer.py",
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "$env:KINGDOM_URSINA_GRASS_DENSITY='low'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "$env:KINGDOM_URSINA_GRASS_DENSITY='high'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY"
+          ],
+          "pm_tickets": [
+            "WK32-R3-BUG-001 (preview startup too slow) — owner 03: hotfixed with default density budget and env preview knob.",
+            "WK32-R3-FEAT-001 (playable grass density budget) — implemented in ursina_renderer.py."
+          ],
+          "notes": [
+            "Panda3D .bam cache-miss log clarification remains Agent 12 ownership; this change addresses renderer entity count/startup budget only."
+          ]
+        },
+        "wk32_r4_tree_fog_perf_hotfix": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r4_tree_fog_perf_hotfix",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r4_tree_fog_perf_hotfix]"
+          },
+          "status": "done",
+          "workstreams": [
+            "Fog",
+            "TreeShading"
+          ],
+          "summary_bullets": [
+            "Fixed WK32-R4-BUG-003: static terrain props tracked via _track_visibility_gated_terrain are now visible for Visibility.VISIBLE and Visibility.SEEN, and hidden only for Visibility.UNSEEN.",
+            "Added explored-fog dimming for static terrain props: props in Visibility.SEEN keep rendering but receive a 0.5 color multiplier; VISIBLE props use their base tint; UNSEEN props remain hidden.",
+            "Fixed flat OBJ tree reads: tree_meadow_*.obj loads as vertex-colored/no-texture geometry, so the shared material helper now applies the factor-lit shader to non-textured vertex-color geoms as well as factor-only geoms.",
+            "The shared factor-lit shader now honors p3d_ColorScale, so environment/tree tint and explored-fog dimming affect lit OBJ materials correctly.",
+            "Kept promoted environment tree default tint at 0.65 after vertex-lit comparison; grass remains on the r3 density budget."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py",
+            "tools/model_viewer_kenney.py",
+            "tools/kenney_pack_scale.py"
+          ],
+          "evidence": {
+            "docs_reviewed": ".cursor/plans/prefab_texture_override_standard.md — shader/material path must be explicit, avoid setShaderAuto, and prove with in-game captures.",
+            "py_compile": "PASS (exit 0) — python -m py_compile game/graphics/ursina_renderer.py tools/model_viewer_kenney.py tools/kenney_pack_scale.py",
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0, existing warnings=46) — python tools/validate_assets.py --report",
+            "preview_capture": "PASS (exit 0) — python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r4_fog_seen --stem seen_props --no-llm",
+            "screenshot_fog_seen": "docs/screenshots/wk32_r4_fog_seen/seen_props_20260425_152833_978.png",
+            "screenshot_loop_1": "docs/screenshots/wk32_r4_tree_fog_shader/after_shader_fog_1_20260425_154113_360.png",
+            "screenshot_loop_2_tuned_050": "docs/screenshots/wk32_r4_tree_fog_shader/after_tree_mult_050_20260425_154155_364.png",
+            "screenshot_loop_3_final_default": "docs/screenshots/wk32_r4_tree_fog_shader/after_tree_mult_050_default_20260425_154226_933.png",
+            "material_debug": "tree_meadow_tall.obj classified as branch=vertex tex=no-texture-attrib vcolor=True before fix; vertex-colored geoms now receive factor-lit shader.",
+            "closeup_flat_before_vertex_fix": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_entity_shader.png",
+            "closeup_vertex_lit": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_vertex_lit.png",
+            "closeup_vertex_lit_065": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_vertex_lit_065.png",
+            "ingame_vertex_lit_065": "docs/screenshots/wk32_r4_tree_fog_shader/after_vertex_lit_065_ingame_20260425_154901_666.png"
+          },
+          "how_to_test": [
+            "python main.py --renderer ursina --no-llm",
+            "Explore terrain with trees; move vision away so tiles become explored-but-fogged; confirm trees remain visible (dimmed) instead of vanishing.",
+            "python tools/run_ursina_capture_once.py --seconds 4 --subdir wk32_r4_tree_fog_shader --stem after_vertex_lit_ingame --no-llm",
+            "python -m py_compile game/graphics/ursina_renderer.py tools/model_viewer_kenney.py tools/kenney_pack_scale.py",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "pm_tickets": [
+            "WK32-R4-BUG-003 (static trees vanish in explored fog) — owner 03: fixed via SEEN-allowed gating and 0.5 SEEN dimming for visibility-gated terrain props.",
+            "Human follow-up: lighter tree OBJ models now use lit vertex-color shading; tree brightness/detail should be re-reviewed by Agent 09/Jaimie against the close-up and in-game screenshots."
+          ],
+          "notes": [
+            "Tree brightness primary ownership remains Agent 12/09, but this renderer/tool shader fix was necessary because promoted OBJ trees were vertex-colored and therefore bypassed the lit shader.",
+            "Hero-spawn FPS lag (BUG-002) still needs the Agent 10/03 renderer-HUD follow-up if it persists after r3 grass density budget."
+          ]
         }
       }
     }

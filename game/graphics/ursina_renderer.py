@@ -153,6 +153,48 @@ def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
     return jx, jz, yaw
 
 
+# WK32 r3: default preview budget is intentionally lower than screenshot density.
+# Use KINGDOM_URSINA_GRASS_DENSITY=low|default|high (or off) to tune preview startup.
+_GRASS_DENSITY_PROFILES: dict[str, tuple[int, int]] = {
+    "off": (0, 1),
+    "low": (1, 3),
+    "default": (1, 2),
+    "medium": (1, 2),
+    "high": (3, 1),
+}
+
+
+def _grass_density_budget() -> tuple[int, int]:
+    """Return ``(clumps_per_selected_tile, tile_sampling_stride)`` for grass preview density."""
+    raw = os.environ.get("KINGDOM_URSINA_GRASS_DENSITY", "default").strip().lower()
+    if raw in _GRASS_DENSITY_PROFILES:
+        return _GRASS_DENSITY_PROFILES[raw]
+    try:
+        clumps = max(0, min(3, int(raw)))
+    except ValueError:
+        return _GRASS_DENSITY_PROFILES["default"]
+    return clumps, 1 if clumps >= 3 else 2
+
+
+def _grass_tile_selected(tx: int, ty: int, stride: int) -> bool:
+    """Deterministic sparse sampling without a visible modulo grid."""
+    if stride <= 1:
+        return True
+    h = (tx * 92837111 ^ ty * 689287499 ^ 0xA511E9B3) & 0xFFFFFFFF
+    return (h % max(1, stride * stride)) == 0
+
+
+def _grass_clump_offset(
+    tx: int, ty: int, slot: int, world_half: float
+) -> tuple[float, float, float]:
+    """Deterministic sub-tile XZ + yaw; fills the cell so scatter does not read as a coarse grid."""
+    h = (tx * 92837111 ^ ty * 689287499 ^ (slot * 0x5BD1E995) ^ (slot * 101)) & 0xFFFFFFFF
+    jx = ((h & 0xFFFF) / 65535.0 - 0.5) * 2.0 * world_half * 0.95
+    jz = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 2.0 * world_half * 0.95
+    yaw = float((tx * 127 + ty * 331 + slot * 47) % 360)
+    return jx, jz, yaw
+
+
 _ENV_SCATTER_MODELS: tuple[list[str], list[str]] | None = None
 _ENV_TREE_MODELS: list[str] | None = None
 
@@ -286,11 +328,11 @@ def _apply_kenney_scatter_mesh_shading_only(ent: Entity, model_rel: str) -> None
 
         if getattr(ent, "model", None) is None:
             return
-        _apply_gltf_color_and_shading(
-            ent.model,
-            debug_materials=False,
-            model_label=model_rel.replace("\\", "/"),
-        )
+        # GLB/GLTF paths usually expose GeomNodes under ``ent.model``. Runtime OBJ
+        # scatter can place them under the Entity NodePath instead, so apply both.
+        label = model_rel.replace("\\", "/")
+        _apply_gltf_color_and_shading(ent.model, debug_materials=False, model_label=label)
+        _apply_gltf_color_and_shading(ent, debug_materials=False, model_label=label)
     except Exception:
         pass
 
@@ -312,8 +354,26 @@ def _finalize_kenney_scatter_entity(
         _apply_kenney_scatter_mesh_shading_only(ent, model_rel)
         if apply_pack_tint:
             apply_kenney_pack_color_tint_to_entity(ent, model_rel.replace("\\", "/"))
+        ent._ks_base_color = ent.color
     except Exception:
         pass
+
+
+def _set_static_prop_fog_tint(ent: Entity, fog_mult: float) -> None:
+    """Apply explored-fog darkening to a static terrain prop without compounding tint."""
+    base = getattr(ent, "_ks_base_color", None)
+    if base is None:
+        base = ent.color
+        ent._ks_base_color = base
+    try:
+        ent.color = color.rgba(
+            float(base.r) * float(fog_mult),
+            float(base.g) * float(fog_mult),
+            float(base.b) * float(fog_mult),
+            float(base.a),
+        )
+    except Exception:
+        ent.color = base
 
 
 def _building_type_str(bt) -> str:
@@ -378,26 +438,62 @@ def _building_height_y(
     return H_BUILDING_2X2
 
 
-def _stage_prefab_path(base_prefab: Path, stage: str) -> Path:
-    """Intermediate build JSON: <core>_build_<stage>_v<ver>.json matching base version (WK32)."""
+def _stage_prefab_path_candidates(base_prefab: Path, stage: str) -> list[Path]:
+    """Intermediate JSON candidates: prefer ``<stem>_build_<stage>_v1`` (e.g. inn_v2 → inn_v2_build_20_v1)."""
     stem = base_prefab.stem
+    out: list[Path] = []
+    seen: set[str] = set()
+
+    def add(p: Path) -> None:
+        s = str(p)
+        if s not in seen:
+            seen.add(s)
+            out.append(p)
+
+    add(_PREFAB_BUILDINGS_DIR / f"{stem}_build_{stage}_v1.json")
     m = re.match(r"^(.+)_v(\d+)$", stem)
     if m:
         core, ver = m.group(1), m.group(2)
-        return _PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v{ver}.json"
-    return _PREFAB_BUILDINGS_DIR / f"{stem}_build_{stage}_v1.json"
+        add(_PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v{ver}.json")
+    return out
 
 
-def _plot_prefab_path(tw: int, th: int) -> Path:
-    w = max(1, min(3, int(tw)))
-    h = max(1, min(3, int(th)))
-    return _PREFAB_BUILDINGS_DIR / f"plot_{w}x{h}_v1.json"
+def _plot_prefab_candidates(tw: int, th: int) -> list[Path]:
+    """Ordered plot prefab paths: exact ``plot_wxh`` first, then sensible larger plot fallbacks (WK32 r2)."""
+    w, h = int(tw), int(th)
+    out: list[Path] = []
+    seen: set[str] = set()
+
+    def add(p: Path) -> None:
+        s = str(p)
+        if s not in seen:
+            seen.add(s)
+            out.append(p)
+
+    add(_PREFAB_BUILDINGS_DIR / f"plot_{w}x{h}_v1.json")
+    wc = max(1, min(3, w))
+    hc = max(1, min(3, h))
+    if (wc, hc) != (w, h):
+        add(_PREFAB_BUILDINGS_DIR / f"plot_{wc}x{hc}_v1.json")
+    side = max(1, min(3, max(w, h)))
+    add(_PREFAB_BUILDINGS_DIR / f"plot_{side}x{side}_v1.json")
+    for sq in (3, 2, 1):
+        add(_PREFAB_BUILDINGS_DIR / f"plot_{sq}x{sq}_v1.json")
+    return out
 
 
 def _first_existing(paths: list[Path]) -> Path | None:
     for p in paths:
         if p.is_file():
             return p
+    return None
+
+
+def _first_existing_groups(groups: list[list[Path]]) -> Path | None:
+    for grp in groups:
+        hit = _first_existing(grp)
+        if hit is not None:
+            return hit
     return None
 
 
@@ -415,7 +511,9 @@ def _resolve_construction_staged_prefab(
       0.50 <= progress < 1.0     -> <base>_build_50_v*.json
       progress >= 1.0 (built)    -> final base prefab
 
-    Fallback when a stage file is missing (never crash): 50% → 20% → plot → final (last resort).
+    Fallback when a stage file is missing (never crash): try alternate filenames per group, then next stage.
+    Non-square plots try ``plot_{w}x{h}_v1`` before square ``plot_{s}x{s}`` (never prefer plot_1x1 while a larger plot exists).
+    Inn stages: ``inn_v2_build_20_v1`` (full stem) before legacy ``inn_build_20_v2``-style names.
     ``KINGDOM_URSINA_PREFAB_TEST=0`` skips the whole prefab path upstream (no staging).
     """
     if bool(getattr(building, "is_constructed", True)):
@@ -425,25 +523,30 @@ def _resolve_construction_staged_prefab(
     if prog >= 1.0:
         return base_prefab
 
-    p_plot = _plot_prefab_path(tw, th)
-    p20 = _stage_prefab_path(base_prefab, "20")
-    p50 = _stage_prefab_path(base_prefab, "50")
+    plot_cands = _plot_prefab_candidates(tw, th)
+    c20 = _stage_prefab_path_candidates(base_prefab, "20")
+    c50 = _stage_prefab_path_candidates(base_prefab, "50")
+    base_list = [base_prefab] if base_prefab.is_file() else []
 
     # Only the initial instant (no build work yet) uses the empty plot; any HP gain uses 20%/50%.
     at_plot = prog <= 1e-9
     if at_plot:
-        order = [p_plot, p50, p20, base_prefab]
+        groups = [plot_cands, c50, c20, base_list]
     elif prog < 0.5:
-        order = [p20, p50, base_prefab, p_plot]
+        groups = [c20, c50, base_list, plot_cands]
     elif prog < 1.0:
-        order = [p50, base_prefab, p20, p_plot]
+        groups = [c50, base_list, c20, plot_cands]
     else:
-        order = [base_prefab]
+        groups = [base_list]
 
-    picked = _first_existing(order)
+    picked = _first_existing_groups(groups) if groups else None
     if picked is not None:
         return picked
-    return base_prefab if base_prefab.is_file() else p_plot
+    if base_prefab.is_file():
+        return base_prefab
+    if plot_cands:
+        return plot_cands[0]
+    return base_prefab
 
 
 def _resolve_prefab_path(bts: str, building) -> Path | None:
@@ -896,25 +999,27 @@ class UrsinaRenderer:
         self._fog_revision_seen = engine_rev
 
     def _track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
-        """Register vertical terrain props that should disappear unless their base tile is visible."""
+        """Register vertical terrain props that should disappear only in unexplored fog."""
         # Vertical props must draw after the ground-fog quad; otherwise their tops can be clipped
         # by fog that is visually behind them at shallow perspective camera angles.
         ent.render_queue = 1
         self._visibility_gated_terrain.append((ent, int(tx), int(ty)))
 
     def _sync_visibility_gated_terrain(self) -> None:
-        """Hide tall terrain props outside visible fog so they cannot protrude over the fog edge."""
+        """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
         world = self.engine.world
         engine_rev = int(getattr(self.engine, "_fog_revision", 0))
         if self._terrain_visibility_revision_seen == engine_rev:
             return
         for ent, tx, ty in self._visibility_gated_terrain:
-            is_visible = (
-                0 <= ty < world.height
-                and 0 <= tx < world.width
-                and world.visibility[ty][tx] == Visibility.VISIBLE
-            )
+            if 0 <= ty < world.height and 0 <= tx < world.width:
+                vis = world.visibility[ty][tx]
+            else:
+                vis = Visibility.UNSEEN
+            is_visible = vis != Visibility.UNSEEN
             ent.enabled = bool(is_visible)
+            if is_visible:
+                _set_static_prop_fog_tint(ent, 0.5 if vis == Visibility.SEEN else 1.0)
         self._terrain_visibility_revision_seen = engine_rev
 
     def _ensure_grid_debug_overlay(self) -> None:
@@ -1028,6 +1133,7 @@ class UrsinaRenderer:
         rm = m * float(ROCK_SCALE_MULTIPLIER)
         g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
         scatter_stride = max(1, int(getattr(config, "URSINA_TERRAIN_SCATTER_STRIDE", 1)))
+        grass_clumps, grass_stride = _grass_density_budget()
 
         root = Entity(name="terrain_3d_root")
         water_tint = color.rgb(0.24, 0.48, 0.82)
@@ -1086,31 +1192,38 @@ class UrsinaRenderer:
                         add_to_scene_entities=False,
                     )
 
-                # WK31: optional stride reduces grass-clutter entities (deterministic grid; trees unchanged).
-                # WK32: sample grass model index from expanded environment list.
+                # WK31: optional stride thins non-grass props (doodads/rocks).
+                # WK32 r3: grass keeps r2 sub-tile jitter but now has a startup budget.
                 on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
                 in_occ = (tx, ty) in occupied_tiles
-                if (
-                    (tile == TileType.GRASS or tile == TileType.TREE)
-                    and on_scatter_grid
+                grass_here = (
+                    grass_clumps > 0
+                    and (tile == TileType.GRASS or tile == TileType.TREE)
                     and not in_occ
-                ):
-                    jx, jz, yaw = _grass_scatter_jitter(tx, ty)
-                    gi = _scatter_model_index(tx, ty, len(grass_models), salt=11)
-                    gm = grass_models[gi]
-                    g_ent = Entity(
-                        parent=root,
-                        model=gm,
-                        position=(wx + jx, 0.0, wz + jz),
-                        scale=(g_sc, g_sc, g_sc),
-                        rotation=(0, yaw, 0),
-                        color=color.white,
-                        collision=False,
-                        double_sided=True,
-                        add_to_scene_entities=False,
-                    )
-                    _finalize_kenney_scatter_entity(g_ent, gm)
-                    self._track_visibility_gated_terrain(g_ent, tx, ty)
+                    and _grass_tile_selected(tx, ty, grass_stride)
+                )
+                if grass_here:
+                    tile_w = float(ts) / float(SCALE)
+                    wh = tile_w * 0.46
+                    for slot in range(int(grass_clumps)):
+                        jx, jz, yaw = _grass_clump_offset(tx, ty, slot, wh)
+                        gi = _scatter_model_index(
+                            tx, ty, len(grass_models), salt=11 + slot * 17
+                        )
+                        gm = grass_models[gi]
+                        g_ent = Entity(
+                            parent=root,
+                            model=gm,
+                            position=(wx + jx, 0.0, wz + jz),
+                            scale=(g_sc, g_sc, g_sc),
+                            rotation=(0, yaw, 0),
+                            color=color.white,
+                            collision=False,
+                            double_sided=True,
+                            add_to_scene_entities=False,
+                        )
+                        _finalize_kenney_scatter_entity(g_ent, gm)
+                        self._track_visibility_gated_terrain(g_ent, tx, ty)
 
                 if tile == TileType.TREE:
                     ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)

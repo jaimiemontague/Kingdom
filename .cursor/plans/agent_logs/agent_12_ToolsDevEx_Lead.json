@@ -2676,6 +2676,114 @@
           "docs/screenshots/wk32_nature/20260418_1430_pack_color_albedo_swatches.png — three-panel albedo modulate (white×1.0, ×0.60 prior policy, ×0.75 retune); in-game visual check still recommended for Agent 09"
         ],
         "blockers": []
+      },
+      "wk32_r2_visual_followup": {
+        "round_id": "wk32_r2_visual_followup",
+        "status": "done",
+        "pm_ref": "sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r2_visual_followup\"] — WK32-R2-FEAT-004 manifest/schema; Inn 3x2 plot + inn_v2 ladder prefabs",
+        "what_i_changed": {
+          "files": [
+            "assets/prefabs/buildings/plot_3x2_v1.json — new 3x2 empty-plot prefab (footprint [3,2], building_type plot_3x2; six resource-stone + structure-poles)",
+            "assets/prefabs/buildings/inn_v2_build_20_v1.json — first 9/38 pieces from inn_v2.json (~24% construction stage)",
+            "assets/prefabs/buildings/inn_v2_build_50_v1.json — first 22/38 pieces from inn_v2.json (~58% construction stage)",
+            "tools/assets_manifest.json — prefabs.buildings.required: +plot_3x2_v1 (ordered before plot_3x3_v1); optional: +inn_v2_build_20_v1, inn_v2_build_50_v1",
+            "assets/prefabs/schema.md — v0.5: non-square plot_{w}x{h}_v1 + inn_v2 stage naming convention"
+          ],
+          "summary": "Shipped manifest-validated prefabs for Inn 3x2 plot and inn_v2 construction ladder (slice from final inn_v2 for 20/50 stages; Agent 15 may replace with authored art). No pack tint changes. Workstream F (auto-spawn spacing) is Agent 05 — not touched."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Optional manual: python tools/model_assembler_kenney.py --open plot_3x2_v1 (opens Ursina)"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers); prefab section clean for new JSONs"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "screenshots": [],
+        "blockers": []
+      },
+      "wk32_r3_preview_load_hotfix": {
+        "round_id": "wk32_r3_preview_load_hotfix",
+        "status": "done",
+        "pm_ref": "WK32-R3-BUG-002 + WK32-R3-FEAT-002 — Panda3D .bam cache-miss triage + prewarm tool",
+        "what_i_changed": {
+          "files": [
+            "tools/prewarm_panda_bam_cache.py — new offscreen prewarm tool; loads environment .obj once and writes models_compressed/... .bam files",
+            "docs/dev/panda_bam_cache.md — developer note explaining cache-miss noise and prewarm command"
+          ],
+          "summary": "Added a lightweight prewarm command so first-run OBJ→BAM conversion can be done explicitly (offscreen) and the scary ':loader(error): Unable to open ... .bam' lines are documented as expected cache-miss behavior when followed by a saved .bam. This does not change game code or the r2 non-grid grass behavior; it just unblocks preview workflow."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Optional: python tools/prewarm_panda_bam_cache.py --environment",
+          "Manual preview: python main.py --renderer ursina --no-llm (allow first run time if cache not warmed)"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
+          }
+        },
+        "screenshots": [],
+        "blockers": [
+          "Preview startup perf regression (dense grass / entity count) is owned by Agent 03 (WK32-R3-BUG-001). This tool addresses first-run OBJ cache conversion + log confusion only."
+        ]
+      },
+      "wk32_r4_tree_fog_perf_hotfix": {
+        "round_id": "wk32_r4_tree_fog_perf_hotfix",
+        "status": "done",
+        "pm_ref": "WK32-R4-BUG-001 — trees too light",
+        "what_i_changed": {
+          "files": [
+            "tools/kenney_pack_scale.py — environment/ tree-only tint multiplier (defaults 0.65) + env var override KINGDOM_ENV_TREE_COLOR_MULT",
+            "docs/dev/panda_bam_cache.md — note on adjusting KINGDOM_ENV_TREE_COLOR_MULT for quick local tuning"
+          ],
+          "summary": "Tree tint routing was already correct (environment/ uses Nature 0.75), but promoted meadow trees still read too bright in screenshot. Added a targeted darker multiplier for environment tree models only (tree_*.*) with an env var override for quick tuning. No changes to grass/non-grid scatter; fog semantics and hero-spawn perf are owned by Agents 03/10."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick",
+          "Manual visual check: set KINGDOM_ENV_TREE_COLOR_MULT=0.65; python main.py --renderer ursina --no-llm"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; WARNs pre-existing flat-model allowlist (heroes/enemies/buildings/workers)"
+          }
+        },
+        "screenshots": [
+          "PM screenshot ref: image-543b2be6-eb68-44c4-98db-2bf5d46ec6ed.png (red-arrow meadow trees too bright before tree-only tint)."
+        ],
+        "blockers": [
+          "Agent 09 signoff still needed on final perceived brightness.",
+          "Fog SEEN vs VISIBLE semantics for static props is Agent 03 (WK32-R4-BUG-003).",
+          "Hero-spawn lag diagnosis/fix is Agent 10/03 (WK32-R4-BUG-002)."
+        ]
       }
     }
   }

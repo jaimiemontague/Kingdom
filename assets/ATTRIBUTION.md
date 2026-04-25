@@ -111,6 +111,8 @@ Use this exact bullet structure (one bullet per pack):
   - `assets/models/environment/bush_small.glb`, `bush_large.glb`, `rock_small_a.glb`, `rock_small_b.glb`, `rock_small_c.glb`, `log_wide.glb`, `stump_round.glb`, `mushroom_tan.glb` (scanner prefixes: `bush` / `rock` / `log` / `stump` / `mushroom`)
   - `assets/models/environment/rock_gy_cluster.obj`, `rock_gy_tall.obj` (promoted from Kenney Graveyard Kit OBJ exports + `rocks-graveyard.mtl` / `rocks-tall-graveyard.mtl` in the same folder)
   - `assets/models/environment/log_survival.obj`, `log_small.obj` (promoted from Kenney Survival Kit `tree-log.obj` / `tree-log-small.obj` + `tree-log.mtl` sidecars)
+  - `assets/models/environment/tree_meadow_tall.obj`, `tree_meadow_small.obj`, `tree_meadow_thin.obj` (promoted from Kenney Nature Kit OBJ: `tree_tall` / `tree_small` / `tree_thin` + sidecar `.mtl`; `mtllib` rewrites only). Replace scatter-only `tree_pine.obj` and remove legacy `tree_pine.glb` (cross-billboard pine read wrong after the WK32 env tint pass — WK32-R2-BUG-002).
+  - `assets/models/environment/rock_meadow_flat.obj`, `rock_meadow_spire.obj`, `rock_meadow_chunk.obj` (promoted from Kenney Nature Kit `rock_largeC`, `rock_tallA`, `rock_smallG` OBJ + `.mtl`; `mtllib` rewrites) for additional doodad variety (WK32 r2).
   - Referenced by `assets/prefabs/buildings/*.json` via `pieces[].model` where applicable (prefab attribution: `kenney_nature-kit`)
 
 ---

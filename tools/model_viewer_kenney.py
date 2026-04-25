@@ -261,6 +261,7 @@ void main() {
 
 _FACTOR_LIT_FRAG = """
 #version 150
+uniform vec4 p3d_ColorScale;
 in vec3 vNormal;
 in vec4 vColor;
 out vec4 fragColor;
@@ -271,7 +272,7 @@ void main() {
     float key  = max(dot(N, keyDir),  0.0);
     float fill = max(dot(N, fillDir), 0.0);
     float shade = 0.38 + 0.48 * key + 0.18 * fill;
-    fragColor = vec4(vColor.rgb * shade, vColor.a);
+    fragColor = vec4(vColor.rgb * p3d_ColorScale.rgb * shade, vColor.a * p3d_ColorScale.a);
 }
 """
 
@@ -298,8 +299,8 @@ def _apply_gltf_color_and_shading(
 
     Textured geoms keep Ursina's default unlit shader (textures carry visual detail).
 
-    Factor-only geoms (``baseColorFactor`` with no texture, no vertex color) get a
-    lightweight custom lit shader that reads ``p3d_Color`` (from ``ColorAttrib``)
+    Non-textured geoms (``baseColorFactor`` or vertex colors, with no texture) get
+    a lightweight custom lit shader that reads ``p3d_Color`` (from ``ColorAttrib``)
     and applies key+fill Lambert lighting via vertex normals.  This avoids both the
     flat-unlit look **and** the ``setShaderAuto`` black-silhouette regression.
 
@@ -354,7 +355,7 @@ def _apply_gltf_color_and_shading(
 
         def walk(np: Any) -> None:
             node = np.node()
-            node_has_flat = False
+            node_needs_lit_shader = False
 
             if isinstance(node, GeomNode):
                 for gi in range(node.get_num_geoms()):
@@ -384,12 +385,13 @@ def _apply_gltf_color_and_shading(
                             new_state = state.set_attrib(ColorAttrib.make_vertex())
                             branch = "vertex"
                             local["vertex"] += 1
+                            node_needs_lit_shader = True
                         else:
                             bc = material_base_color(mat)
                             new_state = state.set_attrib(ColorAttrib.make_flat(bc))
                             branch = "flat"
                             local["flat"] += 1
-                            node_has_flat = True
+                            node_needs_lit_shader = True
 
                     if aggregate_stats is not None:
                         aggregate_stats.add_branch(branch, ambiguous=False)
@@ -403,7 +405,7 @@ def _apply_gltf_color_and_shading(
                             f" vcolor={has_vcolor}"
                         )
 
-                if node_has_flat and factor_shader is not None:
+                if node_needs_lit_shader and factor_shader is not None:
                     np.setShader(factor_shader)
 
             for i in range(np.getNumChildren()):
@@ -420,7 +422,7 @@ def _apply_gltf_color_and_shading(
                 f" vertex={local['vertex']}"
                 f" flat={local['flat']}"
             )
-        return local["flat"] > 0
+        return (local["flat"] + local["vertex"]) > 0
     except Exception as exc:
         if aggregate_stats is not None:
             aggregate_stats.errors += 1

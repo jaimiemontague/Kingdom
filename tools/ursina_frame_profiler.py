@@ -207,7 +207,8 @@ def run(baseline: int = 300, per_hire: int = 180, max_hires: int = 6, dt: float 
                 d = cv - bv
                 pct = (d / max(bv, 0.0001)) * 100
                 flag = " <<<" if pct > 25 else ""
-                print(f"    {bn:<16} {bv:>8.3f} -> {cv:>8.3f}  Δ={d:>+7.3f}  ({pct:>+6.1f}%){flag}")
+                # ASCII-only output so Windows cp1252 terminals don't crash.
+                print(f"    {bn:<16} {bv:>8.3f} -> {cv:>8.3f}  d={d:>+7.3f}  ({pct:>+6.1f}%){flag}")
 
     # O(N²) check
     if len(results) >= 3:

@@ -37,6 +37,7 @@ stays **1.0** in ``pack_extent_multiplier_for_rel``. See plan workstream E + PM 
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +70,11 @@ _PACK_COLOR_MULTIPLIER_BY_FOLDER: dict[str, float] = {
     "kenney_blocky-characters_20": 0.75,
     "kenney_cursor-pixel-pack": 1.0,
 }
+
+# WK32 r4: Some promoted environment trees (eg tree_meadow_*.obj) still read too bright
+# even after the global environment/Nature tint. Apply a slightly stronger multiplier
+# for environment tree models only. Can be overridden for quick tuning without code edits.
+_ENV_TREE_COLOR_MULTIPLIER_DEFAULT = 0.65
 
 # Merged ``Models/GLB format`` mixes Retro + Survival (+ suffixed FT/GY); unsuffixed
 # names default to Retro (1.0) except as resolved below (WK31 Agent 15 + mapping §3.3).
@@ -211,7 +217,15 @@ def pack_color_multiplier_for_rel(rel: str) -> float:
         return 1.0
     # Promoted env/ meshes (grass, tree_pine, etc.) match Nature Kit albedo — same tint as GLTF path.
     if r.startswith("environment/"):
-        return float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_nature-kit"])
+        env_base = float(_PACK_COLOR_MULTIPLIER_BY_FOLDER["kenney_nature-kit"])
+        name = Path(r).name.lower()
+        if name.startswith("tree_"):
+            try:
+                m = float(os.getenv("KINGDOM_ENV_TREE_COLOR_MULT", str(_ENV_TREE_COLOR_MULTIPLIER_DEFAULT)))
+            except Exception:
+                m = _ENV_TREE_COLOR_MULTIPLIER_DEFAULT
+            return max(0.0, min(env_base, float(m)))
+        return env_base
 
     parts = tuple(Path(r).parts)
     raw_mark = "Kenny raw downloads (for exact paths)"

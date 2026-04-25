@@ -6798,6 +6798,731 @@
               "DARKENING: Kenney non-Retro props read okay in buildings, but environment/ trees and grass look too light because env/ paths are exempt from pack_color_multiplier. Jaimie also judges 0.60 as 'too dark' \u2014 retune to 0.75 (25% darker)."
             ]
           }
+        },
+        "wk32_r2_visual_followup": {
+          "round_meta": {
+            "created_utc": "2026-04-25T20:25:00Z",
+            "source": "human_playtest_jaimie_mid_sprint",
+            "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+            "screenshot_ref": "C:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/assets/c__Users_Jaimie_Montague_AppData_Roaming_Cursor_User_workspaceStorage_5c3d09fd4a286a35191fd2f8d02af84c_images_image-1b806d62-8558-4e72-9c20-f2b5677a73b1.png",
+            "pm_note": "Follow-up round created from Jaimie's mid-sprint pass/fail notes. PM remains in planning/delegation only; no game-code edits by Agent 01."
+          },
+          "pm_status_summary": {
+            "overall": "WK32 is mid-sprint. Workstream A is testing PASS. Workstream B needs an Inn construction ladder and a 3x2 plot. Workstream C grass model quality is good, but scatter placement reads as a square grid and needs much higher density plus deterministic random placement inside tiles. Workstream D needs more rock variety. Workstream E is PASS except the single circled tree model in Jaimie's screenshot. Workstream F is FAIL and needs Agent 05 follow-up.",
+            "human_playtest_notes": [
+              "A camera navigation: PASS; no further camera-feel work unless regression appears.",
+              "B construction phases: needs partial build prefab ladder for the Inn; Inn is 3x2 and currently lacks an initial 0% plot prefab.",
+              "C grass: models now look great, but placement is in a square/grid pattern around the map. Need far more density and randomized placement throughout tiles/squares, while remaining deterministic.",
+              "D nature: need more rocks / rock variants.",
+              "E tint/darkening: PASS except the one tree model circled red in the screenshot; that model should be removed, replaced, rescaled, or otherwise corrected.",
+              "F auto-spawn spacing: FAIL; investigate and fix the Workstream F acceptance criteria."
+            ],
+            "gates": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK32-R2-BUG-001",
+              "title": "Grass scatter forms visible square/grid pattern instead of natural meadow",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Use the working EditorCamera to view the meadow near the castle.",
+                "Observe grass instances arranged at regular square/grid intervals rather than natural scattered clumps."
+              ],
+              "expected": "Grass appears dense and natural, with deterministic pseudo-random placement within tiles/squares. It should not read as a visible grid from the default or low camera angles.",
+              "actual": "Grass models are visually improved, but their placement forms a square-like grid around the map and reads fake.",
+              "acceptance_test": [
+                "Grass density is visibly increased from the screenshot state.",
+                "Grass placement uses deterministic jitter/random offsets within eligible tiles or clumps; no obvious square grid remains.",
+                "No grass on paths, water, buildings, or occupied footprints.",
+                "Agent 10 confirms performance remains acceptable or provides a density ceiling.",
+                "python tools/qa_smoke.py --quick PASS."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK32-R2-BUG-002",
+              "title": "Circled tree model reads wrong after darkening pass",
+              "severity": "polish",
+              "owner_agent": "15_ModelAssembler_KitbashLead",
+              "consult_agent": "09_ArtDirector_Pixel_Animation_VFX",
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "Open Jaimie's 2026-04-25 screenshot attached in round_meta.screenshot_ref.",
+                "Inspect the red-circled tree in the lower-left meadow.",
+                "Launch python main.py --renderer ursina and locate the same/similar tree model in-scene."
+              ],
+              "expected": "Every tree model used in the environment scatter belongs visually with the current darker, low-poly kingdom style.",
+              "actual": "One tree model circled by Jaimie sticks out and fails the Workstream E visual pass even though the broader tint/darkening pass is accepted.",
+              "acceptance_test": [
+                "Identify the exact environment model filename responsible for the circled tree.",
+                "Remove, replace, or tune that model so the red-circled visual issue is gone.",
+                "Agent 09 gives a one-paragraph cohesion signoff or lists a concrete remaining fix.",
+                "python tools/validate_assets.py --report exit 0."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK32-R2-BUG-003",
+              "title": "Workstream F auto-spawn spacing failed playtest",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "Use the same build/seed Jaimie playtested for WK32 mid-sprint.",
+                "Let auto-spawned buildings appear.",
+                "Inspect neighboring auto-placed building footprints."
+              ],
+              "expected": "Auto-spawned buildings leave at least a 1-tile empty gap between neighboring footprints. Manual placement behavior is unchanged.",
+              "actual": "Jaimie reports Workstream F as FAIL.",
+              "acceptance_test": [
+                "Find and document the failing seed or construct a deterministic repro.",
+                "Fix only the auto-spawn path if the gap rule is not enforced.",
+                "Manual placement remains unchanged.",
+                "python tools/qa_smoke.py --quick PASS."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK32-R2-FEAT-001",
+              "title": "Inn construction ladder and 3x2 plot prefab",
+              "owner_agent": "15_ModelAssembler_KitbashLead",
+              "workstream": "B",
+              "spec_ref": ".cursor/plans/inn_texture_polish_fee5ac62.plan.md plus .cursor/plans/wk32_camera_construction_nature_polish.plan.md B.2/B.3",
+              "acceptance": [
+                "Add assets/prefabs/buildings/plot_3x2_v1.json with footprint_tiles [3, 2], ground_anchor_y 0.0, attribution complete, and visual style matching existing plot prefabs.",
+                "Add Inn partial build prefabs for the passing Inn model: inn_v2_build_20_v1.json and inn_v2_build_50_v1.json unless Agent 03 confirms the resolver expects a different final stem.",
+                "20% Inn stage reads as foundation/partial walls/scaffold, not a full Inn. 50% stage reads as walls/partial roof/scaffold, not final.",
+                "Footprint tiles exactly match inn_v2.json.",
+                "Round-trip each prefab with python tools/model_assembler_kenney.py --open <prefab_id>.",
+                "python tools/validate_assets.py --report exit 0."
+              ]
+            },
+            {
+              "id": "WK32-R2-FEAT-002",
+              "title": "Renderer supports non-square plot fallback for 3x2 Inn",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "workstream": "B",
+              "spec_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md B.5",
+              "acceptance": [
+                "Construction resolver derives plot_3x2_v1 for 3x2 buildings instead of falling back to plot_1x1_v1 or a square-only plot.",
+                "Resolver derives Inn stage filenames from the final prefab stem, so inn_v2.json maps to inn_v2_build_20_v1.json and inn_v2_build_50_v1.json.",
+                "Missing intermediate prefabs still degrade gracefully without crash.",
+                "Human playtest can place/build an Inn and see 0% plot -> 20% -> 50% -> final.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            },
+            {
+              "id": "WK32-R2-FEAT-003",
+              "title": "More rock variety for nature scatter",
+              "owner_agent": "15_ModelAssembler_KitbashLead",
+              "workstream": "D",
+              "spec_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md D.1",
+              "acceptance": [
+                "Add at least 3 additional rock variants under assets/models/environment/ using scanner-compatible names that start with rock.",
+                "Attribution/source paths logged.",
+                "Models visually fit the current darker Nature/Graveyard palette after tinting.",
+                "python tools/validate_assets.py --report exit 0."
+              ]
+            },
+            {
+              "id": "WK32-R2-FEAT-004",
+              "title": "Manifest/schema follow-through for Inn construction assets",
+              "owner_agent": "12_ToolsDevEx_Lead",
+              "workstream": "B",
+              "spec_ref": "tools/assets_manifest.json and assets/prefabs/schema.md",
+              "acceptance": [
+                "Add plot_3x2_v1 and Inn partial prefabs to tools/assets_manifest.json with the appropriate required/optional status after Agent 15 ships them.",
+                "If schema/docs mention only square plots, update docs to allow non-square plot_{w}x{h}_v1 names.",
+                "python tools/validate_assets.py --report exit 0."
+              ]
+            }
+          ],
+          "pm_integration_order": [
+            "15 ships plot_3x2_v1 plus inn_v2_build_20_v1 and inn_v2_build_50_v1.",
+            "03 updates/ verifies construction resolver for non-square plot fallback and inn_v2 stage stems.",
+            "03 fixes grass scatter distribution: higher density plus deterministic jitter/clumping inside eligible tiles.",
+            "15 adds more rock variants and replaces/removes/tunes the circled bad tree model.",
+            "05 investigates and fixes Workstream F auto-spawn spacing failure.",
+            "12 updates manifest/schema after 15 assets land.",
+            "10 runs perf pass after 03 scatter density changes.",
+            "09 reviews the corrected tree, denser grass, and added rocks.",
+            "11 runs final gates."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "focus": "Fix renderer-side Workstream B/C follow-ups: support non-square 3x2 plot fallback for Inn, derive inn_v2 construction stage names from the final prefab stem, and replace grid-like grass placement with denser deterministic jitter/clumping inside eligible tiles.",
+              "workstreams": [
+                "B",
+                "C"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "plot_3x2_v1 resolver support",
+                "inn_v2_build_20/50 stage resolution",
+                "dense non-grid grass scatter with deterministic random offsets"
+              ]
+            },
+            "05": {
+              "focus": "Workstream F failed playtest. Reproduce the auto-spawn spacing failure, confirm whether existing gap logic is bypassed or too weak, and fix only the auto-spawn path. Manual building placement must remain unchanged.",
+              "workstreams": [
+                "F"
+              ],
+              "status": "assigned_active",
+              "intelligence": "medium",
+              "deliverables": [
+                "deterministic repro or failing seed documented",
+                "auto-spawn >=1 tile gap fixed",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "12": {
+              "focus": "After Agent 15 ships the 3x2 plot and Inn partials, update manifest/schema docs so plot_3x2_v1 and inn_v2_build_20/50 are validated correctly. Do not change tint policy unless Agent 09/15 proves the circled tree issue is a tint-system issue rather than a bad model.",
+              "workstreams": [
+                "B",
+                "E"
+              ],
+              "status": "assigned_active_after_15",
+              "intelligence": "medium",
+              "deliverables": [
+                "assets_manifest entries for plot_3x2_v1 and Inn partials",
+                "schema/doc note for non-square plot names if needed",
+                "validate_assets --report exit 0"
+              ]
+            },
+            "15": {
+              "focus": "Asset follow-up: build the Inn construction ladder for the passing inn_v2 model, add plot_3x2_v1, add more rocks, and identify/fix the circled bad tree model from Jaimie's screenshot.",
+              "workstreams": [
+                "B",
+                "D",
+                "E"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "plot_3x2_v1 prefab",
+                "inn_v2_build_20_v1 and inn_v2_build_50_v1 prefabs",
+                "at least 3 more rock variants",
+                "bad circled tree removed/replaced/tuned with screenshot proof"
+              ]
+            },
+            "09": {
+              "focus": "Consult after 15/03 land: review the corrected tree, denser non-grid grass, added rocks, and Inn partial construction stages. Give concrete keep/change notes; no code edits.",
+              "workstreams": [
+                "B",
+                "C",
+                "D",
+                "E"
+              ],
+              "status": "consult_after_03_15",
+              "intelligence": "low"
+            },
+            "10": {
+              "focus": "After Agent 03 increases grass density / jitter and Agent 15 adds more rocks, run the WK31 Part A perf comparison. If perf is outside budget, recommend a density/stride ceiling rather than reverting visuals blindly.",
+              "workstreams": [
+                "C",
+                "D"
+              ],
+              "status": "consult_after_03_15",
+              "intelligence": "medium"
+            },
+            "11": {
+              "focus": "Final gate runner for this follow-up round. Run qa_smoke and validate_assets after 03/05/12/15 report completion; report failures with owner hints.",
+              "workstreams": [
+                "ALL"
+              ],
+              "status": "consult_final_gate",
+              "intelligence": "low"
+            },
+            "02": {
+              "status": "silent"
+            },
+            "04": {
+              "status": "silent"
+            },
+            "06": {
+              "status": "silent"
+            },
+            "07": {
+              "status": "silent"
+            },
+            "08": {
+              "status": "silent",
+              "reason": "Workstream A camera is testing PASS; no new UX camera review needed unless Agent 03 changes camera behavior."
+            },
+            "13": {
+              "status": "silent"
+            },
+            "14": {
+              "status": "silent"
+            }
+          },
+          "pm_universal_prompt": "You are being activated for WK32 round 2: visual follow-up and Workstream F fix.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r2_visual_followup\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nBug tickets are in pm_bug_tickets; feature specs are in pm_feature_requests.\n\nAfter completing your work:\n1. Update your agent log with deliverables, paths, screenshots, and gate results.\n2. Run: python tools/qa_smoke.py --quick (must PASS for code changes).\n3. Run: python tools/validate_assets.py --report (must exit 0 for asset/manifest changes).\n4. Report status back to PM.\n\nRules: no CHANGELOG/version bump; no config.py footprint edits; preserve determinism.",
+          "pm_agent_prompts": {
+            "03": "Agent 03 (TechnicalDirector) - WK32 r2 visual follow-up. Intelligence: HIGH.\n\nRead PM hub round wk32_r2_visual_followup. You own renderer fixes for B/C:\n1. Construction resolver: support non-square plot fallback for Inn. Inn footprint is 3x2; resolver should request plot_3x2_v1 at 0% rather than plot_1x1 or square-only fallback.\n2. Construction stage stems: the passing Inn model is inn_v2.json, so partial stages should resolve as inn_v2_build_20_v1.json and inn_v2_build_50_v1.json unless you document a safer convention.\n3. Grass scatter: current grass models look good, but placement reads as a square/grid. Increase density and use deterministic jitter/clumping inside eligible tiles so it reads natural. Keep exclusions: no path, water, building, occupied footprints.\n\nCoordinate with Agent 15 asset names. Run python tools/qa_smoke.py --quick. Include before/after screenshots from the same meadow angle.",
+            "05": "Agent 05 (GameplaySystems) - WK32 r2 Workstream F fix. Intelligence: MEDIUM.\n\nJaimie reports Workstream F is FAIL. Reproduce the auto-spawn spacing problem, document the seed/repro, and fix only the auto-spawn building placement path so auto-placed buildings leave at least one empty tile between neighboring footprints. Manual placement must stay unchanged. Preserve determinism.\n\nRun python tools/qa_smoke.py --quick and include the repro/fix evidence in your agent log.",
+            "12": "Agent 12 (ToolsDevEx) - WK32 r2 manifest/schema follow-through. Intelligence: MEDIUM.\n\nWait until Agent 15 ships plot_3x2_v1 plus Inn partial prefabs. Then update tools/assets_manifest.json and any relevant schema/docs so non-square plot_{w}x{h}_v1 names and inn_v2_build_20/50 are recognized correctly. Do not change pack tint unless Agent 09/15 prove the circled tree is a tint-system issue.\n\nRun python tools/validate_assets.py --report. If you touch code/tools, also run python tools/qa_smoke.py --quick.",
+            "15": "Agent 15 (ModelAssembler) - WK32 r2 asset follow-up. Intelligence: HIGH.\n\nRead PM hub round wk32_r2_visual_followup and Jaimie's screenshot ref. Tasks:\n1. Build plot_3x2_v1 for the Inn's 3x2 footprint.\n2. Build Inn construction partials for the passing inn_v2 model: inn_v2_build_20_v1 and inn_v2_build_50_v1, matching inn_v2 footprint and visual style.\n3. Add at least 3 more rock variants under assets/models/environment/ with scanner-compatible names starting with rock.\n4. Identify the exact tree model circled red in Jaimie's screenshot and remove, replace, rescale, or tune it so it no longer sticks out.\n\nRound-trip prefabs with python tools/model_assembler_kenney.py --open <prefab_id>. Run python tools/validate_assets.py --report. Include screenshot proof.",
+            "09": "Agent 09 (ArtDirector) - WK32 r2 consult. Intelligence: LOW.\n\nAfter Agents 03 and 15 land, review: corrected circled tree, denser non-grid grass, added rocks, and Inn construction stages. Give a concise keep/change signoff with concrete file/model names if anything still sticks out. No code edits.",
+            "10": "Agent 10 (PerformanceStability) - WK32 r2 perf consult. Intelligence: MEDIUM.\n\nAfter Agent 03 increases grass density/jitter and Agent 15 adds rocks, rerun the WK31 Part A perf comparison. If outside budget, recommend a density/stride ceiling or clump count limit. Do not ask to revert visuals unless there is no cheaper ceiling. Log numbers and command evidence.",
+            "11": "Agent 11 (QA) - WK32 r2 final gates. Intelligence: LOW.\n\nAfter Agents 03, 05, 12, and 15 report done, run:\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n\nReport PASS/FAIL and owner hints for any failure."
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "15",
+              "03",
+              "05",
+              "12",
+              "09",
+              "10",
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "13",
+              "14"
+            ],
+            "rationale": "Implementers: Agent 15 (HIGH - Inn partial prefab ladder, 3x2 plot, more rocks, bad tree asset triage), Agent 03 (HIGH - non-square construction resolver plus dense deterministic scatter redesign), Agent 05 (MEDIUM - Workstream F deterministic auto-spawn spacing failure), Agent 12 (MEDIUM - manifest/schema follow-through for new prefab naming). Consults: Agent 09 (LOW - visual cohesion signoff), Agent 10 (MEDIUM - perf budget after density increase), Agent 11 (LOW - final gate commands). Silent: Agent 08 because Workstream A camera is already testing PASS; Agents 02/04/06/07/13/14 have no WK32 r2 ownership."
+          }
+        },
+        "wk32_r3_preview_load_hotfix": {
+          "round_meta": {
+            "created_utc": "2026-04-25T21:06:00Z",
+            "source": "human_playtest_jaimie_preview_blocked",
+            "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+            "terminal_ref": "C:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/terminals/1.txt lines 518-555",
+            "pm_note": "Jaimie cannot preview the game after r2 because Ursina startup takes too long; terminal shows Panda3D OBJ cache misses/generation for new environment models. PM files hotfix; Agent 01 does not edit game code."
+          },
+          "pm_status_summary": {
+            "overall": "Preview is blocked. Terminal output shows new OBJ environment models being read and converted to .bam cache files at startup; these Panda3D loader(error) lines are expected first-run cache misses, not necessarily fatal crashes. The actual blocker is that startup/render budget became too heavy after r2 dense grass + new OBJ assets.",
+            "diagnosis": [
+              "The lines ':loader(error): Unable to open models_compressed/... .bam' are Panda3D checking for a compressed cache before creating it. They look scary but are usually cache-miss noise.",
+              "Agent 03 r2 changed grass to 3 clumps per eligible tile and explicitly stopped using URSINA_TERRAIN_SCATTER_STRIDE for grass. This likely multiplies grass Entity/model instantiation cost.",
+              "Agent 15 introduced several OBJ environment models. OBJ-to-BAM conversion on first run adds startup cost; if the game is killed before startup completes, later runs may repeatedly pay part of that cost.",
+              "Current config only exposes KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE, but grass no longer respects it, so Jaimie has no practical low-density preview knob."
+            ],
+            "immediate_human_guidance": [
+              "Do not treat the .bam cache-miss lines alone as fatal errors.",
+              "For any manual retest before the hotfix lands, use python main.py --renderer ursina --no-llm and allow the first run longer than normal so Panda can finish cache generation.",
+              "If still too slow to reach the window, wait for Agent 03's density/startup hotfix before further visual playtest."
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK32-R3-BUG-001",
+              "title": "Ursina preview startup too slow after dense grass and new OBJ environment assets",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "consult_agents": [
+                "10_PerformanceStability_Lead",
+                "12_ToolsDevEx_Lead"
+              ],
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Observe startup logs after r2 environment changes.",
+                "Preview takes too long to become usable; Jaimie kills the process.",
+                "Terminal shows Panda3D trying to open missing models_compressed/*.bam files and saving .bam files for new OBJ environment assets."
+              ],
+              "expected": "Preview reaches an interactive Ursina window quickly enough for human visual review. First-run cache generation may happen, but it should not make normal preview unusable.",
+              "actual": "Startup is slow enough that Jaimie cannot preview and terminates the game.",
+              "acceptance_test": [
+                "Fresh launch reaches usable window on Jaimie's machine without needing to kill it.",
+                "Provide a low-density preview mode or default budget so grass remains natural but startup is playable.",
+                "Do not regress the non-grid grass visual acceptance from r2.",
+                "python tools/qa_smoke.py --quick PASS."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK32-R3-BUG-002",
+              "title": "Panda3D .bam cache-miss noise confuses startup triage",
+              "severity": "minor",
+              "owner_agent": "12_ToolsDevEx_Lead",
+              "consult_agents": [
+                "03_TechnicalDirector_Architecture"
+              ],
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Observe ':loader(error): Unable to open models_compressed/... .bam' followed by 'saved .bam to ...'."
+              ],
+              "expected": "Startup logs make clear whether this is expected first-run cache generation or a real missing asset failure.",
+              "actual": "Panda logs cache misses as loader(error), making normal first-run model conversion look like a game error.",
+              "acceptance_test": [
+                "Document the expected cache-miss behavior in the agent log and/or a developer note.",
+                "If feasible, add a small cache prewarm command/tool for environment assets so Jaimie can run it before preview.",
+                "python tools/validate_assets.py --report exit 0."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK32-R3-FEAT-001",
+              "title": "Playable grass density budget and preview knob",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "workstream": "C",
+              "acceptance": [
+                "Grass density is no longer hardwired to 3 clumps on every eligible tile without a budget.",
+                "Add or reuse an env/config knob so Jaimie can preview low/medium/high grass density from PowerShell.",
+                "Recommended shape: keep natural jitter/clumps, but apply a deterministic density ceiling such as grass clumps per tile and/or eligible-tile sampling. The existing KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE may be reused if documented.",
+                "Default should prioritize playable preview over maximal density; an opt-in high-density mode is acceptable for screenshots.",
+                "Log exact manual commands for low/default/high preview modes."
+              ]
+            },
+            {
+              "id": "WK32-R3-FEAT-002",
+              "title": "Environment asset cache/prewarm path",
+              "owner_agent": "12_ToolsDevEx_Lead",
+              "workstream": "Tools",
+              "acceptance": [
+                "Determine whether the new OBJ environment assets can be preloaded/prewarmed without opening the full game.",
+                "If practical, provide a command or small tool to load environment assets once and populate Panda's cache.",
+                "If not practical, document that .bam cache misses followed by saved .bam are expected and not fatal.",
+                "Coordinate with Agent 15 if source OBJ assets should be replaced with GLB or a more cache-friendly format."
+              ]
+            }
+          ],
+          "pm_integration_order": [
+            "03 first: restore playable startup with grass density budget / preview knob.",
+            "10 immediately measures startup/FPS after 03's change and recommends default density.",
+            "12 documents or adds cache prewarm if first-run OBJ conversion remains confusing/slow.",
+            "11 runs final qa_smoke and validate_assets after 03/12 complete."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "focus": "Hotfix the r2 grass scatter performance/startup regression. Keep the natural non-grid placement, but add a real density budget/preview knob and make the default playable. Current issue: grass ignores URSINA_TERRAIN_SCATTER_STRIDE and spawns 3 clumps per eligible tile.",
+              "workstreams": [
+                "C",
+                "Performance"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "playable default grass density",
+                "documented low/default/high preview commands",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "10": {
+              "focus": "Measure the hotfix once Agent 03 lands it. Compare startup usability and FPS with low/default/high grass density settings. Recommend the default that lets Jaimie preview comfortably.",
+              "workstreams": [
+                "Performance"
+              ],
+              "status": "consult_after_03",
+              "intelligence": "medium"
+            },
+            "12": {
+              "focus": "Triage Panda3D .bam cache-miss startup noise. Determine whether to add a cache prewarm command/tool for environment OBJ assets or simply document expected behavior. Coordinate with 03 if logs can be made less scary.",
+              "workstreams": [
+                "Tools"
+              ],
+              "status": "assigned_active",
+              "intelligence": "medium"
+            },
+            "11": {
+              "focus": "After Agent 03 and 12 report done, run python tools/qa_smoke.py --quick and python tools/validate_assets.py --report. Report PASS/FAIL and any owner hints.",
+              "workstreams": [
+                "QA"
+              ],
+              "status": "consult_final_gate",
+              "intelligence": "low"
+            },
+            "15": {
+              "status": "silent",
+              "reason": "Asset authoring is done for now. Only reactivate if Agent 12/03 prove the OBJ source format or a specific model is the load blocker."
+            },
+            "02": {
+              "status": "silent"
+            },
+            "04": {
+              "status": "silent"
+            },
+            "05": {
+              "status": "silent"
+            },
+            "06": {
+              "status": "silent"
+            },
+            "07": {
+              "status": "silent"
+            },
+            "08": {
+              "status": "silent"
+            },
+            "09": {
+              "status": "silent"
+            },
+            "13": {
+              "status": "silent"
+            },
+            "14": {
+              "status": "silent"
+            }
+          },
+          "pm_universal_prompt": "You are being activated for WK32 round 3: Ursina preview load hotfix.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r3_preview_load_hotfix\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nBug tickets are in pm_bug_tickets; feature specs are in pm_feature_requests.\n\nAfter completing your work:\n1. Update your agent log with deliverables, exact commands, and gate results.\n2. Run: python tools/qa_smoke.py --quick for code changes.\n3. Run: python tools/validate_assets.py --report for tool/asset/manifest changes.\n4. Report status back to PM.\n\nRules: no CHANGELOG/version bump; preserve determinism; do not remove the r2 non-grid grass improvement, but make preview playable.",
+          "pm_agent_prompts": {
+            "03": "Agent 03 (TechnicalDirector) - WK32 r3 preview-load hotfix. Intelligence: HIGH.\n\nJaimie cannot preview the game after r2 because startup is too slow. Terminal shows Panda cache misses for new OBJ environment assets, but your r2 grass change also made grass ignore URSINA_TERRAIN_SCATTER_STRIDE and spawn 3 clumps per eligible tile. Hotfix: keep natural non-grid grass, but add a playable density budget and a documented preview knob. Default should be playable; high density can be opt-in for screenshots. Record exact PowerShell commands for low/default/high preview. Run python tools/qa_smoke.py --quick.",
+            "10": "Agent 10 (PerformanceStability) - WK32 r3 consult. Intelligence: MEDIUM.\n\nAfter Agent 03 lands the density/startup hotfix, measure startup usability and FPS for low/default/high grass density settings. Recommend the default Jaimie should use for normal preview. Log exact commands and results.",
+            "12": "Agent 12 (ToolsDevEx) - WK32 r3 cache/log triage. Intelligence: MEDIUM.\n\nTerminal shows Panda3D ':loader(error): Unable to open models_compressed/... .bam' followed by 'saved .bam to ...' for new OBJ environment assets. Determine whether to add a cache prewarm command/tool or document this as expected first-run cache generation. Coordinate with 03 if startup logs can be clarified. Run python tools/validate_assets.py --report; run qa_smoke if you touch code.",
+            "11": "Agent 11 (QA) - WK32 r3 final gates. Intelligence: LOW.\n\nAfter Agents 03 and 12 report done, run:\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n\nReport PASS/FAIL and owner hints."
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "03",
+              "12",
+              "10",
+              "11"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Implementers: Agent 03 (HIGH - renderer density/startup hotfix; must preserve non-grid grass while restoring playable preview), Agent 12 (MEDIUM - cache/prewarm/log triage for Panda .bam cache misses). Consults: Agent 10 (MEDIUM - startup/FPS measurement and default density recommendation), Agent 11 (LOW - final gates). Silent: Agent 15 unless source asset format is proven to be the blocker; other agents have no r3 ownership."
+          }
+        },
+        "wk32_r4_tree_fog_perf_hotfix": {
+          "round_meta": {
+            "created_utc": "2026-04-25T21:22:00Z",
+            "source": "human_playtest_jaimie_after_r3",
+            "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+            "screenshot_ref": "C:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/assets/c__Users_Jaimie_Montague_AppData_Roaming_Cursor_User_workspaceStorage_5c3d09fd4a286a35191fd2f8d02af84c_images_image-543b2be6-eb68-44c4-98db-2bf5d46ec6ed.png",
+            "pm_note": "Game opens now and grass is acceptable for the moment. New blockers: tree brightness, severe lag/low FPS after heroes spawn, and incorrect explored fog behavior for trees."
+          },
+          "pm_status_summary": {
+            "overall": "R3 restored preview usability enough to playtest. Grass is acceptable for now. Remaining WK32 hotfixes: many trees are still too light, FPS tanks after the first few heroes spawn, and static trees incorrectly vanish when explored terrain becomes fogged (SEEN) instead of only vanishing in unexplored (UNSEEN) terrain.",
+            "human_playtest_notes": [
+              "Tree brightness: red arrows in screenshot point to trees that are too light relative to the darker scene.",
+              "Performance: tons of lag / low FPS after the first few heroes are spawned.",
+              "Fog semantics: trees should remain visible in explored terrain that is currently fogged; they should only be hidden in unexplored black fog."
+            ],
+            "pm_diagnosis_hints": [
+              "Renderer code currently gates vertical terrain props on Visibility.VISIBLE only in _sync_visibility_gated_terrain; this explains trees disappearing in explored-but-not-currently-visible fog.",
+              "Dynamic enemies/heroes are still correctly allowed to require current Visibility.VISIBLE. This r4 request is for static terrain props (trees/rocks/doodads/grass) only.",
+              "FPS after heroes may be renderer entity count, hero billboard/update path, AI/LLM work, or HUD upload; Agent 10 should separate sim vs Ursina renderer before assigning a code owner."
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK32-R4-BUG-001",
+              "title": "Trees too light after tint/darkening pass",
+              "severity": "polish",
+              "owner_agent": "12_ToolsDevEx_Lead",
+              "consult_agents": [
+                "09_ArtDirector_Pixel_Animation_VFX",
+                "15_ModelAssembler_KitbashLead"
+              ],
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Open the screenshot referenced in round_meta.screenshot_ref.",
+                "Compare red-arrowed trees to the surrounding darker terrain/buildings."
+              ],
+              "expected": "Environment trees match the darker low-poly kingdom palette and do not pop as overly bright cyan/teal shapes.",
+              "actual": "Many trees remain too light despite the broader Workstream E pass.",
+              "acceptance_test": [
+                "Identify whether tree_meadow_* assets are receiving the expected environment/Nature tint.",
+                "If global environment tint is correct, add a targeted tree/environment model tint policy or hand off exact bad model names to Agent 15 for replacement/tuning.",
+                "Agent 09 signs off that red-arrow tree brightness is acceptable.",
+                "python tools/validate_assets.py --report exit 0."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK32-R4-BUG-002",
+              "title": "Severe lag / low FPS after first few heroes spawn",
+              "severity": "blocker",
+              "owner_agent": "10_PerformanceStability_Lead",
+              "consult_agents": [
+                "03_TechnicalDirector_Architecture",
+                "06_AIBehaviorDirector_LLM"
+              ],
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Play until the first few heroes are spawned.",
+                "Observe low FPS / heavy lag."
+              ],
+              "expected": "Spawning several heroes should not collapse preview FPS. If LLM/provider latency exists, render FPS should remain understandable and the culprit should be measured.",
+              "actual": "Jaimie reports tons of lag after the first few heroes spawn.",
+              "acceptance_test": [
+                "Measure whether slowdown is sim/AI, renderer/GPU, HUD upload, or entity count using existing perf tools/F2/Ursina counter.",
+                "Produce owner-specific fix recommendation: Agent 03 if renderer, Agent 06 if AI/LLM, Agent 08/03 if HUD upload, Agent 05 if simulation systems.",
+                "If the fix is clearly renderer-side and small, Agent 03 may implement after Agent 10 identifies it.",
+                "python tools/qa_smoke.py --quick PASS after any code change."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK32-R4-BUG-003",
+              "title": "Static trees vanish in explored fog-of-war tiles",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina",
+                "Explore terrain containing trees.",
+                "Move vision away so the terrain becomes explored-but-fogged.",
+                "Observe trees vanish even though the terrain has been explored."
+              ],
+              "expected": "Static terrain props such as trees remain visible, dimmed by the fog overlay, in explored terrain (Visibility.SEEN). They should only be hidden in unexplored black fog (Visibility.UNSEEN).",
+              "actual": "Trees disappear as soon as explored terrain is no longer currently visible.",
+              "pm_diagnosis_hints": "In game/graphics/ursina_renderer.py, _sync_visibility_gated_terrain currently checks world.visibility[ty][tx] == Visibility.VISIBLE. For static terrain props, change this to allow Visibility.SEEN as well, while keeping dynamic enemies/heroes visible-only.",
+              "acceptance_test": [
+                "Trees/rocks/static terrain props remain visible in explored fogged tiles and are darkened by fog overlay.",
+                "Static terrain props are hidden in unexplored black fog so they do not protrude into unknown territory.",
+                "Enemies/units remain governed by current visible-tile rules, not this static-prop rule.",
+                "python tools/qa_smoke.py --quick PASS."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [],
+          "pm_integration_order": [
+            "10 measures FPS lag after heroes spawn and identifies owner/cause first.",
+            "03 fixes static terrain-prop fog semantics (VISIBLE or SEEN; not UNSEEN). If 10 confirms renderer-side FPS issue, 03 also applies the scoped renderer fix.",
+            "12 checks tree tint routing / targeted environment tree multiplier; 09 reviews. 15 only activates if exact tree models need replacement or asset-level tuning.",
+            "11 runs final gates after 03/12 fixes."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "focus": "Fix static terrain prop fog semantics: trees/rocks/doodads should remain visible in explored-but-fogged tiles (SEEN), hidden only in unexplored (UNSEEN). Dynamic enemies/units should still require VISIBLE. Also be ready to take renderer-side FPS fixes if Agent 10 identifies the hero-spawn lag as renderer/GPU/entity-count.",
+              "workstreams": [
+                "Fog",
+                "Performance"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "static prop visibility allows VISIBLE + SEEN, hides UNSEEN",
+                "no dynamic unit visibility regression",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "10": {
+              "focus": "Diagnose severe lag after the first few heroes spawn. Separate sim/AI vs Ursina renderer vs HUD upload vs entity count. Provide owner-specific recommendation; do not guess. If the issue is renderer-side, coordinate directly with Agent 03.",
+              "workstreams": [
+                "Performance"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "repro command and measurement notes",
+                "culprit category and owner recommendation",
+                "default FPS mitigation recommendation"
+              ]
+            },
+            "12": {
+              "focus": "Investigate tree brightness. Confirm whether tree_meadow_* / environment tree assets receive the expected Nature/environment color multiplier. If the global tint path is correct, propose a targeted tree multiplier or hand off exact models to Agent 15 for replacement.",
+              "workstreams": [
+                "E"
+              ],
+              "status": "assigned_active",
+              "intelligence": "medium",
+              "deliverables": [
+                "tree tint routing diagnosis",
+                "targeted tint/tool fix if appropriate",
+                "validate_assets --report exit 0"
+              ]
+            },
+            "09": {
+              "focus": "Art consult after 12/15/03 changes: judge whether red-arrowed trees now sit with the darker scene and whether fogged SEEN trees read correctly. Provide concise signoff or exact remaining asset names.",
+              "workstreams": [
+                "ArtReview"
+              ],
+              "status": "consult_after_12_03",
+              "intelligence": "low"
+            },
+            "11": {
+              "focus": "Final gates after 03/10/12 report done. Run python tools/qa_smoke.py --quick and python tools/validate_assets.py --report. Report PASS/FAIL with likely owner.",
+              "workstreams": [
+                "QA"
+              ],
+              "status": "consult_final_gate",
+              "intelligence": "low"
+            },
+            "15": {
+              "status": "conditional",
+              "reason": "Do not activate immediately. Activate only if Agent 12/09 identify specific tree assets that need replacement or asset-level tuning rather than loader/tint policy."
+            },
+            "06": {
+              "status": "conditional",
+              "reason": "Do not activate immediately. Activate only if Agent 10 proves hero-spawn lag is AI/LLM behavior rather than renderer/HUD."
+            },
+            "02": {
+              "status": "silent"
+            },
+            "04": {
+              "status": "silent"
+            },
+            "05": {
+              "status": "silent"
+            },
+            "07": {
+              "status": "silent"
+            },
+            "08": {
+              "status": "silent"
+            },
+            "13": {
+              "status": "silent"
+            },
+            "14": {
+              "status": "silent"
+            }
+          },
+          "pm_universal_prompt": "You are being activated for WK32 round 4: tree brightness, hero-spawn lag, and explored-fog tree visibility.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r4_tree_fog_perf_hotfix\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nBug tickets are in pm_bug_tickets; status/ordering is in pm_status_summary and pm_integration_order.\n\nAfter completing your work:\n1. Update your agent log with exact commands, screenshots/measurements if relevant, and gate results.\n2. Run: python tools/qa_smoke.py --quick for code changes.\n3. Run: python tools/validate_assets.py --report for asset/tool/manifest changes.\n4. Report status back to PM.\n\nRules: no CHANGELOG/version bump; preserve determinism; keep grass acceptable; do not broaden scope beyond the three r4 issues.",
+          "pm_agent_prompts": {
+            "03": "Agent 03 (TechnicalDirector) - WK32 r4. Intelligence: HIGH.\n\nFix WK32-R4-BUG-003: static terrain props (trees/rocks/doodads/grass) should remain visible in explored-but-fogged terrain (Visibility.SEEN) and hide only in unexplored black fog (Visibility.UNSEEN). Dynamic enemies/units should still require currently VISIBLE tiles. PM diagnosis: _sync_visibility_gated_terrain currently gates props on world.visibility == Visibility.VISIBLE. Adjust semantics carefully and run python tools/qa_smoke.py --quick. Also stand by for renderer-side FPS fix if Agent 10 identifies hero-spawn lag as renderer/GPU/entity-count.",
+            "10": "Agent 10 (PerformanceStability) - WK32 r4. Intelligence: HIGH.\n\nDiagnose severe lag / low FPS after the first few heroes spawn. Use python main.py --renderer ursina and existing perf tools/F2/Ursina FPS counter to separate sim/AI, renderer/GPU/entity count, and HUD upload. Produce an owner-specific recommendation. If renderer-side, coordinate with Agent 03. If AI/LLM-side, tell PM to activate Agent 06. Include exact commands and observations in your log.",
+            "12": "Agent 12 (ToolsDevEx) - WK32 r4. Intelligence: MEDIUM.\n\nInvestigate trees that are still too light in Jaimie's screenshot. Confirm whether tree_meadow_* / environment tree assets receive the expected environment/Nature color multiplier. If the tint path is wrong, fix the loader/tool policy. If the path is correct but the assets are visually bad, list exact model filenames for Agent 15/09. Run python tools/validate_assets.py --report; run qa_smoke if you touch code.",
+            "09": "Agent 09 (ArtDirector) - WK32 r4 consult. Intelligence: LOW.\n\nAfter Agents 12 and 03 report changes, review the red-arrow tree brightness and explored-fog tree visibility. Give a concise signoff or list exact remaining model filenames/issues. No code edits.",
+            "11": "Agent 11 (QA) - WK32 r4 final gates. Intelligence: LOW.\n\nAfter Agents 03, 10, and 12 report done, run:\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n\nReport PASS/FAIL and likely owner for any failure."
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "03",
+              "10",
+              "12",
+              "09",
+              "11"
+            ],
+            "conditional_later": [
+              "15 if specific tree assets need replacement/tuning",
+              "06 if Agent 10 proves hero lag is AI/LLM-side"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "07",
+              "08",
+              "13",
+              "14"
+            ],
+            "rationale": "Implementers/diagnostics: Agent 03 (HIGH - renderer fog semantics and possible renderer perf fix), Agent 10 (HIGH - serious FPS regression diagnosis after heroes spawn), Agent 12 (MEDIUM - tree tint routing/tool policy). Consults: Agent 09 (LOW - visual signoff), Agent 11 (LOW - gates). Conditional: Agent 15 only for asset replacement; Agent 06 only if lag is AI/LLM-side."
+          }
         }
       }
     }

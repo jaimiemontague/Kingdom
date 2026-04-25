@@ -3168,6 +3168,56 @@
           ]
         }
       }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "WK32 R2 — Agent 09 consult (no code)"
+      },
+      "rounds": {
+        "wk32_r2_visual_followup": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r2_visual_followup",
+          "status": "done",
+          "prompt_text": "After Agents 03 and 15 land: review circled tree fix, denser non-grid grass, added rocks, Inn construction stages. Concise keep/change signoff; no code edits.",
+          "what_i_changed": {
+            "summary": "Repo audit and art-direction notes only (no files changed). Confirmed ursina_renderer has _plot_prefab_path(tw,th) → plot_{w}x{h}_v1 for w,h in 1..3, _stage_prefab_path so inn_v2 → inn_v2_build_20_v1 / inn_v2_build_50_v1, _grass_scatter_jitter on grass and doodad placement, and construction staged prefab resolution. R2 prefabs not yet present: missing assets/prefabs/buildings/plot_3x2_v1.json, inn_v2_build_20_v1.json, inn_v2_build_50_v1.json (Inn is 3×2 per inn_v2.json). Until 15 ships those files, the Inn cannot show correct empty plot or partial stages; resolver will fall back per _first_existing. Rocks present with scanner prefix rock: rock.obj, rock_gy_cluster.obj, rock_gy_tall.obj. Tree tiles: only tree_pine.obj matches tree*; circled outlier in Jaimie's screenshot not re-captured here—recommend 15 add/replace a second low-poly pine or tune scale of tree_pine after in-game check.",
+            "files_touched": []
+          },
+          "how_to_test": [
+            "python main.py --renderer ursina",
+            "After plot_3x2_v1 + inn_v2_build_* land: place Inn, observe plot → 20% → 50% → final; frame meadow for grass/doodad cohesion",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "screenshots": {
+              "note": "No new captures this round — signoff pending Agent 15 prefabs + Jaimie replaytest"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0; warns=46 (pre-existing missing placeholder model files)"
+            }
+          },
+          "art_signoff": "Partial / conditional. **Keep:** Renderer-side WK32 work (_grass_scatter_jitter, non-square plot path for plot_3x2_v1, inn_v2_build_* stems, water quad) is the right contract. **Change / pending:** (1) Ship plot_3x2_v1.json and inn_v2_build_20_v1.json + inn_v2_build_50_v1.json (Agent 15) so 3×2 Inn construction reads as designed. (2) **Tree:** With only `assets/models/environment/tree_pine.obj` in tree* set, any single ugly pine is likely the same asset at a bad transform or scale; replace or add a second compatible pine and re-shot Jaimie meadow. (3) **Rocks:** Three `rock*.obj` variants present — good direction; re-check value balance vs bushes after 0.75 tint in live scene. Re-run this consult with one meadow screenshot when 15+03 land.",
+          "blockers": [
+            "plot_3x2_v1.json not in repo",
+            "inn_v2_build_20_v1.json and inn_v2_build_50_v1.json not in repo",
+            "No post-fix screenshot for circled tree (Human + Agent 15 asset pass required for final PASS)"
+          ],
+          "coordination_notes": [
+            "Workstream F (auto-spawn spacing) is Agent 05 — not reviewed here per role boundaries.",
+            "Agent 12 manifest follow-through after 15; Agent 10 perf after 03 density — per PM integration order."
+          ]
+        }
+      }
     }
   }
 }

@@ -15,7 +15,7 @@ For the full art/tooling procedure behind `texture_override`, see `.cursor/plans
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `prefab_id` | string | yes | Stable id; use suffix `_vN` and bump when changing a shipped prefab. |
-| `building_type` | string | yes | Sim building type key (e.g. `house`) — must align with `config.py` when used in-game. **Exception (WK32):** empty-plot prefabs `plot_*x*_v1.json` use `plot_1x1` / `plot_2x2` / `plot_3x3` so they are not mistaken for playable buildings; the renderer loads them by filename for the construction ladder. |
+| `building_type` | string | yes | Sim building type key (e.g. `house`) — must align with `config.py` when used in-game. **Exception (WK32+):** empty-plot prefabs `plot_{w}x{h}_v1.json` (any positive integers *w*, *h*) use a synthetic `building_type` of the form `plot_{w}x{h}` with a literal `x` (e.g. `plot_3x2` for a 3×2 Inn plot) so they are not mistaken for playable buildings; the renderer resolves the JSON **filename** (e.g. `plot_3x2_v1.json`) for the construction ladder, including **non-square** footprints. |
 | `footprint_tiles` | `[int, int]` | yes | Width × depth in **tiles** `[w, d]`. Must match the sim footprint for that `building_type` when wired to gameplay. |
 | `ground_anchor_y` | number | yes | World **Y** of the building anchor / ground plane for placement (typically `0.0`). |
 | `rotation_steps` | number | yes | Degrees per toolbar “rotate step” in the tool (plan default: `90`). Stored for round-trip and future tooling. |
@@ -87,3 +87,4 @@ Each element is one placed kit piece:
 | v0.2 | **Runtime:** `_load_prefab_instance` **auto-centers** the piece cluster in **XZ** on the prefab root (centroid subtraction); **Y** unchanged. Sim places root at footprint center; `_sync_prefab_building_entity` fit-scales to `footprint_tiles`. Schema doc aligned with `game/graphics/ursina_renderer.py` (WK30). Assembler may still save ad-hoc origins; authors need not manually center in XZ. |
 | v0.3 | Added optional per-piece `texture_override` path relative to `assets/` for curated prefab-scoped texture polish (WK32 Inn pass). |
 | v0.4 | Added optional `texture_override_mode` for UV-mapped generated decals, used when object-space projection is not readable enough for doors/windows. |
+| v0.5 | **WK32 r2:** Documented non-square plot prefabs `plot_{w}x{h}_v1` and Inn construction stages named after the final prefab stem (e.g. `inn_v2_build_20_v1` ↔ `inn_v2.json`). |

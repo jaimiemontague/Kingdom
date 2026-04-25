@@ -1,0 +1,405 @@
+{
+  "prefab_id": "inn_v2_build_20_v1",
+  "building_type": "inn",
+  "footprint_tiles": [
+    3,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kingdomsim_generated_building_textures"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-pole.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-pole.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-poles.glb",
+      "pos": [
+        3.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-poles.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/barrels.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/barrels.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-barrel.glb",
+      "pos": [
+        1.5,
+        0.05,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [
+        3.25,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/resource-planks.glb",
+      "pos": [
+        2.75,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK32 r2: construction stage build_20 \u2014 subset of inn_v2 pieces; no window/door decals."
+}

@@ -4134,7 +4134,7 @@
       "rounds": {
         "wk32_r1_execution": {
           "round_id": "wk32_r1_execution",
-          "status": "in_progress",
+          "status": "done",
           "pre_code_checklist_qa_subsystem": {
             "1_file_map": [
               "tools/qa_smoke.py — runs determinism_guard, pytest, and observe_sync headless profiles for merge gate",
@@ -4187,6 +4187,81 @@
             "qa_smoke_quick": "PASS (mid-sprint)",
             "validate_assets": "PASS exit 0 (mid-sprint)",
             "determinism": "Unchanged expectations; determinism_guard passed inside qa_smoke"
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk32_r2_visual_followup": {
+          "round_id": "wk32_r2_visual_followup",
+          "status": "done",
+          "pm_hub_ref": "sprints['wk32-camera-construction-nature-polish'].rounds['wk32_r2_visual_followup']",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult — final merge gates only).",
+            "Appended this round entry with WK32 r2 gate evidence (2026-04-25)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_25": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "WK32 r2 final: determinism_guard PASS; pytest PASS; headless profiles PASS — base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling (0.1x/0.25x/0.5x/1.0x), interior_view, quest_panel, conversation; DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_25": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file for legacy per-name .glb paths in manifest; exit 0 per established PM gate — triage: Agent 12 + prefab pipeline, not blocking merge)"
+            }
+          },
+          "screenshots": "N/A — role was automated gate only; Jaimie / Agent 09 visual signoff and Workstream F playtest remain human-side per PM hub.",
+          "pm_scope_note": "Headless suite does not assert WK32-R2 art tickets (tree model, 6-tile cap UX) or auto-spawn spacing; green gate = no observed regression in determinism, pytest, and observe_sync QA assertions.",
+          "triage_if_fail": {
+            "qa_smoke": "Bisect — Agent 03 (engine/sim/renderer boundaries), Agent 05 (gameplay), Agent 12 (tools), Agent 06 (AI) per failing profile",
+            "validate_assets_errors": "Agent 12 manifest/validator, Agent 15 prefabs, assets/ATTRIBUTION",
+            "validate_assets_only_warns": "Expected until legacy manifest model paths are fully populated; confirm errors=0 for merge."
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk32_r4_tree_fog_perf_hotfix": {
+          "round_id": "wk32_r4_tree_fog_perf_hotfix",
+          "status": "done",
+          "pm_hub_ref": "sprints['wk32-camera-construction-nature-polish'].rounds['wk32_r4_tree_fog_perf_hotfix']",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult — baseline/final gates only for r4).",
+            "Ran qa_smoke and validate_assets to confirm merge gate is green before/after r4 implementers land fixes."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_25_r4_baseline": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "WK32 r4 baseline: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_25_r4_baseline": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file legacy placeholders; non-blocking as long as exit 0)"
+            }
+          },
+          "scope_note": "These gates do not validate the three r4 issues directly (tree brightness, hero-spawn FPS collapse, static-prop fog semantics). They only ensure determinism_guard/pytest/headless profiles and asset validation still pass after scoped renderer/tool changes.",
+          "owner_hints": {
+            "tree_brightness": "Agent 12 (tint routing/tool policy) + Agent 09 consult; Agent 15 only if specific tree assets need replacement",
+            "hero_spawn_lag": "Agent 10 to diagnose; route to Agent 03 if renderer/entity-count; to Agent 06 if AI/LLM; to Agent 08/03 if HUD upload",
+            "explored_fog_tree_visibility": "Agent 03 (static terrain props should allow Visibility.SEEN, hide only UNSEEN; dynamic units remain VISIBLE-only)"
           },
           "blockers": [],
           "bugs_found": []

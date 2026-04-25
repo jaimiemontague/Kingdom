@@ -68,7 +68,9 @@
       "grass",
       "path_stone",
       "rock",
-      "tree_pine",
+      "tree_meadow_tall",
+      "tree_meadow_small",
+      "tree_meadow_thin",
       "grass_tuft_a",
       "grass_tuft_b",
       "grass_flower_red",
@@ -83,6 +85,9 @@
       "mushroom_tan",
       "rock_gy_cluster",
       "rock_gy_tall",
+      "rock_meadow_flat",
+      "rock_meadow_spire",
+      "rock_meadow_chunk",
       "log_survival",
       "log_small"
     ]
@@ -101,11 +106,14 @@
         "gnome_hovel_v1",
         "plot_1x1_v1",
         "plot_2x2_v1",
+        "plot_3x2_v1",
         "plot_3x3_v1"
       ],
       "optional": [
         "wizard_guild_v1",
         "inn_v2",
+        "inn_v2_build_20_v1",
+        "inn_v2_build_50_v1",
         "farm_v2",
         "food_stand_v2",
         "peasant_house_small_build_20_v1",

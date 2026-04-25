@@ -12,6 +12,13 @@ from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
 
 
+def _building_type_str(building_type: object) -> str:
+    """Normalize enum or str building_type for comparisons (WK32 R2)."""
+    if building_type is None:
+        return ""
+    return str(getattr(building_type, "value", building_type))
+
+
 def _overlaps_any(buildings: list, gx: int, gy: int, w: int, h: int) -> bool:
     for b in buildings or []:
         if getattr(b, "hp", 1) <= 0:
@@ -55,8 +62,11 @@ def _violates_auto_spawn_gap(
     WK32: auto-spawned buildings need at least one empty tile between footprints (Chebyshev).
 
     Reject if the minimum Chebyshev distance between any tile of the candidate and any tile of
-    an existing building (or another same-tick placement) is strictly less than ``min_tile_gap``
-    (2 => adjacent footprints are rejected; one-tile gap is accepted).
+    an existing building (or another same-tick placement) is strictly less than ``min_tile_gap``.
+
+    With ``min_tile_gap == 2``: closest tiles of two footprints must not be edge- or
+    corner-adjacent (Chebyshev 0 or 1). A value of 2 means there is at least one empty grid
+    cell between the two rectangles (the usual "1-tile gap" read on a grid).
     """
     pending = pending or []
     for b in buildings or []:
@@ -140,7 +150,12 @@ class NeutralBuildingSystem(GameSystem):
         return None
 
     def _count(self, buildings: list, building_type: str) -> int:
-        return sum(1 for b in buildings if getattr(b, "building_type", None) == building_type and getattr(b, "hp", 1) > 0)
+        want = str(building_type)
+        return sum(
+            1
+            for b in buildings
+            if _building_type_str(getattr(b, "building_type", None)) == want and getattr(b, "hp", 1) > 0
+        )
 
     def _find_castle(self, buildings: list) -> object | None:
         for building in buildings:

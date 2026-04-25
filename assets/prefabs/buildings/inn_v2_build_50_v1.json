@@ -1,0 +1,431 @@
+{
+  "prefab_id": "inn_v2_build_50_v1",
+  "building_type": "inn",
+  "footprint_tiles": [
+    3,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kingdomsim_generated_building_textures"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
+        2.25
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        -1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/road-curb-fantasy-town.glb",
+      "pos": [
+        3.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
+    },
+    {
+      "model": "Models/GLB format/wood-floor.glb",
+      "pos": [
+        2.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-poles.glb",
+      "pos": [
+        2.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        3.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        3.5,
+        1.25,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK32 r2: construction stage build_50 \u2014 subset of inn_v2 pieces; no window/door decals."
+}
