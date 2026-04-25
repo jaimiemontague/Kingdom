@@ -3504,20 +3504,21 @@
             "what_i_changed": [
               "Corrected the incomplete render-order-only fog fix: ground fog now renders before buildings/props instead of last.",
               "Added tile-visibility gating for vertical terrain props (grass, trees, doodads, rocks) so unseen props cannot protrude above the fog edge at oblique camera angles.",
+              "Set visibility-gated 3D terrain props to render_queue=1, matching buildings/prefab pieces, so visible models draw in front of the ground fog instead of having their tops clipped.",
               "Kept the fog texture as the terrain darkening layer; object visibility now follows world.visibility by tile for vertical terrain meshes."
             ],
             "files_changed": [
               "game/graphics/ursina_renderer.py"
             ],
             "evidence": {
-              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_visibility_gate --no-llm",
-              "screenshot": "docs/screenshots/wk32_fog_fix/fog_visibility_gate_20260425_103030_931.png",
+              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_prop_queue --no-llm",
+              "screenshot": "docs/screenshots/wk32_fog_fix/fog_prop_queue_20260425_104702_912.png",
               "py_compile": "PASS - python -m py_compile game/graphics/ursina_renderer.py",
               "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
             },
             "how_to_test": [
               "python main.py --renderer ursina",
-              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_visibility_gate --no-llm",
+              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_prop_queue --no-llm",
               "python tools/qa_smoke.py --quick"
             ],
             "notes": [

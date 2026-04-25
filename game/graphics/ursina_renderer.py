@@ -897,6 +897,9 @@ class UrsinaRenderer:
 
     def _track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
         """Register vertical terrain props that should disappear unless their base tile is visible."""
+        # Vertical props must draw after the ground-fog quad; otherwise their tops can be clipped
+        # by fog that is visually behind them at shallow perspective camera angles.
+        ent.render_queue = 1
         self._visibility_gated_terrain.append((ent, int(tx), int(ty)))
 
     def _sync_visibility_gated_terrain(self) -> None:
