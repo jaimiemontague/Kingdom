@@ -20,6 +20,7 @@ todos:
     status: completed
     dependencies:
       - shots-tool
+isProject: false
 ---
 
 # WK3+ Visual Snapshot System (scripted screenshots + comparison gallery)
@@ -27,6 +28,19 @@ todos:
 ## Outcome
 
 A **repeatable, deterministic** way to generate screenshots of our game in known states (specific buildings placed, enemies present, UI panels opened) and a **side-by-side gallery** that lets us compare those outputs against the reference screenshots you provided in `@.cursor/plans/art_examples`.This unlocks faster art/UI iteration because we can *see* what shipped each round (and detect regressions) without relying solely on manual play.
+
+### WK32 Extension: Tool-Level Model Screenshots
+
+The Inn texture polish pass added a second screenshot loop for 3D prefab/material work. Some art problems are hard to diagnose from full-game captures alone; the model viewer and assembler now support automated screenshots so agents can inspect a prefab before launching the full game.
+
+Commands proven on `inn_v2`:
+
+```powershell
+python tools/model_viewer_kenney.py --focus-prefab inn_v2 --debug-materials --auto-exit-sec 3 --screenshot-subdir wk32_inn_texture/tool_viewer --screenshot-stem after_inn_pieces
+python tools/model_assembler_kenney.py --open inn_v2 --auto-exit-sec 3 --screenshot-subdir wk32_inn_texture/tool_assembler --screenshot-stem after_inn_v2
+```
+
+Use these before in-game captures when validating prefab texture overrides, shader changes, UV/atlas behavior, or piece-level material damage. The final acceptance gate still needs an in-game screenshot beside representative buildings.
 
 ## Key constraints (locked)
 
@@ -114,6 +128,29 @@ We’ll keep it simple HTML/JS (no framework) so it’s easy to delete later.
 
 We will **not** compare pixels in CI (too flaky). The goal is to generate artifacts deterministically.
 
+### E) Prefab Texture Polish Capture Loop
+
+For material polish tasks, use this loop:
+
+1. Capture baseline tool screenshots (`model_viewer_kenney --focus-prefab`, `model_assembler_kenney --open`).
+2. Capture baseline in-game screenshot with `tools/run_ursina_capture_once.py`.
+3. Apply the material change.
+4. Recapture tool screenshots.
+5. Recapture an in-game screenshot beside target-style buildings.
+6. Only then run `qa_smoke` and `validate_assets`.
+
+For building-family comparison, the WK30 prefab row can be enabled:
+
+```powershell
+$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT='1'
+$env:KINGDOM_URSINA_EDITORCAMERA='0'
+python tools/run_ursina_capture_once.py --seconds 8 --subdir wk32_inn_texture --stem after_inn_prefab_oblique --no-llm
+$env:KINGDOM_URSINA_PREFAB_TEST_LAYOUT=''
+$env:KINGDOM_URSINA_EDITORCAMERA=''
+```
+
+The `inn_v2` pass used this to compare the refined Inn directly against Retro Fantasy castle/guild buildings. See [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) for the full visual acceptance checklist.
+
 ## Data flow (high level)
 
 ```mermaid
@@ -165,6 +202,7 @@ produces a browsable HTML page showing both our shots and the reference set.
 
 - Determinism: same scenario+seed produces the same filenames + manifest (byte-identical images is a bonus but not required).
 - Zero gameplay regressions: game still runs normally; screenshot mode is tools-only.
+- For prefab material polish: tool screenshots show the intended material in isolation, and in-game screenshots show it cohering beside target-style buildings. A full-game shot alone is not enough if the issue is material/UV bleed.
 
 ## Immediate next step
 

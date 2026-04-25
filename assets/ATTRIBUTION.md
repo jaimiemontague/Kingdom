@@ -143,6 +143,20 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: kingdomsim_generated_building_textures
+- **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
+- **License**: CC0-1.0
+- **Source**: Generated in-repo by `tools/generate_inn_texture_overrides.py`; online low-poly fantasy references used for style only, with no third-party pixels copied.
+- **Retrieved**: 2026-04-25
+- **Modifications**: N/A (generated directly as 128x128 PNG texture overrides)
+- **Used for**: Inn building texture polish (wood planks, stone blocks, roof shingles)
+- **File locations**:
+  - `assets/textures/buildings/inn/inn_wood_planks.png`
+  - `assets/textures/buildings/inn/inn_stone_blocks.png`
+  - `assets/textures/buildings/inn/inn_roof_shingles.png`
+
+---
+
 ## Audio Assets
 
 ### Pack: Kenney Game Assets: Audio

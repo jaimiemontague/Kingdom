@@ -217,6 +217,22 @@ def _resolve_prefab_model_path(models_root: Path, rel: str) -> tuple[Path | None
     return candidate, None
 
 
+def _resolve_prefab_asset_path(assets_root: Path, rel: str) -> tuple[Path | None, str | None]:
+    """Resolve optional prefab asset paths, such as texture overrides, under assets/."""
+    if not isinstance(rel, str) or not rel.strip():
+        return None, "empty"
+    norm = rel.replace("\\", "/").lstrip("/")
+    if norm.startswith("assets/"):
+        norm = norm[len("assets/") :]
+    candidate = (assets_root / norm).resolve()
+    assets_resolved = assets_root.resolve()
+    try:
+        candidate.relative_to(assets_resolved)
+    except ValueError:
+        return None, "escapes_assets_root"
+    return candidate, None
+
+
 def _validate_prefab_buildings(
     *,
     assets_root: Path,
@@ -369,6 +385,27 @@ def _validate_prefab_buildings(
                             str(path),
                         )
                     )
+                tex_override = piece.get("texture_override")
+                if tex_override is not None:
+                    tex_resolved, _tex_err = _resolve_prefab_asset_path(assets_root, tex_override if isinstance(tex_override, str) else "")
+                    if tex_resolved is None:
+                        findings.append(
+                            Finding(
+                                "error",
+                                "prefab_piece_texture_override_invalid",
+                                f"{prefab_id}: pieces[{i}] texture_override path invalid or escapes assets/: {tex_override!r}",
+                                str(path),
+                            )
+                        )
+                    elif not tex_resolved.is_file():
+                        findings.append(
+                            Finding(
+                                "error",
+                                "prefab_piece_texture_override_missing",
+                                f"{prefab_id}: pieces[{i}] texture_override file not found: {tex_resolved}",
+                                str(path),
+                            )
+                        )
 
         entry["ok"] = not any(f.severity == "error" for f in findings[start_idx:])
         report["prefabs"][prefab_id] = entry

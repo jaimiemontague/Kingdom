@@ -136,9 +136,9 @@ class UrsinaApp:
         # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
         self._hud_quick_sig: int | None = None
 
-        # WK32: ``_editor_camera`` is set by ``_setup_ursina_camera_for_castle()`` (EditorCamera if
-        # ``KINGDOM_URSINA_EDITORCAMERA=1``, else ``None`` for legacy world camera). Do not reassign
-        # here — a duplicate ``self._editor_camera = None`` after setup broke framing (WK32).
+        # WK32: ``_editor_camera`` is set by ``_setup_ursina_camera_for_castle()``. EditorCamera is
+        # default-on; ``KINGDOM_URSINA_EDITORCAMERA=0`` is the legacy fallback. Do not reassign here
+        # — a duplicate ``self._editor_camera = None`` after setup broke framing (WK32).
 
         # WK30 debug: auto-screenshot-then-exit for prefab fit iteration.
         # Env vars:
@@ -209,12 +209,10 @@ class UrsinaApp:
     def _setup_ursina_camera_for_castle(self) -> None:
         """Frame castle + surrounding tiles (PM WK20); do not sync 2D engine camera when 3D pans.
 
-        WK32: **EditorCamera** (orbit/pan) is **opt-in** via ``KINGDOM_URSINA_EDITORCAMERA=1``.
-        Default is the **legacy** rig: world-space ``camera.position`` + ``look_at`` toward the
-        castle — this matches terrain placement and avoids a bad EditorCamera pose (pitch on the
-        rig + local offset was not equivalent to legacy ``look_at``, so the view could sit on the
-        map edge). When EditorCamera is enabled: pivot at castle, same local offset as legacy,
-        ``look_at(castle)``, ``zoom_speed=0``, FOV still from ``engine.zoom``.
+        WK32: **EditorCamera** (orbit/pan) is default-on for model viewer parity.
+        ``KINGDOM_URSINA_EDITORCAMERA=0`` keeps the legacy world-space camera as a fallback.
+        The EditorCamera pivot sits on the castle floor point, while the starting world pose is
+        derived from the known-good legacy ``look_at`` framing.
         """
         castle = next(
             (
@@ -234,8 +232,8 @@ class UrsinaApp:
         # WK30 debug: when the prefab-test layout is active, frame the castle + prefab
         # row. Optional ``KINGDOM_URSINA_CAM_TOPDOWN=1`` to switch to a top-down shot.
         if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
-            cx += 9.0  # midpoint between castle center and east end of test row
-            span = 26.0
+            cx += 10.5  # midpoint between castle center and east end of test row
+            span = 32.0
 
         hfov = math.radians(float(camera.fov))
         d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
@@ -245,7 +243,8 @@ class UrsinaApp:
         # Perspective FOV that matches engine.zoom==default_zoom (single source of truth: engine.zoom).
         self._ursina_reference_fov = float(camera.fov)
 
-        use_editor_camera = os.environ.get("KINGDOM_URSINA_EDITORCAMERA", "").strip() == "1"
+        editor_camera_env = os.environ.get("KINGDOM_URSINA_EDITORCAMERA", "").strip().lower()
+        use_editor_camera = editor_camera_env not in ("0", "false", "no", "off")
         if not use_editor_camera:
             self._editor_camera = None
             if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
@@ -260,17 +259,28 @@ class UrsinaApp:
                 camera.look_at(Vec3(cx, 0, cz))
             return
 
-        # EditorCamera: pivot on the castle floor point; **local** offset matches legacy world pose
-        # (cx, elev, cz - back) when ec.rotation is identity — then look_at toward castle center.
+        target = Vec3(cx, 0.0, cz)
+        debug_layout = os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1"
+        rig_rotation: Vec3 | None = None
+        rig_world_position = Vec3(cx, elev, cz - back)
+        if not debug_layout:
+            # Derive the initial rig rotation from the known-good legacy framing, then parent the
+            # camera under EditorCamera for mouse orbit/pan. This avoids sign/axis drift between
+            # Ursina's camera look_at and EditorCamera's pivot transform.
+            camera.position = rig_world_position
+            camera.look_at(target)
+            rig_rotation = Vec3(camera.rotation)
+
+        # EditorCamera: pivot on the castle floor point; the camera keeps the centered legacy
+        # world position after the rig rotation is applied.
         ec = EditorCamera(
             zoom_speed=0.0,
             rotation_speed=200.0,
             pan_speed=Vec2(5, 5),
             ignore_scroll_on_ui=True,
         )
-        ec.position = Vec3(cx, 0.0, cz)
-        ec.rotation = Vec3(0.0, 0.0, 0.0)
-        if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
+        ec.position = target
+        if debug_layout:
             # Debug layout: fixed rig pitch (no look_at — avoids fighting ec.rotation for prefab shots).
             if os.environ.get("KINGDOM_URSINA_CAM_TOPDOWN") == "1":
                 camera.position = Vec3(0.0, d * 1.6, -d * 0.02)
@@ -279,11 +289,10 @@ class UrsinaApp:
                 camera.position = Vec3(0.0, d * 0.85, -d * 0.7)
                 ec.rotation = Vec3(40.0, 0.0, 0.0)
         else:
-            camera.position = Vec3(0.0, elev, -back)
-            try:
-                camera.look_at(Vec3(cx, 0.0, cz))
-            except Exception:
-                pass
+            camera.rotation = Vec3(0.0, 0.0, 0.0)
+            if rig_rotation is not None:
+                ec.rotation = rig_rotation
+            camera.world_position = rig_world_position
         # EditorCamera.__init__ snapshots camera.editor_position before parenting; on_enable can
         # leave stale state. Sync so orbit/pivot matches castle framing.
         try:
@@ -495,7 +504,7 @@ class UrsinaApp:
         """WK30 debug: place one of each prefab-backed building near the castle.
 
         Used by Agent 03 + Jaimie for prefab-fit iteration. Places castle + warrior /
-        ranger / rogue / wizard guilds + a house fully constructed in a row east of the
+        ranger / rogue / wizard guilds + inn + a house fully constructed in a row east of the
         castle so a single default-framed screenshot shows every prefab against the tile
         grid. Uses ``engine.building_factory`` so any future building-subclass wiring
         (occupancy, researchers, etc.) is consistent with the player-placed path.
@@ -523,14 +532,15 @@ class UrsinaApp:
         base_y = int(castle.grid_y)
 
         # (building_type, dx) — dx chosen to leave one tile of gap between footprints
-        # (2x2 guilds at +0/+3/+6/+9, 1x1 house at +12). House is not in BuildingFactory
+        # (2x2 guilds at +0/+3/+6/+9, 3x2 inn at +12, 1x1 house at +16). House is not in BuildingFactory
         # (it's spawned by peasants, not the build menu), so build it via the base class.
         layout = [
             ("warrior_guild", 0),
             ("ranger_guild", 3),
             ("rogue_guild", 6),
             ("wizard_guild", 9),
-            ("house", 12),
+            ("inn", 12),
+            ("house", 16),
         ]
         from game.entities.buildings.base import Building
         from game.entities.buildings.types import BuildingType

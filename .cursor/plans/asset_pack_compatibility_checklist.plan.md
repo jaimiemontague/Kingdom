@@ -31,6 +31,19 @@ Every candidate pack should be judged against these baseline rules first.
 
 If a pack fails those, stop there.
 
+### Existing-Pack Remediation Rule
+
+Sometimes a pack is usable overall but one building/prefab has weak material reads. The WK32 Inn pass is the reference case: Fantasy Town Kit geometry was useful, but the flat brown/grey/teal surfaces did not match nearby Retro Fantasy stone buildings.
+
+Before rejecting an otherwise useful pack, ask whether a scoped texture override can fix the specific issue:
+
+- Can a small set of low-res textures fix the problem without changing the mesh?
+- Can the override be scoped per prefab piece?
+- Can doors/windows/detail pieces remain readable?
+- Can the result be validated from the strategy camera beside current Kenney terrain/buildings?
+
+If yes, use [prefab_texture_override_standard.md](./prefab_texture_override_standard.md). If no, reject or replace the asset rather than building a fragile one-off.
+
 ## 2. Hard Reject Rules
 
 Reject a candidate immediately if any of these are true.
@@ -107,6 +120,19 @@ This is now the most important pack category.
 - Does it avoid requiring layered decals or custom shader features?
 - Are textures clearly organized and relative?
 - Are there reasonable material counts per building?
+
+### Texture Override Feasibility
+
+Use this only after the pack passes the basic style/technical checks.
+
+- Are the weak surfaces broad enough for whole-piece overrides?
+- Are important details (doors, windows, banners, signs) separate enough to preserve?
+- If the pack uses a shared atlas/colormap, do UVs sample tiny swatches that would make normal replacement textures fail?
+- Would object-space texture mapping solve the issue at gameplay distance?
+- Can overrides be generated in-repo or sourced with clear commercial-safe licensing?
+- Can the result be reviewed with automated model viewer, assembler, and in-game screenshots?
+
+Do not count "maybe we can hack textures later" as a pass. Count it as a pass only if you can name the exact override path, textures, affected pieces, and screenshot gate.
 
 ### Performance / Scope
 
@@ -242,6 +268,7 @@ Ask:
 - Check material count.
 - Check texture path health.
 - Check for engine-specific shader dependence.
+- Check whether broad weak materials can be fixed with prefab-scoped `texture_override` fields, or whether the mesh/atlas structure makes that unsafe.
 - Check if file naming and structure are sane.
 
 ### Phase D: Strategic Fit
@@ -290,6 +317,7 @@ Score: __ / 20
 - Clean materials/textures:
 - No broken paths or engine-only dependencies:
 - Sensible pivots/scale/orientation:
+- If texture remediation is needed, clear per-piece override path:
 Score: __ / 20
 
 4. Gameplay Readability (15)
@@ -334,6 +362,20 @@ With the Kenney terrain as your current foundation, the decision rule becomes ve
 - If it is technically messy and stylistically only "kind of" compatible, reject it faster than you would have before.
 
 That is the biggest revision.
+
+## 11. Texture Remediation Addendum
+
+When a candidate pack is mostly compatible but not quite cohesive, prefer this order:
+
+1. Use an existing better-fitting Kenney piece from the current library.
+2. Adjust prefab composition or piece selection.
+3. Apply scoped prefab `texture_override` textures.
+4. Create derived duplicate model assets only if whole-piece overrides cannot preserve details.
+5. Reject the pack/asset.
+
+Texture overrides are not a license to mix any art style. They are a recovery tool for otherwise-compatible low-poly assets. Every override must have attribution, automated screenshots, and QA evidence.
+
+Reference implementation: `assets/prefabs/buildings/inn_v2.json` plus [prefab_texture_override_standard.md](./prefab_texture_override_standard.md).
 
 If you want, I can next turn this into two shorter ready-to-use versions:
 

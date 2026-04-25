@@ -8,7 +8,8 @@
   "ground_anchor_y": 0.0,
   "rotation_steps": 90,
   "attribution": [
-    "kenney_fantasy-town-kit_2.0"
+    "kenney_fantasy-town-kit_2.0",
+    "kingdomsim_generated_building_textures"
   ],
   "pieces": [
     {
@@ -27,7 +28,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
@@ -45,7 +47,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
@@ -63,7 +66,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
@@ -81,7 +85,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
@@ -99,7 +104,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-window-glass-fantasy-town.glb",
@@ -117,7 +123,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
@@ -135,7 +142,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
@@ -153,7 +161,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
@@ -171,7 +180,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-detail-cross-fantasy-town.glb",
@@ -189,7 +199,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -207,7 +218,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -225,7 +237,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -243,7 +256,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -261,7 +275,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -279,7 +294,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-window-glass-fantasy-town.glb",
@@ -297,7 +313,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
@@ -315,7 +332,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
@@ -333,7 +351,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
@@ -351,7 +370,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/wall-wood-detail-cross-fantasy-town.glb",
@@ -369,7 +389,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
     },
     {
       "model": "Models/GLB format/roof-right-fantasy-town.glb",
@@ -387,7 +408,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/roof-right-fantasy-town.glb",
@@ -405,7 +427,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/roof-left-fantasy-town.glb",
@@ -423,7 +446,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/roof-left-fantasy-town.glb",
@@ -441,7 +465,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/roof-window-fantasy-town.glb",
@@ -459,7 +484,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/roof-window-fantasy-town.glb",
@@ -477,7 +503,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -495,7 +522,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -513,7 +541,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -531,7 +560,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -549,7 +579,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -567,7 +598,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     },
     {
       "model": "Models/GLB format/road-curb-fantasy-town.glb",
@@ -585,7 +617,8 @@
         1.0,
         1.0,
         1.0
-      ]
+      ],
+      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
     }
   ],
   "notes": "Redo: cleaner watermill-wide hero (back-center); foreground = cart (front-right) + crate (front-left); fence on left perimeter. No trees. Matches Fantasy Town preview intent with smaller prop count for a readable silhouette."

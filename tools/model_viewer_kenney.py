@@ -48,6 +48,7 @@ from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack
 # We strictly exclude .obj, .dae, .fbx because Kenney distributes copies in every format.
 # .glb natively embeds all textures cleanly without raw material errors.
 MODEL_EXTS = {".glb", ".gltf"}
+PREFAB_FOCUS_MODEL_EXTS = MODEL_EXTS | {".obj"}
 
 # Canonical Kenney sources (no merged GLB/GLTF trees — avoids duplicate basenames
 # when packs ship overlapping filenames). Reading per-pack from raw downloads
@@ -436,6 +437,38 @@ def _rel_for_label(assets_models: Path, fpath: Path) -> str:
         return str(fpath)
 
 
+def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path], dict[str, str]]:
+    prefab_path = PROJECT_ROOT / "assets" / "prefabs" / "buildings" / f"{prefab_id}.json"
+    if not prefab_path.is_file():
+        print(f"[model_viewer_kenney] Missing prefab: {prefab_path}", file=sys.stderr)
+        return [], {}
+    try:
+        import json
+
+        raw = json.loads(prefab_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"[model_viewer_kenney] Could not read {prefab_path}: {exc}", file=sys.stderr)
+        return [], {}
+
+    out: list[Path] = []
+    seen: set[str] = set()
+    texture_overrides: dict[str, str] = {}
+    for piece in raw.get("pieces") or []:
+        rel = str(piece.get("model") or "").replace("\\", "/").lstrip("/")
+        if not rel or rel in seen:
+            continue
+        seen.add(rel)
+        tex = piece.get("texture_override")
+        if isinstance(tex, str) and tex.strip():
+            texture_overrides[rel] = tex.strip()
+        p = assets_models / rel
+        if p.is_file() and p.suffix.lower() in PREFAB_FOCUS_MODEL_EXTS:
+            out.append(p)
+        else:
+            print(f"[model_viewer_kenney] Prefab piece missing: {rel}", file=sys.stderr)
+    return out, texture_overrides
+
+
 def _truncate_label(s: str, max_len: int = 42) -> str:
     if len(s) <= max_len:
         return s
@@ -455,6 +488,13 @@ def _load_model_node_from_file(abs_path: Path) -> Any:
     p = abs_path.resolve()
     if not p.is_file():
         return None
+    if p.suffix.lower() == ".obj":
+        try:
+            from ursina import application
+
+            return application.base.loader.loadModel(str(p))
+        except Exception:
+            return None
         
     try:
         gs = gltf.GltfSettings()
@@ -475,10 +515,20 @@ def run_viewer(
     model_max_extent: float,
     max_total: int | None,
     debug_materials: bool,
+    focus_prefab: str | None,
+    auto_exit_sec: float,
+    screenshot_subdir: str | None,
+    screenshot_stem: str | None,
 ) -> int:
     os.chdir(PROJECT_ROOT)
 
-    sections, layout_warnings = collect_viewer_sections(assets_models)
+    if focus_prefab:
+        files, texture_overrides_by_rel = _prefab_piece_files(assets_models, focus_prefab)
+        sections = [(f"Prefab {focus_prefab} pieces", files)]
+        layout_warnings: list[str] = []
+    else:
+        texture_overrides_by_rel = {}
+        sections, layout_warnings = collect_viewer_sections(assets_models)
     for w in layout_warnings:
         print(f"[model_viewer_kenney] Warning: {w}", file=sys.stderr)
 
@@ -663,6 +713,12 @@ def run_viewer(
                     aggregate_stats=material_stats,
                 )
                 apply_kenney_pack_color_tint_to_entity(ent, rel_posix)
+                if rel_posix in texture_overrides_by_rel:
+                    from game.graphics.prefab_texture_overrides import apply_prefab_texture_override
+
+                    apply_prefab_texture_override(ent, texture_overrides_by_rel[rel_posix])
+                elif fpath.suffix.lower() == ".obj":
+                    pass
             else:
                 Entity(
                     parent=scene,
@@ -720,20 +776,28 @@ def run_viewer(
 
     _setup_scene_lighting(center_x=gallery_center_x, center_z=center_z, span=span)
 
-    ec = EditorCamera()
     camera.fov = 50
     camera.clip_plane_near = 0.05
     camera.clip_plane_far = 50000.0
     elev = max(24.0, span * 0.01)
     back = max(34.0, span * 0.72)
 
-    # Pivot on the ground (y=0) at the gap focus — one clear height for orbit; camera supplies elevation via local Y.
-    # Local offset only (EditorCamera parents the camera); do not put world X on both ec and camera.
-    ec.position = Vec3(camera_focus_x, 0.0, camera_focus_z)
-    camera.position = Vec3(0, elev, -back)
-    ec.rotation_x = 35
-    # on_enable() sets target_z≈-20; without syncing, every frame lerps camera.z toward that and breaks distance.
-    ec.target_z = camera.z
+    if auto_exit_sec > 0.0:
+        camera.position = Vec3(camera_focus_x, elev, camera_focus_z - back)
+        camera.look_at(Vec3(camera_focus_x, 0.0, camera_focus_z))
+    else:
+        ec = EditorCamera()
+        # Pivot on the ground (y=0) at the gap focus — one clear height for orbit; camera supplies elevation via local Y.
+        # Local offset only (EditorCamera parents the camera); do not put world X on both ec and camera.
+        ec.position = Vec3(camera_focus_x, 0.0, camera_focus_z)
+        camera.position = Vec3(0, elev, -back)
+        ec.rotation = Vec3(35.0, 0.0, 0.0)
+        try:
+            camera.editor_position = camera.position
+        except Exception:
+            pass
+        # on_enable() sets target_z≈-20; without syncing, every frame lerps camera.z toward that and breaks distance.
+        ec.target_z = camera.z
 
     Text(
         text="Right-Drag orbit | Middle-Drag pan | Scroll zoom | ESC quit",
@@ -752,6 +816,15 @@ def run_viewer(
 
     import __main__
     __main__.input = input
+
+    if auto_exit_sec > 0.0:
+        from tools.ursina_capture import install_auto_capture, resolve_tool_screenshot_path
+
+        out_path = resolve_tool_screenshot_path(
+            subdir=screenshot_subdir,
+            stem=screenshot_stem or ("model_viewer" if not focus_prefab else f"model_viewer_{focus_prefab}"),
+        )
+        install_auto_capture(app=app, seconds=auto_exit_sec, out_path=out_path)
 
     app.run()
     return 0
@@ -793,6 +866,30 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print per-geom material classification and aggregate stats",
     )
+    p.add_argument(
+        "--focus-prefab",
+        type=str,
+        default=None,
+        help="Show only the unique model pieces referenced by a building prefab id (e.g. inn_v2)",
+    )
+    p.add_argument(
+        "--auto-exit-sec",
+        type=float,
+        default=0.0,
+        help="After this many seconds, save a screenshot (if requested) and quit",
+    )
+    p.add_argument(
+        "--screenshot-subdir",
+        type=str,
+        default=None,
+        help="Subfolder under docs/screenshots/ for auto screenshots",
+    )
+    p.add_argument(
+        "--screenshot-stem",
+        type=str,
+        default=None,
+        help="Filename stem for auto screenshots",
+    )
     return p.parse_args()
 
 
@@ -806,6 +903,10 @@ def main() -> int:
         model_max_extent=float(args.model_max_extent),
         max_total=args.max_total,
         debug_materials=bool(args.debug_materials),
+        focus_prefab=args.focus_prefab,
+        auto_exit_sec=float(args.auto_exit_sec or 0.0),
+        screenshot_subdir=args.screenshot_subdir,
+        screenshot_stem=args.screenshot_stem,
     )
 
 

@@ -120,6 +120,7 @@ from tools.model_viewer_kenney import (  # noqa: E402
     _load_model_node_from_file,
     _setup_scene_lighting,
 )
+from game.graphics.prefab_texture_overrides import apply_prefab_texture_override  # noqa: E402
 
 
 # -- Data -----------------------------------------------------------------------
@@ -134,14 +135,18 @@ class PlacedPiece:
     pos: tuple[float, float, float] = (0.0, 0.0, 0.0)
     rot_y: float = 0.0  # Y rotation in degrees (Euler; only Y used by tool)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    texture_override: str | None = None
 
     def to_json(self) -> dict:
-        return {
+        out = {
             "model": self.model_rel,
             "pos": [float(self.pos[0]), float(self.pos[1]), float(self.pos[2])],
             "rot": [0.0, float(self.rot_y), 0.0],
             "scale": [float(self.scale[0]), float(self.scale[1]), float(self.scale[2])],
         }
+        if self.texture_override:
+            out["texture_override"] = self.texture_override
+        return out
 
 
 @dataclass
@@ -309,10 +314,16 @@ class AssemblerApp:
         out_dir: Path,
         prefab_id: str,
         open_existing: bool,
+        auto_exit_sec: float = 0.0,
+        screenshot_subdir: str | None = None,
+        screenshot_stem: str | None = None,
     ) -> None:
         self.assets_models = assets_models
         self.out_dir = out_dir
         self.meta = PrefabState(prefab_id=prefab_id)
+        self.auto_exit_sec = float(auto_exit_sec or 0.0)
+        self.screenshot_subdir = screenshot_subdir
+        self.screenshot_stem = screenshot_stem
 
         self.library: list[tuple[str, str]] = _collect_piece_library(assets_models)
         self.library_filtered: list[tuple[str, str]] = list(self.library)
@@ -379,7 +390,12 @@ class AssemblerApp:
             rot_y = float(rot[1]) if len(rot) > 1 else 0.0
             scl_t = (float(scl[0]), float(scl[1]), float(scl[2]))
             self._spawn_piece_core(
-                rel=rel, pos=pos_t, rot_y=rot_y, scale=scl_t, select=False
+                rel=rel,
+                pos=pos_t,
+                rot_y=rot_y,
+                scale=scl_t,
+                texture_override=raw.get("texture_override"),
+                select=False,
             )
         self._pending_pieces = []
 
@@ -488,18 +504,34 @@ class AssemblerApp:
         # Instantiate any pieces loaded from disk (after scene+lighting is ready).
         self._instantiate_pending_pieces()
 
-        # Camera: EditorCamera centered on origin, elevated back view.
-        ec = EditorCamera()
         camera.fov = 50
         camera.clip_plane_near = 0.05
         camera.clip_plane_far = 5000.0
-        ec.position = Vec3(0, 0, 0)
-        camera.position = Vec3(0, 8, -12)
-        ec.rotation_x = 35
-        ec.target_z = camera.z
+        if self.auto_exit_sec > 0.0:
+            camera.position = Vec3(0, 8, -12)
+            camera.look_at(Vec3(0, 0.8, 0))
+        else:
+            # Camera: EditorCamera centered on origin, elevated back view.
+            ec = EditorCamera()
+            ec.position = Vec3(0, 0, 0)
+            camera.position = Vec3(0, 8, -12)
+            ec.rotation = Vec3(35.0, 0.0, 0.0)
+            try:
+                camera.editor_position = camera.position
+            except Exception:
+                pass
+            ec.target_z = camera.z
 
         self._install_input_hook()
         self._refresh_status()
+        if self.auto_exit_sec > 0.0:
+            from tools.ursina_capture import install_auto_capture, resolve_tool_screenshot_path
+
+            out_path = resolve_tool_screenshot_path(
+                subdir=self.screenshot_subdir,
+                stem=self.screenshot_stem or f"assembler_{self.meta.prefab_id}",
+            )
+            install_auto_capture(app=self._app, seconds=self.auto_exit_sec, out_path=out_path)
         return self._app
 
     # ------------------------------------------------------------------
@@ -927,6 +959,7 @@ class AssemblerApp:
         rot_y: float,
         scale: tuple[float, float, float],
         select: bool,
+        texture_override: str | None = None,
     ) -> PlacedPiece | None:
         from ursina import Entity, Vec3, scene
         abs_path = self.assets_models / rel
@@ -956,6 +989,7 @@ class AssemblerApp:
             apply_kenney_pack_color_tint_to_entity(ent, rel)
         except Exception as exc:
             print(f"[assembler] shader classify failed for {rel}: {exc!r}")
+        apply_prefab_texture_override(ent, texture_override)
         ent.assembler_role = "piece"
         piece = PlacedPiece(
             model_rel=rel,
@@ -963,6 +997,7 @@ class AssemblerApp:
             pos=pos,
             rot_y=rot_y,
             scale=scale,
+            texture_override=str(texture_override) if texture_override else None,
         )
         ent.assembler_piece_ref = piece
         self.pieces.append(piece)
@@ -1242,6 +1277,12 @@ def parse_args() -> argparse.Namespace:
                    help="Directory where prefab JSON files are written/read.")
     p.add_argument("--assets-models", type=str, default=str(ASSETS_MODELS),
                    help="Root folder for Kenney models (default: assets/models).")
+    p.add_argument("--auto-exit-sec", type=float, default=0.0,
+                   help="After this many seconds, save a screenshot and quit.")
+    p.add_argument("--screenshot-subdir", type=str, default=None,
+                   help="Subfolder under docs/screenshots/ for auto screenshots.")
+    p.add_argument("--screenshot-stem", type=str, default=None,
+                   help="Filename stem for auto screenshots.")
     return p.parse_args()
 
 
@@ -1273,6 +1314,9 @@ def main() -> int:
         out_dir=out_dir,
         prefab_id=prefab_id,
         open_existing=open_existing,
+        auto_exit_sec=float(args.auto_exit_sec or 0.0),
+        screenshot_subdir=args.screenshot_subdir,
+        screenshot_stem=args.screenshot_stem,
     ).build()
     app.run()
     return 0

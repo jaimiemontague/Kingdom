@@ -59,6 +59,8 @@ Real examples from inspecting files in-repo:
 
 **Critical distinction (learned the hard way):** Factor-only models are not "broken" or "missing textures." They are intentionally designed with solid-color materials. Their official Kenney previews show them with **lit shading** — the 3D depth comes from lighting interaction with surface normals, not from texture detail. Treating them as "unlit but with the right flat color" produces visually correct colors but looks like placeholder art.
 
+**Second critical distinction (WK32 Inn pass):** A textured model can still look too flat. Fantasy Town Kit pieces loaded correctly with `baseColorTexture`, but their shared atlas sampled broad flat brown/grey/teal regions that did not cohere with Retro Fantasy stone buildings. This is not a loader bug. It is an art-direction mismatch that should be handled with prefab-scoped texture overrides, not source GLB mutation.
+
 ---
 
 ## 5. The two-path shading strategy (v0.3 — confirmed working)
@@ -198,12 +200,56 @@ So `--max-total 200` will **only test textured models** and show `flat=0`, givin
 - [ ] Textured models are **not affected** by the factor-only shader path.
 - [ ] **Did NOT use `setShaderAuto()`** — it produces black/invisible renders with Ursina's light setup.
 - [ ] Debug-verified with `--debug-materials` using a `--max-total` large enough to include both textured AND factor-only models.
+- [ ] If source textures are technically correct but visually weak, reviewed [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) and used `texture_override` rather than editing source GLBs.
+- [ ] If using `texture_override`, verified no original atlas colors bleed through on model child nodes.
 - [ ] Visual check by a **human** — automated diagnostics cannot confirm shading quality.
 - [ ] **QA:** `python tools/qa_smoke.py --quick` after renderer changes.
 
 ---
 
-## 10. Dead ends and pitfalls (post-mortem)
+## 10. Prefab Texture Overrides (WK32 Inn success path)
+
+Texture overrides are a separate path from the two-path glTF material classifier. Use them only after the model is loading and shading correctly, but the source material read is not good enough.
+
+### Why the Inn needed this
+
+`inn_v2` uses Fantasy Town Kit pieces. These pieces are textured and technically classified correctly, but the shared `colormap-fantasy-town.png` gives the Inn broad flat colors. Next to Retro Fantasy stone buildings, the Inn looked like a flat brown/grey/teal block.
+
+The winning approach:
+
+- Generated low-res CC0 textures:
+  - `assets/textures/buildings/inn/inn_wood_planks.png`
+  - `assets/textures/buildings/inn/inn_stone_blocks.png`
+  - `assets/textures/buildings/inn/inn_roof_shingles.png`
+- Added `texture_override` fields to `assets/prefabs/buildings/inn_v2.json`.
+- Displayed overrides in `game/graphics/ursina_renderer.py`, `tools/model_assembler_kenney.py`, and `tools/model_viewer_kenney.py`.
+- Used `game/graphics/prefab_texture_overrides.py` for shared loading, caching, recursive cleanup, and object-space mapping.
+
+### Why normal UV replacement was not enough
+
+Atlas-based Kenney pieces may use tiny UV islands into a shared colormap. If you bind a detailed replacement texture through those original UVs, the detail may not appear, or the old atlas state can still show on child nodes.
+
+The fixed override path:
+
+1. Load the override PNG as an Ursina `Texture` with nearest filtering.
+2. Clear old texture state on the model and all child NodePaths.
+3. Bind the override texture and shader input recursively.
+4. Use an object-space shader that projects texture coordinates by dominant surface normal.
+5. Apply a small built-in shade term so surfaces keep low-poly depth.
+
+### What not to do
+
+- Do not use `setShaderAuto()`.
+- Do not edit raw Kenney GLBs.
+- Do not assume `entity.texture = tex` clears child GLB texture states.
+- Do not blindly override door/window/banner pieces if it destroys gameplay readability.
+- Do not accept a tool screenshot without an in-game comparison shot.
+
+Full implementation checklist: [prefab_texture_override_standard.md](./prefab_texture_override_standard.md).
+
+---
+
+## 11. Dead ends and pitfalls (post-mortem)
 
 This section documents approaches that were tried, seemed correct based on code analysis, but failed upon visual review. Future agents should read this before proposing material/shader changes.
 
@@ -247,22 +293,44 @@ This section documents approaches that were tried, seemed correct based on code 
 
 **Lesson:** Always compare against the asset author's official preview, not just against "white" or "black." The bar is not "colors are present" — it's "looks like the official preview."
 
+### Pitfall 5: Treating "texture exists" as "art direction is solved"
+
+**What happened:** Fantasy Town Inn pieces had valid textures and were classified as textured geoms. Early review still showed a flat-looking Inn because the atlas colors were broad and mismatched against Retro Fantasy stone buildings.
+
+**Why it seemed right:** The material diagnostics were clean (`branch=textured`, no missing textures), so it looked like a solved renderer path.
+
+**Why it was wrong:** Technical material correctness does not guarantee visual cohesion. The source atlas can be intentionally simple, packed for a different kit style, or too saturated/flat for a specific prefab context.
+
+**Lesson:** If a textured model is technically correct but visually weak, move to the prefab texture override standard. Keep the loader path intact; fix the scoped art read.
+
+### Pitfall 6: Setting only the root entity texture
+
+**What happened:** Original Fantasy Town atlas colors appeared over new textures in several places.
+
+**Why it seemed right:** Setting `entity.texture` often works for simple Ursina models.
+
+**Why it was wrong:** GLB models can carry texture state on child NodePaths. Root-level texture assignment does not necessarily clear child `TextureAttrib`s.
+
+**Lesson:** Override application must clear and rebind texture/shader state recursively across model child nodes.
+
 ---
 
-## 11. Related docs
+## 12. Related docs
 
 | Doc | Role |
 |-----|------|
 | [kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md) | Folder map, packs, merged OBJ paths. |
+| [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) | Detailed procedure for scoped generated/acquired texture overrides when source Kenney textures are not visually sufficient. |
 | [master_plan_3d_graphics_v1_5.md](./master_plan_3d_graphics_v1_5.md) | v1.5 3D roadmap (renderer, phases). |
 | `tools/model_viewer_kenney.py` | Runnable reference: scan, layout, two-path shading, `_apply_gltf_color_and_shading`. |
 
 ---
 
-## 12. Revision history
+## 13. Revision history
 
 - **v0.1** (viewer): Kenney-only `.glb`/`.gltf` scan, EditorCamera, duplicate-format filter.
 - **v0.2** (viewer): Unlit-compatible `baseColorFactor` / vertex color via per-geom `ColorAttrib`; avoided `clearShader` + `setShaderAuto` regression (black / missing draws). Factor-only models showed correct colors but zero shading (flat appearance).
 - **v0.3** (viewer): Two-path shading strategy. Textured geoms stay on unlit default. Factor-only geoms get a custom GLSL lit shader (`factor_lit_shader`) with hardcoded key+fill Lambert lighting via `p3d_Color` + `p3d_Normal`. Confirmed `setShaderAuto()` still produces black renders — replaced with custom shader. Added `--debug-materials` flag. Fixed `README.md` command reference. Documented sampling bias pitfall.
+- **v0.4 (WK32 Inn texture override)** — Documented prefab-scoped texture overrides for textured models whose source atlas is valid but visually insufficient. Added object-space mapping, recursive texture-state cleanup, and links to the Inn reference standard.
 
 *This guide should be updated when the in-game renderer's shading path changes (e.g. full PBR in v1.5 Phase 4).*

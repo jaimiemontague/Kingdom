@@ -9,6 +9,8 @@ isProject: false
 
 **Implementing `.glb` / `.gltf` in Ursina or the game renderer?** Read **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** first (default unlit shader vs `baseColorFactor`, textures, vertex colors, lighting pitfalls, and the `model_viewer_kenney` reference implementation).
 
+**Need to improve weak Kenney surface reads without editing source GLBs?** Read **[prefab_texture_override_standard.md](./prefab_texture_override_standard.md)**. It documents the WK32 Inn v2 success path: generated low-res textures under `assets/textures/`, per-piece `texture_override` metadata, recursive texture-state cleanup, object-space texture mapping for atlas-swatch UVs, and screenshot acceptance gates.
+
 This document maps **what lives where** under `assets/models`. Paths and pack names below are anchored to the **unmerged** Kenney downloads kept in-repo for reference.
 
 **Reference folder (exact paths, clean separation):**
@@ -98,6 +100,7 @@ The two most recent additions (April 2026) are:
   - **Masonry / construction** — `planks-fantasy-town`, `planks-half-fantasy-town`, `planks-opening-fantasy-town`, `poles-fantasy-town`, `poles-horizontal-fantasy-town`, `pillar-stone-fantasy-town`, `pillar-wood-fantasy-town`, `blade-fantasy-town`, `chimney-fantasy-town`, `chimney-base-fantasy-town`, `chimney-top-fantasy-town`, `overhang-fantasy-town`, `balcony-wall-fantasy-town`, `balcony-wall-fence-fantasy-town`.
   - **Rocks / trees** — `rock-large-fantasy-town`, `rock-small-fantasy-town`, `rock-wide-fantasy-town`, `tree-fantasy-town`, `tree-crooked-fantasy-town`, `tree-high-fantasy-town`, `tree-high-crooked-fantasy-town`, `tree-high-round-fantasy-town`.
 - **Atlas texture:** `Textures/colormap-fantasy-town.png` (11 143 bytes). Each GLB’s `images[0].uri` references this pack-suffixed filename, so merged-tree loads resolve the correct atlas.
+- **WK32 texture-override note:** Fantasy Town pieces often sample tiny regions of the shared atlas. If their flat brown/grey/teal reads do not match nearby Retro Fantasy buildings, do **not** mutate the Kenney GLBs. Use prefab-scoped `texture_override` PNGs plus the object-space override shader documented in [prefab_texture_override_standard.md](./prefab_texture_override_standard.md). `inn_v2` is the reference implementation.
 
 ### Graveyard Kit (`kenney_graveyard-kit_5.0`) — NEW (WK31)
 
@@ -189,6 +192,7 @@ In each raw pack, `map_Kd Textures/foo.png` is relative to the `.mtl` file, i.e.
   6. **Graveyard Kit** — grid tiles show the pack-suffixed file names (e.g. `altar-stone-graveyard.glb`).
   7. Cursor Pixel Pack (empty — 2D tilesheet only)
 - Per-geom classifier (`_apply_gltf_color_and_shading`) routes each piece to unlit (textured) or custom lit (factor-only) — see the integration guide §5.
+- WK32 texture override support: `--focus-prefab <prefab_id>` shows the unique model pieces referenced by a prefab and applies any `texture_override` entries for inspection. Automated tool screenshots use `--screenshot-subdir`, `--screenshot-stem`, and `--auto-exit-sec`.
 
 ### 4.2 Assembler — `tools/model_assembler_kenney.py`
 
@@ -197,6 +201,7 @@ In each raw pack, `map_Kd Textures/foo.png` is relative to the `.mtl` file, i.e.
   2. `Models/GLTF format` *(Nature Kit — factor-only)*
 - No raw-tree scan is needed anymore: the merged tree is collision-free, and every new-pack file's name carries its pack id so humans can tell them apart in the filter.
 - **Saved prefab JSON `model` fields** are POSIX paths relative to `assets/models/`. Fantasy Town / Graveyard pieces serialize as plain merged paths with pack-suffixed filenames, e.g. `Models/GLB format/cart-fantasy-town.glb`. The runtime renderer (`game/graphics/ursina_renderer.py`) prepends `assets/models/` and loads directly — no loader change needed.
+- **Optional `texture_override` fields** are POSIX paths relative to `assets/`. The assembler mirrors the runtime override display via `game/graphics/prefab_texture_overrides.py`; this is required for visual review parity.
 - **Attribution guesser (`_guess_attribution`):**
   1. First checks the **filename suffix** via `FILENAME_SUFFIX_PACK_IDS` — `*-fantasy-town.glb` → `kenney_fantasy-town-kit_2.0`, `*-graveyard.glb` → `kenney_graveyard-kit_5.0`. This is exact (no human trim needed for the two new packs).
   2. Then checks for a `kenney_*` segment in the rel path (via `RAW_TREE_PACK_IDS`) — for the rare case a prefab references a raw-tree path directly.
@@ -214,6 +219,20 @@ In each raw pack, `map_Kd Textures/foo.png` is relative to the `.mtl` file, i.e.
 | **Graveyard piece** | **Merged:** `Models/GLB format/<name>-graveyard.glb` |
 
 The library rows in the assembler are the unadorned filename — which for the two new packs already tells you the pack.
+
+---
+
+## 4.4 Prefab texture overrides for weak pack materials
+
+Some Kenney packs are technically correct but stylistically too flat or too atlas-limited for a specific Kingdom Sim building. The WK32 Inn pass proved a safe remediation path:
+
+- Add generated or license-safe texture PNGs under `assets/textures/buildings/<prefab_or_family>/`.
+- Add optional `texture_override` fields to only the affected prefab pieces.
+- Use `game/graphics/prefab_texture_overrides.py` to cache, bind, and object-space-map those textures.
+- Clear source atlas texture state recursively so original pack colors do not bleed through.
+- Verify with both automated tool screenshots and in-game screenshots beside the target building family.
+
+Use this for scoped polish only. It does **not** replace the pack import/rename rules above, and it does **not** justify editing raw Kenney GLBs. Full step-by-step standard: [prefab_texture_override_standard.md](./prefab_texture_override_standard.md).
 
 ---
 
@@ -321,6 +340,7 @@ All CC0 1.0 Universal. When shipping, cite **each** pack you actually use (mirro
 - [ ] **After importing a renamed pack**, copy the suffixed files into `Models/GLB format/` + `Models/GLB format/Textures/<colormap-<suffix>.png>` (and the matching OBJ / MTL / Textures under `Models/OBJ format/`). Delete any stale unsuffixed copies from the merged tree that got introduced by an earlier unrenamed extract.
 - [ ] **Tools stay in sync:** `tools/model_viewer_kenney.py` needs the pack added to `KENNEY_PACKS_ORDERED`; `tools/model_assembler_kenney.py` needs the pack's filename suffix added to `FILENAME_SUFFIX_PACK_IDS` (and optionally its folder to `RAW_TREE_PACK_IDS` for raw-tree prefab paths).
 - [ ] **If a texture fails to load**, compare merged paths to the matching `Kenney raw downloads/.../Models/GLB format/Textures/` file and confirm the same basename exists under `assets/models/Models/GLB format/Textures/`.
+- [ ] **If a source pack texture is visually insufficient but technically loading**, use [prefab_texture_override_standard.md](./prefab_texture_override_standard.md). Do not edit Kenney GLBs; add scoped generated/acquired textures under `assets/textures/`, `texture_override` metadata, attribution, tool captures, and QA evidence.
 - [ ] **For legal screens**, cite **each** pack you ship assets from (use the seven `License.txt` files above).
 - [ ] **After adding a new Kenney download**, document the new mapping here (§2 pack section + §6 prefix / suffix table + §8 license row).
 
@@ -331,3 +351,4 @@ All CC0 1.0 Universal. When shipping, cite **each** pack you actually use (mirro
 - **v1.0** — Initial map: Blocky Characters, Nature Kit, Retro Fantasy Kit, Survival Kit, Cursor Pixel Pack. Merged `Models/OBJ format/` as canonical. Environment mapping table.
 - **v1.1 (WK31 round-1, 2026-04-18)** — Added **Fantasy Town Kit (2.0)** and **Graveyard Kit (5.0)**. Documented the `Textures/colormap.png` collision and the 14 geometry filename collisions; restored 8 merged GLBs to Retro Fantasy sources to keep existing prefabs correct. Viewer adds the two packs to `KENNEY_PACKS_ORDERED`; assembler temporarily adds raw-tree scan roots for the two new packs (tagged `[fantasy-town]` / `[graveyard]` in the library) and extends `_guess_attribution` to handle raw-tree paths via `RAW_TREE_PACK_IDS`.
 - **v1.2 (WK31 round-2, 2026-04-18)** — **Pack-suffix rename** (`-fantasy-town` / `-graveyard`) applied to every FT / Graveyard `.glb`, `.obj`, `.mtl`, and the shared `colormap.png` — plus rewriting every GLB `images[].uri`, OBJ `mtllib`, and MTL `map_Kd` reference. Merged tree now collision-free and each piece resolves its own atlas from `Models/GLB format/Textures/`: `colormap.png` (Survival), `colormap-fantasy-town.png`, `colormap-graveyard.png`. Assembler simplified: `PIECE_LIB_SUBDIRS` no longer includes raw-tree scan; `_guess_attribution` prefers filename-suffix attribution via `FILENAME_SUFFIX_PACK_IDS` (exact, no human trim). Round-2 also additionally restored `fence.glb` (to Retro Fantasy) and `tree.glb` (to Survival).
+- **v1.3 (WK32 Inn texture override, 2026-04-25)** — Documented prefab-scoped texture overrides for weak Kenney material reads. Added links to the new standard covering generated textures, object-space texture mapping, recursive texture-state cleanup, tool screenshots, and the `inn_v2` reference implementation.

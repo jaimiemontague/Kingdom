@@ -3447,6 +3447,33 @@
               "validate_assets_report": "PASS (exit 0, errors=0, pre-existing warns)",
               "determinism_guard": "PASS"
             }
+          },
+          "followup_2026_04_25_camera_regression_fix": {
+            "status": "done",
+            "bug": "WK32-BUG-008",
+            "what_i_changed": [
+              "Restored EditorCamera as the default Ursina camera path; KINGDOM_URSINA_EDITORCAMERA=0 now remains the explicit legacy fallback.",
+              "Fixed the EditorCamera startup pose by deriving rig rotation from the known-good legacy castle look_at framing, then preserving the matching camera world position after parenting under EditorCamera.",
+              "Kept zoom source-of-truth unchanged: engine.zoom drives camera.fov; EditorCamera zoom_speed remains 0 and ec.target_z is synced each frame."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py"
+            ],
+            "evidence": {
+              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_camera_fix --stem editorcamera_world_position --no-llm",
+              "screenshot": "docs/screenshots/wk32_camera_fix/editorcamera_world_position_20260425_033929_730.png",
+              "py_compile": "PASS - python -m py_compile game/graphics/ursina_app.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_camera_fix --stem editorcamera_world_position --no-llm",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "Automated capture shows the castle centered on launch with EditorCamera default-on.",
+              "Manual mouse orbit / middle-mouse pan / wheel zoom should still be spot-checked in the live window because automated screenshot capture cannot exercise mouse gestures."
+            ]
           }
         }
       }
