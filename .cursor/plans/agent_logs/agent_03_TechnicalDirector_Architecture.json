@@ -3667,6 +3667,65 @@
             "Tree brightness primary ownership remains Agent 12/09, but this renderer/tool shader fix was necessary because promoted OBJ trees were vertex-colored and therefore bypassed the lit shader.",
             "Hero-spawn FPS lag (BUG-002) still needs the Agent 10/03 renderer-HUD follow-up if it persists after r3 grass density budget."
           ]
+        },
+        "wk32_r5_hero_spawn_fps_blocker": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r5_hero_spawn_fps_blocker",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r5_hero_spawn_fps_blocker]"
+          },
+          "status": "done",
+          "workstreams": [
+            "Performance",
+            "Renderer"
+          ],
+          "summary_bullets": [
+            "Fixed the shared Ursina billboard sync path used by heroes/enemies/workers/projectiles: it now uses the renderer-owned _ks_billboard_configured flag instead of probing Ursina's private _billboard field.",
+            "If an entity ever reaches sync unconfigured, _sync_billboard_entity now applies the pixel-billboard settings once, then marks the entity configured; it no longer risks resetting billboard state every frame.",
+            "Cached billboard color assignment with _ks_last_color so hero spawn/update frames do not push redundant Panda color state when texture/tint is unchanged.",
+            "Added an automated Ursina hero FPS probe and looped on it after Jaimie reported the first pass was still slow.",
+            "Fixed the real r5 blocker: static terrain prop visibility syncing now updates only tiles whose VISIBLE/SEEN state changed instead of touching every tracked prop on every fog revision.",
+            "Reduced default grass density from the medium preview budget to the existing low/playable profile; medium/high remain opt-in via KINGDOM_URSINA_GRASS_DENSITY."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_app.py",
+            "tools/run_ursina_capture_once.py"
+          ],
+          "culprit_evidence": [
+            "Agent 10 r4 already measured headless total_frame under 1 ms up to 8 heroes, so this r5 pass stayed in renderer/HUD.",
+            "Code inspection found _sync_billboard_entity tried to avoid resetting billboard state via getattr(ent, \"_billboard\", False), while the renderer already tracks the stable _ks_billboard_configured flag set at entity creation.",
+            "The first automated 5-hero probe reproduced the FPS drop. Stage timings showed the problem was in UrsinaRenderer.update, not sim/HUD: renderer p90 was about 167 ms while tick_simulation/HUD stayed near 0.5-1 ms.",
+            "Neutral building auto-spawn isolation did not change the drop. Disabling grass removed the remaining delta; the existing low grass profile restored 5-hero FPS to the zero-hero baseline."
+          ],
+          "evidence": {
+            "py_compile": "PASS (exit 0) - python -m py_compile game/graphics/ursina_app.py game/graphics/ursina_renderer.py tools/run_ursina_capture_once.py",
+            "lints": "PASS - ReadLints found no diagnostics for changed files",
+            "qa_smoke_quick": "PASS (exit 0) - python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0, warnings=46 pre-existing missing placeholder 3D model files) - python tools/validate_assets.py --report",
+            "baseline_zero_heroes_after_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 -> p50_fps=49.3 p10_fps=40.0 renderer_p90=1.749ms",
+            "five_heroes_before_visibility_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 --disable-neutral-spawn -> p50_fps=42.8 p10_fps=5.2 renderer_p90=166.833ms",
+            "five_heroes_after_visibility_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 --disable-neutral-spawn -> p50_fps=45.8 p10_fps=40.4 renderer_p90=2.316ms",
+            "five_heroes_default_after_grass_budget": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 -> p50_fps=48.7 p10_fps=42.1 renderer_p90=2.986ms",
+            "five_heroes_mock_after_fix": "python tools/run_ursina_capture_once.py --seconds 14 --provider mock --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 -> p50_fps=48.6 p10_fps=42.5 renderer_p90=2.228ms"
+          },
+          "how_to_test": [
+            "python -m py_compile game/graphics/ursina_app.py game/graphics/ursina_renderer.py tools/run_ursina_capture_once.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5",
+            "python tools/run_ursina_capture_once.py --seconds 14 --provider mock --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer ursina --provider mock"
+          ],
+          "manual_fps_verification_needed": [
+            "Automated FPS probe now reads frame dt directly and prints p10/p50/p90 stats, so live manual FPS is no longer the only evidence.",
+            "Jaimie should still spot-check the real game feel with python main.py --renderer ursina --no-llm and python main.py --renderer ursina --provider mock."
+          ],
+          "pm_tickets": [
+            "WK32-R5-BUG-001 (FPS collapses after spawning one or two heroes in Ursina) - owner 03: fixed via terrain-prop visibility dirty sync + playable default grass density; automated 5-hero probes now match zero-hero baseline within normal variance."
+          ]
         }
       }
     }

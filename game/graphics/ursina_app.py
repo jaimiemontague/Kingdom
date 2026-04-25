@@ -123,6 +123,11 @@ class UrsinaApp:
         # WK30 debug: optional deterministic layout for prefab-fit iteration.
         if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
             self._add_wk30_debug_prefab_layout()
+        self._hero_fps_probe_count = self._read_int_env(
+            "KINGDOM_URSINA_HERO_FPS_PROBE_COUNT", 0, min_value=0, max_value=20
+        )
+        if self._hero_fps_probe_count > 0:
+            self._add_hero_fps_probe_layout(self._hero_fps_probe_count)
 
         self._setup_ursina_camera_for_castle()
         self._install_ursina_input_hook()
@@ -170,6 +175,29 @@ class UrsinaApp:
             self._auto_screenshot_path = next_auto_screenshot_path()
         self._auto_exit_elapsed = 0.0
         self._auto_exit_triggered = False
+        self._fps_probe_enabled = os.environ.get("KINGDOM_URSINA_FPS_PROBE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        self._fps_probe_warmup_sec = float(
+            os.environ.get("KINGDOM_URSINA_FPS_PROBE_WARMUP_SEC", "") or 2.0
+        )
+        self._fps_probe_elapsed = 0.0
+        self._fps_probe_samples: list[float] = []
+        self._fps_probe_stage_samples: dict[str, list[float]] = {}
+
+    @staticmethod
+    def _read_int_env(name: str, default: int, *, min_value: int, max_value: int) -> int:
+        raw = os.environ.get(name, "").strip()
+        if not raw:
+            return int(default)
+        try:
+            value = int(raw)
+        except ValueError:
+            return int(default)
+        return max(int(min_value), min(int(max_value), value))
 
     @staticmethod
     def _hud_quick_fingerprint(surf: pygame.Surface) -> int:
@@ -653,6 +681,119 @@ class UrsinaApp:
         except Exception as exc:
             print(f"[wk30-debug-layout] fog reveal failed: {exc}")
 
+    def _add_hero_fps_probe_layout(self, hero_count: int) -> None:
+        """WK32 r5 debug: deterministic warrior guild + N warriors for renderer FPS probes."""
+        engine = self.engine
+        castle = next(
+            (
+                b
+                for b in engine.buildings
+                if getattr(b, "building_type", None) == "castle"
+            ),
+            None,
+        )
+        if castle is None:
+            print("[hero-fps-probe] no castle in engine; skipping scenario")
+            return
+
+        try:
+            from game.entities import WarriorGuild
+            from game.entities.hero import Hero
+
+            guild = WarriorGuild(int(castle.grid_x) - 4, int(castle.grid_y) + 2)
+            guild.is_constructed = True
+            guild.construction_started = True
+            if hasattr(guild, "set_event_bus"):
+                guild.set_event_bus(engine.event_bus)
+            engine.buildings.append(guild)
+            if os.environ.get("KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            ):
+                neutral = getattr(engine, "neutral_building_system", None)
+                if neutral is not None:
+                    neutral.spawn_interval_sec = 999999.0
+
+            for idx in range(max(0, int(hero_count))):
+                hero = Hero(
+                    guild.center_x + config.TILE_SIZE + (idx % 3) * 10,
+                    guild.center_y + (idx // 3) * 10,
+                    hero_class="warrior",
+                )
+                hero.home_building = guild
+                engine.heroes.append(hero)
+
+            # Keep the probe view deterministic without revealing the whole map; full-map
+            # visibility would benchmark terrain draw count instead of hero-spawn cost.
+            try:
+                from game.world import Visibility
+
+                world = engine.world
+                cx = int(getattr(castle, "grid_x", 0))
+                cy = int(getattr(castle, "grid_y", 0))
+                radius = 14
+                for ty in range(max(0, cy - radius), min(int(world.height), cy + radius + 1)):
+                    for tx in range(max(0, cx - radius), min(int(world.width), cx + radius + 1)):
+                        world.visibility[ty][tx] = Visibility.VISIBLE
+                engine._fog_revision = int(getattr(engine, "_fog_revision", 0)) + 1
+            except Exception:
+                pass
+
+            print(f"[hero-fps-probe] spawned warrior_guild heroes={len(engine.heroes)}")
+        except Exception as exc:
+            print(f"[hero-fps-probe] setup failed: {exc}")
+
+    def _record_fps_probe_sample(self, dt: float) -> None:
+        if not self._fps_probe_enabled:
+            return
+        self._fps_probe_elapsed += float(dt or 0.0)
+        if self._fps_probe_elapsed < self._fps_probe_warmup_sec:
+            return
+        if dt > 1e-9:
+            self._fps_probe_samples.append(1.0 / float(dt))
+
+    def _record_fps_probe_stage_ms(self, name: str, started_at: float) -> None:
+        if not self._fps_probe_enabled or self._fps_probe_elapsed < self._fps_probe_warmup_sec:
+            return
+        self._fps_probe_stage_samples.setdefault(name, []).append((pytime.perf_counter() - started_at) * 1000.0)
+
+    def _print_fps_probe_summary(self) -> None:
+        if not self._fps_probe_enabled:
+            return
+        samples = list(self._fps_probe_samples)
+        if not samples:
+            print("[fps-probe] no samples collected")
+            return
+        samples.sort()
+        avg = sum(samples) / len(samples)
+        p10 = samples[max(0, int(len(samples) * 0.10) - 1)]
+        p50 = samples[max(0, int(len(samples) * 0.50) - 1)]
+        p90 = samples[max(0, int(len(samples) * 0.90) - 1)]
+        print(
+            "[fps-probe] "
+            f"heroes={len(getattr(self.engine, 'heroes', []))} "
+            f"frames={len(samples)} "
+            f"avg_fps={avg:.1f} "
+            f"min_fps={samples[0]:.1f} "
+            f"p10_fps={p10:.1f} "
+            f"p50_fps={p50:.1f} "
+            f"p90_fps={p90:.1f} "
+            f"max_fps={samples[-1]:.1f}"
+        )
+        for name, values in sorted(self._fps_probe_stage_samples.items()):
+            vals = sorted(values)
+            if not vals:
+                continue
+            avg_ms = sum(vals) / len(vals)
+            p90_ms = vals[max(0, int(len(vals) * 0.90) - 1)]
+            print(
+                "[fps-probe-stage] "
+                f"{name} frames={len(vals)} avg_ms={avg_ms:.3f} "
+                f"p90_ms={p90_ms:.3f} max_ms={vals[-1]:.3f}"
+            )
+
     def _maybe_auto_screenshot_then_quit(self) -> None:
         """WK30 debug: save one screenshot (if a path was requested) and quit Ursina.
 
@@ -670,6 +811,7 @@ class UrsinaApp:
                     base.graphicsEngine.renderFrame()
                 except Exception:
                     pass
+            self._print_fps_probe_summary()
             if self._auto_screenshot_path and base is not None:
                 out_path = os.path.abspath(self._auto_screenshot_path)
                 out_dir = os.path.dirname(out_path)
@@ -756,7 +898,9 @@ class UrsinaApp:
                         tile=tile,
                     )
 
+            _stage_t0 = pytime.perf_counter()
             self.engine.tick_simulation(dt)
+            self._record_fps_probe_stage_ms("tick_simulation", _stage_t0)
 
             # WK31: EMA of 1/dt for F2 overlay — pygame clock FPS is not Panda3D/GPU FPS in this mode.
             try:
@@ -770,6 +914,7 @@ class UrsinaApp:
                         eng._ursina_window_fps_ema = prev * 0.92 + inst * 0.08
             except Exception:
                 pass
+            self._record_fps_probe_sample(float(dt or 0.0))
 
             # Pause menu Quit sets engine.running = False; Pygame's engine.run() exits the process —
             # Ursina must stop app.run() explicitly or the window stays open forever.
@@ -818,10 +963,16 @@ class UrsinaApp:
             if ecam is not None:
                 ecam.target_z = camera.z
 
+            _stage_t0 = pytime.perf_counter()
             self.renderer.update()
+            self._record_fps_probe_stage_ms("ursina_renderer", _stage_t0)
 
+            _stage_t0 = pytime.perf_counter()
             self.engine.render_pygame()
+            self._record_fps_probe_stage_ms("pygame_hud_render", _stage_t0)
+            _stage_t0 = pytime.perf_counter()
             self._refresh_ui_overlay_texture()
+            self._record_fps_probe_stage_ms("hud_texture_upload", _stage_t0)
             # Fullscreen ↔ windowed toggles with a static HUD skip texture upload; still resync filter.
             self._sync_hud_texture_filter_mode(self._hud_composite_texture)
 

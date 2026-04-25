@@ -7523,6 +7523,176 @@
             ],
             "rationale": "Implementers/diagnostics: Agent 03 (HIGH - renderer fog semantics and possible renderer perf fix), Agent 10 (HIGH - serious FPS regression diagnosis after heroes spawn), Agent 12 (MEDIUM - tree tint routing/tool policy). Consults: Agent 09 (LOW - visual signoff), Agent 11 (LOW - gates). Conditional: Agent 15 only for asset replacement; Agent 06 only if lag is AI/LLM-side."
           }
+        },
+        "wk32_r5_hero_spawn_fps_blocker": {
+          "round_meta": {
+            "created_utc": "2026-04-25T21:55:00Z",
+            "source": "human_playtest_jaimie_after_r4",
+            "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+            "commit_checkpoint": "be14f04 WK32 visual polish and performance follow-ups",
+            "pm_note": "All visual/fog/tree issues now playtest successful. Only remaining blocker is severe FPS drop after one or two heroes spawn."
+          },
+          "pm_status_summary": {
+            "overall": "WK32 is visually successful except for the hero-spawn FPS collapse. Treat r5 as a single-blocker performance round. Do not revisit camera, grass, tree tint, fog, Inn construction, or Workstream F unless the FPS fix directly touches them.",
+            "current_human_report": [
+              "Playtest is successful in all ways except FPS drop once heroes are spawned.",
+              "FPS drop is still really bad even after just one or two heroes."
+            ],
+            "known_diagnostics": [
+              "Agent 10 r4 headless profiler found total_frame under 1 ms up to 8 heroes, so simulation CPU is unlikely to be the cause.",
+              "Agent 10 recommends Agent 03 first: renderer/HUD/entity-count path is most likely.",
+              "Activate Agent 06 only if manual comparison shows lag happens with LLM/provider enabled but does not happen with --no-llm."
+            ],
+            "explicit_non_goals": [
+              "No more art iteration in this round.",
+              "No grass density rollback unless it is proven to be the hero-spawn FPS cause.",
+              "No broad AI rewrite unless --no-llm isolates the issue to provider/LLM behavior."
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK32-R5-BUG-001",
+              "title": "FPS collapses after spawning one or two heroes in Ursina",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "consult_agents": [
+                "10_PerformanceStability_Lead",
+                "06_AIBehaviorDirector_LLM"
+              ],
+              "reporter": "human_playtest_jaimie_2026_04_25",
+              "repro_steps": [
+                "python main.py --renderer ursina --no-llm",
+                "Hire or wait for one to two heroes to spawn.",
+                "Observe severe FPS drop / lag.",
+                "Repeat with python main.py --renderer ursina --provider mock to compare provider path."
+              ],
+              "expected": "Spawning one or two heroes should not collapse the Ursina FPS. Render FPS should stay playable and the F2 overlay should not show runaway HUD/sim cost.",
+              "actual": "Jaimie reports FPS becomes really bad after only one or two heroes.",
+              "pm_diagnosis_hints": [
+                "Agent 10 already found sim CPU cost is sub-1ms up to 8 heroes; start in renderer/HUD, not core sim.",
+                "Check hero render path in game/graphics/ursina_renderer.py: per-frame billboard/entity sync, model/material churn, visibility gating, selection/focus effects, inside-building presentation.",
+                "Check game/graphics/ursina_app.py HUD texture upload: after heroes spawn, HUD/chat/notifications/activity lines may dirty the overlay every frame.",
+                "Use binary isolation toggles if needed: --no-llm vs --provider mock, grass density off/low/default, hero render disabled/debug path, HUD overlay disabled/debug path.",
+                "The desired outcome is a small, surgical fix or a precise owner handoff, not another broad sprint."
+              ],
+              "acceptance_test": [
+                "Manual run with python main.py --renderer ursina --no-llm remains playable after spawning two heroes.",
+                "Record top-left Ursina FPS before and after heroes spawn; F2 overlay should identify no runaway loop cost.",
+                "If fix is renderer/HUD-side, Agent 03 implements and runs python tools/qa_smoke.py --quick.",
+                "If comparison proves LLM-only lag, PM activates Agent 06 with Agent 10's evidence."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [],
+          "pm_integration_order": [
+            "03 investigates and fixes renderer/HUD/entity-count cause first, using Agent 10's r4 diagnostics.",
+            "10 verifies before/after FPS with --no-llm and --provider mock and recommends whether Agent 06 is needed.",
+            "11 runs gates after any code change.",
+            "06 remains conditional; only activate if lag is absent with --no-llm but present with provider/mock/LLM behavior."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "focus": "Single blocker: FPS collapses after one or two heroes spawn. Start from Agent 10's r4 result that sim CPU is not the culprit. Investigate renderer/HUD path: hero entity sync, billboard/texture/material churn, HUD overlay upload after hero activity updates, and any per-frame work triggered by heroes. Implement the smallest fix that restores playable FPS.",
+              "workstreams": [
+                "Performance",
+                "Renderer",
+                "HUD"
+              ],
+              "status": "assigned_active",
+              "intelligence": "high",
+              "deliverables": [
+                "culprit identified with evidence",
+                "renderer/HUD fix if confirmed",
+                "manual before/after FPS notes",
+                "qa_smoke --quick PASS"
+              ]
+            },
+            "10": {
+              "focus": "Verify Agent 03's fix and keep the diagnosis honest. Compare python main.py --renderer ursina --no-llm vs python main.py --renderer ursina --provider mock. Report before/after FPS and whether Agent 06 should remain silent.",
+              "workstreams": [
+                "Performance"
+              ],
+              "status": "consult_after_03",
+              "intelligence": "medium",
+              "deliverables": [
+                "before/after FPS observation",
+                "--no-llm vs mock comparison",
+                "owner recommendation if still failing"
+              ]
+            },
+            "11": {
+              "focus": "After Agent 03 reports a fix, run python tools/qa_smoke.py --quick. Run python tools/validate_assets.py --report only if any asset/tool/manifest files changed.",
+              "workstreams": [
+                "QA"
+              ],
+              "status": "consult_final_gate",
+              "intelligence": "low"
+            },
+            "06": {
+              "status": "conditional",
+              "reason": "Only activate if Agent 10 proves the lag is absent with --no-llm but present with mock/provider/LLM behavior."
+            },
+            "02": {
+              "status": "silent"
+            },
+            "04": {
+              "status": "silent"
+            },
+            "05": {
+              "status": "silent"
+            },
+            "07": {
+              "status": "silent"
+            },
+            "08": {
+              "status": "silent"
+            },
+            "09": {
+              "status": "silent"
+            },
+            "12": {
+              "status": "silent"
+            },
+            "13": {
+              "status": "silent"
+            },
+            "14": {
+              "status": "silent"
+            },
+            "15": {
+              "status": "silent"
+            }
+          },
+          "pm_universal_prompt": "You are being activated for WK32 round 5: final hero-spawn FPS blocker.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk32-camera-construction-nature-polish\"].rounds[\"wk32_r5_hero_spawn_fps_blocker\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nBug tickets are in pm_bug_tickets; status/ordering is in pm_status_summary and pm_integration_order.\n\nAfter completing your work:\n1. Update your agent log with exact commands, before/after FPS notes, and gate results.\n2. Run: python tools/qa_smoke.py --quick for code changes.\n3. Run: python tools/validate_assets.py --report only if asset/tool/manifest files changed.\n4. Report status back to PM.\n\nRules: focus ONLY on the hero-spawn FPS blocker. Visuals, fog, grass, tree tint, Inn construction, and Workstream F are accepted for now.",
+          "pm_agent_prompts": {
+            "03": "Agent 03 (TechnicalDirector) - WK32 r5 final blocker. Intelligence: HIGH.\n\nAll visuals/fog/tree issues are accepted. Only blocker: severe FPS drop after one or two heroes spawn. Agent 10 r4 found sim CPU remains under 1ms up to 8 heroes, so start in renderer/HUD, not gameplay sim. Investigate hero render/entity sync, billboard/texture/material churn, visibility gating, selection/focus effects, and game/graphics/ursina_app.py HUD overlay uploads after hero activity starts. Use binary isolation if helpful: --no-llm vs --provider mock; grass density off/low/default; temporary local debug toggles for hero render/HUD overlay. Implement the smallest renderer/HUD fix. Run python tools/qa_smoke.py --quick and log before/after FPS notes.",
+            "10": "Agent 10 (PerformanceStability) - WK32 r5 consult. Intelligence: MEDIUM.\n\nAfter Agent 03 reports a fix, verify the hero-spawn FPS blocker. Compare:\npython main.py --renderer ursina --no-llm\npython main.py --renderer ursina --provider mock\nWatch top-left Ursina FPS before and after 1-2 heroes spawn; use F2 overlay for context. Report before/after and whether Agent 06 should stay silent or be activated.",
+            "11": "Agent 11 (QA) - WK32 r5 final gate. Intelligence: LOW.\n\nAfter Agent 03 reports done, run:\npython tools/qa_smoke.py --quick\nRun python tools/validate_assets.py --report only if Agent 03 changed assets/tools/manifest. Report PASS/FAIL and likely owner."
+          },
+          "pm_send_list_minimal": {
+            "send_to_agents": [
+              "03",
+              "10",
+              "11"
+            ],
+            "conditional_later": [
+              "06 only if --no-llm is smooth but mock/provider path still lags"
+            ],
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Implementer: Agent 03 (HIGH - renderer/HUD performance fix for hero-spawn FPS collapse). Consults: Agent 10 (MEDIUM - before/after FPS verification and LLM isolation), Agent 11 (LOW - final gate). Conditional: Agent 06 only if the --no-llm comparison proves provider/LLM-specific lag."
+          }
         }
       }
     }

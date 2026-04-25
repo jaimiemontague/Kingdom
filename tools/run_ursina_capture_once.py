@@ -50,9 +50,37 @@ def main() -> int:
         help="Pass --no-llm to main.py",
     )
     ap.add_argument(
+        "--provider",
+        type=str,
+        default="",
+        help="Optional LLM provider to pass through to main.py (for example: mock)",
+    )
+    ap.add_argument(
         "--no-screenshot",
         action="store_true",
         help="Only auto-exit (no PNG); for debugging startup",
+    )
+    ap.add_argument(
+        "--fps-probe",
+        action="store_true",
+        help="Print Ursina FPS stats before auto-exit",
+    )
+    ap.add_argument(
+        "--fps-warmup-sec",
+        type=float,
+        default=2.0,
+        help="Seconds to skip before FPS sample collection (default: 2)",
+    )
+    ap.add_argument(
+        "--hero-fps-probe-count",
+        type=int,
+        default=0,
+        help="Spawn a warrior guild plus this many warriors before startup FPS probe",
+    )
+    ap.add_argument(
+        "--disable-neutral-spawn",
+        action="store_true",
+        help="For hero FPS probes, prevent auto-spawned houses/farms from entering the measurement",
     )
     ns = ap.parse_args()
 
@@ -62,6 +90,13 @@ def main() -> int:
         env["KINGDOM_SCREENSHOT_SUBDIR"] = ns.subdir
     if ns.stem:
         env["KINGDOM_SCREENSHOT_STEM"] = ns.stem
+    if ns.fps_probe:
+        env["KINGDOM_URSINA_FPS_PROBE"] = "1"
+        env["KINGDOM_URSINA_FPS_PROBE_WARMUP_SEC"] = str(ns.fps_warmup_sec)
+    if ns.hero_fps_probe_count:
+        env["KINGDOM_URSINA_HERO_FPS_PROBE_COUNT"] = str(max(0, ns.hero_fps_probe_count))
+    if ns.disable_neutral_spawn:
+        env["KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN"] = "1"
 
     path: str | None = None
     if not ns.no_screenshot:
@@ -80,6 +115,8 @@ def main() -> int:
     cmd = [sys.executable, str(PROJECT_ROOT / "main.py"), "--renderer", "ursina"]
     if ns.no_llm:
         cmd.append("--no-llm")
+    elif ns.provider:
+        cmd.extend(["--provider", ns.provider])
 
     print(f"[capture-once] Running: {' '.join(cmd)}", flush=True)
     r = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env)

@@ -158,7 +158,7 @@ def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
 _GRASS_DENSITY_PROFILES: dict[str, tuple[int, int]] = {
     "off": (0, 1),
     "low": (1, 3),
-    "default": (1, 2),
+    "default": (1, 3),
     "medium": (1, 2),
     "high": (3, 1),
 }
@@ -361,6 +361,8 @@ def _finalize_kenney_scatter_entity(
 
 def _set_static_prop_fog_tint(ent: Entity, fog_mult: float) -> None:
     """Apply explored-fog darkening to a static terrain prop without compounding tint."""
+    if getattr(ent, "_ks_fog_mult", None) == fog_mult:
+        return
     base = getattr(ent, "_ks_base_color", None)
     if base is None:
         base = ent.color
@@ -374,6 +376,7 @@ def _set_static_prop_fog_tint(ent: Entity, fog_mult: float) -> None:
         )
     except Exception:
         ent.color = base
+    ent._ks_fog_mult = fog_mult
 
 
 def _building_type_str(bt) -> str:
@@ -764,7 +767,9 @@ class UrsinaRenderer:
         # RGBA tile buffer reused for fog rebuilds (WK22 R3 perf: avoid 22k pygame.set_at calls).
         self._fog_tile_buf: bytearray | None = None
         self._visibility_gated_terrain: list[tuple[Entity, int, int]] = []
+        self._visibility_gated_terrain_by_tile: dict[tuple[int, int], list[Entity]] = {}
         self._terrain_visibility_revision_seen = -1
+        self._terrain_visible_tiles_seen: set[tuple[int, int]] | None = None
 
         # Status Text UI (2D overlay, not affected by world camera)
         self.status_text = Text(
@@ -1003,7 +1008,17 @@ class UrsinaRenderer:
         # Vertical props must draw after the ground-fog quad; otherwise their tops can be clipped
         # by fog that is visually behind them at shallow perspective camera angles.
         ent.render_queue = 1
-        self._visibility_gated_terrain.append((ent, int(tx), int(ty)))
+        key = (int(tx), int(ty))
+        self._visibility_gated_terrain.append((ent, key[0], key[1]))
+        self._visibility_gated_terrain_by_tile.setdefault(key, []).append(ent)
+
+    def _sync_terrain_prop_tile_visibility(self, ent: Entity, vis: Visibility) -> None:
+        is_visible = vis != Visibility.UNSEEN
+        if getattr(ent, "_ks_prop_enabled", None) is not is_visible:
+            ent.enabled = bool(is_visible)
+            ent._ks_prop_enabled = bool(is_visible)
+        if is_visible:
+            _set_static_prop_fog_tint(ent, 0.5 if vis == Visibility.SEEN else 1.0)
 
     def _sync_visibility_gated_terrain(self) -> None:
         """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
@@ -1011,15 +1026,28 @@ class UrsinaRenderer:
         engine_rev = int(getattr(self.engine, "_fog_revision", 0))
         if self._terrain_visibility_revision_seen == engine_rev:
             return
-        for ent, tx, ty in self._visibility_gated_terrain:
-            if 0 <= ty < world.height and 0 <= tx < world.width:
-                vis = world.visibility[ty][tx]
-            else:
-                vis = Visibility.UNSEEN
-            is_visible = vis != Visibility.UNSEEN
-            ent.enabled = bool(is_visible)
-            if is_visible:
-                _set_static_prop_fog_tint(ent, 0.5 if vis == Visibility.SEEN else 1.0)
+
+        current_visible = set(getattr(world, "_currently_visible", set()) or set())
+        if self._terrain_visible_tiles_seen is None:
+            for ent, tx, ty in self._visibility_gated_terrain:
+                if 0 <= ty < world.height and 0 <= tx < world.width:
+                    vis = world.visibility[ty][tx]
+                else:
+                    vis = Visibility.UNSEEN
+                self._sync_terrain_prop_tile_visibility(ent, vis)
+        else:
+            changed_tiles = self._terrain_visible_tiles_seen ^ current_visible
+            for tx, ty in changed_tiles:
+                ents = self._visibility_gated_terrain_by_tile.get((int(tx), int(ty)))
+                if not ents:
+                    continue
+                if 0 <= ty < world.height and 0 <= tx < world.width:
+                    vis = world.visibility[ty][tx]
+                else:
+                    vis = Visibility.UNSEEN
+                for ent in ents:
+                    self._sync_terrain_prop_tile_visibility(ent, vis)
+        self._terrain_visible_tiles_seen = current_visible
         self._terrain_visibility_revision_seen = engine_rev
 
     def _ensure_grid_debug_overlay(self) -> None:
@@ -1342,12 +1370,17 @@ class UrsinaRenderer:
     ) -> None:
         """Position every frame; avoid re-setting billboard/scale/shader when unchanged (Ursina churn)."""
         UrsinaRenderer._set_texture_if_changed(ent, tex)
-        ent.color = color.white if tex is not None else tint_col
+        target_color = color.white if tex is not None else tint_col
+        if getattr(ent, "_ks_last_color", None) != target_color:
+            ent.color = target_color
+            ent._ks_last_color = target_color
         if getattr(ent, "_ks_last_scale", None) != scale_xyz:
             ent.scale = scale_xyz
             ent._ks_last_scale = scale_xyz
-        if not getattr(ent, "_billboard", False):
+        if not getattr(ent, "_ks_billboard_configured", False):
             ent.billboard = True
+            UrsinaRenderer._apply_pixel_billboard_settings(ent)
+            ent._ks_billboard_configured = True
         UrsinaRenderer._set_shader_if_changed(ent, shader)
         ent.position = pos_xyz
 
