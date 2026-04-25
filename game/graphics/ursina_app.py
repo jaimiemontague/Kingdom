@@ -235,6 +235,49 @@ class UrsinaApp:
             cx += 10.5  # midpoint between castle center and east end of test row
             span = 32.0
 
+        # WK32 debug: allow deterministic close oblique captures by focusing a single building.
+        # Apply *after* the prefab-test layout default framing so focus can override it.
+        focus_type = os.environ.get("KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE", "").strip().lower()
+        if focus_type:
+            def _matches_focus(bt) -> bool:
+                raw = bt
+                try:
+                    s = str(raw or "").strip().lower()
+                except Exception:
+                    s = ""
+                if s == focus_type:
+                    return True
+                # Accept enum-ish strings like "BuildingType.INN" or "inn_v2".
+                if s.endswith(f".{focus_type}") or s.endswith(f"_{focus_type}") or s.endswith(focus_type):
+                    return True
+                try:
+                    name = str(getattr(raw, "name", "") or "").strip().lower()
+                    if name == focus_type:
+                        return True
+                except Exception:
+                    pass
+                return False
+
+            target_b = next(
+                (
+                    b
+                    for b in getattr(self.engine, "buildings", [])
+                    if _matches_focus(getattr(b, "building_type", ""))
+                    and getattr(b, "hp", 1) > 0
+                ),
+                None,
+            )
+            if target_b is not None:
+                cx, cz = sim_px_to_world_xz(float(target_b.center_x), float(target_b.center_y))
+                try:
+                    span = float(os.environ.get("KINGDOM_URSINA_CAM_FOCUS_SPAN", "") or span)
+                except Exception:
+                    pass
+                print(
+                    f"[ursina-camera] focus={focus_type} cx={cx:.2f} cz={cz:.2f} span={span:.2f}",
+                    flush=True,
+                )
+
         hfov = math.radians(float(camera.fov))
         d = (span * 0.5) / max(1e-6, math.tan(hfov * 0.5))
         elev = d * 0.8
@@ -252,8 +295,26 @@ class UrsinaApp:
                     camera.position = Vec3(cx, d * 1.6, cz)
                     camera.look_at(Vec3(cx, 0, cz))
                 else:
-                    camera.position = Vec3(cx, d * 0.85, cz - d * 0.7)
-                    camera.look_at(Vec3(cx, 0, cz + 1.0))
+                    # Deterministic oblique shot with optional yaw/pitch overrides.
+                    try:
+                        yaw_deg = float(os.environ.get("KINGDOM_URSINA_CAM_YAW", "") or 0.0)
+                    except Exception:
+                        yaw_deg = 0.0
+                    try:
+                        pitch_mul = float(os.environ.get("KINGDOM_URSINA_CAM_PITCH_MUL", "") or 1.0)
+                    except Exception:
+                        pitch_mul = 1.0
+                    try:
+                        height_mul = float(os.environ.get("KINGDOM_URSINA_CAM_HEIGHT_MUL", "") or 0.85)
+                    except Exception:
+                        height_mul = 0.85
+                    yaw_rad = math.radians(yaw_deg)
+                    back_mul = 0.7
+                    by = d * height_mul * max(0.0, pitch_mul)
+                    bx = math.sin(yaw_rad) * d * back_mul
+                    bz = math.cos(yaw_rad) * d * back_mul
+                    camera.position = Vec3(cx + bx, by, cz - bz)
+                    camera.look_at(Vec3(cx, 0, cz))
             else:
                 camera.position = Vec3(cx, elev, cz - back)
                 camera.look_at(Vec3(cx, 0, cz))
@@ -286,8 +347,21 @@ class UrsinaApp:
                 camera.position = Vec3(0.0, d * 1.6, -d * 0.02)
                 ec.rotation = Vec3(89.0, 0.0, 0.0)
             else:
-                camera.position = Vec3(0.0, d * 0.85, -d * 0.7)
-                ec.rotation = Vec3(40.0, 0.0, 0.0)
+                cam_dist = d
+                try:
+                    cam_dist = float(os.environ.get("KINGDOM_URSINA_CAM_DIST", "") or cam_dist)
+                except Exception:
+                    cam_dist = d
+                camera.position = Vec3(0.0, cam_dist * 0.85, -cam_dist * 0.7)
+                try:
+                    pitch = float(os.environ.get("KINGDOM_URSINA_CAM_PITCH", "") or 40.0)
+                except Exception:
+                    pitch = 40.0
+                try:
+                    yaw = float(os.environ.get("KINGDOM_URSINA_CAM_YAW", "") or 0.0)
+                except Exception:
+                    yaw = 0.0
+                ec.rotation = Vec3(pitch, yaw, 0.0)
         else:
             camera.rotation = Vec3(0.0, 0.0, 0.0)
             if rig_rotation is not None:
@@ -542,6 +616,9 @@ class UrsinaApp:
             ("inn", 12),
             ("house", 16),
         ]
+        only = os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT_ONLY", "").strip().lower()
+        if only:
+            layout = [(bts, dx) for (bts, dx) in layout if bts == only]
         from game.entities.buildings.base import Building
         from game.entities.buildings.types import BuildingType
 
