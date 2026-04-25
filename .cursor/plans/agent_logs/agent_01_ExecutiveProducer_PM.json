@@ -7693,6 +7693,107 @@
             ],
             "rationale": "Implementer: Agent 03 (HIGH - renderer/HUD performance fix for hero-spawn FPS collapse). Consults: Agent 10 (MEDIUM - before/after FPS verification and LLM isolation), Agent 11 (LOW - final gate). Conditional: Agent 06 only if the --no-llm comparison proves provider/LLM-specific lag."
           }
+        },
+        "wk32_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-25T22:22:00Z",
+            "source": "pm_closeout_after_human_playtest_and_push",
+            "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM",
+            "commit_checkpoints": [
+              "be14f04 WK32 visual polish and performance follow-ups",
+              "ba2b2c6 3D Graphics Phase 2.3 - 3D Camera Controls, 3D Fog-of-War, & Inn v2 Style Adjusted."
+            ]
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK32 is officially closed. Human playtest accepts the 3D camera controls, 3D fog-of-war behavior, grass/nature polish, tree styling, Inn v2 visual/style work, construction staging follow-ups, auto-spawn spacing, and hero-spawn FPS fix. Final save point has been committed and pushed to origin/main.",
+            "accepted_workstreams": [
+              "A - Ursina EditorCamera-style in-game camera controls are accepted.",
+              "B - Construction visuals include non-square 3x2 Inn plot/stages and renderer fallback support.",
+              "C - Grass no longer reads as a square grid; density budget keeps preview playable.",
+              "D - Nature scatter includes additional rocks/trees and acceptable meadow polish.",
+              "E - Non-Retro/tree tinting and vertex-color shader path are accepted.",
+              "F - Auto-spawn spacing follow-up is accepted.",
+              "Fog - 3D fog-of-war now keeps static terrain props visible in explored fog and hides them only in unexplored fog.",
+              "Performance - Hero-spawn FPS blocker is accepted after r5."
+            ],
+            "final_gates": [
+              "Agent logs record python tools/qa_smoke.py --quick PASS for the implemented rounds.",
+              "Agent logs record python tools/validate_assets.py --report exit 0 for asset/tool/manifest changes.",
+              "PM did not rerun gates during closeout; closeout is based on agent evidence plus Jaimie's successful playtest."
+            ],
+            "remaining_known_state": [
+              "models_compressed/ remains untracked generated Panda cache and should not be committed.",
+              "No CHANGELOG/version bump was made; versioning remains a separate human release decision.",
+              "No active WK32 agents remain assigned."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Offer next sprint options to Jaimie; do not reopen WK32 unless a regression is reported."
+            },
+            "02": {
+              "status": "silent"
+            },
+            "03": {
+              "status": "complete"
+            },
+            "04": {
+              "status": "silent"
+            },
+            "05": {
+              "status": "complete"
+            },
+            "06": {
+              "status": "silent"
+            },
+            "07": {
+              "status": "silent"
+            },
+            "08": {
+              "status": "complete"
+            },
+            "09": {
+              "status": "complete"
+            },
+            "10": {
+              "status": "complete"
+            },
+            "11": {
+              "status": "complete"
+            },
+            "12": {
+              "status": "complete"
+            },
+            "13": {
+              "status": "silent"
+            },
+            "14": {
+              "status": "silent"
+            },
+            "15": {
+              "status": "complete"
+            }
+          },
+          "pm_recommended_next_sprint_options": [
+            {
+              "option": "A",
+              "title": "Gameplay Feel Pass",
+              "tradeoff": "Best if Jaimie wants the improved 3D presentation to be backed by richer hero/combat/economy behavior."
+            },
+            {
+              "option": "B",
+              "title": "3D Asset Polish Continuation",
+              "tradeoff": "Best if the next priority is more building construction ladders, foliage variety, and art consistency."
+            },
+            {
+              "option": "C",
+              "title": "Stability And Release Readiness",
+              "tradeoff": "Best if the goal is locking down the new 3D renderer with regression tests, perf baselines, and packaging discipline."
+            }
+          ]
         }
       }
     }
