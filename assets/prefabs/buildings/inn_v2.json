@@ -13,68 +13,11 @@
   ],
   "pieces": [
     {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
       "pos": [
         1.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        90.0,
-        0.0
-      ],
-      "scale": [
         1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        2.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        90.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        3.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        90.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        1.5,
-        0.0,
-        1.5
+        -0.5
       ],
       "rot": [
         0.0,
@@ -86,14 +29,14 @@
         1.0,
         1.0
       ],
-      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
     },
     {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
       "pos": [
-        2.5,
-        0.0,
-        1.5
+        3.5,
+        1.0,
+        -0.5
       ],
       "rot": [
         0.0,
@@ -105,13 +48,32 @@
         1.0,
         1.0
       ],
-      "texture_override": "textures/buildings/inn/inn_stone_window_detail.png"
+      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
     },
     {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
       "pos": [
-        3.5,
+        2.5,
+        1.0,
+        -0.5
+      ],
+      "rot": [
         0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
+    },
+    {
+      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.0,
         2.5
       ],
       "rot": [
@@ -124,120 +86,6 @@
         1.0,
         1.0
       ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        1.5,
-        0.0,
-        1.5
-      ],
-      "rot": [
-        0.0,
-        180.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        1.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        180.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        3.5,
-        0.0,
-        1.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/wall-fantasy-town.glb",
-      "pos": [
-        3.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
-      "pos": [
-        1.5,
-        1.0,
-        -0.75
-      ],
-      "rot": [
-        0.0,
-        270.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
-      "pos": [
-        3.5,
-        1.0,
-        -0.75
-      ],
-      "rot": [
-        0.0,
-        270.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
       "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
     },
     {
@@ -245,45 +93,7 @@
       "pos": [
         2.5,
         1.0,
-        -0.75
-      ],
-      "rot": [
-        0.0,
-        270.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
-      "pos": [
-        1.5,
-        1.0,
-        2.25
-      ],
-      "rot": [
-        0.0,
-        90.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_wood_window_detail.png"
-    },
-    {
-      "model": "Models/GLB format/wall-wood-fantasy-town.glb",
-      "pos": [
-        2.5,
-        1.0,
-        1.25
+        1.5
       ],
       "rot": [
         0.0,
@@ -302,7 +112,7 @@
       "pos": [
         3.5,
         1.0,
-        1.25
+        1.5
       ],
       "rot": [
         0.0,
@@ -321,7 +131,7 @@
       "pos": [
         0.5,
         1.0,
-        1.25
+        1.5
       ],
       "rot": [
         0.0,
@@ -340,7 +150,7 @@
       "pos": [
         0.5,
         1.0,
-        0.25
+        0.5
       ],
       "rot": [
         0.0,
@@ -359,7 +169,7 @@
       "pos": [
         3.5,
         1.0,
-        1.25
+        1.5
       ],
       "rot": [
         0.0,
@@ -377,8 +187,8 @@
       "model": "Models/GLB format/wall-wood-fantasy-town.glb",
       "pos": [
         3.5,
-        1.0,
-        0.25
+        0.9999999999999998,
+        0.5
       ],
       "rot": [
         0.0,
@@ -396,8 +206,8 @@
       "model": "Models/GLB format/roof-right-fantasy-town.glb",
       "pos": [
         1.5,
-        2.05,
-        1.25
+        2.0999999999999996,
+        1.5
       ],
       "rot": [
         0.0,
@@ -415,8 +225,8 @@
       "model": "Models/GLB format/roof-right-fantasy-town.glb",
       "pos": [
         3.5,
-        2.05,
-        0.25
+        2.1000000000000005,
+        0.5
       ],
       "rot": [
         0.0,
@@ -434,8 +244,8 @@
       "model": "Models/GLB format/roof-left-fantasy-town.glb",
       "pos": [
         1.5,
-        2.05,
-        0.25
+        2.0999999999999996,
+        0.5
       ],
       "rot": [
         0.0,
@@ -453,8 +263,8 @@
       "model": "Models/GLB format/roof-left-fantasy-town.glb",
       "pos": [
         3.5,
-        2.05,
-        1.25
+        2.0999999999999996,
+        1.5
       ],
       "rot": [
         0.0,
@@ -472,8 +282,8 @@
       "model": "Models/GLB format/roof-window-fantasy-town.glb",
       "pos": [
         2.5,
-        2.05,
-        1.25
+        2.0999999999999996,
+        1.5
       ],
       "rot": [
         0.0,
@@ -491,8 +301,8 @@
       "model": "Models/GLB format/roof-window-fantasy-town.glb",
       "pos": [
         2.5,
-        2.05,
-        0.25
+        2.0999999999999996,
+        0.5
       ],
       "rot": [
         0.0,
@@ -507,165 +317,11 @@
       "texture_override": "textures/buildings/inn/inn_roof_shingles.png"
     },
     {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        1.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        2.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        3.5,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        1.5,
-        0.0,
-        1.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        2.5,
-        0.0,
-        1.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "Models/GLB format/road-curb-fantasy-town.glb",
-      "pos": [
-        3.5,
-        0.0,
-        1.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_stone_blocks.png"
-    },
-    {
-      "model": "buildings/inn_window_panel.obj",
-      "pos": [
-        1.5,
-        0.28,
-        -0.05
-      ],
-      "rot": [
-        0.0,
-        180.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_window_panel.png",
-      "texture_override_mode": "uv"
-    },
-    {
-      "model": "buildings/inn_window_panel.obj",
-      "pos": [
-        3.5,
-        0.28,
-        -0.05
-      ],
-      "rot": [
-        0.0,
-        180.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "texture_override": "textures/buildings/inn/inn_window_panel.png",
-      "texture_override_mode": "uv"
-    },
-    {
       "model": "buildings/inn_window_panel.obj",
       "pos": [
         1.5,
         1.28,
-        -0.355
+        -0.10499999999999998
       ],
       "rot": [
         0.0,
@@ -685,7 +341,7 @@
       "pos": [
         2.5,
         1.28,
-        -0.355
+        -0.10499999999999998
       ],
       "rot": [
         0.0,
@@ -705,7 +361,7 @@
       "pos": [
         3.5,
         1.28,
-        -0.355
+        -0.10499999999999998
       ],
       "rot": [
         0.0,
@@ -721,11 +377,11 @@
       "texture_override_mode": "uv"
     },
     {
-      "model": "buildings/inn_door_panel.obj",
+      "model": "Models/GLB format/wall-door.glb",
       "pos": [
         2.5,
-        0.04,
-        -0.04
+        0.0,
+        0.5
       ],
       "rot": [
         0.0,
@@ -736,8 +392,97 @@
         1.0,
         1.0,
         1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
       ],
-      "texture_override": "textures/buildings/inn/inn_wood_planks.png"
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window.glb",
+      "pos": [
+        3.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-window.glb",
+      "pos": [
+        3.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     }
   ],
   "notes": "Redo: cleaner watermill-wide hero (back-center); foreground = cart (front-right) + crate (front-left); fence on left perimeter. No trees. Matches Fantasy Town preview intent with smaller prop count for a readable silhouette."
