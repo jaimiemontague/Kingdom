@@ -1,0 +1,55 @@
+{
+  "prefab_id": "lair_v1",
+  "building_type": "goblin_camp",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0",
+    "kenney_retro-fantasy-kit"
+  ],
+  "notes": "Shared lair visual for all MonsterLair subtypes. Tunable in model_assembler_kenney.py. Fit-scales to sim footprint (2x2, 3x3, etc.). Texture overrides: Graveyard crypt + roof (flat kit) -> Retro Fantasy wall_stone_depth + roof_clay_grey_top per prefab_texture_override_standard.md.",
+  "pieces": [
+    {
+      "model": "Models/GLB format/crypt-small-graveyard.glb",
+      "pos": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_stone_depth.png"
+    },
+    {
+      "model": "Models/GLB format/crypt-small-roof-graveyard.glb",
+      "pos": [
+        0.0,
+        1.1,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png"
+    }
+  ]
+}
