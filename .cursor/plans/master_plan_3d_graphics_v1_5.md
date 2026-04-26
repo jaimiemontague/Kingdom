@@ -5,127 +5,93 @@
 ## 1. Mission Statement
 > "Transition the Kingdom project to a fully 3D, low-poly stylized aesthetic suitable for a $15-$20 commercial Steam release. Emphasize visual cohesion, prioritize high-performance flat-shaded geometry over complex textures, and establish a scalable pipeline for importing static and animated 3D assets using Ursina."
 
+**v1.5 release scope (locked as of 2026-04):** **v1.5 ships when Phase 1 and Phase 2 are complete** — static 3D environment, static kitbash buildings, and the prefab/loader stack are production-ready. **Phase 3 (animated 3D units) is optional:** it may land in a **1.5.x** patch or a **later** version, or never on a fixed schedule. Billboards (or the current unit presentation) can remain the shipping solution for v1.5 if animation work is deferred.
+
 ## 2. Versioning & Commit Protocol
-* **Target Release Version:** v1.5 (Once the 3D transition is completely stable and full parity is implemented).
-* **Commit Convention:** All commits for these upcoming sprints must use the naming convention: `"3D Graphics Phase #.#"` (e.g., `3D Graphics Phase 1.0`, `3D Graphics Phase 1.1`, progressing naturally as milestones are hit).
+* **Target Release Version:** **v1.5** = **3D static world + static buildings (Phase 1–2) stable**, not a hard dependency on Phase 3 animated units.
+* **1.5.x (optional):** May include Phase 3 progress, more prefabs, perf, or art passes — TBD.
+* **Commit Convention:** Commits for 3D milestone work use: `"3D Graphics Phase #.#: …"` (e.g. `3D Graphics Phase 2.5: …`) as milestones are hit.
 
 ## 3. Core Rules & Pipeline Overhaul
 Before changing how meshes are loaded or shaded, read **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** (defaults entity shader, `baseColorFactor`-only materials, why naive `setShaderAuto` breaks scenes).
 
-To support this massive visual overhaul properly, we will delegate the structural pipeline updates to the Directors:
+Structural pipeline is owned by the Directors; **current shipped behavior** (2026) includes:
 
-* **Update Core Rules:** **Agent 09 (Art Director)** must rewrite `07-asset-conventions.txt` to explicitly deprecate 2D `.png` sprite rules. They will establish the new standard: `.obj` or `.gltf` for static environment/buildings, and `.gltf` exclusively for animated units (to utilize embedded rigging/animations).
-* **Tooling Overhaul:** **Agent 12 (Tools Director)** must update `tools/assets_manifest.json` and `tools/validate_assets.py` to track and validate 3D meshes and their associated texture files. This will replace the older logic that iterated through PNG frame sequences.
-* **Renderer Update:** **Agent 09 (Art)** and **Agent 03 (Tech Director)** must update `game/graphics/ursina_renderer.py` to completely remove 2D sprite billboarding logic and replace it with standard 3D entity loading (`Entity(model=...))`). They must also hook up Ursina's Actor or FrameAnimation3d logic for unit state changes (Idle, Walk, Attack).
-* **Scale & Collision:** **Agent 05 (Gameplay Director)** and **Agent 03 (Tech)** must recalculate grid interactions. The new 3D models will produce different physical footprints than the legacy 2D tiles. They will ensure simulation logic spacing and physical bounding boxes align so buildings fit the grid seamlessly and units do not clip through them.
+* **3D asset validation:** `tools/assets_manifest.json` and `tools/validate_assets.py` support **3D meshes** (`.glb` / `.gltf` / `.obj`) and texture file checks — extended across WK25+.
+* **Renderer:** `game/graphics/ursina_renderer.py` drives a **3D Ursina** presentation: terrain floor, static props, fog-of-war, prefab building assembly, and **lair** environment meshes. Dynamic units may still use **billboards** until Phase 3; that does **not** block v1.5.
+* **Scale & collision:** `config.py` `footprint_tiles` is authoritative; prefabs and lairs are reconciled to it (Agent 05 audits; Agent 15 adjusts prefab JSON, not sim sizes without PM).
+
+**Standards added after the first Phase 2 sprints (use on every new prefab or kit work):**
+
+| Standard | Where | Purpose |
+|--------|--------|--------|
+| **Prefab texture override** | [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) | Flat Fantasy Town / Graveyard / Survival pieces get **in-repo `texture_override` PNGs** and runtime path in `game/graphics/prefab_texture_overrides.py` — do not edit Kenney GLBs. |
+| **Kit screenshot review (first)** | `assets/models/*Kit*.PNG` etc. (list in §4 Phase 2 below) | **Before** kitbashing, review the pack sheet PNGs so piece picks match silhouette and art direction. |
+| **Model assembler** | `tools/model_assembler_kenney.py` | 1×1 grid placement, rotate, nudge, **per-piece scale** (**`-` / `=`** to shrink/grow, **Shift** = finer step), save prefab JSON; logical `scale` stays in JSON, pack extent multiplier applied at runtime only. |
+| **Model viewer** | `tools/model_viewer_kenney.py` | Debug materials, **focus-prefab**, optional screenshots for review loops — iterate with the texture-override standard. |
 
 ## 4. Implementation Phases (High-Level Roadmap)
-We will tackle this transition in sequential phases to avoid breaking the core game loop. Detailed sprint plans will be created one by one based on this document, allowing us to pivot if we encounter engine limitations. Do not touch animated units until the static 3D world loads perfectly.
+Phases stay sequential for **static** work. **Do not block shipping v1.5 on animated units.**
 
 ### Phase 1: Static Environments & Asset Pipeline Foundations
-* **Goal:** Build the 3D tooling foundation, update the rules, and successfully load/render static environments (terrain floor, trees, basic walls) before touching complex buildings or animated units.
-* **Lighting/Shaders Guideline:** **Agent 09** is instructed to rely exclusively on Ursina's basic lighting and flat shading. Avoid complex PBR materials to ensure the low-poly aesthetic remains clean and performant. If you must adjust materials, follow **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** so factor-only and vertex-colored glTF assets do not render white or black incorrectly.
+* **Goal:** 3D tooling, rules, and static environment (ground, props, basic lighting) before complex buildings and **before** animated units.
+* **Lighting/Shaders:** **Agent 09** — Ursina basic lighting and flat shading; follow **[kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)** for factor-only and vertex-colored assets.
 
-**Sprints Outline:**
-- **Sprint 1.1 (Tooling & Rules):** Agent 12 updates `assets_manifest.json` and `validate_assets.py` to support `.gltf`/`.obj`. Agent 09 updates `07-asset-conventions.txt`.
-- **Sprint 1.2 (Base Terrain):** Agent 09 & Agent 03 replace the tile ground quads with 3D terrain meshes (Grass, Path). Verify scaling.
-- **Sprint 1.3 (Static Environment Props):** Introduce 3D trees and rocks replacing 2D billboards. Connect flat shading.
+**Shipped in practice (incl. WK25–26, WK32, WK33):** Base **green/plane** evolved to **tiled grass albedo** (`floor_ground_grass.png` and tuning); **3D path/water/terrain** integration; **scatter** (grass clumps, trees, rocks) with **deterministic** placement; **3D fog-of-war** with explored vs unseen behavior; **camera** controls suitable for play; **performance** work so meadow + heroes stay playable. Asset manifest/validator understand **environment** and **prefab** entries.
 
-**Success Criteria:**
-- `qa_smoke.py --quick` and `validate_assets.py` pass with the new 3D rules.
-- The Ursina renderer successfully draws the 3D ground plane and static environmental props (trees, rocks) without crashing or massive FPS drops. No 2D environment sprites remain.
+**Original sprint labels (for history):** 1.1 tooling/rules, 1.2 base terrain, 1.3 static props.
 
-> **Tasks for the Human (Jaimie):**
-> - [ ] **Clean the workspace:** Go into `assets/models` and physically delete all non-compatible file formats (e.g., delete `.blend`, `.fbx`, `.dae`, `.stl`). We only want `.gltf` and `.obj` formats.
-> - [ ] **Select Models:** Review the remaining packs and select specific `.obj` or `.gltf` models for the core terrain primitives (e.g., `grass.glb`, `tree_pineSmallA.glb`, `rock_smallA.glb`). Reply to me with your exact chosen filenames.
-> - [ ] **Playtest & Verify (Visual Checklist):** Open the terminal and run `python main.py --renderer ursina`. Look exactly for the following:
->    - Is the ground perfectly flat with no gaps between the grass tiles?
->    - Do the 3D trees and rocks look like solid models, not flat pieces of paper (billboards) that rotate when the camera moves?
->    - Does the shading look smooth and simple, or are there broken textures (e.g., pink/black checkers, pitch black items)? If you see visual garbage or massive FPS lag, reject the sprint and tell me immediately.
+**Success Criteria (met for v1.5 static env path):** `qa_smoke.py --quick` and `validate_assets.py --report` pass; Ursina shows 3D ground and static environmental props at acceptable FPS; no reliance on 2D **environment** billboards for shipped biomes.
+
+> **Jaimie — quick visual pass (`python main.py --renderer ursina --no-llm`):** Ground reads continuous (tiled albedo, no huge seams); trees/rocks are 3D props, not rotating billboards; no pink/black checkers; FPS acceptable when panning the meadow.
 
 ### Phase 2: Static Buildings & Grid Alignment
-* **Goal:** Integrate static buildings into the new renderer layout and grid. Ensure scaling footprints match the collision spaces of our Pygame engine perfectly.
+* **Goal:** Static buildings in the new layout; **kitbash prefab JSON** + loader; scaling matches **grid footprints**.
 
-#### Pipeline pivot (as of 2026-04-16)
+#### Pipeline pivot (as of 2026-04-16) — current
 
-The original Phase 2 assumption — one pre-made `.glb` per building type (e.g. `castle.glb`, `house.glb`) dropped into `assets/models/environment/` and loaded as a single `Entity(model=...)` — **is deprecated**. See `.cursor/plans/wk27_sprint_2_1_buildings.plan.md` (kept as a deprecated stub, never executed as written).
+The original “one `.glb` per building in `assets/models/environment/`” approach is **deprecated** for most buildings. Kingdom uses **kitbash-and-load**:
 
-Instead, Kingdom Sim uses a **kitbash-and-load** pipeline for static buildings, proven end-to-end in WK28 and WK29 (both closed):
+1. **Pieces** — Kenney pieces under `assets/models/Models/…`. See [kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md).
+2. **Assembler** — `tools/model_assembler_kenney.py` (**Agent 12 / 15**). Human kitbashes on a grid; **placement fine-tuning**, **per-piece scale nudge** (`-` / `=`, Shift fine) — see sprint notes WK33 midsprint. Saves **`assets/prefabs/buildings/<prefab_id>.json`**.
+3. **Prefab JSON** — [assets/prefabs/schema.md](../../assets/prefabs/schema.md): `footprint_tiles`, `pieces[]`, optional **`texture_override`** per piece.
+4. **Loader** — `ursina_renderer.py` instantiates pieces; `tools.model_viewer_kenney._apply_gltf_color_and_shading` and texture override path must stay aligned.
+5. **Footprint reconciliation** — match `config.py`; if visuals overshoot, **shrink the prefab**, not the sim.
+6. **Required texture overrides** for flat town/graveyard/survival pieces — **[prefab_texture_override_standard.md](./prefab_texture_override_standard.md)** (PM-enforced; **Agent 15** onboarding).
+7. **Screenshot / kit review first** — Before selecting pieces, review these pack overviews: `assets/models/Fantasy Town Kit.PNG`, `Graveyard Kit.PNG`, `Blocky Characters.PNG`, `Nature Part 1–4.PNG`, `Retro Fantasy Kit.PNG`, `Survival Kit.PNG` (and any new kit sheets added to `assets/models/`). **Tool-first proof:** `model_viewer_kenney.py` and assembler passes before calling a prefab “done”.
 
-1. **Pieces** — Kenney `.glb` kit pieces already live under `assets/models/Models/GLB format/` and `assets/models/Models/GLTF format/`. See [kenney_assets_models_mapping.plan.md](./kenney_assets_models_mapping.plan.md) for the folder map.
-2. **Assembler** — `tools/model_assembler_kenney.py` (Agent 12, WK28). A human kitbashes kit pieces on a 1-unit grid: place / rotate / nudge / delete, save to prefab JSON. Applies the two-path shader classifier at assembly time so what you see is what you get in-game.
-3. **Prefab JSON** — `assets/prefabs/buildings/<prefab_id>.json`, contract documented in [assets/prefabs/schema.md](../../assets/prefabs/schema.md). Stores `building_type`, `footprint_tiles`, `ground_anchor_y`, `pieces[]` (per-piece `model` path + local `pos`/`rot`/`scale`), and a `attribution` list.
-4. **Loader** — `game/graphics/ursina_renderer.py` reads the prefab JSON and instantiates each piece as a child Entity, applying the per-piece classifier (`tools.model_viewer_kenney._apply_gltf_color_and_shading`). See [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md) §5 — textured vs factor-only pieces must **not** go through `setShaderAuto`.
-5. **Footprint reconciliation** — prefabs must fit the building's existing `footprint_tiles` in `config.py`. If a prefab overshoots, shrink the prefab, do not mutate `config.py`. Agent 05 audits; Agent 15 owns the prefab edit.
-6. **Required Texture Overrides** — The default flat color palettes used by the *Fantasy Town Kit*, *Graveyard Kit*, and *Survival Kit* will **never** look acceptable against the game's universal retro aesthetic. Agents assembling prefabs from these kits are **REQUIRED** to use the [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) to skin every model using appropriate PNGs from `assets/models/Models/Textures` (the Kenney retro textures) as they see best based on texture names. This rule does not apply to the Retro or Nature packs, as their models are either appropriately textured out of the box or do not represent retro architecture.
-7. **Required Model Viewer Screenshot Review** — When creating new prefabs or selecting new models for anything, agents MUST first review all of the following model viewer screenshots to get the best selection of components (or to get the best selection if simply picking models): `assets/models/Fantasy Town Kit.PNG`, `assets/models/Graveyard Kit.PNG`, `assets/models/Blocky Characters.PNG`, `assets/models/Nature Part 1.PNG`, `assets/models/Nature Part 2.PNG`, `assets/models/Nature Part 3.PNG`, `assets/models/Nature Part 4.PNG`, `assets/models/Retro Fantasy Kit.PNG`, and `assets/models/Survival Kit.PNG`. All PNGs must be reviewed before the selection process begins.
+**Milestones already demonstrated:** Castle/house/inn/guilds/farm/food stand plots; **WK33** (Phase 2.5 marketing label): **tiling grass ground**, **Graveyard lair** static mesh, **marketplace, blacksmith, trading post** (plus construction-stage JSONs), **FOW/brightness** tuning. **WK32:** camera, fog, nature scatter polish, **Inn v2**-style workstreams, **hero-spawn FPS** mitigation.
 
-**Status today:**
-- WK29 shipped a working gated path: with `KINGDOM_URSINA_PREFAB_TEST=1`, building type `house` renders from `assets/prefabs/buildings/peasant_house_small_v1.json` as a true 3D kitbashed object. With the env var unset, existing rendering is untouched.
-- Agent 10 post-WK29: no >30% FPS regression from the prefab path; **prefab baker (bake prefab JSON → single `.glb`) is NOT currently a blocker**, but stays on the backlog for when we scale up instance counts.
+**Sprints outline (prefab-based):** WK27 single-mesh plan deprecated; **WK30+** building pipeline; **2.2 economy** (marketplace, inn, farms) largely advanced in WK33; **2.3 military** and optional **2.X prefab baker** (only if **Agent 10** requires it at scale) remain on the roadmap for **finishing** Phase 2, not for “starting” it.
 
-**Implication for Phase 2 sprint outline (below):** each "swap" sprint is now: (a) Agent 15 kitbashes the prefab(s) with Jaimie at the keyboard, (b) Agent 03 generalizes the loader to cover the new building type(s) (or removes the env-gate for already-validated types), (c) Agent 05 confirms footprints, (d) Agents 09/10/11 consult on cohesion/FPS/gate.
+**Success Criteria (v1.5 bar for Phase 2):** Buildings and **lair** read as 3D kitbash where prefabbed; footprints match; textures/overrides and gates **PASS**; Jaimie playtest on Ursina.
 
-**Sprints Outline (prefab-based):**
-- **Sprint 2.1 (Castle & Core, superseded / rescoped):** original plan `.cursor/plans/wk27_sprint_2_1_buildings.plan.md` is **DEPRECATED**. Replaced by `.cursor/plans/wk30_buildings_pipeline.plan.md` — generalize the WK29 gated loader + assemble castle and at least one additional building as prefabs.
-- **Sprint 2.2 (Economy Buildings):** Agent 15 assembles Marketplace / Inn / Farms prefabs; Agent 03 extends loader coverage; Agent 05 audits footprints and grid alignment (doors/entrances).
-- **Sprint 2.3 (Military Buildings):** Agent 15 assembles Guild + defensive tower prefabs; Agent 03 wires them through the generalized loader.
-- **Sprint 2.X (Perf hedge, on-demand):** Agent 12 builds a prefab baker (prefab JSON → single `.glb`) **only if** Agent 10 flags a perf regression at scale. Not scheduled yet.
+> **Jaimie:** Kitbash with **Agent 15** (`python tools/model_assembler_kenney.py --open <prefab_id>`). In-game: **scale** vs trees, **ground line** (no float/sink), **clipping** (units path around walls, not through), **textured vs factor-only** looks intentional (overrides per standard).
 
-**Success Criteria:**
-- Buildings render in Ursina via prefab JSON loaded from `assets/prefabs/buildings/*.json`, not single-file meshes.
-- Pygame engine `footprint_tiles` (from `config.py`) match the visual bounds of each prefab; units do not clip through prefab geometry.
-- Textured Kenney kit pieces render with textures; factor-only pieces render with the `factor_lit_shader` (not pitch black, not flat white).
-- `tools/validate_assets.py` and `python tools/qa_smoke.py --quick` remain PASS; manual Ursina smoke shows each completed building as a 3D object.
+### Phase 3: Animated Units (Entity Rigging) — **OPTIONAL; NOT REQUIRED FOR v1.5**
+* **Goal:** If pursued: dynamic units in 3D with **Idle / Walk / Attack** (or equivalent) driven by sim state.
+* **Scheduling:** **Not in the v1.5 milestone.** May appear in **1.5.x** or a later version; **PM decides** when to activate **Agent 03 / 09** for rigging. Until then, **Ursina can keep billboards (or current unit rendering)** for heroes/enemies/workers.
 
-> **Tasks for the Human (Jaimie):**
-> - [ ] **Kitbash with Agent 15:** Pair with Agent 15 at the assembler (`python tools/model_assembler_kenney.py --new --prefab-id <id>`) to build prefab JSONs for the target buildings (Castle first, then Marketplace / Inn / Blacksmith). Keep piece counts small and silhouettes readable.
-> - [ ] **Playtest & Verify (Visual Checklist):** Open the terminal and run `python main.py --renderer ursina`. Look exactly for the following:
->    - **Scale Check:** Do the buildings look like the right size compared to the trees? Are they impossibly tiny or massive screen-blockers?
->    - **Grid/Floor Alignment:** Do the doors and bases of the buildings line up neatly with the floor tiles, or are they floating in the air / visibly sunk through the ground?
->    - **Clipping:** Watch a hero or peasant walk past the building. Do they walk cleanly *around* the building walls, or do they clip straight through the solid masonry geometry? If they clip through, reject the sprint.
->    - **Textured vs factor-only:** Retro Fantasy kit pieces (walls / roofs) should show their textures. Nature Kit accent pieces (rocks / plants) should show visible 3D shading, not pitch black or flat white.
+**Sprints outline (unchanged, only if Phase 3 is greenlit):** 3.1 animation framework in `ursina_renderer.py`; 3.2 workers; 3.3 heroes; 3.4 enemies.
 
-### Phase 3: Animated Units (Entity Rigging)
-* **Goal:** Transition dynamic units (Peasants, Heroes, Enemies) to 3D and attach them to Ursina's animation system.
-* **Focus:** Seamlessly handling `Idle`, `Walk`, and `Attack` states based on the py engine's entity statemachine.
+**Success Criteria (if Phase 3 runs):** Billboard path removable or feature-flagged for units that have 3D; animation state matches sim; **qa_smoke** passes.
 
-**Sprints Outline:**
-- **Sprint 3.1 (Animation Framework):** Agent 03 writes the boilerplate `Actor` or `FrameAnimation3d` routing in `ursina_renderer.py` to swap animations when a unit's state changes.
-- **Sprint 3.2 (Workers):** Agent 09 hooks up 3D meshes and rigging for the Peasant and Tax Collector. Ensure walking traces gracefully across the grid.
-- **Sprint 3.3 (Heroes):** Hook up the Warrior, Ranger, Rogue, and Wizard. Connect their attack animations to the combat event bus.
-- **Sprint 3.4 (Enemies):** Hook up Goblins, Wolves, and Skeletons. Connect their hit/death animations.
+> **Jaimie (only if Phase 3 starts):** Pick character `.gltf` names; playtest walk/attack/camera-facing.
 
-**Success Criteria:**
-- 2D billboard logic for entities is entirely removed from `ursina_renderer.py`.
-- Entities smoothly transition between `Idle`, `Walk`, and `Attack` loops corresponding to simulation data.
-- QA Gates strictly pass.
+### Phase 4: Polish, Lighting, & Release Packaging
+* **Goal:** For **v1.5 ship**: final passes on what Phase 1–2 already use — lighting feel, FOW, construction/build feedback, **perf**, CHANGELOG, store-facing readiness. If Phase 3 is skipped, this phase is **“make static 3D shippable and wow enough”**, not “wait for rigs.”
 
-> **Tasks for the Human (Jaimie):**
-> - [ ] **Select Models:** Review the character packs (like `Modular Character Outfits - Fantasy`) and give me the exact `.gltf` file names you want to use for the Peasant and the Warrior.
-> - [ ] **Playtest & Verify (Visual Checklist):** Open the terminal and run `python main.py --renderer ursina`. Look exactly for the following:
->    - **Idle vs Walk:** When a peasant stops moving, do their legs stop? When they walk, do their legs actually animate in a walking cycle, or are they sliding across the ground like frozen statues?
->    - **Combat:** When a warrior fights an enemy, do they actually swing their weapon (play the Attack animation)? Or do they just bump into each other?
->    - **Direction:** Do the characters actually face the direction they are walking? If they are moonwalking backwards, reject the sprint.
+**Typical tranches (order flexible):** lighting & atmosphere; **VFX** where render-only and cheap; **Agent 10** FPS passes and perf knobs; remove confusion from obsolete 2D docs if any; optional **prefab baker** (Agent 12) **only** if instancing cost demands it.
 
-### Phase 4: Polish, Lighting, & v1.5 Release
-* **Goal:** Final lighting passes, shadows, QA, deterministic tests, and removing any lingering reference to old 2D elements.
-* **Focus:** Visual parity, making the aesthetics "WOW", and achieving high FPS.
+**Success Criteria:** Playtester signoff; FOW and perf acceptable on target hardware; version and **CHANGELOG** updated when Jaimie cuts the release.
 
-**Sprints Outline:**
-- **Sprint 4.1 (Lighting & Atmospherics):** Agent 09 adds directional light, ambient light, and finalizes the Fog of War to correctly overlap the new 3D models.
-- **Sprint 4.2 (VFX & Polish):** Add low-poly particle effects for combat hits, leveling up, and building construction/destruction.
-- **Sprint 4.3 (Performance Optimization):** Agent 10 profiles Ursina FPS. Consolidate meshes or bake textures where necessary to hit a locked 60+ FPS without breaking deterministic sim rules.
+> **Jaimie:** `python main.py --renderer ursina` — lighting feels cohesive; FOW hides what it should; zoomed-out FPS is playable; first-impression “Steam $15” vibe, or a short list of what still janks.
 
-**Success Criteria:**
-- The game visually "Wows" the human tester.
-- Fog of War correctly hides 3D units and models without visual glitches.
-- A steady framerate is maintained through Late-Game scenarios with many units.
-- Version is officially bumped to 1.5 in CHANGELOG and codebase.
+## 5. Changelog
+Update **`CHANGELOG.md`** when Jaimie bumps the version; this master plan is the **roadmap**, not the patch-notes source.
 
-> **Tasks for the Human (Jaimie):**
-> - [ ] **Playtest & Verify (Visual Checklist):** Open the terminal and run `python main.py --renderer ursina`. Look exactly for the following:
->    - **Lighting/VFX:** Does the lighting cast nice, simple shadows that make the buildings pop without overwhelming the screen? Do combat hits spawn clear particle effects instead of graphical noise?
->    - **Fog of War:** Does the black Fog of War smoothly hide models that are far away? Do trees or tall enemies "poke out" of the black fog when they shouldn't?
->    - **Performance:** Does the game feel smooth with the camera zoomed out? (If it feels slower than a slideshow, tell me it failed performance QA).
->    - **The "WOW" Factor:** Does the game currently look cohesive, atmospheric, and worth paying $15 for on Steam? If no, what specifically looks janky? Report the vibes back to me.
+## 6. See Also
+- [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)
+- [prefab_texture_override_standard.md](./prefab_texture_override_standard.md)
+- [wk33_3d_sprint_plan_6e616891.plan.md](./wk33_3d_sprint_plan_6e616891.plan.md) (example completed Phase 2.5 tranche)
+- `assets/prefabs/schema.md`

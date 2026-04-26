@@ -1,12 +1,68 @@
 # Changelog
 
-## Prototype v1.5.0 — Phase 1: 3D Environment Transition
+## Prototype v1.5.0 — 3D graphics (Phases 1–2; in progress)
 
-### WK25 & WK26 Sprints: Asset Tooling & Base Terrain
-- **Asset Conventions Validations:** Upgraded `assets_manifest.json` and `validate_assets.py` to natively ingest standalone 3D meshes (`.glb`, `.gltf`, `.obj`) instead of searching for 2D pixel-art frame sequence directories.
-- **True 3D Base Terrain:** Eradicated the 2D pygame-canvas terrain renderer. Sourced low-poly `.glb` mesh primitives (path tile, rock, pine tree) from asset packs and seamlessly mapped them to the local `Ursina` Entity generation block.
-- **Dynamic Meadow Plane:** Rather than rigid dirt voxel blocks, organic grass tuft doodads now rest securely on top of an endlessly rendered flat green environment plane (`y=-0.05`) acting as a cohesive world floor. 
-- **Foundational Lighting:** Inserted an `AmbientLight` and a shadow-casting `DirectionalLight` to accurately cast flat-shaded geometry across all untextured `.glb` environment models.
+> **Note:** This version is **not finalized** for public release yet. The entry below records **everything shipped on `main` so far** toward the v1.5 goal: a cohesive **static** 3D Ursina presentation (environment + kitbash buildings + tools). **Animated 3D units (Phase 3)** are **out of scope** for this changelog line until/unless they land; heroes, enemies, and workers may remain **billboards** at v1.5 ship. When you officially cut v1.5, edit the title line, add a release name, and trim or tighten bullets if needed. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.
+
+### Vision (target v1.5)
+- **Phase 1–2:** Static environments, fog, camera, Kenney **prefab JSON** buildings, **lair** meshes, economy building coverage, manifest/validation, and perf to a **playable** bar in `python main.py --renderer ursina`.
+- **Phase 3 (optional / later):** Rigged 3D unit animation — may be a **1.5.x** patch or later; **not** required to call the 3D transition “done” for v1.5 per current master plan.
+
+### WK25 & WK26 — Asset tooling & base terrain
+- **Asset conventions:** `tools/assets_manifest.json` and `tools/validate_assets.py` ingest **standalone 3D meshes** (`.glb`, `.gltf`, `.obj`) instead of only 2D PNG frame trees.
+- **True 3D base terrain:** Retired the 2D pygame-canvas terrain draw; low-poly `.glb` primitives (path, rock, pine, etc.) map into Ursina world generation.
+- **Meadow floor:** Organic grass **clumps** on a full-map environment plane (`y≈-0.05`) as the cohesive ground layer (later extended with **textured** ground; see WK33).
+- **Foundational lighting:** `AmbientLight` + shadow-casting `DirectionalLight` for flat-shaded kit geometry.
+
+### WK28 — Assembler spike (tool + schema; Agent 15)
+- **New role:** **Agent 15 (ModelAssembler / Kitbash)** with onboarding in `.cursor/rules/agent-15-modelassembler-onboarding.mdc` and log under `.cursor/plans/agent_logs/`.
+- **`tools/model_assembler_kenney.py` (v0.1):** Kenney **`.glb`** piece picker, **grid placement**, rotate / nudge / delete, **save & load** prefab JSON, **two-path** shader classification (textured vs factor-only) so the tool matches in-game rules.
+- **Contract:** [assets/prefabs/schema.md](assets/prefabs/schema.md) for prefab JSON (`footprint_tiles`, `ground_anchor_y`, `pieces[]`, `attribution`).
+- **Scope:** Tooling and docs **only** (no `game/` renderer integration this sprint) — end-to-end in-game use starts in **WK29**. Plan: `.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md`.
+
+### WK29 — First house + gated Ursina loader
+- **Prefab:** `assets/prefabs/buildings/peasant_house_small_v1.json` — first real **kitbash → JSON** handoff from the assembler (`house`, **1×1** footprint, mixed textured / factor pieces).
+- **Ursina:** `_load_prefab_instance` (and related helpers) in `game/graphics/ursina_renderer.py` — instantiates each piece with the same **shading classifier** as the tool ([kenney_gltf_ursina_integration_guide.md](.cursor/plans/kenney_gltf_ursina_integration_guide.md) §5).
+- **Feature gate:** **`KINGDOM_URSINA_PREFAB_TEST=1`** + building type **`house`** → render from prefab; **off** = legacy path so the pipeline could be validated safely.
+- Replaced the old “drop a single `building.glb` per type” idea from deprecated **WK27**; plan: `.cursor/plans/wk29_first_house_playtest.plan.md`.
+
+### WK30 — Buildings pipeline scale-up (default-on prefabs, “military district”)
+- **Loader generalization:** Prefabs **default-on** when `assets/prefabs/buildings/<type>_v1.json` exists; central **building_type → file** resolution in `ursina_renderer.py`. **`KINGDOM_URSINA_PREFAB_TEST=0`** forces **legacy** billboard/primitive path for A/B or rollback. Caching of prefab roots per building id; shared classifier with `tools/model_viewer_kenney.py` / assembler imports kept in sync.
+- **New prefabs (Agent 15 + Jaimie):** **`castle_v1`**, **`warrior_guild_v1`**, **`ranger_guild_v1`**, **`rogue_guild_v1`** (optional stretch: **`wizard_guild_v1`** if shipped in that sprint) plus tightening **`peasant_house_small_v1`** as needed — footprints audited against **`config.py`** (Agent 05 consult).
+- **Validation:** `tools/assets_manifest.json` **`prefabs.buildings`** + `tools/validate_assets.py` checks for required prefab files, parse, keys, piece model paths, and non-empty `attribution`.
+- **After WK30:** 3D buildings are no longer a one-off env-var demo — **castle + house + core guilds** use the **kitbash JSON** path by default. Economy-focused buildings (Inn, farm, etc.) were queued for **later** tranches and landed in **WK32+** in practice. Plan: `.cursor/plans/wk30_buildings_pipeline.plan.md`.
+
+### WK32 — Camera, fog, nature, construction, performance
+- **In-game camera:** Editor-style **Ursina** camera controls (pan/zoom/orbit-style behavior as implemented) for comfortable map navigation.
+- **3D fog of war:** Fog quads aligned to the terrain grid; **explored** vs **unseen** behavior tuned so **static terrain props** stay visible in explored fog and hide only in **unexplored** fog (see renderer for `Visibility` / prop tint rules).
+- **Grass & scatter:** Grass clumps and nature props **not** locked to an obvious square grid; density/stride knobs for preview vs screenshot (env vars documented in renderer/config).
+- **Nature variety:** Expanded Kenney **Nature** (and related) mesh promotion under `assets/models/environment/` with renderer classification (grass vs doodad vs trees, dedupe, stride).
+- **Tree / kit styling:** Non-Retro pack **tint** and **vertex-color** / shader path for readable trees and props without blowing contrast.
+- **Construction & plots:** **Inn** and plot workstreams — non-square construction staging where applicable, **3×2 Inn** plot/stage prefabs and renderer fallbacks; **auto-spawn spacing** follow-up for world generation.
+- **Hero-spawn FPS:** Major **Ursina** performance pass so hiring one or more heroes does not collapse frame time (renderer/HUD/entity-sync side; sim cost already sub-ms in profiling).
+- **Misc. Ursina UX (overlapping WK24):** Pause/display, HUD, hire hotkey, shopping pacing — see v1.4.9 notes where not repeated here.
+
+### WK33 — Terrain polish, Graveyard lair, economy prefabs (Phase 2.5 tranche)
+- **Tiled grass albedo:** Full-map **base terrain** uses repeatable **`floor_ground_grass.png`** (tiled UVs) instead of a flat solid green quad; tuning via config/env where applicable.
+- **Scatter & FOW readability:** ~**20%** lift on environment scatter tints; **`SEEN`** (explored) fog balance vs ground (config knobs such as `URSINA_FOG_SEEN_ALPHA`, `URSINA_SEEN_PROP_FOG_MULT`, `URSINA_ENV_SCATTER_BRIGHTNESS` / env overrides).
+- **Lair art:** Shared **lair** mesh from **Kenney Graveyard** (`assets/models/environment/lair.glb`, crypt-style read) for all lair building types unless superseded.
+- **Economy kitbash:** Prefabs **`marketplace_v1`**, **`blacksmith_v1`**, **`trading_post_v1`** plus **construction-stage** JSON variants (`*_build_20_v1`, `*_build_50_v1`); **`prefab_texture_override_standard.md`** applied for flat kit pieces; `assets/ATTRIBUTION.md` updated.
+- **Loader:** `game/graphics/ursina_renderer.py` wires building types to prefab files and lair environment resolution; gameplay **footprint** audit (**2×2**) vs `config.py` (no sim size changes).
+
+### WK33 midsprint — Kenney model assembler
+- **Per-piece scale nudge:** With a **selected** placed piece, **`-`** / **`=`** shrink/grow (multiplicative), **Shift** = finer step; status line shows scale; logical `scale` in JSON remains separate from pack **extent multiplier** at runtime (`tools/model_assembler_kenney.py`).
+
+### Standards & tooling (cross-cutting)
+- **Prefab texture overrides:** [prefab_texture_override_standard.md](.cursor/plans/prefab_texture_override_standard.md) — mandatory workflow for weak **Fantasy Town / Graveyard / Survival** materials: per-piece `texture_override` + `game/graphics/prefab_texture_overrides.py` (no Kenney GLB edits). PM + **Agent 15** onboarding updated.
+- **Kit screenshot review (first):** Before kitbashing, review pack sheet PNGs under `assets/models/` (Fantasy Town, Graveyard, Survival, Nature parts, Retro, Blocky Characters, etc.) so piece picks match silhouette goals.
+- **`model_viewer_kenney.py`:** Ongoing **focus-prefab**, material debug, and **screenshot** hooks for assembler ↔ game parity checks.
+- **`lair_v1` / schema:** Prefab schema and neutral lair prefab work aligned with construction and viewer smokes where added.
+
+### Still to do before “official” v1.5.0 release (edit this list when you ship)
+- [ ] Final **CHANGELOG** title, optional codename, and **version** bump in any `config`/metadata you use for builds.
+- [ ] Remaining **Phase 2** building coverage (temples, optional guild/wizard polish, any missing **config** building types) per **master plan** — **castle + house + warrior/ranger/rogue guilds** are already on prefabs from **WK30**; or explicitly mark “good enough for EA” and move overflow to 1.5.x.
+- [ ] Last **QA** pass: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --report`, manual `python main.py --renderer ursina --no-llm` (and `--provider mock` if you use LLM paths).
+- [ ] **Steam / store** copy and screenshots refresh (Agent 13 territory) when you go public.
 
 
 ## Prototype v1.4.9 — Most Ursina Major Bugs Fixed
