@@ -110,6 +110,7 @@ Rules:
 - No `setShaderAuto()`. Ever. See `kenney_gltf_ursina_integration_guide.md` §10 Pitfall 3 — it produces pitch-black renders.
 - Do not touch `tools/model_assembler_kenney.py` source to add features; file a request with Agent 12.
 - Do not touch `config.py` footprints; if they need to change, hand off to Agent 05.
+- **MANDATORY TEXTURE OVERRIDES**: When kitbashing using the *Fantasy Town Kit*, *Survival Kit*, or *Graveyard Kit*, you must absolutely use the the texture override shader standard (`.cursor/plans/prefab_texture_override_standard.md`). Assign an appropriate retro skin from `assets/models/Models/Textures` to the pieces using `texture_override` in the JSON to match our retro art aesthetic. Models from those sets without overrides are unacceptable.
 
 ---
 

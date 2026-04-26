@@ -7796,6 +7796,24 @@
           ]
         }
       }
+    },
+    "post_wk32_art_standards": {
+      "sprint_meta": {
+        "notes": "Post-WK32 Art Follow-Up: Enforcing Kenney Texture Override Standard for non-retro flat color kits."
+      },
+      "rounds": {
+        "art_standard_texture_override": {
+          "round_meta": {
+            "created_utc": "2026-04-26T04:15:00Z",
+            "source": "pm_directive_post_discovery",
+            "pm_note": "Agent 15 confirmed base Kenney kits (Fantasy Town, Survival, Graveyard) lack texturing. PM mandating texture_override usage via prefab_texture_override_standard.md."
+          },
+          "pm_status_summary": {
+            "overall_status": "closed_success",
+            "summary": "Updated master_plan_3d_graphics_v1_5.md (Phase 2) and agent-15-modelassembler-onboarding.mdc (Step 4 Non-negotiable rules) to officially require the texture override standard when kitbashing default flat kits."
+          }
+        }
+      }
     }
   }
 }
