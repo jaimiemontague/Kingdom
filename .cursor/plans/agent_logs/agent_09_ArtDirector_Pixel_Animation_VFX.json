@@ -3218,6 +3218,81 @@
           ]
         }
       }
+    },
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_3d_graphics_v1_5.md",
+        "notes": "WK33 r0: lair static mesh pick, marketplace/blacksmith art briefs, floor_ground_grass albedo sign-off; aligns Phase 1 terrain + Phase 2.2 economy prefabs per master plan"
+      },
+      "rounds": {
+        "wk33_r0_kickoff": {
+          "sprint_id": "wk33-terrain-lair-economy-prefabs",
+          "round_id": "wk33_r0_kickoff",
+          "status": "done",
+          "prompt_text": "WK33: art direction only — lair Graveyard choice, economy building silhouettes, ground texture approval per wk33 plan and master plan Phase 1–2",
+          "references_reviewed": [
+            ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+            ".cursor/plans/master_plan_3d_graphics_v1_5.md (Phase 1 Static Environments; Phase 2 kitbash/texture override bullets)",
+            ".cursor/plans/prefab_texture_override_standard.md (skim: flat-kit overrides for Graveyard/Fantasy Town as needed)",
+            "assets/models/Graveyard Kit.PNG",
+            "assets/models/Models/Textures/floor_ground_grass.png"
+          ],
+          "deliverables": {
+            "lair_mesh": {
+              "choice": "crypt-large-graveyard",
+              "source_path": "assets/models/Models/GLB format/crypt-large-graveyard.glb",
+              "export_target": "assets/models/environment/lair_graveyard_crypt_large.glb (or in-place replace assets/models/environment/lair.glb — confirm with Agent 03 wiring)",
+              "rationale": "Single static mesh; strong crypt silhouette readable at strategy distance; matches undead / monster-lair fantasy. Lair BUILDING_SIZES span 2x2 (goblin_camp, wolf_den, spider_nest) to 3x3 (skeleton_crypt, bandit_camp) — this asset reads 'building-sized'; Agent 03 should scale/anchor so footprint feels OK for all shared lair types.",
+              "alternates_if_too_tall": [
+                "crypt-a-graveyard.glb or crypt-b-graveyard.glb (smaller A/B crypt variants in same pack)"
+              ],
+              "not_recommended_solo": [
+                "altar-stone-graveyard (prop scale; weak as sole lair landmark unless kitbashed with walls)"
+              ]
+            },
+            "marketplace_silhouette": {
+              "mood": "Open-air market: stall awnings or canopy, low wall / rail, plaza feel — not a sealed fort.",
+              "pieces": "Bias Fantasy Town (stalls, cloth, wood trim) + sparse Graveyard/earth props only if it sells 'old kingdom market'; keep piece count low.",
+              "readability": "2x2 footprint per config: silhouette wider than tall; entrance/gap readable toward path."
+            },
+            "blacksmith_silhouette": {
+              "mood": "Forge: squat dark mass, **chimney or tall vent stack** breaking the roofline, anvil/forge read (warm stone or override).",
+              "pieces": "Darker stone + metal accents; avoid bright fantasy pastel; use texture_override per prefab standard for flat kit parts.",
+              "readability": "2x2; chimney/stack makes it distinct from marketplace at a glance."
+            },
+            "ground_texture_floor_ground_grass": {
+              "approved": true,
+              "use": "Full-map repeating albedo on base terrain quad (per Agent 03); seamless tile pattern is suitable.",
+              "caveat": "Texture is **low-value / quite dark** as painted — OK as baseline. After WK33 ~20% scatter lift, if ground still looks muddy or mismatched vs SEEN fog, Agent 03 may apply a **slight** Entity.color multiply on the ground only (e.g. 1.05–1.1) and tune SEEN prop tint separately — do not push grass PNG to 'neon' in isolation."
+            }
+          },
+          "what_i_changed": {
+            "summary": "Art direction only: chose crypt-large-graveyard for lair; wrote economy prefab briefs; approved floor_ground_grass.png with value note. No game code, assets, or manifest edits.",
+            "files_touched": [
+              ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+            ]
+          },
+          "how_to_test": [
+            "N/A for Agent 09 this round (direction only). Integrators: run gates after their code changes.",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report (when assets/manifest touched by 12/15/03)"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "Log-only change; gate run from repo root to confirm branch health"
+            }
+          },
+          "blockers": [],
+          "handoff": {
+            "agent_15": "Export lair from choice crypt-large-graveyard.glb per sprint plan; build marketplace_v1 + blacksmith_v1 prefabs using silhouettes above + prefab_texture_override_standard.md",
+            "agent_03": "Tile floor_ground_grass.png; wire lair to exported env file; FOW/brightness per plan; prefab table for marketplace/blacksmith"
+          }
+        }
+      }
     }
   }
 }

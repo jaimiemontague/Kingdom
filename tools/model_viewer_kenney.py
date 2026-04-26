@@ -23,6 +23,7 @@ that module.
 Usage (from repo root):
   python tools/model_viewer_kenney.py
   python tools/model_viewer_kenney.py --max-total 120
+  python tools/model_viewer_kenney.py --only environment/lair.glb
 
 Controls:
   Right-Click & Drag — Orbit camera
@@ -519,6 +520,7 @@ def run_viewer(
     max_total: int | None,
     debug_materials: bool,
     focus_prefab: str | None,
+    only_relpath: str | None,
     auto_exit_sec: float,
     screenshot_subdir: str | None,
     screenshot_stem: str | None,
@@ -529,6 +531,20 @@ def run_viewer(
         files, texture_overrides_by_rel = _prefab_piece_files(assets_models, focus_prefab)
         sections = [(f"Prefab {focus_prefab} pieces", files)]
         layout_warnings: list[str] = []
+    elif only_relpath:
+        one = (assets_models / Path(only_relpath.replace("\\", "/"))).resolve()
+        if one.suffix.lower() not in MODEL_EXTS:
+            print(
+                f"[model_viewer_kenney] --only must point to a .glb or .gltf file, got: {one}",
+                file=sys.stderr,
+            )
+            return 1
+        if not one.is_file():
+            print(f"[model_viewer_kenney] --only file not found: {one}", file=sys.stderr)
+            return 1
+        texture_overrides_by_rel: dict = {}
+        sections = [(f"Single model ({one.name})", [one])]
+        layout_warnings = []
     else:
         texture_overrides_by_rel = {}
         sections, layout_warnings = collect_viewer_sections(assets_models)
@@ -827,9 +843,16 @@ def run_viewer(
     if auto_exit_sec > 0.0:
         from tools.ursina_capture import install_auto_capture, resolve_tool_screenshot_path
 
+        def _default_stem() -> str:
+            if focus_prefab:
+                return f"model_viewer_{focus_prefab}"
+            if only_relpath:
+                return f"model_viewer_{Path(only_relpath).stem}"
+            return "model_viewer"
+
         out_path = resolve_tool_screenshot_path(
             subdir=screenshot_subdir,
-            stem=screenshot_stem or ("model_viewer" if not focus_prefab else f"model_viewer_{focus_prefab}"),
+            stem=screenshot_stem or _default_stem(),
         )
         install_auto_capture(app=app, seconds=auto_exit_sec, out_path=out_path)
 
@@ -880,6 +903,16 @@ def parse_args() -> argparse.Namespace:
         help="Show only the unique model pieces referenced by a building prefab id (e.g. inn_v2)",
     )
     p.add_argument(
+        "--only",
+        type=str,
+        default=None,
+        metavar="REL_PATH",
+        help=(
+            "Show a single .glb/.gltf under assets/models, as a POSIX path relative to that folder "
+            "(e.g. environment/lair.glb). Mutually exclusive with --focus-prefab."
+        ),
+    )
+    p.add_argument(
         "--auto-exit-sec",
         type=float,
         default=0.0,
@@ -897,7 +930,10 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Filename stem for auto screenshots",
     )
-    return p.parse_args()
+    ns = p.parse_args()
+    if ns.focus_prefab and ns.only:
+        p.error("--only and --focus-prefab are mutually exclusive")
+    return ns
 
 
 def main() -> int:
@@ -911,6 +947,7 @@ def main() -> int:
         max_total=args.max_total,
         debug_materials=bool(args.debug_materials),
         focus_prefab=args.focus_prefab,
+        only_relpath=args.only,
         auto_exit_sec=float(args.auto_exit_sec or 0.0),
         screenshot_subdir=args.screenshot_subdir,
         screenshot_stem=args.screenshot_stem,

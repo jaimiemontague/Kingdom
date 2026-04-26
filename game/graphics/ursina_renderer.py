@@ -132,6 +132,10 @@ _PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
     # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
     "house": "peasant_house_small_v1.json",
     "inn": "inn_v2.json",
+    # WK33 economy buildings (prefab convention: <building_type>_v1.json)
+    "marketplace": "marketplace_v1.json",
+    "blacksmith": "blacksmith_v1.json",
+    "trading_post": "trading_post_v1.json",
 }
 
 
@@ -141,6 +145,25 @@ def _environment_model_path(kind: str) -> str:
         p = _ENV_MODEL_DIR / f"{kind}{ext}"
         if p.is_file():
             return f"assets/models/environment/{kind}{ext}"
+    if kind == "lair":
+        # WK33: if an explicit `lair.*` doesn't exist yet, allow a named graveyard mesh
+        # to be dropped into assets/models/environment/ and picked deterministically.
+        try:
+            candidates: list[Path] = []
+            for ext in (".glb", ".gltf", ".obj"):
+                candidates.extend(_ENV_MODEL_DIR.glob(f"*{ext}"))
+            picks = sorted(
+                (
+                    p
+                    for p in candidates
+                    if any(k in p.stem.lower() for k in ("graveyard", "mausoleum", "crypt", "tomb", "gy"))
+                ),
+                key=lambda p: p.name.lower(),
+            )
+            if picks:
+                return f"assets/models/environment/{picks[0].name}"
+        except Exception:
+            pass
     return "cube"
 
 
@@ -354,6 +377,21 @@ def _finalize_kenney_scatter_entity(
         _apply_kenney_scatter_mesh_shading_only(ent, model_rel)
         if apply_pack_tint:
             apply_kenney_pack_color_tint_to_entity(ent, model_rel.replace("\\", "/"))
+        # WK33: lift scatter brightness after the WK32 "dark pass" tinting.
+        try:
+            m = float(getattr(config, "URSINA_ENV_SCATTER_BRIGHTNESS", 1.0))
+        except Exception:
+            m = 1.0
+        if m > 1.0001:
+            try:
+                ent.color = color.rgba(
+                    min(1.0, float(ent.color.r) * m),
+                    min(1.0, float(ent.color.g) * m),
+                    min(1.0, float(ent.color.b) * m),
+                    float(ent.color.a),
+                )
+            except Exception:
+                pass
         ent._ks_base_color = ent.color
     except Exception:
         pass
@@ -928,7 +966,12 @@ class UrsinaRenderer:
         for ty in range(th):
             buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
         vis_b = b"\x00\x00\x00\x00"
-        seen_b = b"\x00\x00\x00\xaa"  # 170 alpha — matches 2D fog "seen" tint
+        try:
+            seen_a = int(getattr(config, "URSINA_FOG_SEEN_ALPHA", 0xAA))
+        except Exception:
+            seen_a = 0xAA
+        seen_a = max(0, min(255, int(seen_a)))
+        seen_b = bytes((0, 0, 0, seen_a))
         # WK23 FIX: write rows in REVERSE sim-Y order so the texture's row-0
         # corresponds to map-south (sim_py == th*ts).  sim_px_to_world_xz negates
         # the Y axis (world_z = -py/SCALE), so map-south ends at world_z=0 (the
@@ -1018,7 +1061,11 @@ class UrsinaRenderer:
             ent.enabled = bool(is_visible)
             ent._ks_prop_enabled = bool(is_visible)
         if is_visible:
-            _set_static_prop_fog_tint(ent, 0.5 if vis == Visibility.SEEN else 1.0)
+            try:
+                seen_mult = float(getattr(config, "URSINA_SEEN_PROP_FOG_MULT", 0.5))
+            except Exception:
+                seen_mult = 0.5
+            _set_static_prop_fog_tint(ent, seen_mult if vis == Visibility.SEEN else 1.0)
 
     def _sync_visibility_gated_terrain(self) -> None:
         """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
@@ -1172,10 +1219,10 @@ class UrsinaRenderer:
         cx_px = tw * ts * 0.5
         cy_px = th * ts * 0.5
         base_wx, base_wz = sim_px_to_world_xz(cx_px, cy_px)
-        Entity(
+        ground_ent = Entity(
             parent=root,
             model="quad",
-            color=color.rgb(0.2, 0.5, 0.2),
+            color=color.white,
             scale=(w_world, d_world, 1),
             rotation=(90, 0, 0),
             position=(base_wx, -0.05, base_wz),
@@ -1184,6 +1231,39 @@ class UrsinaRenderer:
             shader=unlit_shader,
             add_to_scene_entities=False,
         )
+        # WK33: tile the user-provided grass albedo across the entire ground plane.
+        try:
+            from ursina import Texture
+            from PIL import Image
+
+            if getattr(self, "_ks_ground_tex", None) is None:
+                p = (
+                    _PROJECT_ROOT
+                    / "assets"
+                    / "models"
+                    / "Models"
+                    / "Textures"
+                    / "floor_ground_grass.png"
+                )
+                if p.is_file():
+                    img = Image.open(p).convert("RGBA")
+                    self._ks_ground_tex = Texture(img, filtering=None)
+                else:
+                    self._ks_ground_tex = None
+
+            if self._ks_ground_tex is not None:
+                ground_ent.texture = self._ks_ground_tex
+                # Default: 1 repeat per ~2 tiles (override for quick tuning).
+                tiles_per_repeat = 2.0
+                try:
+                    raw = os.environ.get("KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT", "").strip()
+                    if raw:
+                        tiles_per_repeat = max(0.25, float(raw))
+                except Exception:
+                    tiles_per_repeat = 2.0
+                ground_ent.texture_scale = Vec2(float(tw) / tiles_per_repeat, float(th) / tiles_per_repeat)
+        except Exception:
+            pass
 
         for ty in range(th):
             for tx in range(tw):

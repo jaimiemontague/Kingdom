@@ -7,6 +7,8 @@ Build B policy: strict + attribution checks become failing gates.
 v1.5: validates flat model files under assets/models/<category>/ (*.glb, *.gltf, *.obj)
 instead of PNG frame sequences under assets/sprites/.
 
+v1.6: optional `textures.files` in manifest — paths relative to `assets/` (e.g. `models/Models/Textures/floor_ground_grass.png`); missing file is an error.
+
 This tool is intentionally FAST:
 - no mesh decoding
 - no image decoding
@@ -112,6 +114,50 @@ def _validate_model_tree(
                 )
             )
 
+    return findings, report
+
+
+def _validate_texture_files(
+    *,
+    assets_root: Path,
+    rel_paths: Iterable[str],
+) -> tuple[list[Finding], dict[str, Any]]:
+    """
+    Validate files listed in manifest `textures.files` (paths relative to assets/ root).
+    Used for world tiling albedo and other non-model PNGs (WK33+).
+    """
+    findings: list[Finding] = []
+    report: dict[str, Any] = {"textures": {}}
+    for rel in rel_paths:
+        if not isinstance(rel, str) or not rel.strip():
+            findings.append(Finding("error", "texture_path_invalid", f"Invalid texture entry: {rel!r}"))
+            continue
+        norm = rel.replace("\\", "/").strip().lstrip("/")
+        if ".." in Path(norm).parts:
+            findings.append(Finding("error", "texture_path_unsafe", f"Unsafe texture path: {rel!r}"))
+            report["textures"][str(rel)] = {"ok": False}
+            continue
+        p = (assets_root / norm).resolve()
+        ar = assets_root.resolve()
+        try:
+            p.relative_to(ar)
+        except ValueError:
+            findings.append(
+                Finding("error", "texture_escapes_assets", f"Texture path escapes assets/: {rel}", str(p))
+            )
+            report["textures"][norm] = {"ok": False}
+            continue
+        ok = p.is_file()
+        report["textures"][norm] = {"file": p.name if ok else None, "ok": ok}
+        if not ok:
+            findings.append(
+                Finding(
+                    "error",
+                    "missing_texture_file",
+                    f"Missing texture file: assets/{norm}",
+                    str(p),
+                )
+            )
     return findings, report
 
 
@@ -579,6 +625,17 @@ def main() -> int:
     )
     findings.extend(env_findings)
     full_report["categories"]["environment"] = env_report
+
+    textures = manifest.get("textures") or {}
+    tex_rels: list[str] = []
+    if isinstance(textures, dict):
+        raw = textures.get("files")
+        if isinstance(raw, list):
+            tex_rels = [x for x in raw if isinstance(x, str)]
+    if tex_rels:
+        t_findings, t_report = _validate_texture_files(assets_root=assets_root, rel_paths=tex_rels)
+        findings.extend(t_findings)
+        full_report["categories"]["textures"] = t_report
 
     # Validate audio assets (WK6)
     audio = manifest.get("audio", {})

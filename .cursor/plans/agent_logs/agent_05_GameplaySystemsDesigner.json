@@ -1530,6 +1530,57 @@
         }
       }
     }
+    ,
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "notes": "WK33 Agent 05: prefab footprint audit only (no sim footprint changes)."
+      },
+      "rounds": {
+        "wk33_r0_kickoff": {
+          "sprint_id": "wk33-terrain-lair-economy-prefabs",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+            "notes": "Verify new economy prefabs fit existing sim footprints in config.py BUILDING_SIZES."
+          },
+          "round_id": "wk33_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk33_r0",
+            "build_target": "Economy prefab footprint contract"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_checked": [
+                "config.py: BUILDING_SIZES marketplace/blacksmith/trading_post are all (2, 2).",
+                "assets/prefabs/buildings/marketplace_v1.json footprint_tiles == [2, 2].",
+                "assets/prefabs/buildings/blacksmith_v1.json footprint_tiles == [2, 2].",
+                "assets/prefabs/buildings/trading_post_v1.json footprint_tiles == [2, 2].",
+                "Construction variants keep contract: marketplace_v1_build_20_v1.json, marketplace_v1_build_50_v1.json, blacksmith_v1_build_20_v1.json, blacksmith_v1_build_50_v1.json, trading_post_v1_build_20_v1.json, trading_post_v1_build_50_v1.json all footprint_tiles == [2, 2]."
+              ],
+              "result": "PASS — all WK33 economy prefab footprints match sim BUILDING_SIZES (2x2). No footprint changes requested.",
+              "handoff_notes_for_agent_15": [
+                "No JSON footprint mismatches found. Any in-game overshoot/clipping would be a prefab geometry extent issue (adjust prefab pieces), not a config.py footprint change."
+              ],
+              "files_reviewed": [
+                "config.py",
+                "assets/prefabs/buildings/marketplace_v1.json",
+                "assets/prefabs/buildings/marketplace_v1_build_20_v1.json",
+                "assets/prefabs/buildings/marketplace_v1_build_50_v1.json",
+                "assets/prefabs/buildings/blacksmith_v1.json",
+                "assets/prefabs/buildings/blacksmith_v1_build_20_v1.json",
+                "assets/prefabs/buildings/blacksmith_v1_build_50_v1.json",
+                "assets/prefabs/buildings/trading_post_v1.json",
+                "assets/prefabs/buildings/trading_post_v1_build_20_v1.json",
+                "assets/prefabs/buildings/trading_post_v1_build_50_v1.json"
+              ],
+              "commands_run": [],
+              "blockers": []
+            }
+          }
+        }
+      }
+    }
   }
 }
 

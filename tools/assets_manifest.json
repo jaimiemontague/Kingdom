@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.5",
-  "notes": "v1.5 3D asset validation: one model file per kind under assets/models/<category>/ (animations live inside .glb/.gltf). No per-state sprite folders. Legacy 2D placeholders may still exist under assets/sprites/ until fully migrated.",
+  "schema_version": "1.6",
+  "notes": "v1.6: +textures.files (repo-root-relative under assets/); v1.5 3D asset validation: one model file per kind under assets/models/<category>/. Legacy 2D placeholders may still exist under assets/sprites/ until fully migrated.",
   "heroes": {
     "classes": [
       "warrior",
@@ -89,7 +89,13 @@
       "rock_meadow_spire",
       "rock_meadow_chunk",
       "log_survival",
-      "log_small"
+      "log_small",
+      "lair"
+    ]
+  },
+  "textures": {
+    "files": [
+      "models/Models/Textures/floor_ground_grass.png"
     ]
   },
   "prefabs": {
@@ -121,7 +127,16 @@
         "castle_build_20_v1",
         "castle_build_50_v1",
         "warrior_guild_build_20_v1",
-        "warrior_guild_build_50_v1"
+        "warrior_guild_build_50_v1",
+        "marketplace_v1",
+        "marketplace_v1_build_20_v1",
+        "marketplace_v1_build_50_v1",
+        "blacksmith_v1",
+        "blacksmith_v1_build_20_v1",
+        "blacksmith_v1_build_50_v1",
+        "trading_post_v1",
+        "trading_post_v1_build_20_v1",
+        "trading_post_v1_build_50_v1"
       ]
     }
   },

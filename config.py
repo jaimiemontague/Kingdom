@@ -443,6 +443,36 @@ URSINA_TERRAIN_SCATTER_STRIDE = 2
 _ts_env = os.environ.get("KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE", "").strip()
 if _ts_env.isdigit():
     URSINA_TERRAIN_SCATTER_STRIDE = max(1, min(8, int(_ts_env)))
+
+# --- WK33 terrain readability tuning (Ursina renderer) ---
+# Lift environment scatter (trees/grass/rocks) after the WK32 "dark pass".
+URSINA_ENV_SCATTER_BRIGHTNESS = 1.2
+try:
+    _sb_env = float(os.environ.get("KINGDOM_URSINA_ENV_SCATTER_BRIGHTNESS", "").strip() or "0")
+except Exception:
+    _sb_env = 0.0
+if _sb_env > 0:
+    # Clamp to avoid blowing out white materials.
+    URSINA_ENV_SCATTER_BRIGHTNESS = max(0.5, min(2.0, _sb_env))
+
+# Explored (SEEN) fog tuning knobs.
+URSINA_FOG_SEEN_ALPHA = 0xAA  # 170 alpha (historical default)
+_seen_a_env = os.environ.get("KINGDOM_URSINA_FOG_SEEN_ALPHA", "").strip()
+try:
+    _seen_a_i = int(_seen_a_env) if _seen_a_env else -1
+except Exception:
+    _seen_a_i = -1
+if 0 <= _seen_a_i <= 255:
+    URSINA_FOG_SEEN_ALPHA = _seen_a_i
+
+# How much to darken vertical props (trees/rocks/grass clumps) in explored-but-not-visible fog.
+URSINA_SEEN_PROP_FOG_MULT = 0.5
+try:
+    _spf_env = float(os.environ.get("KINGDOM_URSINA_SEEN_PROP_FOG_MULT", "").strip() or "0")
+except Exception:
+    _spf_env = 0.0
+if _spf_env > 0:
+    URSINA_SEEN_PROP_FOG_MULT = max(0.1, min(1.0, _spf_env))
 # Legacy (WK23): Ursina fog no longer throttles on this — stale 3D fog desynced from minimap/pygame.
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
 # Legacy: Ursina HUD GPU upload is now skipped via row-sampled CRC when pixels are unchanged (ursina_app).

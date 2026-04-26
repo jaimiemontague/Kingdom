@@ -371,6 +371,78 @@
         1.0,
         1.0
       ]
+    },
+    {
+      "model": "Models/GLB format/battlement.glb",
+      "pos": [
+        -0.5,
+        1.0,
+        -1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/battlement.glb",
+      "pos": [
+        0.5,
+        1.0,
+        -0.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/battlement.glb",
+      "pos": [
+        -1.5,
+        1.0,
+        -0.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/battlement.glb",
+      "pos": [
+        -0.5,
+        1.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     }
   ],
   "notes": ""

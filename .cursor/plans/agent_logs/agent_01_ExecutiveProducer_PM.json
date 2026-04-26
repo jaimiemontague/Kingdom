@@ -7814,6 +7814,62 @@
           }
         }
       }
+    },
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_3d_graphics_v1_5.md",
+        "created_utc": "2026-04-26T12:00:00Z",
+        "notes": "WK33: ground texture, scatter brightness+SEEN FOW tune, graveyard lair mesh, economy prefabs marketplace+blacksmith (+trading_post optional)."
+      },
+      "rounds": {
+        "wk33_r0_kickoff": {
+          "round_meta": {
+            "created_utc": "2026-04-26T12:00:00Z"
+          },
+          "pm_status_summary": {
+            "status": "active",
+            "summary": "WK33 kickoff. Integration order: Batch1 parallel Agents 12+09 \u2192 15 \u2192 03 \u2192 05 \u2192 10+11. Full spec: wk33_3d_sprint_plan_6e616891.plan.md"
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk33-terrain-lair-economy-prefabs**, round **wk33_r0_kickoff**.\n\n1) Open and follow the full sprint spec (your Agent section has the step list):\n   `.cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md`\n   Also align with `.cursor/plans/master_plan_3d_graphics_v1_5.md` (Phase 1\u20132).\n2) Find your assignment: PM hub `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` \u2192 `sprints[\\\"wk33-terrain-lair-economy-prefabs\\\"].rounds[\\\"wk33_r0_kickoff\\\"].pm_agent_prompts[YOUR_NUMBER]`\n   (your numbered prompt restates the same work as the plan; if anything conflicts, follow the plan + ask PM.)\n3) Do not commit `models_compressed/`. Jaimie runs the Kenney model assembler with Agent 15 as the plan states.\n4) When you finish: update your agent log under `.cursor/plans/agent_logs/`, then run the gates your role requires (code changes: `python tools/qa_smoke.py --quick` from repo root; if you changed assets or manifest: `python tools/validate_assets.py --report`).\n5) Report back: files touched, exact commands + exit codes, and blockers.\n\nSprint in one line: **tiling grass ground texture**, **~20% lighter** trees/grass scatter + **explored (SEEN) FOW** balance, **lair = Graveyard kit** static mesh in `assets/models/environment/`, **marketplace + blacksmith** prefab JSONs (optional **trading_post**).",
+          "pm_send_list_minimal": {
+            "order": "sequential_with_parallel_batch_1",
+            "batch_1_parallel": [
+              "12",
+              "09"
+            ],
+            "then_in_order": [
+              "15",
+              "03",
+              "05",
+              "10",
+              "11"
+            ],
+            "optional": "13 (patch notes only if you cut a test build)",
+            "rationale": "12 low: manifest+validate. 9 medium: art direction for lair+buildings+ground. 15 high: kitbash+exports. 03 high: Ursina+prefab table+brightness. 5 low: footprint consult. 10+11 low: perf spot + final gates.",
+            "intelligence_by_agent": {
+              "12": "low",
+              "09": "medium",
+              "15": "high",
+              "03": "high",
+              "05": "low",
+              "10": "low",
+              "11": "low",
+              "13": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "12": "WK33 (Tools): Do exactly the **Agent 12** block in `.cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md` \u2014 add `assets/models/Models/Textures/floor_ground_grass.png` and any new environment/lair files Agent 15 adds to `tools/assets_manifest.json` (or project manifest in use), then run `python tools/validate_assets.py --report` until 0 errors. Log exit code in `agent_12` hub log.",
+            "09": "WK33 (Art): Do the **Agent 09** block in the WK33 plan file. Deliver: (1) one Graveyard kit choice for the shared **lair** mesh, (2) short silhouette/mood notes for **marketplace** and **blacksmith** for Agent 15, (3) sign-off that `floor_ground_grass.png` is OK as world-scale tiled albedo. Log in agent_09 JSON.",
+            "15": "WK33 (ModelAssembler): Do the **Agent 15** block in the WK33 plan. Export a single **lair** mesh into `assets/models/environment/` (name it so Agent 03 can wire `lair` per plan). Build `marketplace_v1.json` and `blacksmith_v1.json` (optional `trading_post_v1.json`) under `assets/prefabs/buildings/`; use `prefab_texture_override_standard.md` for flat kits. Update `assets/ATTRIBUTION.md`. Jaimie at keyboard for assembler. Log + optional `model_viewer_kenney.py` smokes as in plan.",
+            "03": "WK33 (Tech): Do the **Agent 03** block in the WK33 plan. `game/graphics/ursina_renderer.py`: base quad uses tiled `floor_ground_grass.png`; ~20% lift on env scatter tints; tune SEEN FOW vs ground after Jaimie spot-check; wire lair to new graveyard file; add `marketplace`/`blacksmith` to `_PREFAB_BUILDING_TYPE_TO_FILE` if needed. `python tools/qa_smoke.py --quick` MUST pass. Log in agent_03 JSON.",
+            "05": "WK33 (Gameplay): Do the **Agent 05** block. Compare each new prefab `footprint_tiles` to `config.py` BUILDING_SIZES; do not change sim footprints without PM. If prefab vis overshoots, file notes for Agent 15. Log in agent_05 JSON.",
+            "10": "WK33 (Performance): After Agent 03 is done, run a short `python main.py --renderer ursina --no-llm` session and watch FPS; report regression vs feel only. Log in agent_10 JSON.",
+            "11": "WK33 (QA): After code settles, run `python tools/qa_smoke.py --quick` and if assets changed `python tools/validate_assets.py --report`; both must PASS. Log in agent_11 JSON.",
+            "13": "Optional: draft short player-facing bullets for this sprint if a build goes to testers. No version bump unless Jaimie says so."
+          }
+        }
+      }
     }
   }
 }

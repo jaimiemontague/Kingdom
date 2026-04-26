@@ -1,0 +1,55 @@
+{
+  "prefab_id": "trading_post_v1_build_50_v1",
+  "building_type": "trading_post",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_retro-fantasy-kit",
+    "kingdomsim_generated_building_textures"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/stall-fantasy-town.glb",
+      "pos": [
+        1.55,
+        0.0,
+        0.45
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
+    },
+    {
+      "model": "Models/GLB format/barrels.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "WK33 ~50%: + delivery cart; final adds battlement (trading_post_v1). Tent removed from final; stages match current piece list."
+}

@@ -2786,6 +2786,44 @@
         ]
       }
     }
+  },
+  "wk33-terrain-lair-economy-prefabs": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+      "notes": "WK33 r0: manifest v1.6 (textures + lair env kind + econ prefab ids); validate_assets textures check"
+    },
+    "rounds": {
+      "wk33_r0_kickoff": {
+        "round_id": "wk33_r0_kickoff",
+        "status": "done",
+        "pm_ref": "sprints['wk33-terrain-lair-economy-prefabs'].rounds['wk33_r0_kickoff'] — Agent 12 block",
+        "what_i_changed": {
+          "files": [
+            "tools/assets_manifest.json — schema 1.6: environment.types +lair; textures.files floor_ground_grass.png; prefabs.buildings.optional +marketplace_v1, blacksmith_v1, trading_post_v1",
+            "tools/validate_assets.py — v1.6 _validate_texture_files; manifest textures.files"
+          ],
+          "summary": "Ground tiling albedo path is now gate-checked. Lair static mesh and economy prefab JSONs are listed so Agent 15/03 work clears warns (lair: assets/models/environment/lair.{glb|gltf|obj}; prefabs under assets/prefabs/buildings/). No models_compressed/."
+        },
+        "how_to_test": [
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "validate_assets_report": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "errors=0; SUMMARY warns=50 (incl. missing environment:lair, optional marketplace_v1/blacksmith_v1/trading_post_v1 until A15; pre-existing flat-model warns)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 

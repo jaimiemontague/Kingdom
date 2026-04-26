@@ -9,6 +9,40 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "notes": "WK33: tiled ground texture, scatter brightness lift, SEEN fog tuning hooks, lair mesh hookup, and economy prefab wiring."
+      },
+      "rounds": {
+        "wk33_r0_kickoff": {
+          "sprint_id": "wk33-terrain-lair-economy-prefabs",
+          "round_id": "wk33_r0_kickoff",
+          "round_meta": {
+            "pm_hub_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → sprints[wk33-terrain-lair-economy-prefabs].rounds[wk33_r0_kickoff]"
+          },
+          "what_i_changed": [
+            "config.py: added Ursina tuning knobs for WK33 (URSINA_ENV_SCATTER_BRIGHTNESS, URSINA_FOG_SEEN_ALPHA, URSINA_SEEN_PROP_FOG_MULT) with env overrides.",
+            "game/graphics/ursina_renderer.py: base ground quad now uses tiled floor_ground_grass.png (cached Texture) + texture_scale; scatter entities apply URSINA_ENV_SCATTER_BRIGHTNESS; fog overlay SEEN alpha and prop SEEN fog multiplier now read from config; prefab filename table includes marketplace/blacksmith/trading_post; lair mesh resolver falls back to a deterministically chosen graveyard-ish mesh if lair.* is absent."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "notes": [
+            "Ground tiling can be tuned via KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT (default 2.0).",
+            "SEEN fog tuning can be adjusted via KINGDOM_URSINA_FOG_SEEN_ALPHA and KINGDOM_URSINA_SEEN_PROP_FOG_MULT without code edits."
+          ]
+        }
+      }
+    },
     "wk1-broad-sweep-midweek-endweek": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk1-broad-sweep-midweek-endweek_3ca65814.plan.md",

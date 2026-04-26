@@ -1,0 +1,37 @@
+{
+  "prefab_id": "trading_post_v1_build_20_v1",
+  "building_type": "trading_post",
+  "footprint_tiles": [
+    2,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_retro-fantasy-kit",
+    "kingdomsim_generated_building_textures"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/stall-fantasy-town.glb",
+      "pos": [
+        1.55,
+        0.0,
+        0.45
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
+    }
+  ],
+  "notes": "WK33 ~20%: first stall + stock barrels before cart and battlement (trading_post_v1)."
+}
