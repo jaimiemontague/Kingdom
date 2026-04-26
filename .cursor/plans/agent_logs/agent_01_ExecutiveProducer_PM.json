@@ -7870,6 +7870,41 @@
           }
         }
       }
+    },
+    "wk33-midsprint-assembler-scale-hotkeys": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/assembler_scale_hotkeys_177ca989.plan.md",
+        "created_utc": "2026-04-27T00:00:00Z",
+        "notes": "Midsprint follow-up: scale nudge for Kenney Kit Assembler (unblocks farm prefab fix). - / = hotkeys, Kenney pack multiplier contract unchanged."
+      },
+      "rounds": {
+        "r0_implement": {
+          "round_meta": {
+            "created_utc": "2026-04-27T00:00:00Z"
+          },
+          "pm_status_summary": {
+            "status": "active",
+            "summary": "Jaimie requested in-assembler per-piece size adjustment. Single-file: tools/model_assembler_kenney.py. Order: 12 (implement) \u2192 11 (merge gate). Not a parallel multi-agent sprint."
+          },
+          "pm_universal_prompt": "You are being activated for **wk33-midsprint-assembler-scale-hotkeys**, round **r0_implement** (follow-up to main WK33 work).\n\n1) **Spec (read first):** `.cursor/plans/assembler_scale_hotkeys_177ca989.plan.md` \u2014 implement exactly what it describes; the Kenney **logical** `scale` in JSON is separate from `pack_extent_multiplier_for_rel` on the Entity in the tool.\n2) **PM hub path:** `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` \u2192 `sprints[\\\"wk33-midsprint-assembler-scale-hotkeys\\\"].rounds[\\\"r0_implement\\\"].pm_agent_prompts[YOUR_NUMBER]`\n3) **Code:** `tools/model_assembler_kenney.py` only (no game/ or config changes unless the plan\u2019s follow-up file lists them).\n4) **Gates:** Agent 12: run `python tools/qa_smoke.py --quick` from repo root after code changes. Agent 11: final PASS confirmation.\n5) **Log:** your agent log JSON with what changed, commands, and exit codes.\n\n**Goal:** With a **selected** placed piece, **-** (minus) makes the piece **slightly smaller** and **=** (equals) **slightly larger**; **Shift** = finer step; display scale in status. Preserve `entity.scale = logical_scale * pack_extent_multiplier_for_rel(model_path)`.",
+          "pm_send_list_minimal": {
+            "order": "12_then_11",
+            "then_in_order": [
+              "12",
+              "11"
+            ],
+            "rationale": "12 (MEDIUM) implements assembler hotkeys+contract. 11 (LOW) final qa_smoke gate after 12; no 03/15 unless a bug is found.",
+            "intelligence_by_agent": {
+              "12": "medium",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "12": "Assembler scale midsprint (Agent 12 Tools). Implement `.cursor/plans/assembler_scale_hotkeys_177ca989.plan.md` in **one file** `tools/model_assembler_kenney.py`: add `-` shrink / `=` grow on **selected** piece, Shift=fine, multiplicative uniform nudge, clamp, `apply` logical `PlacedPiece.scale` then re-`entity.scale = (*pf, *pf, *pf)` with existing `pack_extent_multiplier_for_rel`. Update module Controls docstring and `_refresh_status` to show scale. Numpad `subtract` optional. Do not bake `pf` into JSON. Run: `python tools/qa_smoke.py --quick`. Log in agent_12 JSON with evidence.",
+            "11": "After Agent 12: run `python tools/qa_smoke.py --quick` (from repo root). If anything unexpected in tools touched, note PASS/FAIL in agent_11 log."
+          }
+        }
+      }
     }
   }
 }

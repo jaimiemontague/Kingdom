@@ -33,6 +33,9 @@ Controls (hover the 3D scene; UI clicks route to UI, not the scene):
     Q / E                   - rotate selected piece 90 deg around Y
     [ / ]                   - move selected piece Y by 0.25 units
     Shift+[ / Shift+]       - move selected piece Y by 0.05 units (fine vertical)
+    -  (numpad subtract)    - uniform shrink selected piece (logical scale × ~0.98)
+    =                        - uniform grow selected piece (logical scale × ~1.02)
+    Shift + - / =           - finer nudge (× ~0.995 / ~1.005; same as Shift+WASD pattern)
     Delete / Backspace      - remove selected piece
     Right-drag / MMB drag   - orbit / pan camera (EditorCamera)
     Scroll wheel            - zoom
@@ -98,6 +101,13 @@ NUDGE_FINE_STEP = 0.25  # Shift+WASD; matches Y_STEP for consistent sub-grid pla
 ROT_STEP = 90.0
 Y_STEP = 0.25
 Y_STEP_FINE = 0.05  # Shift+[ / Shift+]
+
+# Uniform multiplicative nudge for logical `scale` (JSON); on-Entity display uses
+# `piece.scale * pack_extent_multiplier_for_rel` — never bake the pack factor into JSON.
+SCALE_NUDGE_FACTOR = 1.02
+SCALE_NUDGE_FACTOR_FINE = 1.005
+SCALE_LOGICAL_MIN = 0.01
+SCALE_LOGICAL_MAX = 5.0
 
 DEFAULT_PREFAB_ID = "untitled_v1"
 DEFAULT_BUILDING_TYPE = "house"
@@ -1121,6 +1131,39 @@ class AssemblerApp:
         self.selected.entity.rotation_y = self.selected.rot_y
         self._refresh_status()
 
+    def apply_piece_scale_to_entity(self, piece: PlacedPiece) -> None:
+        """Set ``entity.scale`` from logical ``piece.scale`` and Kenney pack extent multiplier."""
+        if piece.entity is None:
+            return
+        from ursina import Vec3
+
+        rel = piece.model_rel
+        pf = pack_extent_multiplier_for_rel(rel)
+        s = piece.scale
+        piece.entity.scale = Vec3(
+            s[0] * pf,
+            s[1] * pf,
+            s[2] * pf,
+        )
+
+    def _nudge_selected_scale(self, grow: bool, *, fine: bool) -> None:
+        """Multiplicative uniform scale nudge on logical `PlacedPiece.scale` (saved to JSON)."""
+        if self.selected is None:
+            self._show_toast("no piece selected", err=True)
+            return
+        if self.selected.entity is None:
+            return
+        base = SCALE_NUDGE_FACTOR_FINE if fine else SCALE_NUDGE_FACTOR
+        factor = base if grow else (1.0 / base)
+        s0, s1, s2 = self.selected.scale
+        self.selected.scale = (
+            min(SCALE_LOGICAL_MAX, max(SCALE_LOGICAL_MIN, s0 * factor)),
+            min(SCALE_LOGICAL_MAX, max(SCALE_LOGICAL_MIN, s1 * factor)),
+            min(SCALE_LOGICAL_MAX, max(SCALE_LOGICAL_MIN, s2 * factor)),
+        )
+        self.apply_piece_scale_to_entity(self.selected)
+        self._refresh_status()
+
     # ------------------------------------------------------------------
     # Input
     # ------------------------------------------------------------------
@@ -1185,6 +1228,15 @@ class AssemblerApp:
             self._move_selected(0.0, 0.0, dy=+y_step)
             return
 
+        fine_scale = _shift_held()
+        # Panda/Ursina: main keyboard '-', '='; also accept common aliases.
+        if key in ("-", "minus", "subtract"):
+            self._nudge_selected_scale(grow=False, fine=fine_scale)
+            return
+        if key in ("=", "equals"):
+            self._nudge_selected_scale(grow=True, fine=fine_scale)
+            return
+
     def _handle_left_click(self) -> None:
         from ursina import mouse
         hovered = getattr(mouse, "hovered_entity", None)
@@ -1240,10 +1292,12 @@ class AssemblerApp:
         sel_str = "(none)"
         if self.selected is not None:
             x, y, z = self.selected.pos
+            sx, sy, sz = self.selected.scale
             sel_str = (
                 f"{Path(self.selected.model_rel).name}"
                 f"  pos=({x:+.2f},{y:+.2f},{z:+.2f})"
                 f"  rot_y={self.selected.rot_y:.0f}"
+                f"  scale=({sx:.2f},{sy:.2f},{sz:.2f})"
             )
         self.status_text.text = (
             f"pieces: {len(self.pieces)}   selected: {sel_str}"

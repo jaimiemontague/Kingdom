@@ -2824,6 +2824,37 @@
         "blockers": []
       }
     }
+  },
+  "wk33-midsprint-assembler-scale-hotkeys": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/assembler_scale_hotkeys_177ca989.plan.md",
+      "notes": "Midsprint: -/= scale nudge; logical scale in JSON; pack_extent on Entity only"
+    },
+    "rounds": {
+      "r0_implement": {
+        "round_id": "r0_implement",
+        "status": "done",
+        "pm_ref": "sprints['wk33-midsprint-assembler-scale-hotkeys'].rounds['r0_implement']",
+        "what_i_changed": {
+          "files": [
+            "tools/model_assembler_kenney.py — SCALE_NUDGE_FACTOR / FINE, MIN/MAX; apply_piece_scale_to_entity; _nudge_selected_scale; handle_input -/= (minus, subtract, equals); _refresh_status scale= line; module Controls docstring"
+          ],
+          "summary": "Selected piece: - shrinks, = grows (multiplicative); Shift uses finer step. Logical triple clamped [0.01, 5.0]. Entity.scale = logical * pack_extent_multiplier_for_rel after each edit; JSON unchanged contract."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick",
+          "Manual: python tools/model_assembler_kenney.py --open farm_v1 — select piece, -/=, Shift+/-, confirm status line and save/reopen"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }
 
