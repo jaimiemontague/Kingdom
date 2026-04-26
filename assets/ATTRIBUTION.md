@@ -148,10 +148,10 @@ Use this exact bullet structure (one bullet per pack):
 ### Pack: kingdomsim_generated_building_textures
 - **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
 - **License**: CC0-1.0
-- **Source**: Generated in-repo by `tools/generate_inn_texture_overrides.py`; online low-poly fantasy references used for style only, with no third-party pixels copied.
-- **Retrieved**: 2026-04-25
-- **Modifications**: N/A (generated directly as 128x128 PNG texture overrides and small OBJ door/window overlays)
-- **Used for**: Inn building texture polish (wood planks, stone blocks, roof shingles, door/window/dormer detail, UV window decals)
+- **Source**: Generated in-repo by generator scripts (see below); online low-poly fantasy references used for style only, with no third-party pixels copied.
+- **Retrieved**: 2026-04-25 (Inn), 2026-04-26 (Food Stand)
+- **Modifications**: N/A (generated directly as 64x64 / 128x128 PNG texture overrides and small OBJ door/window overlays)
+- **Used for**: Inn and Food Stand building texture polish (wood planks, stone blocks, roof shingles, door/window/dormer detail, UV window decals, canvas awning)
 - **File locations**:
   - `assets/textures/buildings/inn/inn_wood_planks.png`
   - `assets/textures/buildings/inn/inn_stone_blocks.png`
@@ -162,6 +162,11 @@ Use this exact bullet structure (one bullet per pack):
   - `assets/models/buildings/inn_door_panel.mtl`
   - `assets/models/buildings/inn_window_panel.obj`
   - `assets/models/buildings/inn_window_panel.mtl`
+  - `assets/textures/buildings/food_stand/food_stand_wood_stall.png`
+  - `assets/textures/buildings/food_stand/food_stand_canvas_awning.png`
+- **Generator scripts**:
+  - `tools/generate_inn_texture_overrides.py` — Inn textures
+  - `tools/generate_food_stand_texture_overrides.py` — Food Stand textures
 
 ---
 

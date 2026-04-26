@@ -4,26 +4,29 @@
   "footprint_tiles": [1, 1],
   "ground_anchor_y": 0.0,
   "rotation_steps": 90,
-  "attribution": ["kenney_fantasy-town-kit_2.0"],
+  "attribution": ["kenney_fantasy-town-kit_2.0", "kingdomsim_generated_building_textures"],
   "pieces": [
     {
       "model": "Models/GLB format/stall-fantasy-town.glb",
       "pos": [0.5, 0.0, 0.5],
       "rot": [0.0, 0.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "scale": [1.0, 1.0, 1.0],
+      "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
     },
     {
       "model": "Models/GLB format/banner-green-fantasy-town.glb",
       "pos": [0.5, 1.15, 0.35],
       "rot": [0.0, 0.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "scale": [1.0, 1.0, 1.0],
+      "texture_override": "textures/buildings/food_stand/food_stand_canvas_awning.png"
     },
     {
       "model": "Models/GLB format/stall-stool-fantasy-town.glb",
       "pos": [0.72, 0.0, 0.42],
       "rot": [0.0, 35.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "scale": [1.0, 1.0, 1.0],
+      "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
     }
   ],
-  "notes": "Smallest economy building: Fantasy Town market stall + banner + stool; 1x1 footprint."
+  "notes": "Smallest economy building: Fantasy Town market stall + banner + stool; 1x1 footprint. Texture overrides applied per prefab_texture_override_standard (WK32 backfill): stall/stool -> wood_stall, banner -> canvas_awning."
 }
