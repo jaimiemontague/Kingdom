@@ -1,40 +1,484 @@
 {
   "prefab_id": "farm_v2",
   "building_type": "farm",
-  "footprint_tiles": [2, 2],
+  "footprint_tiles": [
+    3,
+    2
+  ],
   "ground_anchor_y": 0.0,
   "rotation_steps": 90,
-  "attribution": ["kenney_fantasy-town-kit_2.0", "kenney_nature-kit"],
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_nature-kit"
+  ],
   "pieces": [
     {
       "model": "Models/GLB format/windmill-fantasy-town.glb",
-      "pos": [1.0, 0.0, 1.35],
-      "rot": [0.0, 0.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        0.5,
+        2.5,
+        0.8500000000000001
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        0.6468390360515734,
+        0.6468390360515734,
+        0.6468390360515734
+      ]
     },
     {
       "model": "Models/GLTF format/crops_wheatStageB.glb",
-      "pos": [0.35, 0.0, 0.35],
-      "rot": [0.0, 0.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
-    },
-    {
-      "model": "Models/GLTF format/crops_wheatStageB.glb",
-      "pos": [1.65, 0.0, 0.35],
-      "rot": [0.0, 20.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        1.65,
+        0.0,
+        0.35
+      ],
+      "rot": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLTF format/crops_dirtRow.glb",
-      "pos": [1.0, 0.0, 0.3],
-      "rot": [0.0, 90.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        1.0,
+        0.05,
+        0.3
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/fence-fantasy-town.glb",
-      "pos": [0.22, 0.0, 0.85],
-      "rot": [0.0, 90.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        0.21999999999999997,
+        0.0,
+        0.35
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/wall-door.glb",
+      "pos": [
+        0.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tower.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/tower.glb",
+      "pos": [
+        0.5,
+        2.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side-corner.glb",
+      "pos": [
+        0.25,
+        3.0,
+        1.75
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.6217214879388442,
+        0.6217214879388442,
+        0.6217214879388442
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side-corner.glb",
+      "pos": [
+        0.75,
+        3.0,
+        1.75
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.6217214879388442,
+        0.6217214879388442,
+        0.6217214879388442
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side-corner.glb",
+      "pos": [
+        0.75,
+        3.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.6217214879388442,
+        0.6217214879388442,
+        0.6217214879388442
+      ]
+    },
+    {
+      "model": "Models/GLB format/roof-high-side-corner.glb",
+      "pos": [
+        0.25,
+        3.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        0.6217214879388442,
+        0.6217214879388442,
+        0.6217214879388442
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        1.25,
+        0.0,
+        1.75
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        2.25,
+        0.0,
+        0.75
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        2.0,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageB.glb",
+      "pos": [
+        1.75,
+        0.0,
+        1.75
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageB.glb",
+      "pos": [
+        2.25,
+        0.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageB.glb",
+      "pos": [
+        1.25,
+        0.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageB.glb",
+      "pos": [
+        1.75,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageB.glb",
+      "pos": [
+        2.25,
+        0.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        1.75,
+        0.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        2.0,
+        0.0,
+        1.25
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-barrel.glb",
+      "pos": [
+        0.0,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-barrel.glb",
+      "pos": [
+        -0.25,
+        0.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_cornStageD.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_cornStageC.glb",
+      "pos": [
+        2.0,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     }
   ],
   "notes": "Redo: windmill hero (back-center) + Nature wheat + dirt row crops in foreground + FT fence side accent. Sells 'farm' identity vs v1 single-mesh windmill."

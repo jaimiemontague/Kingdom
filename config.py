@@ -279,7 +279,7 @@ BUILDING_SIZES = {
     "palace": (3, 3),
     # Neutral auto-spawn buildings
     "house": (1, 1),
-    "farm": (2, 2),
+    "farm": (3, 2),
     "food_stand": (1, 1),
     # Lairs
     "goblin_camp": (2, 2),

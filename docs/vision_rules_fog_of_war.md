@@ -32,7 +32,7 @@ All new sources must follow the same contract: append `(world_x, world_y, radius
 | Building type  | Footprint (config) | Suggested radius (tiles) | Rationale |
 |----------------|--------------------|--------------------------|-----------|
 | `house`        | 1×1                | **3**                    | Small dwelling; modest sight. |
-| `farm`         | 2×2                | **5**                    | Larger footprint; more open area. |
+| `farm`         | 3×2                | **5**                    | Larger footprint; more open area. |
 | `food_stand`   | 1×1                | **3**                    | Same as house. |
 
 These are intentionally smaller than the castle (10) and heroes (7) so that player-built and hero presence remain the primary vision; neutral buildings just prevent their immediate area from being swallowed by fog.

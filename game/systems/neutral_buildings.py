@@ -6,7 +6,7 @@ Auto-spawns neutral civilian buildings near the castle based on hero count.
 
 from __future__ import annotations
 
-from config import TILE_SIZE
+from config import BUILDING_SIZES, TILE_SIZE
 from game.entities.neutral_buildings import House, Farm, FoodStand
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
@@ -226,10 +226,11 @@ class NeutralBuildingSystem(GameSystem):
             return
 
         if cur_farms < want_farms:
+            fw, fh = BUILDING_SIZES.get("farm", (3, 2))
             spot = self._find_spot(
                 castle=castle,
                 buildings=buildings,
-                size=(2, 2),
+                size=(int(fw), int(fh)),
                 min_r=8,
                 max_r=18,
                 shuffle_within_ring=True,

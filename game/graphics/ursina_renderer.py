@@ -10,7 +10,7 @@ v1.5 Sprint 1.2 (Agent 03): Terrain is built from discrete 3D meshes under
 under one root Entity — no TileSpriteLibrary bake or terrain atlas.
 
 Most buildings use BuildingSpriteLibrary on a single billboard quad; **castle**, **house**,
-and **lair** use static 3D meshes from ``assets/models/environment/`` (v1.5 Sprint 2.1).
+and **lair** (if no ``lair_v1.json`` prefab) use static 3D meshes from ``assets/models/environment/`` (v1.5 Sprint 2.1). When ``lair_v1.json`` exists, lairs use the prefab path (Graveyard kitbash).
 WK30 (Agent 03): for any building whose ``building_type`` resolves to an existing
 ``assets/prefabs/buildings/<file>.json`` (see ``_PREFAB_BUILDING_TYPE_TO_FILE`` + the
 ``<building_type>_v1.json`` convention fallback), the prefab path loads **by default**
@@ -125,8 +125,8 @@ _PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
 # the ``<building_type>_v1.json`` convention in ``_resolve_prefab_path``. Keep this table
 # sorted and minimal — the expectation is that new buildings land under the convention.
 _PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
-    # WK31 economy visual pass (Jaimie): inn_v2, farm_v1, food_stand_v2, gnome_hovel_v1.
-    "farm": "farm_v1.json",
+    # WK31 economy visual pass (Jaimie): inn_v2, farm_v2, food_stand_v2, gnome_hovel_v1.
+    "farm": "farm_v2.json",
     "food_stand": "food_stand_v2.json",
     "gnome_hovel": "gnome_hovel_v1.json",
     # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
@@ -601,8 +601,8 @@ def _resolve_prefab_path(bts: str, building) -> Path | None:
     1. ``KINGDOM_URSINA_PREFAB_TEST=0`` (explicit zero) → force legacy path for everything.
        Any other value, or env unset, keeps prefabs on.
     2. No ``building_type`` string → legacy.
-    3. Lairs keep their dedicated ``lair`` mesh (no prefab contract yet). Detected via the
-       same ``is_lair`` / ``stash_gold`` hook used by ``_is_3d_mesh_building``.
+    3. Lairs: if ``assets/prefabs/buildings/lair_v1.json`` exists, all lair types use that
+       prefab (Graveyard kitbash). Otherwise fall through to legacy ``lair`` static mesh.
     4. Filename = explicit ``_PREFAB_BUILDING_TYPE_TO_FILE`` entry, else convention
        ``<building_type>_v1.json``.
     5. File must exist under ``_PREFAB_BUILDINGS_DIR``; otherwise → legacy.
@@ -612,7 +612,8 @@ def _resolve_prefab_path(bts: str, building) -> Path | None:
     if not bts:
         return None
     if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-        return None
+        p = _PREFAB_BUILDINGS_DIR / "lair_v1.json"
+        return p if p.is_file() else None
     filename = _PREFAB_BUILDING_TYPE_TO_FILE.get(bts) or f"{bts}_v1.json"
     path = _PREFAB_BUILDINGS_DIR / filename
     return path if path.is_file() else None

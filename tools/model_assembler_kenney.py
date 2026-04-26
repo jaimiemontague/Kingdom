@@ -39,7 +39,8 @@ Controls (hover the 3D scene; UI clicks route to UI, not the scene):
     Delete / Backspace      - remove selected piece
     Right-drag / MMB drag   - orbit / pan camera (EditorCamera)
     Scroll wheel            - zoom
-    ESC                     - quit
+    ESC                     - close modal / open-prefab dialog only (does not exit)
+    Ctrl+Q                  - quit the assembler
 """
 from __future__ import annotations
 
@@ -689,7 +690,7 @@ class AssemblerApp:
             text=(
                 "LMB=place/select  WASD=nudge1  Shift+WASD=nudge0.25  Q/E=rotate  "
                 "[ / ]=y0.25  Shift+[ / ]=y0.05  Del=remove  RMB=orbit  MMB=pan  "
-                "Scroll=zoom  ESC=quit"
+                "Scroll=zoom  ESC=dialogs  Ctrl+Q=quit"
             ),
             parent=camera.ui,
             position=(-0.40, -0.49),
@@ -1177,16 +1178,18 @@ class AssemblerApp:
         def _shift_held() -> bool:
             return bool(held_keys.get("shift", 0) or held_keys.get("left shift", 0))
 
-        # ESC: close modal if open, else quit.
+        def _control_held() -> bool:
+            return bool(
+                held_keys.get("left control", 0)
+                or held_keys.get("right control", 0)
+            )
+
+        # ESC: only dismiss modals / the open-prefab dialog. Does not exit (avoids
+        # accidental data loss; use Ctrl+Q to quit).
         if key == "escape":
             if (self.modal_field is not None) or self.open_dialog_entities:
                 self._close_modal()
                 self._close_open_dialog()
-                return
-            try:
-                application.quit()
-            except Exception:
-                sys.exit(0)
             return
 
         # Left mouse down: route to UI, ground, or piece.
@@ -1198,6 +1201,14 @@ class AssemblerApp:
         if key in ("delete", "backspace"):
             if self.selected is not None:
                 self._remove_piece(self.selected)
+            return
+
+        # Ctrl+Q: quit. (Plain Q = rotate, below.) Some platforms send a combined name.
+        if key in ("control-q", "ctrl-q") or (key == "q" and _control_held()):
+            try:
+                application.quit()
+            except Exception:
+                sys.exit(0)
             return
 
         xz_step = NUDGE_FINE_STEP if _shift_held() else NUDGE_STEP
