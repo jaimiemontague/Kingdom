@@ -131,7 +131,10 @@ from tools.model_viewer_kenney import (  # noqa: E402
     _load_model_node_from_file,
     _setup_scene_lighting,
 )
-from game.graphics.prefab_texture_overrides import apply_prefab_texture_override  # noqa: E402
+from game.graphics.prefab_texture_overrides import (  # noqa: E402
+    apply_prefab_texture_override,
+    parse_object_uv_scale_field,
+)
 
 
 # -- Data -----------------------------------------------------------------------
@@ -148,6 +151,7 @@ class PlacedPiece:
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     texture_override: str | None = None
     texture_override_mode: str | None = None
+    texture_override_object_scale: float | None = None  # object-mode only; see prefab_schema / prefab_texture_overrides
 
     def to_json(self) -> dict:
         out = {
@@ -160,6 +164,8 @@ class PlacedPiece:
             out["texture_override"] = self.texture_override
         if self.texture_override_mode:
             out["texture_override_mode"] = self.texture_override_mode
+        if self.texture_override_object_scale is not None:
+            out["texture_override_object_scale"] = float(self.texture_override_object_scale)
         return out
 
 
@@ -410,6 +416,9 @@ class AssemblerApp:
                 scale=scl_t,
                 texture_override=raw.get("texture_override"),
                 texture_override_mode=raw.get("texture_override_mode"),
+                texture_override_object_scale=parse_object_uv_scale_field(
+                    raw.get("texture_override_object_scale")
+                ),
                 select=False,
             )
         self._pending_pieces = []
@@ -976,6 +985,7 @@ class AssemblerApp:
         select: bool,
         texture_override: str | None = None,
         texture_override_mode: str | None = None,
+        texture_override_object_scale: float | None = None,
     ) -> PlacedPiece | None:
         from ursina import Entity, Vec3, scene
         abs_path = self.assets_models / rel
@@ -1005,7 +1015,12 @@ class AssemblerApp:
             apply_kenney_pack_color_tint_to_entity(ent, rel)
         except Exception as exc:
             print(f"[assembler] shader classify failed for {rel}: {exc!r}")
-        apply_prefab_texture_override(ent, texture_override, texture_override_mode)
+        apply_prefab_texture_override(
+            ent,
+            texture_override,
+            texture_override_mode,
+            object_uv_scale=texture_override_object_scale,
+        )
         ent.assembler_role = "piece"
         piece = PlacedPiece(
             model_rel=rel,
@@ -1015,6 +1030,7 @@ class AssemblerApp:
             scale=scale,
             texture_override=str(texture_override) if texture_override else None,
             texture_override_mode=str(texture_override_mode) if texture_override_mode else None,
+            texture_override_object_scale=texture_override_object_scale,
         )
         ent.assembler_piece_ref = piece
         self.pieces.append(piece)

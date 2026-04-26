@@ -7828,8 +7828,8 @@
             "created_utc": "2026-04-26T12:00:00Z"
           },
           "pm_status_summary": {
-            "status": "active",
-            "summary": "WK33 kickoff. Integration order: Batch1 parallel Agents 12+09 \u2192 15 \u2192 03 \u2192 05 \u2192 10+11. Full spec: wk33_3d_sprint_plan_6e616891.plan.md"
+            "status": "closed_success",
+            "summary": "WK33 kickoff round complete; see wk33_sprint_closeout for final signoff."
           },
           "pm_universal_prompt": "You are being activated for sprint **wk33-terrain-lair-economy-prefabs**, round **wk33_r0_kickoff**.\n\n1) Open and follow the full sprint spec (your Agent section has the step list):\n   `.cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md`\n   Also align with `.cursor/plans/master_plan_3d_graphics_v1_5.md` (Phase 1\u20132).\n2) Find your assignment: PM hub `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` \u2192 `sprints[\\\"wk33-terrain-lair-economy-prefabs\\\"].rounds[\\\"wk33_r0_kickoff\\\"].pm_agent_prompts[YOUR_NUMBER]`\n   (your numbered prompt restates the same work as the plan; if anything conflicts, follow the plan + ask PM.)\n3) Do not commit `models_compressed/`. Jaimie runs the Kenney model assembler with Agent 15 as the plan states.\n4) When you finish: update your agent log under `.cursor/plans/agent_logs/`, then run the gates your role requires (code changes: `python tools/qa_smoke.py --quick` from repo root; if you changed assets or manifest: `python tools/validate_assets.py --report`).\n5) Report back: files touched, exact commands + exit codes, and blockers.\n\nSprint in one line: **tiling grass ground texture**, **~20% lighter** trees/grass scatter + **explored (SEEN) FOW** balance, **lair = Graveyard kit** static mesh in `assets/models/environment/`, **marketplace + blacksmith** prefab JSONs (optional **trading_post**).",
           "pm_send_list_minimal": {
@@ -7868,6 +7868,40 @@
             "11": "WK33 (QA): After code settles, run `python tools/qa_smoke.py --quick` and if assets changed `python tools/validate_assets.py --report`; both must PASS. Log in agent_11 JSON.",
             "13": "Optional: draft short player-facing bullets for this sprint if a build goes to testers. No version bump unless Jaimie says so."
           }
+        },
+        "wk33_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T18:00:00Z",
+            "source": "pm_closeout_after_jaimie_playtest",
+            "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM",
+            "commit_message": "3D Graphics Phase 2.5: Market, Blacksmith, Farms, Trading Post, and Lairs + grass added."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK33 is officially closed. Tiling grass ground texture, scatter/SEEN FOW tuning, Graveyard lair static mesh, marketplace + blacksmith + trading_post prefabs (plus construction-stage JSONs and midsprint Kenney assembler scale hotkeys -/=) are accepted. Jaimie playtested Ursina FPS personally; no separate Agent 10 formal run. Agent 11 final gate re-run not required per PM; agent logs note PM acceptance."
+          },
+          "pm_accepted_deliverables": [
+            "Ground: floor_ground_grass.png on base terrain quad; env scatter brightness and FOW tuning hooks (Agent 03 + config).",
+            "Lair: assets/models/environment/lair.glb (Graveyard crypt) wired for all lair types (Agent 15 + 03).",
+            "Economy prefabs: marketplace_v1, blacksmith_v1, trading_post_v1 and build_% variants; farm-related work as landed with Agent 15/03.",
+            "Tools: assets manifest + validate_assets; model_assembler_kenney scale nudge (WK33 midsprint).",
+            "Gameplay: Agent 05 footprint audit PASS 2x2 for new prefabs."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Offer next sprint options; reopen WK33 only on regression report."
+            },
+            "10": {
+              "status": "waived",
+              "note": "Jaimie confirmed FPS acceptable in playtest; PM closed sprint without a separate Agent 10 log round."
+            },
+            "11": {
+              "status": "waived",
+              "note": "PM accepted Jaimie verification; formal re-gate in agent_11 log not required."
+            }
+          }
         }
       }
     },
@@ -7883,8 +7917,8 @@
             "created_utc": "2026-04-27T00:00:00Z"
           },
           "pm_status_summary": {
-            "status": "active",
-            "summary": "Jaimie requested in-assembler per-piece size adjustment. Single-file: tools/model_assembler_kenney.py. Order: 12 (implement) \u2192 11 (merge gate). Not a parallel multi-agent sprint."
+            "status": "closed_success",
+            "summary": "Midsprint landed with Agent 12+11; folded into WK33_sprint_closeout. Assembler -/= scale nudge for selected pieces is accepted."
           },
           "pm_universal_prompt": "You are being activated for **wk33-midsprint-assembler-scale-hotkeys**, round **r0_implement** (follow-up to main WK33 work).\n\n1) **Spec (read first):** `.cursor/plans/assembler_scale_hotkeys_177ca989.plan.md` \u2014 implement exactly what it describes; the Kenney **logical** `scale` in JSON is separate from `pack_extent_multiplier_for_rel` on the Entity in the tool.\n2) **PM hub path:** `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` \u2192 `sprints[\\\"wk33-midsprint-assembler-scale-hotkeys\\\"].rounds[\\\"r0_implement\\\"].pm_agent_prompts[YOUR_NUMBER]`\n3) **Code:** `tools/model_assembler_kenney.py` only (no game/ or config changes unless the plan\u2019s follow-up file lists them).\n4) **Gates:** Agent 12: run `python tools/qa_smoke.py --quick` from repo root after code changes. Agent 11: final PASS confirmation.\n5) **Log:** your agent log JSON with what changed, commands, and exit codes.\n\n**Goal:** With a **selected** placed piece, **-** (minus) makes the piece **slightly smaller** and **=** (equals) **slightly larger**; **Shift** = finer step; display scale in status. Preserve `entity.scale = logical_scale * pack_extent_multiplier_for_rel(model_path)`.",
           "pm_send_list_minimal": {

@@ -455,7 +455,9 @@ def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path]
 
     out: list[Path] = []
     seen: set[str] = set()
-    texture_overrides: dict[str, tuple[str, str | None]] = {}
+    from game.graphics.prefab_texture_overrides import parse_object_uv_scale_field
+
+    texture_overrides: dict[str, tuple[str, str | None, float | None]] = {}
     for piece in raw.get("pieces") or []:
         rel = str(piece.get("model") or "").replace("\\", "/").lstrip("/")
         if not rel or rel in seen:
@@ -464,7 +466,11 @@ def _prefab_piece_files(assets_models: Path, prefab_id: str) -> tuple[list[Path]
         tex = piece.get("texture_override")
         if isinstance(tex, str) and tex.strip():
             mode = piece.get("texture_override_mode")
-            texture_overrides[rel] = (tex.strip(), mode.strip() if isinstance(mode, str) else None)
+            texture_overrides[rel] = (
+                tex.strip(),
+                mode.strip() if isinstance(mode, str) else None,
+                parse_object_uv_scale_field(piece.get("texture_override_object_scale")),
+            )
         p = assets_models / rel
         if p.is_file() and p.suffix.lower() in PREFAB_FOCUS_MODEL_EXTS:
             out.append(p)
@@ -737,8 +743,10 @@ def run_viewer(
                 if rel_posix in texture_overrides_by_rel:
                     from game.graphics.prefab_texture_overrides import apply_prefab_texture_override
 
-                    tex_override, tex_mode = texture_overrides_by_rel[rel_posix]
-                    apply_prefab_texture_override(ent, tex_override, tex_mode)
+                    tex_override, tex_mode, tex_ovs = texture_overrides_by_rel[rel_posix]
+                    apply_prefab_texture_override(
+                        ent, tex_override, tex_mode, object_uv_scale=tex_ovs
+                    )
                 elif fpath.suffix.lower() == ".obj":
                     pass
             else:

@@ -4276,7 +4276,7 @@
       "rounds": {
         "wk33_r0_spinup_2026_04_26": {
           "round_id": "wk33_r0_spinup_2026_04_26",
-          "status": "in_progress",
+          "status": "complete",
           "what_i_changed": [
             "Onboarding session: no repo code changes; baseline gate run for active sprint WK33."
           ],
@@ -4301,6 +4301,16 @@
           "pm_assignment": "After code settles, re-run both gates; log when WK33 implementers (12→15→03→05→10) land.",
           "blockers": [],
           "bugs_found": []
+        },
+        "wk33_r0_closeout_2026_04_27": {
+          "round_id": "wk33_r0_closeout_2026_04_27",
+          "status": "waived_by_pm",
+          "what_i_changed": [
+            "PM (Agent 01) closed sprint wk33-terrain-lair-economy-prefabs 2026-04-27. Jaimie + PM signoff; formal final qa_smoke/validate re-run in this log not required."
+          ],
+          "evidence": {
+            "pm_hub": "sprints['wk33-terrain-lair-economy-prefabs'].rounds['wk33_sprint_closeout']"
+          }
         }
       }
     }

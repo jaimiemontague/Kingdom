@@ -47,6 +47,7 @@ Each element is one placed kit piece:
 | `scale` | `[sx, sy, sz]` | yes | Uniform or per-axis scale (default `[1, 1, 1]`). |
 | `texture_override` | string | no | Optional path relative to **`assets/`** for a curated PNG texture override. Example: `textures/buildings/inn/inn_roof_shingles.png`. Overrides are applied only to this prefab piece and do not mutate source Kenney GLBs. |
 | `texture_override_mode` | string | no | Optional mapping mode for `texture_override`. Default/object-space mode ignores source UVs and is best for Kenney atlas pieces. Use `"uv"` only for generated decal meshes with authored UVs, such as explicit window panels. |
+| `texture_override_object_scale` | number | no | **Object mode only** (`texture_override_mode` not `"uv"`). World-space repeat rate for the override shader. Default when omitted: **0.75** (historical). **Higher** values tile the texture more (finer, smaller features); **lower** = larger, broader tiles. Omitted for every existing prefab keeps the old look. |
 
 ## Rules
 

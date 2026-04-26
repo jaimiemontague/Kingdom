@@ -7,19 +7,19 @@ todos:
     status: completed
   - id: a12-manifest
     content: "Agent 12: manifest + validate_assets for grass PNG, lair glb, new prefabs; exit 0."
-    status: pending
+    status: completed
   - id: a15-kitbash
     content: "Agent 15: graveyard lair static mesh; marketplace_v1 + blacksmith_v1 prefabs (trading_post optional); ATTRIBUTION."
-    status: pending
+    status: completed
   - id: a03-renderer
     content: "Agent 03: ground texture tiling; ~20% scatter brightness; SEEN FOW tune; lair path; _PREFAB_BUILDING_TYPE_TO_FILE; qa_smoke PASS."
-    status: pending
+    status: completed
   - id: a05-footprints
     content: "Agent 05: verify prefab footprint vs config; hand off mismatches to 15."
-    status: pending
+    status: completed
   - id: a10-a11
-    content: "Agents 10+11: FPS spot-check + final gates (qa_smoke + validate_assets)."
-    status: pending
+    content: "Agents 10+11: FPS spot-check + final gates (qa_smoke + validate_assets). Closed 2026-04-27: Jaimie playtest FPS; PM waived formal 10/11 re-runs; see PM hub wk33_sprint_closeout."
+    status: completed
 isProject: false
 ---
 

@@ -634,7 +634,10 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
     centered on the sim building's footprint-center, and the visible mesh extent fits
     within the sim footprint.
     """
-    from game.graphics.prefab_texture_overrides import apply_prefab_texture_override
+    from game.graphics.prefab_texture_overrides import (
+        apply_prefab_texture_override,
+        parse_object_uv_scale_field,
+    )
     from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack_extent_multiplier_for_rel
     from tools.model_viewer_kenney import _apply_gltf_color_and_shading
 
@@ -725,6 +728,7 @@ def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
                 child,
                 piece.get("texture_override"),
                 piece.get("texture_override_mode"),
+                object_uv_scale=parse_object_uv_scale_field(piece.get("texture_override_object_scale")),
             )
         except Exception:
             pass

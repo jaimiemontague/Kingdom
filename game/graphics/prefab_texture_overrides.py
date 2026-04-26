@@ -6,6 +6,7 @@ untouched and custom polish can be scoped to one building.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,10 @@ ASSETS_ROOT = PROJECT_ROOT / "assets"
 _TEXTURE_CACHE: dict[str, Any] = {}
 _OBJECT_SHADER: list[Any] = []
 _UV_SHADER: list[Any] = []
+
+# Object-space override: world units per texture repeat. Higher = finer detail / more repeats.
+# Legacy shader used a literal 0.75; keep that as the default for existing prefabs.
+DEFAULT_OBJECT_UV_SCALE: float = 0.75
 
 
 _OBJECT_TEX_VERT = """
@@ -39,19 +44,21 @@ void main() {
 _OBJECT_TEX_FRAG = """
 #version 150
 uniform sampler2D tex;
+uniform float object_uv_scale;
 in vec3 vWorldPos;
 in vec3 vWorldNormal;
 out vec4 fragColor;
 void main() {
     vec3 n = normalize(vWorldNormal);
     vec3 an = abs(n);
+    float s = object_uv_scale;
     vec2 uv;
     if (an.y >= an.x && an.y >= an.z) {
-        uv = vWorldPos.xz * 0.75;
+        uv = vWorldPos.xz * s;
     } else if (an.x >= an.z) {
-        uv = vWorldPos.zy * 0.75;
+        uv = vWorldPos.zy * s;
     } else {
-        uv = vWorldPos.xy * 0.75;
+        uv = vWorldPos.xy * s;
     }
     vec4 texel = texture(tex, fract(uv));
     vec3 key_dir = normalize(vec3(0.45, 0.75, -0.35));
@@ -135,13 +142,20 @@ def load_prefab_texture_override(asset_rel: str):
     return tex
 
 
-def apply_prefab_texture_override(entity: Any, asset_rel: str | None, mode: str | None = None) -> bool:
+def apply_prefab_texture_override(
+    entity: Any,
+    asset_rel: str | None,
+    mode: str | None = None,
+    *,
+    object_uv_scale: float | None = None,
+) -> bool:
     if not asset_rel:
         return False
     tex = load_prefab_texture_override(str(asset_rel))
     if tex is None:
         return False
     mode_key = str(mode or "object").strip().lower()
+    ovs = float(object_uv_scale) if object_uv_scale is not None else DEFAULT_OBJECT_UV_SCALE
     try:
         model = getattr(entity, "model", None)
         panda_tex = getattr(tex, "_texture", tex)
@@ -156,6 +170,8 @@ def apply_prefab_texture_override(entity: Any, asset_rel: str | None, mode: str 
                 node.setShader(shader)
             if hasattr(node, "setShaderInput"):
                 node.setShaderInput("tex", panda_tex)
+                if mode_key != "uv":
+                    node.setShaderInput("object_uv_scale", ovs)
 
         if model is not None:
             _apply_to_node(model)
@@ -171,6 +187,8 @@ def apply_prefab_texture_override(entity: Any, asset_rel: str | None, mode: str 
         entity.shader = shader
         if hasattr(entity, "setShaderInput"):
             entity.setShaderInput("tex", panda_tex)
+            if mode_key != "uv":
+                entity.setShaderInput("object_uv_scale", ovs)
         # Override textures are authored at final game value; do not additionally
         # darken them via the source pack's color multiplier.
         from ursina import color
@@ -185,3 +203,16 @@ def apply_prefab_texture_override(entity: Any, asset_rel: str | None, mode: str 
 
 def clear_prefab_texture_override_cache() -> None:
     _TEXTURE_CACHE.clear()
+
+
+def parse_object_uv_scale_field(raw: Any) -> float | None:
+    """Optional per-piece `texture_override_object_scale` in prefab JSON (object-mode only)."""
+    if raw is None:
+        return None
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(v) or v <= 0.0 or v > 1.0e6:
+        return None
+    return v
