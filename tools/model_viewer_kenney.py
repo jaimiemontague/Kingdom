@@ -76,9 +76,9 @@ DEFAULT_PACK_GAP = 14.0
 # other packs multiply via ``kenney_pack_scale.pack_max_extent_for_rel``.
 DEFAULT_MODEL_MAX_EXTENT = 5.0
 LABEL_Y = 0.08
-TEXT_SCALE = 13.0
-PACK_TITLE_SCALE = 20.0
-EMPTY_PACK_NOTE_SCALE = 11.0
+TEXT_SCALE = 19.5
+PACK_TITLE_SCALE = 30.0
+EMPTY_PACK_NOTE_SCALE = 16.5
 
 
 @dataclass
@@ -665,6 +665,7 @@ def run_viewer(
             color=color.white,
             billboard=True,
             origin=(0, 0.5),
+            always_on_top=True,
         )
 
         gallery_min_x = min(gallery_min_x, ox)
@@ -686,6 +687,7 @@ def run_viewer(
                 color=color.light_gray,
                 billboard=True,
                 origin=(0, 0.5),
+                always_on_top=True,
             )
 
         for i, fpath in enumerate(files):
@@ -741,6 +743,7 @@ def run_viewer(
                 color=color.light_gray,
                 billboard=True,
                 origin=(0, 0.5),
+                always_on_top=True,
             )
 
         cursor_x += pack_width + pack_gap

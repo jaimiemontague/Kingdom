@@ -4,7 +4,8 @@
   "notes": [
     "This file is owned by Agent 01 only.",
     "Structure nests rounds inside sprints to keep history organized.",
-    "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
+    "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds.",
+    "MANDATORY REQUIREMENT: When creating new prefabs or selecting new models for anything, agents MUST first review all of the following model viewer screenshots to get the best selection of components (or to get the best selection if simply picking models): `assets/models/Fantasy Town Kit.PNG`, `assets/models/Graveyard Kit.PNG`, `assets/models/Blocky Characters.PNG`, `assets/models/Nature Part 1.PNG`, `assets/models/Nature Part 2.PNG`, `assets/models/Nature Part 3.PNG`, `assets/models/Nature Part 4.PNG`, `assets/models/Retro Fantasy Kit.PNG`, and `assets/models/Survival Kit.PNG`. All PNGs must be reviewed before the selection process begins."
   ],
   "sprints": {
     "wk7-ui-polish": {

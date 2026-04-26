@@ -111,6 +111,7 @@ Rules:
 - Do not touch `tools/model_assembler_kenney.py` source to add features; file a request with Agent 12.
 - Do not touch `config.py` footprints; if they need to change, hand off to Agent 05.
 - **MANDATORY TEXTURE OVERRIDES**: When kitbashing using the *Fantasy Town Kit*, *Survival Kit*, or *Graveyard Kit*, you must absolutely use the the texture override shader standard (`.cursor/plans/prefab_texture_override_standard.md`). Assign an appropriate retro skin from `assets/models/Models/Textures` to the pieces using `texture_override` in the JSON to match our retro art aesthetic. Models from those sets without overrides are unacceptable.
+- **MANDATORY MODEL VIEWER SCREENSHOT REVIEW**: When creating new prefabs or selecting new models for anything, you MUST first review all of the following model viewer screenshots to get the best selection of components (or to get the best selection if simply picking models): `assets/models/Fantasy Town Kit.PNG`, `assets/models/Graveyard Kit.PNG`, `assets/models/Blocky Characters.PNG`, `assets/models/Nature Part 1.PNG`, `assets/models/Nature Part 2.PNG`, `assets/models/Nature Part 3.PNG`, `assets/models/Nature Part 4.PNG`, `assets/models/Retro Fantasy Kit.PNG`, and `assets/models/Survival Kit.PNG`. All PNGs must be reviewed before the selection process begins.
 
 ---
 
