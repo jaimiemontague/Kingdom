@@ -311,6 +311,9 @@ class GameEngine:
                 continue
             if getattr(building, "is_neutral", False):
                 continue
+            # Lairs are hostile world structures, not player vision sources.
+            if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+                continue
             raw_bt = getattr(building, "building_type", None)
             btype_name = str(getattr(raw_bt, "value", raw_bt) or "")
             if btype_name == "castle":

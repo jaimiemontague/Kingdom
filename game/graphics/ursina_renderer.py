@@ -1722,6 +1722,24 @@ class UrsinaRenderer:
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
             is_lair = hasattr(b, "stash_gold")
+            # Fog-of-war: lairs are hostile world structures and should not be visible through fog.
+            # Match enemy visibility semantics: show only when the lair tile is currently VISIBLE.
+            if is_lair:
+                world = self.engine.world
+                ts = float(config.TILE_SIZE)
+                tx, ty = int(getattr(b, "x", 0.0) / ts), int(getattr(b, "y", 0.0) / ts)
+                lair_visible = True
+                if 0 <= ty < world.height and 0 <= tx < world.width:
+                    lair_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)
+                obj_id = id(b)
+                existing = self._entities.get(obj_id)
+                if not lair_visible:
+                    if existing is not None:
+                        existing.enabled = False
+                        active_ids.add(obj_id)
+                    continue
+                if existing is not None and getattr(existing, "enabled", True) is False:
+                    existing.enabled = True
             if is_castle:
                 col = COLOR_CASTLE
             elif is_lair:
@@ -1832,6 +1850,8 @@ class UrsinaRenderer:
                     col = color.magenta
                 elif hc == HeroClass.ROGUE or str(hc).lower() == "rogue":
                     col = color.violet
+                elif hc == HeroClass.CLERIC or str(hc).lower() == "cleric":
+                    col = color.rgb(48 / 255, 186 / 255, 178 / 255)
 
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
             clips_h = HeroSpriteLibrary.clips_for(hc_key, size=int(config.TILE_SIZE))

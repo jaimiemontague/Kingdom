@@ -683,5 +683,44 @@
         }
       }
     }
+    ,
+    "ad_hoc-cleric-hero-pixel-sprites": {
+      "sprint_meta": {
+        "notes": "Hotfix: cleric hero was rendering as a teal circle; update procedural hero sprites so cleric matches the shared pixel-hero style (teal accent)."
+      },
+      "rounds": {
+        "2026-04-26_cleric_pixel_sprites": {
+          "sprint_id": "ad_hoc-cleric-hero-pixel-sprites",
+          "round_id": "2026-04-26_cleric_pixel_sprites",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Changed HeroSpriteLibrary procedural frames from circle+glyph to a pixel-hero (head/torso/legs) style, matching existing warrior/rogue look at gameplay zoom. Added cleric teal accent (48,186,178) and ensured cleric gets the same animation set. Also added cleric teal to Ursina hero tint + UI portrait color maps, and updated CC0 placeholder generator accent mapping.",
+            "files": [
+              "game/graphics/hero_sprites.py",
+              "game/graphics/ursina_renderer.py",
+              "game/ui/chat_panel.py",
+              "game/ui/quest_view_panel.py",
+              "tools/generate_cc0_placeholders.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "No PNG hero sprites were added; this change standardizes the procedural fallback so new classes (like cleric) do not render as circles."
+          ]
+        }
+      }
+    }
   }
 }

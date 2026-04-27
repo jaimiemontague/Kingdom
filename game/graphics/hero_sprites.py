@@ -18,6 +18,7 @@ class HeroSpriteSpec:
     ranger: Tuple[int, int, int] = (70, 200, 120)
     rogue: Tuple[int, int, int] = (180, 180, 200)
     wizard: Tuple[int, int, int] = (170, 90, 230)
+    cleric: Tuple[int, int, int] = (48, 186, 178)
 
 
 class HeroSpriteLibrary:
@@ -81,6 +82,8 @@ class HeroSpriteLibrary:
             return spec.rogue
         if hc == "wizard":
             return spec.wizard
+        if hc == "cleric":
+            return spec.cleric
         return spec.warrior
 
     @classmethod
@@ -90,42 +93,75 @@ class HeroSpriteLibrary:
 
     @staticmethod
     def _procedural_frames(hero_class: str, action: str, base_color: Tuple[int, int, int], spec: HeroSpriteSpec) -> list[pygame.Surface]:
+        # NOTE: This procedural style is intentionally "pixel-hero" (head/torso/legs),
+        # matching the CC0 placeholder look used elsewhere in the project. It avoids
+        # font glyphs so hero classes always read consistently, even in headless modes.
         s = int(spec.size)
         cx = cy = s // 2
-        r = max(6, s // 3)
 
         def mk_surface() -> pygame.Surface:
-            surf = pygame.Surface((s, s), pygame.SRCALPHA)
-            return surf
+            return pygame.Surface((s, s), pygame.SRCALPHA)
 
-        def draw_base(surf: pygame.Surface, bob_px: float = 0.0, lean: float = 0.0, brighten: float = 1.0):
-            col = (
-                min(255, int(base_color[0] * brighten)),
-                min(255, int(base_color[1] * brighten)),
-                min(255, int(base_color[2] * brighten)),
-            )
-            shadow = pygame.Rect(0, 0, int(r * 1.8), int(r * 0.9))
-            shadow.center = (cx, cy + r // 2 + 6)
-            pygame.draw.ellipse(surf, (0, 0, 0, 55), shadow)
+        def shade(c: Tuple[int, int, int], delta: int) -> Tuple[int, int, int]:
+            return (max(0, min(255, c[0] + delta)), max(0, min(255, c[1] + delta)), max(0, min(255, c[2] + delta)))
 
-            body_center = (int(cx + lean * 4), int(cy + bob_px))
-            pygame.draw.circle(surf, col, body_center, r)
-            pygame.draw.circle(surf, spec.outline, body_center, r, 2)
+        dark = (20, 20, 25)
+        skin = (255, 210, 180)
 
-            # Simple class glyph
-            glyph = (hero_class or "warrior").lower()[:1].upper()
-            font = pygame.font.Font(None, max(12, s // 2))
-            txt = font.render(glyph, True, (250, 250, 250))
-            rect = txt.get_rect(center=body_center)
-            surf.blit(txt, rect)
+        def draw_pixel_hero(surf: pygame.Surface, *, t: float, st: str) -> tuple[int, int]:
+            # A simple 32x32 pixel hero: head + torso + legs + tiny class accents.
+            # Returns (bx, by) body center-ish for weapon placement.
+            surf.fill((0, 0, 0, 0))
+            bob = int(max(0, math.sin(t * math.tau) * 2)) if st == "idle" else 0
+            lean = int(math.sin(t * math.tau) * 2) if st == "walk" else 0
+            if st == "hurt":
+                lean = -2 if int(t * 10) % 2 == 0 else 2
+            elif st == "attack":
+                lean = 3 if t > 0.3 else -1
+
+            bx, by = cx + lean, cy + 2 + bob
+
+            # Head
+            pygame.draw.rect(surf, dark, pygame.Rect(bx - 4, by - 12, 8, 8))
+            pygame.draw.rect(surf, skin, pygame.Rect(bx - 3, by - 11, 6, 6))
+
+            # Torso
+            pygame.draw.rect(surf, dark, pygame.Rect(bx - 5, by - 4, 10, 8))
+            pygame.draw.rect(surf, base_color, pygame.Rect(bx - 4, by - 3, 8, 5))
+            pygame.draw.rect(surf, shade(base_color, -18), pygame.Rect(bx - 4, by + 2, 8, 2))
+
+            # Legs
+            leg_base = by + 4
+            if st == "walk":
+                l_off = int(math.sin(t * math.tau) * 3)
+                r_off = int(math.cos(t * math.tau) * 3)
+            else:
+                l_off, r_off = -2, 2
+
+            pygame.draw.rect(surf, dark, pygame.Rect(bx - 3 + l_off, leg_base, 4, 6))
+            pygame.draw.rect(surf, (110, 110, 110), pygame.Rect(bx - 2 + l_off, leg_base, 2, 5))
+            pygame.draw.rect(surf, dark, pygame.Rect(bx - 1 + r_off, leg_base, 4, 6))
+            pygame.draw.rect(surf, (110, 110, 110), pygame.Rect(bx + r_off, leg_base, 2, 5))
+
+            # Class micro-accent (a single pixel "tabard" highlight)
+            hc = (hero_class or "warrior").lower()
+            if hc == "cleric":
+                pygame.draw.rect(surf, (230, 245, 245), pygame.Rect(bx - 1, by - 1, 2, 2))
+            elif hc == "wizard":
+                pygame.draw.rect(surf, (245, 225, 255), pygame.Rect(bx - 1, by - 1, 2, 2))
+            elif hc == "rogue":
+                pygame.draw.rect(surf, (225, 225, 235), pygame.Rect(bx - 1, by - 1, 2, 2))
+            elif hc == "ranger":
+                pygame.draw.rect(surf, (235, 255, 235), pygame.Rect(bx - 1, by - 1, 2, 2))
+
+            return bx, by
 
         if action == "idle":
             frames = []
             for i in range(6):
                 t = i / 6.0
                 surf = mk_surface()
-                bob = math.sin(t * math.tau) * 1.2
-                draw_base(surf, bob_px=bob, lean=0.0, brighten=1.0)
+                draw_pixel_hero(surf, t=t, st="idle")
                 frames.append(surf)
             return frames
 
@@ -134,65 +170,58 @@ class HeroSpriteLibrary:
             for i in range(8):
                 t = i / 8.0
                 surf = mk_surface()
-                bob = abs(math.sin(t * math.tau)) * 1.6
-                lean = math.sin(t * math.tau) * 0.6
-                draw_base(surf, bob_px=-bob, lean=lean, brighten=1.05)
-
-                # feet ticks
-                y = cy + r + 2
-                x_off = int(math.sin(t * math.tau) * 4)
-                pygame.draw.line(surf, (230, 230, 230), (cx - 6 + x_off, y), (cx - 2 + x_off, y), 2)
-                pygame.draw.line(surf, (230, 230, 230), (cx + 2 - x_off, y), (cx + 6 - x_off, y), 2)
+                draw_pixel_hero(surf, t=t, st="walk")
                 frames.append(surf)
             return frames
 
         if action == "attack":
             frames = []
             hc_lower = (hero_class or "").lower()
-            is_ranger = (hc_lower == "ranger")
-            
+
             for i in range(6):
                 t = i / 5.0
                 surf = mk_surface()
-                lean = 0.9 if t > 0.3 else 0.2
-                draw_base(surf, bob_px=0.0, lean=lean, brighten=1.10)
+                bx, by = draw_pixel_hero(surf, t=t, st="attack")
 
-                if is_ranger:
-                    # Bow cue: C-curve vertical arc + string (WK5 Hotfix: ranger ranged readability)
-                    # Bow limb: vertical C-curve from left side (drawn as arc points)
-                    bow_left_x = cx - r - 2
-                    # Draw bow arc (C-curve) using line segments
-                    # Top to middle (curved left)
-                    for i in range(4):
-                        y_off = -4 + i
-                        x_off = int((i / 3.0) ** 2 * 2)  # Curved left
-                        pygame.draw.circle(surf, (20, 20, 25), (bow_left_x - x_off, cy + y_off), 1)
-                    # Middle to bottom (curved left)
-                    for i in range(4):
-                        y_off = i
-                        x_off = int(((3 - i) / 3.0) ** 2 * 2)  # Curved left
-                        pygame.draw.circle(surf, (20, 20, 25), (bow_left_x - x_off, cy + y_off), 1)
-                    # String (vertical line connecting top and bottom)
-                    pygame.draw.line(surf, (200, 200, 210), (bow_left_x + 2, cy - 4), (bow_left_x + 2, cy + 4), 1)
-                    # Arrow cue (minimal, matches skeleton_archer style)
-                    if t > 0.2:  # Arrow appears mid-attack
-                        arrow_start = (bow_left_x + 2, cy)
-                        arrow_end = (cx + r + 2, cy - 2)
-                        pygame.draw.line(surf, (255, 245, 220), arrow_start, arrow_end, 2)
+                # Weapon cues (simple, readable at gameplay zoom)
+                if hc_lower == "ranger":
+                    # bow + arrow cue
+                    pygame.draw.line(surf, dark, (bx - 6, by - 10), (bx - 6, by + 4), 2)
+                    pygame.draw.line(surf, (200, 200, 210), (bx - 5, by - 10), (bx - 5, by + 4), 1)
+                    if t > 0.2:
+                        pygame.draw.line(surf, (245, 235, 200), (bx - 2, by - 2), (bx + 14, by - 4), 2)
+                elif hc_lower == "wizard":
+                    # staff + glow
+                    pygame.draw.line(surf, (100, 60, 20), (bx + 2, by + 8), (bx + 10, by - 10), 2)
+                    glow_r = int(5 * math.sin(t * math.pi))
+                    if glow_r > 0:
+                        pygame.draw.circle(surf, (200, 150, 255, 140), (bx + 10, by - 10), glow_r)
+                        pygame.draw.circle(surf, (255, 255, 255), (bx + 10, by - 10), 2)
+                elif hc_lower == "rogue":
+                    # twin daggers
+                    dx1, dy1 = bx + 8, by - 4 + int(8 * t)
+                    dx2, dy2 = bx + 10, by + 6 - int(10 * t)
+                    pygame.draw.line(surf, (180, 180, 190), (bx, by - 2), (dx1, dy1), 2)
+                    pygame.draw.line(surf, (180, 180, 190), (bx + 2, by + 2), (dx2, dy2), 2)
+                elif hc_lower == "cleric":
+                    # mace cue (readable "holy bonk")
+                    end_x, end_y = bx + 10, by - 12 + int(28 * t)
+                    pygame.draw.line(surf, (230, 235, 235), (bx - 2, by - 4), (end_x, end_y), 3)
+                    pygame.draw.circle(surf, (255, 230, 140), (end_x, end_y), 3)
                 else:
-                    # sword arc (non-ranger classes)
-                    start = (cx + r - 2, cy - 2)
-                    end = (cx + r + 10, cy - 12 + int(18 * t))
-                    pygame.draw.line(surf, (245, 245, 245), start, end, 3)
-                    pygame.draw.circle(surf, (255, 220, 120), end, 3)
+                    # warrior/default sword
+                    end_x, end_y = bx + 10, by - 12 + int(28 * t)
+                    pygame.draw.line(surf, (220, 220, 225), (bx - 2, by - 4), (end_x, end_y), 3)
+                    pygame.draw.circle(surf, (255, 200, 50), (end_x, end_y), 3)
                 frames.append(surf)
             return frames
 
         if action == "hurt":
             frames = []
             for i in range(4):
+                t = i / 4.0
                 surf = mk_surface()
-                draw_base(surf, bob_px=0.0, lean=(-1) ** i * 0.8, brighten=0.8)
+                draw_pixel_hero(surf, t=t, st="hurt")
                 # red flash overlay
                 overlay = pygame.Surface((s, s), pygame.SRCALPHA)
                 overlay.fill((255, 40, 40, 70))

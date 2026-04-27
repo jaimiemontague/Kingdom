@@ -431,6 +431,44 @@
           }
         }
       }
+    },
+    "wk34-final-3d-model-pass-pre-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "Final 3D model pass pre-v1.5. Agent 11 scope: sprint-close gates only (qa_smoke --quick + validate_assets --report) and report PASS/FAIL + owner hints."
+      },
+      "rounds": {
+        "wk34_r0_gates_2026_04_27": {
+          "round_id": "wk34_r0_gates_2026_04_27",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate run only for WK34 close).",
+            "Ran sprint-required gates: qa_smoke --quick and validate_assets --report."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS; pytest PASS (97 passed); observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_27": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders for many entity/building models; non-blocking as long as exit 0)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

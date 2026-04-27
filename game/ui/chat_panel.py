@@ -20,6 +20,7 @@ _HERO_CLASS_COLORS = {
     "ranger": (70, 200, 120),
     "rogue": (180, 180, 200),
     "wizard": (170, 90, 230),
+    "cleric": (48, 186, 178),
 }
 
 _COLOR_BG_DIM = (0, 0, 0, 100)

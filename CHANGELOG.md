@@ -1,8 +1,8 @@
 # Changelog
 
-## Prototype v1.5.0 — 3D graphics (Phases 1–2; in progress)
+## Prototype v1.5.0 — The Game Goes 3D
 
-> **Note:** This version is **not finalized** for public release yet. The entry below records **everything shipped on `main` so far** toward the v1.5 goal: a cohesive **static** 3D Ursina presentation (environment + kitbash buildings + tools). **Animated 3D units (Phase 3)** are **out of scope** for this changelog line until/unless they land; heroes, enemies, and workers may remain **billboards** at v1.5 ship. When you officially cut v1.5, edit the title line, add a release name, and trim or tighten bullets if needed. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.
+This update completes the **Phase 1–2** transition to a cohesive **static 3D** Ursina presentation (environment + kitbash buildings + tooling). Animated 3D units remain a possible **1.5.x** follow-up. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.
 
 ### Vision (target v1.5)
 - **Phase 1–2:** Static environments, fog, camera, Kenney **prefab JSON** buildings, **lair** meshes, economy building coverage, manifest/validation, and perf to a **playable** bar in `python main.py --renderer ursina`.
@@ -52,17 +52,19 @@
 ### WK33 midsprint — Kenney model assembler
 - **Per-piece scale nudge:** With a **selected** placed piece, **`-`** / **`=`** shrink/grow (multiplicative), **Shift** = finer step; status line shows scale; logical `scale` in JSON remains separate from pack **extent multiplier** at runtime (`tools/model_assembler_kenney.py`).
 
+### WK34 — Final 3D model pass (Phase 2.6)
+- **Nature readability:** Nature scatter props scaled up ~**4×** so trees/rocks/grass read at gameplay camera distance.
+- **Construction stages:** Added 20%/50% build-stage prefabs for **Ranger/Rogue/Wizard Guilds**, plus full prefab sets for **Guardhouse** and the new **Temple**.
+- **Temple + Clerics:** Added a canonical buildable **Temple** that can recruit **Clerics**.
+- **Fog of war:** **All constructed player buildings** reveal a small radius of fog for better moment-to-moment readability.
+- **Pacing polish:** Farms spawn at **half rate**; the first food stands try to spawn **near the Marketplace**; shopping durations reduced to curb Marketplace loitering.
+- **Build roster cleanup:** Deprecated buildings removed from the buildable roster (kept as legacy-safe code paths).
+
 ### Standards & tooling (cross-cutting)
 - **Prefab texture overrides:** [prefab_texture_override_standard.md](.cursor/plans/prefab_texture_override_standard.md) — mandatory workflow for weak **Fantasy Town / Graveyard / Survival** materials: per-piece `texture_override` + `game/graphics/prefab_texture_overrides.py` (no Kenney GLB edits). PM + **Agent 15** onboarding updated.
 - **Kit screenshot review (first):** Before kitbashing, review pack sheet PNGs under `assets/models/` (Fantasy Town, Graveyard, Survival, Nature parts, Retro, Blocky Characters, etc.) so piece picks match silhouette goals.
 - **`model_viewer_kenney.py`:** Ongoing **focus-prefab**, material debug, and **screenshot** hooks for assembler ↔ game parity checks.
 - **`lair_v1` / schema:** Prefab schema and neutral lair prefab work aligned with construction and viewer smokes where added.
-
-### Still to do before “official” v1.5.0 release (edit this list when you ship)
-- [ ] Final **CHANGELOG** title, optional codename, and **version** bump in any `config`/metadata you use for builds.
-- [ ] Remaining **Phase 2** building coverage (temples, optional guild/wizard polish, any missing **config** building types) per **master plan** — **castle + house + warrior/ranger/rogue guilds** are already on prefabs from **WK30**; or explicitly mark “good enough for EA” and move overflow to 1.5.x.
-- [ ] Last **QA** pass: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --report`, manual `python main.py --renderer ursina --no-llm` (and `--provider mock` if you use LLM paths).
-- [ ] **Steam / store** copy and screenshots refresh (Agent 13 territory) when you go public.
 
 
 ## Prototype v1.4.9 — Most Ursina Major Bugs Fixed

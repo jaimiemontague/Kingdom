@@ -121,6 +121,7 @@ def _hero_frames(hero_class: str, state: str) -> list[pygame.Surface]:
         "ranger": (70, 200, 120),
         "rogue": (180, 180, 200),
         "wizard": (170, 90, 230),
+        "cleric": (48, 186, 178),
     }
     acc = accents.get(hero_class, (220, 220, 220))
     skin = (255, 210, 180)
@@ -195,6 +196,12 @@ def _hero_frames(hero_class: str, state: str) -> list[pygame.Surface]:
                 dx2, dy2 = bx + 10, by + 6 - int(10 * t)
                 pygame.draw.line(s, (180, 180, 190), (bx, by-2), (dx1, dy1), 2)
                 pygame.draw.line(s, (180, 180, 190), (bx+2, by+2), (dx2, dy2), 2)
+            elif hc_lower == "cleric":
+                # Same melee read as warrior; teal torso already sets class identity.
+                start_x, start_y = bx - 2, by - 4
+                end_x, end_y = bx + 10, by - 14 + int(28 * t)
+                pygame.draw.line(s, (235, 245, 245), (start_x, start_y), (end_x, end_y), 3)
+                pygame.draw.circle(s, (255, 230, 140), (end_x, end_y), 3)
         else:
             pygame.draw.rect(s, skin, pygame.Rect(bx - 6, by - 2, 2, 4))
             pygame.draw.rect(s, skin, pygame.Rect(bx + 4, by - 2, 2, 4))

@@ -2421,6 +2421,47 @@
           }
         }
       }
+    },
+    "wk34-3d-final-model-pass-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "created_utc": "2026-04-27T00:00:00Z",
+        "notes": "WK34: nature scatter 4× scale-up; Ranger/Rogue/Wizard construction stages; Guardhouse and Temple full prefab sets; Cleric hiring; building LoS; neutral spawn rebalance; Marketplace loitering reduction; deprecated building roster cleanup."
+      },
+      "rounds": {
+        "wk34_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T00:00:00Z",
+            "source": "pm_closeout_after_agent_completion",
+            "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM",
+            "commit_message": "v1.5.0 - The Game Goes 3D"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK34 is closed and accepted. Final 3D model pass for pre-v1.5: nature props scaled up, new/updated prefabs and construction stages, Temple + Clerics, building LoS, spawn/pacing tuning, and deprecated building roster cleanup. Gates pass (qa_smoke + validate_assets)."
+          },
+          "pm_accepted_deliverables": [
+            "Nature scatter scale-up (~4×) for readability in Ursina.",
+            "Prefab sets: Ranger Guild rework + build_20/build_50; Rogue/Wizard build_20/build_50; Guardhouse full set; Temple full set.",
+            "Temple is canonical buildable type; can hire Clerics.",
+            "Fog-of-war: all constructed player buildings reveal a 3-tile radius (excluding castle, neutrals, and lairs).",
+            "Neutral spawns: farms at half rate; first food stands prefer near Marketplace; shopping durations reduced to curb loitering.",
+            "Deprecated buildings removed from build roster (keys/hotkeys/UI), with legacy-safe guards where needed."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Cut v1.5.0 release: bump version metadata + finalize CHANGELOG + tag release commit."
+            },
+            "03": { "status": "done" },
+            "05": { "status": "done" },
+            "07": { "status": "done" },
+            "15": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        }
+      }
     }
   }
 }

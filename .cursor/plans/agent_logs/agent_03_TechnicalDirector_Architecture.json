@@ -784,6 +784,38 @@
                 "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
               }
             },
+            "followups": [
+              {
+                "added_at_local": "2026-04-26",
+                "topic": "Fog-of-war LoS: exclude lairs",
+                "what_i_changed": [
+                  "game/engine._update_fog_of_war: WK34 player-building LoS now skips lairs (building.is_lair or stash_gold), since lairs are not player structures."
+                ],
+                "files_changed": [
+                  "game/engine.py"
+                ],
+                "evidence": {
+                  "qa_smoke_quick": {
+                    "command": "python tools/qa_smoke.py --quick",
+                    "exit_code": 0,
+                    "status": "PASS"
+                  }
+                }
+              }
+            ],
+            "final_gates": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46"
+              }
+            },
             "screenshots": "None captured this session. Plan optional: python tools/model_viewer_kenney.py --screenshot-subdir wk34 --auto-exit-sec 5"
           }
         }
