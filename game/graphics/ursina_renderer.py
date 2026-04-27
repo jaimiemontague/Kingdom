@@ -1697,6 +1697,27 @@ class UrsinaRenderer:
         except Exception:
             HeroClass = None
 
+        self._ensure_shadow_bounds_once()
+
+        world = getattr(snapshot, "world", None) or self._world
+        fog_revision = int(getattr(snapshot, "fog_revision", 0))
+        self._build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        self._ensure_fog_overlay(world, fog_revision)
+        self._sync_visibility_gated_terrain(world, fog_revision)
+        self._ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
+
+        active_ids = set()
+        self._sync_snapshot_buildings(snapshot, world, active_ids)
+        self._sync_snapshot_heroes(snapshot, active_ids, HeroClass)
+        self._sync_snapshot_enemies(snapshot, world, active_ids)
+        self._sync_snapshot_peasants(snapshot, active_ids)
+        self._sync_snapshot_guards(snapshot, active_ids)
+        self._sync_snapshot_tax_collector(snapshot, active_ids)
+        self._sync_snapshot_projectiles(snapshot, active_ids)
+        self._update_debug_status_text(snapshot)
+        self._destroy_removed_entities(active_ids)
+
+    def _ensure_shadow_bounds_once(self) -> None:
         if (
             not self._shadow_bounds_initialized
             and self._directional_light is not None
@@ -1707,15 +1728,7 @@ class UrsinaRenderer:
                 pass
             self._shadow_bounds_initialized = True
 
-        world = getattr(snapshot, "world", None) or self._world
-        fog_revision = int(getattr(snapshot, "fog_revision", 0))
-        self._build_3d_terrain(world, getattr(snapshot, "buildings", ()))
-        self._ensure_fog_overlay(world, fog_revision)
-        self._sync_visibility_gated_terrain(world, fog_revision)
-        self._ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
-
-        active_ids = set()
-
+    def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         for b in getattr(snapshot, "buildings", ()):
             bt_raw = getattr(b, "building_type", "") or ""
@@ -1836,6 +1849,8 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — pixel billboards (WK22 R3: walk/idle/inside + attack/hurt from _render_anim_trigger)
         for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
@@ -1882,6 +1897,8 @@ class UrsinaRenderer:
             self._sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
             active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_enemies(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Enemies — billboards (same animation contract as pygame EnemyRenderer)
         ts = float(config.TILE_SIZE)
         for e in getattr(snapshot, "enemies", ()):
@@ -1919,6 +1936,8 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Peasants — billboards
         for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
@@ -1948,6 +1967,8 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Guards — billboards
         for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
@@ -1978,6 +1999,8 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Tax Collector — billboards
         tc = getattr(snapshot, "tax_collector", None)
         if tc is not None:
@@ -2009,6 +2032,8 @@ class UrsinaRenderer:
                 )
                 active_ids.add(obj_id)
 
+        
+    def _sync_snapshot_projectiles(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
         if self._projectile_tex is None:
             psurf = get_projectile_billboard_surface()
@@ -2047,6 +2072,7 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
+    def _update_debug_status_text(self, snapshot: "SimStateSnapshot") -> None:
         heroes_alive = len([h for h in getattr(snapshot, "heroes", ()) if getattr(h, "is_alive", True)])
         enemies_alive = len(getattr(snapshot, "enemies", ()))
         status_text = (
@@ -2056,6 +2082,8 @@ class UrsinaRenderer:
         if self.status_text.text != status_text:
             self.status_text.text = status_text
 
+
+    def _destroy_removed_entities(self, active_ids: set) -> None:
         dead_ids = set(self._entities.keys()) - active_ids
         for obj_id in dead_ids:
             self._unit_anim_state.pop(obj_id, None)
@@ -2063,3 +2091,4 @@ class UrsinaRenderer:
             import ursina
 
             ursina.destroy(ent)
+

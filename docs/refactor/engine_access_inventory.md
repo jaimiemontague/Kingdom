@@ -96,3 +96,15 @@ Other code (Ursina, etc.) may still use `engine` as a local or `self.engine` on 
 
 - `game/ui/building_panel.py` does **not** store `self.engine`. Ursina HUD re-upload is requested via optional `on_request_ursina_hud_upload: Callable[[], None] | None` (wired from `GameEngine._request_ursina_hud_upload` in `engine.py`).
 - `game/ui/building_renderers/economic_panel.py` calls that callback via `_request_live_hud_upload_for_ursina(panel)` (no `getattr(panel, "engine", ...)`).
+
+---
+
+## WK41 mechanical splits (readability; no API contract change)
+
+- **`game/engine_facades/camera_display.py`** — `EngineCameraDisplay`: camera/zoom, display apply, screenshot (`GameEngine` delegates one-liners).
+- **`game/engine_facades/render_coordinator.py`** — `EngineRenderCoordinator`: pygame composite `render`, hero-focus minimap, perf overlay (`GameEngine` delegates).
+- **`game/engine_facades/__init__.py`** — re-exports the two facades.
+- **`game/graphics/ursina_coords.py`**, **`ursina_environment.py`**, **`ursina_prefabs.py`**, **`ursina_units_anim.py`** — leaf helpers split out of `ursina_renderer.py` (Track A1).
+- **`game/graphics/ursina_terrain_fog_collab.py`** — `UrsinaTerrainFogCollab`: terrain root, fog, visibility-gated props, grid debug (when wired on branch using collaborators).
+- **`game/graphics/ursina_entity_render_collab.py`** — `UrsinaEntityRenderCollab`: billboard/prefab/3D building entity sync helpers (same).
+- **`game/graphics/ursina_renderer.py`** — `UrsinaRenderer.update()` delegates snapshot sync to `_sync_snapshot_*` helpers + `_update_debug_status_text` / `_destroy_removed_entities` (Track A3 / R4); renderer owns `_entities` / `_unit_anim_state` / lighting fields as before.

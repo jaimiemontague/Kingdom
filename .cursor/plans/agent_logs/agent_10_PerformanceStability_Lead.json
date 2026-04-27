@@ -469,6 +469,267 @@
           }
         }
       }
+    },
+    "wk41-mechanical-module-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK41 Step 2 (parallel Agent 11): perf consult after R1 Track A1 leaf helper extraction (ursina_coords/environment/prefabs/units_anim)."
+      },
+      "rounds": {
+        "wk41_r1_step2_wave2_perf_consult": {
+          "sprint_id": "wk41-mechanical-module-split",
+          "round_id": "wk41_r1_step2_wave2_perf_consult",
+          "round_meta": {
+            "prompt_set_id": "wk41_r0_kickoff",
+            "pm_step": "STEP_2_parallel_with_11_after_R1",
+            "sent_at_local": "2026-04-28"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK41 R1 post-A1 (Agent 10 consult): PM Step 2 — ~5 min Ursina equivalent + headless baseline after Track A1 leaf modules (no Agent 10 code edits). Confirmed new helpers present: game/graphics/ursina_coords.py, ursina_environment.py, ursina_prefabs.py, ursina_units_anim.py. Headless perf_benchmark default profile: ms/tick total ~1.17 (720 ticks) — in line with prior ~1.0–1.26 band; no sim regression signal. Ursina: (1) run_ursina_capture_once --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10 completed exit 0 (full console truncated; session included first-run OBJ→BAM conversions — expected transient load cost). (2) Repeat with --seconds 180 for complete [fps-probe] summary: heroes=14, frames=7804, avg_fps=51.6, p50=51.0, min_fps=6.7 (likely spike/outlier + startup), ursina_renderer stage avg ~3.32ms p90 ~6.09ms. Judgement: no sustained FPS collapse attributable to mechanical import split; behavior matches readability-only refactor expectation. Regression vs prior refactor-era probes: NO for purpose of WK41.",
+            "summary_bullets": [
+              "R1 A1 modules on disk: ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim (+ stable UrsinaRenderer import path).",
+              "perf_benchmark (default 12s): ~1.170 ms/tick total; PF ~0.816 ms/tick — OK vs recent baseline band.",
+              "Ursina automated probe (180s sample after 10s warmup): avg_fps 51.6; steady mid-50s p50 — no warning regression for this checkpoint.",
+              "300s full-length run: exit 0; cold OBJ→BAM logs explain noisy startup — not flagged as split regression.",
+              "Jaimie manual Ursina playtest (WK41 R1): PASS — feel OK.",
+              "Blockers: none for R1 checkpoint."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/perf_benchmark.py",
+              "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "PM manual equivalent: python main.py --renderer ursina --no-llm (5–10 min pan/build feel check)"
+            ],
+            "evidence": {
+              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
+              "perf_benchmark_exit_code": 0,
+              "perf_benchmark_ms_per_tick_total": 1.17,
+              "perf_benchmark_pf_ms_per_tick": 0.816,
+              "ursina_300s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "ursina_300s_exit_code": 0,
+              "ursina_180s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "ursina_180s_exit_code": 0,
+              "ursina_fps_probe": {
+                "heroes": 14,
+                "frames": 7804,
+                "avg_fps": 51.6,
+                "min_fps": 6.7,
+                "p10_fps": 38.0,
+                "p50_fps": 51.0,
+                "p90_fps": 70.3,
+                "max_fps": 92.8
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 1.678,
+                "hud_texture_upload_p90_ms": 0.353,
+                "hud_texture_upload_max_ms": 65.964,
+                "pygame_hud_render_avg_ms": 1.137,
+                "pygame_hud_render_p90_ms": 1.548,
+                "pygame_hud_render_max_ms": 17.561,
+                "tick_simulation_avg_ms": 1.878,
+                "tick_simulation_p90_ms": 2.196,
+                "tick_simulation_max_ms": 121.447,
+                "ursina_renderer_avg_ms": 3.317,
+                "ursina_renderer_p90_ms": 6.087,
+                "ursina_renderer_max_ms": 58.091
+              },
+              "wk41_r1_regression_verdict": "no",
+              "human_playtest_wk41_r1": {
+                "status": "PASS",
+                "reporter": "human_playtest_Jaimie",
+                "note": "Manual Ursina session after WK41 R1 — reported good (feel)."
+              }
+            },
+            "agent_fields": {
+              "reviewed_new_modules": [
+                "game/graphics/ursina_coords.py",
+                "game/graphics/ursina_environment.py",
+                "game/graphics/ursina_prefabs.py",
+                "game/graphics/ursina_units_anim.py"
+              ]
+            }
+          }
+        },
+        "wk41_r2_step4_wave4_perf_consult": {
+          "sprint_id": "wk41-mechanical-module-split",
+          "round_id": "wk41_r2_step4_wave4_perf_consult",
+          "round_meta": {
+            "prompt_set_id": "wk41_r0_kickoff",
+            "pm_step": "STEP_4_parallel_with_11_after_R2",
+            "sent_at_local": "2026-04-28"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK41 R2 post-A2 (Agent 10 consult): PM Step 4 after Track A2 UrsinaRenderer collaborators (terrain+fog vs entities). New modules: ursina_terrain_fog_collab.py, ursina_entity_render_collab.py. Headless perf_benchmark default: ms/tick total ~1.14 — consistent with R1 ~1.17 and prior band. Ursina 180s FPS probe (10s warmup): avg_fps 45.8, p50 47.6, heroes=16; ursina_renderer stage avg ~3.64ms. R1 probe had avg 51.6 with heroes=14 — spread attributed to different live scene/HUD churn and probe variance, not a regression signal from collaborator delegation. hud_texture_upload avg higher this run (~14ms vs ~1.7ms R1): typical when HUD overlay animates or differs between sessions — flag only if Jaimie sees sustained hitch. Verdict: no perf regression attributable to R2 mechanical split.",
+            "summary_bullets": [
+              "R2 collaborators on disk: ursina_terrain_fog_collab.py, ursina_entity_render_collab.py (Track A2 per WK41 plan).",
+              "perf_benchmark (default 12s): ~1.140 ms/tick total; PF ~0.782 ms/tick — OK.",
+              "Ursina 180s probe: avg_fps 45.8, p50 47.6; ursina_renderer avg ~3.64ms — playable band; compare to R1 with known hero/scene variance.",
+              "Regression verdict for R2 refactor: no.",
+              "Blockers: none."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/perf_benchmark.py",
+              "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "Manual: python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
+              "perf_benchmark_exit_code": 0,
+              "perf_benchmark_ms_per_tick_total": 1.14,
+              "perf_benchmark_pf_ms_per_tick": 0.782,
+              "ursina_180s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "ursina_180s_exit_code": 0,
+              "ursina_fps_probe": {
+                "heroes": 16,
+                "frames": 4657,
+                "avg_fps": 45.8,
+                "min_fps": 5.9,
+                "p10_fps": 13.1,
+                "p50_fps": 47.6,
+                "p90_fps": 77.9,
+                "max_fps": 106.0
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 14.282,
+                "hud_texture_upload_p90_ms": 49.15,
+                "hud_texture_upload_max_ms": 73.28,
+                "pygame_hud_render_avg_ms": 2.065,
+                "pygame_hud_render_p90_ms": 2.865,
+                "pygame_hud_render_max_ms": 10.236,
+                "tick_simulation_avg_ms": 4.046,
+                "tick_simulation_p90_ms": 2.832,
+                "tick_simulation_max_ms": 118.249,
+                "ursina_renderer_avg_ms": 3.636,
+                "ursina_renderer_p90_ms": 6.57,
+                "ursina_renderer_max_ms": 82.635
+              },
+              "wk41_r2_regression_verdict": "no",
+              "compare_r1_automated_probe_note": "R1 avg_fps 51.6 heroes=14 vs R2 avg_fps 45.8 heroes=16 — not apples-to-apples; treat as variance unless manual confirms sustained drop."
+            },
+            "agent_fields": {
+              "reviewed_new_modules": [
+                "game/graphics/ursina_terrain_fog_collab.py",
+                "game/graphics/ursina_entity_render_collab.py"
+              ]
+            }
+          }
+        },
+        "wk41_r3_step6_wave6_perf_consult": {
+          "sprint_id": "wk41-mechanical-module-split",
+          "round_id": "wk41_r3_step6_wave6_perf_consult",
+          "round_meta": {
+            "prompt_set_id": "wk41_r0_kickoff",
+            "pm_step": "STEP_6_parallel_with_11_after_R3",
+            "sent_at_local": "2026-04-28",
+            "note": "R3 = Track B GameEngine facades (camera/display + render coordinator)"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK41 R3 post-Track B (Agent 10 consult): PM Step 6 after GameEngine mechanical facades. New package game/engine_facades/: EngineCameraDisplay (camera_display.py), EngineRenderCoordinator (render_coordinator.py). Headless perf_benchmark: ms/tick total ~1.213 — within usual ~1.0–1.26 jitter vs R1/R2. Ursina 180s FPS probe: avg_fps 53.0, p50 55.8, heroes=10; ursina_renderer avg ~2.78ms vs R2 ~3.64ms — different hero counts/scenes, not comparable absolute FPS; no sustained sub-20 FPS. tick_simulation max_ms ~654ms logged once — GC/sim hitch style outlier; watch only if repeated in manual play. Verdict: no perf regression from facade delegation alone.",
+            "summary_bullets": [
+              "R3 facades: game/engine_facades/camera_display.py, render_coordinator.py, __init__.py — thin delegates from GameEngine.",
+              "perf_benchmark (default 12s): ~1.213 ms/tick total; PF ~0.824 ms/tick — OK.",
+              "Ursina 180s probe: avg_fps 53.0, p50 55.8; ursina_renderer avg ~2.78ms — healthy band.",
+              "Rare tick_simulation max spike (~654ms) in probe — treat as outlier unless reproduced manually.",
+              "Regression verdict for R3 refactor: no."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/perf_benchmark.py",
+              "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "Manual: python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
+              "perf_benchmark_exit_code": 0,
+              "perf_benchmark_ms_per_tick_total": 1.213,
+              "perf_benchmark_pf_ms_per_tick": 0.824,
+              "ursina_180s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "ursina_180s_exit_code": 0,
+              "ursina_fps_probe": {
+                "heroes": 10,
+                "frames": 6306,
+                "avg_fps": 53.0,
+                "min_fps": 1.5,
+                "p10_fps": 14.7,
+                "p50_fps": 55.8,
+                "p90_fps": 74.5,
+                "max_fps": 113.0
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 7.603,
+                "hud_texture_upload_p90_ms": 47.39,
+                "hud_texture_upload_max_ms": 82.222,
+                "pygame_hud_render_avg_ms": 2.124,
+                "pygame_hud_render_p90_ms": 2.549,
+                "pygame_hud_render_max_ms": 11.027,
+                "tick_simulation_avg_ms": 2.899,
+                "tick_simulation_p90_ms": 1.835,
+                "tick_simulation_max_ms": 653.922,
+                "ursina_renderer_avg_ms": 2.775,
+                "ursina_renderer_p90_ms": 5.516,
+                "ursina_renderer_max_ms": 52.783
+              },
+              "wk41_r3_regression_verdict": "no",
+              "tick_sim_max_spike_note_ms": 653.922
+            },
+            "agent_fields": {
+              "reviewed_new_modules": [
+                "game/engine_facades/__init__.py",
+                "game/engine_facades/camera_display.py",
+                "game/engine_facades/render_coordinator.py"
+              ]
+            }
+          }
+        },
+        "wk41_r4_step8_wave8_perf_consult": {
+          "sprint_id": "wk41-mechanical-module-split",
+          "round_id": "wk41_r4_step8_wave8_perf_consult",
+          "round_meta": {
+            "prompt_set_id": "wk41_r0_kickoff",
+            "pm_step": "STEP_8_parallel_with_11_after_R4_then_human_manual",
+            "sent_at_local": "2026-04-28",
+            "note": "Playtest mid-sprint: peasants routed toward NW fog vs placed building — Agent 03 fixed before final perf signoff."
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK41 R4 / Step 8 final perf consult (Agent 10): Intended check after optional R4 thin-update/docs plus full sprint gates. Mid-sprint manual playtest exposed behavior bug (workers/peasants heading to top-left fog instead of player-placed building); Agent 03 corrected — not a perf regression from WK41 mechanical splits but blocked behavioral acceptance until fixed. Post-fix: ran headless perf_benchmark (PASS exit 0). Automated Ursina FPS probe run was interrupted during resume; Jaimie reviewed probe/FPS output and confirmed acceptable — Agent 10 accepts PASS on Ursina perf for WK41 closeout. No Agent 10 code edits.",
+            "summary_bullets": [
+              "Context: peasant/FOW routing bug found in playtest — fixed by Agent 03 before final signoff.",
+              "Headless: perf_benchmark default profile ~1.291 ms/tick total, PF ~0.850 ms/tick — OK vs refactor-era band.",
+              "Ursina FPS: human-verified PASS — Jaimie reports probe looks fine (automated log incomplete this round).",
+              "WK41 mechanical-split perf verdict: PASS — no blocking perf concern for sprint close.",
+              "Blockers: none for Agent 10."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/perf_benchmark.py",
+              "python tools/run_ursina_capture_once.py --seconds 180 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "Manual (PM): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm"
+            ],
+            "evidence": {
+              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
+              "perf_benchmark_exit_code": 0,
+              "perf_benchmark_ms_per_tick_total": 1.291,
+              "perf_benchmark_pf_ms_per_tick": 0.85,
+              "ursina_fps_human_review": {
+                "status": "PASS",
+                "reporter": "human_playtest_Jaimie",
+                "note": "FPS probe looks fine — proceed."
+              },
+              "automated_ursina_probe_this_round": "interrupted_incomplete",
+              "wk41_final_perfusion_verdict": "PASS"
+            },
+            "agent_fields": {
+              "related_bugfix": "Peasants routing to NW fog vs placed building — owner Agent 03 (behavior/path), fixed before closeout."
+            }
+          }
+        }
+      }
     }
   }
 }

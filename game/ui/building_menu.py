@@ -45,7 +45,25 @@ class BuildingMenu:
         # Check if placement is valid
         size = BUILDING_SIZES.get(self.selected_building, (1, 1))
         self.preview_valid = self.can_place(grid_x, grid_y, size, world, buildings, self.selected_building)
-        
+
+    def update_preview_world_pixels(
+        self,
+        world_x: float,
+        world_y: float,
+        world,
+        buildings: list,
+    ):
+        """Ursina: use floor-ray sim coordinates directly (avoids 2D camera vs EditorCamera drift)."""
+        if not self.selected_building:
+            return
+        grid_x = int(world_x // TILE_SIZE)
+        grid_y = int(world_y // TILE_SIZE)
+        self.preview_grid_pos = (grid_x, grid_y)
+        size = BUILDING_SIZES.get(self.selected_building, (1, 1))
+        self.preview_valid = self.can_place(
+            grid_x, grid_y, size, world, buildings, self.selected_building
+        )
+
     def can_place(self, grid_x: int, grid_y: int, size: tuple, world, buildings: list, building_type: str = None) -> bool:
         """Check if a building can be placed at the given position."""
         building_type = building_type or self.selected_building

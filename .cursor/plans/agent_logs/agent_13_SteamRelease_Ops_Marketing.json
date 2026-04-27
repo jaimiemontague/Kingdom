@@ -745,6 +745,43 @@
           }
         }
       }
+    },
+    "wk41-mechanical-module-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
+        "notes": "Agent 13: CHANGELOG bullets for readability sprint; no version bump (same v1.5.1 line)."
+      },
+      "rounds": {
+        "wk41_r0_changelog_closeout": {
+          "round_id": "wk41_r0_changelog_closeout",
+          "round_meta": {
+            "prompt_set_id": "wk41_agent13_changelog",
+            "build_target": "CHANGELOG_WK41_subsection_under_v1_5_1",
+            "completed_local": "2026-04-29"
+          },
+          "what_i_changed": [
+            "CHANGELOG.md — added subsection **WK41 — Mechanical module split** under Prototype v1.5.1 (player-facing + dev-oriented bullets; no new version number)."
+          ],
+          "how_to_test": [
+            "Read CHANGELOG.md top section for clarity and accuracy vs shipped WK41 work."
+          ],
+          "evidence": {
+            "changelog": {
+              "file": "CHANGELOG.md",
+              "note": "WK41 bullets: ursina_* helpers + engine_facades + engine_access_inventory pointer + --no-llm / --provider mock reminder"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "note": "doc-only Agent 13 change — gate not required for markdown; PM merge commit may include code from other agents already gated"
+            }
+          },
+          "patch_notes_bullets_for_steam_or_discord": [
+            "Behind the scenes: big **readability** pass on the 3D renderer and game shell code—split into smaller modules so updates stay safer and faster to land (no gameplay redesign).",
+            "If you play **v1.5.1**, you should see the **same** Kingdom Sim feel; this work is mostly for **maintainability** and future patches.",
+            "Run locally without an API key anytime: `python main.py --no-llm` or `python main.py --provider mock`."
+          ]
+        }
+      }
     }
   }
 }

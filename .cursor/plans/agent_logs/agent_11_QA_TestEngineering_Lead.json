@@ -688,6 +688,238 @@
           ]
         }
       }
+    },
+    "wk41-mechanical-module-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
+        "pm_round": "wk41_r0_kickoff",
+        "notes": "QA runs full stack after each Agent 03 step; parallel optional Agent 10."
+      },
+      "rounds": {
+        "wk41_r0_agent11_onboarding_2026_04_27": {
+          "round_id": "wk41_r0_agent11_onboarding_2026_04_27",
+          "status": "complete",
+          "what_i_changed": [
+            "Agent 11 onboarding: no repo code changes; baseline automated gates for active sprint WK41 (PM status in_progress)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "pm_assignment": "WK41: blocked_until_03_step_done until Agent 03 completes each R1–R4 step; then run determinism_guard + pytest + qa_smoke --quick + validate_assets (errors=0); log per pm_agent_prompts['11'].",
+          "evidence": {
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS; pytest 114 passed; observe_sync profiles through DONE: PASS (includes speed_scaling, interior_view, quest_panel, conversation)."
+              ]
+            },
+            "validate_assets_2026_04_27": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk41_step2_post_r1_full_stack": {
+          "round_id": "wk41_step2_post_r1_full_stack",
+          "status": "complete",
+          "pm_step": "STEP 2 — after Agent 03 WK41-R1 Track A1 (agent_03 round wk41_r0_kickoff_r1_complete)",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only). Validates merged WK41-R1 Ursina leaf-helper extraction per sprint plan gate stack."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "no violations found"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "PM: Wave 2 PASS — unblock Agent 03 for STEP 3 (WK41-R2 Track A2) per pm_jaimie_send_order.",
+            "Jaimie: optional parallel Agent 10 Ursina FPS spot-check per STEP 2.",
+            "Agent 11: re-run this full stack after Agent 03 completes R2 (STEP 4)."
+          ]
+        },
+        "wk41_step4_post_r2_full_stack": {
+          "round_id": "wk41_step4_post_r2_full_stack",
+          "status": "complete",
+          "pm_step": "STEP 4 — after Agent 03 WK41-R2 Track A2 (agent_03 round wk41_r2_track_a2_complete)",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only). Validates WK41-R2 Ursina method/collaborator grouping per sprint plan gate stack."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "no violations found"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "PM: STEP 4 PASS — unblock Agent 03 for STEP 5 (WK41-R3 Track B GameEngine facades).",
+            "Jaimie: optional Agent 10 Ursina FPS spot-check in parallel with this wave.",
+            "Agent 11: re-run full stack after Agent 03 completes R3 (STEP 6)."
+          ]
+        },
+        "wk41_step6_post_r3_full_stack": {
+          "round_id": "wk41_step6_post_r3_full_stack",
+          "status": "complete",
+          "pm_step": "STEP 6 — after Agent 03 WK41-R3 Track B (agent_03 round wk41_r3_track_b_complete): GameEngine camera/display + render coordinator facades",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only)."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "no violations found"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "Agent 03: STEP 7 optional WK41-R4 (thin update loop and/or engine_access_inventory.md) then STEP 8 gates.",
+            "Jaimie: optional Agent 10 Ursina FPS parallel with STEP 8 Agent 11; then STEP 9 manual smokes (~10 min each): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm",
+            "Agent 11: run full stack again after Agent 03 completes R4 if they ship it (STEP 8)."
+          ]
+        },
+        "wk41_step8_post_r4_full_stack": {
+          "round_id": "wk41_step8_post_r4_full_stack",
+          "status": "complete",
+          "pm_step": "STEP 8 — final automated gates after WK41-R4 (agent_03 wk41_r4_track_a3_docs_complete) + Agent 03 fix for playtest bug",
+          "context": {
+            "prior_interrupt": "Earlier STEP 8 gate run was stopped when human playtest found peasants pathing toward top-left fog-of-war instead of player-placed building.",
+            "fix_owner": "Agent 03 (Technical Director)",
+            "resume": "This round is the resumed full stack on current main after that fix."
+          },
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only)."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "no violations found"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "Jaimie: STEP 9 manual regression on peasants + placement — repeat prior playtest scenario (place building; confirm workers/peasants route to site not map corner/FOW). Commands from sprint plan: python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm ; optional python main.py --renderer ursina --provider mock",
+            "PM: WK41 automated QA signoff for merge/release checklist once manual PASS.",
+            "Optional Agent 13: CHANGELOG bullets only if Jaimie requests."
+          ]
+        }
+      }
     }
   }
 }

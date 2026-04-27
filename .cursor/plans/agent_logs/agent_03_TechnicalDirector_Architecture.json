@@ -1246,6 +1246,189 @@
           }
         }
       }
+    },
+    "wk41-mechanical-module-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
+        "notes": "WK41: R1 leaf helpers + R2 Ursina collaborators; no behavior change"
+      },
+      "rounds": {
+        "wk41_r0_kickoff_r1_complete": {
+          "round_id": "wk41_r0_kickoff_r1_complete",
+          "what_i_changed": [
+            "Added game/graphics/ursina_coords.py — SCALE, sim_px_to_world_xz, px_to_world",
+            "Added game/graphics/ursina_environment.py — scatter/grass/tree lists, Kenney finalize, static prop fog tint, PROJECT_ROOT",
+            "Added game/graphics/ursina_prefabs.py — building_type→prefab table, construction staging, footprint/3D helpers, _load_prefab_instance",
+            "Added game/graphics/ursina_units_anim.py — _frame_index_for_clip, hero/enemy base clips, worker idle surface",
+            "ursina_renderer.py — imports from above; removed ~700 lines duplicate module-level helpers; grass albedo path uses PROJECT_ROOT"
+          ],
+          "files_changed": [
+            "game/graphics/ursina_coords.py",
+            "game/graphics/ursina_environment.py",
+            "game/graphics/ursina_prefabs.py",
+            "game/graphics/ursina_units_anim.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 (baseline warns unchanged)"
+            }
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "next_steps_pm": "Completed; superseded by wk41_r2 round log"
+        },
+        "wk41_r2_track_a2_complete": {
+          "round_id": "wk41_r2_track_a2_complete",
+          "what_i_changed": [
+            "Added game/graphics/ursina_terrain_fog_collab.py — UrsinaTerrainFogCollab(renderer): terrain root, fog quad, visibility-gated props, grid debug",
+            "Added game/graphics/ursina_entity_render_collab.py — UrsinaEntityRenderCollab(renderer): billboard sync, 3D/prefab building entities",
+            "UrsinaRenderer: constructs collaborators after lighting; update() delegates terrain/fog/grid + entity helpers; trimmed imports (terrain helpers only in collab module)",
+            "Removed ~730 lines of methods from ursina_renderer.py into collaborators; state remains on UrsinaRenderer (self._terrain_entity, self._entities, etc.)"
+          ],
+          "files_changed": [
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/graphics/ursina_entity_render_collab.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0"
+            }
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "next_steps_pm": "PM Step 4 parallel 11+10; Step 5 Agent 03 WK41-R3 Track B (GameEngine camera/display + render coordinator facades)"
+        },
+        "wk41_r3_track_b_complete": {
+          "round_id": "wk41_r3_track_b_complete",
+          "what_i_changed": [
+            "Added game/engine_facades/camera_display.py — EngineCameraDisplay(engine): apply_display_settings, screen_to_world, clamp_camera, center_on_castle, capture_screenshot, set_zoom, zoom_by, update_camera",
+            "Added game/engine_facades/render_coordinator.py — EngineRenderCoordinator(engine): render, _render_hero_minimap, render_perf_overlay, render_pygame",
+            "Added game/engine_facades/__init__.py re-exports",
+            "GameEngine: after sim.setup_initial_state() constructs _camera_display + _render_coordinator; public methods remain thin delegates for tests/monkeypatch; removed unused engine imports (os, MAP_*/COLOR/camera zoom imports, get_font, perf_stats, set_render_zoom)",
+            "Init order: first windowed pygame bootstrap calls display_manager.apply_settings(...) directly (before facades exist); subsequent apply_display_settings uses EngineCameraDisplay"
+          ],
+          "files_changed": [
+            "game/engine_facades/__init__.py",
+            "game/engine_facades/camera_display.py",
+            "game/engine_facades/render_coordinator.py",
+            "game/engine.py"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "114 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer pygame --no-llm"
+          ],
+          "next_steps_pm": "PM Step 6 parallel 11+10; optional WK41-R4 thin UrsinaRenderer.update() + engine_access_inventory.md"
+        },
+        "wk41_r4_track_a3_docs_complete": {
+          "round_id": "wk41_r4_track_a3_docs_complete",
+          "what_i_changed": [
+            "ursina_renderer.py: UrsinaRenderer.update() thin orchestration — _ensure_shadow_bounds_once, _sync_snapshot_buildings/heroes/enemies/peasants/guards/tax_collector/projectiles, _update_debug_status_text, _destroy_removed_entities (logic unchanged; mechanical extraction)",
+            "docs/refactor/engine_access_inventory.md: WK41 subsection listing engine_facades + ursina_* helper modules + update() helper split",
+            "Removed one-off tools/_wk41_r4_extract_ursina_update.py after use"
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py",
+            "docs/refactor/engine_access_inventory.md"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "114 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer pygame --no-llm"
+          ],
+          "next_steps_pm": "PM Step 8 Jaimie manual smokes; optional Agent 13 CHANGELOG draft if release"
+        }
+      }
     }
   }
 }

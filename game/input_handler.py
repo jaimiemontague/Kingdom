@@ -613,13 +613,20 @@ class InputHandler:
                     c._borderless_drag_window_offset = None
 
         if c.building_menu.selected_building:
-            c.building_menu.update_preview(
-                event.pos,
-                c.world,
-                c.buildings,
-                (c.camera_x, c.camera_y),
-                zoom=c.zoom,
-            )
+            engine = getattr(c, "_engine", None)
+            wptr = getattr(engine, "_ursina_pointer_world_sim", None) if engine is not None else None
+            if wptr is not None:
+                c.building_menu.update_preview_world_pixels(
+                    wptr[0], wptr[1], c.world, c.buildings
+                )
+            else:
+                c.building_menu.update_preview(
+                    event.pos,
+                    c.world,
+                    c.buildings,
+                    (c.camera_x, c.camera_y),
+                    zoom=c.zoom,
+                )
 
         # Update building list panel hover state
         if c.building_list_panel.visible:

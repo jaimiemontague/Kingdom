@@ -4,6 +4,15 @@
 
 Post–v1.5.0 **architecture refactor** (Stages 0–5, see `.cursor/plans/master_plan_architecture_refactor.md`): **`SimEngine`** simulation core in `game/sim_engine.py`, read-only **`SimStateSnapshot`** for renderers, **`GameCommands`** for input (no raw `GameEngine` in `InputHandler`), **`PygameRenderer`** for the pygame world pass, **Ursina** as the default renderer (`python main.py` / `main.py --renderer ursina`), root script archive under `tools/archive/`, updated **`.cursor/rules/02-project-layout.mdc`**, and **BuildingPanel** Ursina HUD re-upload via **`on_request_ursina_hud_upload`** (no `panel.engine` reference). `python main.py --renderer pygame` remains for 2D. Gates: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --report`.
 
+### WK41 — Mechanical module split (readability; no gameplay change)
+
+Internal/code organization follow-up after the refactor (plan: `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`). Player-facing experience should be unchanged; this keeps the codebase easier to navigate and safer for future work.
+
+- **Under the hood:** Large **`ursina_renderer`** logic is split into focused **`game/graphics/ursina_*.py`** helpers (coordinates, environment/scatter, prefabs, unit animation) plus **terrain/fog** and **entity rendering** collaborator modules—same 3D presentation, clearer files for contributors.
+- **Presentation shell:** **`GameEngine`** camera, display, zoom, and render/minimap/perf paths delegate to **`game/engine_facades/`** (`EngineCameraDisplay`, `EngineRenderCoordinator`) so the main engine file stays an orchestrator, not a wall of code.
+- **Docs:** Refactor inventory (`docs/refactor/engine_access_inventory.md`) lists the new modules for anyone tracing **snapshot → renderer → Ursina**.
+- **Reminder:** You can still run without API keys: **`python main.py --no-llm`** or **`python main.py --provider mock`**.
+
 ## Prototype v1.5.0 — The Game Goes 3D
 
 This update completes the **Phase 1–2** transition to a cohesive **static 3D** Ursina presentation (environment + kitbash buildings + tooling). Animated 3D units remain a possible **1.5.x** follow-up. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.

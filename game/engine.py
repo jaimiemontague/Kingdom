@@ -7,14 +7,10 @@ with existing code and tests; it composes :class:`game.sim_engine.SimEngine` (``
 all simulation state and ticking.
 """
 import time
-import os
 import pygame
 from typing import TYPE_CHECKING
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TILE_SIZE,
-    MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
-    CAMERA_SPEED_PX_PER_SEC, CAMERA_EDGE_MARGIN_PX,
-    ZOOM_MIN, ZOOM_MAX,
     MAX_ALIVE_ENEMIES,
     LAIR_BOUNTY_COST,
     BOUNTY_REWARD_LOW,
@@ -48,16 +44,15 @@ from game.cleanup_manager import CleanupManager
 from game.events import EventBus, GameEventType
 from game.systems.protocol import SystemContext
 from game.types import BountyType, HeroClass
-from game.graphics.font_cache import get_font
-from game.graphics.render_context import set_render_zoom
 from game.graphics.pygame_renderer import PygameRenderer, PygameWorldRenderContext
 from game.graphics.renderers import RendererRegistry
-from game.systems import perf_stats
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
 from ai.context_builder import ContextBuilder
 
 from game.input_manager import InputManager
 from game.sim_engine import SimEngine
+from game.engine_facades.camera_display import EngineCameraDisplay
+from game.engine_facades.render_coordinator import EngineRenderCoordinator
 
 if TYPE_CHECKING:
     from game.sim.snapshot import SimStateSnapshot
@@ -85,6 +80,10 @@ class GameEngine:
         # Camera state (always needed for simulation coordinate queries)
         self.camera_x = 0
         self.camera_y = 0
+        # Ursina: last floor-ray hit in sim pixels (see ursina_app._engine_screen_pos_for_pointer).
+        # EditorCamera pans/orbits in world space; engine.camera_x/y follow the 2D scroll path — mixing
+        # them breaks placement/selection unless we prefer this ray hit when present.
+        self._ursina_pointer_world_sim: tuple[float, float] | None = None
         self.zoom = 1.0
         self.default_zoom = 1.0
         self.clock = pygame.time.Clock()
@@ -120,7 +119,8 @@ class GameEngine:
             self._borderless_drag_start_pos = None
             self._borderless_drag_window_offset = None
             self.display_manager = DisplayManager(self)
-            self.apply_display_settings(self.display_mode, self.window_size)
+            # Bootstrap window before EngineCameraDisplay exists (facades created after full UI init).
+            self.display_manager.apply_settings(self.display_mode, self.window_size)
             self.screenshot_hide_ui = False
             self.show_perf = True
             # Render surfaces
@@ -248,6 +248,8 @@ class GameEngine:
         # Initialize starting buildings (pure simulation)
         self.sim.setup_initial_state()
         # Presentation-owned camera framing is handled by setup_initial_state() wrapper.
+        self._camera_display = EngineCameraDisplay(self)
+        self._render_coordinator = EngineRenderCoordinator(self)
 
     def _request_ursina_hud_upload(self) -> None:
         """Ursina: mark pygame HUD buffer dirty so the GPU texture re-uploads (e.g. thin building-panel bars)."""
@@ -501,9 +503,16 @@ class GameEngine:
         """Handle mouse movement."""
         self.input_handler.handle_mousemove(event)
     
+    def pointer_world_xy(self, screen_pos: tuple) -> tuple[float, float]:
+        """Sim-world (px, py) under the HUD cursor; prefers Ursina floor-ray hit when valid."""
+        wptr = getattr(self, "_ursina_pointer_world_sim", None)
+        if wptr is not None and getattr(self, "_ursina_viewer", False):
+            return float(wptr[0]), float(wptr[1])
+        return self.screen_to_world(screen_pos[0], screen_pos[1])
+
     def try_select_hero(self, screen_pos: tuple) -> bool:
         """Try to select a hero at the given screen position. Returns True if selected."""
-        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        world_x, world_y = self.pointer_world_xy(screen_pos)
         
         for hero in self.heroes:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
@@ -525,7 +534,7 @@ class GameEngine:
         """Try to select the tax collector at the given screen position. Returns True if selected. (wk16)"""
         if self.tax_collector is None:
             return False
-        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        world_x, world_y = self.pointer_world_xy(screen_pos)
         tc = self.tax_collector
         if tc.distance_to(world_x, world_y) < tc.size:
             self.selected_hero = tc  # unified selection state for left panel
@@ -541,7 +550,7 @@ class GameEngine:
 
     def try_select_guard(self, screen_pos: tuple) -> bool:
         """Try to select a guard at the given screen position. Returns True if selected."""
-        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        world_x, world_y = self.pointer_world_xy(screen_pos)
         for guard in self.guards:
             if getattr(guard, "is_alive", True) and guard.distance_to(world_x, world_y) < guard.size:
                 self.selected_hero = guard
@@ -557,7 +566,7 @@ class GameEngine:
 
     def try_select_peasant(self, screen_pos: tuple) -> bool:
         """Try to select a peasant at the given screen position. Returns True if selected."""
-        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        world_x, world_y = self.pointer_world_xy(screen_pos)
         for peasant in self.peasants:
             if getattr(peasant, "is_alive", True) and peasant.distance_to(world_x, world_y) < peasant.size:
                 self.selected_peasant = peasant
@@ -578,7 +587,7 @@ class GameEngine:
 
     def try_select_building(self, screen_pos: tuple) -> bool:
         """Try to select a building at the given screen position. Returns True if selected."""
-        world_x, world_y = self.screen_to_world(screen_pos[0], screen_pos[1])
+        world_x, world_y = self.pointer_world_xy(screen_pos)
         
         for building in self.buildings:
             rect = building.get_rect()
@@ -678,7 +687,7 @@ class GameEngine:
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
         mouse_pos = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
-        world_x, world_y = self.screen_to_world(mouse_pos[0], mouse_pos[1])
+        world_x, world_y = self.pointer_world_xy((mouse_pos[0], mouse_pos[1]))
         
         # Bounty reward tiers (player-paid; cost == reward).
         mods = self.input_manager.get_key_mods() if getattr(self, "input_manager", None) else {'shift': False, 'ctrl': False, 'alt': False}
@@ -1289,145 +1298,36 @@ class GameEngine:
     
     def apply_display_settings(self, display_mode: str, window_size: tuple[int, int] | None = None):
         """Apply display mode settings (fullscreen/borderless/windowed)."""
-        # Ursina 3D viewer: pygame uses SDL dummy; real window is Ursina/Panda — use window.* APIs.
-        if getattr(self, "headless_ui", False) and getattr(self, "_ursina_viewer", False):
-            DisplayManager.apply_ursina_window(self, display_mode, window_size)
-            return
-        if self.display_manager is None:
-            return
-        self.display_manager.apply_settings(display_mode, window_size)
-    
+        return self._camera_display.apply_display_settings(display_mode, window_size)
+
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float]:
         """Convert screen-space pixels to world-space pixels, accounting for zoom."""
-        z = self.zoom if self.zoom else 1.0
-        return self.camera_x + (screen_x / z), self.camera_y + (screen_y / z)
+        return self._camera_display.screen_to_world(screen_x, screen_y)
 
     def clamp_camera(self):
         """Clamp camera to world bounds given current zoom."""
-        win_w = int(self.window_width)
-        win_h = int(self.window_height)
-        view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
-        view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
-        world_w = MAP_WIDTH * TILE_SIZE
-        world_h = MAP_HEIGHT * TILE_SIZE
-
-        max_x = max(0, world_w - view_w)
-        max_y = max(0, world_h - view_h)
-
-        self.camera_x = max(0, min(max_x, self.camera_x))
-        self.camera_y = max(0, min(max_y, self.camera_y))
+        return self._camera_display.clamp_camera()
 
     def center_on_castle(self, reset_zoom: bool = True, castle=None):
         """Center camera on the castle; optionally reset zoom to the starting zoom."""
-        if reset_zoom:
-            self.zoom = float(getattr(self, "default_zoom", 1.0))
-
-        if castle is None:
-            castle = next(
-                (b for b in self.buildings if getattr(b, "building_type", None) == "castle" and getattr(b, "hp", 0) > 0),
-                None,
-            )
-        if not castle:
-            return
-
-        win_w = int(self.window_width)
-        win_h = int(self.window_height)
-        self.camera_x = castle.center_x - win_w // 2
-        self.camera_y = castle.center_y - win_h // 2
-        self.clamp_camera()
+        return self._camera_display.center_on_castle(reset_zoom=reset_zoom, castle=castle)
 
     def capture_screenshot(self):
         """Capture a screenshot to docs/screenshots/manual/ with timestamp filename."""
-        from datetime import datetime
-        
-        # Ensure the manual screenshots folder exists
-        screenshot_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs", "screenshots", "manual")
-        os.makedirs(screenshot_dir, exist_ok=True)
-        
-        # Generate timestamp-based filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Trim to milliseconds
-        filename = f"screenshot_{timestamp}.png"
-        filepath = os.path.join(screenshot_dir, filename)
-        
-        # Save the current screen
-        try:
-            pygame.image.save(self.screen, filepath)
-            self.hud.add_message(f"Screenshot saved: {filename}", (100, 200, 255))
-            print(f"[screenshot] Saved: {filepath}")
-        except Exception as e:
-            self.hud.add_message(f"Screenshot failed: {e}", (255, 100, 100))
-            print(f"[screenshot] Failed: {e}")
+        return self._camera_display.capture_screenshot()
 
     def set_zoom(self, new_zoom: float):
         """Set zoom with clamping."""
-        self.zoom = max(ZOOM_MIN, min(ZOOM_MAX, float(new_zoom)))
-        self.clamp_camera()
+        return self._camera_display.set_zoom(new_zoom)
 
     def zoom_by(self, factor: float):
         """Zoom in/out around the mouse cursor."""
-        if factor is None:
-            return
-        factor = float(factor)
-        if factor <= 0:
-            return
-
-        mouse_x, mouse_y = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
-        before_x, before_y = self.screen_to_world(mouse_x, mouse_y)
-
-        self.set_zoom(self.zoom * factor)
-
-        # Keep the same world point under the cursor after zooming.
-        after_zoom = self.zoom if self.zoom else 1.0
-        self.camera_x = before_x - (mouse_x / after_zoom)
-        self.camera_y = before_y - (mouse_y / after_zoom)
-        self.clamp_camera()
+        return self._camera_display.zoom_by(factor)
 
     def update_camera(self, dt: float):
         """Update camera position based on WASD + mouse edge scrolling."""
-        # wk14: If chat is active, do not pan the camera (typing intercepts WASD)
-        if hasattr(self, "hud"):
-            chat_panel = getattr(self.hud, "_chat_panel", None)
-            if chat_panel is not None and getattr(chat_panel, "is_active", lambda: False)():
-                return
+        return self._camera_display.update_camera(dt)
 
-        keys = self.input_manager.get_key_mods() if getattr(self, "input_manager", None) else {'shift': False, 'ctrl': False, 'alt': False}
-        speed = float(CAMERA_SPEED_PX_PER_SEC) * float(dt)
-
-        dx = 0.0
-        dy = 0.0
-
-        # WASD pan (world-space pixels)
-        if getattr(self, "input_manager", None):
-            if self.input_manager.is_key_pressed('a'): dx -= speed
-            if self.input_manager.is_key_pressed('d'): dx += speed
-            if self.input_manager.is_key_pressed('w'): dy -= speed
-            if self.input_manager.is_key_pressed('s'): dy += speed
-        else:
-            pg_keys = pygame.key.get_pressed()
-            if pg_keys[pygame.K_a]: dx -= speed
-            if pg_keys[pygame.K_d]: dx += speed
-            if pg_keys[pygame.K_w]: dy -= speed
-            if pg_keys[pygame.K_s]: dy += speed
-
-        # Mouse edge scroll (still in world-space pixels)
-        has_focus = self.input_manager.is_mouse_focused() if getattr(self, "input_manager", None) else pygame.mouse.get_focused()
-        if has_focus:
-            mx, my = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
-            if mx < CAMERA_EDGE_MARGIN_PX:
-                dx -= speed
-            elif mx > int(self.window_width) - CAMERA_EDGE_MARGIN_PX:
-                dx += speed
-
-            if my < CAMERA_EDGE_MARGIN_PX:
-                dy -= speed
-            elif my > int(self.window_height) - CAMERA_EDGE_MARGIN_PX:
-                dy += speed
-
-        if dx or dy:
-            self.camera_x += dx
-            self.camera_y += dy
-            self.clamp_camera()
-    
     def get_game_state(self) -> dict:
         """Get current game state for AI and UI.
 
@@ -1477,122 +1377,7 @@ class GameEngine:
     
     def render(self):
         """Render the game."""
-        # Ursina viewer: 3D world is drawn by Ursina; pygame only composites HUD. Keep the
-        # surface transparent where we skip drawing so the 3D layer shows through.
-        skip_pygame_world = bool(
-            getattr(self, "headless_ui", False)
-            and getattr(self, "_ursina_skip_world_render", False)
-        )
-        if skip_pygame_world:
-            self.screen.fill((0, 0, 0, 0))
-        else:
-            self.screen.fill(COLOR_BLACK)
-
-        snapshot = self.build_snapshot()
-        pr = getattr(self, "pygame_renderer", None)
-        if pr is not None and self.screen is not None and self._scaled_surface is not None:
-            pr.render_world(
-                self.screen,
-                snapshot,
-                skip_pygame_world=skip_pygame_world,
-                window_width=int(self.window_width),
-                window_height=int(self.window_height),
-                scaled_surface=self._scaled_surface,
-            )
-
-        # Render HUD
-        if not bool(getattr(self, "screenshot_hide_ui", False)):
-            self.hud.render(self.screen, self.get_game_state())
-            # wk14: If we transitioned out of interior (e.g. building destroyed), restore outdoor ambient
-            from game.ui.micro_view_manager import ViewMode
-            prev = getattr(self, "_previous_micro_view_mode", None)
-            now_mode = getattr(self.micro_view, "mode", None)
-            if prev == ViewMode.INTERIOR and now_mode != ViewMode.INTERIOR and self.audio_system is not None:
-                self.audio_system.stop_interior_ambient()
-            self._previous_micro_view_mode = now_mode
-
-            # WK18: Hero Focus Minimap
-            if now_mode == ViewMode.HERO_FOCUS and getattr(self.micro_view, "quest_hero", None):
-                right_rect = getattr(self.hud, "_right_rect", None)
-                if right_rect:
-                    minimap_rect = pygame.Rect(
-                        right_rect.x, right_rect.y, right_rect.width, right_rect.height // 2
-                    )
-                    self._render_hero_minimap(
-                        self.screen,
-                        minimap_rect,
-                        self.micro_view.quest_hero,
-                        snapshot,
-                    )
-
-            # Render debug panel
-            self.debug_panel.render(self.screen, self.get_game_state())
-            # WK18: Dev Tools overlay (AI/LLM log stream)
-            self.dev_tools_panel.render(self.screen)
-
-            # Render building panel
-            self.building_panel.render(self.screen, self.heroes, self.economy)
-            
-            # WK7: Render build catalog panel (castle-driven)
-            if self.build_catalog_panel.visible:
-                self.build_catalog_panel.render(self.screen, self.economy, self.buildings)
-
-            # WK7: Pause menu (rendered before pause overlay)
-            if self.pause_menu.visible:
-                # Keep modal geometry in sync with the actual HUD surface (Ursina resizes can
-                # otherwise leave page_buttons rects misaligned vs mouse for hover/hit-test).
-                try:
-                    sw, sh = self.screen.get_size()
-                    if int(self.pause_menu.screen_width) != int(sw) or int(self.pause_menu.screen_height) != int(sh):
-                        self.pause_menu.on_resize(sw, sh)
-                except Exception:
-                    pass
-                # Prefer live input_manager coords (matches Ursina get_mouse_pos mapping) over
-                # last-event cursor so hover matches the pointer when the menu is open.
-                mp = None
-                if getattr(self, "input_manager", None) is not None:
-                    try:
-                        mp = self.input_manager.get_mouse_pos()
-                    except Exception:
-                        mp = None
-                if mp is not None and len(mp) >= 2:
-                    self._last_ui_cursor_pos = (int(mp[0]), int(mp[1]))
-                    self.pause_menu.render(
-                        self.screen, mouse_pos=(int(mp[0]), int(mp[1]))
-                    )
-                else:
-                    gs_pm = self.get_game_state()
-                    ucp = gs_pm.get("ui_cursor_pos")
-                    if ucp is not None and len(ucp) >= 2:
-                        self.pause_menu.render(
-                            self.screen, mouse_pos=(int(ucp[0]), int(ucp[1]))
-                        )
-                    else:
-                        self.pause_menu.render(self.screen)
-
-            # Perf overlay (helps diagnose lag spikes)
-            if self.show_perf:
-                self.render_perf_overlay(self.screen)
-            
-            # Pause overlay (only show if paused but menu not visible)
-            if self.paused and not self.pause_menu.visible:
-                self.screen.blit(self._pause_overlay, (0, 0))
-                if self._pause_font is None:
-                    self._pause_font = pygame.font.Font(None, 72)
-                text = self._pause_font.render("PAUSED", True, (255, 255, 255))
-                win_w = int(self.window_width)
-                win_h = int(self.window_height)
-                text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
-                self.screen.blit(text, text_rect)
-        
-        # NOTE (WK7): On some Windows setups, rapid mode switches can intermittently crash inside
-        # SDL/driver during flip(). update() has proven more robust in practice.
-        if not getattr(self, "headless_ui", False):
-            try:
-                pygame.display.update()
-            except Exception as e:
-                raise
-
+        return self._render_coordinator.render()
 
     def _render_hero_minimap(
         self,
@@ -1605,161 +1390,11 @@ class GameEngine:
         world draw path as :class:`PygameRenderer` via ``render_minimap_contents`` and the
         current frame ``SimStateSnapshot`` (no second sim query for entity lists).
         """
-        from game.graphics.render_context import set_render_zoom
-        from game.world import Visibility
-
-        old_zoom = self.zoom if self.zoom else 1.0
-        try:
-            set_render_zoom(1.0)
-        except Exception:
-            pass
-
-        if getattr(self, "_minimap_surface", None) is None or self._minimap_surface.get_size() != (rect.width, rect.height):
-            self._minimap_surface = pygame.Surface((rect.width, rect.height))
-        mini_surf = self._minimap_surface
-        mini_surf.fill(COLOR_BLACK)
-
-        cam_x = hero.x - rect.width / 2
-        cam_y = hero.y - rect.height / 2
-        camera_offset = (int(cam_x), int(cam_y))
-
-        pr = getattr(self, "pygame_renderer", None)
-        if pr is not None:
-            pr.render_minimap_contents(mini_surf, snapshot, camera_offset)
-        else:
-            # Pure headless: no PygameRenderer; keep a minimal duplicate for safety.
-            w = snapshot.world
-            w.render(mini_surf, camera_offset)
-            for b in snapshot.buildings:
-                self.renderer_registry.render_building(mini_surf, b, camera_offset)
-            for e in snapshot.enemies:
-                gx, gy = w.world_to_grid(getattr(e, "x", 0.0), getattr(e, "y", 0.0))
-                if 0 <= gx < w.width and 0 <= gy < w.height:
-                    if w.visibility[gy][gx] == Visibility.VISIBLE:
-                        self.renderer_registry.render_enemy(mini_surf, e, camera_offset)
-            for h in snapshot.heroes:
-                self.renderer_registry.render_hero(mini_surf, h, camera_offset)
-            for g in snapshot.guards:
-                self.renderer_registry.render_guard(mini_surf, g, camera_offset)
-            for p in snapshot.peasants:
-                self.renderer_registry.render_peasant(mini_surf, p, camera_offset)
-            if snapshot.tax_collector:
-                self.renderer_registry.render_tax_collector(mini_surf, snapshot.tax_collector, camera_offset)
-            if hasattr(w, "render_fog"):
-                w.render_fog(mini_surf, camera_offset)
-
-        # Border
-        pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)
-        pygame.draw.rect(mini_surf, (40, 40, 40), mini_surf.get_rect().inflate(-4, -4), 1)
-
-        surface.blit(mini_surf, (rect.x, rect.y))
-
-        try:
-            set_render_zoom(old_zoom)
-        except Exception:
-            pass
+        return self._render_coordinator._render_hero_minimap(surface, rect, hero, snapshot)
 
     def render_perf_overlay(self, surface: pygame.Surface):
-        now_ms = pygame.time.get_ticks()
-        if self._perf_last_ms == 0:
-            self._perf_last_ms = now_ms
+        return self._render_coordinator.render_perf_overlay(surface)
 
-        # Update snapshot ~1x/sec (pathfinding stats) and ~4x/sec (counts + timings).
-        if self._perf_overlay_next_update_ms == 0:
-            self._perf_overlay_next_update_ms = now_ms
-
-        if now_ms >= self._perf_overlay_next_update_ms:
-            self._perf_overlay_next_update_ms = now_ms + 250
-            self._perf_snapshot["fps"] = float(self.clock.get_fps())
-            self._perf_snapshot["heroes"] = len([h for h in self.heroes if getattr(h, "is_alive", True)])
-            self._perf_snapshot["enemies"] = len([e for e in self.enemies if getattr(e, "is_alive", False)])
-            self._perf_snapshot["peasants"] = len([p for p in self.peasants if getattr(p, "is_alive", True)])
-            self._perf_snapshot["guards"] = len([g for g in self.guards if getattr(g, "is_alive", False)])
-            self._perf_overlay_dirty = True
-
-        if now_ms - self._perf_last_ms >= 1000:
-            self._perf_last_ms = now_ms
-            self._perf_pf_calls = perf_stats.pathfinding.calls
-            self._perf_pf_failures = perf_stats.pathfinding.failures
-            self._perf_pf_total_ms = perf_stats.pathfinding.total_ms
-            perf_stats.reset_pathfinding()
-            self._perf_overlay_dirty = True
-
-        # Rebuild panel only when sampled values change.
-        if self._perf_overlay_panel is None or self._perf_overlay_dirty:
-            self._perf_overlay_dirty = False
-
-            fps = float(self._perf_snapshot.get("fps", 0.0))
-            enemies_alive = int(self._perf_snapshot.get("enemies", 0))
-            heroes_alive = int(self._perf_snapshot.get("heroes", 0))
-            peasants_alive = int(self._perf_snapshot.get("peasants", 0))
-            guards_alive = int(self._perf_snapshot.get("guards", 0))
-
-            ursina_ema = getattr(self, "_ursina_window_fps_ema", None)
-            if getattr(self, "_ursina_viewer", False):
-                lines = [
-                    f"FPS (pygame/HUD path): {fps:0.1f}",
-                    "3D GPU: use top-left Ursina fps counter (not this number).",
-                ]
-                if ursina_ema is not None:
-                    lines.append(f"Ursina dt EMA ~FPS (rough): {float(ursina_ema):0.1f}")
-                lines.extend(
-                    [
-                        f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
-                        f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
-                        f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
-                    ]
-                )
-            else:
-                lines = [
-                    f"FPS: {fps:0.1f}",
-                    f"Entities: heroes={heroes_alive} peasants={peasants_alive} guards={guards_alive} enemies={enemies_alive} (cap={MAX_ALIVE_ENEMIES})",
-                    f"Loop ms (ema): events={self._perf_events_ms:0.2f} update={self._perf_update_ms:0.2f} render={self._perf_render_ms:0.2f}",
-                    f"PF calls/s: {self._perf_pf_calls}  fails/s: {self._perf_pf_failures}  ms/s: {self._perf_pf_total_ms:0.1f}",
-                ]
-
-            font = get_font(16)
-            pad = 6
-            w = 0
-            h = 0
-            rendered = []
-            for line in lines:
-                s = font.render(line, True, (255, 255, 255))
-                rendered.append(s)
-                w = max(w, s.get_width())
-                h += s.get_height()
-
-            panel = pygame.Surface((w + pad * 2, h + pad * 2), pygame.SRCALPHA)
-            panel.fill((0, 0, 0, 140))
-            yy = pad
-            for s in rendered:
-                panel.blit(s, (pad, yy))
-                yy += s.get_height()
-
-            # Close button (X) drawn into cached panel
-            x_surf = font.render("X", True, (255, 255, 255))
-            size = 18
-            close_local = pygame.Rect(panel.get_width() - size - 4, 4, size, size)
-            pygame.draw.rect(panel, (45, 45, 55), close_local)
-            pygame.draw.rect(panel, (120, 120, 150), close_local, 1)
-            panel.blit(x_surf, (close_local.centerx - x_surf.get_width() // 2, close_local.centery - x_surf.get_height() // 2))
-            self._perf_overlay_panel = panel
-
-        # Reposition: bottom-left of the world area (avoid top bar, right panel, bottom bar)
-        win_w = int(getattr(self, "window_width", surface.get_width()))
-        win_h = int(getattr(self, "window_height", surface.get_height()))
-        top_h = int(getattr(self.hud, "top_bar_height", 48))
-        bottom_h = int(getattr(self.hud, "bottom_bar_height", 96))
-
-        panel = self._perf_overlay_panel
-        px = 10
-        py = max(top_h + 10, win_h - bottom_h - panel.get_height() - 10)
-        surface.blit(panel, (px, py))
-
-        # Click target in screen coords (for close)
-        size = 18
-        self._perf_close_rect = pygame.Rect(px + panel.get_width() - size - 4, py + 4, size, size)
-    
     def tick_simulation(self, dt: float) -> tuple[float, float]:
         """
         Advance the game simulation by one logical step.
@@ -1795,10 +1430,7 @@ class GameEngine:
         Execute the standard Pygame rendering pipeline and UI overlays.
         Returns render_ms for profiling.
         """
-        t2 = time.perf_counter()
-        self.render()
-        t3 = time.perf_counter()
-        return (t3 - t2) * 1000.0
+        return self._render_coordinator.render_pygame()
 
     def run(self):
         """Main game loop for standard Pygame playback."""

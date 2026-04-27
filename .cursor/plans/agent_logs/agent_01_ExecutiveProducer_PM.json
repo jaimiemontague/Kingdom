@@ -1441,6 +1441,199 @@
         "do_not_send": [ "02", "03", "04", "05", "06", "07", "08", "09", "10", "14", "15" ],
         "kickoff": "Open TWO chats in WAVE1 (same prompt): Agent 12 in one, Agent 01 in the other. When BOTH done, one chat Agent 11. Then Jaimie does manual. Optional: Agent 13 for CHANGELOG with Jaimie OK."
       }
+    },
+    "wk41-mechanical-module-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T18:30:00Z",
+        "closed_utc": "2026-04-29T00:00:00Z",
+        "notes": "Readability-only: split ursina_renderer.py + GameEngine into modules/collaborators. No behavior change. Owner 03; QA 11; optional perf 10 parallel with 11 after each 03 round.",
+        "pm_jaimie_send_order": [
+          "STEP 1 — Agent 03 (HIGH): WK41-R1 Track A1 only — extract Ursina module-level helpers to new game/graphics/*.py modules per plan; keep import path game.graphics.ursina_renderer.UrsinaRenderer stable. Run pytest + qa_smoke --quick + validate_assets; update agent_03 log.",
+          "STEP 2 — IN PARALLEL (two Cursor chats, same universal prompt): Agent 11 (LOW) — full gate stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Agent 10 (LOW, consult) — optional ~5 min Ursina FPS spot-check: python main.py --renderer ursina --no-llm. Start Step 2 only after Step 1 is merged or 03 confirms R1 complete on your branch.",
+          "STEP 3 — Agent 03 (HIGH): WK41-R2 Track A2 — UrsinaRenderer method groups / collaborators (terrain+fog vs entities per plan); gates + log.",
+          "STEP 4 — PARALLEL: Agent 11 + Agent 10 (same as Step 2).",
+          "STEP 5 — Agent 03 (HIGH): WK41-R3 Track B — GameEngine facades (e.g. camera/display + render coordinator) with delegation one-liners; do not break GameCommands or public GameEngine API; gates + log.",
+          "STEP 6 — PARALLEL: Agent 11 + Agent 10.",
+          "STEP 7 — Agent 03 (MEDIUM): WK41-R4 optional — thin UrsinaRenderer.update() loop extraction and/or docs/refactor/engine_access_inventory.md; defer risky parts per plan; gates + log.",
+          "STEP 8 — PARALLEL: Agent 11 + Agent 10; then JAIMIE manual (~10 min each): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm. Optional: python main.py --renderer ursina --provider mock. STEP 8b optional — Agent 13 (LOW): CHANGELOG draft only if Jaimie wants; no version bump without Jaimie."
+        ]
+      },
+      "rounds": {
+        "wk41_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk41_r0_kickoff",
+            "created_utc": "2026-04-28T18:30:00Z",
+            "build_target": "Mechanical_split_Ursina_Engine_readability"
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "WK41 kickoff: mechanical module split (no gameplay/sim behavior change). Single implementer Agent 03 in sequence; Agent 11 (+ optional Agent 10) validate in parallel after each 03 round. Plan file + PM hub are authoritative."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "monitoring",
+              "next_action": "PM hub updated 2026-04-28; advance rounds when 03/11 report; escalate scope creep to defer."
+            },
+            "03": {
+              "status": "assigned_active",
+              "next_action": "Execute WK41 plan rounds R1→R4 in order; see pm_agent_prompts[\"03\"] and plan file."
+            },
+            "10": {
+              "status": "consult_optional",
+              "next_action": "After each 03 mergeable chunk, run IN PARALLEL with Agent 11: brief Ursina FPS session — see sprint_meta.pm_jaimie_send_order Step 2/4/6/8."
+            },
+            "11": {
+              "status": "blocked_until_03_step_done",
+              "next_action": "After each 03 step completes: full automated gate stack; log commands + exit codes in agent_11 JSON."
+            },
+            "13": {
+              "status": "optional",
+              "next_action": "Only if Jaimie requests at sprint end: draft CHANGELOG bullets; do not edit CHANGELOG.md without approval."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK41 Mechanical Split (Tech, HIGH/MEDIUM): Read FIRST: .cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md (full file). Then read PM hub .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → sprints[\"wk41-mechanical-module-split\"] → sprint_meta.pm_jaimie_send_order for step order. Execute in order: (R1) Track A1 leaf helpers out of ursina_renderer.py; (R2) Track A2 class/collaborators; (R3) Track B GameEngine facades; (R4) optional thin update + engine_access_inventory.md touch. Rules: no behavior change; no new features; helpers must NOT import UrsinaRenderer (avoid cycles); keep `from game.graphics.ursina_renderer import UrsinaRenderer` working; GameEngine keeps public methods as thin delegates to collaborators. Gates each round: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Update .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json with files, commands, exit codes.",
+            "10": "WK41 (Perf, LOW consult): After EACH Agent 03 mergeable step (when Jaimie activates you per PM send order), run ~5 minutes: python main.py --renderer ursina --no-llm — note FPS/feel vs baseline; report regression yes/no in agent_10 JSON. Do not edit game code unless PM escalates. Independent of Agent 11 — safe to run same universal prompt in parallel chat.",
+            "11": "WK41 (QA, LOW): After EACH Agent 03 step completes (when Jaimie activates you per PM send order), run from repo root: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report (errors=0). Log all commands + exit codes in agent_11 JSON. Parallel with Agent 10 is OK — different outputs, no file overlap.",
+            "13": "WK41 (optional, Marketing/Ops, LOW): Only if Jaimie asks at sprint end: draft internal or player-facing bullets for readability refactor; do NOT edit CHANGELOG.md or bump version without Jaimie."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Single-threaded implementation on Agent 03 (avoid merge conflicts on engine.py / ursina_renderer.py). After each 03 round: Agent 11 (gates) + Agent 10 (optional Ursina FPS consult) run in PARALLEL — two chats. Jaimie manual after final gates. Agent 13 only on request. Agents 01/02/04–09/12/14/15 silent unless escalated.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "low",
+              "10": "low",
+              "13": "low"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "14",
+              "15"
+            ],
+            "waves": [
+              {
+                "wave": 1,
+                "parallel": false,
+                "agents": [{ "id": "03", "intel": "high", "step": "STEP_1_R1" }]
+              },
+              {
+                "wave": 2,
+                "parallel": true,
+                "depends_on": "wave1_03_r1_done",
+                "agents": [
+                  { "id": "11", "intel": "low" },
+                  { "id": "10", "intel": "low", "note": "optional consult" }
+                ]
+              },
+              {
+                "wave": 3,
+                "parallel": false,
+                "depends_on": "wave2_pass",
+                "agents": [{ "id": "03", "intel": "high", "step": "STEP_3_R2" }]
+              },
+              {
+                "wave": 4,
+                "parallel": true,
+                "depends_on": "wave3_03_r2_done",
+                "agents": [
+                  { "id": "11", "intel": "low" },
+                  { "id": "10", "intel": "low" }
+                ]
+              },
+              {
+                "wave": 5,
+                "parallel": false,
+                "depends_on": "wave4_pass",
+                "agents": [{ "id": "03", "intel": "high", "step": "STEP_5_R3" }]
+              },
+              {
+                "wave": 6,
+                "parallel": true,
+                "depends_on": "wave5_03_r3_done",
+                "agents": [
+                  { "id": "11", "intel": "low" },
+                  { "id": "10", "intel": "low" }
+                ]
+              },
+              {
+                "wave": 7,
+                "parallel": false,
+                "depends_on": "wave6_pass",
+                "agents": [{ "id": "03", "intel": "medium", "step": "STEP_7_R4_optional" }]
+              },
+              {
+                "wave": 8,
+                "parallel": true,
+                "depends_on": "wave7_03_r4_done",
+                "agents": [
+                  { "id": "11", "intel": "low" },
+                  { "id": "10", "intel": "low" }
+                ]
+              },
+              {
+                "wave": 9,
+                "parallel": false,
+                "depends_on": "wave8_pass",
+                "human": "Jaimie_manual_smokes",
+                "optional": [ { "id": "13", "intel": "low" } ]
+              }
+            ]
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
+        },
+        "wk41_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk41_sprint_closeout",
+            "created_utc": "2026-04-29T00:00:00Z",
+            "source": "pm_closeout_after_jaimie_playtest_pass_and_agent_logs",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK41 complete. All planned tracks shipped (R1 leaf modules, R2 Ursina collaborators, R3 GameEngine facades, R4 thin update + engine_access_inventory). Agent 11 STEP 2–8 gates PASS; Agent 10 perf consult PASS each wave; mid-sprint peasants/workers routing bug fixed by Agent 03 before final signoff; Jaimie manual playtest PASS."
+          },
+          "pm_accepted_deliverables": [
+            "game/graphics/ursina_coords.py, ursina_environment.py, ursina_prefabs.py, ursina_units_anim.py (Track A1)",
+            "game/graphics/ursina_terrain_fog_collab.py, ursina_entity_render_collab.py (Track A2)",
+            "game/engine_facades/camera_display.py, render_coordinator.py (Track B)",
+            "UrsinaRenderer.update() orchestration helpers + docs/refactor/engine_access_inventory.md WK41 subsection (R4)",
+            "Automated QA: determinism_guard + pytest + qa_smoke --quick + validate_assets errors=0 throughout"
+          ],
+          "pm_evidence": {
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk41-mechanical-module-split rounds wk41_r0_kickoff_r1_complete through wk41_r4_track_a3_docs_complete",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk41_step2 through wk41_step8_post_r4_full_stack — all PASS",
+            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json → WK41 waves — no blocking perf regression",
+            "human_playtest": "Jaimie: sprint wrap playtest PASS (user confirmation 2026-04)"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Offer next sprint options; optional git save-state / CHANGELOG if Jaimie wants release notes (Agent 13)."
+            },
+            "03": {
+              "status": "done"
+            },
+            "10": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
     }
   }
 }

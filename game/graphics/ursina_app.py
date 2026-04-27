@@ -444,6 +444,7 @@ class UrsinaApp:
         """
         px, py = self.input_manager.get_mouse_pos()
         eng = self.engine
+        eng._ursina_pointer_world_sim = None
         z = float(eng.zoom if eng.zoom else 1.0)
         hit: tuple[float, float] | None = None
         wx_sim = wy_sim = 0.0
@@ -475,6 +476,7 @@ class UrsinaApp:
                 wx, wz = hit
                 wx_sim = wx * SCALE
                 wy_sim = -wz * SCALE
+                eng._ursina_pointer_world_sim = (wx_sim, wy_sim)
                 sx = (wx_sim - eng.camera_x) * z
                 sy = (wy_sim - eng.camera_y) * z
                 pos = (int(round(sx)), int(round(sy)))
