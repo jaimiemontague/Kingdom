@@ -33,6 +33,8 @@ class GameEventType(str, Enum):
     # wk18: AI/LLM monitoring data tap (Agent 12 emits; Agent 08 Dev Tools overlay consumes)
     LLM_REQUEST = "llm_request"
     LLM_RESPONSE = "llm_response"
+    # wk37 Stage2: sim -> presentation bridge for user-facing HUD toasts
+    HUD_MESSAGE = "hud_message"
 
 
 class EventBus:

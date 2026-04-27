@@ -2692,6 +2692,258 @@
         "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
         "rationale": "Stage 1 is engine snapshot + Ursina renderer boundary only. Avoid cross-domain conflicts."
       }
+    },
+    "wk37-refactor-stage2-simengine-presentation-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "created_utc": "2026-04-27T16:05:00Z",
+        "notes": "Architecture Refactor Stage 2 kickoff: split GameEngine into SimEngine (pure sim) + PresentationLayer (camera/display/UI/render/audio/VFX wrapper). Two rounds: R1 scaffold + move sim-owned init, R2 move update loop + convert sim→HUD direct calls to EventBus HUD_MESSAGE + presentation subscription."
+      },
+      "rounds": {
+        "wk37_r1_simengine_scaffold": {
+          "round_meta": {
+            "prompt_set_id": "wk37_r1",
+            "build_target": "Stage2_SimEngine_Scaffold + PresentationLayer_Wiring",
+            "visibility": "Implementer: 03. QA: 11 (post)."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Create game/sim_engine.py and move sim-owned initialization out of the God-object engine. Wire PresentationLayer to own self.sim and forward properties so existing code keeps working.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK37-STAGE2-FEAT-001",
+              "title": "Introduce SimEngine and wire PresentationLayer wrapper",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1) + master_plan_architecture_refactor.md Stage 2",
+              "acceptance": [
+                "New file game/sim_engine.py defines SimEngine (no UI/camera/display/audio/VFX).",
+                "PresentationLayer (in game/engine.py) owns self.sim and forwards key entity/system properties for backward compatibility.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Follow the WK37 plan file: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1).",
+                "Create game/sim_engine.py with SimEngine scaffolding and move sim-owned __init__ state from GameEngine into SimEngine, one block at a time.",
+                "In game/engine.py, wire PresentationLayer to create self.sim = SimEngine(...) and add property forwarding (engine.buildings -> sim.buildings, etc.) so existing code continues to run.",
+                "Run gates: python -m pytest tests/ and python tools/qa_smoke.py --quick."
+              ],
+              "acceptance_criteria": [
+                "qa_smoke --quick PASS.",
+                "No functional behavior change intended; only relocation + wiring."
+              ]
+            },
+            "11": {
+              "status": "consult",
+              "asks": [
+                "After Agent 03 lands WK37 R1, run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "rationale": "03 must land the refactor before 11 can validate it.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK37 Stage 2 R1 (Tech): Read the sprint plan first: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1). Context: .cursor/plans/master_plan_architecture_refactor.md Stage 2. Implement SimEngine scaffold in game/sim_engine.py and move sim-owned init into SimEngine. Wire PresentationLayer (game/engine.py) to own self.sim and forward properties for backward compatibility. Gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick. Log files changed + commands + exit codes in agent_03 log.",
+            "11": "WK37 Stage 2 R1 (QA - CONSULT): After Agent 03 merges R1, run `python tools/qa_smoke.py --quick` and record PASS/FAIL + exit code in agent_11 log."
+          }
+        },
+        "wk37_r2_move_update_loop": {
+          "round_meta": {
+            "prompt_set_id": "wk37_r2",
+            "build_target": "Stage2_Move_UpdateLoop + HUD_MESSAGE_EventBridge",
+            "visibility": "Implementer: 03. QA: 11 (post). Consult: 10 (perf)."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Move update loop + fog-of-war + get_game_state/build_snapshot into SimEngine. Replace sim→HUD direct calls with EventBus HUD_MESSAGE events; PresentationLayer subscribes and calls hud.add_message().",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
+              "manual_smoke": "python main.py --no-llm and python main.py --renderer ursina --no-llm must run without regressions."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK37-STAGE2-FEAT-002",
+              "title": "Move sim update loop into SimEngine and bridge HUD messages via EventBus",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2) + master_plan_architecture_refactor.md Stage 2",
+              "acceptance": [
+                "SimEngine owns update(dt) and sim sub-methods; PresentationLayer tick_simulation delegates to sim.",
+                "SimEngine no longer calls hud.add_message() directly; instead emits HUD_MESSAGE events.",
+                "PresentationLayer subscribes to HUD_MESSAGE and forwards to hud.add_message().",
+                "get_game_state() and build_snapshot() live on SimEngine; PresentationLayer delegates for compatibility.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Follow the WK37 plan file: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2).",
+                "Move setup_initial_state, _update_fog_of_war, update() and _update_* helpers into SimEngine.",
+                "Convert sim→HUD direct calls (notably _route_combat_events and try_hire_hero) into EventBus HUD_MESSAGE events. PresentationLayer subscribes and calls hud.add_message().",
+                "Move get_game_state() + build_snapshot() into SimEngine; PresentationLayer delegates.",
+                "Run gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report.",
+                "Manual smoke: python main.py --no-llm ; python main.py --renderer ursina --no-llm ; python main.py --renderer ursina --provider mock."
+              ]
+            },
+            "11": {
+              "status": "consult",
+              "asks": [
+                "After Agent 03 merges WK37 R2, run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
+              ]
+            },
+            "10": {
+              "status": "consult",
+              "asks": [
+                "After Agent 03 merges WK37 R2, run python main.py --renderer ursina --no-llm for ~5 minutes and note any obvious FPS regression or new stutter. Log in agent_10."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_10_11",
+            "then_in_order": ["03"],
+            "then_parallel": ["10", "11"],
+            "rationale": "03 must land the refactor; 10 and 11 validate in parallel afterward.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "10": "low",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK37 Stage 2 R2 (Tech): Read the sprint plan first: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2). Context: .cursor/plans/master_plan_architecture_refactor.md Stage 2 (\"Things that will fight Stage 2\"). Move sim update loop + fog-of-war + get_game_state/build_snapshot into SimEngine and make PresentationLayer delegate. Replace sim calls to hud.add_message() with EventBus HUD_MESSAGE events and subscribe in PresentationLayer to restore messages. Gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Manual: python main.py --no-llm ; python main.py --renderer ursina --no-llm ; python main.py --renderer ursina --provider mock. Log evidence in agent_03 log.",
+            "10": "WK37 Stage 2 R2 (Perf - CONSULT): After Agent 03 merges, run `python main.py --renderer ursina --no-llm` for ~5 minutes. Watch for new stutter/FPS collapse during normal gameplay (hiring heroes, placing buildings, panning camera). Log result in agent_10 JSON.",
+            "11": "WK37 Stage 2 R2 (QA - CONSULT): After Agent 03 merges, run `python tools/qa_smoke.py --quick` (and `python tools/validate_assets.py --report` if prompted). Record PASS/FAIL + exit codes in agent_11 JSON."
+          }
+        },
+        "wk37_r3_fow_building_parity": {
+          "round_meta": {
+            "prompt_set_id": "wk37_r3",
+            "build_target": "Stage2_FoW_Parity_DedupeSimVsPresentation",
+            "visibility": "Implementer: 03. Human playtest: Jaimie (fog-of-war parity)."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "After SimEngine became authoritative for fog, remove duplicate/stale GameEngine fog paths so WK34-style building LoS cannot drift or double-apply.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
+            }
+          },
+          "pm_notes": [
+            "This round was not in the original WK37 two-round plan; it landed after human Ursina playtests exposed fog parity risk post-split."
+          ],
+          "pm_agent_prompts": {
+            "03": "WK37 Stage 2 R3 (Tech): See Agent 03 log round wk37_r3_fow_building_parity. Goal: single authoritative fog path in SimEngine; GameEngine forwards fog revision + thin-wraps _update_fog_of_war for legacy/monkeypatch sites. Gates: pytest + qa_smoke + validate_assets."
+          }
+        },
+        "wk37_r4_guild_fow_tuning": {
+          "round_meta": {
+            "prompt_set_id": "wk37_r4",
+            "build_target": "Stage2_Guild_FoW_Readability_Tuning",
+            "visibility": "Implementer: 03. Human playtest: Jaimie (guild vs economic building fog edge readability)."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Tune guild fog reveal radius (additive) without breaking baseline non-guild player building LoS; driven by repeated Jaimie Ursina playtests with Agent 03.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS."
+            }
+          },
+          "pm_notes": [
+            "Config knobs added in config.py (see Agent 03 log): PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES."
+          ],
+          "pm_agent_prompts": {
+            "03": "WK37 Stage 2 R4 (Tech): See Agent 03 log round wk37_r4_guild_fow_tuning. Goal: improve guild fog-edge readability vs 3D mesh footprint perception while keeping sim footprint unchanged. Gates: pytest + qa_smoke."
+          }
+        },
+        "wk37_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T16:30:00Z",
+            "source": "pm_closeout_after_agent_completion_and_repeated_human_playtest",
+            "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+            "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK37 Stage 2 is closed and accepted. SimEngine + PresentationLayer split landed (R1 scaffold, R2 sim update loop + HUD_MESSAGE bridge). Additional midsprint rounds R3/R4 were driven by repeated Jaimie Ursina playtesting with Agent 03 to preserve fog-of-war parity (dedupe sim vs presentation fog paths) and improve guild fog-edge readability via config-tunable extra guild vision radius. Automated gates pass; perf consult PASS; human playtest signoff recorded in Agent 10/03 logs."
+          },
+          "pm_accepted_deliverables": [
+            "game/sim_engine.py: SimEngine owns sim init + sim update orchestration + get_game_state/build_snapshot construction (per Agent 03 log).",
+            "game/engine.py: PresentationLayer-style GameEngine wrapper with self.sim + property forwarding + HUD_MESSAGE subscription.",
+            "game/events.py: HUD_MESSAGE event type for sim→HUD toasts.",
+            "Fog parity: R3 removes duplicate/stale engine fog path; SimEngine remains authoritative.",
+            "Guild fog tuning: R4 adds PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES in config.py (tunable)."
+          ],
+          "pm_evidence": {
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → sprint wk37-refactor-stage2-simengine-presentation-split rounds wk37_r1 through wk37_r4 (pytest/qa_smoke/validate_assets as logged).",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → WK37 R1+R2 consult gates PASS.",
+            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json → WK37 R2 perf consult PASS + human_playtest_wk37_r2 PASS (Jaimie).",
+            "human_playtest": "Jaimie: multiple Ursina playtests while iterating fog-of-war with Agent 03 (R3/R4)."
+          },
+          "pm_next_actions": [
+            "Plan Stage 3 kickoff: InputHandler decoupling via GameCommands protocol (master plan Stage 3).",
+            "Optional: commit/push save-state if working tree is dirty after closeout bookkeeping."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Kick off Stage 3 sprint planning + PM hub entry once Jaimie confirms save-state commit timing."
+            },
+            "03": { "status": "done" },
+            "10": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk37-refactor-stage2-simengine-presentation-split**.\\n\\n1) Read the sprint plan first:\\n   .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md\\n\\n2) Read the master plan section for context:\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 2: GameEngine God Object Decomposition\\n\\n3) Read your assignment in the PM hub:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk37-refactor-stage2-simengine-presentation-split\\\"]\\n   -> rounds[\\\"<your round id>\\\"]\\n   -> pm_agent_prompts[YOUR_AGENT_NUMBER]\\n\\n4) After completing your work:\\n   - Update your agent log\\n   - Run required gates (at minimum): python tools/qa_smoke.py --quick\\n   - Report back: files touched + commands + exit codes + blockers\\n",
+      "pm_send_list_minimal": {
+        "order": "two_rounds_sequential",
+        "round_1": {
+          "then_in_order": ["03", "11"],
+          "intelligence_by_agent": {
+            "03": "high",
+            "11": "low"
+          }
+        },
+        "round_2": {
+          "then_in_order": ["03"],
+          "then_parallel": ["10", "11"],
+          "intelligence_by_agent": {
+            "03": "high",
+            "10": "low",
+            "11": "low"
+          }
+        },
+        "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
+        "rationale": "Stage 2 is a core engine refactor; keep scope limited to Tech implementer + QA/perf consult validation."
+      }
     }
   }
 }

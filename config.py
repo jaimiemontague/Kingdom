@@ -388,6 +388,15 @@ BUILDING_MAX_OCCUPANTS = {
     "food_stand": 0,
 }
 
+# Fog: player building line-of-sight (WK34; SimEngine `GameEngine` / `SimEngine._update_fog_of_war`)
+# All constructed player buildings (excl. castle, neutrals, lairs) get a revealer at the
+# building center. Guild hiring halls use 3D prefabs that often read slightly past the
+# logical 2×2 sim footprint in Ursina, so fog can look "hugged" to the mesh; the extra
+# is additive and tunable.
+PLAYER_BUILDING_VISION_TILES = 3
+PLAYER_GUILD_TYPES = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"})
+PLAYER_GUILD_EXTRA_VISION_TILES = 2
+
 # Hero settings
 HERO_HIRE_COST = HERO.hire_cost
 HERO_BASE_HP = HERO.base_hp

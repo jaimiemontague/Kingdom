@@ -919,5 +919,203 @@
         }
       }
     }
+    ,
+    "wk37-refactor-stage2-simengine-presentation-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK37 Stage 2 R1: introduce SimEngine + PresentationLayer wrapper in game/engine.py with backward-compat property forwarding."
+      },
+      "rounds": {
+        "wk37_r1_simengine_scaffold": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r1_simengine_scaffold",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK37 Stage 2 R1: create game/sim_engine.py and move sim-owned __init__ state out of GameEngine. Wire GameEngine as PresentationLayer wrapper with self.sim and backward-compat property forwarding.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added new sim-only core: game/sim_engine.py (SimEngine) owning determinism seed, sim time, early nudge state, world/event_bus, entity lists, and core systems.",
+              "Refactored game/engine.py GameEngine.__init__ to create self.sim = SimEngine(...), and added property forwarding (+ setters where needed) so existing code continues to access engine.buildings/heroes/etc.",
+              "Kept update loop and rendering logic in GameEngine for R1; this round is constructor split + compat wiring only."
+            ],
+            "files_changed": [
+              "game/sim_engine.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "blockers": []
+          }
+        }
+        ,
+        "wk37_r2_move_update_loop": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r2_move_update_loop",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK37 Stage 2 R2: Move update loop + fog-of-war + get_game_state/build_snapshot into SimEngine. Replace sim->HUD direct calls with EventBus HUD_MESSAGE events; PresentationLayer subscribes and forwards to hud.add_message().",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added GameEventType.HUD_MESSAGE and PresentationLayer subscription to forward HUD toasts from sim via EventBus.",
+              "Moved core sim update orchestration into SimEngine.update(dt, game_state), leaving presentation chores (render animations, hud/vfx update, conversation poll) in GameEngine.",
+              "Moved get_game_state/build_snapshot construction into SimEngine with PresentationLayer passing UI/camera/display fields as parameters."
+            ],
+            "files_changed": [
+              "game/events.py",
+              "game/sim_engine.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --no-llm",
+              "python main.py --renderer ursina --no-llm",
+              "python main.py --renderer ursina --provider mock"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "blockers": [
+              "Manual smoke still recommended for parity: python main.py --no-llm and python main.py --renderer ursina --no-llm."
+            ]
+          }
+        }
+        ,
+        "wk37_r3_fow_building_parity": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r3_fow_parity",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "Parity fix: after Stage2 sim move, building FoW (WK34 +3 tile building LoS) must not regress; remove duplicate/stale GameEngine fog path and keep SimEngine authoritative.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: SimEngine.update() runs authoritative SimEngine._update_fog_of_war (includes WK34 constructed player building +3 LoS), but GameEngine still carried a second full _update_fog_of_war body + engine-local _fog_* state — risk of drift/bugs and confusing edits.",
+              "Fix: forward engine._fog_revision / _fog_revealers_snapshot to self.sim, replace GameEngine._update_fog_of_war with thin wrapper calling self.sim._update_fog_of_war (still supports legacy call sites + ursina_frame_profiler monkey-patches).",
+              "Audio: moved initial ambient set_ambient() to non-headless __init__ (was incorrectly triggered by _early_nudge_mode setter)."
+            ],
+            "files_changed": [
+              "game/engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "acceptance_checks": [
+              "Ursina: player-placed buildings that are fully constructed should contribute their own small revealed halo vs black fog (WK34 +3 tiles), not only castle/hero vision."
+            ],
+            "blockers": []
+          }
+        }
+        ,
+        "wk37_r4_guild_fow_tuning": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r4_guild_fow_tuning",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "Manual parity: guild 3D prefabs looked tighter to fog than economic buildings despite same sim footprint — tune without breaking WK34 baseline for non-guild player buildings.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Sim uses one revealer per qualifying building at building.center with PLAYER_BUILDING_VISION_TILES=3 for all non-castle player buildings; guild/marketplace share 2×2 BUILDING_SIZES — perceived gap was Ursina mesh reading past logical footprint + frontier placement vs in-town overlap with castle/hero vision.",
+              "Added config: PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES (default +2 tiles additive for warrior/ranger/rogue/wizard guild only). SimEngine._update_fog_of_war uses r = PLAYER_BUILDING_VISION_TILES + (extra if guild).",
+              "Human signoff: Jaimie confirmed looks great / pass for all; Agents 10–11 wrapping gates separately."
+            ],
+            "files_changed": [
+              "config.py",
+              "game/sim_engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "107 tests (post guild FoW tuning)"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "acceptance_checks": [
+              "Guild halls at fog edge show a clearer revealed margin vs black fog (tunable via PLAYER_GUILD_EXTRA_VISION_TILES)."
+            ],
+            "blockers": []
+          }
+        }
+      }
+    }
   }
 }

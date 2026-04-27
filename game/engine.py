@@ -46,11 +46,11 @@ from game.graphics.font_cache import get_font
 from game.graphics.render_context import set_render_zoom
 from game.graphics.renderers import RendererRegistry
 from game.systems import perf_stats
-from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
 from ai.context_builder import ContextBuilder
 
 from game.input_manager import InputManager
+from game.sim_engine import SimEngine
 
 if TYPE_CHECKING:
     from game.sim.snapshot import SimStateSnapshot
@@ -66,21 +66,11 @@ class GameEngine:
         
         self.input_manager = input_manager
 
-        # Determinism knobs (future multiplayer enablement).
-        # Seed early so world gen + initial lairs are reproducible when enabled.
-        set_sim_seed(SIM_SEED)
-        self._sim_now_ms = 0
-        # wk12 Chronos: 5-tier speed control; default NORMAL (0.5x). Camera dt kept separate in run().
-        set_time_multiplier(DEFAULT_SPEED_TIER)
-        self._camera_dt = 0.0
+        # Stage 2: simulation core moved into SimEngine.
+        self.sim = SimEngine(early_nudge_mode=early_nudge_mode)
 
-        # Early pacing guardrail (ContentScenarioDirector, wk1 broad sweep):
-        # Within the first few minutes, surface a clear prompt and optionally place
-        # a starter bounty using existing systems. Driven by sim-time (dt), not wall-clock.
-        self._early_nudge_elapsed_s = 0.0
-        self._early_nudge_tip_shown = False
-        self._early_nudge_starter_bounty_done = False
-        self._early_nudge_mode = (early_nudge_mode or EARLY_PACING_NUDGE_MODE or "auto").strip().lower()
+        # Camera dt is presentation-owned (camera moves independently of sim tick rate).
+        self._camera_dt = 0.0
         
         # Camera state (always needed for simulation coordinate queries)
         self.camera_x = 0
@@ -105,9 +95,6 @@ class GameEngine:
         self._perf_update_ms = 0.0
         self._perf_render_ms = 0.0
 
-        # Initialize game world (pure simulation, no Pygame dependency)
-        self.world = World()
-        self.event_bus = EventBus()
         self.renderer_registry = None if headless and not headless_ui else RendererRegistry()
         self._renderer_prune_accum_s = 0.0
 
@@ -176,37 +163,7 @@ class GameEngine:
             self._pause_font = None
             self.screen = None
         
-        # Game objects
-        self.buildings = []
-        self.heroes = []
-        self.enemies = []
-        self.bounties = []
-        self.peasants = []
-        self.guards = []
-        self.peasant_spawn_timer = 0.0
-        
-        # Systems
-        self.combat_system = CombatSystem()
-        self.economy = EconomySystem()
-        self.spawner = EnemySpawner(self.world)
-        self.lair_system = LairSystem(self.world)
-        self.neutral_building_system = NeutralBuildingSystem(self.world)
-        self.buff_system = BuffSystem()
-        self.building_factory = BuildingFactory()
-        
-        # Selection (always needed for simulation queries)
-        self.selected_building = None
-        self.selected_peasant = None
-        self.selected_hero = None
-        
-        # Bounty system
-        self.bounty_system = BountySystem()
-        
-        # AI controller (will be set from main.py)
-        self.ai_controller = None
-        
-        # Tax collector (created after castle is placed)
-        self.tax_collector = None
+        # (Sim-owned state moved to self.sim; keep compat via property forwarding below.)
 
         if not headless or headless_ui:
             # Audio, UI, VFX — only needed for Pygame rendering
@@ -229,6 +186,11 @@ class GameEngine:
             self.vfx_system = VFXSystem()
             self.event_bus.subscribe("*", self.audio_system.on_event)
             self.event_bus.subscribe("*", self.vfx_system.on_event)
+            # WK37 Stage2: bridge sim HUD_MESSAGE events into UI toasts.
+            self.event_bus.subscribe(GameEventType.HUD_MESSAGE, self._on_hud_message_event)
+            # Start ambient loop on game start (audio only if present)
+            if self.audio_system is not None:
+                self.audio_system.set_ambient("ambient_loop", volume=0.4)
         else:
             # Headless stubs: _NullStub silently absorbs any .method() or .attr access
             class _NullStub:
@@ -260,152 +222,228 @@ class GameEngine:
             self.vfx_system = None
 
         # Initialize starting buildings (pure simulation)
-        self.setup_initial_state()
-        
-        # Start ambient loop on game start (audio only if present)
-        if self.audio_system is not None:
-            self.audio_system.set_ambient("ambient_loop", volume=0.4)
+        self.sim.setup_initial_state()
+        # Presentation-owned camera framing is handled by setup_initial_state() wrapper.
 
-    def _update_fog_of_war(self):
-        """Update fog-of-war visibility around the castle, living heroes, neutral buildings, and guards.
+    def _on_hud_message_event(self, event: dict) -> None:
+        """Presentation hook: render sim-emitted HUD toasts."""
+        try:
+            text = event.get("text") or event.get("message") or ""
+            color = event.get("color") or (255, 255, 255)
+            if text and hasattr(self, "hud") and self.hud:
+                self.hud.add_message(str(text), tuple(color))
+        except Exception:
+            pass
 
-        WK22 Agent-10 perf fix: cache the tile-grid positions of every revealer and
-        skip the expensive ``world.update_visibility`` call when no vision source has
-        moved by at least one full tile since the last rebuild.  This eliminates the
-        dominant per-frame cost (previously ~55% of total frame time).
-        """
-        # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.
-        # WK17: per docs/vision_rules_fog_of_war.md (Agent 05 spec).
-        CASTLE_VISION_TILES = 10
-        HERO_VISION_TILES = 7
-        GUARD_VISION_TILES = 6
-        NEUTRAL_VISION = {"house": 3, "farm": 5, "food_stand": 3}
+    # ---------------------------------------------------------------------
+    # Stage 2: backward-compat property forwarding (engine.<x> -> sim.<x>)
+    # ---------------------------------------------------------------------
+    @property
+    def world(self):
+        return self.sim.world
 
-        castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
-        revealers = []
-        hero_revealers = []  # Track which revealers are heroes (for XP tracking)
-        
-        if castle is not None:
-            revealers.append((castle.center_x, castle.center_y, CASTLE_VISION_TILES))
+    @property
+    def event_bus(self):
+        return self.sim.event_bus
 
-        for hero in self.heroes:
-            if getattr(hero, "is_alive", True):
-                revealers.append((hero.x, hero.y, HERO_VISION_TILES))
-                hero_revealers.append((hero, hero.x, hero.y, HERO_VISION_TILES))
+    @property
+    def buildings(self):
+        return self.sim.buildings
 
-        # WK17: Neutral buildings (house, farm, food_stand) as vision sources.
-        for building in self.buildings:
-            btype = getattr(building, "building_type", None)
-            if btype not in NEUTRAL_VISION:
-                continue
-            if getattr(building, "is_constructed", True) is not True:
-                continue
-            if getattr(building, "hp", 1) <= 0:
-                continue
-            radius = NEUTRAL_VISION[btype]
-            revealers.append((building.center_x, building.center_y, radius))
+    @buildings.setter
+    def buildings(self, v):
+        self.sim.buildings = v
 
-        # WK34: All constructed player-placed buildings reveal 3 tiles (building LoS).
-        # Neutrals use NEUTRAL_VISION above; castle uses CASTLE_VISION_TILES above.
-        BUILDING_VISION_TILES = 3
-        for building in self.buildings:
-            if not getattr(building, "is_constructed", False):
-                continue
-            if getattr(building, "hp", 1) <= 0:
-                continue
-            if getattr(building, "is_neutral", False):
-                continue
-            # Lairs are hostile world structures, not player vision sources.
-            if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-                continue
-            raw_bt = getattr(building, "building_type", None)
-            btype_name = str(getattr(raw_bt, "value", raw_bt) or "")
-            if btype_name == "castle":
-                continue
-            revealers.append(
-                (building.center_x, building.center_y, BUILDING_VISION_TILES)
-            )
+    @property
+    def heroes(self):
+        return self.sim.heroes
 
-        # WK17: Living guards as vision sources.
-        for guard in self.guards:
-            if not getattr(guard, "is_alive", True):
-                continue
-            revealers.append((guard.x, guard.y, GUARD_VISION_TILES))
+    @heroes.setter
+    def heroes(self, v):
+        self.sim.heroes = v
 
-        if not revealers:
-            return
+    @property
+    def enemies(self):
+        return self.sim.enemies
 
-        # ---- Dirty check: skip update if no revealer moved a full tile ----
-        # Build a canonical snapshot of (grid_x, grid_y, radius) for comparison.
-        # Sort so list order (heroes vs buildings iteration) cannot spuriously skip updates.
-        w2g = self.world.world_to_grid
-        grid_snapshot = tuple(
-            sorted((w2g(wx, wy)[0], w2g(wx, wy)[1], r) for wx, wy, r in revealers)
-        )
-        prev = getattr(self, "_fog_revealers_snapshot", None)
-        if prev is not None and prev == grid_snapshot:
-            # Nothing changed on the tile grid — skip the expensive rebuild.
-            return
-        self._fog_revealers_snapshot = grid_snapshot
-        # Increment fog revision so the Ursina renderer knows the grid has changed.
-        self._fog_revision = getattr(self, "_fog_revision", 0) + 1
+    @enemies.setter
+    def enemies(self, v):
+        self.sim.enemies = v
 
-        # ---- Perform the full visibility update ----
-        # WK6: Track newly revealed tiles for XP awards
-        newly_revealed = self.world.update_visibility(revealers, return_new_reveals=True)
-        
-        # WK6: Award XP to Rangers for newly revealed tiles
-        if newly_revealed:
-            for hero, hx, hy, radius in hero_revealers:
-                if hero.hero_class == "ranger":
-                    # Check which newly revealed tiles are within this hero's vision radius
-                    hero_grid_x, hero_grid_y = self.world.world_to_grid(hx, hy)
-                    radius_sq = radius * radius
-                    
-                    for grid_x, grid_y in newly_revealed:
-                        # Check if this tile is within hero's vision circle
-                        dx = grid_x - hero_grid_x
-                        dy = grid_y - hero_grid_y
-                        if (dx * dx + dy * dy) <= radius_sq:
-                            # First-time reveal: award XP (idempotent via set check)
-                            if (grid_x, grid_y) not in hero._revealed_tiles:
-                                hero._revealed_tiles.add((grid_x, grid_y))
-                                # Award small XP (1 per tile, Agent 06 can tune)
-                                hero.xp += 1
+    @property
+    def bounties(self):
+        return self.sim.bounties
+
+    @bounties.setter
+    def bounties(self, v):
+        self.sim.bounties = v
+
+    @property
+    def peasants(self):
+        return self.sim.peasants
+
+    @peasants.setter
+    def peasants(self, v):
+        self.sim.peasants = v
+
+    @property
+    def guards(self):
+        return self.sim.guards
+
+    @guards.setter
+    def guards(self, v):
+        self.sim.guards = v
+
+    @property
+    def peasant_spawn_timer(self):
+        return self.sim.peasant_spawn_timer
+
+    @peasant_spawn_timer.setter
+    def peasant_spawn_timer(self, v):
+        self.sim.peasant_spawn_timer = v
+
+    @property
+    def combat_system(self):
+        return self.sim.combat_system
+
+    @property
+    def economy(self):
+        return self.sim.economy
+
+    @property
+    def spawner(self):
+        return self.sim.spawner
+
+    @property
+    def lair_system(self):
+        return self.sim.lair_system
+
+    @property
+    def neutral_building_system(self):
+        return self.sim.neutral_building_system
+
+    @property
+    def buff_system(self):
+        return self.sim.buff_system
+
+    @property
+    def building_factory(self):
+        return self.sim.building_factory
+
+    @property
+    def bounty_system(self):
+        return self.sim.bounty_system
+
+    @property
+    def selected_building(self):
+        return self.sim.selected_building
+
+    @selected_building.setter
+    def selected_building(self, v):
+        self.sim.selected_building = v
+
+    @property
+    def selected_peasant(self):
+        return self.sim.selected_peasant
+
+    @selected_peasant.setter
+    def selected_peasant(self, v):
+        self.sim.selected_peasant = v
+
+    @property
+    def selected_hero(self):
+        return self.sim.selected_hero
+
+    @selected_hero.setter
+    def selected_hero(self, v):
+        self.sim.selected_hero = v
+
+    @property
+    def ai_controller(self):
+        return self.sim.ai_controller
+
+    @ai_controller.setter
+    def ai_controller(self, v):
+        self.sim.ai_controller = v
+
+    @property
+    def tax_collector(self):
+        return self.sim.tax_collector
+
+    @tax_collector.setter
+    def tax_collector(self, v):
+        self.sim.tax_collector = v
+
+    # Sim time + early pacing nudge state (compat: tests and engine methods access these attrs)
+    @property
+    def _sim_now_ms(self):
+        return self.sim._sim_now_ms
+
+    @_sim_now_ms.setter
+    def _sim_now_ms(self, v):
+        self.sim._sim_now_ms = v
+
+    @property
+    def _early_nudge_elapsed_s(self):
+        return self.sim._early_nudge_elapsed_s
+
+    @_early_nudge_elapsed_s.setter
+    def _early_nudge_elapsed_s(self, v):
+        self.sim._early_nudge_elapsed_s = v
+
+    @property
+    def _early_nudge_tip_shown(self):
+        return self.sim._early_nudge_tip_shown
+
+    @_early_nudge_tip_shown.setter
+    def _early_nudge_tip_shown(self, v):
+        self.sim._early_nudge_tip_shown = v
+
+    @property
+    def _early_nudge_starter_bounty_done(self):
+        return self.sim._early_nudge_starter_bounty_done
+
+    @_early_nudge_starter_bounty_done.setter
+    def _early_nudge_starter_bounty_done(self, v):
+        self.sim._early_nudge_starter_bounty_done = v
+
+    @property
+    def _early_nudge_mode(self):
+        return self.sim._early_nudge_mode
+
+    @_early_nudge_mode.setter
+    def _early_nudge_mode(self, v):
+        self.sim._early_nudge_mode = v
+
+    @property
+    def _fog_revision(self) -> int:
+        return int(getattr(self.sim, "_fog_revision", 0))
+
+    @_fog_revision.setter
+    def _fog_revision(self, v: int) -> None:
+        self.sim._fog_revision = int(v)
+
+    @property
+    def _fog_revealers_snapshot(self):
+        return getattr(self.sim, "_fog_revealers_snapshot", None)
+
+    @_fog_revealers_snapshot.setter
+    def _fog_revealers_snapshot(self, v) -> None:
+        self.sim._fog_revealers_snapshot = v
+
+    def _update_fog_of_war(self) -> None:
+        """SimEngine owns the authoritative fog update; keep a thin wrapper for legacy call sites / profilers."""
+        self.sim._update_fog_of_war()
         
     def setup_initial_state(self):
-        """Set up the initial game state."""
-        # Place castle in center
-        center_x = MAP_WIDTH // 2 - 1
-        center_y = MAP_HEIGHT // 2 - 1
-        
-        castle = Castle(center_x, center_y)
-        # Starting castle is fully built and targetable.
-        if hasattr(castle, "is_constructed"):
-            castle.is_constructed = True
-        if hasattr(castle, "construction_started"):
-            castle.construction_started = True
-        self.buildings.append(castle)
-        if hasattr(castle, "set_event_bus"):
-            castle.set_event_bus(self.event_bus)
-
-        # Create tax collector at castle
-        self.tax_collector = TaxCollector(castle)
-        
-        # Clear tiles under castle for path
-        for dy in range(castle.size[1]):
-            for dx in range(castle.size[0]):
-                self.world.set_tile(center_x + dx, center_y + dy, 2)  # PATH
-        
-        # Center camera on castle
-        self.center_on_castle(reset_zoom=True, castle=castle)
-
-        # Spawn initial monster lairs (hostile world-structures).
-        self.lair_system.spawn_initial_lairs(self.buildings, castle)
-        self.clamp_camera()
-
-        # Initialize fog-of-war reveal around the starting castle.
-        self._update_fog_of_war()
+        """Backward-compat wrapper (Stage 2): sim owns initial state."""
+        self.sim.setup_initial_state()
+        try:
+            castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
+            self.center_on_castle(reset_zoom=True, castle=castle)
+            self.clamp_camera()
+        except Exception:
+            pass
         
     def handle_events(self):
         """Process input events."""
@@ -728,25 +766,10 @@ class GameEngine:
 
         game_state = self.get_game_state()
 
-        # wk12 Chronos: ensure all buildings have event_bus for hero_entered/exited_building events
-        for building in self.buildings:
-            if getattr(building, "_event_bus", None) is None and hasattr(building, "set_event_bus"):
-                building.set_event_bus(self.event_bus)
+        # Stage 2: sim update loop lives in SimEngine.
+        self.sim.update(dt, game_state)
 
-        system_ctx = self._build_system_context()
-        self._update_ai_and_heroes(dt, game_state)
-        castle = self._update_world_systems(system_ctx, dt, game_state)
-        self._update_peasants(dt, game_state, castle)
-        enemy_ranged_events = self._update_enemies(dt)
-        self._update_guards(dt)
-        self._spawn_enemies(dt)
-        self._apply_entity_separation(dt)
-        events = self._process_combat(system_ctx, dt, enemy_ranged_events)
-        self._route_combat_events(events)
-        self._cleanup_after_combat()
-        self._process_bounties()
-        self._update_neutral_systems(dt, castle)
-        self._update_buildings(dt)
+        # Presentation chores stay here for now.
         self._update_render_animations(dt)
         self._finalize_update(dt)
         self._poll_conversation_response()
@@ -1376,78 +1399,29 @@ class GameEngine:
         WK32: each entry in ``buildings`` has ``construction_progress`` in [0, 1] for staged build visuals;
         ``buildings_construction_progress`` matches ``buildings`` order for consumers that need parallel arrays.
         """
-        castle = next((b for b in self.buildings if b.building_type == "castle"), None)
-        return {
-            "screen_w": int(self.window_width),
-            "screen_h": int(self.window_height),
-            # WK7: Display mode state for ESC Graphics menu
-            "display_mode": getattr(self, "display_mode", "windowed"),
-            "window_size": getattr(self, "window_size", (WINDOW_WIDTH, WINDOW_HEIGHT)),
-            "gold": self.economy.player_gold,
-            "heroes": self.heroes,
-            "peasants": self.peasants,
-            "guards": self.guards,
-            "enemies": self.enemies,
-            "buildings": self.buildings,
-            "buildings_construction_progress": tuple(
-                float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
-            ),
-            "bounties": self.bounty_system.get_unclaimed_bounties(),
-            "bounty_system": self.bounty_system,
-            "wave": self.spawner.wave_number,
-            "selected_hero": self.selected_hero,
-            "selected_building": getattr(self, "selected_building", None),
-            "selected_peasant": getattr(self, "selected_peasant", None),
-            "castle": castle,
-            "economy": self.economy,
-            "world": self.world,
-            # UI helper: placement mode info for HUD
-            "placing_building_type": getattr(self.building_menu, "selected_building", None),
-            # UI helper: whether debug UI is currently visible (used to gate debug-only HUD indicators)
-            "debug_ui": bool(getattr(self.debug_panel, "visible", False)),
-            # wk13 Living Interiors: right-panel mode and rect for input (ESC/map click exit)
-            "micro_view_mode": getattr(self.micro_view, "mode", None),
-            "micro_view_building": getattr(self.micro_view, "interior_building", None),
-            # wk14: quest panel state for QuestViewPanel
-            "micro_view_quest_hero": getattr(self.micro_view, "quest_hero", None),
-            "micro_view_quest_data": getattr(self.micro_view, "quest_data", None),
-            "right_panel_rect": getattr(self.hud, "_right_rect", None),
-            "llm_available": getattr(self.ai_controller, "llm_brain", None) is not None,
-            # Last MOUSEMOTION in engine.screen space — required when pygame.mouse is dummy (Ursina HUD).
-            "ui_cursor_pos": getattr(self, "_last_ui_cursor_pos", None),
-        }
+        return self.sim.get_game_state(
+            screen_w=int(getattr(self, "window_width", WINDOW_WIDTH)),
+            screen_h=int(getattr(self, "window_height", WINDOW_HEIGHT)),
+            display_mode=getattr(self, "display_mode", "windowed"),
+            window_size=getattr(self, "window_size", (WINDOW_WIDTH, WINDOW_HEIGHT)),
+            placing_building_type=getattr(getattr(self, "building_menu", None), "selected_building", None),
+            debug_ui=bool(getattr(getattr(self, "debug_panel", None), "visible", False)),
+            micro_view_mode=getattr(getattr(self, "micro_view", None), "mode", None),
+            micro_view_building=getattr(getattr(self, "micro_view", None), "interior_building", None),
+            micro_view_quest_hero=getattr(getattr(self, "micro_view", None), "quest_hero", None),
+            micro_view_quest_data=getattr(getattr(self, "micro_view", None), "quest_data", None),
+            right_panel_rect=getattr(getattr(self, "hud", None), "_right_rect", None),
+            llm_available=getattr(self.ai_controller, "llm_brain", None) is not None,
+            ui_cursor_pos=getattr(self, "_last_ui_cursor_pos", None),
+        )
 
     def build_snapshot(self) -> "SimStateSnapshot":
         """Build a frozen snapshot of current sim state for renderers (read-only)."""
-        from game.sim.snapshot import SimStateSnapshot
-
-        castle = next(
-            (b for b in self.buildings if getattr(b, "building_type", None) == "castle"),
-            None,
-        )
-
         vfx_projectiles: tuple = ()
         if self.vfx_system is not None:
             vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", []))
 
-        return SimStateSnapshot(
-            buildings=tuple(self.buildings),
-            heroes=tuple(self.heroes),
-            enemies=tuple(self.enemies),
-            peasants=tuple(self.peasants),
-            guards=tuple(self.guards),
-            bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
-            world=self.world,
-            fog_revision=int(getattr(self, "_fog_revision", 0)),
-            gold=int(getattr(self.economy, "player_gold", 0)),
-            wave=int(getattr(self.spawner, "wave_number", 0)),
-            buildings_construction_progress=tuple(
-                float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
-            ),
-            selected_hero=self.selected_hero,
-            selected_building=getattr(self, "selected_building", None),
-            castle=castle,
-            tax_collector=getattr(self, "tax_collector", None),
+        return self.sim.build_snapshot(
             vfx_projectiles=vfx_projectiles,
             screen_w=int(getattr(self, "window_width", 0) or 0),
             screen_h=int(getattr(self, "window_height", 0) or 0),

@@ -597,6 +597,82 @@
           }
         }
       }
+    },
+    "wk37-refactor-stage2-simengine-presentation-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "Stage 2 SimEngine + PresentationLayer: Agent 10 R2 perf consult after update loop moved to SimEngine + HUD_MESSAGE bridge."
+      },
+      "rounds": {
+        "wk37_r2_move_update_loop_perf_consult_2026_04_27": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r2_move_update_loop_perf_consult_2026_04_27",
+          "round_meta": {
+            "prompt_set_id": "wk37_r2",
+            "build_target": "Stage2_Move_UpdateLoop + HUD_MESSAGE (perf consult)",
+            "sent_at_local": "2026-04-27"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK37 R2 (Agent 10 consult): PM asked for ~5 min Ursina --no-llm with attention to stutter/FPS during hire/build/pan. Ran automated 300s Ursina session with FPS probe, hero-fps-probe spawning 4 warriors at warrior_guild, 10s warmup. Result: avg_fps 41.7 over 11184 frames; p50 42.9, p90 48.3; min_fps 3.5 (single-frame style outlier). Stage timings: tick_simulation avg 2.073ms but max 265ms (rare spike); ursina_renderer avg 1.713ms max 60ms; hud_texture_upload max 59.7ms (occasional upload hitch). Steady-state feels in mid-40s FPS band with 4 heroes — no evidence of sustained sub-20 FPS from Stage 2 delegation alone. Headless perf_benchmark heavy profile: ms/tick total 1.093 (sim path sanity). qa_smoke --quick PASS; validate_assets --report exit 0 (errors=0 warns=46).",
+            "summary_bullets": [
+              "Ursina 300s + 4 hired warriors: avg_fps 41.7, p50 42.9; min_fps 3.5 — treat as outlier spike, not sustained collapse.",
+              "Probe stages: tick_simulation p90 ~1.07ms avg but rare max ~265ms; ursina_renderer avg ~1.7ms — flag for Agent 03 only if human playtest sees repeated hitching after cache warm.",
+              "Headless sim: perf_benchmark heavy ~1.09 ms/tick total — acceptable vs prior ~1.0–1.1 band.",
+              "Human playtest (Jaimie): PASS — Ursina/manual session acceptable after WK37 R2 (matches automated consult: no sustained regression concern)."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10 --hero-fps-probe-count 4",
+              "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 5 --seed 3",
+              "Manual (PM spec): python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "validate_assets": "python tools/validate_assets.py --report",
+              "validate_assets_exit_code": 0,
+              "validate_assets_summary": "errors=0 warns=46",
+              "ursina_fps_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10 --hero-fps-probe-count 4",
+              "ursina_fps_probe": {
+                "heroes": 4,
+                "frames": 11184,
+                "avg_fps": 41.7,
+                "min_fps": 3.5,
+                "p10_fps": 36.5,
+                "p50_fps": 42.9,
+                "p90_fps": 48.3,
+                "max_fps": 54.2
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 1.198,
+                "hud_texture_upload_p90_ms": 0.335,
+                "hud_texture_upload_max_ms": 59.748,
+                "pygame_hud_render_avg_ms": 0.986,
+                "pygame_hud_render_p90_ms": 1.24,
+                "pygame_hud_render_max_ms": 8.846,
+                "tick_simulation_avg_ms": 2.073,
+                "tick_simulation_p90_ms": 1.072,
+                "tick_simulation_max_ms": 265.286,
+                "ursina_renderer_avg_ms": 1.713,
+                "ursina_renderer_p90_ms": 2.255,
+                "ursina_renderer_max_ms": 60.493
+              },
+              "perf_benchmark_heavy": "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 5 --seed 3",
+              "perf_benchmark_ms_per_tick_total": 1.093,
+              "perf_benchmark_pf_ms_per_tick": 0.771,
+              "human_playtest_wk37_r2": {
+                "status": "PASS",
+                "reporter": "human_playtest_Jaimie",
+                "note": "Jaimie reported playtest passes (WK37 Stage 2 / R2 parity + feel)."
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
