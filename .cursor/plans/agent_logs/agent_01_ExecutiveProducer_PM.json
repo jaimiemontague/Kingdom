@@ -3133,6 +3133,181 @@
         "do_not_send": ["01", "02", "04", "05", "06", "07", "09", "10", "12", "13", "14", "15"],
         "rationale": "Single-threaded code ownership on Agent 03. QA after each round. Agent 08 only in R3 and parallel with 11 to maximize speed at sprint end when work is independent."
       }
+    },
+    "wk39-refactor-stage4-pygame-renderer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "master_plan_section": "Stage 4: Render Method Extraction (approx. L861+)",
+        "created_utc": "2026-04-28T00:00:00Z",
+        "notes": "WK39 CLOSED: Stage 4 PygameRenderer + Jaimie human playtest PASS. Follow-on Ursina ranged VFX (build_snapshot get_active_projectiles, billboard/depth) logged in agent_03 ursina-ranged-vfx-2026-04; same play session signoff.",
+        "pm_jaimie_send_order": [
+          "1) Agent 03 (MEDIUM) — wk39_r1_pygame_renderer_extraction. No other implementer starts first.",
+          "2) Agent 11 (LOW) — after 03 reports R1 done: pytest, qa_smoke, validate_assets; log.",
+          "3) Agent 03 (MEDIUM) — wk39_r2_snapshot_context_minimap.",
+          "4) Agent 11 (LOW) — after R2.",
+          "5) Agent 03 (MEDIUM) — wk39_r3_hardening_tests.",
+          "6) Agent 11 (LOW) — final gate stack after R3; then Jaimie optional manual: python main.py --no-llm and python main.py --renderer ursina --no-llm per plan."
+        ]
+      },
+      "rounds": {
+        "wk39_r1_pygame_renderer_extraction": {
+          "round_meta": {
+            "prompt_set_id": "wk39_r1",
+            "build_target": "PygameRenderer_scaffold + world_block_move_from_engine",
+            "visibility": "Implementer: 03. QA: 11 post-merge."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Create PygameRenderer; move view_surface setup through world/entities/fog/bounties/scale-blit from GameEngine.render (approx. L1442-1556) with no behavior change. Document building_menu / building_list_panel placement inside world layer. Preserve skip_pygame_world and Ursina compositing path.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable baseline)."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "done",
+              "asks": [
+                "Read .cursor/plans/wk39_stage4_pygame_renderer.plan.md and master plan Stage 4.",
+                "Implement game/graphics/pygame_renderer.py; wire from game/engine.py render().",
+                "Run pytest, qa_smoke, validate_assets; update agent_03 log."
+              ],
+              "acceptance_criteria": [
+                "World draw path lives in PygameRenderer or clearly delegated; engine.render() thinner for world portion.",
+                "Gates PASS."
+              ]
+            },
+            "11": {
+              "status": "done",
+              "asks": [
+                "After 03 R1: run full gate line; log exit codes in agent_11 log."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "medium", "11": "low" },
+            "rationale": "03 lands code; 11 validates."
+          },
+          "pm_agent_prompts": {
+            "03": "WK39 Stage 4 R1 (Tech, MEDIUM): Per .cursor/plans/wk39_stage4_pygame_renderer.plan.md WK39-R1 and master plan Stage 4. Add game/graphics/pygame_renderer.py; extract world rendering block from game/engine.py render() (preserve draw order, skip_pygame_world branch, bounty update_ui_metrics ordering). Use build_snapshot() as appropriate. Gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log in agent_03 JSON.",
+            "11": "WK39 Stage 4 R1 (QA, LOW): After 03 lands R1, run pytest, qa_smoke, validate_assets; log commands and exit_code in agent_11 JSON."
+          }
+        },
+        "wk39_r2_snapshot_context_minimap": {
+          "round_meta": {
+            "prompt_set_id": "wk39_r2",
+            "build_target": "Snapshot_first_iteration + optional_minimap_dedupe",
+            "visibility": "Implementer: 03. QA: 11 post-merge."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Prefer iterating from SimStateSnapshot in PygameRenderer; narrow context for non-snapshot refs; optional share helper with _render_hero_minimap.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0."
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": { "status": "done" },
+            "11": { "status": "done" }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "medium", "11": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK39 Stage 4 R2 (Tech, MEDIUM): WK39-R2 per wk39 plan. Snapshot-first + context cleanup; optional minimap dedupe. Same gates. Update agent_03 log.",
+            "11": "WK39 Stage 4 R2 (QA, LOW): After 03 R2, run gates; log in agent_11 log."
+          }
+        },
+        "wk39_r3_hardening_tests": {
+          "round_meta": {
+            "prompt_set_id": "wk39_r3",
+            "build_target": "Tests_docs_final_gates",
+            "visibility": "Implementer: 03. QA: 11. Human: Jaimie manual."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Small tests (e.g. render smoke headless); optional docs/refactor update; final gates; Jaimie pygame + Ursina parity check.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0."
+            }
+          },
+          "pm_manual_jaimie": [
+            "python main.py --no-llm",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "pm_next_actions_by_agent": {
+            "03": { "status": "done" },
+            "11": { "status": "done" }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "medium", "11": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK39 Stage 4 R3 (Tech, MEDIUM): WK39-R3 per wk39 plan. Tests + any engine_access_inventory.md note; final gates. Update agent_03 log. Tell PM when ready for Jaimie manual.",
+            "11": "WK39 Stage 4 R3 (QA, LOW): After 03 R3, full pytest, qa_smoke, validate_assets; log all exit codes."
+          }
+        },
+        "wk39_sprint_closeout": {
+          "round_meta": {
+            "closed_at_local": "2026-04-27",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "build_target": "Sprint_Close_WK39_Stage4_Plus_UrsinaVfxParity"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK39 Stage 4 (PygameRenderer) complete: R1–R3 delivered; Agent 11 gates all PASS. Jaimie human playtest PASS (default + Ursina). Playtest follow-up: Ursina projectiles invisible — fixed by Agent 03 (build_snapshot get_active_projectiles + ursina_renderer billboard/depth/scale) logged in agent_03 ursina-ranged-vfx-2026-04; same sign-off."
+          },
+          "pm_gates": {
+            "pytest": "PASS 114+ per final agent_03 (snapshot contract test added in VFX thread)",
+            "qa_smoke_quick": "PASS exit 0 (per logs)",
+            "validate_assets": "errors=0 warns=46 baseline"
+          },
+          "pm_deliverables": [
+            "game/graphics/pygame_renderer.py + PygameWorldRenderContext (GameEngine still owns HUD/panels/overlay UIs).",
+            "game/engine.py — render() delegates world pass; build_snapshot() includes vfx projectiles via get_active_projectiles().",
+            "tests/test_pygame_renderer_wk39.py; tests/test_renderer_snapshot_contract addition for VFX list.",
+            "docs/refactor/engine_access_inventory.md — PygameRenderer section.",
+            "Ursina: ursina_renderer.py projectile billboards/depth/scale; engine vfx_system update path as logged.",
+            ".cursor/plans/wk39_stage4_pygame_renderer.plan.md"
+          ],
+          "pm_evidence": {
+            "agent_03": "wk39-refactor-stage4-pygame-renderer (R1–R3) + ursina-ranged-vfx-2026-04 in agent_03_TechnicalDirector_Architecture.json",
+            "agent_11": "wk39 rounds wk39_r1–r3 in agent_11 JSON — all done",
+            "human_playtest": "Jaimie: pass including Ursina VFX after fix (2026-04-27 per agent_03 human_verification)"
+          },
+          "pm_next_actions": [
+            "Optional: git save-state commit if not already pushed; CHANGELOG / version bump is Jaimie's call (Agent 13 for notes).",
+            "Next architecture stage: **Stage 5** per master plan — root script cleanup, update .cursor/rules/02-project-layout.mdc, final integration gate (Agent 12 + 01 + 11; Agent 12 LOW / 11)."
+          ]
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint wk39-refactor-stage4-pygame-renderer (Architecture Refactor Stage 4: PygameRenderer extraction).\\n\\n1) Read the sprint plan FIRST:\\n   .cursor/plans/wk39_stage4_pygame_renderer.plan.md\\n2) Read master plan (Stage 4 only):\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 4: Render Method Extraction\\n3) Read the PM log for this sprint and YOUR round assignment:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk39-refactor-stage4-pygame-renderer\\\"]\\n   -> rounds[<round id: start wk39_r1_pygame_renderer_extraction unless PM says otherwise>]\\n   -> pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"] and pm_next_actions_by_agent[YOUR_NUMBER]\\n4) Send order: see sprint_meta.pm_jaimie_send_order in that sprint block.\\n5) When done: update YOUR agent log; run listed gates; report files, commands, exit codes, blockers to Jaimie/PM.",
+      "pm_send_list_minimal": {
+        "kickoff_note": "Serpentine only: 03 then 11 per round. No parallel implementation agents. No second agent in step 1.",
+        "waves": [
+          { "wave": 1, "parallel": false, "agents": [{ "id": "03", "intel": "medium", "round": "wk39_r1_pygame_renderer_extraction" }] },
+          { "wave": 2, "parallel": false, "depends_on": "wave1_03_r1", "agents": [{ "id": "11", "intel": "low", "round": "wk39_r1_pygame_renderer_extraction" }] },
+          { "wave": 3, "parallel": false, "agents": [{ "id": "03", "intel": "medium", "round": "wk39_r2_snapshot_context_minimap" }] },
+          { "wave": 4, "parallel": false, "depends_on": "wave3_03_r2", "agents": [{ "id": "11", "intel": "low", "round": "wk39_r2_snapshot_context_minimap" }] },
+          { "wave": 5, "parallel": false, "agents": [{ "id": "03", "intel": "medium", "round": "wk39_r3_hardening_tests" }] },
+          { "wave": 6, "parallel": false, "depends_on": "wave5_03_r3", "agents": [{ "id": "11", "intel": "low", "round": "wk39_r3_hardening_tests" }] }
+        ],
+        "do_not_send": ["01", "02", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14", "15"],
+        "rationale": "Stage 4 is engine/render extraction; 03 only implements. 11 runs gates. Others silent unless escalated."
+      }
     }
   }
 }

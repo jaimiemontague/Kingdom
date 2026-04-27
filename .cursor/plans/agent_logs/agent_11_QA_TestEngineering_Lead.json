@@ -767,6 +767,132 @@
           "bugs_found": []
         }
       }
+    },
+    "wk39-refactor-stage4-pygame-renderer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
+        "notes": "Agent 11: gates after each Agent 03 round per pm_jaimie_send_order."
+      },
+      "rounds": {
+        "wk39_r1_pygame_renderer_extraction": {
+          "round_id": "wk39_r1_pygame_renderer_extraction",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R1: validation after Agent 03 PygameRenderer scaffold + engine.render delegation)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "110 passed, 1 warning (pkg_resources deprecation)."
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders; baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk39_r2_snapshot_context_minimap": {
+          "round_id": "wk39_r2_snapshot_context_minimap",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R2: gates after Agent 03 snapshot-first / context / optional minimap dedupe)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "110 passed, 1 warning (pkg_resources deprecation)."
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk39_r3_hardening_tests": {
+          "round_id": "wk39_r3_hardening_tests",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R3: final gate stack after Agent 03 hardening + tests; Jaimie manual per PM)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "113 passed, 1 warning (pkg_resources deprecation)."
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            }
+          },
+          "pm_manual_for_jaimie": [
+            "python main.py --no-llm",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

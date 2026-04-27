@@ -45,6 +45,7 @@ from game.systems.protocol import SystemContext
 from game.types import BountyType, HeroClass
 from game.graphics.font_cache import get_font
 from game.graphics.render_context import set_render_zoom
+from game.graphics.pygame_renderer import PygameRenderer, PygameWorldRenderContext
 from game.graphics.renderers import RendererRegistry
 from game.systems import perf_stats
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
@@ -187,6 +188,16 @@ class GameEngine:
             self.vfx_system = VFXSystem()
             self.event_bus.subscribe("*", self.audio_system.on_event)
             self.event_bus.subscribe("*", self.vfx_system.on_event)
+            self.pygame_renderer = PygameRenderer(
+                PygameWorldRenderContext(
+                    renderer_registry=self.renderer_registry,
+                    bounty_system=self.sim.bounty_system,
+                    vfx_system=self.vfx_system,
+                    building_menu=self.building_menu,
+                    building_list_panel=self.building_list_panel,
+                    economy=self.sim.economy,
+                )
+            )
             # WK37 Stage2: bridge sim HUD_MESSAGE events into UI toasts.
             self.event_bus.subscribe(GameEventType.HUD_MESSAGE, self._on_hud_message_event)
             # Start ambient loop on game start (audio only if present)
@@ -221,6 +232,7 @@ class GameEngine:
             self.input_handler = None
             self.cleanup_manager = CleanupManager(self)
             self.vfx_system = None
+            self.pygame_renderer = None
 
         # Initialize starting buildings (pure simulation)
         self.sim.setup_initial_state()
@@ -1199,7 +1211,14 @@ class GameEngine:
     def _finalize_update(self, dt: float):
         """Finalize per-frame UI and VFX updates."""
         if self.headless:
+            # Flush + VFX: headless sim/observers must still age projectiles so snapshots stay in sync
+            # with the pygame path and Ursina (projectile positions depend on vfx.update).
             self._flush_event_bus()
+            if self.vfx_system is not None and hasattr(self.vfx_system, "update"):
+                try:
+                    self.vfx_system.update(dt)
+                except Exception:
+                    pass
             return
         # wk14: Interior building-under-attack rumble (throttled by sim time)
         from game.ui.micro_view_manager import ViewMode
@@ -1420,7 +1439,13 @@ class GameEngine:
         """Build a frozen snapshot of current sim state for renderers (read-only)."""
         vfx_projectiles: tuple = ()
         if self.vfx_system is not None:
-            vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", []))
+            # VFXSystem exposes get_active_projectiles() — there is no .active_projectiles attr;
+            # using getattr(..., "active_projectiles", ()) made Ursina snapshots always empty.
+            getter = getattr(self.vfx_system, "get_active_projectiles", None)
+            if callable(getter):
+                vfx_projectiles = tuple(getter())
+            else:
+                vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", ()))
 
         return self.sim.build_snapshot(
             vfx_projectiles=vfx_projectiles,
@@ -1448,119 +1473,17 @@ class GameEngine:
         else:
             self.screen.fill(COLOR_BLACK)
 
-        # Pixel art: quantize camera to integer pixels to reduce shimmer.
-        camera_offset = (int(self.camera_x), int(self.camera_y))
-
-        # Render-only context (do not affect simulation determinism).
-        try:
-            set_render_zoom(self.zoom if self.zoom else 1.0)
-        except Exception:
-            pass
-
-        if skip_pygame_world:
-            view_surface = self.screen
-        elif abs((self.zoom if self.zoom else 1.0) - 1.0) < 1e-6:
-            # If not zoomed, render directly to the screen to avoid an expensive smoothscale.
-            view_surface = self.screen
-        else:
-            # Render world + entities to a zoomed "camera view" surface, then scale to window.
-            win_w = int(self.window_width)
-            win_h = int(self.window_height)
-            view_w = max(1, int(win_w / (self.zoom if self.zoom else 1.0)))
-            view_h = max(1, int(win_h / (self.zoom if self.zoom else 1.0)))
-            if self._view_surface is None or self._view_surface_size != (view_w, view_h):
-                self._view_surface = pygame.Surface((view_w, view_h))
-                self._view_surface_size = (view_w, view_h)
-            view_surface = self._view_surface
-            view_surface.fill(COLOR_BLACK)
-
-        if not skip_pygame_world:
-            # Render world
-            self.world.render(view_surface, camera_offset)
-
-            # Render buildings
-            for building in self.buildings:
-                self.renderer_registry.render_building(view_surface, building, camera_offset)
-
-            # Render enemies
-            for enemy in self.enemies:
-                # Fog-of-war: enemies should only be visible when currently in vision (VISIBLE),
-                # not in explored-but-dim (SEEN) tiles.
-                gx, gy = self.world.world_to_grid(getattr(enemy, "x", 0.0), getattr(enemy, "y", 0.0))
-                if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
-                    if self.world.visibility[gy][gx] != Visibility.VISIBLE:
-                        continue
-                else:
-                    continue
-                self.renderer_registry.render_enemy(view_surface, enemy, camera_offset)
-
-            # Render heroes
-            for hero in self.heroes:
-                self.renderer_registry.render_hero(view_surface, hero, camera_offset)
-
-            # Render guards
-            for guard in self.guards:
-                self.renderer_registry.render_guard(view_surface, guard, camera_offset)
-
-            # Render peasants
-            for peasant in self.peasants:
-                self.renderer_registry.render_peasant(view_surface, peasant, camera_offset)
-
-            # Render tax collector
-            if self.tax_collector:
-                self.renderer_registry.render_tax_collector(view_surface, self.tax_collector, camera_offset)
-
-            # Render building preview
-            self.building_menu.render(view_surface, camera_offset)
-            
-            # Render building list panel (if visible)
-            if self.building_list_panel.visible:
-                selected_type = getattr(self.building_menu, "selected_building", None)
-                self.building_list_panel.render(view_surface, self.economy, self.buildings, selected_type)
-
-            # Render VFX overlay (world-space) if present.
-            if self.vfx_system is not None and hasattr(self.vfx_system, "render"):
-                try:
-                    self.vfx_system.render(view_surface, camera_offset)
-                except Exception:
-                    pass
-
-            # Fog-of-war overlay (covers world + entities/markers in unrevealed areas)
-            # Draw AFTER world/entities/VFX so hidden areas remain hidden.
-            if hasattr(self.world, "render_fog"):
-                self.world.render_fog(view_surface, camera_offset)
-
-            # Hotfix: Bounties must be visible even in black fog (UNSEEN). Render AFTER fog overlay so
-            # the solid-black fog pass does not hide bounty flags.
-            # Precompute lightweight UI metrics (responders/attractiveness) so bounty markers can display them.
-            if hasattr(self.bounty_system, "update_ui_metrics"):
-                try:
-                    self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
-                except Exception:
-                    pass
-            self.renderer_registry.render_bounties(
-                view_surface,
-                getattr(self.bounty_system, "bounties", []),
-                camera_offset,
+        snapshot = self.build_snapshot()
+        pr = getattr(self, "pygame_renderer", None)
+        if pr is not None and self.screen is not None and self._scaled_surface is not None:
+            pr.render_world(
+                self.screen,
+                snapshot,
+                skip_pygame_world=skip_pygame_world,
+                window_width=int(self.window_width),
+                window_height=int(self.window_height),
+                scaled_surface=self._scaled_surface,
             )
-
-            # Scale the world to the actual window (reusing a destination surface)
-            if view_surface is not self.screen:
-                # Pixel art: nearest-neighbor scaling (no blur).
-                win_w = int(self.window_width)
-                win_h = int(self.window_height)
-                try:
-                    pygame.transform.scale(view_surface, (win_w, win_h), self._scaled_surface)
-                    self.screen.blit(self._scaled_surface, (0, 0))
-                except Exception as e:
-                    raise
-        else:
-            # Bounty UI metrics still used by HUD/minimap; keep in sync without drawing world layers.
-            if hasattr(self.bounty_system, "update_ui_metrics"):
-                try:
-                    self.bounty_system.update_ui_metrics(self.heroes, self.enemies, self.buildings)
-                except Exception:
-                    pass
 
         # Render HUD
         if not bool(getattr(self, "screenshot_hide_ui", False)):
@@ -1580,7 +1503,12 @@ class GameEngine:
                     minimap_rect = pygame.Rect(
                         right_rect.x, right_rect.y, right_rect.width, right_rect.height // 2
                     )
-                    self._render_hero_minimap(self.screen, minimap_rect, self.micro_view.quest_hero)
+                    self._render_hero_minimap(
+                        self.screen,
+                        minimap_rect,
+                        self.micro_view.quest_hero,
+                        snapshot,
+                    )
 
             # Render debug panel
             self.debug_panel.render(self.screen, self.get_game_state())
@@ -1651,10 +1579,20 @@ class GameEngine:
                 raise
 
 
-    def _render_hero_minimap(self, surface: pygame.Surface, rect: pygame.Rect, hero):
-        """Render a secondary map view centered on a specific hero (WK18)."""
+    def _render_hero_minimap(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        hero,
+        snapshot: "SimStateSnapshot",
+    ):
+        """Render a secondary map view centered on a specific hero (WK18). Uses the same
+        world draw path as :class:`PygameRenderer` via ``render_minimap_contents`` and the
+        current frame ``SimStateSnapshot`` (no second sim query for entity lists).
+        """
         from game.graphics.render_context import set_render_zoom
         from game.world import Visibility
+
         old_zoom = self.zoom if self.zoom else 1.0
         try:
             set_render_zoom(1.0)
@@ -1670,26 +1608,30 @@ class GameEngine:
         cam_y = hero.y - rect.height / 2
         camera_offset = (int(cam_x), int(cam_y))
 
-        # Map contents
-        self.world.render(mini_surf, camera_offset)
-        for b in self.buildings:
-            self.renderer_registry.render_building(mini_surf, b, camera_offset)
-        for e in self.enemies:
-            gx, gy = self.world.world_to_grid(getattr(e, "x", 0.0), getattr(e, "y", 0.0))
-            if 0 <= gx < self.world.width and 0 <= gy < self.world.height:
-                if self.world.visibility[gy][gx] == Visibility.VISIBLE:
-                    self.renderer_registry.render_enemy(mini_surf, e, camera_offset)
-        for h in self.heroes:
-            self.renderer_registry.render_hero(mini_surf, h, camera_offset)
-        for g in self.guards:
-            self.renderer_registry.render_guard(mini_surf, g, camera_offset)
-        for p in self.peasants:
-            self.renderer_registry.render_peasant(mini_surf, p, camera_offset)
-        if self.tax_collector:
-            self.renderer_registry.render_tax_collector(mini_surf, self.tax_collector, camera_offset)
-            
-        if hasattr(self.world, "render_fog"):
-            self.world.render_fog(mini_surf, camera_offset)
+        pr = getattr(self, "pygame_renderer", None)
+        if pr is not None:
+            pr.render_minimap_contents(mini_surf, snapshot, camera_offset)
+        else:
+            # Pure headless: no PygameRenderer; keep a minimal duplicate for safety.
+            w = snapshot.world
+            w.render(mini_surf, camera_offset)
+            for b in snapshot.buildings:
+                self.renderer_registry.render_building(mini_surf, b, camera_offset)
+            for e in snapshot.enemies:
+                gx, gy = w.world_to_grid(getattr(e, "x", 0.0), getattr(e, "y", 0.0))
+                if 0 <= gx < w.width and 0 <= gy < w.height:
+                    if w.visibility[gy][gx] == Visibility.VISIBLE:
+                        self.renderer_registry.render_enemy(mini_surf, e, camera_offset)
+            for h in snapshot.heroes:
+                self.renderer_registry.render_hero(mini_surf, h, camera_offset)
+            for g in snapshot.guards:
+                self.renderer_registry.render_guard(mini_surf, g, camera_offset)
+            for p in snapshot.peasants:
+                self.renderer_registry.render_peasant(mini_surf, p, camera_offset)
+            if snapshot.tax_collector:
+                self.renderer_registry.render_tax_collector(mini_surf, snapshot.tax_collector, camera_offset)
+            if hasattr(w, "render_fog"):
+                w.render_fog(mini_surf, camera_offset)
 
         # Border
         pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)

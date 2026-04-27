@@ -80,3 +80,12 @@ These appear in helper functions that take a local `engine` parameter.
 - **Tests:** `tests/test_input_handler_gamecommands.py` — mock `GameCommands` / `SimpleNamespace` to assert QUIT, affordance, and `H` hotkey call the command surface only.
 
 Other code (Ursina, etc.) may still use `engine` as a local or `self.engine` on their own types; this section is only the **input** decoupling story.
+
+---
+
+## `PygameRenderer` + `GameEngine.render` (WK39 Stage 4)
+
+- **Contract:** Each frame, `GameEngine.build_snapshot()` produces a read-only `SimStateSnapshot`; `PygameRenderer.render_world(screen, snapshot, ...)` draws terrain → entities → fog → bounty pipeline into the zoom/view surface (or bounty-metrics-only when `skip_pygame_world` for Ursina HUD composite).
+- **Non-snapshot refs:** `PygameWorldRenderContext` holds `renderer_registry`, `bounty_system`, `vfx_system`, `building_menu`, `building_list_panel`, `economy`.
+- **Stays on `GameEngine`:** HUD, building panel, build catalog, pause menu, perf overlay, pause tint; hero-focus minimap still orchestrates rect/blit from `render()`, map pixels shared via `PygameRenderer.render_minimap_contents`.
+- **Tests:** `tests/test_pygame_renderer_wk39.py` — imports, snapshot wiring, `skip_pygame_world` smoke (full-frame pygame raster stays covered by `qa_smoke --quick`).

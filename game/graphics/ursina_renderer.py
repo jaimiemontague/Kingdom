@@ -109,8 +109,11 @@ PEASANT_SCALE = 0.465
 GUARD_SCALE_XZ = 0.5
 GUARD_SCALE_Y = 0.7
 
-# Ranged VFX billboards — keep smaller than hero sprites (~UNIT_BILLBOARD_SCALE 0.62)
-PROJECTILE_BILLBOARD_SCALE = 0.1
+# Ranged VFX billboards — smaller than unit sprites, readable in perspective.
+# 0.3 was large in playtest; 25% of that keeps arrows visible (snapshot + depth fix) without dominating the frame.
+PROJECTILE_BILLBOARD_SCALE = 0.075
+# Vertical lift: match enemy sprite center (ENEMY_SCALE*0.5) so arrows aren’t drawn under terrain.
+PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 
 
 def sim_px_to_world_xz(px_x: float, px_y: float) -> tuple[float, float]:
@@ -2028,13 +2031,18 @@ class UrsinaRenderer:
                 ent.billboard = True
                 self._apply_pixel_billboard_settings(ent)
                 ent._ks_billboard_configured = True
+            # Draw above the floor plane: tiny Y (s*0.5) caused depth-fighting with terrain; stack with units.
+            if not getattr(ent, "_ks_projectile_depth", False):
+                ent.set_depth_test(False)
+                ent.render_queue = 2
+                ent._ks_projectile_depth = True
             wx, wz = sim_px_to_world_xz(proj.x, proj.y)
             self._sync_billboard_entity(
                 ent,
                 tex=ptex,
                 tint_col=color.white,
                 scale_xyz=(s, s, 1),
-                pos_xyz=(wx, s * 0.5, wz),
+                pos_xyz=(wx, PROJECTILE_BILLBOARD_Y, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)

@@ -5,6 +5,7 @@ This does NOT instantiate Ursina or any GPU resources. It only checks that
 get_game_state() provides the data shapes the renderer expects to consume.
 """
 import pygame
+from unittest.mock import MagicMock
 
 from game.engine import GameEngine
 from game.sim.snapshot import SimStateSnapshot
@@ -78,6 +79,21 @@ def test_engine_build_snapshot_returns_valid_snapshot():
         assert snap.world is engine.world
         assert snap.fog_revision >= 0
         assert snap.castle is not None
+    finally:
+        pygame.quit()
+
+
+def test_build_snapshot_pulls_vfx_projectiles_via_get_active_projectiles():
+    """Ursina reads snapshot.vfx_projectiles — must use VFXSystem.get_active_projectiles()."""
+    engine = GameEngine(headless=False, headless_ui=True)
+    try:
+        token = object()
+        mock_vfx = MagicMock()
+        mock_vfx.get_active_projectiles = MagicMock(return_value=[token])
+        engine.vfx_system = mock_vfx
+        snap = engine.build_snapshot()
+        assert token in snap.vfx_projectiles
+        mock_vfx.get_active_projectiles.assert_called()
     finally:
         pygame.quit()
 
