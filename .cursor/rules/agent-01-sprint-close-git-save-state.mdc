@@ -1,0 +1,34 @@
+---
+description: Sprint close workflow: save-state commit + push (Agent 01)
+alwaysApply: true
+---
+
+# Sprint Close: Git Save-State (PM / Agent 01)
+
+## Non-negotiable safety constraint
+
+- **Do not create git commits or push to remote unless the human explicitly asks for it in this chat.**
+- If the human says “wrap/close the sprint” but does not explicitly request a commit/push, **ask for that permission** (one-line yes/no), then proceed immediately when granted.
+
+## Standard sprint-close flow
+
+When a sprint is marked `closed_success` (or otherwise wrapped):
+
+- **Step 1 — Confirm gates**: ensure the sprint’s required gates are recorded as PASS (at minimum `python tools/qa_smoke.py --quick`, and `python tools/validate_assets.py --report` when applicable).
+- **Step 2 — Propose the save-state commit**: recommend a single “save state” commit and push to capture the sprint end.
+- **Step 3 — If approved, execute immediately**:
+  - Stage changes
+  - Commit with a clear message: `Sprint <id>: <short outcome>`
+  - Push to the current branch’s remote tracking branch
+
+## What to say to Jaimie (copy/paste prompt)
+
+Use very explicit language and provide the exact commands. Example:
+
+```powershell
+git status
+git add -A
+git commit -m "Sprint wkXX: <short outcome>"
+git push
+```
+

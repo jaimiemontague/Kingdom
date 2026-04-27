@@ -2462,6 +2462,236 @@
           }
         }
       }
+    },
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "created_utc": "2026-04-27T15:21:00Z",
+        "notes": "Architecture Refactor Stage 1 kickoff: introduce SimStateSnapshot + GameEngine.build_snapshot(), then migrate UrsinaRenderer to consume snapshot (no self.engine references). Two rounds: R1 snapshot+tests, R2 renderer migration + manual parity."
+      },
+      "rounds": {
+        "wk36_r1_snapshot_and_tests": {
+          "round_meta": {
+            "prompt_set_id": "wk36_r1",
+            "build_target": "Stage1_Snapshot + Engine_build_snapshot + Snapshot_Tests",
+            "visibility": "Implementers: 03. QA: 11."
+          },
+          "pm_status_summary": {
+            "overall_status": "Assigned",
+            "focus": "Create frozen SimStateSnapshot, add GameEngine.build_snapshot(), and add tests validating snapshot immutability + engine snapshot shape. No Ursina renderer changes in R1.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK36-STAGE1-FEAT-001",
+              "title": "SimStateSnapshot dataclass + GameEngine.build_snapshot()",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Tasks 1-A and 1-B)",
+              "acceptance": [
+                "game/sim/snapshot.py exists with @dataclass(frozen=True) SimStateSnapshot.",
+                "GameEngine.build_snapshot() exists and returns a SimStateSnapshot.",
+                "No sim behavior changes; build_snapshot is read-only.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            },
+            {
+              "id": "WK36-STAGE1-TEST-001",
+              "title": "Snapshot contract tests",
+              "owner_agent": "11_QA_TestEngineering_Lead",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Task 1-E)",
+              "acceptance": [
+                "tests/test_renderer_snapshot_contract.py has test_snapshot_is_frozen().",
+                "tests/test_renderer_snapshot_contract.py has test_engine_build_snapshot_returns_valid_snapshot().",
+                "Tests remain headless (no Ursina/GPU).",
+                "python -m pytest tests/ PASS.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 1 Task 1-A and 1-B from the master plan: create game/sim/snapshot.py (frozen dataclass) and add GameEngine.build_snapshot() in game/engine.py.",
+                "Keep build_snapshot render-only (no side effects).",
+                "Run gates: python -m pytest tests/ and python tools/qa_smoke.py --quick."
+              ],
+              "acceptance_criteria": [
+                "SimStateSnapshot exists and is frozen.",
+                "GameEngine.build_snapshot() returns SimStateSnapshot in headless mode.",
+                "qa_smoke --quick PASS."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "After Agent 03 lands snapshot/build_snapshot, add Stage 1 Task 1-E tests to tests/test_renderer_snapshot_contract.py.",
+                "Run: python -m pytest tests/ and python tools/qa_smoke.py --quick and report PASS/FAIL."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "rationale": "03 must land snapshot/build_snapshot before 11 can validate it with tests.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK36 Stage 1 R1 (Tech): Follow .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md (Round WK36-R1) and the master plan .cursor/plans/master_plan_architecture_refactor.md section 'Stage 1'. Implement Task 1-A (create game/sim/snapshot.py with frozen SimStateSnapshot) and Task 1-B (add GameEngine.build_snapshot() in game/engine.py). Keep build_snapshot read-only. Run: python -m pytest tests/ and python tools/qa_smoke.py --quick. Log files changed + commands + exit codes in agent_03 JSON.",
+            "11": "WK36 Stage 1 R1 (QA): After Agent 03 lands, implement Task 1-E from the master plan: add tests test_snapshot_is_frozen() and test_engine_build_snapshot_returns_valid_snapshot() to tests/test_renderer_snapshot_contract.py. Keep tests headless. Run: python -m pytest tests/ and python tools/qa_smoke.py --quick. Log PASS/FAIL with exit codes in agent_11 JSON."
+          }
+        },
+        "wk36_r2_renderer_migration": {
+          "round_meta": {
+            "prompt_set_id": "wk36_r2",
+            "build_target": "Stage1_UrsinaRenderer_Decouple",
+            "visibility": "Implementers: 03. Consult: 10. QA: 11 (post)."
+          },
+          "pm_status_summary": {
+            "overall_status": "Assigned",
+            "focus": "Migrate UrsinaRenderer to consume SimStateSnapshot; ensure ursina_renderer.py has zero self.engine references; wire UrsinaApp to pass snapshot each frame; manual parity check.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
+              "manual_ursina_parity": "python main.py --renderer ursina --no-llm should look identical to pre-refactor."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK36-STAGE1-FEAT-002",
+              "title": "UrsinaRenderer consumes SimStateSnapshot (no engine ref)",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Tasks 1-C and 1-D)",
+              "acceptance": [
+                "UrsinaRenderer.__init__ no longer takes engine.",
+                "UrsinaRenderer.update(snapshot) consumes SimStateSnapshot.",
+                "No 'self.engine' appears in game/graphics/ursina_renderer.py.",
+                "UrsinaApp builds snapshot each frame and passes it to renderer.update(snapshot).",
+                "qa_smoke --quick PASS.",
+                "Manual: python main.py --renderer ursina --no-llm parity OK."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 1 Task 1-C and 1-D from the master plan: update game/graphics/ursina_renderer.py to remove engine dependency and consume SimStateSnapshot; update game/graphics/ursina_app.py to pass snapshot each frame.",
+                "Be sure to fix _building_occupied_tiles(engine) -> _building_occupied_tiles(buildings).",
+                "Run gates: python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report.",
+                "Manual parity: python main.py --renderer ursina --no-llm."
+              ]
+            },
+            "10": {
+              "status": "consult",
+              "asks": [
+                "After Agent 03 lands R2: run python main.py --renderer ursina --no-llm for ~5 minutes and note any obvious FPS regression vs baseline (rough feel is fine). Log result in agent_10."
+              ]
+            },
+            "11": {
+              "status": "consult",
+              "asks": [
+                "After R2 lands: run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_10_11",
+            "then_in_order": ["03"],
+            "then_parallel": ["10", "11"],
+            "rationale": "03 migration must land first; 10+11 are post-change validation in parallel.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "10": "low",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK36 Stage 1 R2 (Tech): Follow .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md (Round WK36-R2) and master plan Stage 1 Tasks 1-C/1-D. Migrate game/graphics/ursina_renderer.py so it has ZERO self.engine references; update signature to __init__(world) and update(snapshot: SimStateSnapshot). Update game/graphics/ursina_app.py to call snapshot = self.engine.build_snapshot(); self.renderer.update(snapshot), and construct renderer with UrsinaRenderer(self.engine.world). Fix _building_occupied_tiles(engine)->(buildings). Run: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report; then manual: python main.py --renderer ursina --no-llm. Log evidence in agent_03 JSON.",
+            "10": "WK36 Stage 1 R2 (Perf - CONSULT): After Agent 03 merges: run `python main.py --renderer ursina --no-llm` and watch FPS/perf overlay for 5 minutes. Report whether snapshot change caused noticeable perf regression. Log in agent_10 JSON.",
+            "11": "WK36 Stage 1 R2 (QA - CONSULT): After Agent 03 merges: run `python tools/qa_smoke.py --quick` (and if assets changed `python tools/validate_assets.py --report`). Record PASS/FAIL + exit codes in agent_11 JSON."
+          }
+        },
+        "wk36_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T15:50:00Z",
+            "source": "pm_closeout_after_agent_completion_and_human_parity",
+            "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+            "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK36 Stage 1 is closed and accepted. SimStateSnapshot introduced + engine.build_snapshot() added; UrsinaRenderer fully decoupled from engine (no self.engine refs) and consumes snapshot passed from UrsinaApp. Automated gates pass and human parity checks confirm normal building placement + fog-of-war + mock provider AI behavior."
+          },
+          "pm_accepted_deliverables": [
+            "New snapshot contract: game/sim/snapshot.py (frozen SimStateSnapshot).",
+            "Engine API: GameEngine.build_snapshot() returns SimStateSnapshot.",
+            "Renderer decoupling: game/graphics/ursina_renderer.py has zero self.engine references; update(snapshot) consumes snapshot fields.",
+            "Ursina wiring: game/graphics/ursina_app.py builds snapshot each frame and passes it to renderer.update(snapshot).",
+            "Tests: tests/test_renderer_snapshot_contract.py includes snapshot immutability + build_snapshot validity tests."
+          ],
+          "pm_evidence": {
+            "agent_03": "agent_03_TechnicalDirector_Architecture.json → wk36-refactor-stage1-snapshot-decouple rounds wk36_r1_snapshot_and_tests + wk36_r2_renderer_migration: pytest PASS, qa_smoke PASS, validate_assets PASS.",
+            "agent_11": "agent_11_QA_TestEngineering_Lead.json → wk36-refactor-stage1-snapshot-decouple rounds wk36_r1_snapshot_and_tests + wk36_r2_renderer_migration: qa_smoke PASS, validate_assets PASS.",
+            "agent_10": "agent_10_PerformanceStability_Lead.json → wk36 perf consult: Ursina FPS probe shows no steady-state regression attributable to snapshot allocation (one-time dips likely OBJ→BAM cache writes).",
+            "human_manual_parity": {
+              "no_llm": "Jaimie: building placement & fog-of-war seemed normal (manual parity).",
+              "provider_mock": "Jaimie: AI seems to be working normal with --provider mock."
+            }
+          },
+          "pm_human_commands_run_or_recommended": [
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer ursina --provider mock"
+          ],
+          "pm_next_actions": [
+            "Proceed to Stage 2 planning (GameEngine decomposition into SimEngine + PresentationLayer) using the master plan Stage 2 section, now that Stage 0+1 test safety net exists.",
+            "Optional: add a tiny regression test asserting UrsinaRenderer has no engine ref (static grep) if we want a hard guardrail for Stage 2+."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Plan Stage 2 kickoff sprint (SimEngine + PresentationLayer split) with careful two-round sequencing and explicit backward-compat shims."
+            },
+            "03": { "status": "done" },
+            "10": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk36-refactor-stage1-snapshot-decouple**.\\n\\n1) Read the sprint plan first:\\n   .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md\\n\\n2) Read the master plan section for context:\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 1: SimState Snapshot Interface (Renderer Decoupling)\\n\\n3) Read your assignment in the PM hub:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk36-refactor-stage1-snapshot-decouple\\\"]\\n   -> rounds[\\\"<your round id>\\\"]\\n   -> pm_agent_prompts[YOUR_AGENT_NUMBER]\\n\\n4) After completing your work:\\n   - Update your agent log\\n   - Run required gates (at minimum): python tools/qa_smoke.py --quick\\n   - Report back: files touched + commands + exit codes + blockers\\n",
+      "pm_send_list_minimal": {
+        "order": "two_rounds_sequential",
+        "round_1": {
+          "then_in_order": ["03", "11"],
+          "intelligence_by_agent": {
+            "03": "high",
+            "11": "low"
+          }
+        },
+        "round_2": {
+          "then_in_order": ["03"],
+          "then_parallel": ["10", "11"],
+          "intelligence_by_agent": {
+            "03": "high",
+            "10": "low",
+            "11": "low"
+          }
+        },
+        "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
+        "rationale": "Stage 1 is engine snapshot + Ursina renderer boundary only. Avoid cross-domain conflicts."
+      }
     }
   }
 }

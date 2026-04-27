@@ -7,6 +7,7 @@ get_game_state() provides the data shapes the renderer expects to consume.
 import pygame
 
 from game.engine import GameEngine
+from game.sim.snapshot import SimStateSnapshot
 
 # These are the keys UrsinaRenderer.update() reads from get_game_state().
 # Extracted by grep of `gs["..."]` in ursina_renderer.py lines 1693-2067.
@@ -54,6 +55,29 @@ def test_buildings_have_required_renderer_attributes():
             assert hasattr(b, "hp"), "building missing hp"
             assert hasattr(b, "max_hp"), "building missing max_hp"
             assert hasattr(b, "is_constructed"), "building missing is_constructed"
+    finally:
+        pygame.quit()
+
+
+def test_snapshot_is_frozen():
+    snap = SimStateSnapshot(
+        buildings=(), heroes=(), enemies=(), peasants=(),
+        guards=(), bounties=(), world=None,
+    )
+    import pytest
+    with pytest.raises(AttributeError):
+        snap.buildings = []  # Should fail — frozen
+
+
+def test_engine_build_snapshot_returns_valid_snapshot():
+    engine = GameEngine(headless=True)
+    try:
+        snap = engine.build_snapshot()
+        assert isinstance(snap, SimStateSnapshot)
+        assert len(snap.buildings) >= 1  # Castle
+        assert snap.world is engine.world
+        assert snap.fog_revision >= 0
+        assert snap.castle is not None
     finally:
         pygame.quit()
 

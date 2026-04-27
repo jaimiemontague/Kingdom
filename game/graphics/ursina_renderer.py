@@ -34,6 +34,7 @@ import re
 import time
 import zlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pygame
 import config
@@ -50,6 +51,9 @@ from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
 from game.graphics.vfx import get_projectile_billboard_surface
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 from game.world import TileType, Visibility
+
+if TYPE_CHECKING:
+    from game.sim.snapshot import SimStateSnapshot
 
 # Fallback tints when a texture is missing
 COLOR_HERO = color.azure
@@ -348,10 +352,10 @@ def _scatter_model_index(tx: int, ty: int, n: int, salt: int) -> int:
     return int(h % n)
 
 
-def _building_occupied_tiles(engine) -> set[tuple[int, int]]:
+def _building_occupied_tiles(buildings) -> set[tuple[int, int]]:
     """Grid cells covered by any building footprint (for scatter exclusion)."""
     occ: set[tuple[int, int]] = set()
-    for b in getattr(engine, "buildings", []) or []:
+    for b in buildings or []:
         try:
             gx, gy = int(b.grid_x), int(b.grid_y)
             sw, sh = int(b.size[0]), int(b.size[1])
@@ -811,8 +815,8 @@ def _visibility_signature(world) -> int:
 
 
 class UrsinaRenderer:
-    def __init__(self, engine):
-        self.engine = engine
+    def __init__(self, world):
+        self._world = world
 
         # Entity mappings: simulation object id() -> Ursina Entity
         self._entities = {}
@@ -861,7 +865,7 @@ class UrsinaRenderer:
         try:
             from ursina import color as ucolor
 
-            world = self.engine.world
+            world = self._world
             tw, th = int(world.width), int(world.height)
             ts = float(config.TILE_SIZE)
             cx_px = tw * ts * 0.5
@@ -951,7 +955,7 @@ class UrsinaRenderer:
         cache_key = (cache_prefix, "anim", class_key, clip_name, idx, int(config.TILE_SIZE))
         return surf, cache_key
 
-    def _ensure_fog_overlay(self) -> None:
+    def _ensure_fog_overlay(self, world, fog_revision: int) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
 
         WK22: Rebuild only when ``engine._fog_revision`` advances (revealer crossed a tile).
@@ -962,12 +966,8 @@ class UrsinaRenderer:
         """
         if self._terrain_entity is None:
             return
-
-        world = self.engine.world
-
-        engine_rev = getattr(self.engine, "_fog_revision", 0)
         my_rev = getattr(self, "_fog_revision_seen", -1)
-        if engine_rev == my_rev and self._fog_entity is not None:
+        if int(fog_revision) == my_rev and self._fog_entity is not None:
             return
 
         tw, th = int(world.width), int(world.height)
@@ -1068,7 +1068,7 @@ class UrsinaRenderer:
             self._fog_entity.texture_offset = Vec2(0, 1)
             self._fog_entity.render_queue = 0
 
-        self._fog_revision_seen = engine_rev
+        self._fog_revision_seen = int(fog_revision)
 
     def _track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
         """Register vertical terrain props that should disappear only in unexplored fog."""
@@ -1091,10 +1091,9 @@ class UrsinaRenderer:
                 seen_mult = 0.5
             _set_static_prop_fog_tint(ent, seen_mult if vis == Visibility.SEEN else 1.0)
 
-    def _sync_visibility_gated_terrain(self) -> None:
+    def _sync_visibility_gated_terrain(self, world, fog_revision: int) -> None:
         """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
-        world = self.engine.world
-        engine_rev = int(getattr(self.engine, "_fog_revision", 0))
+        engine_rev = int(fog_revision)
         if self._terrain_visibility_revision_seen == engine_rev:
             return
 
@@ -1121,7 +1120,7 @@ class UrsinaRenderer:
         self._terrain_visible_tiles_seen = current_visible
         self._terrain_visibility_revision_seen = engine_rev
 
-    def _ensure_grid_debug_overlay(self) -> None:
+    def _ensure_grid_debug_overlay(self, world, buildings) -> None:
         """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
 
         Off by default. When enabled, renders one line-mesh Entity spanning a
@@ -1147,7 +1146,6 @@ class UrsinaRenderer:
         except Exception:
             return
 
-        world = self.engine.world
         tw, th = int(world.width), int(world.height)
         ts = int(config.TILE_SIZE)
 
@@ -1159,7 +1157,7 @@ class UrsinaRenderer:
         castle = next(
             (
                 b
-                for b in getattr(self.engine, "buildings", [])
+                for b in (buildings or [])
                 if getattr(b, "building_type", None) == "castle"
             ),
             None,
@@ -1213,12 +1211,11 @@ class UrsinaRenderer:
         # Render above the terrain quad but below fog and billboards.
         self._grid_debug_entity.render_queue = 3
 
-    def _build_3d_terrain(self) -> None:
+    def _build_3d_terrain(self, world, buildings) -> None:
         """Per-tile path/water meshes + scatter grass doodads on a full-map base plane (v1.5 Sprint 1.2)."""
         if self._terrain_entity is not None:
             return
 
-        world = self.engine.world
         tw, th = int(world.width), int(world.height)
         ts = int(config.TILE_SIZE)
         m = float(TERRAIN_SCALE_MULTIPLIER)
@@ -1227,7 +1224,7 @@ class UrsinaRenderer:
         # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
         path_model = _environment_model_path("path_stone")
         rock_model = _environment_model_path("rock")
-        occupied_tiles = _building_occupied_tiles(self.engine)
+        occupied_tiles = _building_occupied_tiles(buildings)
         tm = m * float(TREE_SCALE_MULTIPLIER)
         rm = m * float(ROCK_SCALE_MULTIPLIER)
         g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
@@ -1690,7 +1687,7 @@ class UrsinaRenderer:
         else:
             ent.color = tint_col
 
-    def update(self):
+    def update(self, snapshot: "SimStateSnapshot"):
         """Called every frame by the Ursina app loop."""
         try:
             from game.types import HeroClass
@@ -1707,17 +1704,17 @@ class UrsinaRenderer:
                 pass
             self._shadow_bounds_initialized = True
 
-        self._build_3d_terrain()
-        self._ensure_fog_overlay()
-        self._sync_visibility_gated_terrain()
-        self._ensure_grid_debug_overlay()
-
-        gs = self.engine.get_game_state()
+        world = getattr(snapshot, "world", None) or self._world
+        fog_revision = int(getattr(snapshot, "fog_revision", 0))
+        self._build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        self._ensure_fog_overlay(world, fog_revision)
+        self._sync_visibility_gated_terrain(world, fog_revision)
+        self._ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
         active_ids = set()
 
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
-        for b in gs["buildings"]:
+        for b in getattr(snapshot, "buildings", ()):
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
@@ -1725,7 +1722,6 @@ class UrsinaRenderer:
             # Fog-of-war: lairs are hostile world structures and should not be visible through fog.
             # Match enemy visibility semantics: show only when the lair tile is currently VISIBLE.
             if is_lair:
-                world = self.engine.world
                 ts = float(config.TILE_SIZE)
                 tx, ty = int(getattr(b, "x", 0.0) / ts), int(getattr(b, "y", 0.0) / ts)
                 lair_visible = True
@@ -1838,7 +1834,7 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
         # Heroes — pixel billboards (WK22 R3: walk/idle/inside + attack/hurt from _render_anim_trigger)
-        for h in gs["heroes"]:
+        for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
                 continue
             col = COLOR_HERO
@@ -1884,9 +1880,8 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
         # Enemies — billboards (same animation contract as pygame EnemyRenderer)
-        world = self.engine.world
         ts = float(config.TILE_SIZE)
-        for e in gs["enemies"]:
+        for e in getattr(snapshot, "enemies", ()):
             tx, ty = int(e.x / ts), int(e.y / ts)
             is_visible = True
             if 0 <= ty < world.height and 0 <= tx < world.width:
@@ -1922,7 +1917,7 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
         # Peasants — billboards
-        for p in gs["peasants"]:
+        for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
                 continue
             s = PEASANT_SCALE
@@ -1951,7 +1946,7 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
         # Guards — billboards
-        for g in gs["guards"]:
+        for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
                 continue
             col = COLOR_GUARD
@@ -1980,38 +1975,36 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
-        # Tax Collectors — billboards (get_game_state may omit tax_collectors; fall back to engine singleton)
-        _tc_list = gs.get("tax_collectors")
-        if not _tc_list:
-            _singleton = getattr(self.engine, "tax_collector", None)
-            _tc_list = [_singleton] if _singleton is not None else []
-        for tc in _tc_list:
+        # Tax Collector — billboards
+        tc = getattr(snapshot, "tax_collector", None)
+        if tc is not None:
             if not getattr(tc, "is_alive", True):
-                continue
-            col = COLOR_PEASANT
-            tcsurf = _worker_idle_surface("tax_collector")
-            tctex = TerrainTextureBridge.surface_to_texture(
-                tcsurf, cache_key=("worker_idle", "tax_collector", int(config.TILE_SIZE))
-            )
-            s = PEASANT_SCALE
-            ent, obj_id = self._get_or_create_entity(
-                tc,
-                model="quad",
-                col=color.white,
-                scale=(s, s, 1),
-                texture=tctex,
-                billboard=True,
-            )
-            wx, wz = sim_px_to_world_xz(tc.x, tc.y)
-            self._sync_billboard_entity(
-                ent,
-                tex=tctex,
-                tint_col=col,
-                scale_xyz=(s, s, 1),
-                pos_xyz=(wx, s * 0.5, wz),
-                shader=sprite_unlit_shader,
-            )
-            active_ids.add(obj_id)
+                pass
+            else:
+                col = COLOR_PEASANT
+                tcsurf = _worker_idle_surface("tax_collector")
+                tctex = TerrainTextureBridge.surface_to_texture(
+                    tcsurf, cache_key=("worker_idle", "tax_collector", int(config.TILE_SIZE))
+                )
+                s = PEASANT_SCALE
+                ent, obj_id = self._get_or_create_entity(
+                    tc,
+                    model="quad",
+                    col=color.white,
+                    scale=(s, s, 1),
+                    texture=tctex,
+                    billboard=True,
+                )
+                wx, wz = sim_px_to_world_xz(tc.x, tc.y)
+                self._sync_billboard_entity(
+                    ent,
+                    tex=tctex,
+                    tint_col=col,
+                    scale_xyz=(s, s, 1),
+                    pos_xyz=(wx, s * 0.5, wz),
+                    shader=sprite_unlit_shader,
+                )
+                active_ids.add(obj_id)
 
         # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
         if self._projectile_tex is None:
@@ -2020,10 +2013,7 @@ class UrsinaRenderer:
                 psurf, cache_key=("ursina", "projectile_arrow_billboard_v1")
             )
         ptex = self._projectile_tex
-        vfx = getattr(self.engine, "vfx_system", None)
-        for proj in gs.get("projectiles") or (
-            vfx.get_active_projectiles() if vfx is not None else []
-        ):
+        for proj in getattr(snapshot, "vfx_projectiles", ()) or ():
             s = PROJECTILE_BILLBOARD_SCALE
             ent, obj_id = self._get_or_create_entity(
                 proj,
@@ -2049,11 +2039,11 @@ class UrsinaRenderer:
             )
             active_ids.add(obj_id)
 
-        heroes_alive = len([h for h in gs["heroes"] if getattr(h, "is_alive", True)])
-        enemies_alive = len(gs["enemies"])
+        heroes_alive = len([h for h in getattr(snapshot, "heroes", ()) if getattr(h, "is_alive", True)])
+        enemies_alive = len(getattr(snapshot, "enemies", ()))
         status_text = (
-            f"Gold: {gs['gold']}  |  Heroes: {heroes_alive}  |  "
-            f"Enemies: {enemies_alive}  |  Buildings: {len(gs['buildings'])}"
+            f"Gold: {getattr(snapshot, 'gold', 0)}  |  Heroes: {heroes_alive}  |  "
+            f"Enemies: {enemies_alive}  |  Buildings: {len(getattr(snapshot, 'buildings', ())) }"
         )
         if self.status_text.text != status_text:
             self.status_text.text = status_text

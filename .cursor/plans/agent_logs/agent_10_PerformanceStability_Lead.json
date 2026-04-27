@@ -530,6 +530,73 @@
           }
         }
       }
+    },
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "Stage 1 renderer decouple (SimStateSnapshot): Agent 10 consult run after R2 migration landed in workspace."
+      },
+      "rounds": {
+        "wk36_r2_renderer_migration_perf_consult_2026_04_27": {
+          "sprint_id": "wk36-refactor-stage1-snapshot-decouple",
+          "round_id": "wk36_r2_renderer_migration_perf_consult_2026_04_27",
+          "round_meta": {
+            "prompt_set_id": "wk36_r2",
+            "build_target": "Stage1_UrsinaRenderer_Decouple (perf consult)",
+            "sent_at_local": "2026-04-27"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK36 R2 (Agent 10 consult): Ran automated Ursina session with FPS probe enabled after snapshot migration was present in workspace. Result: avg ~58 FPS over ~1144 frames (25s run; 5s warmup). One-time low FPS dips observed (min 12 FPS) consistent with first-run OBJ->BAM cache writes during the session. No evidence of steady-state FPS collapse attributable to per-frame snapshot allocation. validate_assets --report exit 0 (warns=46, expected placeholder 3D model WARNs). qa_smoke --quick PASS (exit 0).",
+            "summary_bullets": [
+              "Ursina FPS probe (no-LLM): avg_fps 58.4, p10 51.1, p50 60.2, p90 63.7; min 12.0 during OBJ->BAM cache writes.",
+              "HUD pipeline probes: hud_texture_upload avg 0.258ms; pygame_hud_render avg 0.924ms; ursina_renderer avg 0.320ms (probe output).",
+              "Assessment: no obvious perf regression from snapshot-based update loop in steady state; investigate only if min-FPS dips persist after BAM cache is warm."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python tools/run_ursina_capture_once.py --seconds 25 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 5",
+              "Manual parity (5 min): python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick",
+              "qa_smoke_exit_code": 0,
+              "validate_assets": "python tools/validate_assets.py --report",
+              "validate_assets_exit_code": 0,
+              "validate_assets_summary": "errors=0 warns=46",
+              "ursina_fps_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 25 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 5",
+              "ursina_fps_probe": {
+                "heroes": 0,
+                "frames": 1144,
+                "avg_fps": 58.4,
+                "min_fps": 12.0,
+                "p10_fps": 51.1,
+                "p50_fps": 60.2,
+                "p90_fps": 63.7,
+                "max_fps": 65.8
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 0.258,
+                "hud_texture_upload_p90_ms": 0.325,
+                "hud_texture_upload_max_ms": 0.637,
+                "pygame_hud_render_avg_ms": 0.924,
+                "pygame_hud_render_p90_ms": 1.110,
+                "pygame_hud_render_max_ms": 4.342,
+                "tick_simulation_avg_ms": 0.466,
+                "tick_simulation_p90_ms": 0.283,
+                "tick_simulation_max_ms": 65.718,
+                "ursina_renderer_avg_ms": 0.320,
+                "ursina_renderer_p90_ms": 0.394,
+                "ursina_renderer_max_ms": 1.034
+              },
+              "note": "During the run, console showed OBJ->BAM saves for several environment props; those one-time conversions can explain transient low-FPS outliers."
+            }
+          }
+        }
+      }
     }
   }
 }

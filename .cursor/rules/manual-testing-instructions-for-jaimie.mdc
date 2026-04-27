@@ -1,0 +1,46 @@
+---
+description: Manual test requests must be explicit and beginner-friendly
+alwaysApply: true
+---
+
+# Manual testing instructions (Jaimie-friendly)
+
+Whenever asking the human (Jaimie) to manually test anything:
+
+## Always assume
+
+- Jaimie is **not deep in the sprint context**.
+- Jaimie has **limited developer experience** and needs very explicit “what to look for”.
+
+## Required format for any manual test request
+
+- **Exact command(s)** to run from the repo root (PowerShell-compatible).
+- **Duration**: how long to run it (e.g. “2 minutes”, “10 minutes”).
+- **Steps**: 3–7 bullet steps, in order.
+- **What to verify**: concrete pass/fail checks, phrased as observations.
+- **What to do if it fails**: what to screenshot/copy, and which log/doc to reference.
+- **What to review (optional)**: 1–2 specific docs/plan paths if sprint context matters.
+
+## Example template
+
+```text
+Run:
+<exact command>
+
+Do this:
+1) ...
+2) ...
+
+Verify:
+- ...
+- ...
+
+If it fails:
+- Copy/paste the last ~30 lines of terminal output
+- Note whether you ran --no-llm or --provider mock
+- Tell me what you clicked/expected vs what happened
+
+Context to skim (2 minutes):
+- .cursor/plans/<current sprint plan>.plan.md (Definition of Done section)
+```
+

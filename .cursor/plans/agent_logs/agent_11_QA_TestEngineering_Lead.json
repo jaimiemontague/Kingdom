@@ -509,6 +509,73 @@
           "bugs_found": []
         }
       }
+    },
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "notes": "Stage 1 R1: snapshot contract tests only (renderer migration is R2, owned by Agent 03)."
+      },
+      "rounds": {
+        "wk36_r1_snapshot_and_tests": {
+          "round_id": "wk36_r1_snapshot_and_tests",
+          "status": "done",
+          "what_i_changed": [
+            "tests/test_renderer_snapshot_contract.py: added Task 1-E tests for SimStateSnapshot immutability and engine.build_snapshot() validity (headless, GPU-free)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "pytest_2026_04_27": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "Collected 107 tests; all PASS."
+              ]
+            },
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+        ,
+        "wk36_r2_renderer_migration": {
+          "round_id": "wk36_r2_renderer_migration",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only for R2).",
+            "Ran post-merge gates per PM prompt."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report_2026_04_27": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders; non-blocking as long as exit 0)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

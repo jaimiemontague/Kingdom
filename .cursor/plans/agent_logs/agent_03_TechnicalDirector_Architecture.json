@@ -821,5 +821,103 @@
         }
       }
     }
+    ,
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK36 Stage 1 R1: introduce SimStateSnapshot + GameEngine.build_snapshot(); no Ursina renderer migration in R1."
+      },
+      "rounds": {
+        "wk36_r1_snapshot_and_tests": {
+          "sprint_id": "wk36-refactor-stage1-snapshot-decouple",
+          "round_id": "wk36_r1_snapshot_and_tests",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK36 Stage 1 R1: Implement Task 1-A (game/sim/snapshot.py frozen SimStateSnapshot) and Task 1-B (GameEngine.build_snapshot()) per master plan Stage 1. Keep build_snapshot read-only. Run pytest + qa_smoke --quick.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added frozen dataclass SimStateSnapshot in game/sim/snapshot.py (immutable container for renderer-facing state).",
+              "Implemented GameEngine.build_snapshot() returning SimStateSnapshot with shallow-copied entity tuples + world + fog_revision + economy/spawner scalars + selection + vfx projectiles + camera/display basics.",
+              "No sim behavior changes; build_snapshot is a pure read of existing engine state."
+            ],
+            "files_changed": [
+              "game/sim/snapshot.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "blockers": [
+              "Agent 11 owns WK36-STAGE1-TEST-001 tests in tests/test_renderer_snapshot_contract.py and should land after this snapshot/build_snapshot change."
+            ]
+          }
+        }
+        ,
+        "wk36_r2_renderer_migration": {
+          "sprint_id": "wk36-refactor-stage1-snapshot-decouple",
+          "round_id": "wk36_r2_renderer_migration",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK36 Stage 1 R2: Decouple UrsinaRenderer from GameEngine by consuming SimStateSnapshot (no self.engine references) and wire UrsinaApp to pass engine.build_snapshot() each frame.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "UrsinaRenderer: __init__(world) now stores self._world; update(snapshot: SimStateSnapshot) consumes snapshot fields and no longer reads engine state directly.",
+              "Replaced all remaining renderer engine-coupling points: fog gating now uses snapshot.fog_revision, debug grid overlay uses (world, snapshot.buildings), terrain scatter exclusion uses _building_occupied_tiles(buildings).",
+              "UrsinaApp: constructs renderer via UrsinaRenderer(self.engine.world) and calls snapshot=self.engine.build_snapshot(); self.renderer.update(snapshot) each frame."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "acceptance_checks": [
+              "Verified: no self.engine / engine.get_game_state / gs[...] usage remains in game/graphics/ursina_renderer.py."
+            ],
+            "blockers": []
+          }
+        }
+      }
+    }
   }
 }

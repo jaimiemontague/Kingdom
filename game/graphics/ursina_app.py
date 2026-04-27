@@ -118,7 +118,7 @@ class UrsinaApp:
         if ai_controller_factory:
             self.engine.ai_controller = ai_controller_factory()
 
-        self.renderer = UrsinaRenderer(self.engine)
+        self.renderer = UrsinaRenderer(self.engine.world)
 
         # WK30 debug: optional deterministic layout for prefab-fit iteration.
         if os.environ.get("KINGDOM_URSINA_PREFAB_TEST_LAYOUT") == "1":
@@ -964,7 +964,8 @@ class UrsinaApp:
                 ecam.target_z = camera.z
 
             _stage_t0 = pytime.perf_counter()
-            self.renderer.update()
+            snapshot = self.engine.build_snapshot()
+            self.renderer.update(snapshot)
             self._record_fps_probe_stage_ms("ursina_renderer", _stage_t0)
 
             _stage_t0 = pytime.perf_counter()

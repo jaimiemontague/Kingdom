@@ -4,6 +4,7 @@ Main game engine - handles the game loop, input, and coordination.
 import time
 import os
 import pygame
+from typing import TYPE_CHECKING
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TILE_SIZE,
     MAP_WIDTH, MAP_HEIGHT, COLOR_BLACK,
@@ -50,6 +51,9 @@ from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_mult
 from ai.context_builder import ContextBuilder
 
 from game.input_manager import InputManager
+
+if TYPE_CHECKING:
+    from game.sim.snapshot import SimStateSnapshot
 
 class GameEngine:
     """Main game engine class."""
@@ -1412,6 +1416,49 @@ class GameEngine:
             # Last MOUSEMOTION in engine.screen space — required when pygame.mouse is dummy (Ursina HUD).
             "ui_cursor_pos": getattr(self, "_last_ui_cursor_pos", None),
         }
+
+    def build_snapshot(self) -> "SimStateSnapshot":
+        """Build a frozen snapshot of current sim state for renderers (read-only)."""
+        from game.sim.snapshot import SimStateSnapshot
+
+        castle = next(
+            (b for b in self.buildings if getattr(b, "building_type", None) == "castle"),
+            None,
+        )
+
+        vfx_projectiles: tuple = ()
+        if self.vfx_system is not None:
+            vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", []))
+
+        return SimStateSnapshot(
+            buildings=tuple(self.buildings),
+            heroes=tuple(self.heroes),
+            enemies=tuple(self.enemies),
+            peasants=tuple(self.peasants),
+            guards=tuple(self.guards),
+            bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
+            world=self.world,
+            fog_revision=int(getattr(self, "_fog_revision", 0)),
+            gold=int(getattr(self.economy, "player_gold", 0)),
+            wave=int(getattr(self.spawner, "wave_number", 0)),
+            buildings_construction_progress=tuple(
+                float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
+            ),
+            selected_hero=self.selected_hero,
+            selected_building=getattr(self, "selected_building", None),
+            castle=castle,
+            tax_collector=getattr(self, "tax_collector", None),
+            vfx_projectiles=vfx_projectiles,
+            screen_w=int(getattr(self, "window_width", 0) or 0),
+            screen_h=int(getattr(self, "window_height", 0) or 0),
+            camera_x=float(getattr(self, "camera_x", 0.0) or 0.0),
+            camera_y=float(getattr(self, "camera_y", 0.0) or 0.0),
+            zoom=float(getattr(self, "zoom", 1.0) or 1.0),
+            default_zoom=float(getattr(self, "default_zoom", 1.0) or 1.0),
+            paused=bool(getattr(self, "paused", False)),
+            running=bool(getattr(self, "running", True)),
+            pause_menu_visible=bool(getattr(getattr(self, "pause_menu", None), "visible", False)),
+        )
     
     def render(self):
         """Render the game."""
