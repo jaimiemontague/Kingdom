@@ -60,9 +60,31 @@ The original “one `.glb` per building in `assets/models/environment/`” appro
 6. **Required texture overrides** for flat town/graveyard/survival pieces — **[prefab_texture_override_standard.md](./prefab_texture_override_standard.md)** (PM-enforced; **Agent 15** onboarding).
 7. **Screenshot / kit review first** — Before selecting pieces, review these pack overviews: `assets/models/Fantasy Town Kit.PNG`, `Graveyard Kit.PNG`, `Blocky Characters.PNG`, `Nature Part 1–4.PNG`, `Retro Fantasy Kit.PNG`, `Survival Kit.PNG` (and any new kit sheets added to `assets/models/`). **Tool-first proof:** `model_viewer_kenney.py` and assembler passes before calling a prefab “done”.
 
-**Milestones already demonstrated:** Castle/house/inn/guilds/farm/food stand plots; **WK33** (Phase 2.5 marketing label): **tiling grass ground**, **Graveyard lair** static mesh, **marketplace, blacksmith, trading post** (plus construction-stage JSONs), **FOW/brightness** tuning. **WK32:** camera, fog, nature scatter polish, **Inn v2**-style workstreams, **hero-spawn FPS** mitigation.
+#### Status today (loader, perf, workflow) — supersedes WK29-only notes
 
-**Sprints outline (prefab-based):** WK27 single-mesh plan deprecated; **WK30+** building pipeline; **2.2 economy** (marketplace, inn, farms) largely advanced in WK33; **2.3 military** and optional **2.X prefab baker** (only if **Agent 10** requires it at scale) remain on the roadmap for **finishing** Phase 2, not for “starting” it.
+- **Loader (post-WK30):** Prefabs are **default-on** when `assets/prefabs/buildings/<building_type>_v1.json` (or the project’s `_PREFAB_BUILDING_TYPE_TO_FILE` entry) exists. **`KINGDOM_URSINA_PREFAB_TEST=0`** forces the **legacy** billboard/primitive path for A/B or rollback; **unset or non-zero** uses prefabs. The WK29-era **“house only + require `=1`”** behavior is **historical** — see `wk30_buildings_pipeline.plan.md`.
+- **First house:** `peasant_house_small_v1.json` remains the first end-to-end kitbash; same pipeline as castle, guilds, and economy buildings.
+- **Perf:** After prefab scale-up, **Agent 10** has not treated **>30%** FPS regression from the prefab path as a release blocker; a **prefab baker** (JSON → single `.glb`) stays **backlog** until instance count / profiling demands it.
+- **Each new building tranche:** (a) **Agent 15** + Jaimie kitbash in the assembler, (b) **Agent 03** extends loader / prefab map as needed, (c) **Agent 05** footprint audit, (d) **Agents 09 / 10 / 11** consult on cohesion, FPS, and gates.
+
+#### Phase 2 sprint map (`3D Graphics Phase 2.#` — see `git log --grep="Phase 2"`)
+
+Commits use the **`3D Graphics Phase 2.x: …`** convention. Rough mapping to studio weeks and **master-plan** labels:
+
+| Phase | Sprint / window | What shipped (summary) | Plan / anchor |
+|-------|------------------|-------------------------|----------------|
+| **2.0** | WK28 → early assembly | Kenney **assembler + schema** mature; first building kitbashes underway | `wk28_assembler_spike_41c2daeb.plan.md`; `3ae0a34` |
+| **2.1** | **WK30** | **Default-on** prefab loader (generalizes WK29); **castle + warrior / ranger / rogue** guild prefabs (wizard optional); manifest + `validate_assets` **prefabs.buildings** | `wk30_buildings_pipeline.plan.md` — **replaces deprecated** `wk27_sprint_2_1_buildings.plan.md`; `b51d679` |
+| **2.2** | **WK31** + economy follow-on | **First half** of **economy / living** buildings into the game (Inn, Farm, Food Stand, Gnome Hovel, plots, etc. per PM order); overlaps **Part B** of perf + economy plan | `wk31_kingdom_perf_and_economy.plan.md` Part B; `cad0d71` |
+| **2.3** | **WK32** | **3D camera**, **3D fog-of-war**, **Inn v2** / construction & nature polish, **hero-spawn FPS** mitigation | `wk32_camera_construction_nature_polish.plan.md`; `ba2b2c6` |
+| **2.4** | Focused texture pass | **Food stand** (and related) **backfill** of **texture overrides** under [prefab_texture_override_standard.md](./prefab_texture_override_standard.md) | `ba9f40c` |
+| **2.5** | **WK33** (+ midsprint) | **Tiled grass** albedo, **Graveyard lair** mesh, **marketplace / blacksmith / trading_post / farm** prefabs + **construction-stage** JSONs; **assembler** per-piece **`-` / `=`** scale (Shift fine) | `wk33_3d_sprint_plan_6e616891.plan.md`; `assembler_scale_hotkeys_177ca989.plan.md`; `f9e7dff` |
+
+*Hash column in git history is the source of truth if two commits share the same phase number (e.g. a **2.2** midsprint save vs the main **2.2** economy tranche).*
+
+**Sprint 2.X (perf hedge, on-demand):** **Agent 12** prefab **baker** only if **Agent 10** flags a regression at scale — not on the calendar by default.
+
+**Milestones already demonstrated (roll-up):** Military district (**2.1**), economy/living first tranche (**2.2**), camera/FOW/Inn/perf (**2.3**), override standard applied to food stand (**2.4**), terrain + lair + core economy prefabs + assembler scale (**2.5**).
 
 **Success Criteria (v1.5 bar for Phase 2):** Buildings and **lair** read as 3D kitbash where prefabbed; footprints match; textures/overrides and gates **PASS**; Jaimie playtest on Ursina.
 
@@ -93,5 +115,5 @@ Update **`CHANGELOG.md`** when Jaimie bumps the version; this master plan is the
 ## 6. See Also
 - [kenney_gltf_ursina_integration_guide.md](./kenney_gltf_ursina_integration_guide.md)
 - [prefab_texture_override_standard.md](./prefab_texture_override_standard.md)
-- [wk33_3d_sprint_plan_6e616891.plan.md](./wk33_3d_sprint_plan_6e616891.plan.md) (example completed Phase 2.5 tranche)
+- Phase 2 sprints: [wk30_buildings_pipeline.plan.md](./wk30_buildings_pipeline.plan.md) (2.1), [wk31_kingdom_perf_and_economy.plan.md](./wk31_kingdom_perf_and_economy.plan.md) (2.2 Part A/B), [wk32_camera_construction_nature_polish.plan.md](./wk32_camera_construction_nature_polish.plan.md) (2.3), [wk33_3d_sprint_plan_6e616891.plan.md](./wk33_3d_sprint_plan_6e616891.plan.md) (2.5), [assembler_scale_hotkeys_177ca989.plan.md](./assembler_scale_hotkeys_177ca989.plan.md) (2.5 midsprint)
 - `assets/prefabs/schema.md`
