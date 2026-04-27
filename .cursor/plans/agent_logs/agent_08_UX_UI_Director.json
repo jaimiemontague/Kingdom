@@ -305,6 +305,67 @@
           }
         }
       }
+    },
+    "wk38-refactor-stage3-gamecommands": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+        "notes": "WK38 Stage 3 R3: UX consult — wave 6 parallel with QA after Agent 03 R3 complete"
+      },
+      "rounds": {
+        "wk38_r3_hardening_tests_ux": {
+          "round_id": "wk38_r3_hardening_tests_ux",
+          "prompt_text": "pm_ux_checklist_08 — consulting only; no code unless coordinated with Agent 03",
+          "response": {
+            "status": "consult_complete",
+            "send_order_compliance": "Agent 08 activates only at step 6 per sprint_meta.pm_jaimie_send_order — not started in R1 (Agents 03/11 only)",
+            "what_i_changed": [],
+            "verification": {
+              "grep_engine_in_input_handler": {
+                "command": "rg \"self\\.engine|engine = self\\.engine\" game/input_handler.py",
+                "result": "no matches (PASS — matches Stage 3 grep sanity)"
+              },
+              "automated_gates_wk38_r3": {
+                "pytest": {
+                  "command": "python -m pytest tests/",
+                  "exit_code": 0,
+                  "note": "110 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "DONE: PASS"
+                },
+                "validate_assets_report": {
+                  "command": "python tools/validate_assets.py --report",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "warns": 46,
+                  "note": "warnings are missing_model_file baseline per validator"
+                }
+              },
+              "manual_pm_ux_checklist_08": {
+                "human_required": true,
+                "copy_paste_commands_repo_root": [
+                  "python main.py --no-llm",
+                  "python main.py --renderer ursina --no-llm"
+                ],
+                "confirm": [
+                  "build catalog open/close",
+                  "hire hotkey",
+                  "pause / ESC",
+                  "wheel zoom",
+                  "hero selection",
+                  "bounty placement key"
+                ],
+                "compare_to": "pre-WK38 expectation — no new dead clicks or focus traps",
+                "agent_note": "Interactive pygame/Ursina session not run inside this agent environment; gates + grep provide indirect confidence only."
+              }
+            },
+            "verdict": "KEEP — refactor is behind GameCommands facade; recommend Jaimie run the two manual commands above for final UX sign-off.",
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

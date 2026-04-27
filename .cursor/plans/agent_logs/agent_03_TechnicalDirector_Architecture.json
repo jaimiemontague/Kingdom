@@ -1116,6 +1116,133 @@
           }
         }
       }
+    },
+    "wk38-refactor-stage3-gamecommands": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK38 Stage 3: InputHandler decoupling via GameCommands; R1 scaffold"
+      },
+      "rounds": {
+        "wk38_r1_gamecommands_scaffold": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r1_gamecommands_scaffold",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "GameCommands Protocol + EngineBackedGameCommands; InputHandler(commands); wire from GameEngine.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added game/game_commands.py: GameCommands Protocol (marker _game_commands_impl) + EngineBackedGameCommands with __getattr__/__setattr__/__delattr__ forwarding 1:1 to GameEngine for R1 (behavior parity; R2 replaces with explicit protocol).",
+              "input_handler.py: __init__(commands: GameCommands), self.commands only; all former self.engine paths use facade (local var name engine unchanged for minimal diff).",
+              "engine.py: InputHandler(EngineBackedGameCommands(self))."
+            ],
+            "files_changed": [
+              "game/game_commands.py",
+              "game/input_handler.py",
+              "game/engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "capability_inventory_r1": [
+              "R1 uses transparent proxy: InputHandler still touches economy, hud, panels, world, sim-typed lists, and private _skip_event_processing_frames, _borderless_*, _cleanup_destroyed_buildings, etc. via forwarding — explicit protocol methods in R2 per plan."
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "107 passed"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46 (pre-existing)"
+              }
+            },
+            "blockers": []
+          }
+        },
+        "wk38_r2_mechanical_migration": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r2_mechanical_migration",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK38-R2: explicit GameCommands protocol + EngineBacked forwarders; input_handler uses c=commands only (no self.engine / engine= self.engine).",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "game_commands.py: Replaced generic __getattr__ proxy with explicit GameCommands Protocol (properties + methods) and EngineBackedGameCommands 1:1 delegates to GameEngine; private _skip / borderless / perf / speed_before_pause via typed accessors.",
+              "input_handler.py: Local handle renamed c = self.commands throughout process_events, select_building_for_placement, handle_keydown, handle_mousedown, handle_mousemove, _clear_hero_selection; rg self.engine and engine = self.engine empty."
+            ],
+            "files_changed": [
+              "game/game_commands.py",
+              "game/input_handler.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": { "command": "python -m pytest tests/", "exit_code": 0, "status": "PASS" },
+              "qa_smoke_quick": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+              "validate_assets_report": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS", "summary": "errors=0 warns=46" }
+            },
+            "blockers": []
+          }
+        },
+        "wk38_r3_hardening_tests_ux": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r3_hardening_tests_ux",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK38-R3: mock tests; grep sanity; optional engine_access_inventory.md; full gates.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "tests/test_input_handler_gamecommands.py: 3 tests — QUIT clears commands.running; unaffordable select_building toasts via commands.hud; KEYDOWN 'h' calls commands.try_hire_hero.",
+              "docs/refactor/engine_access_inventory.md: new subsection InputHandler + GameCommands (WK38 wiring, grep DoD note, test file pointer).",
+              "Grep sanity (workspace): no matches for self.engine or engine = self.engine in game/input_handler.py."
+            ],
+            "files_changed": [
+              "tests/test_input_handler_gamecommands.py",
+              "docs/refactor/engine_access_inventory.md",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": { "command": "python -m pytest tests/", "exit_code": 0, "status": "PASS", "note": "110 tests incl. 3 new" },
+              "qa_smoke_quick": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+              "validate_assets_report": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS", "summary": "errors=0 warns=46" },
+              "grep_input_handler": { "pattern": "self.engine OR engine = self.engine", "path": "game/input_handler.py", "matches": 0 }
+            },
+            "blockers": [],
+            "manual_smoke_jaimie": [
+              "python main.py --no-llm",
+              "python main.py --renderer ursina --no-llm"
+            ]
+          }
+        }
+      }
     }
   }
 }

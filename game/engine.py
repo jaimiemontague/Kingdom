@@ -35,6 +35,7 @@ from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel, DevToolsPanel
 from game.ui.building_list_panel import BuildingListPanel
 from game.ui.pause_menu import PauseMenu
 from game.ui.build_catalog_panel import BuildCatalogPanel
+from game.game_commands import EngineBackedGameCommands
 from game.input_handler import InputHandler
 from game.display_manager import DisplayManager
 from game.building_factory import BuildingFactory
@@ -181,7 +182,7 @@ class GameEngine:
             self.building_panel.engine = self
             self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
             self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
-            self.input_handler = InputHandler(self)
+            self.input_handler = InputHandler(EngineBackedGameCommands(self))
             self.cleanup_manager = CleanupManager(self)
             self.vfx_system = VFXSystem()
             self.event_bus.subscribe("*", self.audio_system.on_event)

@@ -2944,6 +2944,195 @@
         "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
         "rationale": "Stage 2 is a core engine refactor; keep scope limited to Tech implementer + QA/perf consult validation."
       }
+    },
+    "wk38-refactor-stage3-gamecommands": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "master_plan_section": "Stage 3: Input Handler Decoupling (approx. L794+)",
+        "created_utc": "2026-04-27T20:15:00Z",
+        "notes": "WK38 CLOSED 2026-04-27: Stage 3 GameCommands + InputHandler decouple shipped; human playtest PASS (Jaimie). See wk38_sprint_closeout round.",
+        "pm_jaimie_send_order": [
+          "1) Agent 03 (HIGH) — round wk38_r1 only. No other agent starts until 03 reports R1 done and gates pass.",
+          "2) Agent 11 (LOW) — after step 1: run qa_smoke + log (and pytest if 03 asked).",
+          "3) Agent 03 (HIGH) — round wk38_r2.",
+          "4) Agent 11 (LOW) — after step 3.",
+          "5) Agent 03 (HIGH) — round wk38_r3.",
+          "6) In PARALLEL (after step 5): Agent 11 (LOW) final gate + log; Agent 08 (LOW, consult) UX checklist in .cursor/plans/wk38_stage3_input_gamecommands.plan.md / PM round wk38_r3 — do not edit game code unless Agent 03 requests a copy fix."
+        ]
+      },
+      "rounds": {
+        "wk38_r1_gamecommands_scaffold": {
+          "round_meta": {
+            "prompt_set_id": "wk38_r1",
+            "build_target": "GameCommands_Protocol + EngineBackedGameCommands + InputHandler_first_slice",
+            "visibility": "Implementer: 03. QA: 11 after merge."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Add game/game_commands.py with GameCommands Protocol and EngineBackedGameCommands delegating to GameEngine. Change InputHandler to take commands: GameCommands. Migrate a first vertical slice (or full process_events) so the game still runs. Inventory distinct engine capabilities used from input_handler.py.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK38-STAGE3-FEAT-001",
+              "title": "GameCommands protocol + InputHandler(commands) + facade",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md (WK38-R1) + master_plan_architecture_refactor.md Stage 3",
+              "acceptance": [
+                "game/game_commands.py exists with GameCommands Protocol and EngineBackedGameCommands (or equivalent name) implementing delegation to GameEngine.",
+                "InputHandler.__init__ takes GameCommands, not GameEngine (R1 may still be partial migration if a second commit completes R1 — prefer finishing R1 in one merge when practical).",
+                "python -m pytest tests/ PASS; python tools/qa_smoke.py --quick PASS."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "done",
+              "asks": [
+                "Read .cursor/plans/wk38_stage3_input_gamecommands.plan.md and master plan Stage 3.",
+                "Inventory engine capabilities referenced from game/input_handler.py; add Protocol + facade; wire GameEngine to pass EngineBackedGameCommands into InputHandler.",
+                "Run pytest, qa_smoke, validate_assets; update agent_03 log with evidence."
+              ],
+              "acceptance_criteria": [
+                "First slice merged; gates PASS; no intended gameplay change."
+              ]
+            },
+            "11": {
+              "status": "done",
+              "asks": [
+                "After Agent 03 reports R1 merged: run python tools/qa_smoke.py --quick and log exit code; note any new failures in agent_11 log."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "high", "11": "low" },
+            "rationale": "03 implements; 11 validates after merge only."
+          },
+          "pm_agent_prompts": {
+            "03": "WK38 Stage 3 R1 (Tech, HIGH): Execute WK38-R1 in .cursor/plans/wk38_stage3_input_gamecommands.plan.md. Add game/game_commands.py: GameCommands Protocol + EngineBackedGameCommands delegating to game/engine.py GameEngine. Refactor game/input_handler.py to use self.commands and game/engine.py to construct InputHandler with the facade. Cover inventory + first vertical slice. Expose private engine hooks needed by input as explicit protocol methods (no raw getattr on arbitrary _privates in InputHandler). Gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log in .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json.",
+            "11": "WK38 Stage 3 R1 (QA, LOW): After Agent 03 lands R1, run python tools/qa_smoke.py --quick. Log command + exit_code in .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json. If FAIL, file regression note to PM and Agent 03."
+          }
+        },
+        "wk38_r2_mechanical_migration": {
+          "round_meta": {
+            "prompt_set_id": "wk38_r2",
+            "build_target": "InputHandler_full_migration_through_GameCommands",
+            "visibility": "Implementer: 03. QA: 11 after merge."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "Complete mechanical migration: handle_keydown, handle_mousedown, handle_mousemove, select_building_for_placement, _clear_hero_selection — all through self.commands / protocol. Extend Protocol + facade for any missing surfaces.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
+              "optional_manual_ursina": "python main.py --renderer ursina --no-llm for spot-check if input paths touched."
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": { "status": "done", "note": "R2 landed per agent_03 log." },
+            "11": { "status": "done", "note": "Gates PASS per agent_11 log." }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "high", "11": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK38 Stage 3 R2 (Tech, HIGH): Complete migration per .cursor/plans/wk38_stage3_input_gamecommands.plan.md WK38-R2. No behavior change intended. extend GameCommands as needed. Same gates as R1 + optional Ursina spot-check. Update agent_03 log.",
+            "11": "WK38 Stage 3 R2 (QA, LOW): After 03 merge, run python tools/qa_smoke.py --quick; log in agent_11 log."
+          }
+        },
+        "wk38_r3_hardening_tests_ux": {
+          "round_meta": {
+            "prompt_set_id": "wk38_r3",
+            "build_target": "Tests_Grep_Docs_Plus_UX_Consult",
+            "visibility": "Implementer: 03. Parallel after 03 handoff: 11 (gate) + 08 (consult, no code unless agreed)."
+          },
+          "pm_status_summary": {
+            "overall_status": "complete",
+            "focus": "1–3 mock-based tests; verify rg shows no self.engine in input_handler; optional engine_access_inventory.md subsection; Manual pygame + Ursina. Agent 08: short UX checklist (ESC, build catalog, focus).",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0.",
+              "grep_sanity": "self.engine and `engine = self.engine` must not appear in game/input_handler.py (use rg from plan)."
+            }
+          },
+          "pm_ux_checklist_08": [
+            "From repo root: python main.py --no-llm and python main.py --renderer ursina --no-llm (few minutes each).",
+            "Confirm: build catalog open/close, hire hotkey, pause/ESC, wheel zoom, hero selection, bounty placement key — no new dead clicks or focus traps vs pre-WK38 expectation."
+          ],
+          "pm_next_actions_by_agent": {
+            "03": { "status": "done" },
+            "11": { "status": "done" },
+            "08": { "status": "done" }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_11_08",
+            "then_in_order": ["03"],
+            "then_parallel": ["11", "08"],
+            "intelligence_by_agent": { "03": "high", "11": "low", "08": "low" },
+            "rationale": "11 and 08 are independent: QA runs commands; UX reviews flows without touching 03s files in parallel if 03 is done."
+          },
+          "pm_agent_prompts": {
+            "03": "WK38 Stage 3 R3 (Tech, HIGH): Hardening per wk38 plan WK38-R3. Add small tests; remove TYPE_CHECKING engine coupling if safe; document protocol in docs/refactor/engine_access_inventory.md (optional). Confirm rg clean on input_handler. Full gate stack. Update agent_03 log.",
+            "11": "WK38 Stage 3 R3 (QA, LOW): Final python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log all exit codes. Independent of Agent 08; run in parallel with 08 after 03 says R3 is ready.",
+            "08": "WK38 Stage 3 R3 (UX, LOW consult): Read pm_ux_checklist_08 in this round. No code changes unless you coordinate with Agent 03 for a one-line copy fix. Report keep/change in agent_08 log or return to PM."
+          }
+        },
+        "wk38_sprint_closeout": {
+          "round_meta": {
+            "closed_at_local": "2026-04-27",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "build_target": "Sprint_Close_WK38_Stage3"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK38 Stage 3 (GameCommands + InputHandler decouple) accepted. Automated gates PASS (pytest, qa_smoke, validate_assets). Agent 08 UX consult KEEP. Jaimie human playtest (pygame + Ursina) PASS — final sign-off.",
+            "gates_recorded": {
+              "pytest": "PASS 110 tests (per agent logs)",
+              "qa_smoke_quick": "PASS exit 0",
+              "validate_assets": "PASS errors=0 warns=46 baseline",
+              "grep_input_handler": "no self.engine / engine = self.engine in game/input_handler.py"
+            }
+          },
+          "pm_deliverables": [
+            "game/game_commands.py — GameCommands Protocol + EngineBackedGameCommands",
+            "game/input_handler.py — routes via commands only",
+            "game/engine.py — wires InputHandler(EngineBackedGameCommands(self))",
+            "tests/test_input_handler_gamecommands.py",
+            "docs/refactor/engine_access_inventory.md — InputHandler + GameCommands subsection",
+            ".cursor/plans/wk38_stage3_input_gamecommands.plan.md"
+          ],
+          "pm_next_actions": [
+            "Plan WK39 / Stage 4: PygameRenderer extraction per master_plan_architecture_refactor.md Stage 4 (optional defer).",
+            "Optional: update master plan checklist Stage 3 when convenient."
+          ]
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint wk38-refactor-stage3-gamecommands (Architecture Refactor Stage 3: InputHandler + GameCommands).\\n\\n1) Read the sprint plan FIRST:\\n   .cursor/plans/wk38_stage3_input_gamecommands.plan.md\\n2) Read master plan context (Stage 3 only):\\n   .cursor/plans/master_plan_architecture_refactor.md (section: Stage 3: Input Handler Decoupling)\\n3) Read the PM Executive Producer log for this sprint and YOUR assignment:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk38-refactor-stage3-gamecommands\\\"]\\n   -> rounds[<your round id: start with wk38_r1_gamecommands_scaffold unless PM says otherwise>]\\n   -> pm_agent_prompts[\\\"YOUR_AGENT_NUMBER_AS_STRING\\\"] and pm_next_actions_by_agent[YOUR_NUMBER]\\n4) Jaimie send order (do not start out of order): see sprint_meta.pm_jaimie_send_order in the same sprint block.\\n5) When done: update YOUR agent log JSON; run the gates PM listed for your role; report files changed + commands + exit codes + blockers back to Jaimie/PM.",
+      "pm_send_list_minimal": {
+        "kickoff_parallelism_note": "Only one implementation agent (03) per round. QA 11 is sequential after each 03 round. 11+08 parallel ONLY on the final step after 03 R3 is complete.",
+        "waves": [
+          { "wave": 1, "parallel": false, "agents": [{ "id": "03", "intel": "high", "round": "wk38_r1_gamecommands_scaffold" }] },
+          { "wave": 2, "parallel": false, "depends_on": "wave_1_03_done", "agents": [{ "id": "11", "intel": "low", "round": "wk38_r1_gamecommands_scaffold" }] },
+          { "wave": 3, "parallel": false, "agents": [{ "id": "03", "intel": "high", "round": "wk38_r2_mechanical_migration" }] },
+          { "wave": 4, "parallel": false, "agents": [{ "id": "11", "intel": "low", "round": "wk38_r2_mechanical_migration" }] },
+          { "wave": 5, "parallel": false, "agents": [{ "id": "03", "intel": "high", "round": "wk38_r3_hardening_tests_ux" }] },
+          { "wave": 6, "parallel": true, "depends_on": "wave_5_03_done", "agents": [{ "id": "11", "intel": "low", "round": "wk38_r3_hardening_tests_ux" }, { "id": "08", "intel": "low", "round": "wk38_r3_hardening_tests_ux" }] }
+        ],
+        "do_not_send": ["01", "02", "04", "05", "06", "07", "09", "10", "12", "13", "14", "15"],
+        "rationale": "Single-threaded code ownership on Agent 03. QA after each round. Agent 08 only in R3 and parallel with 11 to maximize speed at sprint end when work is independent."
+      }
     }
   }
 }

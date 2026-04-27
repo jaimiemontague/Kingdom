@@ -68,3 +68,15 @@ These appear in helper functions that take a local `engine` parameter.
 - **direct**: `self.engine.tick_simulation(dt)`
 - **guarded**: `getattr(self.engine, "running", True)` (quit handling / loop exit)
 
+---
+
+## `InputHandler` + `GameCommands` (WK38 Stage 3)
+
+`game/input_handler.py` no longer references `GameEngine` at runtime. It holds `self.commands: GameCommands` and uses a local `c` handle to the same object for all event handling.
+
+- **Protocol + default implementation:** `game/game_commands.py` — `GameCommands` (Protocol) and `EngineBackedGameCommands` (delegates to the real `GameEngine` in `engine.py` when wiring the default path).
+- **Wiring:** `GameEngine` constructs `InputHandler(EngineBackedGameCommands(self))` in `game/engine.py`.
+- **DoD / grep (sprint R3):** `self.engine` and `engine = self.engine` must not appear in `game/input_handler.py` (use your search tool of choice; `rg` in the plan is the same check).
+- **Tests:** `tests/test_input_handler_gamecommands.py` — mock `GameCommands` / `SimpleNamespace` to assert QUIT, affordance, and `H` hotkey call the command surface only.
+
+Other code (Ursina, etc.) may still use `engine` as a local or `self.engine` on their own types; this section is only the **input** decoupling story.
