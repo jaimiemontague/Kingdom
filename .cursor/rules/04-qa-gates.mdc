@@ -45,7 +45,7 @@ Check: no crashes, heroes move, combat works, buildings construct, UI responsive
 
 Whenever you ask **Jaimie** to verify something manually — in Cursor chat, agent logs, or PM prompts — include the **full terminal command** (from project root), not a vague instruction.
 
-- **Good**: `python main.py --renderer ursina`
+- **Good**: `python main.py` (default Ursina) or `python main.py --renderer pygame` when the 2D path must be tested
 - **Bad**: “run the Ursina build” / “start the game and check placement”
 
 Use fenced code blocks or a single line per command. Include env vars when required, e.g. `set KINGDOM_URSINA_DEBUG_INPUT=1` (Windows) or `export KINGDOM_URSINA_DEBUG_INPUT=1` (Unix), then the `python ...` line on the next line if the shell needs two steps.

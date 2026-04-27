@@ -1,5 +1,9 @@
 # Changelog
 
+## Prototype v1.5.1 — 3D Native with major Refactor
+
+Post–v1.5.0 **architecture refactor** (Stages 0–5, see `.cursor/plans/master_plan_architecture_refactor.md`): **`SimEngine`** simulation core in `game/sim_engine.py`, read-only **`SimStateSnapshot`** for renderers, **`GameCommands`** for input (no raw `GameEngine` in `InputHandler`), **`PygameRenderer`** for the pygame world pass, **Ursina** as the default renderer (`python main.py` / `main.py --renderer ursina`), root script archive under `tools/archive/`, updated **`.cursor/rules/02-project-layout.mdc`**, and **BuildingPanel** Ursina HUD re-upload via **`on_request_ursina_hud_upload`** (no `panel.engine` reference). `python main.py --renderer pygame` remains for 2D. Gates: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --report`.
+
 ## Prototype v1.5.0 — The Game Goes 3D
 
 This update completes the **Phase 1–2** transition to a cohesive **static 3D** Ursina presentation (environment + kitbash buildings + tooling). Animated 3D units remain a possible **1.5.x** follow-up. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.

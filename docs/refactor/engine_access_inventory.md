@@ -89,3 +89,10 @@ Other code (Ursina, etc.) may still use `engine` as a local or `self.engine` on 
 - **Non-snapshot refs:** `PygameWorldRenderContext` holds `renderer_registry`, `bounty_system`, `vfx_system`, `building_menu`, `building_list_panel`, `economy`.
 - **Stays on `GameEngine`:** HUD, building panel, build catalog, pause menu, perf overlay, pause tint; hero-focus minimap still orchestrates rect/blit from `render()`, map pixels shared via `PygameRenderer.render_minimap_contents`.
 - **Tests:** `tests/test_pygame_renderer_wk39.py` — imports, snapshot wiring, `skip_pygame_world` smoke (full-frame pygame raster stays covered by `qa_smoke --quick`).
+
+---
+
+## `BuildingPanel` (post–REFACTOR-TECH-001)
+
+- `game/ui/building_panel.py` does **not** store `self.engine`. Ursina HUD re-upload is requested via optional `on_request_ursina_hud_upload: Callable[[], None] | None` (wired from `GameEngine._request_ursina_hud_upload` in `engine.py`).
+- `game/ui/building_renderers/economic_panel.py` calls that callback via `_request_live_hud_upload_for_ursina(panel)` (no `getattr(panel, "engine", ...)`).

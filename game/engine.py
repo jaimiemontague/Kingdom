@@ -1,5 +1,10 @@
 """
-Main game engine - handles the game loop, input, and coordination.
+Presentation shell for the running match: window/pygame, main loop, HUD, audio, and VFX.
+
+The architecture refactor (see ``.cursor/plans/master_plan_architecture_refactor.md``) calls this
+role *PresentationLayer*. The public class name remains ``GameEngine`` for import compatibility
+with existing code and tests; it composes :class:`game.sim_engine.SimEngine` (``self.sim``) for
+all simulation state and ticking.
 """
 import time
 import os
@@ -58,7 +63,10 @@ if TYPE_CHECKING:
     from game.sim.snapshot import SimStateSnapshot
 
 class GameEngine:
-    """Main game engine class."""
+    """
+    PresentationLayer implementation: wraps ``SimEngine``, owns pygame display, input, HUD, and the
+    main loop; sim logic lives on ``self.sim``.
+    """
     
     def __init__(self, early_nudge_mode: str | None = None, input_manager: InputManager | None = None, headless: bool = False, headless_ui: bool = False):
         self.headless = headless
@@ -179,8 +187,11 @@ class GameEngine:
             self.building_list_panel = BuildingListPanel(self.window_width, self.window_height)
             self.debug_panel = DebugPanel(self.window_width, self.window_height)
             self.dev_tools_panel = DevToolsPanel(self.event_bus, self.window_width, self.window_height)
-            self.building_panel = BuildingPanel(self.window_width, self.window_height)
-            self.building_panel.engine = self
+            self.building_panel = BuildingPanel(
+                self.window_width,
+                self.window_height,
+                on_request_ursina_hud_upload=self._request_ursina_hud_upload,
+            )
             self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
             self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
             self.input_handler = InputHandler(EngineBackedGameCommands(self))
@@ -237,6 +248,10 @@ class GameEngine:
         # Initialize starting buildings (pure simulation)
         self.sim.setup_initial_state()
         # Presentation-owned camera framing is handled by setup_initial_state() wrapper.
+
+    def _request_ursina_hud_upload(self) -> None:
+        """Ursina: mark pygame HUD buffer dirty so the GPU texture re-uploads (e.g. thin building-panel bars)."""
+        setattr(self, "_ursina_hud_force_upload", True)
 
     def _on_hud_message_event(self, event: dict) -> None:
         """Presentation hook: render sim-emitted HUD toasts."""
@@ -1810,4 +1825,7 @@ class GameEngine:
                 self._perf_render_ms = rnd_ms if self._perf_render_ms <= 0 else (self._perf_render_ms * (1 - alpha) + rnd_ms * alpha)
         
         pygame.quit()
+
+# Public alias: ``GameEngine`` is the name used in imports and tests; refactor docs use "PresentationLayer".
+PresentationLayer = GameEngine
 

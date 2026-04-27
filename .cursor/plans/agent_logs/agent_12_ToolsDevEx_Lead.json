@@ -2840,5 +2840,50 @@
         ]
       }
     }
+  },
+  "wk40-refactor-stage5-cleanup": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
+      "notes": "Workstream A Task 5-A: root script archive + GLB scratch delete"
+    },
+    "rounds": {
+      "wk40_r0_kickoff": {
+        "round_id": "wk40_r0_kickoff",
+        "status": "done",
+        "pm_ref": "sprints['wk40-refactor-stage5-cleanup'].rounds['wk40_r0_kickoff']",
+        "what_i_changed": {
+          "files": [
+            "tools/archive/root_wk40_stage5/README.md",
+            "tools/archive/root_wk40_stage5/*.py — 7 pm_*.py, 4 extract_*.py, get_agent_responses.py, test_llm.py (moved from repo root)",
+            "Deleted root: scratch_debug_glb.py, scratch_debug_glb_2.py … _6.py"
+          ],
+          "summary": "Root cleanup per master plan Stage 5 / WK40 plan. Grep found no README/docs references to removed paths; no code imported these modules. .cursor/plans/agent_logs/pm_*.py left untouched."
+        },
+        "how_to_test": [
+          "python -m pytest tests/",
+          "python tools/validate_assets.py --report",
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "pytest": {
+            "command": "python -m pytest tests/ -q",
+            "exit_code": 0,
+            "status": "PASS"
+          },
+          "validate_assets": {
+            "command": "python tools/validate_assets.py --report",
+            "exit_code": 0,
+            "status": "PASS",
+            "note": "0 errors (report mode)"
+          },
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": []
+      }
+    }
   }
 }

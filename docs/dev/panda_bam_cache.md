@@ -24,7 +24,7 @@ python tools/prewarm_panda_bam_cache.py --environment
 
 That loads all `.obj` files under `assets/models/environment/` once (offscreen) and writes their `.bam` caches under `models_compressed/`.
 
-After this, `python main.py --renderer ursina` should start faster and the cache-miss noise should disappear for those assets.
+After this, `python main.py` (default is Ursina) or `python main.py --renderer ursina` should start faster and the cache-miss noise should disappear for those assets.
 
 ## Tree brightness note (WK32 r4)
 
@@ -33,7 +33,7 @@ You can locally retune the tree-only multiplier without code changes:
 
 ```bash
 set KINGDOM_ENV_TREE_COLOR_MULT=0.65
-python main.py --renderer ursina --no-llm
+python main.py --no-llm
 ```
 
 

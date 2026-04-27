@@ -46,9 +46,9 @@ def parse_args():
     parser.add_argument(
         "--renderer",
         type=str,
-        default="pygame",
+        default="ursina",
         choices=["pygame", "ursina"],
-        help="Which rendering frontend to use"
+        help="Rendering frontend (default: ursina / 3D; use pygame for 2D)",
     )
     return parser.parse_args()
 

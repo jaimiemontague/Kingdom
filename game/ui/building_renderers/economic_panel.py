@@ -11,9 +11,9 @@ from game.ui.widgets import Button, HPBar
 
 def _request_live_hud_upload_for_ursina(panel) -> None:
     """Ursina skips GPU HUD refresh when a row-sampled CRC is unchanged; thin progress bars often miss samples."""
-    eng = getattr(panel, "engine", None)
-    if eng is not None:
-        setattr(eng, "_ursina_hud_force_upload", True)
+    fn = getattr(panel, "on_request_ursina_hud_upload", None)
+    if callable(fn):
+        fn()
 
 
 class EconomicPanelRenderer:

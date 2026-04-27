@@ -6,8 +6,8 @@ Used by F12 in the Ursina viewer. Default: ``docs/screenshots/ursina_<timestamp>
 Optional environment (PowerShell examples)::
 
     $env:KINGDOM_SCREENSHOT_SUBDIR = "wk32_nature"
-    python main.py --renderer ursina
-    # F12 → docs/screenshots/wk32_nature/ursina_<timestamp>.png
+    python main.py
+    # (default renderer is Ursina) F12 → docs/screenshots/wk32_nature/ursina_<timestamp>.png
 
     $env:KINGDOM_SCREENSHOT_STEM = "meadow"
     # F12 → .../meadow_<timestamp>.png

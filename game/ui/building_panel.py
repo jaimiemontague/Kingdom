@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pygame
 
 from config import COLOR_GREEN, COLOR_RED, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
@@ -12,7 +14,13 @@ from game.ui.widgets import Button, NineSlice
 class BuildingPanel:
     """Panel that shows detailed building information when a building is selected."""
 
-    def __init__(self, screen_width: int, screen_height: int) -> None:
+    def __init__(
+        self,
+        screen_width: int,
+        screen_height: int,
+        *,
+        on_request_ursina_hud_upload: Callable[[], None] | None = None,
+    ) -> None:
         self.screen_width = int(screen_width)
         self.screen_height = int(screen_height)
         self.visible = False
@@ -58,8 +66,9 @@ class BuildingPanel:
             (60, 179, 113),
             (255, 140, 0),
         ]
-        # Set by GameEngine after init — used to flag Ursina HUD GPU upload for thin animated bars.
-        self.engine = None
+        # Optional: wired by GameEngine (Ursina) so economic renderers can request a full HUD surface re-upload
+        # for thin progress bars that row-sampling may miss; no engine reference is stored.
+        self.on_request_ursina_hud_upload = on_request_ursina_hud_upload
 
     def select_building(self, building, heroes: list) -> None:
         """Select a building to show details for."""

@@ -57,7 +57,7 @@ Follow these steps in order every time you receive a task.
 13. **Report back** with a concise summary: what you did, what passed, what's left.
 
 14. **Human verification — exact commands (required)**  
-    Whenever you tell Jaimie (the human) to run a **manual** test, build, or game mode — in chat, in your agent log `how_to_test`, or in `recommended_next_actions` — you MUST include the **exact terminal command(s)** as a copy-paste block, **as if run from the project root** (`Kingdom/`). Do not say only “run the smoke suite” or “launch Ursina”; give e.g. `python tools/qa_smoke.py --quick` or `python main.py --renderer ursina`. If env vars or flags matter, include them on the same line or immediately below.
+    Whenever you tell Jaimie (the human) to run a **manual** test, build, or game mode — in chat, in your agent log `how_to_test`, or in `recommended_next_actions` — you MUST include the **exact terminal command(s)** as a copy-paste block, **as if run from the project root** (`Kingdom/`). Do not say only “run the smoke suite” or “launch the game”; give e.g. `python tools/qa_smoke.py --quick` or `python main.py` (default 3D Ursina) or `python main.py --renderer pygame` when 2D must be verified. If env vars or flags matter, include them on the same line or immediately below.
 
 ## Common Mistakes to Avoid
 

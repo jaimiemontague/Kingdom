@@ -1315,6 +1315,132 @@
         ],
         "rationale": "Stage 4 is engine/render extraction; 03 only implements. 11 runs gates. Others silent unless escalated."
       }
+    },
+    "wk40-refactor-stage5-cleanup": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
+        "plan_index_ref": ".cursor/plans/wk40_stage5_cleanup_dod.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "master_plan_section": "Stage 5: Cleanup, Consolidation, and Definition of Done (L896+)",
+        "status": "active",
+        "created_utc": "2026-04-28T12:00:00Z",
+        "notes": "WK40 kickoff: post-WK39 Stage 5. Parallel Wave1 = Agent 12 (root/tools archive) + Agent 01 (02-project-layout.mdc); Wave2 = Agent 11 full gates; Wave3 = Jaimie manual + optional Agent 13 CHANGELOG if Jaimie approves version.",
+        "pm_jaimie_send_order": [
+          "WAVE 1 (run in parallel — start both at once): Agent 12 (LOW intelligence) + Agent 01 (LOW intelligence). 12 owns root script archive/delete; 01 owns .cursor/rules/02-project-layout.mdc. No file overlap; merge to main branch or coordinate if both touch same files (they should not).",
+          "WAVE 2 (after Wave 1 both report done, or PRs merged): Agent 11 (LOW intelligence) — run determinism, pytest, qa_smoke, validate_assets; review Global DoD (master plan L925–939); log evidence.",
+          "WAVE 3 (human, after Agent 11 PASS): Jaimie — manual smokes: python main.py --no-llm (10m, default Ursina); python main.py --renderer pygame --no-llm (10m, 2D); python main.py --provider mock (5m) from repo root in PowerShell.",
+          "WAVE 3b (optional): Agent 13 (LOW) — CHANGELOG / patch-note draft only if Jaimie approves a version bump. No version number without Jaimie."
+        ],
+        "pm_tech_debt": [
+          {
+            "id": "REFACTOR-TECH-001",
+            "title": "Decouple BuildingPanel from raw GameEngine reference (building_panel.engine + economic_panel getattr)",
+            "severity": "polish",
+            "status": "done",
+            "closed_note": "2026-04-28: BuildingPanel takes on_request_ursina_hud_upload=; GameEngine._request_ursina_hud_upload; economic_panel uses panel.on_request_ursina_hud_upload",
+            "owner_suggested": { "primary": "08_UX_UI", "consult": "03_TechnicalDirector" },
+            "rationale": "Assessor: game/engine.py sets self.building_panel.engine = self. game/ui/building_renderers/economic_panel._request_live_hud_upload_for_ursina uses getattr(panel, 'engine', None) to set _ursina_hud_force_upload. Replace with explicit callback or small interface on BuildingPanel, not a full engine reference.",
+            "files_hint": [ "game/engine.py", "game/ui/building_panel.py", "game/ui/building_renderers/economic_panel.py" ],
+            "plan_ref": ".cursor/plans/wk40_post_assessor_tidy_prompts.md"
+          }
+        ]
+      },
+      "rounds": {
+        "wk40_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk40_r0_kickoff",
+            "build_target": "Root_cleanup_ProjectLayout_DoD_Gates",
+            "created_utc": "2026-04-28T12:00:00Z"
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "WK40 Stage 5: cleanup, updated project layout rules, final gates + manual smokes, optional CHANGELOG. Escalate sim/renderer gaps to Agent 03; do not expand scope into new features."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "done",
+              "next_action": "Workstream B complete 2026-04-28: .cursor/rules/02-project-layout.mdc rewritten with SimEngine, GameEngine-as-PresentationLayer, SimStateSnapshot, PygameRenderer/Ursina, GameCommands, master plan + engine_access_inventory pointers; run list includes --renderer ursina."
+            },
+            "11": {
+              "status": "blocked_until_wave1",
+              "next_action": "After 12+01 done: run full stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Jaimie manual list; document Global DoD review in agent_11 log."
+            },
+            "12": {
+              "status": "ready",
+              "next_action": "Task 5-A: root scratch/pm_*/extract_*/get_agent_responses.py/test_llm per plan; do not move scripts under .cursor/plans/agent_logs/; run pytest + validate_assets after; log."
+            },
+            "13": {
+              "status": "optional",
+              "next_action": "Only if Jaimie requests: CHANGELOG prose; no version bump without Jaimie."
+            }
+          },
+          "pm_send_list_minimal": {
+            "rationale": "WAVE1: 12 and 01 touch disjoint paths (root/tools vs .cursor/rules) — run in parallel for speed. WAVE2: 11 must run after repo reflects both. WAVE3: human; 13 optional. Agents 02–10, 14–15 silent unless PM escalates.",
+            "intelligence_by_agent": {
+              "12": "low",
+              "01": "low",
+              "11": "low",
+              "13": "low"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "14",
+              "15"
+            ],
+            "waves": [
+              {
+                "wave": 1,
+                "parallel": true,
+                "note": "Start two Cursor chats: paste universal prompt; assign Agent 12 in one, Agent 01 in the other.",
+                "agents": [
+                  { "id": "12", "intel": "low" },
+                  { "id": "01", "intel": "low" }
+                ]
+              },
+              {
+                "wave": 2,
+                "parallel": false,
+                "depends_on": "wave1_12_01_merged_or_both_report_done",
+                "agents": [ { "id": "11", "intel": "low" } ]
+              },
+              {
+                "wave": 3,
+                "parallel": false,
+                "depends_on": "wave2_11_gates_PASS",
+                "note": "Jaimie human manual smokes (see sprint_meta.pm_jaimie_send_order).",
+                "human": "Jaimie"
+              },
+              {
+                "wave": "3b_optional",
+                "parallel": false,
+                "depends_on": "Jaimie_approval",
+                "agents": [ { "id": "13", "intel": "low" } ]
+              }
+            ]
+          },
+          "pm_agent_prompts": {
+            "01": "WK40 Stage 5 (PM, LOW): You own Workstream B in .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md. Update ONLY .cursor/rules/02-project-layout.mdc (and at most a one-line cross-link elsewhere if the plan says so) to document SimEngine + PresentationLayer, SimStateSnapshot / build_snapshot(), PygameRenderer vs ursina_renderer, main.py / ursina_app wiring, and how to run with --renderer ursina. Link docs/refactor/engine_access_inventory.md and point to master_plan_architecture_refactor.md for Stage history. When done: append entry to this PM log file (agent_01) under the current round if needed, and/or .cursor/plans/agent_logs/ agent_01 if your studio log lives there. No production game code. Optional: python tools/qa_smoke.py --quick for sanity (not required for doc-only).",
+            "12": "WK40 Stage 5 (Tools, LOW): You own Workstream A in .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md (Task 5-A from master plan Stage 5). Archive or delete root scratch_debug_glb*.py, root pm_*.py, root extract_*.py, get_agent_responses.py; move or remove test_llm.py per plan. Do NOT delete or move scripts that live only under .cursor/plans/agent_logs/ — those are out of scope. Grep README/docs for stale references. When done: python -m pytest tests/ ; python tools/validate_assets.py --report ; at minimum your changes should allow python tools/qa_smoke.py --quick to still PASS. Update agent_12 log with files, commands, exit codes.",
+            "11": "WK40 Stage 5 (QA, LOW): Start AFTER Agent 12 and Agent 01 have finished and changes are in your workspace/branch. Workstream C: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report (0 errors). Review Global Definition of Done checklist in .cursor/plans/master_plan_architecture_refactor.md L925–939; if something is not satisfied, file in agent_11 log with owner Agent 03 vs PM. Prepare exact manual commands for Jaimie (already in plan). Log all evidence.",
+            "13": "WK40 Stage 5 (optional, Marketing/Ops, LOW): Only if Jaimie explicitly wants release notes. Draft a short player-facing or internal-facing CHANGELOG entry for this refactor-cleanup tranche. Do not bump version or edit CHANGELOG.md until Jaimie approves. Coordinate with plan Workstream D."
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint wk40-refactor-stage5-cleanup (Architecture Refactor Stage 5: Cleanup, consolidation, Definition of Done), round wk40_r0_kickoff.\\n\\n1) Read the sprint plan FIRST: .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md (short index: .cursor/plans/wk40_stage5_cleanup_dod.plan.md).\\n2) Read the master plan Stage 5: .cursor/plans/master_plan_architecture_refactor.md (approx. L896+, Task 5-A through Global DoD).\\n3) Read the PM Executive Producer log for this sprint: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\\\"wk40-refactor-stage5-cleanup\\\"] -> rounds[\\\"wk40_r0_kickoff\\\"] -> pm_agent_prompts[\\\"YOUR_NUMBER\\\"] and pm_next_actions_by_agent.\\n4) Follow Jaimie's send order in that sprint block (sprint_meta.pm_jaimie_send_order). Wave 1: Agents 12 and 01 in parallel. Wave 2: Agent 11. Wave 3: Jaimie manual. Wave 3b optional: Agent 13.\\n5) When done: update your own agent log JSON; run the gates in your numbered prompt; report to Jaimie: files, commands, exit codes, blockers.\\n\\nOne line: root script cleanup + 02-project-layout update + final gates and manual smokes; no new gameplay or renderer refactors in this sprint unless a gate requires a hotfix (escalate to PM / Agent 03).",
+      "pm_send_list_minimal": {
+        "rationale": "WAVE1 parallel: 12 (low) + 01 (low), disjoint file ownership. WAVE2: 11 (low) after both land. WAVE3: Jaimie human. 3b optional: 13 (low). Others silent.",
+        "intelligence_by_agent": { "12": "low", "01": "low", "11": "low", "13": "low" },
+        "do_not_send": [ "02", "03", "04", "05", "06", "07", "08", "09", "10", "14", "15" ],
+        "kickoff": "Open TWO chats in WAVE1 (same prompt): Agent 12 in one, Agent 01 in the other. When BOTH done, one chat Agent 11. Then Jaimie does manual. Optional: Agent 13 for CHANGELOG with Jaimie OK."
+      }
     }
   }
 }

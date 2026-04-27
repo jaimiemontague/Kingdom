@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.0 — The Game Goes 3D** (see `config.py`).
+This repository is currently stamped as **Prototype v1.5.1 — 3D Native with major Refactor** (see `config.py`).
 
 ## Overview
 
@@ -53,11 +53,11 @@ OPENAI_MODEL=gpt-5-nano
 ## Running the Game
 
 ```bash
-# Run with mock AI (no API key needed)
+# Run with mock AI (no API key needed) — default is 3D Ursina
 python main.py
 
-# Run the 3D Ursina renderer (recommended in v1.5)
-python main.py --renderer ursina
+# 2D pygame presentation (explicit; for headless-style dev or 2D-only checks)
+python main.py --renderer pygame
 
 # Run with OpenAI (uses OPENAI_API_KEY/OPENAI_MODEL from .env)
 python main.py --provider openai

@@ -6,50 +6,63 @@ alwaysApply: true
 
 # Project Layout
 
+## Architecture (refactor post–v1.5)
+
+- **`SimEngine`** (`game/sim_engine.py`) — pure simulation: world, systems, entities for the running match, `update()`, `get_game_state()`, `build_snapshot()` into a read-only **`SimStateSnapshot`** (`game/sim/snapshot.py`).
+- **`GameEngine`** (`game/engine.py`) — presentation orchestration (the refactor’s **PresentationLayer** role; the class name stayed `GameEngine` for compatibility). It owns pygame init (when not headless), camera, **HUD/panels/menus**, audio, VFX, and composes `self.sim: SimEngine`. The pygame **world/entity** draw path delegates to **`PygameRenderer`** using the snapshot; HUD and chrome stay here.
+- **`InputHandler`** uses **`GameCommands`** (`game/game_commands.py`), not a raw `GameEngine` type — default wiring is `EngineBackedGameCommands`.
+- **2D / pygame** — `game/graphics/pygame_renderer.py` consumes `SimStateSnapshot` per frame for terrain → units → fog-style pipeline (see `GameEngine` and `docs/refactor/engine_access_inventory.md`).
+- **3D / Ursina** — `game/graphics/ursina_app.py` runs the windowed loop; `game/graphics/ursina_renderer.py` renders from snapshots (engine bridge access tracked in `docs/refactor/engine_access_inventory.md`).
+- **Full refactor map & stages:** `.cursor/plans/master_plan_architecture_refactor.md`
+
+## Repository tree (high level)
+
 ```
 Kingdom/
-├── main.py                          # Entry point: python main.py
-├── config.py                        # All tuning constants, costs, sizes, colors
-├── requirements.txt                 # pygame, openai, anthropic, google-generativeai, httpx, python-dotenv
-├── CHANGELOG.md                     # Version history (update on release only)
+├── main.py                          # Entry: default Ursina; --renderer pygame for 2D
+├── config.py                        # Tuning constants, costs, sizes, colors
+├── requirements.txt
+├── CHANGELOG.md                     # Version history (update on release only; Jaimie/Agent 13)
 │
 ├── game/
-│   ├── engine.py                    # Main game loop, input, coordination
+│   ├── sim_engine.py                # SimEngine — sim core, build_snapshot, get_game_state
+│   ├── engine.py                    # GameEngine (PresentationLayer) — loop, camera, UI, VFX, delegates sim to self.sim
+│   ├── game_commands.py             # GameCommands protocol; EngineBackedGameCommands (default)
+│   ├── input_handler.py             # Uses GameCommands only (no direct GameEngine ref)
 │   ├── world.py                     # Tile map, fog of war
-│   ├── entities/                    # Hero, Enemy, Building, Peasant, TaxCollector, Guard, Lair
-│   ├── systems/                     # Combat, Economy, Bounty, Spawner, Lair, Buffs, Pathfinding
+│   ├── entities/                    # Hero, Enemy, Building, Peasant, TaxCollector, Guard, Lair, …
+│   ├── systems/                     # Combat, Economy, Bounty, Spawner, Lair, Buffs, Pathfinding, …
 │   ├── ui/                          # HUD, panels, menus, widgets, theme
-│   ├── graphics/                    # Sprite generators, animation, VFX, font cache
+│   ├── graphics/                    # PygameRenderer, UrsinaRenderer, UrsinaApp, sprites, VFX, font cache, …
 │   ├── audio/                       # AudioSystem + event contract
-│   └── sim/                         # Timebase, determinism, contracts, guardrails
+│   └── sim/                         # Timebase, determinism, contracts, SimStateSnapshot
 │
 ├── ai/
 │   ├── basic_ai.py                  # Hero AI decision loop (no-LLM and LLM paths)
 │   └── providers/                   # LLM provider adapters (openai, claude, gemini, grok, mock)
 │
 ├── assets/
-│   ├── sprites/                     # Pixel art: heroes/, enemies/, buildings/, workers/
+│   ├── sprites/                     # Pixel art (2D)
+│   ├── models/                      # 3D (.glb / kitbash); prefabs under assets/prefabs/
 │   ├── audio/sfx/                   # Sound effects (.wav/.ogg)
 │   ├── audio/ambient/               # Ambient loops (.ogg)
 │   └── ui/                          # UI skin assets (9-slice, icons)
 │
 ├── tools/
-│   ├── qa_smoke.py                  # QA gate: python tools/qa_smoke.py --quick
-│   ├── validate_assets.py           # Asset gate: python tools/validate_assets.py --report
-│   ├── determinism_guard.py         # Static determinism checker
-│   ├── observe_sync.py              # Headless behavior observer
-│   ├── capture_screenshots.py       # Deterministic screenshot runner
-│   └── assets_manifest.json         # Expected assets list
+│   ├── qa_smoke.py                  # Gate: python tools/qa_smoke.py --quick
+│   ├── validate_assets.py          # python tools/validate_assets.py --report
+│   ├── determinism_guard.py
+│   ├── observe_sync.py
+│   ├── capture_screenshots.py
+│   └── assets_manifest.json
 │
 ├── docs/
-│   └── screenshots/                 # Baseline + manual screenshots
+│   ├── screenshots/                 # Baselines
+│   └── refactor/                    # engine access inventory, refactor notes
 │
 └── .cursor/
-    ├── rules/                       # THIS FOLDER — SOPs for all agents
-    └── plans/
-        ├── studio-agent-cards_*.plan.md   # Full agent card definitions
-        ├── agent_logs/                     # Per-agent JSON logs (1 file per agent)
-        └── *.plan.md                       # Sprint plan files
+    ├── rules/                       # Studio SOPs
+    └── plans/                       # Sprint + master plans; agent_logs/ per–agent JSON
 ```
 
 ## Key constants location
@@ -58,9 +71,13 @@ All game tuning lives in `config.py`: costs, sizes, speeds, HP values, spawn rat
 
 ## How to run the game
 
+```powershell
+python main.py
+python main.py --no-llm
+python main.py --provider mock
+python main.py --provider openai
+python main.py --renderer pygame
+python main.py --renderer pygame --no-llm
 ```
-python main.py                    # Default (mock AI, borderless window)
-python main.py --no-llm           # No AI decisions (basic patrol only)
-python main.py --provider mock    # Mock LLM provider (deterministic)
-python main.py --provider openai  # Real LLM (needs .env with API key)
-```
+
+Default renderer is **Ursina (3D)**. Use `--renderer pygame` for the 2D pygame + `GameEngine` loop (see `main.py`).

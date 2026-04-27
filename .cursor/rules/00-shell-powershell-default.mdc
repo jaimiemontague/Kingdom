@@ -21,7 +21,7 @@ This repo is developed on **Windows PowerShell**. When providing commands or scr
 
 ```powershell
 $env:KINGDOM_URSINA_PREFAB_TEST = "1"
-python main.py --renderer ursina --no-llm
+python main.py --no-llm
 ```
 
 ### Stop on failure

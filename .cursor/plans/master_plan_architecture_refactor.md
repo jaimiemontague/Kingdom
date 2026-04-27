@@ -325,7 +325,7 @@ The inventory from the exploration (to be confirmed by Agent 12):
 - `UrsinaRenderer.update(snapshot)` takes a `SimStateSnapshot` instead of reading `self.engine`
 - `self.engine` does not appear anywhere in `ursina_renderer.py`
 - All existing tests pass; `qa_smoke --quick` PASS
-- Manual verification: `python main.py --renderer ursina --no-llm` looks identical to pre-refactor
+- Manual verification: `python main.py --no-llm` (default Ursina) looks identical to pre-refactor
 
 ### Architecture Options for the Snapshot
 
@@ -619,7 +619,7 @@ def test_engine_build_snapshot_returns_valid_snapshot():
 - `PresentationLayer` wraps `SimEngine` and adds camera/display/UI/render
 - The old `GameEngine` name still works (as an alias or as `PresentationLayer` itself) for backward compatibility
 - All Stage 0 tests pass; `qa_smoke --quick` PASS
-- Manual verification: both `python main.py` and `python main.py --renderer ursina --no-llm` work
+- Manual verification: `python main.py --no-llm` (default Ursina) and `python main.py --renderer pygame --no-llm` (2D) both work
 
 ### Architecture Options for the Split
 
@@ -916,8 +916,8 @@ Run the complete gate stack:
 1. `python tools/determinism_guard.py` — PASS
 2. `python tools/qa_smoke.py --quick` — PASS (includes pytest + headless scenarios)
 3. `python tools/validate_assets.py --report` — 0 errors
-4. Manual smoke: `python main.py --no-llm` for 10 minutes
-5. Manual smoke: `python main.py --renderer ursina --no-llm` for 10 minutes
+4. Manual smoke: `python main.py --no-llm` for 10 minutes (default Ursina)
+5. Manual smoke: `python main.py --renderer pygame --no-llm` for 10 minutes (2D path)
 6. Manual smoke: `python main.py --provider mock` for 5 minutes
 
 ### Global Definition of Done for the Entire Refactor
@@ -931,8 +931,8 @@ The refactor is complete when ALL of the following are true:
 - [ ] Root directory has no scratch/debug scripts
 - [ ] `python tools/qa_smoke.py --quick` PASS
 - [ ] `python tools/validate_assets.py --report` 0 errors
-- [ ] `python main.py --no-llm` runs 10 minutes without crashes
-- [ ] `python main.py --renderer ursina --no-llm` runs 10 minutes without crashes
+- [ ] `python main.py --no-llm` runs 10 minutes without crashes (default Ursina)
+- [ ] `python main.py --renderer pygame --no-llm` runs 10 minutes without crashes (2D)
 - [ ] `tests/test_engine.py` has 5+ integration tests covering headless, headless_ui, tick, and snapshot
 - [ ] `tests/test_renderer_snapshot_contract.py` verifies snapshot immutability and required fields
 - [ ] Agent onboarding rules updated to reflect new architecture

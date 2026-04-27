@@ -40,7 +40,7 @@ Must match master plan Stage 3:
 - `InputHandler.__init__` **does not** take `GameEngine`; it takes a **`GameCommands`** (Protocol-typed) dependency.
 - All former `self.engine` / `engine` usage in `input_handler.py` goes through **`self.commands`** (or equivalent) — **no** `from game.engine import GameEngine` except **`TYPE_CHECKING`** if still needed for annotations.
 - **Gates:** `python -m pytest tests/` PASS; `python tools/qa_smoke.py --quick` PASS; `python tools/validate_assets.py --report` exit 0 (warnings acceptable per recent baseline).
-- **Manual:** hotkeys, mouse, panels in **pygame default** and **`python main.py --renderer ursina --no-llm`** (and spot-check `--provider mock` if any input path touches LLM UI). Use explicit PowerShell commands in PM hub / Jaimie instructions per studio rules.
+- **Manual:** hotkeys, mouse, panels in **`python main.py --renderer pygame --no-llm`** (2D) and **`python main.py --no-llm`** (default Ursina) (and spot-check `--provider mock` if any input path touches LLM UI). Use explicit PowerShell commands in PM hub / Jaimie instructions per studio rules.
 
 ## Architecture (locked: Option A)
 

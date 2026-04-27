@@ -16,7 +16,7 @@
 - `InputHandler.__init__` takes **`GameCommands`**, not `GameEngine`.
 - [game/input_handler.py](../../game/input_handler.py) uses **`self.commands` only** — no runtime import of `GameEngine` except `TYPE_CHECKING` if needed.
 - **Gates:** `python -m pytest tests/` PASS; `python tools/qa_smoke.py --quick` PASS; `python tools/validate_assets.py --report` exit 0 (warns OK).
-- **Manual:** default pygame + `python main.py --renderer ursina --no-llm` + spot `python main.py --provider mock` as needed.
+- **Manual:** default Ursina + `python main.py --renderer pygame --no-llm` (2D) + spot `python main.py --provider mock` as needed.
 
 ## Architecture (Option A — locked)
 
