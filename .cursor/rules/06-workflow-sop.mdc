@@ -17,6 +17,9 @@ Follow these steps in order every time you receive a task.
 2. **Read your own log** to understand what you did last:
    `.cursor/plans/agent_logs/agent_NN_YourRole.json`
 
+   **Important:** Only read the **current sprint** and (if needed) the **last round** in that sprint. If you need deep history, consult the archive:
+   `.cursor/plans/agent_logs/archive/agent_NN_YourRole.archive.json`
+
 3. **Understand the scope**: What files are you expected to touch? What is the acceptance criteria?
 
 ## Phase 2: Investigate (read before you write)

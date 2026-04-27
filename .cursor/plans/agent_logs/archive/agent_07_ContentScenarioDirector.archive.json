@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "agent": {
+    "id": "07",
+    "name": "ContentScenarioDirector"
+  },
+  "notes": [
+    "Archive file created by tools/roll_agent_logs.py.",
+    "Contains older sprints moved verbatim from the rolling log to reduce context bloat.",
+    "This file may be empty until the rolling log exceeds the keep window.",
+    "This file is append-only: do not rewrite old rounds."
+  ],
+  "sprints": {}
+}

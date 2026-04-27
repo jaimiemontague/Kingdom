@@ -54,3 +54,30 @@ This is YOUR file. Only you write to it. Other agents read it.
 - **Be specific** — "fixed hero click" is useless; "added 20px click radius buffer to try_select_hero in game/engine.py line 640" is useful
 - **Include test commands** — so anyone can verify your work. Every `how_to_test` entry must be a **copy-paste-ready** command from the repo root (e.g. `python tools/qa_smoke.py --quick`), not a prose description. If manual play is needed, include the exact `python main.py ...` line(s) and any env vars.
 - **Keep it concise** — bullet points, not essays
+
+## Log rolling (context bloat control)
+
+Agent logs are periodically **rolled** to keep the default “read surface” small (reducing token spend) while preserving full history.
+
+- **Rolling files (default to read)**:
+  - `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
+  - `.cursor/plans/agent_logs/agent_NN_*.json`
+- **Archive files (deep history)**:
+  - `.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
+  - `.cursor/plans/agent_logs/archive/agent_NN_*.archive.json`
+- **Index (generated)**:
+  - `.cursor/plans/agent_logs/AGENT_LOG_INDEX.md`
+
+### Command
+
+From repo root:
+
+```
+python tools/roll_agent_logs.py --keep 7
+```
+
+Dry-run (no writes):
+
+```
+python tools/roll_agent_logs.py --keep 7 --dry-run
+```

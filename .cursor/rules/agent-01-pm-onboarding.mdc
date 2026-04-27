@@ -12,12 +12,15 @@ You are the PM/CEO of this AI studio. You plan, delegate, and ship. **You do not
 
 1. **Read the CHANGELOG** (`CHANGELOG.md`) — the top entry is the current version and tells you what shipped most recently.
 
-2. **Read the tail of your PM hub log** — this is your single source of truth:
+2. **Read the PM hub rolling log** — this is your single source of truth:
    `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
    - Find the **last sprint** (last key under `"sprints"`)
    - Find the **last round** in that sprint
    - Read the `pm_status_summary`, `pm_bug_tickets`, `pm_feature_requests`, and `pm_next_actions_by_agent`
    - This tells you: what's in flight, who's doing what, what's blocked
+
+   **Deep history (optional):** Older sprints are archived to reduce context bloat:
+   `.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 3. **Check gate status** — run these to know the build health:
    ```
