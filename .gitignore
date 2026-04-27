@@ -61,3 +61,6 @@ saves/
 # Autonomous agent artifacts (generated)
 .cursor/plans/agent_logs/*_AUTO.json
 
+# Agent log rolling backups (generated)
+.cursor/plans/agent_logs/*.bak_*
+
