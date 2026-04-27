@@ -217,6 +217,7 @@ BUILDING_COSTS = {
     "inn": 150,
     "trading_post": 250,
     # Phase 2: Temples
+    "temple": 400,
     "temple_agrela": 400,
     "temple_dauros": 400,
     "temple_fervus": 400,
@@ -225,17 +226,17 @@ BUILDING_COSTS = {
     "temple_helia": 400,
     "temple_lunord": 400,
     # Phase 3: Non-Human Dwellings
-    "gnome_hovel": 300,
-    "elven_bungalow": 350,
-    "dwarven_settlement": 300,
+    "gnome_hovel": 0,  # WK34 REMOVED
+    "elven_bungalow": 0,  # WK34 REMOVED
+    "dwarven_settlement": 0,  # WK34 REMOVED
     # Phase 4: Defensive Structures
-    "guardhouse": 200,
-    "ballista_tower": 300,
-    "wizard_tower": 500,
+    "guardhouse": 300,
+    "ballista_tower": 0,  # WK34 REMOVED
+    "wizard_tower": 0,  # WK34 REMOVED
     # Phase 5: Special Buildings
-    "fairgrounds": 400,
-    "library": 350,
-    "royal_gardens": 250,
+    "fairgrounds": 0,  # WK34 REMOVED
+    "library": 0,  # WK34 REMOVED
+    "royal_gardens": 0,  # WK34 REMOVED
     # Phase 6: Palace
     "palace": 0,
     # Neutral auto-spawn buildings (not player-placeable)
@@ -256,6 +257,7 @@ BUILDING_SIZES = {
     "inn": (3, 2),
     "trading_post": (2, 2),
     # Phase 2: Temples
+    "temple": (3, 4),
     "temple_agrela": (3, 3),
     "temple_dauros": (3, 3),
     "temple_fervus": (3, 3),
@@ -301,6 +303,7 @@ BUILDING_COLORS = {
     "inn": (160, 82, 45),  # Sienna
     "trading_post": (255, 140, 0),  # Dark orange
     # Phase 2: Temples
+    "temple": (220, 200, 150),
     "temple_agrela": (255, 192, 203),  # Pink (healing)
     "temple_dauros": (255, 255, 224),  # Light yellow (monks)
     "temple_fervus": (50, 205, 50),  # Lime green (nature)
@@ -344,6 +347,7 @@ BUILDING_CONSTRAINTS = {
 # Building prerequisites (required buildings)
 BUILDING_PREREQUISITES = {
     "ballista_tower": ["dwarven_settlement"],
+    "temple": [],
 }
 
 # Inn economy (WK18): entry and loiter fees; heroes with gold < 1 are ejected
@@ -361,6 +365,7 @@ BUILDING_MAX_OCCUPANTS = {
     "blacksmith": 2,
     "inn": 6,
     "trading_post": 0,
+    "temple": 4,
     "temple_agrela": 4,
     "temple_dauros": 4,
     "temple_fervus": 4,

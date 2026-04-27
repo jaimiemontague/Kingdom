@@ -164,6 +164,15 @@ class NeutralBuildingSystem(GameSystem):
                 return building
         return None
 
+    def _find_marketplace(self, buildings: list) -> object | None:
+        """Return the first constructed marketplace, or None."""
+        for b in buildings or []:
+            if _building_type_str(getattr(b, "building_type", None)) != "marketplace":
+                continue
+            if getattr(b, "is_constructed", False):
+                return b
+        return None
+
     def update(self, ctx: SystemContext, dt: float) -> None:
         """Protocol update hook for neutral building simulation."""
         castle = self._find_castle(ctx.buildings)
@@ -184,7 +193,8 @@ class NeutralBuildingSystem(GameSystem):
 
         hero_count = len([h for h in (heroes or []) if getattr(h, "is_alive", False)])
         want_houses = max(0, hero_count)
-        want_farms = max(0, hero_count)
+        # WK34: farms at half rate to prioritize houses.
+        want_farms = max(0, hero_count // 2)
         want_food = max(0, hero_count // 3)
 
         cur_houses = self._count(buildings, "house")
@@ -213,14 +223,39 @@ class NeutralBuildingSystem(GameSystem):
             return
 
         if cur_food < want_food:
-            spot = self._find_spot(
-                castle=castle,
-                buildings=buildings,
-                size=(1, 1),
-                min_r=3,
-                max_r=18,
-                shuffle_within_ring=True,
-            )
+            market = self._find_marketplace(buildings)
+            spot = None
+            # WK34: first 2 food stands try to spawn very near the marketplace (2–3 tiles).
+            if cur_food < 2 and market is not None:
+                market_gx = int(getattr(market, "grid_x", 0))
+                market_gy = int(getattr(market, "grid_y", 0))
+                mw, mh = getattr(market, "size", (1, 1))
+                market_cx = market_gx + int(mw) // 2
+                market_cy = market_gy + int(mh) // 2
+
+                class _MarketProxy:
+                    grid_x = market_cx
+                    grid_y = market_cy
+                    size = (1, 1)
+
+                spot = self._find_spot(
+                    castle=_MarketProxy(),
+                    buildings=buildings,
+                    size=(1, 1),
+                    min_r=2,
+                    max_r=3,
+                    shuffle_within_ring=True,
+                )
+
+            if spot is None:
+                spot = self._find_spot(
+                    castle=castle,
+                    buildings=buildings,
+                    size=(1, 1),
+                    min_r=3,
+                    max_r=18,
+                    shuffle_within_ring=True,
+                )
             if spot:
                 buildings.append(FoodStand(*spot))
             return

@@ -340,6 +340,68 @@
         }
       }
     }
+    ,
+    "wk34-final-3d-model-pass-pre-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "WK34: Temple rename to canonical temple + cleric hiring, neutral spawn rebalance, marketplace loitering fix, remove deprecated buildings from build roster."
+      },
+      "rounds": {
+        "wk34_r1_impl": {
+          "sprint_id": "wk34-final-3d-model-pass-pre-v1-5",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk34_r1_impl",
+          "round_meta": {
+            "build_target": "pre-v1.5",
+            "sent_at_local": "2026-04-26T20:51:00"
+          },
+          "prompt_text": "Implement the Agent 07 block from the WK34 plan (simulation/logic changes).",
+          "response": {
+            "received_at_local": "2026-04-26T20:51:00",
+            "status": "complete",
+            "what_i_changed": [
+              "Added canonical building type `temple` and Temple building entity; wired BuildingFactory + entity exports so placement works.",
+              "Added `HeroClass.CLERIC` and enabled hiring Clerics from the Temple via `GameEngine.try_hire_hero()`.",
+              "Neutral spawns: farms now spawn at half rate; first 2 food stands attempt to spawn within 2–3 tiles of a constructed Marketplace.",
+              "Reduced marketplace/blacksmith shopping task duration bands to reduce loitering.",
+              "Removed deprecated buildings from player build roster: stripped hotkeys + removed from Build Catalog and Build List panels; set their `BUILDING_COSTS` to 0 so they stay non-buildable."
+            ],
+            "files_touched": [
+              "game/types.py",
+              "game/entities/buildings/types.py",
+              "game/entities/buildings/temples.py",
+              "game/entities/buildings/__init__.py",
+              "game/entities/__init__.py",
+              "game/building_factory.py",
+              "config.py",
+              "game/input_handler.py",
+              "game/ui/build_catalog_panel.py",
+              "game/ui/building_list_panel.py",
+              "game/systems/neutral_buildings.py",
+              "ai/behaviors/task_durations.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm (manual spot check: build Temple via T, hire Cleric via H, confirm farms are rarer than houses, food stands spawn near Marketplace, removed hotkeys do nothing)"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick → exit_code=0 (PASS)",
+              "validate_assets": "python tools/validate_assets.py --report → exit_code=0 (PASS; warnings about missing 3D unit/building models are pre-existing and non-blocking)"
+            },
+            "recommended_next_actions": [
+              "Agent 03: implement Building LoS (constructed player buildings reveal 3 tiles) and renderer temple prefab mapping per WK34 plan.",
+              "Agent 15: deliver temple/guardhouse/ranger/rogue/wizard prefab JSONs + construction stages per plan so the new `temple` type renders in Ursina.",
+              "Human quick sanity: `python main.py --renderer ursina --no-llm` and confirm T opens Temple placement and G/E/V/Y/O/F/I/R do nothing."
+            ]
+          }
+        }
+      }
+    }
   },
   "wk14-persona-presence": {
     "sprint_meta": {

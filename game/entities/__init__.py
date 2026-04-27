@@ -5,6 +5,7 @@ from .buildings import (
     BuildingType,
     Building, Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace,
     Blacksmith, Inn, TradingPost,
+    Temple,
     TempleAgrela, TempleDauros, TempleFervus, TempleKrypta, TempleKrolm, TempleHelia, TempleLunord,
     GnomeHovel, ElvenBungalow, DwarvenSettlement,
     Guardhouse, BallistaTower, WizardTower,

@@ -934,5 +934,86 @@
         }
       }
     }
+    ,
+    "wk34-final-3d-model-pass-pre-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "WK34: Nature scatter 4× scale + new/updated guild prefabs + guardhouse/temple prefab sets (20%/50% stages)."
+      },
+      "rounds": {
+        "wk34_r0_prefabs_and_nature_scale": {
+          "round_id": "wk34_r0_prefabs_and_nature_scale",
+          "round_meta": { "prompt_set_id": "wk34_r0", "completed_at_local": "2026-04-26T20:59:00" },
+          "status": "complete",
+          "what_i_changed": [
+            "game/graphics/ursina_renderer.py — set TREE/ROCK/GRASS_SCATTER *_SCALE_MULTIPLIER to 4× (1.15→4.6, 0.42→1.68, 0.52→2.08).",
+            "assets/prefabs/buildings/ranger_guild_v1.json — replaced placeholder tent/canvas ranger guild with Retro Fantasy wood-pane lodge/outpost (now schema_version=0.2, Retro-only attribution).",
+            "assets/prefabs/buildings/ranger_guild_build_20_v1.json, ranger_guild_build_50_v1.json — new construction stages (plot → walls).",
+            "assets/prefabs/buildings/rogue_guild_build_20_v1.json, rogue_guild_build_50_v1.json — new construction stages (plot → walls).",
+            "assets/prefabs/buildings/wizard_guild_build_20_v1.json, wizard_guild_build_50_v1.json — new construction stages (plot → partial tower).",
+            "assets/prefabs/buildings/guardhouse_v1.json, guardhouse_build_20_v1.json, guardhouse_build_50_v1.json — new guardhouse prefab set (initial attempt used missing model names; revised to wall-fortified-paint + tower-top).",
+            "assets/prefabs/buildings/temple_v1.json, temple_build_20_v1.json, temple_build_50_v1.json — new temple prefab set (building_type=temple)."
+          ],
+          "how_to_test": [
+            "python tools/model_viewer_kenney.py --focus-prefab ranger_guild_v1 --auto-exit-sec 2 --screenshot-subdir wk34 --screenshot-stem ranger_guild_v1",
+            "python tools/model_viewer_kenney.py --focus-prefab guardhouse_v1 --auto-exit-sec 2 --screenshot-subdir wk34 --screenshot-stem guardhouse_v1",
+            "python tools/model_viewer_kenney.py --focus-prefab temple_v1 --auto-exit-sec 2 --screenshot-subdir wk34 --screenshot-stem temple_v1",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "model_viewer_screens": [
+              "docs/screenshots/wk34/ranger_guild_v1_20260426_205706_952.png",
+              "docs/screenshots/wk34/temple_v1_20260426_205714_408.png",
+              "docs/screenshots/wk34/guardhouse_v1_20260426_205900_802.png"
+            ],
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0 warns=46 (pre-existing warnings)" },
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+          },
+          "blockers": [],
+          "handoff": {
+            "agent_03": "Register guardhouse/temple prefabs in renderer lookup per WK34 plan, and ensure construction-stage resolver loads *_build_20_v1 / *_build_50_v1 files. Also building LoS change lives in engine per Agent 03 tasks.",
+            "agent_05": "Footprint audit: all new prefabs use footprint_tiles [2,2]. Guardhouse size needs config.py update per Agent 07 task."
+          }
+        },
+        "wk34_r1_temple_sand_and_frame_quads": {
+          "round_id": "wk34_r1_temple_sand_and_frame_quads",
+          "round_meta": { "prompt_set_id": "wk34_r1", "completed_at_local": "2026-04-26T22:30:00" },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/models/buildings/temple_frame_quad.obj, temple_frame_quad.mtl — 1m UV quad (Z-facing) for window/door decals; mtllib for loader.",
+            "assets/prefabs/buildings/temple_v1.json — road + hedge + 9x wall-block-half (plinth) use models/Models/Textures/floor_tiles_sand_small.png + texture_override_object_scale 1.6; 14x wall-window + 1x door parent pieces keep wall_brick_sand_center; 14 frame quads: window_tall_rounded_lit + door_wood_window_lit, texture_override_mode uv, slight radial outward offset from (1.5,2.5) footprint center.",
+            "temple_build_20_v1.json, temple_build_50_v1.json — regen: sand on site/plinth/road/hedge; 50% excludes roof + frame quads; 20% plinth+road+hedge+obelisks only."
+          ],
+          "how_to_test": [
+            "python tools/model_viewer_kenney.py --focus-prefab temple_v1 --auto-exit-sec 2 --screenshot-subdir wk34 --screenshot-stem temple_v1_frames",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0" },
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+          }
+        },
+        "wk34_r2_temple_construction_stages_resync": {
+          "round_id": "wk34_r2_temple_construction_stages_resync",
+          "round_meta": { "prompt_set_id": "wk34_r2", "completed_at_local": "2026-04-26T23:45:00" },
+          "status": "complete",
+          "what_i_changed": [
+            "Regenerated assets/prefabs/buildings/temple_build_20_v1.json and temple_build_50_v1.json from current temple_v1.json (14 plinth+road+hedge+obelisk; 29 = full wall shell without roof or temple_frame_quad overlays)."
+          ],
+          "how_to_test": [
+            "python tools/model_viewer_kenney.py --focus-prefab temple_build_20_v1 --auto-exit-sec 2",
+            "python tools/model_viewer_kenney.py --focus-prefab temple_build_50_v1 --auto-exit-sec 2",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0" },
+            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+          }
+        }
+      }
+    }
   }
 }

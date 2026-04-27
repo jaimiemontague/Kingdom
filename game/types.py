@@ -9,6 +9,7 @@ class HeroClass(str, Enum):
     RANGER = "ranger"
     ROGUE = "rogue"
     WIZARD = "wizard"
+    CLERIC = "cleric"
 
 
 class EnemyType(str, Enum):

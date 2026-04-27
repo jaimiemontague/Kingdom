@@ -501,7 +501,7 @@ class GameEngine:
     
     def try_hire_hero(self):
         """Try to hire a hero from the selected guild building or auto-locate one."""
-        allowed = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild"})
+        allowed = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild", "temple"})
 
         def _is_hirable_guild(b) -> bool:
             bt = getattr(b, "building_type", "")
@@ -522,7 +522,7 @@ class GameEngine:
                     break
 
         if guild is None:
-            self.hud.add_message("Requires a constructed guild (Warrior/Ranger/Rogue/Wizard)!", (255, 100, 100))
+            self.hud.add_message("Requires a constructed guild (Warrior/Ranger/Rogue/Wizard) or Temple!", (255, 100, 100))
             return
 
         if not self.economy.can_afford_hero():
@@ -539,6 +539,7 @@ class GameEngine:
             "ranger_guild": HeroClass.RANGER.value,
             "rogue_guild": HeroClass.ROGUE.value,
             "wizard_guild": HeroClass.WIZARD.value,
+            "temple": HeroClass.CLERIC.value,
         }
         hero_class = class_by_guild.get(guild.building_type, HeroClass.WARRIOR.value)
         hero = Hero(
@@ -1085,6 +1086,8 @@ class GameEngine:
         for building in self.buildings:
             if building.building_type == "trading_post" and hasattr(building, "update"):
                 building.update(dt, self.economy)
+            # WK34: These buildings are temporarily removed from the build menu.
+            # Keep update logic in case they appear in legacy save data.
             elif building.building_type == "ballista_tower" and hasattr(building, "update"):
                 building.update(dt, self.enemies)
             elif building.building_type == "wizard_tower" and hasattr(building, "update"):

@@ -66,10 +66,10 @@ SCALE = 32.0
 # v1.5 Sprint 1.2: uniform scale for Kenney OBJ tiles (1×1 plane ≈ one sim tile).
 TERRAIN_SCALE_MULTIPLIER = 1.0
 # Props sit on the same grid; tune if authored mesh bounds drift.
-TREE_SCALE_MULTIPLIER = 1.15
-ROCK_SCALE_MULTIPLIER = 0.42
+TREE_SCALE_MULTIPLIER = 4.6
+ROCK_SCALE_MULTIPLIER = 1.68
 # Grass tiles use organic scatter doodads on the base plane, not full-tile voxels.
-GRASS_SCATTER_SCALE_MULTIPLIER = 0.52
+GRASS_SCATTER_SCALE_MULTIPLIER = 2.08
 
 # Vertical extents (world units), from Agent 09 volumetric mapping table
 H_CASTLE = 2.2

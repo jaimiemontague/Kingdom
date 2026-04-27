@@ -15,6 +15,7 @@ class BuildingType(str, Enum):
     BLACKSMITH = "blacksmith"
     INN = "inn"
     TRADING_POST = "trading_post"
+    TEMPLE = "temple"
     TEMPLE_AGRELA = "temple_agrela"
     TEMPLE_DAUROS = "temple_dauros"
     TEMPLE_FERVUS = "temple_fervus"

@@ -15,6 +15,14 @@ class TempleAgrela(HiringBuilding, Building):
         self._init_hiring_state()
 
 
+class Temple(HiringBuilding, Building):
+    """Temple — recruits Clerics (healers)."""
+
+    def __init__(self, grid_x: int, grid_y: int):
+        super().__init__(grid_x, grid_y, BuildingType.TEMPLE)
+        self._init_hiring_state()
+
+
 class TempleDauros(HiringBuilding, Building):
     """Temple to Dauros - recruits Monks."""
 

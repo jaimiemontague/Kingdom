@@ -13,6 +13,7 @@ from .guilds import RangerGuild, RogueGuild, WarriorGuild, WizardGuild
 from .hiring_mixin import HiringBuilding
 from .special import Fairgrounds, Library, Palace, RoyalGardens
 from .temples import (
+    Temple,
     TempleAgrela,
     TempleDauros,
     TempleFervus,
@@ -39,6 +40,7 @@ __all__ = [
     "Blacksmith",
     "Inn",
     "TradingPost",
+    "Temple",
     "TempleAgrela",
     "TempleDauros",
     "TempleFervus",

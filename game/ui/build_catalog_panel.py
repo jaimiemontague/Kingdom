@@ -27,16 +27,8 @@ BUILDING_HOTKEYS = {
     "blacksmith": "6",
     "inn": "7",
     "trading_post": "8",
-    "temple_agrela": "T",
-    "gnome_hovel": "G",
-    "elven_bungalow": "E",
-    "dwarven_settlement": "V",
+    "temple": "T",
     "guardhouse": "U",
-    "ballista_tower": "Y",
-    "wizard_tower": "O",
-    "fairgrounds": "F",
-    "library": "I",
-    "royal_gardens": "R",
 }
 
 
@@ -69,9 +61,8 @@ class BuildCatalogPanel:
         self.placeable_buildings = [
             "warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild",
             "marketplace", "blacksmith", "inn", "trading_post",
-            "temple_agrela", "gnome_hovel", "elven_bungalow", "dwarven_settlement",
-            "guardhouse", "ballista_tower", "wizard_tower",
-            "fairgrounds", "library", "royal_gardens"
+            "temple",
+            "guardhouse",
         ]
         
         # Grid layout

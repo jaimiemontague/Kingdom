@@ -1,5 +1,5 @@
 {
-  "prefab_id": "ranger_guild_v1",
+  "prefab_id": "ranger_guild_build_50_v1",
   "building_type": "ranger_guild",
   "footprint_tiles": [
     2,
@@ -70,10 +70,10 @@
       "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
     },
     {
-      "model": "Models/GLB format/structure-floor.glb",
+      "model": "Models/GLB format/campfire-pit.glb",
       "pos": [
-        1.5,
-        0.75,
+        0.25,
+        0.0,
         0.5
       ],
       "rot": [
@@ -82,28 +82,9 @@
         0.0
       ],
       "scale": [
-        1.2433743083946522,
-        1.2433743083946522,
-        1.2433743083946522
-      ],
-      "texture_override": "textures/buildings/food_stand/food_stand_wood_stall.png"
-    },
-    {
-      "model": "Models/GLB format/tent-canvas.glb",
-      "pos": [
-        1.5,
-        1.5,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.1208903218740558,
-        1.1208903218740558,
-        1.1208903218740558
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
@@ -123,25 +104,7 @@
         1.0,
         1.0
       ]
-    },
-    {
-      "model": "Models/GLB format/campfire-pit.glb",
-      "pos": [
-        0.25,
-        0.0,
-        0.5
-      ],
-      "rot": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ]
     }
   ],
-  "notes": "WK34: scouting outpost \u2014 tents + Survival structure-floor (wood plank skin) + tent canvas + props."
+  "notes": "WK34 ~50%: full deck + canvas awning; no yard props yet."
 }

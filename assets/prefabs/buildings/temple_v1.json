@@ -1,0 +1,1059 @@
+{
+  "prefab_id": "temple_v1",
+  "building_type": "temple",
+  "footprint_tiles": [
+    3,
+    4
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_nature-kit",
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/wall-doorway-round-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        0.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        -0.5,
+        0.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        2.5,
+        0.0,
+        4.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        0.5,
+        0.0,
+        4.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/roof-high-left-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-left-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-left-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-left-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.0,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-right-fantasy-town.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-right-fantasy-town.glb",
+      "pos": [
+        2.5,
+        1.0,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-gable-fantasy-town.glb",
+      "pos": [
+        1.5,
+        2.2,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-gable-fantasy-town.glb",
+      "pos": [
+        1.5,
+        2.2,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/roof-high-gable-fantasy-town.glb",
+      "pos": [
+        1.5,
+        2.2,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/roof_clay_grey_top.png",
+      "texture_override_object_scale": 1.35
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.1,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-window-stone-fantasy-town.glb",
+      "pos": [
+        1.5,
+        1.1,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/wall_brick_sand_center.png"
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        0.5,
+        -0.5,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        1.5,
+        -0.5,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        2.5,
+        -0.5,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        0.5,
+        -0.5,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        1.5,
+        -0.5,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        2.5,
+        -0.5,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        0.5,
+        -0.5,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        1.5,
+        -0.5,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/wall-block-half-fantasy-town.glb",
+      "pos": [
+        2.5,
+        -0.5,
+        3.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/road-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/hedge-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLB format/hedge-fantasy-town.glb",
+      "pos": [
+        1.5,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/floor_tiles_sand_small.png",
+      "texture_override_object_scale": 1.6
+    },
+    {
+      "model": "Models/GLTF format/statue_obelisk.glb",
+      "pos": [
+        0.25,
+        0.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/statue_obelisk.glb",
+      "pos": [
+        2.75,
+        0.0,
+        0.25
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        1.5,
+        -0.12500000000000006,
+        1.18
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.88,
+        1.05,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/door_wood_window_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        2.531304951684997,
+        0.22499999999999998,
+        1.187390096630006
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        0.46869504831500297,
+        0.22499999999999998,
+        1.187390096630006
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        2.7994974746830583,
+        0.27499999999999997,
+        1.4505025253169417
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        2.82,
+        0.27499999999999997,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        0.43739009663000594,
+        0.22499999999999998,
+        1.468695048315003
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        0.42999999999999994,
+        0.22499999999999998,
+        2.5
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        0.43739009663000594,
+        0.22499999999999998,
+        3.531304951684997
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        2.7994974746830583,
+        0.27499999999999997,
+        3.549497474683058
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        2.5494974746830583,
+        0.27499999999999997,
+        3.799497474683058
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        1.531304951684997,
+        1.375,
+        3.812609903369994
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        0.46869504831500297,
+        0.22499999999999998,
+        3.812609903369994
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        1.5,
+        0.27499999999999997,
+        3.8200000000000003
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        1.5,
+        1.375,
+        1.18
+      ],
+      "rot": [
+        0.0,
+        180.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    },
+    {
+      "model": "buildings/temple_frame_quad.obj",
+      "pos": [
+        1.5,
+        1.275,
+        3.57
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        0.52,
+        0.55,
+        1.0
+      ],
+      "texture_override": "models/Models/Textures/window_tall_rounded_lit.png",
+      "texture_override_mode": "uv"
+    }
+  ],
+  "notes": "WK34: temple with sand floor tiles (road, hedges, plinth), brick walls, clay roof, window/door frame decals (UV quads), FT props."
+}

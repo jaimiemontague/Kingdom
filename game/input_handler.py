@@ -236,27 +236,12 @@ class InputHandler:
         elif event.key == '8':
             self.select_building_for_placement("trading_post")
         elif event.key == 't':
-            self.select_building_for_placement("temple_agrela")
-        elif event.key == 'g':
-            self.select_building_for_placement("gnome_hovel")
-        elif event.key == 'e':
-            # Ursina viewer uses held E for zoom; elven bungalow hotkey would fight that (KEYDOWN).
-            if not getattr(engine, "_ursina_viewer", False):
-                self.select_building_for_placement("elven_bungalow")
-        elif event.key == 'v':
-            self.select_building_for_placement("dwarven_settlement")
+            self.select_building_for_placement("temple")
+        # WK34 REMOVED — will return in future sprint:
+        # gnome_hovel (G), elven_bungalow (E), dwarven_settlement (V),
+        # ballista_tower (Y), wizard_tower (O), fairgrounds (F), library (I), royal_gardens (R)
         elif event.key == 'u':
             self.select_building_for_placement("guardhouse")
-        elif event.key == 'y':
-            self.select_building_for_placement("ballista_tower")
-        elif event.key == 'o':
-            self.select_building_for_placement("wizard_tower")
-        elif event.key == 'f':
-            self.select_building_for_placement("fairgrounds")
-        elif event.key == 'i':
-            self.select_building_for_placement("library")
-        elif event.key == 'r':
-            self.select_building_for_placement("royal_gardens")
 
         elif event.key == 'h':
             # Hire a hero

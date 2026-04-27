@@ -20,6 +20,18 @@ Key design decisions (see ``.cursor/plans/wk28_assembler_spike_41c2daeb.plan.md`
 **WK31:** Display scale applies ``tools/kenney_pack_scale.pack_extent_multiplier_for_rel``
 per model path on top of authored JSON ``scale`` (Retro = 1.0); saved JSON stays logical.
 
+**WK34 — Temple construction stages:** Prefabs ``temple_build_20_v1`` (site + plinth)
+and ``temple_build_50_v1`` (walls, no roof/decal quads) are normal prefab JSON files
+beside ``temple_v1``. Open them by **filename stem** with ``--open`` (the in-app
+Open list only shows the first 8 files alphabetically, so ``temple_*`` is often
+not in that list)::
+
+    python tools/model_assembler_kenney.py --open temple_build_20_v1
+    python tools/model_assembler_kenney.py --open temple_build_50_v1
+    python tools/model_assembler_kenney.py --open temple_v1
+
+See ``CONSTRUCTION_STAGE_PREFAB_IDS`` below for the canonical ids.
+
 Usage (from repo root):
     python tools/model_assembler_kenney.py --new
     python tools/model_assembler_kenney.py --open peasant_house_small_v1
@@ -48,6 +60,7 @@ import argparse
 import json
 import os
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -55,6 +68,14 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # Only .glb/.gltf pieces; OBJ/FBX/DAE are duplicate Kenney exports we avoid.
 MODEL_EXTS = {".glb", ".gltf"}
+
+# Intermediate kitbash JSON (same schema as final prefabs). Used by
+# `game/graphics/ursina_renderer` construction progress and the model viewer.
+# These are *not* auto-registered; open with: ``python tools/model_assembler_kenney.py --open <id>``.
+CONSTRUCTION_STAGE_PREFAB_IDS: tuple[str, ...] = (
+    "temple_build_20_v1",
+    "temple_build_50_v1",
+)
 
 # Folders scanned for the left-side piece library.
 #
@@ -926,7 +947,8 @@ class AssemblerApp:
             self.open_dialog_entities.append(note)
 
         row_h = 0.045
-        max_rows = 8
+        # Was 8; with many building JSONs, late-alphabet stems (e.g. temple_*) were invisible.
+        max_rows = 16
         for i, f in enumerate(files[:max_rows]):
             y = 0.15 - i * row_h
             btn = Button(
@@ -1353,7 +1375,17 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Kenney kit assembler (WK28 spike). Place .glb kit pieces on a 1-unit grid "
             "and save/reload building prefab JSON under assets/prefabs/buildings/."
-        )
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent(
+            f"""
+            Construction-stage examples (temple; same as CONSTRUCTION_STAGE_PREFAB_IDS):
+              python tools/model_assembler_kenney.py --open {CONSTRUCTION_STAGE_PREFAB_IDS[0]}
+              python tools/model_assembler_kenney.py --open {CONSTRUCTION_STAGE_PREFAB_IDS[1]}
+
+            Final kitbash: python tools/model_assembler_kenney.py --open temple_v1
+            """
+        ).strip(),
     )
     p.add_argument("--new", action="store_true", help="Start a fresh empty prefab.")
     p.add_argument("--open", dest="open_id", type=str, default=None,
