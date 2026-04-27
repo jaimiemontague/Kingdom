@@ -100,19 +100,20 @@ class InputHandler:
             engine.hud.add_message("Not enough gold!", (255, 100, 100))
             return False
 
-        # Check prerequisites
+        # Check prerequisites. Empty list = no prerequisite (e.g. temple).
         from config import BUILDING_PREREQUISITES
         if building_type in BUILDING_PREREQUISITES:
             required = BUILDING_PREREQUISITES[building_type]
-            has_prereq = False
-            for building in engine.buildings:
-                if building.building_type in required and getattr(building, "is_constructed", False):
-                    has_prereq = True
-                    break
-            if not has_prereq:
-                req_names = ", ".join(b.replace("_", " ").title() for b in required)
-                engine.hud.add_message(f"Requires: {req_names}", (255, 200, 100))
-                return False
+            if required:
+                has_prereq = False
+                for building in engine.buildings:
+                    if building.building_type in required and getattr(building, "is_constructed", False):
+                        has_prereq = True
+                        break
+                if not has_prereq:
+                    req_names = ", ".join(b.replace("_", " ").title() for b in required)
+                    engine.hud.add_message(f"Requires: {req_names}", (255, 200, 100))
+                    return False
 
         # Check constraints (mutually exclusive)
         from config import BUILDING_CONSTRAINTS

@@ -70,16 +70,17 @@ class BuildingMenu:
                     if building.building_type == excluded_type:
                         return False
         
-        # Check prerequisites (required buildings)
+        # Check prerequisites (required buildings). Empty list = no prerequisite.
         if building_type in BUILDING_PREREQUISITES:
             required_types = BUILDING_PREREQUISITES[building_type]
-            has_prerequisite = False
-            for building in buildings:
-                if building.building_type in required_types and building.is_constructed:
-                    has_prerequisite = True
-                    break
-            if not has_prerequisite:
-                return False
+            if required_types:
+                has_prerequisite = False
+                for building in buildings:
+                    if building.building_type in required_types and building.is_constructed:
+                        has_prerequisite = True
+                        break
+                if not has_prerequisite:
+                    return False
         
         return True
     

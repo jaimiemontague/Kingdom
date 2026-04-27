@@ -1,0 +1,80 @@
+{
+  "prefab_id": "plot_3x4_v1",
+  "building_type": "plot_3x4",
+  "footprint_tiles": [3, 4],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit",
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [0.5, 0.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [2.5, 0.0, 0.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [0.5, 0.0, 3.5],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [2.5, 0.0, 3.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [0.5, 0.0, 1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [2.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [0.5, 0.0, 2.5],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-stone-large.glb",
+      "pos": [2.5, 0.0, 2.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/structure-poles.glb",
+      "pos": [1.5, 0.0, 2.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-planks.glb",
+      "pos": [1.5, 0.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/resource-planks.glb",
+      "pos": [1.5, 0.0, 3.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "WK34: 3x4 foundation plot for Temple footprint — corner stones, scaffold, front/back beams."
+}

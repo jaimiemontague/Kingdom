@@ -301,6 +301,24 @@ class GameEngine:
             radius = NEUTRAL_VISION[btype]
             revealers.append((building.center_x, building.center_y, radius))
 
+        # WK34: All constructed player-placed buildings reveal 3 tiles (building LoS).
+        # Neutrals use NEUTRAL_VISION above; castle uses CASTLE_VISION_TILES above.
+        BUILDING_VISION_TILES = 3
+        for building in self.buildings:
+            if not getattr(building, "is_constructed", False):
+                continue
+            if getattr(building, "hp", 1) <= 0:
+                continue
+            if getattr(building, "is_neutral", False):
+                continue
+            raw_bt = getattr(building, "building_type", None)
+            btype_name = str(getattr(raw_bt, "value", raw_bt) or "")
+            if btype_name == "castle":
+                continue
+            revealers.append(
+                (building.center_x, building.center_y, BUILDING_VISION_TILES)
+            )
+
         # WK17: Living guards as vision sources.
         for guard in self.guards:
             if not getattr(guard, "is_alive", True):

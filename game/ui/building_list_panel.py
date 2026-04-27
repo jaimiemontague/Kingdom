@@ -89,17 +89,18 @@ class BuildingListPanel:
         if economy.player_gold < cost:
             return (False, "Cannot afford")
         
-        # Check prerequisites
+        # Check prerequisites. Empty list = no prerequisite.
         if building_type in BUILDING_PREREQUISITES:
             required = BUILDING_PREREQUISITES[building_type]
-            has_prereq = False
-            for building in buildings:
-                if building.building_type in required and getattr(building, "is_constructed", False):
-                    has_prereq = True
-                    break
-            if not has_prereq:
-                req_names = ", ".join(b.replace("_", " ").title() for b in required)
-                return (False, f"Requires: {req_names}")
+            if required:
+                has_prereq = False
+                for building in buildings:
+                    if building.building_type in required and getattr(building, "is_constructed", False):
+                        has_prereq = True
+                        break
+                if not has_prereq:
+                    req_names = ", ".join(b.replace("_", " ").title() for b in required)
+                    return (False, f"Requires: {req_names}")
         
         # Check constraints (mutually exclusive)
         if building_type in BUILDING_CONSTRAINTS:

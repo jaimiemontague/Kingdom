@@ -109,13 +109,14 @@
         "inn_v1",
         "farm_v1",
         "food_stand_v1",
-        "gnome_hovel_v1",
         "plot_1x1_v1",
         "plot_2x2_v1",
         "plot_3x2_v1",
-        "plot_3x3_v1"
+        "plot_3x3_v1",
+        "plot_3x4_v1"
       ],
       "optional": [
+        "gnome_hovel_v1",
         "wizard_guild_v1",
         "inn_v2",
         "inn_v2_build_20_v1",

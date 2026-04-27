@@ -739,6 +739,55 @@
           ]
         }
       }
+    },
+    "wk34-3d-final-model-pass-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "WK34: building LoS, nature 4x trees+scatter, prefab table, plot_3x4 for Temple 3x4 footprint"
+      },
+      "rounds": {
+        "wk34_r0_execution": {
+          "sprint_id": "wk34-3d-final-model-pass-v1-5",
+          "round_id": "wk34_r0_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-26"
+          },
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "game/engine._update_fog_of_war: +3 tile vision radius for every constructed player building (skip castle, skip is_neutral, skip dead) — WK34 building LoS.",
+              "ursina_renderer: TREE_SCALE_MULTIPLIER=4.6 (4x vs pre-WK34 1.15 per plan); _PREFAB_BUILDING_TYPE_TO_FILE adds ranger_guild, temple, guardhouse; removed gnome_hovel prefab entry (deprecated).",
+              "assets/prefabs/buildings/plot_3x4_v1.json: 3x4 construction plot so Temple (config BUILDING_SIZES 3x4) resolves plot_3x4 in _plot_prefab_candidates at 0% build.",
+              "tools/assets_manifest.json: plot_3x4_v1 in required; gnome_hovel_v1 moved to optional."
+            ],
+            "files_changed": [
+              "game/engine.py",
+              "game/graphics/ursina_renderer.py",
+              "assets/prefabs/buildings/plot_3x4_v1.json",
+              "tools/assets_manifest.json"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "screenshots": "None captured this session. Plan optional: python tools/model_viewer_kenney.py --screenshot-subdir wk34 --auto-exit-sec 5"
+          }
+        }
+      }
     }
   }
 }

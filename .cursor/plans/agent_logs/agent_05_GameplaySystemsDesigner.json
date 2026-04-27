@@ -410,6 +410,64 @@
           }
         }
       }
+    },
+    "wk34-3d-final-model-pass": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "WK34: Agent 05 role per plan — Task 05-A prefab vs BUILDING_SIZES, Task 05-B qa_smoke + validate_assets, Task 05-C human Ursina spot-check (not automated here)."
+      },
+      "rounds": {
+        "wk34_r0_final_gate": {
+          "sprint_id": "wk34-3d-final-model-pass",
+          "round_id": "wk34_r0_final_gate",
+          "round_meta": {
+            "prompt_set_id": "wk34",
+            "build_target": "WK34 final footprint audit + release gates"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "No code changes — read-only audit + gate runs per AGENT 05 in WK34 plan (PM hub not yet had wk34; plan is source of truth)."
+              ],
+              "footprint_audit_table": [
+                "ranger_guild: prefab v1 + build_20 + build_50 all footprint_tiles [2, 2] | config.py BUILDING_SIZES['ranger_guild'] (2, 2) | PASS",
+                "rogue_guild: v1 + build_20 + build_50 [2, 2] | (2, 2) | PASS",
+                "wizard_guild: v1 + build_20 + build_50 [2, 2] | (2, 2) | PASS",
+                "guardhouse: v1 + build_20 + build_50 [2, 2] | (2, 2) | PASS",
+                "temple: v1 + build_20 + build_50 [3, 4] | config.py BUILDING_SIZES['temple'] (3, 4) | PASS",
+                "Note: plan Task 05-A table lists temple as [2,2]; current repo uses 3x4 in both config and prefabs (Agent 07) — match is to config, not the stale plan row."
+              ],
+              "files_reviewed": [
+                "config.py (BUILDING_SIZES for ranger_guild, rogue_guild, wizard_guild, guardhouse, temple)",
+                "assets/prefabs/buildings/ranger_guild_v1.json, ranger_guild_build_20_v1.json, ranger_guild_build_50_v1.json",
+                "assets/prefabs/buildings/rogue_guild_v1.json, rogue_guild_build_20_v1.json, rogue_guild_build_50_v1.json",
+                "assets/prefabs/buildings/wizard_guild_v1.json, wizard_guild_build_20_v1.json, wizard_guild_build_50_v1.json",
+                "assets/prefabs/buildings/guardhouse_v1.json, guardhouse_build_20_v1.json, guardhouse_build_50_v1.json",
+                "assets/prefabs/buildings/temple_v1.json, temple_build_20_v1.json, temple_build_50_v1.json"
+              ],
+              "in_game_spot_check": "Not run in this session — Jaimie: use python main.py --renderer ursina --no-llm per plan Task 05-C checklist.",
+              "kenney_viewer_screenshots": "Not captured in this session — optional: python tools/model_viewer_kenney.py --screenshot-subdir wk34 --auto-exit-sec 5 (after prefabs landed).",
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "validate_assets_report": {
+                  "command": "python tools/validate_assets.py --report",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "errors": 0,
+                  "warns": 46,
+                  "notes": "errors=0 per SUMMARY; WARN missing_model_file stubs expected for Ursina/prefab pipeline (legacy; same as prior sprints)"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

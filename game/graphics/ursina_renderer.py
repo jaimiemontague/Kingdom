@@ -66,10 +66,14 @@ SCALE = 32.0
 # v1.5 Sprint 1.2: uniform scale for Kenney OBJ tiles (1×1 plane ≈ one sim tile).
 TERRAIN_SCALE_MULTIPLIER = 1.0
 # Props sit on the same grid; tune if authored mesh bounds drift.
-TREE_SCALE_MULTIPLIER = 4.6
-ROCK_SCALE_MULTIPLIER = 1.68
+# Trees are *not* part of the WK34 ground-scatter 4× pass (only rocks + grass clumps).
+# Kenney tree GLBs are already tall; keep this near 1.0 to avoid “massive” canopy scale.
+TREE_SCALE_MULTIPLIER = 1.15
+ROCK_SCALE_MULTIPLIER = 1.68  # 4× of pre-WK34 0.42
 # Grass tiles use organic scatter doodads on the base plane, not full-tile voxels.
-GRASS_SCATTER_SCALE_MULTIPLIER = 2.08
+GRASS_SCATTER_SCALE_MULTIPLIER = 2.08  # 4× of pre-WK34 0.52
+# Flower / log / mushroom mesh instances: half the scatter scale of other ground props (2× original vs 4×).
+GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE = 0.5
 
 # Vertical extents (world units), from Agent 09 volumetric mapping table
 H_CASTLE = 2.2
@@ -125,10 +129,9 @@ _PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
 # the ``<building_type>_v1.json`` convention in ``_resolve_prefab_path``. Keep this table
 # sorted and minimal — the expectation is that new buildings land under the convention.
 _PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
-    # WK31 economy visual pass (Jaimie): inn_v2, farm_v2, food_stand_v2, gnome_hovel_v1.
+    # WK31 economy: inn_v2, farm_v2, food_stand_v2. WK34: removed gnome_hovel (deprecated).
     "farm": "farm_v2.json",
     "food_stand": "food_stand_v2.json",
-    "gnome_hovel": "gnome_hovel_v1.json",
     # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
     "house": "peasant_house_small_v1.json",
     "inn": "inn_v2.json",
@@ -136,6 +139,10 @@ _PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
     "marketplace": "marketplace_v1.json",
     "blacksmith": "blacksmith_v1.json",
     "trading_post": "trading_post_v1.json",
+    # WK34: explicit prefabs (convention also resolves ``<type>_v1.json`` when present).
+    "ranger_guild": "ranger_guild_v1.json",
+    "temple": "temple_v1.json",
+    "guardhouse": "guardhouse_v1.json",
 }
 
 
@@ -268,6 +275,18 @@ def _is_doodad_scatter_stem(name: str) -> bool:
         or name.startswith("rock")
         or name.startswith("stone")
     )
+
+
+def _stem_is_flower_ground_scatter(name: str) -> bool:
+    """Flower-style meshes in the grass scatter list (not grass tufts)."""
+    s = str(name).lower()
+    return "wildflower" in s or s.startswith("flower") or s.startswith("plant_flat")
+
+
+def _stem_is_log_or_mushroom_ground_scatter(name: str) -> bool:
+    """Log and mushroom doodads — scaled down vs rocks/bushes/stumps."""
+    s = str(name).lower()
+    return s.startswith("log") or s.startswith("mushroom")
 
 
 def _environment_grass_and_doodad_model_lists() -> tuple[list[str], list[str]]:
@@ -1324,11 +1343,18 @@ class UrsinaRenderer:
                             tx, ty, len(grass_models), salt=11 + slot * 17
                         )
                         gm = grass_models[gi]
+                        g_stem = Path(gm).stem
+                        g_mul = (
+                            float(GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE)
+                            if _stem_is_flower_ground_scatter(g_stem)
+                            else 1.0
+                        )
+                        g_scale = g_sc * g_mul
                         g_ent = Entity(
                             parent=root,
                             model=gm,
                             position=(wx + jx, 0.0, wz + jz),
-                            scale=(g_sc, g_sc, g_sc),
+                            scale=(g_scale, g_scale, g_scale),
                             rotation=(0, yaw, 0),
                             color=color.white,
                             collision=False,
@@ -1362,7 +1388,10 @@ class UrsinaRenderer:
                     di = _scatter_model_index(tx, ty, len(doodad_models), salt=29)
                     dm = doodad_models[di]
                     jx, jz, yaw = _grass_scatter_jitter(tx + 101, ty + 67)
-                    dm_scale = rm * (0.85 if "bush" in Path(dm).stem.lower() else 1.0)
+                    dstem = Path(dm).stem
+                    dm_scale = rm * (0.85 if "bush" in dstem.lower() else 1.0)
+                    if _stem_is_log_or_mushroom_ground_scatter(dstem):
+                        dm_scale *= float(GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE)
                     doodad_ent = Entity(
                         parent=root,
                         model=dm,
