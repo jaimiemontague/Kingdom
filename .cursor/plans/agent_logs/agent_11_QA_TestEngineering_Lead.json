@@ -469,6 +469,46 @@
           "bugs_found": []
         }
       }
+    },
+    "wk35-refactor-stage0-regression-baseline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk35_refactor_stage_0_sprint_0c916763.plan.md",
+        "notes": "Architecture refactor Stage 0: add integration/contract tests only (no production code)."
+      },
+      "rounds": {
+        "wk35_r1_execution": {
+          "round_id": "wk35_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "tests/test_engine.py: added 5 Stage-0 headless integration tests (init branches, tick/update loop contract, get_game_state key freeze, full orchestration no-crash).",
+            "tests/test_renderer_snapshot_contract.py: added 3 renderer snapshot data-contract tests (no GPU/Ursina instantiation)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "pytest_2026_04_27": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "Collected 105 tests; all PASS."
+              ]
+            },
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

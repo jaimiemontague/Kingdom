@@ -1,0 +1,36 @@
+---
+description: Default to PowerShell command syntax in this repo
+alwaysApply: true
+---
+
+# Shell Default: PowerShell (Windows)
+
+This repo is developed on **Windows PowerShell**. When providing commands or scripts:
+
+- **Assume PowerShell**, not bash/zsh.
+- **Write command blocks in PowerShell syntax**.
+- **Do not use** bash-only constructs:
+  - `&&` chaining (use `;` or `if ($LASTEXITCODE -ne 0) { exit 1 }`)
+  - heredocs like `cat <<'EOF' ... EOF`
+  - `export VAR=...` (use `$env:VAR = "..."`)
+  - `VAR=... command` (use `$env:VAR = "..."` then run command on next line)
+
+## Examples
+
+### Env vars
+
+```powershell
+$env:KINGDOM_URSINA_PREFAB_TEST = "1"
+python main.py --renderer ursina --no-llm
+```
+
+### Stop on failure
+
+```powershell
+python -m pytest tests/
+if ($LASTEXITCODE -ne 0) { exit 1 }
+
+python tools/qa_smoke.py --quick
+if ($LASTEXITCODE -ne 0) { exit 1 }
+```
+

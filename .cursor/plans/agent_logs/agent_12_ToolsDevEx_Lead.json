@@ -2808,4 +2808,37 @@
       }
     }
   }
+  ,
+  "wk35-refactor-stage0-regression-baseline": {
+    "sprint_meta": {
+      "plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+      "notes": "Stage 0: regression baseline + test hardening (Agent 12 deliverable: engine access inventory doc)"
+    },
+    "rounds": {
+      "wk35_r1_execution": {
+        "round_id": "wk35_r1_execution",
+        "status": "done",
+        "pm_ref": "master_plan_architecture_refactor.md Stage 0 / Task 0-C",
+        "what_i_changed": {
+          "files": [
+            "docs/refactor/engine_access_inventory.md"
+          ],
+          "summary": "Captured machine-readable inventory of direct engine accesses from Ursina bridge files to serve as Stage 1 checklist for renderer/app decoupling."
+        },
+        "how_to_test": [
+          "python tools/qa_smoke.py --quick"
+        ],
+        "evidence": {
+          "qa_smoke": {
+            "command": "python tools/qa_smoke.py --quick",
+            "exit_code": 0,
+            "status": "PASS"
+          }
+        },
+        "blockers": [
+          "PM hub sprint entry for wk35 was not yet present in agent_01 log in this workspace copy; proceeded with Stage 0 Task 0-C as specified in master plan."
+        ]
+      }
+    }
+  }
 }
