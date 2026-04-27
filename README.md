@@ -4,11 +4,11 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.2.0** (see `config.py`).
+This repository is currently stamped as **Prototype v1.5.0 — The Game Goes 3D** (see `config.py`).
 
 ## Overview
 
-In this game, you play as a ruler who builds a kingdom and hires heroes to defend it. Unlike traditional RTS games, you don't directly control the heroes - instead, they make their own decisions based on their AI personalities. The twist? Important decisions (when to retreat, what to buy, which bounties to pursue) are made by calling LLM APIs like OpenAI, Claude, Gemini, or Grok.
+In this game, you play as a ruler who builds a kingdom and hires heroes to defend it. Unlike traditional RTS games, you **don't directly control heroes** — you place incentives (buildings, bounties) and they choose actions on their own. Important decisions (when to retreat, what to buy, which bounties to pursue) can be made by LLM providers like OpenAI, Claude, Gemini, or Grok, and the game is also fully playable without an API key via mock/no‑LLM modes.
 
 ## Design Docs (Vision / Scope)
 
@@ -28,7 +28,7 @@ In this game, you play as a ruler who builds a kingdom and hires heroes to defen
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.13+
 - Pygame 2.5+
 - (Optional) API keys for LLM providers
 
@@ -55,6 +55,9 @@ OPENAI_MODEL=gpt-5-nano
 ```bash
 # Run with mock AI (no API key needed)
 python main.py
+
+# Run the 3D Ursina renderer (recommended in v1.5)
+python main.py --renderer ursina
 
 # Run with OpenAI (uses OPENAI_API_KEY/OPENAI_MODEL from .env)
 python main.py --provider openai
@@ -83,18 +86,7 @@ python tools/model_viewer_kenney.py
 
 ## Controls
 
-| Key | Action |
-|-----|--------|
-| 1 | Build Warrior Guild ($150) |
-| 2 | Build Marketplace ($100) |
-| H | Hire a Hero ($50) |
-| B | Place a Bounty ($50) |
-| Left Click | Select hero / Place building |
-| Right Click | Command selected hero to move |
-| P | Use potion (selected hero) |
-| Space/ESC | Pause game |
-| F1 | Toggle debug panel |
-| Mouse Edge | Scroll camera |
+Controls evolve quickly; the fastest way to see the current bindings is the in-game help/menus. Common defaults include building placement, hiring (`H`), and bounty placement.
 
 ## Gameplay
 
@@ -137,7 +129,7 @@ The LLM receives context about the hero's stats, nearby enemies, inventory, and 
 ## Project Structure
 
 ```
-kingdom/
+Kingdom/
 ├── main.py              # Entry point
 ├── config.py            # Game configuration
 ├── requirements.txt     # Python dependencies
@@ -149,11 +141,8 @@ kingdom/
 │   └── ui/              # HUD, Menus, Debug panel
 ├── ai/
 │   ├── basic_ai.py      # State machine AI
-│   ├── llm_brain.py     # LLM coordinator
-│   ├── context_builder.py
-│   ├── prompt_templates.py
-│   └── providers/       # OpenAI, Claude, Gemini, Grok
-└── assets/              # Sprites and maps (placeholder)
+│   └── providers/       # OpenAI, Claude, Gemini, Grok, mock
+└── assets/              # Sprites, UI, audio, 3D models/prefabs
 ```
 
 ## Studio Gateway (Autonomous AI Studio)
@@ -173,7 +162,7 @@ See: `docs/studio_gateway.md`
 python tools/qa_smoke.py --quick
 ```
 
-- **Model viewer (manual)**: After changing `tools/model_viewer.py`, run `python tools/model_viewer.py` from the repo root, confirm WASD pan and wheel zoom work, pack borders and labels are visible, then close with ESC. Use `python tools/model_viewer.py --max-total 30` for a quick smoke without loading every file.
+- **Kenney model viewer (manual)**: `python tools/model_viewer_kenney.py`
 
 ## Customization
 
