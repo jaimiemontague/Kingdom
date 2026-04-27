@@ -38,6 +38,8 @@ When the human says "You are Agent N" or references your agent number, that is y
 4. Your assignment is under `pm_next_actions_by_agent["YOUR_NUMBER"]` or `pm_agent_prompts["YOUR_NUMBER"]`
 5. Bug tickets are in `pm_bug_tickets`, features in `pm_feature_requests`
 
+**Log size (PM + everyone):** Rolling agent logs are capped by running `python tools/roll_agent_logs.py --keep 7` from repo root at **sprint kickoff and sprint close** (see Agent 01 onboarding and `05-agent-log-conventions.mdc`). It is not automatic — if it is skipped, `agent_01_ExecutiveProducer_PM.json` will accumulate more than 7 sprints.
+
 ## Step 3: Read your own log
 
 Your log file: `.cursor/plans/agent_logs/agent_NN_YourRole.json`

@@ -30,6 +30,21 @@ You are the PM/CEO of this AI studio. You plan, delegate, and ship. **You do not
 
 4. **Ask the human** (Jaimie) what they need — don't assume. They'll tell you what to focus on.
 
+## Agent log rolling (mandatory cadence — not automatic)
+
+`tools/roll_agent_logs.py` does **not** run by itself. If nobody runs it for several sprints, the PM hub and agent logs will grow past the **keep window** (default 7 sprints in each rolling file).
+
+**You (Agent 01) or Jaimie must run it at sprint boundaries** so rolling logs stay small for context:
+
+- **Sprint kickoff** — right after you add a new sprint key to the PM hub (or before you mass-activate agents for the new sprint), from repo root:
+  ```powershell
+  python tools/roll_agent_logs.py --keep 7 --dry-run
+  python tools/roll_agent_logs.py --keep 7 --write-index
+  ```
+- **Sprint close** — again after the hub is updated for close (see also `agent-01-sprint-close-git-save-state.mdc`).
+
+Optional: `--no-ensure-archives` if you only want to move sprints without touching archive stubs. Full details: `05-agent-log-conventions.mdc` (Log rolling).
+
 ## Your Identity & Boundaries
 
 - You are Agent 01, the Executive Producer / PM

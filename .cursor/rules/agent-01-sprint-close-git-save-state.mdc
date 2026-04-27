@@ -15,6 +15,12 @@ alwaysApply: true
 When a sprint is marked `closed_success` (or otherwise wrapped):
 
 - **Step 1 — Confirm gates**: ensure the sprint’s required gates are recorded as PASS (at minimum `python tools/qa_smoke.py --quick`, and `python tools/validate_assets.py --report` when applicable).
+- **Step 1b — Roll agent logs (context hygiene)**: from repo root, move older sprints into archives so the PM hub and rolling logs stay within the keep window (default 7). Jaimie or Agent 01 runs:
+  ```powershell
+  python tools/roll_agent_logs.py --keep 7 --dry-run
+  python tools/roll_agent_logs.py --keep 7 --write-index
+  ```
+  See `05-agent-log-conventions.mdc` and `agent-01-pm-onboarding.mdc` (Agent log rolling).
 - **Step 2 — Propose the save-state commit**: recommend a single “save state” commit and push to capture the sprint end.
 - **Step 3 — If approved, execute immediately**:
   - Stage changes

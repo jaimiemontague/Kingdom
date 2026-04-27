@@ -59,6 +59,8 @@ This is YOUR file. Only you write to it. Other agents read it.
 
 Agent logs are periodically **rolled** to keep the default “read surface” small (reducing token spend) while preserving full history.
 
+**When to run (required for healthy logs):** At **sprint kickoff** and **sprint close** (or whenever the PM hub has clearly more than the keep window of sprints). Agent 01 or Jaimie runs the command from repo root — there is no CI hook unless you add one.
+
 - **Rolling files (default to read)**:
   - `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`
   - `.cursor/plans/agent_logs/agent_NN_*.json`

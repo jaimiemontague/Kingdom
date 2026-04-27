@@ -63,4 +63,5 @@ saves/
 
 # Agent log rolling backups (generated)
 .cursor/plans/agent_logs/*.bak_*
+.cursor/plans/agent_logs/archive/*.bak_*
 

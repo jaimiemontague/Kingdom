@@ -4066,6 +4066,383 @@
           ]
         }
       }
+    },
+    "wk16-ux-interactions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk16_ux_and_interactions_sprint.plan.md",
+        "notes": "Sprint wk16 UX & Interactions: Pause menu alignment, Tax Collector clickable, hero selection from interiors/chat. Agent 11 Assignment 16D: Verification & Regression. Context: .cursor/Play Test Results.txt (Improvements to make)."
+      },
+      "rounds": {
+        "wk16_r1": {
+          "round_id": "wk16_r1",
+          "status": "done",
+          "what_i_changed": [
+            "tools/screenshot_scenarios.py: added Tax Collector left-panel shot to scenario_ui_panels (_apply_select_tax_collector, Shot ui_panels_tax_collector.png) so snapshot gallery can capture Left Panel targeting a Tax Collector.",
+            "Ran qa_smoke --quick, validate_assets --report; captured Pause Menu and Left Panel (incl. tax collector) galleries; built gallery.html."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/wk16_ux_interactions/pause_menu --size 1920x1080 --ticks 0",
+            "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk16_ux_interactions/left_panel_tax_collector --size 1920x1080 --ticks 0",
+            "python tools/build_gallery.py --shots docs/screenshots/wk16_ux_interactions --refs docs/screenshots/wk16_ux_interactions --out docs/screenshots/wk16_ux_interactions/gallery.html"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "All profiles PASS (determinism_guard, pytest, observe_sync base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling, interior_view, quest_panel, conversation)."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=0"
+            },
+            "snapshot_galleries": {
+              "pause_menu": "docs/screenshots/wk16_ux_interactions/pause_menu (1 PNG + manifest.json)",
+              "left_panel_tax_collector": "docs/screenshots/wk16_ux_interactions/left_panel_tax_collector (5 PNGs: hero, hidden, building, debug, tax_collector + manifest.json)",
+              "gallery_html": "docs/screenshots/wk16_ux_interactions/gallery.html"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "When Agent 03/08 land Tax Collector clickability and left-panel renderer: re-capture ui_panels to confirm ui_panels_tax_collector.png shows tax collector details; manual smoke: click tax collector on map and confirm left panel opens."
+          ]
+        }
+      }
+    },
+    "wk28-assembler-spike": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk28_assembler_spike_41c2daeb.plan.md",
+        "notes": "QA consult: post-merge gate only; no new scenarios (PM wk28_r1_execution)."
+      },
+      "rounds": {
+        "wk28_r0_qa_onboarding": {
+          "round_id": "wk28_r0_qa_onboarding",
+          "status": "done",
+          "what_i_changed": [
+            "Agent 11 spinup: ran mandatory gates per onboarding (no game code)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-16: determinism_guard + pytest + observe_sync profiles (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling, interior_view, quest_panel, conversation) — DONE: PASS"
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders for 3D manifest; non-blocking)"
+            }
+          },
+          "pm_alignment": "Consult-only this sprint: after wk28 tool merges, re-run qa_smoke --quick; on FAIL bisect and assign Agent 12."
+        },
+        "wk28_r1_execution": {
+          "round_id": "wk28_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository files changed (Agent 11 consult-only: post-merge regression gate).",
+            "Executed PM assignment: ran python tools/qa_smoke.py --quick after wk28 toolchain context; no new observe_sync scenarios added per scope."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-16 wk28_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). Output ends DONE: PASS."
+              ]
+            }
+          },
+          "scope_note": "Did not modify game/, ai/, config.py, or sprint plans. Tool launch / prefab round-trip acceptance (WK28-FEAT-001/002) owned by Agents 12 and 15.",
+          "if_fail_next_step": "Bisect to tools/ or recent merges; assign regressions to Agent 12 (Tools).",
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "QA consult: post-merge gate; WK29-FEAT-001/002 and Ursina env gating owned by Agents 15/03; manual playtest checklist section 6 is Jaimie + consult agents."
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "round_id": "wk29_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository files changed (Agent 11 consult-only).",
+            "Ran post-merge regression gate per PM: python tools/qa_smoke.py --quick. No new observe_sync scenarios added (WK29 scope)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "wk29_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling x4, interior_view, quest_panel, conversation). DONE: PASS."
+              ]
+            }
+          },
+          "pm_gates_acknowledged": {
+            "qa_smoke_quick": "PASS",
+            "env_off_no_regression": "Not automated by QA this round; Jaimie / Agent 10 per plan section 4.3–4.4",
+            "env_on_house_renders": "Manual; Agents 15/03 + plan section 6 checklist"
+          },
+          "if_fail_next_step": "Bisect: assign loader issues to Agent 03, prefab/schema to Agent 15.",
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk30-buildings-pipeline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
+        "notes": "QA consult: post-merge qa_smoke + validate_assets; WK27 single-.glb approach deprecated per master plan Phase 2 Pipeline pivot (2026-04-16)."
+      },
+      "rounds": {
+        "wk30_r1_execution": {
+          "round_id": "wk30_r1_execution",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only).",
+            "Ran PM gates: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "wk30_r1_execution: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders for legacy manifest paths; per PM gate warnings acceptable)"
+            }
+          },
+          "context_ack": {
+            "master_plan_phase2_pivot": "Kitbash prefab JSON + per-piece loader; not one .glb per building (wk27 plan deprecated).",
+            "if_fail_next_step": "Agent 03 loader / Agent 15 prefab schema / Agent 12 validator"
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk31-perf-fps-and-pack-scale": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+        "notes": "Part B economy prefabs (inn, farm, food_stand, gnome_hovel); QA consult post-merge gates per wk31_r2_economy."
+      },
+      "rounds": {
+        "wk31_r2_economy": {
+          "round_id": "wk31_r2_economy",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only per PM).",
+            "Ran PM gates: python tools/qa_smoke.py --quick and python tools/validate_assets.py --report; triage note: no FAIL; prefabs assets/prefabs/buildings/{inn_v1,farm_v1,food_stand_v1,gnome_hovel_v1}.json and tools/assets_manifest.json prefabs.buildings entries present in tree at gate time."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-18 wk31_r2_economy: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file legacy placeholders; per plan B.5 / PM gate exit 0; warnings acceptable)"
+            }
+          },
+          "triage": {
+            "regressions_to_agent_15": "Prefab JSON / schema / attribution / footprint — if validate_assets ERROR on prefab paths or smoke fails after prefab edits.",
+            "regressions_to_agent_12": "tools/assets_manifest.json, validate_assets severity, tooling — if new ERROR paths or manifest contract breaks."
+          },
+          "part_b_ack": {
+            "plan_section": "wk31_kingdom_perf_and_economy.plan.md Part B",
+            "human_playtest_ursina": "Not automated by Agent 11 this round; Agents 15/05/09/10 per PM hub."
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "QA consult per PM hub wk32_r1_execution (revised 2026-04-18): run qa_smoke + validate_assets after 03/12/15 landings; mid-sprint sanity run; final close run."
+      },
+      "rounds": {
+        "wk32_r1_execution": {
+          "round_id": "wk32_r1_execution",
+          "status": "done",
+          "pre_code_checklist_qa_subsystem": {
+            "1_file_map": [
+              "tools/qa_smoke.py — runs determinism_guard, pytest, and observe_sync headless profiles for merge gate",
+              "tools/determinism_guard.py — static scan for wall-clock and unseeded RNG in simulation code paths",
+              "tools/observe_sync.py — headless sim runner and --qa assertion collection",
+              "tools/validate_assets.py — manifest existence, attribution, and path validation for assets/",
+              "tools/assets_manifest.json — building prefab and model declarations consumed by validate_assets",
+              "tests/ — pytest invoked inside qa_smoke for regression coverage",
+              "QA_TEST_PLAN.md / RELEASE_QA_CHECKLIST.md — living human test docs (not part of automated exit codes)"
+            ],
+            "2_architecture_options": [
+              "OPT A — Run full qa_smoke --quick + validate_assets --report after each major merge (03, 12, 15) and once at sprint close: PROS early regression signal, matches PM prompt; CONS multiple runs; RISK low; EFFORT low — SELECTED",
+              "OPT B — Gate only at sprint end: PROS fewer runs; CONS late bisect; RISK medium; EFFORT low — rejected",
+              "OPT C — Add WK32-specific observe_sync scenario for construction/camera: PROS targeted; CONS scope creep for consult sprint; RISK medium; EFFORT medium — deferred unless PM requests new assertions"
+            ],
+            "3_existing_code_conflicts": "None identified for QA tooling. WK32 Ursina/renderer WIP could theoretically diverge headless vs game-only paths; if qa_smoke FAILs after a merge, triage per PM: 03 (renderer/camera/water/construction resolver), 12 (pack color / manifest / validate_assets), 15 (prefabs/environment meshes). pm_role_note: PM emergency edits to ursina_renderer.py / ursina_app.py are Agent 03 ownership for commit/refactor; gates run on current working tree including uncommitted WIP."
+          },
+          "what_i_changed": [
+            "Agent 11 log entry only (this file). No game or tool code edits."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_mid_sprint_2026_04_18": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "Mid-sprint run per pm_agent_prompts[11] revised 2026-04-18: determinism_guard PASS; pytest PASS; observe_sync profiles through speed_scaling, interior_view, quest_panel, conversation; DONE: PASS.",
+                "Working tree at run time contained uncommitted WK32 work (renderer, pack scale, prefabs, environment GLBs, tests) per git status — gate still green."
+              ]
+            },
+            "validate_assets_report_mid_sprint_2026_04_18": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (legacy missing_model_file placeholders; PM gate allows exit 0 with warnings)"
+            }
+          },
+          "delta_vs_prior": "Prior logged gate: wk31_r2_economy (2026-04-18) same PASS pattern; warn count unchanged at 46; qa_smoke profile set unchanged end state DONE: PASS.",
+          "next_actions": [
+            "Re-run both gates after Agent 03 formally commits/adopts PM scatter + EditorCamera + construction resolver + water quad.",
+            "Re-run after Agent 12 pack_color 0.75 + manifest + integration guide land.",
+            "Re-run after Agent 15 tracks environment GLBs + prefabs.",
+            "Final sprint-close duplicate of both gates; then mark round status done."
+          ],
+          "pm_gates_acknowledged": {
+            "qa_smoke_quick": "PASS (mid-sprint)",
+            "validate_assets": "PASS exit 0 (mid-sprint)",
+            "determinism": "Unchanged expectations; determinism_guard passed inside qa_smoke"
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk32_r2_visual_followup": {
+          "round_id": "wk32_r2_visual_followup",
+          "status": "done",
+          "pm_hub_ref": "sprints['wk32-camera-construction-nature-polish'].rounds['wk32_r2_visual_followup']",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult — final merge gates only).",
+            "Appended this round entry with WK32 r2 gate evidence (2026-04-25)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_25": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "WK32 r2 final: determinism_guard PASS; pytest PASS; headless profiles PASS — base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling (0.1x/0.25x/0.5x/1.0x), interior_view, quest_panel, conversation; DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_25": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file for legacy per-name .glb paths in manifest; exit 0 per established PM gate — triage: Agent 12 + prefab pipeline, not blocking merge)"
+            }
+          },
+          "screenshots": "N/A — role was automated gate only; Jaimie / Agent 09 visual signoff and Workstream F playtest remain human-side per PM hub.",
+          "pm_scope_note": "Headless suite does not assert WK32-R2 art tickets (tree model, 6-tile cap UX) or auto-spawn spacing; green gate = no observed regression in determinism, pytest, and observe_sync QA assertions.",
+          "triage_if_fail": {
+            "qa_smoke": "Bisect — Agent 03 (engine/sim/renderer boundaries), Agent 05 (gameplay), Agent 12 (tools), Agent 06 (AI) per failing profile",
+            "validate_assets_errors": "Agent 12 manifest/validator, Agent 15 prefabs, assets/ATTRIBUTION",
+            "validate_assets_only_warns": "Expected until legacy manifest model paths are fully populated; confirm errors=0 for merge."
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk32_r4_tree_fog_perf_hotfix": {
+          "round_id": "wk32_r4_tree_fog_perf_hotfix",
+          "status": "done",
+          "pm_hub_ref": "sprints['wk32-camera-construction-nature-polish'].rounds['wk32_r4_tree_fog_perf_hotfix']",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult — baseline/final gates only for r4).",
+            "Ran qa_smoke and validate_assets to confirm merge gate is green before/after r4 implementers land fixes."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_25_r4_baseline": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "WK32 r4 baseline: determinism_guard PASS; pytest PASS; observe_sync profiles PASS through DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_25_r4_baseline": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file legacy placeholders; non-blocking as long as exit 0)"
+            }
+          },
+          "scope_note": "These gates do not validate the three r4 issues directly (tree brightness, hero-spawn FPS collapse, static-prop fog semantics). They only ensure determinism_guard/pytest/headless profiles and asset validation still pass after scoped renderer/tool changes.",
+          "owner_hints": {
+            "tree_brightness": "Agent 12 (tint routing/tool policy) + Agent 09 consult; Agent 15 only if specific tree assets need replacement",
+            "hero_spawn_lag": "Agent 10 to diagnose; route to Agent 03 if renderer/entity-count; to Agent 06 if AI/LLM; to Agent 08/03 if HUD upload",
+            "explored_fog_tree_visibility": "Agent 03 (static terrain props should allow Visibility.SEEN, hide only UNSEEN; dynamic units remain VISIBLE-only)"
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

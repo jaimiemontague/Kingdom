@@ -2620,6 +2620,42 @@
           ]
         }
       }
+    },
+    "wk26-sprint-1-2-base-terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk26_sprint_1_2_base_terrain.plan.md",
+        "notes": "Sprint 1.2 (Base Terrain): Agent 09 lighting in UrsinaRenderer; Agent 03 terrain mesh loop."
+      },
+      "rounds": {
+        "sprint_1_2_execution": {
+          "sprint_id": "wk26-sprint-1-2-base-terrain",
+          "round_id": "sprint_1_2_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "v1.5 Sprint 1.2 (Agent 09): Moved scene lighting from UrsinaApp into UrsinaRenderer._setup_scene_lighting() — cool gray-blue AmbientLight + warm DirectionalLight (angled toward map center), shadow map resolution from config, DirectionalLight.update_bounds(scene) once on first update. Removed duplicate lights from ursina_app.py. Set config.URSINA_DIRECTIONAL_SHADOWS=True so lit 3D meshes use lit_with_shadows_shader default and props can cast shadows; billboards remain unlit + shadow-mask excluded.",
+            "files": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py",
+              "config.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: _build_3d_terrain / Entity(model=environment/*) not in repo yet; lighting is ready for those entities."
+          ]
+        }
+      }
     }
   }
 }

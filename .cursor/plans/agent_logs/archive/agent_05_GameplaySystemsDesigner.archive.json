@@ -1156,6 +1156,71 @@
           }
         }
       }
+    },
+    "wk13-living-interiors": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk13_living_interiors_sprint_de5aae29.plan.md",
+        "notes": "wk13 Living Interiors Sprint 2: Enter Building button (Section 2D)."
+      },
+      "rounds": {
+        "wk13_r1_enter_building": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r1_enter_building",
+          "round_meta": {
+            "build_target": "enter_building_action",
+            "sent_at_local": "2026-02-18T00:00:00"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/ui/building_panel.py: Added enter_building_button_rect and enter_building_button_hovered; _render_enter_building_button() for buildings with max_occupants > 0 and is_constructed, not castle; handle_click returns {\"type\": \"enter_building\", \"building\": building}; update_hover for enter button. Input handler already had enter_building branch (calls micro_view.enter_interior, deselects panel)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: select Inn/Guild/Marketplace/Blacksmith, click Enter Building, confirm interior view; exit via button/ESC/map click."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        },
+        "wk13_r2_hotfix_gold_earned_setter": {
+          "sprint_id": "wk13-living-interiors",
+          "round_id": "wk13_r2_hotfix_gold_earned_setter",
+          "round_meta": {
+            "build_target": "hotfix",
+            "sent_at_local": "2026-02-18T00:00:00",
+            "notes": "BUG 3: Inn.gold_earned_from_drinks property had no setter; ai/basic_ai.py setattr() caused crash."
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/entities/buildings/economic.py: Added @gold_earned_from_drinks.setter on Inn that writes to self.drink_income_gold (max(0, int(value))). Fixes crash when AI assigns drink cost via setattr(pending_building, 'gold_earned_from_drinks', current + cost)."
+              ],
+              "how_to_test": [
+                "python tools/qa_smoke.py --quick",
+                "Manual: hero gets drink at Inn, confirm no property setter crash."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }
