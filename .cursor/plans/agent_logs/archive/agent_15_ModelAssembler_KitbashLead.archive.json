@@ -10,5 +10,89 @@
     "This file may be empty until the rolling log exceeds the keep window.",
     "This file is append-only: do not rewrite old rounds."
   ],
-  "sprints": {}
+  "sprints": {
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "notes": "WK33 r0: lair static mesh, marketplace + blacksmith + trading_post prefabs; Agent 03 owns ground texture / scatter / FOW / loader table."
+      },
+      "rounds": {
+        "wk33_r0_construction_stages": {
+          "round_id": "wk33_r0_construction_stages",
+          "round_meta": {
+            "prompt_set_id": "wk33_r0",
+            "completed_at_local": "2026-04-26T16:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/marketplace_v1_build_20_v1.json, marketplace_v1_build_50_v1.json — subsets of current marketplace_v1 (stalls+barrels → +hall+walls+one roof).",
+            "assets/prefabs/buildings/blacksmith_v1_build_20_v1.json, blacksmith_v1_build_50_v1.json — 5- and 10-piece prefixes of blacksmith_v1 (forge+chimney stack; 50% before workbench + fences).",
+            "assets/prefabs/buildings/trading_post_v1_build_20_v1.json, trading_post_v1_build_50_v1.json — 2- and 3-piece (stall+barrels → +cart; final 4 = +battlement).",
+            "tools/assets_manifest.json — optional prefab ids for all six."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open marketplace_v1_build_50_v1",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          }
+        },
+        "wk33_r0_kickoff": {
+          "round_id": "wk33_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk33_r0",
+            "completed_at_local": "2026-04-26T12:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/models/environment/lair.glb — copy of Models/GLB format/crypt-large-graveyard.glb (single lair read for all sim lair types).",
+            "assets/prefabs/buildings/marketplace_v1.json — 4x FT stall/bench, food_stand wood texture override.",
+            "assets/prefabs/buildings/blacksmith_v1.json — retro stone 2x2 (warrior XZ), workbench-anvil, FT chimney with wall_brick_stone_center override.",
+            "assets/prefabs/buildings/trading_post_v1.json — cart-high + tent-canvas (Survival) + stall/bench; timber/sand/food_stand overrides.",
+            "assets/ATTRIBUTION.md — lair.glb under Kenney Graveyard 5.0 file list."
+          ],
+          "how_to_test": [
+            "python tools/model_viewer_kenney.py --focus-prefab marketplace_v1 --auto-exit-sec 2",
+            "python tools/model_viewer_kenney.py --focus-prefab blacksmith_v1 --auto-exit-sec 2",
+            "python tools/model_viewer_kenney.py --focus-prefab trading_post_v1 --auto-exit-sec 2",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "model_viewer_screens": [
+              "docs/screenshots/model_viewer_marketplace_v1_20260426_082208_655.png",
+              "docs/screenshots/model_viewer_blacksmith_v1_20260426_082213_971.png",
+              "docs/screenshots/model_viewer_trading_post_v1_20260426_082218_922.png"
+            ],
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0 warns=46"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "handoff": {
+            "agent_03": "Add marketplace, blacksmith, trading_post to _PREFAB_BUILDING_TYPE_TO_FILE; ground/brightness/SEEN FOW per wk33 plan. lair.glb ready for lair path.",
+            "agent_12": "tools/assets_manifest.json already optional-listed these prefabs + lair; confirm no delta needed."
+          }
+        }
+      }
+    }
+  }
 }

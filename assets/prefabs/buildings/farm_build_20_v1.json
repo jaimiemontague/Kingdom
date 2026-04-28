@@ -1,0 +1,143 @@
+{
+  "prefab_id": "farm_build_20_v1",
+  "building_type": "farm",
+  "footprint_tiles": [
+    3,
+    2
+  ],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_fantasy-town-kit_2.0",
+    "kenney_nature-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLTF format/crops_wheatStageB.glb",
+      "pos": [
+        1.65,
+        0.0,
+        0.35
+      ],
+      "rot": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_dirtRow.glb",
+      "pos": [
+        1.0,
+        0.05,
+        0.3
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/fence-fantasy-town.glb",
+      "pos": [
+        0.22,
+        0.0,
+        0.35
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLTF format/crops_leafsStageA.glb",
+      "pos": [
+        1.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        270.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/detail-barrel.glb",
+      "pos": [
+        0.0,
+        0.0,
+        0.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        0.5,
+        0.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "model": "Models/GLB format/structure-cross.glb",
+      "pos": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "notes": "Construction stage ~20%: field rows and early plantings are in, with a fence marker and a barrel on-site."
+}

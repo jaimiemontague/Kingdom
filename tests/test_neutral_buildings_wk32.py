@@ -54,9 +54,13 @@ def test_neutral_autospawn_pairwise_min_chebyshev_ge2_vs_castle_and_each_other()
 
     heroes = [_Hero() for _ in range(12)]
     buildings: list = [castle]
+    peasants: list = []
 
     for _ in range(500):
-        nbs.tick(6.0, buildings, heroes, castle)
+        nbs.tick(6.0, buildings, heroes, peasants, castle)
+        gs = {"castle": castle, "buildings": buildings}
+        for p in list(peasants):
+            p.update(0.2, gs)
 
     alive = [b for b in buildings if getattr(b, "hp", 1) > 0 and hasattr(b, "grid_x")]
     assert len(alive) >= 6
@@ -104,7 +108,7 @@ def test_neutral_autospawn_real_engine_pairwise_min_chebyshev_ge2(seed: int) -> 
     )
     assert castle is not None
     for _ in range(200):
-        e.neutral_building_system.tick(6.0, e.buildings, e.heroes, castle)
+        e.neutral_building_system.tick(6.0, e.buildings, e.heroes, e.peasants, castle)
     alive = [b for b in e.buildings if getattr(b, "hp", 1) > 0 and hasattr(b, "grid_x")]
     assert len(alive) >= 2
     for i, a in enumerate(alive):

@@ -9,111 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk29-first-house-playtest": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
-        "notes": "WK29 R1 consult: FPS env OFF vs ON for gated prefab house loader."
-      },
-      "rounds": {
-        "wk29_r1_execution": {
-          "sprint_id": "wk29-first-house-playtest",
-          "round_id": "wk29_r1_execution",
-          "round_meta": {
-            "prompt_set_id": "wk29_r1",
-            "sent_at_local": "2026-04-16"
-          },
-          "response": {
-            "status": "complete",
-            "raw": "WK29 R1 (Agent 10 consult): Compared Ursina perf risk for KINGDOM_URSINA_PREFAB_TEST=1 vs unset after Agents 03/15 prefab + loader landed. assets/prefabs/buildings/peasant_house_small_v1.json has 2 pieces (wall-door + roof); _load_prefab_instance builds one root Entity + 2 children, applies _apply_gltf_color_and_shading once per piece at instantiation (not per frame). _get_or_create_prefab_house_entity caches per sim building id. Extra draw/state vs prior Sprint 2.1 single-mesh house path is O(pieces) per house instance and tiny relative to combined terrain batch. Automated CLI did not expose FPS numbers; launched python main.py --renderer ursina --no-llm for ~12s with env unset and with KINGDOM_URSINA_PREFAB_TEST=1 — both started cleanly (wgl) with no crash. Judgement: no evidence of >30% FPS regression from this feature alone; wk30 prefab baker not flagged as blocker. Recommend Jaimie spot-check Ursina corner FPS counter and optional F2 pygame perf overlay for numeric confirmation on her GPU.",
-            "summary_bullets": [
-              "Prefab path: 2 child meshes + load-time classifier; cached per building — no per-frame prefab load.",
-              "Short Ursina smoke (env OFF / ON): both launches OK; no numeric FPS from stdout.",
-              "Static analysis: >30% drop unlikely vs prior house mesh; wk30 baker blocker NOT triggered.",
-              "python tools/qa_smoke.py --quick PASS (exit 0)."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/qa_smoke.py --quick",
-              "Manual FPS (repo root): python main.py --renderer ursina --no-llm",
-              "Manual FPS prefab ON (PowerShell): $env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina --no-llm",
-              "In session: Ursina window FPS counter (top-left); F2 toggles pygame perf overlay on HUD for sim ms breakdown."
-            ],
-            "evidence": {
-              "qa_smoke": "python tools/qa_smoke.py --quick",
-              "qa_smoke_exit_code": 0,
-              "ursina_smoke_seconds": 12,
-              "wk30_prefab_baker_blocker": false
-            },
-            "agent_fields": {
-              "prefab_piece_count": 2,
-              "reviewed_files": [
-                "game/graphics/ursina_renderer.py (_use_wk29_prefab_house, _load_prefab_instance, _get_or_create_prefab_house_entity)",
-                "assets/prefabs/buildings/peasant_house_small_v1.json"
-              ]
-            }
-          }
-        }
-      }
-    },
-    "wk30-buildings-pipeline": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
-        "notes": "WK30 R1 consult: FPS vs WK29 baseline with full military prefab set; baker decision gate."
-      },
-      "rounds": {
-        "wk30_r1_execution": {
-          "sprint_id": "wk30-buildings-pipeline",
-          "round_id": "wk30_r1_execution",
-          "round_meta": {
-            "prompt_set_id": "wk30_r1",
-            "sent_at_local": "2026-04-16"
-          },
-          "response": {
-            "status": "complete",
-            "raw": "WK30 R1 (Agent 10 consult): After Agents 15/03/12 landed generalized default-on prefab loader (_resolve_prefab_path, KINGDOM_URSINA_PREFAB_TEST=0 opt-out) and military prefabs, recorded per-prefab piece counts from assets/prefabs/buildings/*.json. WK29 baseline reference: peasant_house_small_v1 = 2 pieces (single gated house). WK30 shipped: castle_v1=20, warrior_guild_v1=8, ranger_guild_v1=6, rogue_guild_v1=6, wizard_guild_v1=11 (stretch), peasant_house_small_v1=2. Sum of child mesh entities if all six types are simultaneously prefab-rendered: 63 pieces total (vs 2 in minimal WK29 test). Loader still instantiates once per building id with per-piece shading at load only; dominant cost remains batched terrain + fog/HUD path from prior work. Short Ursina smoke: python main.py --renderer ursina --no-llm ~12s default-on OK; $env:KINGDOM_URSINA_PREFAB_TEST='0'; same command OK (legacy path). No FPS numbers from CLI. Judgement: scaling from 2 to ~63 static prefab pieces across the full set is orders of magnitude smaller than terrain combine cost; >30% FPS drop vs WK29 single-house scenario is not a credible outcome from prefab draw count alone. WK31 perf-hedge prefab baker NOT flagged. Recommend Jaimie confirm with Ursina FPS counter / F2 when framing Castle + house + guilds in one view.",
-            "summary_bullets": [
-              "Piece counts: house 2, castle 20, warrior_guild 8, ranger_guild 6, rogue_guild 6, wizard_guild 11 (63 total if all types visible).",
-              "Loader: cached per building id; classifier at instantiation — same model as WK29.",
-              "Ursina smoke default-on + opt-out=0: both ~12s, no crash (wgl).",
-              "python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report exit 0 (errors=0, pre-existing WARNs on placeholder 3D manifest entries).",
-              "WK31 baker diversion: NOT triggered (Agent 10 judgement)."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/qa_smoke.py --quick",
-              "python tools/validate_assets.py --report",
-              "python main.py --renderer ursina --no-llm",
-              "$env:KINGDOM_URSINA_PREFAB_TEST='0'; python main.py --renderer ursina --no-llm",
-              "Optional numeric FPS: Ursina fps_counter + F2 pygame perf overlay; pan until Castle + house + guilds in view."
-            ],
-            "evidence": {
-              "qa_smoke": "python tools/qa_smoke.py --quick",
-              "qa_smoke_exit_code": 0,
-              "validate_assets": "python tools/validate_assets.py --report",
-              "validate_assets_exit_code": 0,
-              "validate_assets_summary": "errors=0 warns=46",
-              "ursina_smoke_seconds": 12,
-              "wk31_prefab_baker_perf_hedge": false,
-              "prefab_piece_counts": {
-                "peasant_house_small_v1": 2,
-                "castle_v1": 20,
-                "warrior_guild_v1": 8,
-                "ranger_guild_v1": 6,
-                "rogue_guild_v1": 6,
-                "wizard_guild_v1": 11
-              },
-              "prefab_piece_total_all_types": 63
-            },
-            "agent_fields": {
-              "wk29_baseline_house_pieces": 2,
-              "reviewed_files": [
-                "game/graphics/ursina_renderer.py (_resolve_prefab_path, _load_prefab_instance, prefab sync)"
-              ]
-            }
-          }
-        }
-      }
-    },
     "wk31-perf-fps-and-pack-scale": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
@@ -742,7 +637,10 @@
           "round_id": "wk42_r2_r3_perf_consult",
           "round_meta": {
             "prompt_set_id": "wk42_parallel_11_10",
-            "pm_steps": ["STEP_4_after_R2", "STEP_6_after_R3"],
+            "pm_steps": [
+              "STEP_4_after_R2",
+              "STEP_6_after_R3"
+            ],
             "sent_at_local": "2026-04-27",
             "note": "Repo state has Track A+B+C applied (696-line ursina_renderer.py). Single probe satisfies PM parallel perf checks for both rounds."
           },

@@ -1,6 +1,9 @@
 {
   "schema_version": "2.0",
-  "agent": { "id": "15", "name": "ModelAssembler_KitbashLead" },
+  "agent": {
+    "id": "15",
+    "name": "ModelAssembler_KitbashLead"
+  },
   "notes": [
     "This file is owned by Agent 15 only.",
     "Structure nests rounds inside sprints to keep history organized.",
@@ -8,67 +11,6 @@
     "See .cursor/rules/agent-15-modelassembler-onboarding.mdc for role contract."
   ],
   "sprints": {
-    "wk33-terrain-lair-economy-prefabs": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
-        "notes": "WK33 r0: lair static mesh, marketplace + blacksmith + trading_post prefabs; Agent 03 owns ground texture / scatter / FOW / loader table."
-      },
-      "rounds": {
-        "wk33_r0_construction_stages": {
-          "round_id": "wk33_r0_construction_stages",
-          "round_meta": { "prompt_set_id": "wk33_r0", "completed_at_local": "2026-04-26T16:00:00" },
-          "status": "complete",
-          "what_i_changed": [
-            "assets/prefabs/buildings/marketplace_v1_build_20_v1.json, marketplace_v1_build_50_v1.json — subsets of current marketplace_v1 (stalls+barrels → +hall+walls+one roof).",
-            "assets/prefabs/buildings/blacksmith_v1_build_20_v1.json, blacksmith_v1_build_50_v1.json — 5- and 10-piece prefixes of blacksmith_v1 (forge+chimney stack; 50% before workbench + fences).",
-            "assets/prefabs/buildings/trading_post_v1_build_20_v1.json, trading_post_v1_build_50_v1.json — 2- and 3-piece (stall+barrels → +cart; final 4 = +battlement).",
-            "tools/assets_manifest.json — optional prefab ids for all six."
-          ],
-          "how_to_test": [
-            "python tools/model_assembler_kenney.py --open marketplace_v1_build_50_v1",
-            "python tools/validate_assets.py --report",
-            "python tools/qa_smoke.py --quick"
-          ],
-          "evidence": {
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
-          }
-        },
-        "wk33_r0_kickoff": {
-          "round_id": "wk33_r0_kickoff",
-          "round_meta": { "prompt_set_id": "wk33_r0", "completed_at_local": "2026-04-26T12:00:00" },
-          "status": "complete",
-          "what_i_changed": [
-            "assets/models/environment/lair.glb — copy of Models/GLB format/crypt-large-graveyard.glb (single lair read for all sim lair types).",
-            "assets/prefabs/buildings/marketplace_v1.json — 4x FT stall/bench, food_stand wood texture override.",
-            "assets/prefabs/buildings/blacksmith_v1.json — retro stone 2x2 (warrior XZ), workbench-anvil, FT chimney with wall_brick_stone_center override.",
-            "assets/prefabs/buildings/trading_post_v1.json — cart-high + tent-canvas (Survival) + stall/bench; timber/sand/food_stand overrides.",
-            "assets/ATTRIBUTION.md — lair.glb under Kenney Graveyard 5.0 file list."
-          ],
-          "how_to_test": [
-            "python tools/model_viewer_kenney.py --focus-prefab marketplace_v1 --auto-exit-sec 2",
-            "python tools/model_viewer_kenney.py --focus-prefab blacksmith_v1 --auto-exit-sec 2",
-            "python tools/model_viewer_kenney.py --focus-prefab trading_post_v1 --auto-exit-sec 2",
-            "python tools/validate_assets.py --report",
-            "python tools/qa_smoke.py --quick"
-          ],
-          "evidence": {
-            "model_viewer_screens": [
-              "docs/screenshots/model_viewer_marketplace_v1_20260426_082208_655.png",
-              "docs/screenshots/model_viewer_blacksmith_v1_20260426_082213_971.png",
-              "docs/screenshots/model_viewer_trading_post_v1_20260426_082218_922.png"
-            ],
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0 warns=46" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
-          },
-          "blockers": [],
-          "handoff": {
-            "agent_03": "Add marketplace, blacksmith, trading_post to _PREFAB_BUILDING_TYPE_TO_FILE; ground/brightness/SEEN FOW per wk33 plan. lair.glb ready for lair path.",
-            "agent_12": "tools/assets_manifest.json already optional-listed these prefabs + lair; confirm no delta needed."
-          }
-        }
-      }
-    },
     "wk32-camera-construction-nature-polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
@@ -178,8 +120,16 @@
             "python tools/validate_assets.py --report"
           ],
           "evidence": {
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" }
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            }
           },
           "blockers": []
         },
@@ -202,9 +152,20 @@
             "python tools/validate_assets.py --report"
           ],
           "evidence": {
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" },
-            "visual_review": { "status": "pending_human", "note": "In-game meadow + tree tiles — confirm variety vs single grass/tuft; adjust copy list or stride if too dense." }
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "In-game meadow + tree tiles — confirm variety vs single grass/tuft; adjust copy list or stride if too dense."
+            }
           },
           "blockers": []
         },
@@ -232,10 +193,23 @@
             "python main.py --renderer ursina"
           ],
           "evidence": {
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
-            "bug_wk32_r2_bug_002": { "suspect_removed": "assets/models/environment/tree_pine.glb (and tree_pine.obj); replaced by tree_meadow_*.obj from Nature kit" },
-            "visual_review": { "status": "pending_human", "note": "Confirm meadow trees after tint; Inn construction stages once Agent 03 resolver is wired" }
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "bug_wk32_r2_bug_002": {
+              "suspect_removed": "assets/models/environment/tree_pine.glb (and tree_pine.obj); replaced by tree_meadow_*.obj from Nature kit"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "Confirm meadow trees after tint; Inn construction stages once Agent 03 resolver is wired"
+            }
           },
           "blockers": []
         }
@@ -450,8 +424,16 @@
             "python tools/validate_assets.py --report"
           ],
           "evidence": {
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS errors=0 warns=46 pre-existing" }
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            }
           },
           "blockers": []
         }
@@ -511,7 +493,10 @@
             "castle_v1": {
               "id": "castle_v1",
               "building_type": "castle",
-              "footprint_tiles": [3, 3],
+              "footprint_tiles": [
+                3,
+                3
+              ],
               "piece_budget": 20,
               "palette": "heavy stone / fortified (Retro Fantasy fortified + tower family)",
               "target_silhouette": "visual anchor of the kingdom: central gate front + two back towers + heavy walls on flanks; courtyard okay (no interior roof).",
@@ -532,7 +517,10 @@
             "warrior_guild_v1": {
               "id": "warrior_guild_v1",
               "building_type": "warrior_guild",
-              "footprint_tiles": [2, 2],
+              "footprint_tiles": [
+                2,
+                2
+              ],
               "piece_budget": 12,
               "palette": "painted plaster body (wall-paint-*) + imposing roofline (roof-high-side) — 'armory feel'",
               "target_silhouette": "compact square body, pitched roof, one gate, flanks with window slits — distinct from peasant house via (a) roof-high-side instead of roof-side, (b) wall-paint family instead of wall-pane-painted-wood.",
@@ -553,7 +541,10 @@
             "ranger_guild_v1": {
               "id": "ranger_guild_v1",
               "building_type": "ranger_guild",
-              "footprint_tiles": [2, 2],
+              "footprint_tiles": [
+                2,
+                2
+              ],
               "piece_budget": 12,
               "palette": "plain wood walls (wall-pane-wood-*) + standard pitched roof (roof-side) + optional Nature Kit tree accent",
               "target_silhouette": "hunter's lodge: same body shape as Warrior but wood-tone walls, less imposing roof, one green accent.",
@@ -572,7 +563,10 @@
             "rogue_guild_v1": {
               "id": "rogue_guild_v1",
               "building_type": "rogue_guild",
-              "footprint_tiles": [2, 2],
+              "footprint_tiles": [
+                2,
+                2
+              ],
               "piece_budget": 12,
               "palette": "bare stone (wall.glb, wall-half.glb, wall-window.glb) — steel-gray, low-profile, asymmetric",
               "target_silhouette": "lower profile than Warrior/Ranger; use wall-half for short segments; off-center doorway; shallow roof.",
@@ -591,7 +585,10 @@
             "wizard_guild_v1_optional": {
               "id": "wizard_guild_v1",
               "building_type": "wizard_guild",
-              "footprint_tiles": [2, 2],
+              "footprint_tiles": [
+                2,
+                2
+              ],
               "piece_budget": 14,
               "palette": "tower motif on a 2x2 base; purple accent via paint-family pieces if any fit.",
               "target_silhouette": "tall vertical punctuation point — one tower stacked centrally, walls wrap the base.",
@@ -933,8 +930,7 @@
           ]
         }
       }
-    }
-    ,
+    },
     "wk34-final-3d-model-pass-pre-v1-5": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
@@ -943,7 +939,10 @@
       "rounds": {
         "wk34_r0_prefabs_and_nature_scale": {
           "round_id": "wk34_r0_prefabs_and_nature_scale",
-          "round_meta": { "prompt_set_id": "wk34_r0", "completed_at_local": "2026-04-26T20:59:00" },
+          "round_meta": {
+            "prompt_set_id": "wk34_r0",
+            "completed_at_local": "2026-04-26T20:59:00"
+          },
           "status": "complete",
           "what_i_changed": [
             "game/graphics/ursina_renderer.py — set TREE/ROCK/GRASS_SCATTER *_SCALE_MULTIPLIER to 4× (1.15→4.6, 0.42→1.68, 0.52→2.08).",
@@ -967,8 +966,16 @@
               "docs/screenshots/wk34/temple_v1_20260426_205714_408.png",
               "docs/screenshots/wk34/guardhouse_v1_20260426_205900_802.png"
             ],
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0 warns=46 (pre-existing warnings)" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0 warns=46 (pre-existing warnings)"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
           },
           "blockers": [],
           "handoff": {
@@ -978,7 +985,10 @@
         },
         "wk34_r1_temple_sand_and_frame_quads": {
           "round_id": "wk34_r1_temple_sand_and_frame_quads",
-          "round_meta": { "prompt_set_id": "wk34_r1", "completed_at_local": "2026-04-26T22:30:00" },
+          "round_meta": {
+            "prompt_set_id": "wk34_r1",
+            "completed_at_local": "2026-04-26T22:30:00"
+          },
           "status": "complete",
           "what_i_changed": [
             "assets/models/buildings/temple_frame_quad.obj, temple_frame_quad.mtl — 1m UV quad (Z-facing) for window/door decals; mtllib for loader.",
@@ -991,13 +1001,24 @@
             "python tools/qa_smoke.py --quick"
           ],
           "evidence": {
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
           }
         },
         "wk34_r2_temple_construction_stages_resync": {
           "round_id": "wk34_r2_temple_construction_stages_resync",
-          "round_meta": { "prompt_set_id": "wk34_r2", "completed_at_local": "2026-04-26T23:45:00" },
+          "round_meta": {
+            "prompt_set_id": "wk34_r2",
+            "completed_at_local": "2026-04-26T23:45:00"
+          },
           "status": "complete",
           "what_i_changed": [
             "Regenerated assets/prefabs/buildings/temple_build_20_v1.json and temple_build_50_v1.json from current temple_v1.json (14 plinth+road+hedge+obelisk; 29 = full wall shell without roof or temple_frame_quad overlays)."
@@ -1009,8 +1030,66 @@
             "python tools/qa_smoke.py --quick"
           ],
           "evidence": {
-            "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "errors=0" },
-            "qa_smoke": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" }
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          }
+        }
+      }
+    },
+    "wk43-building-nature-stage1": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
+        "notes": "WK43 Stage 1: add construction-stage prefabs for neutral buildings (Food Stand + Farm)."
+      },
+      "rounds": {
+        "wk43_r0_kickoff": {
+          "round_id": "wk43_r0_kickoff",
+          "round_meta": {
+            "prompt_set_id": "wk43_r0",
+            "completed_at_local": "2026-04-28T08:55:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/food_stand_build_20_v1.json — 20% stage (plot pad + crate + shovel) for a clear under-construction read.",
+            "assets/prefabs/buildings/food_stand_build_50_v1.json — 50% stage (stall-fantasy-town) with the same wood stall texture override as the completed Food Stand.",
+            "assets/prefabs/buildings/farm_build_20_v1.json — 20% stage (field rows + early plants + fence marker + barrel).",
+            "assets/prefabs/buildings/farm_build_50_v1.json — 50% stage (windmill + partial structure/roof markers + field rows)."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open food_stand_build_20_v1",
+            "python tools/model_assembler_kenney.py --open food_stand_build_50_v1",
+            "python tools/model_assembler_kenney.py --open farm_build_20_v1",
+            "python tools/model_assembler_kenney.py --open farm_build_50_v1",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "errors=0 warns=46 (pre-existing)"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "Open each prefab id in the assembler to confirm staging silhouettes read well before wiring into Ursina resolver."
+            }
+          },
+          "blockers": [],
+          "handoff": {
+            "agent_03": "Construction stage prefab ids added: food_stand_build_20_v1 / food_stand_build_50_v1 and farm_build_20_v1 / farm_build_50_v1 (all under assets/prefabs/buildings/)."
           }
         }
       }

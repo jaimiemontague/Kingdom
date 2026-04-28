@@ -9,41 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk17-quality-logic-immersion": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk17_quality_logic_immersion.plan.md",
-        "notes": "WK17: Quality, Logic, & Immersion."
-      },
-      "rounds": {
-        "wk17_r1_kickoff_investigation": {
-          "round_id": "wk17_r1_kickoff_investigation",
-          "sprint_id": "wk17-quality-logic-immersion",
-          "round_meta": {
-            "prompt_set_id": "wk17_r1_investigation_v1",
-            "build_target": "BuildA_midweek"
-          },
-          "response": {
-            "status": "done",
-            "agent_fields": {
-              "what_i_changed": [
-                "docs/vision_rules_fog_of_war.md: Added visibility radii and rules for auto-spawned buildings (house, farm, food_stand) and Guards for Fog of War integration. Agent 03 implements engine hooks in Round 2."
-              ],
-              "how_to_test": [
-                "python tools/qa_smoke.py --quick (no game code change; doc only)"
-              ],
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                }
-              },
-              "blockers": []
-            }
-          }
-        }
-      }
-    },
     "wk18-llm-merger-and-mechanics": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
@@ -396,6 +361,61 @@
                   "errors": 0,
                   "warns": 46,
                   "notes": "errors=0 per SUMMARY; WARN missing_model_file stubs expected for Ursina/prefab pipeline (legacy; same as prior sprints)"
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
+    },
+    "wk43-building-nature-stage1": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
+        "notes": "WK43 Stage 1: neutral plots + BuilderPeasant lifecycle (Agent 05 core sim/entity work)."
+      },
+      "rounds": {
+        "wk43_r0_builder_peasant_stage1": {
+          "round_id": "wk43_r0_builder_peasant_stage1",
+          "sprint_id": "wk43-building-nature-stage1",
+          "round_meta": {
+            "prompt_set_id": "wk43_r0_kickoff",
+            "build_target": "Stage1_plots_builder_peasant",
+            "created_utc": "2026-04-28T14:45:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/entities/neutral_buildings.py: NeutralBuilding + House/Farm/FoodStand now accept is_constructed; plots spawn with hp=1, is_constructed=False, requires_builder_peasant=True; neutral tax generation pauses until constructed.",
+                "game/entities/peasant.py: Regular peasants skip builder-only plots (requires_builder_peasant).",
+                "game/entities/builder_peasant.py (new): BuilderPeasant entity with lifecycle MOVE_TO_PLOT -> BUILDING -> RETURN_TO_CASTLE -> DESPAWN; marks plot requires_builder_peasant=False when construction completes.",
+                "game/systems/neutral_buildings.py: tick signature updated to tick(dt, buildings, heroes, peasants, castle); spawns plots + a BuilderPeasant; despawns builders once they reach the castle (removes from peasants list).",
+                "game/sim_engine.py: pass self.peasants into NeutralBuildingSystem.tick call site.",
+                "tests/test_builder_lifecycle.py (new): plot spawns unconstructed; builder constructs; builder returns + despawns; regular peasant ignores builder-only plots.",
+                "tests/test_neutral_buildings_wk32.py: updated NeutralBuildingSystem.tick call sites for new signature."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest tests/",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest tests/",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "notes": "115 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
                 }
               },
               "blockers": []

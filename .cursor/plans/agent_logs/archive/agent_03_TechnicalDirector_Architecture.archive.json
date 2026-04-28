@@ -3421,6 +3421,877 @@
           }
         }
       }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "WK32 r1 — Agent 03: EditorCamera, construction staging resolver, env scatter"
+      },
+      "rounds": {
+        "wk32_r1_execution": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r1_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-18"
+          },
+          "prompt_text": "WK32 r1 revised 2026-04-18: pre-code checklist, PM scatter handoff, water quad (BUG-007), construction thresholds aligned with Agent 15.",
+          "pre_code_checklist_2026_04_18": {
+            "file_map": [
+              "game/graphics/ursina_renderer.py — 3D terrain (_build_3d_terrain), prefab load/sync, construction staging resolver, scatter scanners + PM shading helpers.",
+              "game/graphics/ursina_app.py — UrsinaApp, EditorCamera setup, FOV↔engine.zoom, WASD pan vs orbit.",
+              "game/entities/buildings/base.py — Building.construction_progress (consumer only).",
+              "game/engine.py — get_game_state buildings_construction_progress (snapshot).",
+              "game/world.py — TileType enum for terrain tiles.",
+              "tools/kenney_pack_scale.py — apply_kenney_pack_color_tint_to_entity (scatter finalize; Agent 12 owns multipliers).",
+              "tools/model_viewer_kenney.py — _apply_gltf_color_and_shading reference (scatter shading-only path).",
+              "assets/models/environment/* — meshes scanned for grass/doodad lists.",
+              "assets/prefabs/buildings/*.json — plot + pilot intermediates (Agent 15)."
+            ],
+            "architecture_options": [
+              "OPT A destroy+recreate prefab entity on stage change — PM pick; LOW risk, S effort.",
+              "OPT B pre-spawn 4 sub-roots — rejected (memory/perf at kingdom scale).",
+              "OPT C hot-swap pieces inside loader — rejected this sprint (HIGH effort).",
+              "Water OPT A per-tile unlit quad — PM pick; LOW risk, S effort.",
+              "Water OPT B batched water mesh — deferred (M effort)."
+            ],
+            "architecture_chosen": "OPT A for construction staging and OPT A for water (flat quad per water tile, y=0.005, unlit_shader). PM emergency helpers _apply_kenney_scatter_mesh_shading_only + _finalize_kenney_scatter_entity adopted as-is (single shading/tint path for path/grass/tree/doodad/rock).",
+            "existing_code_conflicts_addressed": [
+              "KINGDOM_URSINA_PREFAB_TEST=0 already forces legacy path via _resolve_prefab_path returning None — staging not applied.",
+              "Entity.default_shader vs explicit unlit_shader on water quad — water uses explicit unlit_shader.",
+              "Intermediate filenames derive from base prefab stem (e.g. inn_v2 → inn_v2_build_20_v2.json via _stage_prefab_path).",
+              "Revision 2026-04-18: thresholds changed from <0.2 plot band to progress==0 only for plot; (0,0.5)→20%, [0.5,1)→50%."
+            ]
+          },
+          "response": {
+            "status": "complete",
+            "pm_edit_adoption": "Adopted PM’s _apply_kenney_scatter_mesh_shading_only + _finalize_kenney_scatter_entity and ursina_app EditorCamera rotation Vec3 + camera.editor_position sync; reviewed + kept with this commit.",
+            "summary_bullets": [
+              "EditorCamera (ursina_app): engine.zoom → camera.fov; EditorCamera zoom_speed=0; ec.target_z synced after FOV; WASD pans ec when not RMB orbiting; KINGDOM_URSINA_EDITORCAMERA=0 legacy.",
+              "Construction staging (_resolve_construction_staged_prefab): progress<=0 → plot; (0,0.5)→build_20; [0.5,1)→build_50; built/>=1→final. Fallback lists: plot→50→20→final; 20-stage→50→final→plot; 50-stage→final→20→plot.",
+              "WK32-BUG-007: water tiles use flat quad (unlit_shader) at y=0.005, not grass_models[0] tint.",
+              "Scatter: filename scanner unchanged; occupied tiles excluded; PM finalize applies shading + optional pack tint (water skipped).",
+              "Screenshots: folder docs/screenshots/wk32_nature/ reserved per PM; automated session did not capture F12 — Jaimie/Agent 15 should add before/after water + construction sequence PNGs."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "screenshot_folder_note": "PM target path docs/screenshots/wk32_nature/ — blocked by repo gitignore (docs/screenshots/); create locally for F12 evidence; force-add PNGs with git add -f if PM wants them versioned.",
+            "gates": {
+              "qa_smoke_quick": "PASS (exit 0)",
+              "validate_assets_report": "PASS (exit 0, errors=0, pre-existing warns)",
+              "determinism_guard": "PASS"
+            }
+          },
+          "followup_2026_04_25_camera_regression_fix": {
+            "status": "done",
+            "bug": "WK32-BUG-008",
+            "what_i_changed": [
+              "Restored EditorCamera as the default Ursina camera path; KINGDOM_URSINA_EDITORCAMERA=0 now remains the explicit legacy fallback.",
+              "Fixed the EditorCamera startup pose by deriving rig rotation from the known-good legacy castle look_at framing, then preserving the matching camera world position after parenting under EditorCamera.",
+              "Kept zoom source-of-truth unchanged: engine.zoom drives camera.fov; EditorCamera zoom_speed remains 0 and ec.target_z is synced each frame."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_app.py"
+            ],
+            "evidence": {
+              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_camera_fix --stem editorcamera_world_position --no-llm",
+              "screenshot": "docs/screenshots/wk32_camera_fix/editorcamera_world_position_20260425_033929_730.png",
+              "py_compile": "PASS - python -m py_compile game/graphics/ursina_app.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_camera_fix --stem editorcamera_world_position --no-llm",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "Automated capture shows the castle centered on launch with EditorCamera default-on.",
+              "Manual mouse orbit / middle-mouse pan / wheel zoom should still be spot-checked in the live window because automated screenshot capture cannot exercise mouse gestures."
+            ]
+          },
+          "followup_2026_04_25_zoom_in_tuning": {
+            "status": "done",
+            "what_i_changed": [
+              "Raised shared camera zoom_max from 2.5 to 5.0 so wheel / +/- / held E can zoom closer.",
+              "Lowered the Ursina FOV floor from 18 degrees to 8 degrees so the full 5.0 engine zoom is visible in the 3D renderer.",
+              "Kept engine.zoom as the single source of truth for camera.fov to preserve picking and HUD coordinate math."
+            ],
+            "files_changed": [
+              "config.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "evidence": {
+              "zoom_values": "PASS - ZOOM_MAX=5.0, ursina_fov_at_max=8.40",
+              "py_compile": "PASS - python -m py_compile config.py game/graphics/ursina_app.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "config.py is shared; this is intentional user-requested camera tuning, not a footprint or sim contract change."
+            ]
+          },
+          "followup_2026_04_25_fog_perspective_visibility_fix": {
+            "status": "done",
+            "what_i_changed": [
+              "Corrected the incomplete render-order-only fog fix: ground fog now renders before buildings/props instead of last.",
+              "Added tile-visibility gating for vertical terrain props (grass, trees, doodads, rocks) so unseen props cannot protrude above the fog edge at oblique camera angles.",
+              "Set visibility-gated 3D terrain props to render_queue=1, matching buildings/prefab pieces, so visible models draw in front of the ground fog instead of having their tops clipped.",
+              "Kept the fog texture as the terrain darkening layer; object visibility now follows world.visibility by tile for vertical terrain meshes."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py"
+            ],
+            "evidence": {
+              "focused_capture": "PASS - python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_prop_queue --no-llm",
+              "screenshot": "docs/screenshots/wk32_fog_fix/fog_prop_queue_20260425_104702_912.png",
+              "py_compile": "PASS - python -m py_compile game/graphics/ursina_renderer.py",
+              "qa_smoke_quick": "PASS - python tools/qa_smoke.py --quick"
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina",
+              "python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_fog_fix --stem fog_prop_queue --no-llm",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "notes": [
+              "Manual orbit/tilt around the castle and map edge is still the decisive check because automated capture cannot reproduce Jaimie's exact camera angle."
+            ]
+          }
+        },
+        "wk32_r2_visual_followup": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r2_visual_followup",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r2_visual_followup]"
+          },
+          "status": "done",
+          "workstreams": [
+            "B",
+            "C"
+          ],
+          "summary_bullets": [
+            "Workstream B: _resolve_construction_staged_prefab now tries plot_{w}x{h} first (ordered _plot_prefab_candidates), then stage files via _stage_prefab_path_candidates — prefers inn_v2_build_20_v1 / inn_v2_build_50_v1 (full stem) before legacy core_build_20_v2 names.",
+            "Workstream C: grass tufts no longer thinned by URSINA_TERRAIN_SCATTER_STRIDE; _GRASS_CLUMPS_PER_TILE=3 per eligible tile with _grass_clump_offset deterministic sub-tile spread (reduces square-grid read). Doodads/rocks still use scatter_stride.",
+            "WK32-R2-FEAT-002 / BUG-001 addressed in ursina_renderer only; no config.py edits."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0; pre-existing warns for optional hero/enemy model placeholders)",
+            "screenshots": "Jaimie/PM: meadow before/after not re-captured in this session; run python main.py --renderer ursina and compare meadow near castle, or python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r2_grass --stem meadow --no-llm"
+          },
+          "how_to_test": [
+            "python main.py --renderer ursina",
+            "Inn 3x2: confirm construction 0% shows plot_3x2 (when assets present), 20% / 50% use inn_v2_build_*_v1",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "pm_tickets": [
+            "WK32-R2-BUG-001 (grass grid) — owner 03: addressed via density + clump offsets",
+            "WK32-R2-FEAT-002 (3x2 plot + inn stages) — owner 03: resolver candidate lists"
+          ]
+        },
+        "wk32_r3_preview_load_hotfix": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r3_preview_load_hotfix",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r3_preview_load_hotfix]"
+          },
+          "status": "done",
+          "workstreams": [
+            "C",
+            "Performance"
+          ],
+          "summary_bullets": [
+            "Added renderer-only KINGDOM_URSINA_GRASS_DENSITY=off|low|default|medium|high preview knob; no config.py or CHANGELOG edits.",
+            "Default grass budget is now 1 clump on a deterministic non-grid 1-in-4 tile sample (stride 2), low is 1-in-9, and high restores r2 screenshot density (3 clumps on every eligible tile).",
+            "Preserved r2 natural sub-tile jitter via _grass_clump_offset and kept exclusions for paths, water, and occupied building footprints."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "manual_preview_commands_powershell": {
+            "low": "$env:KINGDOM_URSINA_GRASS_DENSITY='low'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "default": "python main.py --renderer ursina --no-llm",
+            "high_screenshot_density": "$env:KINGDOM_URSINA_GRASS_DENSITY='high'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "off_debug": "$env:KINGDOM_URSINA_GRASS_DENSITY='off'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY"
+          },
+          "evidence": {
+            "py_compile": "PASS (exit 0) — python -m py_compile game/graphics/ursina_renderer.py",
+            "density_profile_check": "PASS (exit 0) — python -c \"from game.graphics import ursina_renderer as r; print('default', r._grass_density_budget()); import os; os.environ['KINGDOM_URSINA_GRASS_DENSITY']='low'; print('low', r._grass_density_budget()); os.environ['KINGDOM_URSINA_GRASS_DENSITY']='high'; print('high', r._grass_density_budget())\" -> default (1, 2), low (1, 3), high (3, 1)",
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "Not run; no assets, tools, or manifest files changed.",
+            "preview_capture": "PASS (exit 0) — python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r3_preview --stem default_density --no-llm",
+            "screenshot": "docs/screenshots/wk32_r3_preview/default_density_20260425_151227_441.png"
+          },
+          "how_to_test": [
+            "python -m py_compile game/graphics/ursina_renderer.py",
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "$env:KINGDOM_URSINA_GRASS_DENSITY='low'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY",
+            "$env:KINGDOM_URSINA_GRASS_DENSITY='high'; python main.py --renderer ursina --no-llm; Remove-Item Env:\\KINGDOM_URSINA_GRASS_DENSITY"
+          ],
+          "pm_tickets": [
+            "WK32-R3-BUG-001 (preview startup too slow) — owner 03: hotfixed with default density budget and env preview knob.",
+            "WK32-R3-FEAT-001 (playable grass density budget) — implemented in ursina_renderer.py."
+          ],
+          "notes": [
+            "Panda3D .bam cache-miss log clarification remains Agent 12 ownership; this change addresses renderer entity count/startup budget only."
+          ]
+        },
+        "wk32_r4_tree_fog_perf_hotfix": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r4_tree_fog_perf_hotfix",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r4_tree_fog_perf_hotfix]"
+          },
+          "status": "done",
+          "workstreams": [
+            "Fog",
+            "TreeShading"
+          ],
+          "summary_bullets": [
+            "Fixed WK32-R4-BUG-003: static terrain props tracked via _track_visibility_gated_terrain are now visible for Visibility.VISIBLE and Visibility.SEEN, and hidden only for Visibility.UNSEEN.",
+            "Added explored-fog dimming for static terrain props: props in Visibility.SEEN keep rendering but receive a 0.5 color multiplier; VISIBLE props use their base tint; UNSEEN props remain hidden.",
+            "Fixed flat OBJ tree reads: tree_meadow_*.obj loads as vertex-colored/no-texture geometry, so the shared material helper now applies the factor-lit shader to non-textured vertex-color geoms as well as factor-only geoms.",
+            "The shared factor-lit shader now honors p3d_ColorScale, so environment/tree tint and explored-fog dimming affect lit OBJ materials correctly.",
+            "Kept promoted environment tree default tint at 0.65 after vertex-lit comparison; grass remains on the r3 density budget."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py",
+            "tools/model_viewer_kenney.py",
+            "tools/kenney_pack_scale.py"
+          ],
+          "evidence": {
+            "docs_reviewed": ".cursor/plans/prefab_texture_override_standard.md — shader/material path must be explicit, avoid setShaderAuto, and prove with in-game captures.",
+            "py_compile": "PASS (exit 0) — python -m py_compile game/graphics/ursina_renderer.py tools/model_viewer_kenney.py tools/kenney_pack_scale.py",
+            "qa_smoke_quick": "PASS (exit 0) — python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0, existing warnings=46) — python tools/validate_assets.py --report",
+            "preview_capture": "PASS (exit 0) — python tools/run_ursina_capture_once.py --seconds 3 --subdir wk32_r4_fog_seen --stem seen_props --no-llm",
+            "screenshot_fog_seen": "docs/screenshots/wk32_r4_fog_seen/seen_props_20260425_152833_978.png",
+            "screenshot_loop_1": "docs/screenshots/wk32_r4_tree_fog_shader/after_shader_fog_1_20260425_154113_360.png",
+            "screenshot_loop_2_tuned_050": "docs/screenshots/wk32_r4_tree_fog_shader/after_tree_mult_050_20260425_154155_364.png",
+            "screenshot_loop_3_final_default": "docs/screenshots/wk32_r4_tree_fog_shader/after_tree_mult_050_default_20260425_154226_933.png",
+            "material_debug": "tree_meadow_tall.obj classified as branch=vertex tex=no-texture-attrib vcolor=True before fix; vertex-colored geoms now receive factor-lit shader.",
+            "closeup_flat_before_vertex_fix": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_entity_shader.png",
+            "closeup_vertex_lit": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_vertex_lit.png",
+            "closeup_vertex_lit_065": "docs/screenshots/wk32_r4_tree_fog_shader/tree_close_vertex_lit_065.png",
+            "ingame_vertex_lit_065": "docs/screenshots/wk32_r4_tree_fog_shader/after_vertex_lit_065_ingame_20260425_154901_666.png"
+          },
+          "how_to_test": [
+            "python main.py --renderer ursina --no-llm",
+            "Explore terrain with trees; move vision away so tiles become explored-but-fogged; confirm trees remain visible (dimmed) instead of vanishing.",
+            "python tools/run_ursina_capture_once.py --seconds 4 --subdir wk32_r4_tree_fog_shader --stem after_vertex_lit_ingame --no-llm",
+            "python -m py_compile game/graphics/ursina_renderer.py tools/model_viewer_kenney.py tools/kenney_pack_scale.py",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "pm_tickets": [
+            "WK32-R4-BUG-003 (static trees vanish in explored fog) — owner 03: fixed via SEEN-allowed gating and 0.5 SEEN dimming for visibility-gated terrain props.",
+            "Human follow-up: lighter tree OBJ models now use lit vertex-color shading; tree brightness/detail should be re-reviewed by Agent 09/Jaimie against the close-up and in-game screenshots."
+          ],
+          "notes": [
+            "Tree brightness primary ownership remains Agent 12/09, but this renderer/tool shader fix was necessary because promoted OBJ trees were vertex-colored and therefore bypassed the lit shader.",
+            "Hero-spawn FPS lag (BUG-002) still needs the Agent 10/03 renderer-HUD follow-up if it persists after r3 grass density budget."
+          ]
+        },
+        "wk32_r5_hero_spawn_fps_blocker": {
+          "sprint_id": "wk32-camera-construction-nature-polish",
+          "round_id": "wk32_r5_hero_spawn_fps_blocker",
+          "round_meta": {
+            "sent_at_local": "2026-04-25",
+            "pm_ref": "sprints[wk32-camera-construction-nature-polish].rounds[wk32_r5_hero_spawn_fps_blocker]"
+          },
+          "status": "done",
+          "workstreams": [
+            "Performance",
+            "Renderer"
+          ],
+          "summary_bullets": [
+            "Fixed the shared Ursina billboard sync path used by heroes/enemies/workers/projectiles: it now uses the renderer-owned _ks_billboard_configured flag instead of probing Ursina's private _billboard field.",
+            "If an entity ever reaches sync unconfigured, _sync_billboard_entity now applies the pixel-billboard settings once, then marks the entity configured; it no longer risks resetting billboard state every frame.",
+            "Cached billboard color assignment with _ks_last_color so hero spawn/update frames do not push redundant Panda color state when texture/tint is unchanged.",
+            "Added an automated Ursina hero FPS probe and looped on it after Jaimie reported the first pass was still slow.",
+            "Fixed the real r5 blocker: static terrain prop visibility syncing now updates only tiles whose VISIBLE/SEEN state changed instead of touching every tracked prop on every fog revision.",
+            "Reduced default grass density from the medium preview budget to the existing low/playable profile; medium/high remain opt-in via KINGDOM_URSINA_GRASS_DENSITY."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_app.py",
+            "tools/run_ursina_capture_once.py"
+          ],
+          "culprit_evidence": [
+            "Agent 10 r4 already measured headless total_frame under 1 ms up to 8 heroes, so this r5 pass stayed in renderer/HUD.",
+            "Code inspection found _sync_billboard_entity tried to avoid resetting billboard state via getattr(ent, \"_billboard\", False), while the renderer already tracks the stable _ks_billboard_configured flag set at entity creation.",
+            "The first automated 5-hero probe reproduced the FPS drop. Stage timings showed the problem was in UrsinaRenderer.update, not sim/HUD: renderer p90 was about 167 ms while tick_simulation/HUD stayed near 0.5-1 ms.",
+            "Neutral building auto-spawn isolation did not change the drop. Disabling grass removed the remaining delta; the existing low grass profile restored 5-hero FPS to the zero-hero baseline."
+          ],
+          "evidence": {
+            "py_compile": "PASS (exit 0) - python -m py_compile game/graphics/ursina_app.py game/graphics/ursina_renderer.py tools/run_ursina_capture_once.py",
+            "lints": "PASS - ReadLints found no diagnostics for changed files",
+            "qa_smoke_quick": "PASS (exit 0) - python tools/qa_smoke.py --quick",
+            "validate_assets_report": "PASS (exit 0, errors=0, warnings=46 pre-existing missing placeholder 3D model files) - python tools/validate_assets.py --report",
+            "baseline_zero_heroes_after_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 -> p50_fps=49.3 p10_fps=40.0 renderer_p90=1.749ms",
+            "five_heroes_before_visibility_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 --disable-neutral-spawn -> p50_fps=42.8 p10_fps=5.2 renderer_p90=166.833ms",
+            "five_heroes_after_visibility_fix": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 --disable-neutral-spawn -> p50_fps=45.8 p10_fps=40.4 renderer_p90=2.316ms",
+            "five_heroes_default_after_grass_budget": "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 -> p50_fps=48.7 p10_fps=42.1 renderer_p90=2.986ms",
+            "five_heroes_mock_after_fix": "python tools/run_ursina_capture_once.py --seconds 14 --provider mock --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5 -> p50_fps=48.6 p10_fps=42.5 renderer_p90=2.228ms"
+          },
+          "how_to_test": [
+            "python -m py_compile game/graphics/ursina_app.py game/graphics/ursina_renderer.py tools/run_ursina_capture_once.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python tools/run_ursina_capture_once.py --seconds 14 --no-llm --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5",
+            "python tools/run_ursina_capture_once.py --seconds 14 --provider mock --no-screenshot --fps-probe --fps-warmup-sec 3 --hero-fps-probe-count 5",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer ursina --provider mock"
+          ],
+          "manual_fps_verification_needed": [
+            "Automated FPS probe now reads frame dt directly and prints p10/p50/p90 stats, so live manual FPS is no longer the only evidence.",
+            "Jaimie should still spot-check the real game feel with python main.py --renderer ursina --no-llm and python main.py --renderer ursina --provider mock."
+          ],
+          "pm_tickets": [
+            "WK32-R5-BUG-001 (FPS collapses after spawning one or two heroes in Ursina) - owner 03: fixed via terrain-prop visibility dirty sync + playable default grass density; automated 5-hero probes now match zero-hero baseline within normal variance."
+          ]
+        }
+      }
+    },
+    "wk34-3d-final-model-pass-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "notes": "WK34: building LoS, nature 4x trees+scatter, prefab table, plot_3x4 for Temple 3x4 footprint"
+      },
+      "rounds": {
+        "wk34_r0_execution": {
+          "sprint_id": "wk34-3d-final-model-pass-v1-5",
+          "round_id": "wk34_r0_execution",
+          "round_meta": {
+            "sent_at_local": "2026-04-26"
+          },
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "game/engine._update_fog_of_war: +3 tile vision radius for every constructed player building (skip castle, skip is_neutral, skip dead) — WK34 building LoS.",
+              "ursina_renderer: TREE_SCALE_MULTIPLIER=4.6 (4x vs pre-WK34 1.15 per plan); _PREFAB_BUILDING_TYPE_TO_FILE adds ranger_guild, temple, guardhouse; removed gnome_hovel prefab entry (deprecated).",
+              "assets/prefabs/buildings/plot_3x4_v1.json: 3x4 construction plot so Temple (config BUILDING_SIZES 3x4) resolves plot_3x4 in _plot_prefab_candidates at 0% build.",
+              "tools/assets_manifest.json: plot_3x4_v1 in required; gnome_hovel_v1 moved to optional."
+            ],
+            "files_changed": [
+              "game/engine.py",
+              "game/graphics/ursina_renderer.py",
+              "assets/prefabs/buildings/plot_3x4_v1.json",
+              "tools/assets_manifest.json"
+            ],
+            "how_to_test": [
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "followups": [
+              {
+                "added_at_local": "2026-04-26",
+                "topic": "Fog-of-war LoS: exclude lairs",
+                "what_i_changed": [
+                  "game/engine._update_fog_of_war: WK34 player-building LoS now skips lairs (building.is_lair or stash_gold), since lairs are not player structures."
+                ],
+                "files_changed": [
+                  "game/engine.py"
+                ],
+                "evidence": {
+                  "qa_smoke_quick": {
+                    "command": "python tools/qa_smoke.py --quick",
+                    "exit_code": 0,
+                    "status": "PASS"
+                  }
+                }
+              }
+            ],
+            "final_gates": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46"
+              }
+            },
+            "screenshots": "None captured this session. Plan optional: python tools/model_viewer_kenney.py --screenshot-subdir wk34 --auto-exit-sec 5"
+          }
+        }
+      }
+    },
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK36 Stage 1 R1: introduce SimStateSnapshot + GameEngine.build_snapshot(); no Ursina renderer migration in R1."
+      },
+      "rounds": {
+        "wk36_r1_snapshot_and_tests": {
+          "sprint_id": "wk36-refactor-stage1-snapshot-decouple",
+          "round_id": "wk36_r1_snapshot_and_tests",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK36 Stage 1 R1: Implement Task 1-A (game/sim/snapshot.py frozen SimStateSnapshot) and Task 1-B (GameEngine.build_snapshot()) per master plan Stage 1. Keep build_snapshot read-only. Run pytest + qa_smoke --quick.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added frozen dataclass SimStateSnapshot in game/sim/snapshot.py (immutable container for renderer-facing state).",
+              "Implemented GameEngine.build_snapshot() returning SimStateSnapshot with shallow-copied entity tuples + world + fog_revision + economy/spawner scalars + selection + vfx projectiles + camera/display basics.",
+              "No sim behavior changes; build_snapshot is a pure read of existing engine state."
+            ],
+            "files_changed": [
+              "game/sim/snapshot.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "blockers": [
+              "Agent 11 owns WK36-STAGE1-TEST-001 tests in tests/test_renderer_snapshot_contract.py and should land after this snapshot/build_snapshot change."
+            ]
+          }
+        },
+        "wk36_r2_renderer_migration": {
+          "sprint_id": "wk36-refactor-stage1-snapshot-decouple",
+          "round_id": "wk36_r2_renderer_migration",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK36 Stage 1 R2: Decouple UrsinaRenderer from GameEngine by consuming SimStateSnapshot (no self.engine references) and wire UrsinaApp to pass engine.build_snapshot() each frame.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "UrsinaRenderer: __init__(world) now stores self._world; update(snapshot: SimStateSnapshot) consumes snapshot fields and no longer reads engine state directly.",
+              "Replaced all remaining renderer engine-coupling points: fog gating now uses snapshot.fog_revision, debug grid overlay uses (world, snapshot.buildings), terrain scatter exclusion uses _building_occupied_tiles(buildings).",
+              "UrsinaApp: constructs renderer via UrsinaRenderer(self.engine.world) and calls snapshot=self.engine.build_snapshot(); self.renderer.update(snapshot) each frame."
+            ],
+            "files_changed": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "acceptance_checks": [
+              "Verified: no self.engine / engine.get_game_state / gs[...] usage remains in game/graphics/ursina_renderer.py."
+            ],
+            "blockers": []
+          }
+        }
+      }
+    },
+    "wk37-refactor-stage2-simengine-presentation-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK37 Stage 2 R1: introduce SimEngine + PresentationLayer wrapper in game/engine.py with backward-compat property forwarding."
+      },
+      "rounds": {
+        "wk37_r1_simengine_scaffold": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r1_simengine_scaffold",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK37 Stage 2 R1: create game/sim_engine.py and move sim-owned __init__ state out of GameEngine. Wire GameEngine as PresentationLayer wrapper with self.sim and backward-compat property forwarding.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added new sim-only core: game/sim_engine.py (SimEngine) owning determinism seed, sim time, early nudge state, world/event_bus, entity lists, and core systems.",
+              "Refactored game/engine.py GameEngine.__init__ to create self.sim = SimEngine(...), and added property forwarding (+ setters where needed) so existing code continues to access engine.buildings/heroes/etc.",
+              "Kept update loop and rendering logic in GameEngine for R1; this round is constructor split + compat wiring only."
+            ],
+            "files_changed": [
+              "game/sim_engine.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "blockers": []
+          }
+        },
+        "wk37_r2_move_update_loop": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r2_move_update_loop",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK37 Stage 2 R2: Move update loop + fog-of-war + get_game_state/build_snapshot into SimEngine. Replace sim->HUD direct calls with EventBus HUD_MESSAGE events; PresentationLayer subscribes and forwards to hud.add_message().",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added GameEventType.HUD_MESSAGE and PresentationLayer subscription to forward HUD toasts from sim via EventBus.",
+              "Moved core sim update orchestration into SimEngine.update(dt, game_state), leaving presentation chores (render animations, hud/vfx update, conversation poll) in GameEngine.",
+              "Moved get_game_state/build_snapshot construction into SimEngine with PresentationLayer passing UI/camera/display fields as parameters."
+            ],
+            "files_changed": [
+              "game/events.py",
+              "game/sim_engine.py",
+              "game/engine.py"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --no-llm",
+              "python main.py --renderer ursina --no-llm",
+              "python main.py --renderer ursina --provider mock"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "blockers": [
+              "Manual smoke still recommended for parity: python main.py --no-llm and python main.py --renderer ursina --no-llm."
+            ]
+          }
+        },
+        "wk37_r3_fow_building_parity": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r3_fow_parity",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "Parity fix: after Stage2 sim move, building FoW (WK34 +3 tile building LoS) must not regress; remove duplicate/stale GameEngine fog path and keep SimEngine authoritative.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Root cause: SimEngine.update() runs authoritative SimEngine._update_fog_of_war (includes WK34 constructed player building +3 LoS), but GameEngine still carried a second full _update_fog_of_war body + engine-local _fog_* state — risk of drift/bugs and confusing edits.",
+              "Fix: forward engine._fog_revision / _fog_revealers_snapshot to self.sim, replace GameEngine._update_fog_of_war with thin wrapper calling self.sim._update_fog_of_war (still supports legacy call sites + ursina_frame_profiler monkey-patches).",
+              "Audio: moved initial ambient set_ambient() to non-headless __init__ (was incorrectly triggered by _early_nudge_mode setter)."
+            ],
+            "files_changed": [
+              "game/engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS (warns only)",
+                "summary": "errors=0 warns=46 (pre-existing missing stub 3D model files)"
+              }
+            },
+            "acceptance_checks": [
+              "Ursina: player-placed buildings that are fully constructed should contribute their own small revealed halo vs black fog (WK34 +3 tiles), not only castle/hero vision."
+            ],
+            "blockers": []
+          }
+        },
+        "wk37_r4_guild_fow_tuning": {
+          "sprint_id": "wk37-refactor-stage2-simengine-presentation-split",
+          "round_id": "wk37_r4_guild_fow_tuning",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "Manual parity: guild 3D prefabs looked tighter to fog than economic buildings despite same sim footprint — tune without breaking WK34 baseline for non-guild player buildings.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Sim uses one revealer per qualifying building at building.center with PLAYER_BUILDING_VISION_TILES=3 for all non-castle player buildings; guild/marketplace share 2×2 BUILDING_SIZES — perceived gap was Ursina mesh reading past logical footprint + frontier placement vs in-town overlap with castle/hero vision.",
+              "Added config: PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES (default +2 tiles additive for warrior/ranger/rogue/wizard guild only). SimEngine._update_fog_of_war uses r = PLAYER_BUILDING_VISION_TILES + (extra if guild).",
+              "Human signoff: Jaimie confirmed looks great / pass for all; Agents 10–11 wrapping gates separately."
+            ],
+            "files_changed": [
+              "config.py",
+              "game/sim_engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python main.py --renderer ursina --no-llm"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "107 tests (post guild FoW tuning)"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "acceptance_checks": [
+              "Guild halls at fog edge show a clearer revealed margin vs black fog (tunable via PLAYER_GUILD_EXTRA_VISION_TILES)."
+            ],
+            "blockers": []
+          }
+        }
+      }
+    },
+    "wk38-refactor-stage3-gamecommands": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "notes": "WK38 Stage 3: InputHandler decoupling via GameCommands; R1 scaffold"
+      },
+      "rounds": {
+        "wk38_r1_gamecommands_scaffold": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r1_gamecommands_scaffold",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "GameCommands Protocol + EngineBackedGameCommands; InputHandler(commands); wire from GameEngine.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Added game/game_commands.py: GameCommands Protocol (marker _game_commands_impl) + EngineBackedGameCommands with __getattr__/__setattr__/__delattr__ forwarding 1:1 to GameEngine for R1 (behavior parity; R2 replaces with explicit protocol).",
+              "input_handler.py: __init__(commands: GameCommands), self.commands only; all former self.engine paths use facade (local var name engine unchanged for minimal diff).",
+              "engine.py: InputHandler(EngineBackedGameCommands(self))."
+            ],
+            "files_changed": [
+              "game/game_commands.py",
+              "game/input_handler.py",
+              "game/engine.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "capability_inventory_r1": [
+              "R1 uses transparent proxy: InputHandler still touches economy, hud, panels, world, sim-typed lists, and private _skip_event_processing_frames, _borderless_*, _cleanup_destroyed_buildings, etc. via forwarding — explicit protocol methods in R2 per plan."
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "107 passed"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46 (pre-existing)"
+              }
+            },
+            "blockers": []
+          }
+        },
+        "wk38_r2_mechanical_migration": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r2_mechanical_migration",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK38-R2: explicit GameCommands protocol + EngineBacked forwarders; input_handler uses c=commands only (no self.engine / engine= self.engine).",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "game_commands.py: Replaced generic __getattr__ proxy with explicit GameCommands Protocol (properties + methods) and EngineBackedGameCommands 1:1 delegates to GameEngine; private _skip / borderless / perf / speed_before_pause via typed accessors.",
+              "input_handler.py: Local handle renamed c = self.commands throughout process_events, select_building_for_placement, handle_keydown, handle_mousedown, handle_mousemove, _clear_hero_selection; rg self.engine and engine = self.engine empty."
+            ],
+            "files_changed": [
+              "game/game_commands.py",
+              "game/input_handler.py",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46"
+              }
+            },
+            "blockers": []
+          }
+        },
+        "wk38_r3_hardening_tests_ux": {
+          "sprint_id": "wk38-refactor-stage3-gamecommands",
+          "round_id": "wk38_r3_hardening_tests_ux",
+          "round_meta": {
+            "sent_at_local": "2026-04-27"
+          },
+          "prompt_text": "WK38-R3: mock tests; grep sanity; optional engine_access_inventory.md; full gates.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "tests/test_input_handler_gamecommands.py: 3 tests — QUIT clears commands.running; unaffordable select_building toasts via commands.hud; KEYDOWN 'h' calls commands.try_hire_hero.",
+              "docs/refactor/engine_access_inventory.md: new subsection InputHandler + GameCommands (WK38 wiring, grep DoD note, test file pointer).",
+              "Grep sanity (workspace): no matches for self.engine or engine = self.engine in game/input_handler.py."
+            ],
+            "files_changed": [
+              "tests/test_input_handler_gamecommands.py",
+              "docs/refactor/engine_access_inventory.md",
+              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
+            ],
+            "how_to_test": [
+              "python -m pytest tests/",
+              "python tools/qa_smoke.py --quick",
+              "python tools/validate_assets.py --report"
+            ],
+            "evidence": {
+              "pytest": {
+                "command": "python -m pytest tests/",
+                "exit_code": 0,
+                "status": "PASS",
+                "note": "110 tests incl. 3 new"
+              },
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              },
+              "validate_assets_report": {
+                "command": "python tools/validate_assets.py --report",
+                "exit_code": 0,
+                "status": "PASS",
+                "summary": "errors=0 warns=46"
+              },
+              "grep_input_handler": {
+                "pattern": "self.engine OR engine = self.engine",
+                "path": "game/input_handler.py",
+                "matches": 0
+              }
+            },
+            "blockers": [],
+            "manual_smoke_jaimie": [
+              "python main.py --no-llm",
+              "python main.py --renderer ursina --no-llm"
+            ]
+          }
+        }
+      }
     }
   }
 }

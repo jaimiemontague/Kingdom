@@ -108,7 +108,13 @@ class Peasant:
 
     def _pick_build_target(self, buildings: list):
         # Priority 1: any unconstructed building (prefer ones not started, then oldest)
-        candidates = [b for b in buildings if getattr(b, "is_constructed", True) is False and b.hp > 0]
+        candidates = [
+            b
+            for b in buildings
+            if getattr(b, "is_constructed", True) is False
+            and getattr(b, "hp", 0) > 0
+            and not getattr(b, "requires_builder_peasant", False)  # WK43: neutral plots are builder-only
+        ]
         if not candidates:
             return None
         # Prefer unstarted construction, then oldest placement time

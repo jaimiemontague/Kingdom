@@ -545,7 +545,21 @@ class UrsinaRenderer:
             if not getattr(p, "is_alive", True):
                 continue
             s = PEASANT_SCALE
-            col = COLOR_PEASANT
+            # Default: preserve sprite native colors (no tint multiplier).
+            col = color.white
+            tint_textured = False
+            raw_col = getattr(p, "color", None)
+            if isinstance(raw_col, tuple) and len(raw_col) >= 3:
+                try:
+                    r, g, b = int(raw_col[0]), int(raw_col[1]), int(raw_col[2])
+                    col = color.rgb(r / 255.0, g / 255.0, b / 255.0)
+                except Exception:
+                    col = color.white
+
+            # Builder peasants should be visibly distinct (green tint).
+            # Avoid importing sim classes into renderer; use a lightweight type-name check.
+            if getattr(p, "__class__", None) is not None and getattr(p.__class__, "__name__", "") == "BuilderPeasant":
+                tint_textured = True
             psurf = _worker_idle_surface("peasant")
             ptex = TerrainTextureBridge.surface_to_texture(
                 psurf, cache_key=("worker_idle", "peasant", int(config.TILE_SIZE))
@@ -566,6 +580,7 @@ class UrsinaRenderer:
                 scale_xyz=(s, s, 1),
                 pos_xyz=(wx, s * 0.5, wz),
                 shader=sprite_unlit_shader,
+                tint_textured=tint_textured,
             )
             active_ids.add(obj_id)
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from config import BUILDING_SIZES, TILE_SIZE
 from game.entities.neutral_buildings import House, Farm, FoodStand
+from game.entities.builder_peasant import BuilderPeasant
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
 
@@ -176,9 +177,9 @@ class NeutralBuildingSystem(GameSystem):
     def update(self, ctx: SystemContext, dt: float) -> None:
         """Protocol update hook for neutral building simulation."""
         castle = self._find_castle(ctx.buildings)
-        self.tick(dt, ctx.buildings, ctx.heroes, castle)
+        self.tick(dt, ctx.buildings, ctx.heroes, getattr(ctx, "peasants", []), castle)
 
-    def tick(self, dt: float, buildings: list, heroes: list, castle) -> None:
+    def tick(self, dt: float, buildings: list, heroes: list, peasants: list, castle) -> None:
         # Tick tax generation for existing neutral buildings
         for b in buildings:
             if getattr(b, "is_neutral", False) and hasattr(b, "update"):
@@ -189,6 +190,23 @@ class NeutralBuildingSystem(GameSystem):
                     pass
 
         if not castle:
+            return
+
+        # WK43: despawn builders that have returned to the castle.
+        if peasants is not None:
+            peasants[:] = [
+                p
+                for p in peasants
+                if getattr(p, "is_alive", True) and not getattr(p, "should_despawn", False)
+            ]
+
+        # WK43: while there are any builder-only plots or an active builder, do not spawn new plots.
+        if any(
+            getattr(b, "requires_builder_peasant", False) and getattr(b, "hp", 0) > 0
+            for b in (buildings or [])
+        ):
+            return
+        if any(isinstance(p, BuilderPeasant) for p in (peasants or [])):
             return
 
         hero_count = len([h for h in (heroes or []) if getattr(h, "is_alive", False)])
@@ -219,7 +237,10 @@ class NeutralBuildingSystem(GameSystem):
                 shuffle_within_ring=False,  # "as tightly as they can"
             )
             if spot:
-                buildings.append(House(*spot))
+                plot = House(*spot, is_constructed=False)
+                buildings.append(plot)
+                if peasants is not None:
+                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
         if cur_food < want_food:
@@ -257,7 +278,10 @@ class NeutralBuildingSystem(GameSystem):
                     shuffle_within_ring=True,
                 )
             if spot:
-                buildings.append(FoodStand(*spot))
+                plot = FoodStand(*spot, is_constructed=False)
+                buildings.append(plot)
+                if peasants is not None:
+                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
         if cur_farms < want_farms:
@@ -271,7 +295,10 @@ class NeutralBuildingSystem(GameSystem):
                 shuffle_within_ring=True,
             )
             if spot:
-                buildings.append(Farm(*spot))
+                plot = Farm(*spot, is_constructed=False)
+                buildings.append(plot)
+                if peasants is not None:
+                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
 

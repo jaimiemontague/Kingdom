@@ -352,7 +352,7 @@ class SimEngine:
         self.bounty_system.cleanup()
 
         # Neutral systems
-        self.neutral_building_system.tick(dt, self.buildings, self.heroes, castle)
+        self.neutral_building_system.tick(dt, self.buildings, self.heroes, self.peasants, castle)
         if self.tax_collector:
             self.tax_collector.update(dt, self.buildings, self.economy, world=self.world)
 
@@ -587,6 +587,8 @@ class SimEngine:
         CASTLE_VISION_TILES = 10
         HERO_VISION_TILES = 7
         GUARD_VISION_TILES = 6
+        # WK43 Stage 1: Peasants (incl. BuilderPeasant) provide limited local LoS.
+        PEASANT_VISION_TILES = 6
         NEUTRAL_VISION = {"house": 3, "farm": 5, "food_stand": 3}
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
@@ -600,6 +602,12 @@ class SimEngine:
             if getattr(hero, "is_alive", True):
                 revealers.append((hero.x, hero.y, HERO_VISION_TILES))
                 hero_revealers.append((hero, hero.x, hero.y, HERO_VISION_TILES))
+
+        # WK43: Living peasants as vision sources.
+        for peasant in self.peasants:
+            if not getattr(peasant, "is_alive", True):
+                continue
+            revealers.append((peasant.x, peasant.y, PEASANT_VISION_TILES))
 
         # WK17: Neutral buildings (house, farm, food_stand) as vision sources.
         for building in self.buildings:

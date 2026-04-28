@@ -7814,6 +7814,446 @@
           }
         }
       }
+    },
+    "wk33-terrain-lair-economy-prefabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_3d_graphics_v1_5.md",
+        "created_utc": "2026-04-26T12:00:00Z",
+        "notes": "WK33: ground texture, scatter brightness+SEEN FOW tune, graveyard lair mesh, economy prefabs marketplace+blacksmith (+trading_post optional)."
+      },
+      "rounds": {
+        "wk33_r0_kickoff": {
+          "round_meta": {
+            "created_utc": "2026-04-26T12:00:00Z"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK33 kickoff round complete; see wk33_sprint_closeout for final signoff."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk33-terrain-lair-economy-prefabs**, round **wk33_r0_kickoff**.\n\n1) Open and follow the full sprint spec (your Agent section has the step list):\n   `.cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md`\n   Also align with `.cursor/plans/master_plan_3d_graphics_v1_5.md` (Phase 1–2).\n2) Find your assignment: PM hub `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` → `sprints[\\\"wk33-terrain-lair-economy-prefabs\\\"].rounds[\\\"wk33_r0_kickoff\\\"].pm_agent_prompts[YOUR_NUMBER]`\n   (your numbered prompt restates the same work as the plan; if anything conflicts, follow the plan + ask PM.)\n3) Do not commit `models_compressed/`. Jaimie runs the Kenney model assembler with Agent 15 as the plan states.\n4) When you finish: update your agent log under `.cursor/plans/agent_logs/`, then run the gates your role requires (code changes: `python tools/qa_smoke.py --quick` from repo root; if you changed assets or manifest: `python tools/validate_assets.py --report`).\n5) Report back: files touched, exact commands + exit codes, and blockers.\n\nSprint in one line: **tiling grass ground texture**, **~20% lighter** trees/grass scatter + **explored (SEEN) FOW** balance, **lair = Graveyard kit** static mesh in `assets/models/environment/`, **marketplace + blacksmith** prefab JSONs (optional **trading_post**).",
+          "pm_send_list_minimal": {
+            "order": "sequential_with_parallel_batch_1",
+            "batch_1_parallel": [
+              "12",
+              "09"
+            ],
+            "then_in_order": [
+              "15",
+              "03",
+              "05",
+              "10",
+              "11"
+            ],
+            "optional": "13 (patch notes only if you cut a test build)",
+            "rationale": "12 low: manifest+validate. 9 medium: art direction for lair+buildings+ground. 15 high: kitbash+exports. 03 high: Ursina+prefab table+brightness. 5 low: footprint consult. 10+11 low: perf spot + final gates.",
+            "intelligence_by_agent": {
+              "12": "low",
+              "09": "medium",
+              "15": "high",
+              "03": "high",
+              "05": "low",
+              "10": "low",
+              "11": "low",
+              "13": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "12": "WK33 (Tools): Do exactly the **Agent 12** block in `.cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md` — add `assets/models/Models/Textures/floor_ground_grass.png` and any new environment/lair files Agent 15 adds to `tools/assets_manifest.json` (or project manifest in use), then run `python tools/validate_assets.py --report` until 0 errors. Log exit code in `agent_12` hub log.",
+            "09": "WK33 (Art): Do the **Agent 09** block in the WK33 plan file. Deliver: (1) one Graveyard kit choice for the shared **lair** mesh, (2) short silhouette/mood notes for **marketplace** and **blacksmith** for Agent 15, (3) sign-off that `floor_ground_grass.png` is OK as world-scale tiled albedo. Log in agent_09 JSON.",
+            "15": "WK33 (ModelAssembler): Do the **Agent 15** block in the WK33 plan. Export a single **lair** mesh into `assets/models/environment/` (name it so Agent 03 can wire `lair` per plan). Build `marketplace_v1.json` and `blacksmith_v1.json` (optional `trading_post_v1.json`) under `assets/prefabs/buildings/`; use `prefab_texture_override_standard.md` for flat kits. Update `assets/ATTRIBUTION.md`. Jaimie at keyboard for assembler. Log + optional `model_viewer_kenney.py` smokes as in plan.",
+            "03": "WK33 (Tech): Do the **Agent 03** block in the WK33 plan. `game/graphics/ursina_renderer.py`: base quad uses tiled `floor_ground_grass.png`; ~20% lift on env scatter tints; tune SEEN FOW vs ground after Jaimie spot-check; wire lair to new graveyard file; add `marketplace`/`blacksmith` to `_PREFAB_BUILDING_TYPE_TO_FILE` if needed. `python tools/qa_smoke.py --quick` MUST pass. Log in agent_03 JSON.",
+            "05": "WK33 (Gameplay): Do the **Agent 05** block. Compare each new prefab `footprint_tiles` to `config.py` BUILDING_SIZES; do not change sim footprints without PM. If prefab vis overshoots, file notes for Agent 15. Log in agent_05 JSON.",
+            "10": "WK33 (Performance): After Agent 03 is done, run a short `python main.py --renderer ursina --no-llm` session and watch FPS; report regression vs feel only. Log in agent_10 JSON.",
+            "11": "WK33 (QA): After code settles, run `python tools/qa_smoke.py --quick` and if assets changed `python tools/validate_assets.py --report`; both must PASS. Log in agent_11 JSON.",
+            "13": "Optional: draft short player-facing bullets for this sprint if a build goes to testers. No version bump unless Jaimie says so."
+          }
+        },
+        "wk33_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T18:00:00Z",
+            "source": "pm_closeout_after_jaimie_playtest",
+            "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM",
+            "commit_message": "3D Graphics Phase 2.5: Market, Blacksmith, Farms, Trading Post, and Lairs + grass added."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK33 is officially closed. Tiling grass ground texture, scatter/SEEN FOW tuning, Graveyard lair static mesh, marketplace + blacksmith + trading_post prefabs (plus construction-stage JSONs and midsprint Kenney assembler scale hotkeys -/=) are accepted. Jaimie playtested Ursina FPS personally; no separate Agent 10 formal run. Agent 11 final gate re-run not required per PM; agent logs note PM acceptance."
+          },
+          "pm_accepted_deliverables": [
+            "Ground: floor_ground_grass.png on base terrain quad; env scatter brightness and FOW tuning hooks (Agent 03 + config).",
+            "Lair: assets/models/environment/lair.glb (Graveyard crypt) wired for all lair types (Agent 15 + 03).",
+            "Economy prefabs: marketplace_v1, blacksmith_v1, trading_post_v1 and build_% variants; farm-related work as landed with Agent 15/03.",
+            "Tools: assets manifest + validate_assets; model_assembler_kenney scale nudge (WK33 midsprint).",
+            "Gameplay: Agent 05 footprint audit PASS 2x2 for new prefabs."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Offer next sprint options; reopen WK33 only on regression report."
+            },
+            "10": {
+              "status": "waived",
+              "note": "Jaimie confirmed FPS acceptable in playtest; PM closed sprint without a separate Agent 10 log round."
+            },
+            "11": {
+              "status": "waived",
+              "note": "PM accepted Jaimie verification; formal re-gate in agent_11 log not required."
+            }
+          }
+        }
+      }
+    },
+    "wk33-midsprint-assembler-scale-hotkeys": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/assembler_scale_hotkeys_177ca989.plan.md",
+        "created_utc": "2026-04-27T00:00:00Z",
+        "notes": "Midsprint follow-up: scale nudge for Kenney Kit Assembler (unblocks farm prefab fix). - / = hotkeys, Kenney pack multiplier contract unchanged."
+      },
+      "rounds": {
+        "r0_implement": {
+          "round_meta": {
+            "created_utc": "2026-04-27T00:00:00Z"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Midsprint landed with Agent 12+11; folded into WK33_sprint_closeout. Assembler -/= scale nudge for selected pieces is accepted."
+          },
+          "pm_universal_prompt": "You are being activated for **wk33-midsprint-assembler-scale-hotkeys**, round **r0_implement** (follow-up to main WK33 work).\n\n1) **Spec (read first):** `.cursor/plans/assembler_scale_hotkeys_177ca989.plan.md` — implement exactly what it describes; the Kenney **logical** `scale` in JSON is separate from `pack_extent_multiplier_for_rel` on the Entity in the tool.\n2) **PM hub path:** `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` → `sprints[\\\"wk33-midsprint-assembler-scale-hotkeys\\\"].rounds[\\\"r0_implement\\\"].pm_agent_prompts[YOUR_NUMBER]`\n3) **Code:** `tools/model_assembler_kenney.py` only (no game/ or config changes unless the plan’s follow-up file lists them).\n4) **Gates:** Agent 12: run `python tools/qa_smoke.py --quick` from repo root after code changes. Agent 11: final PASS confirmation.\n5) **Log:** your agent log JSON with what changed, commands, and exit codes.\n\n**Goal:** With a **selected** placed piece, **-** (minus) makes the piece **slightly smaller** and **=** (equals) **slightly larger**; **Shift** = finer step; display scale in status. Preserve `entity.scale = logical_scale * pack_extent_multiplier_for_rel(model_path)`.",
+          "pm_send_list_minimal": {
+            "order": "12_then_11",
+            "then_in_order": [
+              "12",
+              "11"
+            ],
+            "rationale": "12 (MEDIUM) implements assembler hotkeys+contract. 11 (LOW) final qa_smoke gate after 12; no 03/15 unless a bug is found.",
+            "intelligence_by_agent": {
+              "12": "medium",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "12": "Assembler scale midsprint (Agent 12 Tools). Implement `.cursor/plans/assembler_scale_hotkeys_177ca989.plan.md` in **one file** `tools/model_assembler_kenney.py`: add `-` shrink / `=` grow on **selected** piece, Shift=fine, multiplicative uniform nudge, clamp, `apply` logical `PlacedPiece.scale` then re-`entity.scale = (*pf, *pf, *pf)` with existing `pack_extent_multiplier_for_rel`. Update module Controls docstring and `_refresh_status` to show scale. Numpad `subtract` optional. Do not bake `pf` into JSON. Run: `python tools/qa_smoke.py --quick`. Log in agent_12 JSON with evidence.",
+            "11": "After Agent 12: run `python tools/qa_smoke.py --quick` (from repo root). If anything unexpected in tools touched, note PASS/FAIL in agent_11 log."
+          }
+        }
+      }
+    },
+    "wk34-3d-final-model-pass-v1-5": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+        "created_utc": "2026-04-27T00:00:00Z",
+        "notes": "WK34: nature scatter 4× scale-up; Ranger/Rogue/Wizard construction stages; Guardhouse and Temple full prefab sets; Cleric hiring; building LoS; neutral spawn rebalance; Marketplace loitering reduction; deprecated building roster cleanup."
+      },
+      "rounds": {
+        "wk34_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T00:00:00Z",
+            "source": "pm_closeout_after_agent_completion",
+            "plan_ref": ".cursor/plans/wk34_3d_final_model_pass_v1_5.plan.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM",
+            "commit_message": "v1.5.0 - The Game Goes 3D"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK34 is closed and accepted. Final 3D model pass for pre-v1.5: nature props scaled up, new/updated prefabs and construction stages, Temple + Clerics, building LoS, spawn/pacing tuning, and deprecated building roster cleanup. Gates pass (qa_smoke + validate_assets)."
+          },
+          "pm_accepted_deliverables": [
+            "Nature scatter scale-up (~4×) for readability in Ursina.",
+            "Prefab sets: Ranger Guild rework + build_20/build_50; Rogue/Wizard build_20/build_50; Guardhouse full set; Temple full set.",
+            "Temple is canonical buildable type; can hire Clerics.",
+            "Fog-of-war: all constructed player buildings reveal a 3-tile radius (excluding castle, neutrals, and lairs).",
+            "Neutral spawns: farms at half rate; first food stands prefer near Marketplace; shopping durations reduced to curb loitering.",
+            "Deprecated buildings removed from build roster (keys/hotkeys/UI), with legacy-safe guards where needed."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Cut v1.5.0 release: bump version metadata + finalize CHANGELOG + tag release commit."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "07": {
+              "status": "done"
+            },
+            "15": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        }
+      }
+    },
+    "wk36-refactor-stage1-snapshot-decouple": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "created_utc": "2026-04-27T15:21:00Z",
+        "notes": "Architecture Refactor Stage 1 kickoff: introduce SimStateSnapshot + GameEngine.build_snapshot(), then migrate UrsinaRenderer to consume snapshot (no self.engine references). Two rounds: R1 snapshot+tests, R2 renderer migration + manual parity."
+      },
+      "rounds": {
+        "wk36_r1_snapshot_and_tests": {
+          "round_meta": {
+            "prompt_set_id": "wk36_r1",
+            "build_target": "Stage1_Snapshot + Engine_build_snapshot + Snapshot_Tests",
+            "visibility": "Implementers: 03. QA: 11."
+          },
+          "pm_status_summary": {
+            "overall_status": "Assigned",
+            "focus": "Create frozen SimStateSnapshot, add GameEngine.build_snapshot(), and add tests validating snapshot immutability + engine snapshot shape. No Ursina renderer changes in R1.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK36-STAGE1-FEAT-001",
+              "title": "SimStateSnapshot dataclass + GameEngine.build_snapshot()",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Tasks 1-A and 1-B)",
+              "acceptance": [
+                "game/sim/snapshot.py exists with @dataclass(frozen=True) SimStateSnapshot.",
+                "GameEngine.build_snapshot() exists and returns a SimStateSnapshot.",
+                "No sim behavior changes; build_snapshot is read-only.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            },
+            {
+              "id": "WK36-STAGE1-TEST-001",
+              "title": "Snapshot contract tests",
+              "owner_agent": "11_QA_TestEngineering_Lead",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Task 1-E)",
+              "acceptance": [
+                "tests/test_renderer_snapshot_contract.py has test_snapshot_is_frozen().",
+                "tests/test_renderer_snapshot_contract.py has test_engine_build_snapshot_returns_valid_snapshot().",
+                "Tests remain headless (no Ursina/GPU).",
+                "python -m pytest tests/ PASS.",
+                "python tools/qa_smoke.py --quick PASS."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 1 Task 1-A and 1-B from the master plan: create game/sim/snapshot.py (frozen dataclass) and add GameEngine.build_snapshot() in game/engine.py.",
+                "Keep build_snapshot render-only (no side effects).",
+                "Run gates: python -m pytest tests/ and python tools/qa_smoke.py --quick."
+              ],
+              "acceptance_criteria": [
+                "SimStateSnapshot exists and is frozen.",
+                "GameEngine.build_snapshot() returns SimStateSnapshot in headless mode.",
+                "qa_smoke --quick PASS."
+              ]
+            },
+            "11": {
+              "status": "assigned_active",
+              "asks": [
+                "After Agent 03 lands snapshot/build_snapshot, add Stage 1 Task 1-E tests to tests/test_renderer_snapshot_contract.py.",
+                "Run: python -m pytest tests/ and python tools/qa_smoke.py --quick and report PASS/FAIL."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": [
+              "03",
+              "11"
+            ],
+            "rationale": "03 must land snapshot/build_snapshot before 11 can validate it with tests.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK36 Stage 1 R1 (Tech): Follow .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md (Round WK36-R1) and the master plan .cursor/plans/master_plan_architecture_refactor.md section 'Stage 1'. Implement Task 1-A (create game/sim/snapshot.py with frozen SimStateSnapshot) and Task 1-B (add GameEngine.build_snapshot() in game/engine.py). Keep build_snapshot read-only. Run: python -m pytest tests/ and python tools/qa_smoke.py --quick. Log files changed + commands + exit codes in agent_03 JSON.",
+            "11": "WK36 Stage 1 R1 (QA): After Agent 03 lands, implement Task 1-E from the master plan: add tests test_snapshot_is_frozen() and test_engine_build_snapshot_returns_valid_snapshot() to tests/test_renderer_snapshot_contract.py. Keep tests headless. Run: python -m pytest tests/ and python tools/qa_smoke.py --quick. Log PASS/FAIL with exit codes in agent_11 JSON."
+          }
+        },
+        "wk36_r2_renderer_migration": {
+          "round_meta": {
+            "prompt_set_id": "wk36_r2",
+            "build_target": "Stage1_UrsinaRenderer_Decouple",
+            "visibility": "Implementers: 03. Consult: 10. QA: 11 (post)."
+          },
+          "pm_status_summary": {
+            "overall_status": "Assigned",
+            "focus": "Migrate UrsinaRenderer to consume SimStateSnapshot; ensure ursina_renderer.py has zero self.engine references; wire UrsinaApp to pass snapshot each frame; manual parity check.",
+            "gates": {
+              "pytest": "python -m pytest tests/ must PASS.",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
+              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
+              "manual_ursina_parity": "python main.py --renderer ursina --no-llm should look identical to pre-refactor."
+            }
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK36-STAGE1-FEAT-002",
+              "title": "UrsinaRenderer consumes SimStateSnapshot (no engine ref)",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec_ref": ".cursor/plans/master_plan_architecture_refactor.md Stage 1 (Tasks 1-C and 1-D)",
+              "acceptance": [
+                "UrsinaRenderer.__init__ no longer takes engine.",
+                "UrsinaRenderer.update(snapshot) consumes SimStateSnapshot.",
+                "No 'self.engine' appears in game/graphics/ursina_renderer.py.",
+                "UrsinaApp builds snapshot each frame and passes it to renderer.update(snapshot).",
+                "qa_smoke --quick PASS.",
+                "Manual: python main.py --renderer ursina --no-llm parity OK."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 1 Task 1-C and 1-D from the master plan: update game/graphics/ursina_renderer.py to remove engine dependency and consume SimStateSnapshot; update game/graphics/ursina_app.py to pass snapshot each frame.",
+                "Be sure to fix _building_occupied_tiles(engine) -> _building_occupied_tiles(buildings).",
+                "Run gates: python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report.",
+                "Manual parity: python main.py --renderer ursina --no-llm."
+              ]
+            },
+            "10": {
+              "status": "consult",
+              "asks": [
+                "After Agent 03 lands R2: run python main.py --renderer ursina --no-llm for ~5 minutes and note any obvious FPS regression vs baseline (rough feel is fine). Log result in agent_10."
+              ]
+            },
+            "11": {
+              "status": "consult",
+              "asks": [
+                "After R2 lands: run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_10_11",
+            "then_in_order": [
+              "03"
+            ],
+            "then_parallel": [
+              "10",
+              "11"
+            ],
+            "rationale": "03 migration must land first; 10+11 are post-change validation in parallel.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "10": "low",
+              "11": "low"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "WK36 Stage 1 R2 (Tech): Follow .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md (Round WK36-R2) and master plan Stage 1 Tasks 1-C/1-D. Migrate game/graphics/ursina_renderer.py so it has ZERO self.engine references; update signature to __init__(world) and update(snapshot: SimStateSnapshot). Update game/graphics/ursina_app.py to call snapshot = self.engine.build_snapshot(); self.renderer.update(snapshot), and construct renderer with UrsinaRenderer(self.engine.world). Fix _building_occupied_tiles(engine)->(buildings). Run: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report; then manual: python main.py --renderer ursina --no-llm. Log evidence in agent_03 JSON.",
+            "10": "WK36 Stage 1 R2 (Perf - CONSULT): After Agent 03 merges: run `python main.py --renderer ursina --no-llm` and watch FPS/perf overlay for 5 minutes. Report whether snapshot change caused noticeable perf regression. Log in agent_10 JSON.",
+            "11": "WK36 Stage 1 R2 (QA - CONSULT): After Agent 03 merges: run `python tools/qa_smoke.py --quick` (and if assets changed `python tools/validate_assets.py --report`). Record PASS/FAIL + exit codes in agent_11 JSON."
+          }
+        },
+        "wk36_sprint_closeout": {
+          "round_meta": {
+            "created_utc": "2026-04-27T15:50:00Z",
+            "source": "pm_closeout_after_agent_completion_and_human_parity",
+            "plan_ref": ".cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md",
+            "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+            "closed_by": "Agent 01 ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK36 Stage 1 is closed and accepted. SimStateSnapshot introduced + engine.build_snapshot() added; UrsinaRenderer fully decoupled from engine (no self.engine refs) and consumes snapshot passed from UrsinaApp. Automated gates pass and human parity checks confirm normal building placement + fog-of-war + mock provider AI behavior."
+          },
+          "pm_accepted_deliverables": [
+            "New snapshot contract: game/sim/snapshot.py (frozen SimStateSnapshot).",
+            "Engine API: GameEngine.build_snapshot() returns SimStateSnapshot.",
+            "Renderer decoupling: game/graphics/ursina_renderer.py has zero self.engine references; update(snapshot) consumes snapshot fields.",
+            "Ursina wiring: game/graphics/ursina_app.py builds snapshot each frame and passes it to renderer.update(snapshot).",
+            "Tests: tests/test_renderer_snapshot_contract.py includes snapshot immutability + build_snapshot validity tests."
+          ],
+          "pm_evidence": {
+            "agent_03": "agent_03_TechnicalDirector_Architecture.json → wk36-refactor-stage1-snapshot-decouple rounds wk36_r1_snapshot_and_tests + wk36_r2_renderer_migration: pytest PASS, qa_smoke PASS, validate_assets PASS.",
+            "agent_11": "agent_11_QA_TestEngineering_Lead.json → wk36-refactor-stage1-snapshot-decouple rounds wk36_r1_snapshot_and_tests + wk36_r2_renderer_migration: qa_smoke PASS, validate_assets PASS.",
+            "agent_10": "agent_10_PerformanceStability_Lead.json → wk36 perf consult: Ursina FPS probe shows no steady-state regression attributable to snapshot allocation (one-time dips likely OBJ→BAM cache writes).",
+            "human_manual_parity": {
+              "no_llm": "Jaimie: building placement & fog-of-war seemed normal (manual parity).",
+              "provider_mock": "Jaimie: AI seems to be working normal with --provider mock."
+            }
+          },
+          "pm_human_commands_run_or_recommended": [
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer ursina --provider mock"
+          ],
+          "pm_next_actions": [
+            "Proceed to Stage 2 planning (GameEngine decomposition into SimEngine + PresentationLayer) using the master plan Stage 2 section, now that Stage 0+1 test safety net exists.",
+            "Optional: add a tiny regression test asserting UrsinaRenderer has no engine ref (static grep) if we want a hard guardrail for Stage 2+."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Plan Stage 2 kickoff sprint (SimEngine + PresentationLayer split) with careful two-round sequencing and explicit backward-compat shims."
+            },
+            "03": {
+              "status": "done"
+            },
+            "10": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk36-refactor-stage1-snapshot-decouple**.\\n\\n1) Read the sprint plan first:\\n   .cursor/plans/wk36_stage1_snapshot_decouple_4ce35abd.plan.md\\n\\n2) Read the master plan section for context:\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 1: SimState Snapshot Interface (Renderer Decoupling)\\n\\n3) Read your assignment in the PM hub:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk36-refactor-stage1-snapshot-decouple\\\"]\\n   -> rounds[\\\"<your round id>\\\"]\\n   -> pm_agent_prompts[YOUR_AGENT_NUMBER]\\n\\n4) After completing your work:\\n   - Update your agent log\\n   - Run required gates (at minimum): python tools/qa_smoke.py --quick\\n   - Report back: files touched + commands + exit codes + blockers\\n",
+      "pm_send_list_minimal": {
+        "order": "two_rounds_sequential",
+        "round_1": {
+          "then_in_order": [
+            "03",
+            "11"
+          ],
+          "intelligence_by_agent": {
+            "03": "high",
+            "11": "low"
+          }
+        },
+        "round_2": {
+          "then_in_order": [
+            "03"
+          ],
+          "then_parallel": [
+            "10",
+            "11"
+          ],
+          "intelligence_by_agent": {
+            "03": "high",
+            "10": "low",
+            "11": "low"
+          }
+        },
+        "do_not_send": [
+          "02",
+          "04",
+          "05",
+          "06",
+          "07",
+          "08",
+          "09",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "rationale": "Stage 1 is engine snapshot + Ursina renderer boundary only. Avoid cross-domain conflicts."
+      }
     }
   }
 }

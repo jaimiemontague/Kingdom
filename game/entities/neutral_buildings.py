@@ -17,7 +17,15 @@ class NeutralBuilding(Building):
     is_neutral = True
     is_player_placeable = False
 
-    def __init__(self, grid_x: int, grid_y: int, building_type: str, *, tax_per_minute: float):
+    def __init__(
+        self,
+        grid_x: int,
+        grid_y: int,
+        building_type: str,
+        *,
+        tax_per_minute: float,
+        is_constructed: bool = True,
+    ):
         super().__init__(grid_x, grid_y, building_type)
 
         # Ensure config defaults exist (but still allow overrides).
@@ -30,13 +38,20 @@ class NeutralBuilding(Building):
         self._tax_accum = 0.0
         self.tax_per_minute = float(tax_per_minute)
 
-        # Neutral buildings appear fully constructed.
-        self.is_constructed = True
-        self.construction_started = True
-
         # Slightly squishier than guilds.
         self.max_hp = 180
-        self.hp = self.max_hp
+
+        # WK43 Stage 1: neutrals can spawn as unconstructed plots (builder-only).
+        self.is_constructed = bool(is_constructed)
+        if self.is_constructed:
+            self.construction_started = True
+            self.hp = self.max_hp
+            self.requires_builder_peasant = False
+        else:
+            self.construction_started = False
+            self.hp = 1
+            self._work_accum = 0.0
+            self.requires_builder_peasant = True
 
     def collect_taxes(self) -> int:
         amount = int(self.stored_tax_gold)
@@ -51,6 +66,8 @@ class NeutralBuilding(Building):
         """
         if self.hp <= 0:
             return
+        if not getattr(self, "is_constructed", True):
+            return
         gold_per_sec = self.tax_per_minute / 60.0
         self._tax_accum += gold_per_sec * float(dt)
         add = int(self._tax_accum)
@@ -60,21 +77,22 @@ class NeutralBuilding(Building):
 
 
 class House(NeutralBuilding):
-    def __init__(self, grid_x: int, grid_y: int):
-        super().__init__(grid_x, grid_y, "house", tax_per_minute=3.0)
+    def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
+        super().__init__(grid_x, grid_y, "house", tax_per_minute=3.0, is_constructed=is_constructed)
 
 
 class Farm(NeutralBuilding):
-    def __init__(self, grid_x: int, grid_y: int):
-        super().__init__(grid_x, grid_y, "farm", tax_per_minute=4.0)
+    def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
+        super().__init__(grid_x, grid_y, "farm", tax_per_minute=4.0, is_constructed=is_constructed)
         # Farms are larger targets.
         self.max_hp = 220
-        self.hp = self.max_hp
+        if getattr(self, "is_constructed", True):
+            self.hp = self.max_hp
 
 
 class FoodStand(NeutralBuilding):
-    def __init__(self, grid_x: int, grid_y: int):
-        super().__init__(grid_x, grid_y, "food_stand", tax_per_minute=3.5)
+    def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
+        super().__init__(grid_x, grid_y, "food_stand", tax_per_minute=3.5, is_constructed=is_constructed)
 
 
 

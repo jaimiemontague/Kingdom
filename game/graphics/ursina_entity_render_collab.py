@@ -149,9 +149,12 @@ class UrsinaEntityRenderCollab:
         scale_xyz: tuple[float, float, float],
         pos_xyz: tuple[float, float, float],
         shader,
+        tint_textured: bool = False,
     ) -> None:
         UrsinaEntityRenderCollab.set_texture_if_changed(ent, tex)
-        target_color = color.white if tex is not None else tint_col
+        # Most sprite sheets should render with their native colors (white multiplier).
+        # Only a few entities (e.g., BuilderPeasant) intentionally use a tint multiplier.
+        target_color = tint_col if (tint_textured and tex is not None) else (color.white if tex is not None else tint_col)
         if getattr(ent, "_ks_last_color", None) != target_color:
             ent.color = target_color
             ent._ks_last_color = target_color

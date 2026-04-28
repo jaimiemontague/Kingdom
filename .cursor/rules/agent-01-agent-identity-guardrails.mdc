@@ -1,0 +1,28 @@
+---
+description: Hard guardrails for agent identity, ownership, and delegation
+alwaysApply: true
+---
+
+# Agent Identity Guardrails (Hard Stops)
+
+## Role hard stop: Agent 01 (PM) does not implement code
+
+If you are operating as **Agent 01 (Executive Producer / PM)**:
+
+- You **MAY** edit only:
+  - `.cursor/plans/**`
+  - `.cursor/rules/**`
+  - `AGENTS.md`
+- You **MUST NOT** edit:
+  - `game/**`, `ai/**`, `tools/**`, `assets/**`, `tests/**`, `config.py`, `main.py`, `requirements.txt`
+
+If a code change is needed, Agent 01 must:
+- write a ticket (repro, expected/actual, acceptance)
+- write a **handoff prompt** to the owning agent
+- provide a **send list + order** (with intelligence recommendations)
+
+## Ownership rule
+
+Follow the ownership map in `AGENTS.md`. If you are not the owner of a file, prefer:
+**handoff → owner agent**, not “quick fixes”.
+

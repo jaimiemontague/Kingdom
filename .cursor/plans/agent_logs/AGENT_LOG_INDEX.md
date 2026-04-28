@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk33-terrain-lair-economy-prefabs`
-- `wk33-midsprint-assembler-scale-hotkeys`
-- `wk34-3d-final-model-pass-v1-5`
-- `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
+- `wk40-refactor-stage5-cleanup`
+- `wk41-mechanical-module-split`
+- `wk42-renderer-dedupe-wire-collabs`
+- `wk43-building-nature-stage1`
 
-**Archived sprints:** 24
+**Archived sprints:** 28
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `wk29-first-house-playtest`
-- `wk30-buildings-pipeline`
-- `wk31-perf-fps-and-pack-scale`
-- `wk32-camera-construction-nature-polish`
 - `post_wk32_art_standards`
+- `wk33-terrain-lair-economy-prefabs`
+- `wk33-midsprint-assembler-scale-hotkeys`
+- `wk34-3d-final-model-pass-v1-5`
+- `wk36-refactor-stage1-snapshot-decouple`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -52,26 +52,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk32-camera-construction-nature-polish`
-- `wk34-3d-final-model-pass-v1-5` — game/engine._update_fog_of_war: +3 tile vision radius for every constructed player building (skip castle, skip is_neutral, skip dead) — WK34 building LoS.; ursina_renderer: TREE_SCALE_MULTIPLIER=4.6 (4x vs pre-WK34 1.15 per plan); _PREFAB_BUILDING_TYPE_TO_FILE adds ranger_guild, temple, guardhouse; removed gnome_hovel prefab entry (deprecated).
-- `wk36-refactor-stage1-snapshot-decouple` — UrsinaRenderer: __init__(world) now stores self._world; update(snapshot: SimStateSnapshot) consumes snapshot fields and no longer reads engine state directly.; Replaced all remaining renderer engine-coupling points: fog gating now uses snapshot.fog_revision, debug grid overlay uses (world, snapshot.buildings), terrain scatter exclusion uses _building_occupied_tiles(buildings).
-- `wk37-refactor-stage2-simengine-presentation-split` — Sim uses one revealer per qualifying building at building.center with PLAYER_BUILDING_VISION_TILES=3 for all non-castle player buildings; guild/marketplace share 2×2 BUILDING_SIZES — perceived gap was Ursina mesh reading past logical footprint + frontier placement vs in-town overlap with castle/hero vision.; Added config: PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES (default +2 tiles additive for warrior/ranger/rogue/wizard guild only). SimEngine._update_fog_of_war uses r = PLAYER_BUILDING_VISION_TILES + (extra if guild).
-- `wk38-refactor-stage3-gamecommands` — tests/test_input_handler_gamecommands.py: 3 tests — QUIT clears commands.running; unaffordable select_building toasts via commands.hud; KEYDOWN 'h' calls commands.try_hire_hero.; docs/refactor/engine_access_inventory.md: new subsection InputHandler + GameCommands (WK38 wiring, grep DoD note, test file pointer).
 - `wk39-refactor-stage4-pygame-renderer` — tests/test_pygame_renderer_wk39.py: 3 tests — module exports; headless_ui pygame_renderer + build_snapshot; render_world(skip_pygame_world=True) smoke (no full-frame raster in-file: Windows SDL/font order flakiness; full draw still in qa_smoke).; docs/refactor/engine_access_inventory.md: new section PygameRenderer + GameEngine.render (WK39).
 - `ursina-ranged-vfx-visibility-2026-04` — ursina_renderer: PROJECTILE_BILLBOARD_SCALE 0.3 → 0.075 (25% of the post-fix size) for readable but non-dominant arrows.; Jaimie playtest: pass (projectiles visible + size OK).
+- `wk40-default-renderer-ursina-2026-04` — main.py: --renderer default pygame → ursina; help text for 2D override.; 02-project-layout.mdc, README.md, 00-shell, 04-qa-gates, 06-workflow-sop: default Ursina; pygame explicit for 2D path.
+- `wk40-post-assessor-presentationlayer-doc-2026-04` — game/engine.py: module docstring = presentation shell wrapping SimEngine; design doc name PresentationLayer vs public GameEngine.; GameEngine class docstring: 1–2 sentences, owns pygame/HUD/loop, sim on self.sim.
+- `wk41-mechanical-module-split` — ursina_renderer.py: UrsinaRenderer.update() thin orchestration — _ensure_shadow_bounds_once, _sync_snapshot_buildings/heroes/enemies/peasants/guards/tax_collector/projectiles, _update_debug_status_text, _destroy_removed_entities (logic unchanged; mechanical extraction); docs/refactor/engine_access_inventory.md: WK41 subsection listing engine_facades + ursina_* helper modules + update() helper split
+- `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py: removed duplicate module-level block (lines 119–819); imports from ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim; grass albedo path uses PROJECT_ROOT import; ursina_renderer.py: UrsinaTerrainFogCollab(self) + UrsinaEntityRenderCollab(self) in __init__ after _setup_scene_lighting(); deleted 6 terrain/fog methods + 11 entity-render staticmethods; update() and sync paths delegate to collaborators
+- `wk43-building-nature-stage1`
 
-**Archived sprints:** 21
+**Archived sprints:** 26
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `v1_5-sprint-1-2-base-terrain`
-- `wk27-sprint-2-1-3d-buildings`
-- `wk29-first-house-playtest`
-- `wk30-buildings-pipeline`
-- `wk31-perf-fps-and-pack-scale`
+- `wk32-camera-construction-nature-polish`
+- `wk34-3d-final-model-pass-v1-5`
+- `wk36-refactor-stage1-snapshot-decouple`
+- `wk37-refactor-stage2-simengine-presentation-split`
+- `wk38-refactor-stage3-gamecommands`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -94,15 +94,15 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk17-quality-logic-immersion`
 - `wk18-llm-merger-and-mechanics`
 - `wk30-buildings-pipeline`
 - `wk31-kingdom-perf-economy`
 - `wk32-camera-construction-nature-polish`
 - `wk33-terrain-lair-economy-prefabs`
 - `wk34-3d-final-model-pass`
+- `wk43-building-nature-stage1`
 
-**Archived sprints:** 9
+**Archived sprints:** 10
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
@@ -112,6 +112,7 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - `wk11-building-interiors-llm-setup`
 - `wk12-chronos`
 - `wk13-living-interiors`
+- `wk17-quality-logic-immersion`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -201,15 +202,15 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_10_PerformanceStability_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk29-first-house-playtest` — Prefab path: 2 child meshes + load-time classifier; cached per building — no per-frame prefab load.; Short Ursina smoke (env OFF / ON): both launches OK; no numeric FPS from stdout.
-- `wk30-buildings-pipeline` — Piece counts: house 2, castle 20, warrior_guild 8, ranger_guild 6, rogue_guild 6, wizard_guild 11 (63 total if all types visible).; Loader: cached per building id; classifier at instantiation — same model as WK29.
 - `wk31-perf-fps-and-pack-scale` — Headless perf_benchmark: ~1.07 ms/tick total (20/20 heroes/enemies + bounties) — sim not primary suspect for Ursina lag.; Top GPU suspects: URSINA_DIRECTIONAL_SHADOWS=True vs config comment; per-tile terrain Entities without batching; prefab piece count; HUD texture upload on change.
 - `wk32-camera-construction-nature-polish` — Headless profiler: total_frame stays <1ms up to 8 heroes (0 enemies) → sim CPU not the cause of low FPS after heroes spawn.; Most likely culprit is renderer/HUD/scene-graph cost (Agent 03 domain), not AI/LLM (Agent 06) by default.
 - `wk33-terrain-lair-economy-prefabs`
 - `wk36-refactor-stage1-snapshot-decouple` — Ursina FPS probe (no-LLM): avg_fps 58.4, p10 51.1, p50 60.2, p90 63.7; min 12.0 during OBJ->BAM cache writes.; HUD pipeline probes: hud_texture_upload avg 0.258ms; pygame_hud_render avg 0.924ms; ursina_renderer avg 0.320ms (probe output).
 - `wk37-refactor-stage2-simengine-presentation-split` — Ursina 300s + 4 hired warriors: avg_fps 41.7, p50 42.9; min_fps 3.5 — treat as outlier spike, not sustained collapse.; Probe stages: tick_simulation p90 ~1.07ms avg but rare max ~265ms; ursina_renderer avg ~1.7ms — flag for Agent 03 only if human playtest sees repeated hitching after cache warm.
+- `wk41-mechanical-module-split` — Context: peasant/FOW routing bug found in playtest — fixed by Agent 03 before final signoff.; Headless: perf_benchmark default profile ~1.291 ms/tick total, PF ~0.850 ms/tick — OK vs refactor-era band.
+- `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py line count: 696 (plan target ≤900 / ~700).; perf_benchmark (default 12s): ~1.280 ms/tick total; PF ~0.879 ms/tick — OK.
 
-**Archived sprints:** 10
+**Archived sprints:** 12
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
@@ -220,6 +221,8 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - `wk17-quality-logic-immersion`
 - `wk22-3d-refinement`
 - `wk27-sprint-2-1-3d-buildings`
+- `wk29-first-house-playtest`
+- `wk30-buildings-pipeline`
 
 ### 11 — QA_TestEngineering_Lead
 
@@ -227,26 +230,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_11_QA_TestEngineering_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk33-terrain-lair-economy-prefabs` — PM (Agent 01) closed sprint wk33-terrain-lair-economy-prefabs 2026-04-27. Jaimie + PM signoff; formal final qa_smoke/validate re-run in this log not required.
-- `wk34-final-3d-model-pass-pre-v1-5` — No repository code changes (Agent 11 gate run only for WK34 close).; Ran sprint-required gates: qa_smoke --quick and validate_assets --report.
-- `wk35-refactor-stage0-regression-baseline` — tests/test_engine.py: added 5 Stage-0 headless integration tests (init branches, tick/update loop contract, get_game_state key freeze, full orchestration no-crash).; tests/test_renderer_snapshot_contract.py: added 3 renderer snapshot data-contract tests (no GPU/Ursina instantiation).
-- `wk36-refactor-stage1-snapshot-decouple` — No repository code changes (Agent 11 consult-only for R2).; Ran post-merge gates per PM prompt.
 - `wk37-refactor-stage2-simengine-presentation-split` — Agent 11 session spinup: re-ran merge gates; no repository code changes.
 - `wk38-refactor-stage3-gamecommands` — No repository code changes (Agent 11 R3: final gate stack + optional rg sanity on input_handler).
 - `wk39-refactor-stage4-pygame-renderer` — No repository code changes (Agent 11 R3: final gate stack after Agent 03 hardening + tests; Jaimie manual per PM).
+- `wk40-refactor-stage5-cleanup` — WK40 Wave 2 Workstream C: no game code; ran full automated gate stack per pm_agent_prompts['11'] and sprint plan L68–73.
+- `wk41-mechanical-module-split` — No repository code changes (Agent 11 gate validation only).
+- `wk42-renderer-dedupe-wire-collabs` — No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack.
+- `wk43-building-nature-stage1` — No repository code changes (Agent 11 gate validation only).; Ran WK43 required full gate stack; recorded exit codes.
 
-**Archived sprints:** 21
+**Archived sprints:** 25
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk28-assembler-spike`
-- `wk29-first-house-playtest`
-- `wk30-buildings-pipeline`
-- `wk31-perf-fps-and-pack-scale`
 - `wk32-camera-construction-nature-polish`
+- `wk33-terrain-lair-economy-prefabs`
+- `wk34-final-3d-model-pass-pre-v1-5`
+- `wk35-refactor-stage0-regression-baseline`
+- `wk36-refactor-stage1-snapshot-decouple`
 
 ### 12 — ToolsDevEx_Lead
 
@@ -276,6 +279,7 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - `wk3-ui-polish-1080p-pixelart` — Updated WK3 Build B patch notes draft with closeout-required sections: UI polish highlights, snapshot/gallery commands, and concrete credits bullets.; Verified attribution packaging: every pack under assets/third_party is listed in assets/ATTRIBUTION and includes LICENSE/README files.
 - `wk4-new-enemy-skeleton-archer` — Context re-ACK complete: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, pipeline completeness, gates).; Role-specific deliverables: patch notes drafts (gated by QA), attribution compliance (if needed), release checklist alignment.
 - `wk7-ui-polish` — Assigned to attribution proof for the CC0 UI art pack.; Blocked pending Agent 09's UI pack selection and source/license URLs.
+- `wk41-mechanical-module-split` — CHANGELOG.md — added subsection **WK41 — Mechanical module split** under Prototype v1.5.1 (player-facing + dev-oriented bullets; no new version number).
 
 **Archived sprints:** 0
 
@@ -295,12 +299,13 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_15_ModelAssembler_KitbashLead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk33-terrain-lair-economy-prefabs` — assets/models/environment/lair.glb — copy of Models/GLB format/crypt-large-graveyard.glb (single lair read for all sim lair types).; assets/prefabs/buildings/marketplace_v1.json — 4x FT stall/bench, food_stand wood texture override.
 - `wk32-camera-construction-nature-polish` — assets/prefabs/buildings/plot_3x2_v1.json — 3×2 empty plot (7 pcs: corner stones + scaffold + planks) for Inn footprint; building_type plot_3x2.; assets/prefabs/buildings/inn_v2_build_20_v1.json — 10 piece subset: first 6 stone walls + 4 road-curbs (inn_v2 construction ~20%).
 - `wk31-perf-fps-and-pack-scale` — assets/prefabs/buildings/inn_v2.json — watermill-wide-fantasy-town + cart + stall-bench + fence + planks (5 pieces); FT-only attribution.; assets/prefabs/buildings/farm_v2.json — windmill-fantasy-town.glb single hero (1 piece).
 - `wk30-buildings-pipeline` — assets/prefabs/buildings/castle_v1.json — Jaimie kitbashed interactively (20 pieces, 4 corner towers, fortified perimeter with central gate). Agent 15 post-save: trimmed coarse attribution from [retro-fantasy-kit, survival-kit] to [retro-fantasy-kit] (no Survival pieces placed).; assets/prefabs/buildings/warrior_guild_v1.json — Agent 15 hand-authored (8 pieces). 2x2 painted-plaster armory with high-pitched gable roof. Reference kit for Ranger/Rogue palette swaps.
 - `wk29-first-house-playtest` — assets/prefabs/buildings/peasant_house_small_v1.json — kitbashed by Jaimie in tools/model_assembler_kenney.py; 2 Retro Fantasy pieces (wall-door.glb at base, roof.glb lifted +1.0 on Y); saved and round-trip confirmed by reopening with --open.; assets/prefabs/buildings/peasant_house_small_v1.json — Agent 15 hand-trimmed attribution from ['kenney_retro-fantasy-kit','kenney_survival-kit'] (coarse auto-inference) down to ['kenney_retro-fantasy-kit'] only, since neither piece comes from the Survival kit.
 - `wk28-assembler-spike` — Log only — no new prefab files this round.
 - `wk34-final-3d-model-pass-pre-v1-5` — Regenerated assets/prefabs/buildings/temple_build_20_v1.json and temple_build_50_v1.json from current temple_v1.json (14 plinth+road+hedge+obelisk; 29 = full wall shell without roof or temple_frame_quad overlays).
+- `wk43-building-nature-stage1` — assets/prefabs/buildings/food_stand_build_20_v1.json — 20% stage (plot pad + crate + shovel) for a clear under-construction read.; assets/prefabs/buildings/food_stand_build_50_v1.json — 50% stage (stall-fantasy-town) with the same wood stall texture override as the completed Food Stand.
 
-**Archived sprints:** 0
+**Archived sprints:** 1
+- `wk33-terrain-lair-economy-prefabs`
