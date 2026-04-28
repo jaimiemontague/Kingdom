@@ -154,6 +154,8 @@ class UrsinaRenderer:
 
         # Entity mappings: simulation object id() -> Ursina Entity
         self._entities = {}
+        # WK44 Stage 2: dynamic trees keyed by tile (tx,ty) for growth scaling.
+        self._tree_entities: dict[tuple[int, int], Entity] = {}
 
         # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
@@ -304,6 +306,7 @@ class UrsinaRenderer:
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
         self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        self._terrain_fog.sync_dynamic_trees(world, getattr(snapshot, "trees", ()) or ())
         self._terrain_fog.ensure_fog_overlay(world, fog_revision)
         self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))

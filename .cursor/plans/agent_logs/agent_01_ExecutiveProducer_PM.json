@@ -10,594 +10,6 @@
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
   "sprints": {
-    "wk37-refactor-stage2-simengine-presentation-split": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "created_utc": "2026-04-27T16:05:00Z",
-        "notes": "Architecture Refactor Stage 2 kickoff: split GameEngine into SimEngine (pure sim) + PresentationLayer (camera/display/UI/render/audio/VFX wrapper). Two rounds: R1 scaffold + move sim-owned init, R2 move update loop + convert sim→HUD direct calls to EventBus HUD_MESSAGE + presentation subscription."
-      },
-      "rounds": {
-        "wk37_r1_simengine_scaffold": {
-          "round_meta": {
-            "prompt_set_id": "wk37_r1",
-            "build_target": "Stage2_SimEngine_Scaffold + PresentationLayer_Wiring",
-            "visibility": "Implementer: 03. QA: 11 (post)."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Create game/sim_engine.py and move sim-owned initialization out of the God-object engine. Wire PresentationLayer to own self.sim and forward properties so existing code keeps working.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
-            }
-          },
-          "pm_bug_tickets": [],
-          "pm_feature_requests": [
-            {
-              "id": "WK37-STAGE2-FEAT-001",
-              "title": "Introduce SimEngine and wire PresentationLayer wrapper",
-              "owner_agent": "03_TechnicalDirector_Architecture",
-              "spec_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1) + master_plan_architecture_refactor.md Stage 2",
-              "acceptance": [
-                "New file game/sim_engine.py defines SimEngine (no UI/camera/display/audio/VFX).",
-                "PresentationLayer (in game/engine.py) owns self.sim and forwards key entity/system properties for backward compatibility.",
-                "python tools/qa_smoke.py --quick PASS."
-              ]
-            }
-          ],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Follow the WK37 plan file: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1).",
-                "Create game/sim_engine.py with SimEngine scaffolding and move sim-owned __init__ state from GameEngine into SimEngine, one block at a time.",
-                "In game/engine.py, wire PresentationLayer to create self.sim = SimEngine(...) and add property forwarding (engine.buildings -> sim.buildings, etc.) so existing code continues to run.",
-                "Run gates: python -m pytest tests/ and python tools/qa_smoke.py --quick."
-              ],
-              "acceptance_criteria": [
-                "qa_smoke --quick PASS.",
-                "No functional behavior change intended; only relocation + wiring."
-              ]
-            },
-            "11": {
-              "status": "consult",
-              "asks": [
-                "After Agent 03 lands WK37 R1, run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "rationale": "03 must land the refactor before 11 can validate it.",
-            "intelligence_by_agent": {
-              "03": "high",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK37 Stage 2 R1 (Tech): Read the sprint plan first: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R1). Context: .cursor/plans/master_plan_architecture_refactor.md Stage 2. Implement SimEngine scaffold in game/sim_engine.py and move sim-owned init into SimEngine. Wire PresentationLayer (game/engine.py) to own self.sim and forward properties for backward compatibility. Gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick. Log files changed + commands + exit codes in agent_03 log.",
-            "11": "WK37 Stage 2 R1 (QA - CONSULT): After Agent 03 merges R1, run `python tools/qa_smoke.py --quick` and record PASS/FAIL + exit code in agent_11 log."
-          }
-        },
-        "wk37_r2_move_update_loop": {
-          "round_meta": {
-            "prompt_set_id": "wk37_r2",
-            "build_target": "Stage2_Move_UpdateLoop + HUD_MESSAGE_EventBridge",
-            "visibility": "Implementer: 03. QA: 11 (post). Consult: 10 (perf)."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Move update loop + fog-of-war + get_game_state/build_snapshot into SimEngine. Replace sim→HUD direct calls with EventBus HUD_MESSAGE events; PresentationLayer subscribes and calls hud.add_message().",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
-              "manual_smoke": "python main.py --no-llm and python main.py --renderer ursina --no-llm must run without regressions."
-            }
-          },
-          "pm_bug_tickets": [],
-          "pm_feature_requests": [
-            {
-              "id": "WK37-STAGE2-FEAT-002",
-              "title": "Move sim update loop into SimEngine and bridge HUD messages via EventBus",
-              "owner_agent": "03_TechnicalDirector_Architecture",
-              "spec_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2) + master_plan_architecture_refactor.md Stage 2",
-              "acceptance": [
-                "SimEngine owns update(dt) and sim sub-methods; PresentationLayer tick_simulation delegates to sim.",
-                "SimEngine no longer calls hud.add_message() directly; instead emits HUD_MESSAGE events.",
-                "PresentationLayer subscribes to HUD_MESSAGE and forwards to hud.add_message().",
-                "get_game_state() and build_snapshot() live on SimEngine; PresentationLayer delegates for compatibility.",
-                "python tools/qa_smoke.py --quick PASS."
-              ]
-            }
-          ],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Follow the WK37 plan file: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2).",
-                "Move setup_initial_state, _update_fog_of_war, update() and _update_* helpers into SimEngine.",
-                "Convert sim→HUD direct calls (notably _route_combat_events and try_hire_hero) into EventBus HUD_MESSAGE events. PresentationLayer subscribes and calls hud.add_message().",
-                "Move get_game_state() + build_snapshot() into SimEngine; PresentationLayer delegates.",
-                "Run gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report.",
-                "Manual smoke: python main.py --no-llm ; python main.py --renderer ursina --no-llm ; python main.py --renderer ursina --provider mock."
-              ]
-            },
-            "11": {
-              "status": "consult",
-              "asks": [
-                "After Agent 03 merges WK37 R2, run python tools/qa_smoke.py --quick and record PASS/FAIL + exit code in agent_11 log."
-              ]
-            },
-            "10": {
-              "status": "consult",
-              "asks": [
-                "After Agent 03 merges WK37 R2, run python main.py --renderer ursina --no-llm for ~5 minutes and note any obvious FPS regression or new stutter. Log in agent_10."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_parallel_10_11",
-            "then_in_order": [
-              "03"
-            ],
-            "then_parallel": [
-              "10",
-              "11"
-            ],
-            "rationale": "03 must land the refactor; 10 and 11 validate in parallel afterward.",
-            "intelligence_by_agent": {
-              "03": "high",
-              "10": "low",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK37 Stage 2 R2 (Tech): Read the sprint plan first: .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md (Round WK37-R2). Context: .cursor/plans/master_plan_architecture_refactor.md Stage 2 (\"Things that will fight Stage 2\"). Move sim update loop + fog-of-war + get_game_state/build_snapshot into SimEngine and make PresentationLayer delegate. Replace sim calls to hud.add_message() with EventBus HUD_MESSAGE events and subscribe in PresentationLayer to restore messages. Gates: python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Manual: python main.py --no-llm ; python main.py --renderer ursina --no-llm ; python main.py --renderer ursina --provider mock. Log evidence in agent_03 log.",
-            "10": "WK37 Stage 2 R2 (Perf - CONSULT): After Agent 03 merges, run `python main.py --renderer ursina --no-llm` for ~5 minutes. Watch for new stutter/FPS collapse during normal gameplay (hiring heroes, placing buildings, panning camera). Log result in agent_10 JSON.",
-            "11": "WK37 Stage 2 R2 (QA - CONSULT): After Agent 03 merges, run `python tools/qa_smoke.py --quick` (and `python tools/validate_assets.py --report` if prompted). Record PASS/FAIL + exit codes in agent_11 JSON."
-          }
-        },
-        "wk37_r3_fow_building_parity": {
-          "round_meta": {
-            "prompt_set_id": "wk37_r3",
-            "build_target": "Stage2_FoW_Parity_DedupeSimVsPresentation",
-            "visibility": "Implementer: 03. Human playtest: Jaimie (fog-of-war parity)."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "After SimEngine became authoritative for fog, remove duplicate/stale GameEngine fog paths so WK34-style building LoS cannot drift or double-apply.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
-            }
-          },
-          "pm_notes": [
-            "This round was not in the original WK37 two-round plan; it landed after human Ursina playtests exposed fog parity risk post-split."
-          ],
-          "pm_agent_prompts": {
-            "03": "WK37 Stage 2 R3 (Tech): See Agent 03 log round wk37_r3_fow_building_parity. Goal: single authoritative fog path in SimEngine; GameEngine forwards fog revision + thin-wraps _update_fog_of_war for legacy/monkeypatch sites. Gates: pytest + qa_smoke + validate_assets."
-          }
-        },
-        "wk37_r4_guild_fow_tuning": {
-          "round_meta": {
-            "prompt_set_id": "wk37_r4",
-            "build_target": "Stage2_Guild_FoW_Readability_Tuning",
-            "visibility": "Implementer: 03. Human playtest: Jaimie (guild vs economic building fog edge readability)."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Tune guild fog reveal radius (additive) without breaking baseline non-guild player building LoS; driven by repeated Jaimie Ursina playtests with Agent 03.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS."
-            }
-          },
-          "pm_notes": [
-            "Config knobs added in config.py (see Agent 03 log): PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES."
-          ],
-          "pm_agent_prompts": {
-            "03": "WK37 Stage 2 R4 (Tech): See Agent 03 log round wk37_r4_guild_fow_tuning. Goal: improve guild fog-edge readability vs 3D mesh footprint perception while keeping sim footprint unchanged. Gates: pytest + qa_smoke."
-          }
-        },
-        "wk37_sprint_closeout": {
-          "round_meta": {
-            "created_utc": "2026-04-27T16:30:00Z",
-            "source": "pm_closeout_after_agent_completion_and_repeated_human_playtest",
-            "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
-            "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-            "closed_by": "Agent 01 ExecutiveProducer_PM"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK37 Stage 2 is closed and accepted. SimEngine + PresentationLayer split landed (R1 scaffold, R2 sim update loop + HUD_MESSAGE bridge). Additional midsprint rounds R3/R4 were driven by repeated Jaimie Ursina playtesting with Agent 03 to preserve fog-of-war parity (dedupe sim vs presentation fog paths) and improve guild fog-edge readability via config-tunable extra guild vision radius. Automated gates pass; perf consult PASS; human playtest signoff recorded in Agent 10/03 logs."
-          },
-          "pm_accepted_deliverables": [
-            "game/sim_engine.py: SimEngine owns sim init + sim update orchestration + get_game_state/build_snapshot construction (per Agent 03 log).",
-            "game/engine.py: PresentationLayer-style GameEngine wrapper with self.sim + property forwarding + HUD_MESSAGE subscription.",
-            "game/events.py: HUD_MESSAGE event type for sim→HUD toasts.",
-            "Fog parity: R3 removes duplicate/stale engine fog path; SimEngine remains authoritative.",
-            "Guild fog tuning: R4 adds PLAYER_GUILD_TYPES + PLAYER_GUILD_EXTRA_VISION_TILES in config.py (tunable)."
-          ],
-          "pm_evidence": {
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → sprint wk37-refactor-stage2-simengine-presentation-split rounds wk37_r1 through wk37_r4 (pytest/qa_smoke/validate_assets as logged).",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → WK37 R1+R2 consult gates PASS.",
-            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json → WK37 R2 perf consult PASS + human_playtest_wk37_r2 PASS (Jaimie).",
-            "human_playtest": "Jaimie: multiple Ursina playtests while iterating fog-of-war with Agent 03 (R3/R4)."
-          },
-          "pm_next_actions": [
-            "Plan Stage 3 kickoff: InputHandler decoupling via GameCommands protocol (master plan Stage 3).",
-            "Optional: commit/push save-state if working tree is dirty after closeout bookkeeping."
-          ],
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "closed",
-              "next_action": "Kick off Stage 3 sprint planning + PM hub entry once Jaimie confirms save-state commit timing."
-            },
-            "03": {
-              "status": "done"
-            },
-            "10": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          }
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint **wk37-refactor-stage2-simengine-presentation-split**.\\n\\n1) Read the sprint plan first:\\n   .cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md\\n\\n2) Read the master plan section for context:\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 2: GameEngine God Object Decomposition\\n\\n3) Read your assignment in the PM hub:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk37-refactor-stage2-simengine-presentation-split\\\"]\\n   -> rounds[\\\"<your round id>\\\"]\\n   -> pm_agent_prompts[YOUR_AGENT_NUMBER]\\n\\n4) After completing your work:\\n   - Update your agent log\\n   - Run required gates (at minimum): python tools/qa_smoke.py --quick\\n   - Report back: files touched + commands + exit codes + blockers\\n",
-      "pm_send_list_minimal": {
-        "order": "two_rounds_sequential",
-        "round_1": {
-          "then_in_order": [
-            "03",
-            "11"
-          ],
-          "intelligence_by_agent": {
-            "03": "high",
-            "11": "low"
-          }
-        },
-        "round_2": {
-          "then_in_order": [
-            "03"
-          ],
-          "then_parallel": [
-            "10",
-            "11"
-          ],
-          "intelligence_by_agent": {
-            "03": "high",
-            "10": "low",
-            "11": "low"
-          }
-        },
-        "do_not_send": [
-          "02",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "12",
-          "13",
-          "14",
-          "15"
-        ],
-        "rationale": "Stage 2 is a core engine refactor; keep scope limited to Tech implementer + QA/perf consult validation."
-      }
-    },
-    "wk38-refactor-stage3-gamecommands": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "master_plan_section": "Stage 3: Input Handler Decoupling (approx. L794+)",
-        "created_utc": "2026-04-27T20:15:00Z",
-        "notes": "WK38 CLOSED 2026-04-27: Stage 3 GameCommands + InputHandler decouple shipped; human playtest PASS (Jaimie). See wk38_sprint_closeout round.",
-        "pm_jaimie_send_order": [
-          "1) Agent 03 (HIGH) — round wk38_r1 only. No other agent starts until 03 reports R1 done and gates pass.",
-          "2) Agent 11 (LOW) — after step 1: run qa_smoke + log (and pytest if 03 asked).",
-          "3) Agent 03 (HIGH) — round wk38_r2.",
-          "4) Agent 11 (LOW) — after step 3.",
-          "5) Agent 03 (HIGH) — round wk38_r3.",
-          "6) In PARALLEL (after step 5): Agent 11 (LOW) final gate + log; Agent 08 (LOW, consult) UX checklist in .cursor/plans/wk38_stage3_input_gamecommands.plan.md / PM round wk38_r3 — do not edit game code unless Agent 03 requests a copy fix."
-        ]
-      },
-      "rounds": {
-        "wk38_r1_gamecommands_scaffold": {
-          "round_meta": {
-            "prompt_set_id": "wk38_r1",
-            "build_target": "GameCommands_Protocol + EngineBackedGameCommands + InputHandler_first_slice",
-            "visibility": "Implementer: 03. QA: 11 after merge."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Add game/game_commands.py with GameCommands Protocol and EngineBackedGameCommands delegating to GameEngine. Change InputHandler to take commands: GameCommands. Migrate a first vertical slice (or full process_events) so the game still runs. Inventory distinct engine capabilities used from input_handler.py.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable)."
-            }
-          },
-          "pm_bug_tickets": [],
-          "pm_feature_requests": [
-            {
-              "id": "WK38-STAGE3-FEAT-001",
-              "title": "GameCommands protocol + InputHandler(commands) + facade",
-              "owner_agent": "03_TechnicalDirector_Architecture",
-              "spec_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md (WK38-R1) + master_plan_architecture_refactor.md Stage 3",
-              "acceptance": [
-                "game/game_commands.py exists with GameCommands Protocol and EngineBackedGameCommands (or equivalent name) implementing delegation to GameEngine.",
-                "InputHandler.__init__ takes GameCommands, not GameEngine (R1 may still be partial migration if a second commit completes R1 — prefer finishing R1 in one merge when practical).",
-                "python -m pytest tests/ PASS; python tools/qa_smoke.py --quick PASS."
-              ]
-            }
-          ],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done",
-              "asks": [
-                "Read .cursor/plans/wk38_stage3_input_gamecommands.plan.md and master plan Stage 3.",
-                "Inventory engine capabilities referenced from game/input_handler.py; add Protocol + facade; wire GameEngine to pass EngineBackedGameCommands into InputHandler.",
-                "Run pytest, qa_smoke, validate_assets; update agent_03 log with evidence."
-              ],
-              "acceptance_criteria": [
-                "First slice merged; gates PASS; no intended gameplay change."
-              ]
-            },
-            "11": {
-              "status": "done",
-              "asks": [
-                "After Agent 03 reports R1 merged: run python tools/qa_smoke.py --quick and log exit code; note any new failures in agent_11 log."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "high",
-              "11": "low"
-            },
-            "rationale": "03 implements; 11 validates after merge only."
-          },
-          "pm_agent_prompts": {
-            "03": "WK38 Stage 3 R1 (Tech, HIGH): Execute WK38-R1 in .cursor/plans/wk38_stage3_input_gamecommands.plan.md. Add game/game_commands.py: GameCommands Protocol + EngineBackedGameCommands delegating to game/engine.py GameEngine. Refactor game/input_handler.py to use self.commands and game/engine.py to construct InputHandler with the facade. Cover inventory + first vertical slice. Expose private engine hooks needed by input as explicit protocol methods (no raw getattr on arbitrary _privates in InputHandler). Gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log in .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json.",
-            "11": "WK38 Stage 3 R1 (QA, LOW): After Agent 03 lands R1, run python tools/qa_smoke.py --quick. Log command + exit_code in .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json. If FAIL, file regression note to PM and Agent 03."
-          }
-        },
-        "wk38_r2_mechanical_migration": {
-          "round_meta": {
-            "prompt_set_id": "wk38_r2",
-            "build_target": "InputHandler_full_migration_through_GameCommands",
-            "visibility": "Implementer: 03. QA: 11 after merge."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Complete mechanical migration: handle_keydown, handle_mousedown, handle_mousemove, select_building_for_placement, _clear_hero_selection — all through self.commands / protocol. Extend Protocol + facade for any missing surfaces.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable).",
-              "optional_manual_ursina": "python main.py --renderer ursina --no-llm for spot-check if input paths touched."
-            }
-          },
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done",
-              "note": "R2 landed per agent_03 log."
-            },
-            "11": {
-              "status": "done",
-              "note": "Gates PASS per agent_11 log."
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "high",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK38 Stage 3 R2 (Tech, HIGH): Complete migration per .cursor/plans/wk38_stage3_input_gamecommands.plan.md WK38-R2. No behavior change intended. extend GameCommands as needed. Same gates as R1 + optional Ursina spot-check. Update agent_03 log.",
-            "11": "WK38 Stage 3 R2 (QA, LOW): After 03 merge, run python tools/qa_smoke.py --quick; log in agent_11 log."
-          }
-        },
-        "wk38_r3_hardening_tests_ux": {
-          "round_meta": {
-            "prompt_set_id": "wk38_r3",
-            "build_target": "Tests_Grep_Docs_Plus_UX_Consult",
-            "visibility": "Implementer: 03. Parallel after 03 handoff: 11 (gate) + 08 (consult, no code unless agreed)."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "1–3 mock-based tests; verify rg shows no self.engine in input_handler; optional engine_access_inventory.md subsection; Manual pygame + Ursina. Agent 08: short UX checklist (ESC, build catalog, focus).",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0.",
-              "grep_sanity": "self.engine and `engine = self.engine` must not appear in game/input_handler.py (use rg from plan)."
-            }
-          },
-          "pm_ux_checklist_08": [
-            "From repo root: python main.py --no-llm and python main.py --renderer ursina --no-llm (few minutes each).",
-            "Confirm: build catalog open/close, hire hotkey, pause/ESC, wheel zoom, hero selection, bounty placement key — no new dead clicks or focus traps vs pre-WK38 expectation."
-          ],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            },
-            "08": {
-              "status": "done"
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_parallel_11_08",
-            "then_in_order": [
-              "03"
-            ],
-            "then_parallel": [
-              "11",
-              "08"
-            ],
-            "intelligence_by_agent": {
-              "03": "high",
-              "11": "low",
-              "08": "low"
-            },
-            "rationale": "11 and 08 are independent: QA runs commands; UX reviews flows without touching 03s files in parallel if 03 is done."
-          },
-          "pm_agent_prompts": {
-            "03": "WK38 Stage 3 R3 (Tech, HIGH): Hardening per wk38 plan WK38-R3. Add small tests; remove TYPE_CHECKING engine coupling if safe; document protocol in docs/refactor/engine_access_inventory.md (optional). Confirm rg clean on input_handler. Full gate stack. Update agent_03 log.",
-            "11": "WK38 Stage 3 R3 (QA, LOW): Final python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log all exit codes. Independent of Agent 08; run in parallel with 08 after 03 says R3 is ready.",
-            "08": "WK38 Stage 3 R3 (UX, LOW consult): Read pm_ux_checklist_08 in this round. No code changes unless you coordinate with Agent 03 for a one-line copy fix. Report keep/change in agent_08 log or return to PM."
-          }
-        },
-        "wk38_sprint_closeout": {
-          "round_meta": {
-            "closed_at_local": "2026-04-27",
-            "closed_by": "Agent_01_ExecutiveProducer_PM",
-            "build_target": "Sprint_Close_WK38_Stage3"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK38 Stage 3 (GameCommands + InputHandler decouple) accepted. Automated gates PASS (pytest, qa_smoke, validate_assets). Agent 08 UX consult KEEP. Jaimie human playtest (pygame + Ursina) PASS — final sign-off.",
-            "gates_recorded": {
-              "pytest": "PASS 110 tests (per agent logs)",
-              "qa_smoke_quick": "PASS exit 0",
-              "validate_assets": "PASS errors=0 warns=46 baseline",
-              "grep_input_handler": "no self.engine / engine = self.engine in game/input_handler.py"
-            }
-          },
-          "pm_deliverables": [
-            "game/game_commands.py — GameCommands Protocol + EngineBackedGameCommands",
-            "game/input_handler.py — routes via commands only",
-            "game/engine.py — wires InputHandler(EngineBackedGameCommands(self))",
-            "tests/test_input_handler_gamecommands.py",
-            "docs/refactor/engine_access_inventory.md — InputHandler + GameCommands subsection",
-            ".cursor/plans/wk38_stage3_input_gamecommands.plan.md"
-          ],
-          "pm_next_actions": [
-            "Plan WK39 / Stage 4: PygameRenderer extraction per master_plan_architecture_refactor.md Stage 4 (optional defer).",
-            "Optional: update master plan checklist Stage 3 when convenient."
-          ]
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint wk38-refactor-stage3-gamecommands (Architecture Refactor Stage 3: InputHandler + GameCommands).\\n\\n1) Read the sprint plan FIRST:\\n   .cursor/plans/wk38_stage3_input_gamecommands.plan.md\\n2) Read master plan context (Stage 3 only):\\n   .cursor/plans/master_plan_architecture_refactor.md (section: Stage 3: Input Handler Decoupling)\\n3) Read the PM Executive Producer log for this sprint and YOUR assignment:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk38-refactor-stage3-gamecommands\\\"]\\n   -> rounds[<your round id: start with wk38_r1_gamecommands_scaffold unless PM says otherwise>]\\n   -> pm_agent_prompts[\\\"YOUR_AGENT_NUMBER_AS_STRING\\\"] and pm_next_actions_by_agent[YOUR_NUMBER]\\n4) Jaimie send order (do not start out of order): see sprint_meta.pm_jaimie_send_order in the same sprint block.\\n5) When done: update YOUR agent log JSON; run the gates PM listed for your role; report files changed + commands + exit codes + blockers back to Jaimie/PM.",
-      "pm_send_list_minimal": {
-        "kickoff_parallelism_note": "Only one implementation agent (03) per round. QA 11 is sequential after each 03 round. 11+08 parallel ONLY on the final step after 03 R3 is complete.",
-        "waves": [
-          {
-            "wave": 1,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "high",
-                "round": "wk38_r1_gamecommands_scaffold"
-              }
-            ]
-          },
-          {
-            "wave": 2,
-            "parallel": false,
-            "depends_on": "wave_1_03_done",
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk38_r1_gamecommands_scaffold"
-              }
-            ]
-          },
-          {
-            "wave": 3,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "high",
-                "round": "wk38_r2_mechanical_migration"
-              }
-            ]
-          },
-          {
-            "wave": 4,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk38_r2_mechanical_migration"
-              }
-            ]
-          },
-          {
-            "wave": 5,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "high",
-                "round": "wk38_r3_hardening_tests_ux"
-              }
-            ]
-          },
-          {
-            "wave": 6,
-            "parallel": true,
-            "depends_on": "wave_5_03_done",
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk38_r3_hardening_tests_ux"
-              },
-              {
-                "id": "08",
-                "intel": "low",
-                "round": "wk38_r3_hardening_tests_ux"
-              }
-            ]
-          }
-        ],
-        "do_not_send": [
-          "01",
-          "02",
-          "04",
-          "05",
-          "06",
-          "07",
-          "09",
-          "10",
-          "12",
-          "13",
-          "14",
-          "15"
-        ],
-        "rationale": "Single-threaded code ownership on Agent 03. QA after each round. Agent 08 only in R3 and parallel with 11 to maximize speed at sprint end when work is independent."
-      }
-    },
     "wk39-refactor-stage4-pygame-renderer": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
@@ -1750,6 +1162,277 @@
           "14"
         ],
         "rationale": "Parallelize 15 (prefabs) + 05 (sim/entity) first. 03 depends on 05 signature changes and benefits from 15 filenames for stage-prefab mapping. 11 runs gates post-integration. Human manual smoke closes."
+      }
+    },
+    "wk44-stage2-dynamic-trees": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "status": "active",
+        "created_utc": "2026-04-28T15:41:00Z",
+        "notes": "WK44: Stage 2 Dynamic Tree Growth. Keep TileType.TREE on world grid, but add sim.trees list + NatureSystem for growth. Trees become blocking at growth >= 0.75. Ursina sync scales trees via terrain/fog collaborator dict keyed by (tx,ty)."
+      },
+      "rounds": {
+        "wk44_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk44_r0_kickoff",
+            "created_utc": "2026-04-28T15:41:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Kickoff round. Parallelize Agent 05 (NatureSystem + Tree entity + tests) with Agent 03 (engine/snapshot/world/ursina wiring) by splitting file ownership to avoid conflicts. QA (11) runs full gate stack after integration; Jaimie manual Ursina smoke after gates."
+          },
+          "pm_accepted_deliverables": [
+            "New sim entities: sim.trees list of Tree objects with deterministic growth 0.25->0.5->0.75->1.0 over ~6 minutes.",
+            "New system: NatureSystem ticks tree growth deterministically.",
+            "World gen: clustered forests (no per-tile independent noise).",
+            "Blocking rule: a tree is blocking iff growth >= 0.75.",
+            "Snapshot contract: SimStateSnapshot includes trees tuple; Ursina terrain collab syncs tree scale from snapshot."
+          ],
+          "pm_jaimie_send_order": [
+            "STEP 1 — PARALLEL: Agent 05 (HIGH) + Agent 03 (HIGH) with split file boundaries to avoid conflicts.",
+            "STEP 2 — Agent 11 (LOW): full gate stack after integration.",
+            "STEP 3 — Jaimie manual smoke (Ursina primary)."
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 2 sim pieces WITHOUT touching engine/world/renderer files (to avoid conflicts with Agent 03).",
+                "Add new files: game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem).",
+                "Add unit test: tests/test_nature_growth.py covering deterministic growth to 1.0 over ~6 minutes and intermediate steps.",
+                "Do NOT edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files in this round.",
+                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum run the new test file); report exit codes."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Wire Stage 2 plumbing + Ursina sync. You own integration files to avoid merge conflicts.",
+                "Edit: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forests + blocking rule growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (store tree entities dict + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees).",
+                "Coordinate with Agent 05 for Tree/NatureSystem APIs; if needed, adapt integration to match their implementation.",
+                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_done",
+              "asks": [
+                "After Agent 03 reports integration complete: run full gate stack from repo root and log exit codes.",
+                "Commands: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel_then_11_then_human",
+            "batch_1_parallel": [
+              "05",
+              "03"
+            ],
+            "then_in_order": [
+              "11"
+            ],
+            "then_human": "Jaimie manual smoke",
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
+          },
+          "pm_agent_prompts": {
+            "05": "WK44 Stage 2 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). Implement ONLY new sim components: add game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem). Add tests/test_nature_growth.py verifying deterministic growth from 0.25 to 1.0 over ~6 minutes and intermediate step(s). Do NOT edit game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration to avoid conflicts). Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new test). Log files touched + commands + exit codes in your agent log.",
+            "03": "WK44 Stage 2 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). You own integration files: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forest gen + blocking iff growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (tree entity dict keyed by (tx,ty) + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees(snapshot.trees)). Coordinate with Agent 05 for Tree/NatureSystem APIs. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes + key files changed in your agent log.",
+            "11": "WK44 Stage 2 (QA, LOW): After Agent 03 reports integration complete, run full gate stack from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log commands + exit codes in agent_11 JSON and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**"
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**",
+      "pm_send_list_minimal": {
+        "order": "batch_1_parallel_then_11_then_human",
+        "batch_1_parallel": [
+          "05",
+          "03"
+        ],
+        "then_in_order": [
+          "11"
+        ],
+        "then_human": "Jaimie manual smoke",
+        "intelligence_by_agent": {
+          "05": "high",
+          "03": "high",
+          "11": "low"
+        },
+        "do_not_send": [
+          "02",
+          "04",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
+      }
+    },
+    "wk45-stage2_5-sapling-spawning": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T17:02:00Z",
+        "notes": "WK45 Stage 2.5: NatureSystem spawns new saplings over time (no lumberjack). Rate: 1 sapling / 30s global, cap 50 trees. Saplings set TileType.TREE immediately but remain non-blocking until growth>=0.75. If a building is placed on a sapling tile, the sapling is removed."
+      },
+      "rounds": {
+        "wk45_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk45_r0_kickoff",
+            "created_utc": "2026-04-28T17:02:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Kickoff round. Parallelize Agent 05 (nature spawning + tests) with Agent 03 (integration + removal-on-build). QA (11) runs gates after integration. Jaimie manual Ursina smoke afterwards."
+          },
+          "pm_accepted_deliverables": [
+            "NatureSystem spawns saplings deterministically: 1/30s global, cap 50 trees total.",
+            "Saplings spawn with growth=0.25, set TileType.TREE immediately, remain non-blocking until growth>=0.75 (existing blocking rule).",
+            "If a building is placed covering a sapling tile, that sapling Tree entity is removed.",
+            "Tests cover sapling spawn and removal-on-build footprint.",
+            "Gates PASS: qa_smoke --quick; validate_assets --report"
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement sapling spawning logic inside NatureSystem without touching engine/world/renderer files (avoid conflicts with Agent 03).",
+                "Update game/systems/nature.py and (if needed) game/entities/nature.py to support spawning metadata/state.",
+                "Add tests: tests/test_nature_spawns_saplings.py and (if needed) extend tests/test_nature_growth.py.",
+                "Do NOT edit: game/sim_engine.py, game/world.py, or any game/graphics files.",
+                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new tests)."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Integrate sapling spawning in SimEngine tick loop and ensure world tiles are updated to TileType.TREE when saplings spawn.",
+                "Implement removal-on-build: when placing a building, remove any Tree entities under the footprint (and ensure world growth lookup no longer reports them).",
+                "Coordinate with Agent 05 for the NatureSystem API; adapt integration accordingly.",
+                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_done",
+              "asks": [
+                "After Agent 03 reports integration complete: run gates from repo root: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report (optionally full stack).",
+                "Log exit codes in agent_11 JSON."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel_then_11_then_human",
+            "batch_1_parallel": [
+              "05",
+              "03"
+            ],
+            "then_in_order": [
+              "11"
+            ],
+            "then_human": "Jaimie manual Ursina smoke",
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallelize 05 (NatureSystem spawning + tests) and 03 (engine/world integration + removal-on-build). 11 runs gates post-integration. Human confirms visuals."
+          },
+          "pm_agent_prompts": {
+            "05": "WK45 Stage 2.5 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Implement sapling spawning in NatureSystem: rate 1 sapling/30s global, cap 50 total trees. Saplings start at growth=0.25 and use existing discrete growth steps. Prefer spawning near existing trees, but fall back to valid grass/buildable tiles. Do NOT edit game/sim_engine.py, game/world.py, or any game/graphics files (Agent 03 owns integration). Add tests: tests/test_nature_spawns_saplings.py (and extend growth test if needed). Run: python tools/determinism_guard.py; python -m pytest tests/. Log files touched + commands + exit codes in your agent log.",
+            "03": "WK45 Stage 2.5 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Integrate sapling spawning: ensure SimEngine/world reflect new saplings by setting TileType.TREE on spawn and keeping world.tree_growth_lookup consistent. Implement removal-on-build: when a building is placed covering a sapling tile, remove the Tree entity (and ensure growth lookup no longer reports it). Coordinate with Agent 05’s NatureSystem API. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes in your agent log.",
+            "11": "WK45 Stage 2.5 (QA, LOW): After Agent 03 reports integration complete, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. If either fails, capture the failure output. Log commands + exit codes in agent_11 JSON and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk45-stage2_5-sapling-spawning**, round **wk45_r0_kickoff**.\n\n1) Read the sprint plan FIRST: `.cursor/plans/wk45_stage2_5_sapling_spawning.plan.md`\n2) Read the PM hub for your assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk45-stage2_5-sapling-spawning\"].rounds[\"wk45_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: sapling spawning only; no lumberjack economy.\n4) Parallel safety: Agent 05 must not edit engine/world/graphics; Agent 03 owns integration files.\n5) Update your agent log with files touched, commands, and exit codes.\n\nOne line: **Saplings spawn over time and can be built over (removes sapling).**"
+        },
+        "wk45_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk45_sprint_closeout",
+            "created_utc": "2026-04-29T00:00:00Z",
+            "source": "pm_closeout_after_agent_logs_and_human_playtest_waiver",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK45 closed. Saplings spawn over time (1/30s global, cap 50); TileType.TREE on spawn; non-blocking until growth>=0.75; building placement removes trees under footprint; Ursina creates/destroys tree entities for spawned/removed saplings. Gates PASS (Agent 11). Jaimie: playtest accepted as good enough for now (no extra manual session required for closeout)."
+          },
+          "pm_accepted_deliverables": [
+            "NatureSystem: deterministic sapling spawn cadence, cap, near-forest preference, tests in tests/test_nature_spawns_saplings.py (Agent 05).",
+            "SimEngine + engine + Ursina: world tile + growth lookup on spawn; remove_trees on build; dynamic tree entity create/destroy (Agent 03).",
+            "Gates: determinism_guard, pytest 118, qa_smoke --quick, validate_assets errors=0 (Agent 03 + Agent 11)."
+          ],
+          "pm_evidence": {
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk45-stage2_5-sapling-spawning.wk45_r0_sapling_spawning_sim_only",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff (118 passed; full gate stack PASS)",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff_gates_2026_04_28",
+            "human_playtest": "Jaimie: playtesting good enough for closeout (2026-04)"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at sprint boundary; plan WK46 Stage 3 lumberjack economy or polish."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        }
       }
     }
   }

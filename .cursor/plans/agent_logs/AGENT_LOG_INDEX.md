@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk37-refactor-stage2-simengine-presentation-split`
-- `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
 - `wk40-refactor-stage5-cleanup`
 - `wk41-mechanical-module-split`
 - `wk42-renderer-dedupe-wire-collabs`
 - `wk43-building-nature-stage1`
+- `wk44-stage2-dynamic-trees`
+- `wk45-stage2_5-sapling-spawning`
 
-**Archived sprints:** 28
+**Archived sprints:** 30
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `post_wk32_art_standards`
-- `wk33-terrain-lair-economy-prefabs`
 - `wk33-midsprint-assembler-scale-hotkeys`
 - `wk34-3d-final-model-pass-v1-5`
 - `wk36-refactor-stage1-snapshot-decouple`
+- `wk37-refactor-stage2-simengine-presentation-split`
+- `wk38-refactor-stage3-gamecommands`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -52,26 +52,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk39-refactor-stage4-pygame-renderer` — tests/test_pygame_renderer_wk39.py: 3 tests — module exports; headless_ui pygame_renderer + build_snapshot; render_world(skip_pygame_world=True) smoke (no full-frame raster in-file: Windows SDL/font order flakiness; full draw still in qa_smoke).; docs/refactor/engine_access_inventory.md: new section PygameRenderer + GameEngine.render (WK39).
-- `ursina-ranged-vfx-visibility-2026-04` — ursina_renderer: PROJECTILE_BILLBOARD_SCALE 0.3 → 0.075 (25% of the post-fix size) for readable but non-dominant arrows.; Jaimie playtest: pass (projectiles visible + size OK).
 - `wk40-default-renderer-ursina-2026-04` — main.py: --renderer default pygame → ursina; help text for 2D override.; 02-project-layout.mdc, README.md, 00-shell, 04-qa-gates, 06-workflow-sop: default Ursina; pygame explicit for 2D path.
 - `wk40-post-assessor-presentationlayer-doc-2026-04` — game/engine.py: module docstring = presentation shell wrapping SimEngine; design doc name PresentationLayer vs public GameEngine.; GameEngine class docstring: 1–2 sentences, owns pygame/HUD/loop, sim on self.sim.
 - `wk41-mechanical-module-split` — ursina_renderer.py: UrsinaRenderer.update() thin orchestration — _ensure_shadow_bounds_once, _sync_snapshot_buildings/heroes/enemies/peasants/guards/tax_collector/projectiles, _update_debug_status_text, _destroy_removed_entities (logic unchanged; mechanical extraction); docs/refactor/engine_access_inventory.md: WK41 subsection listing engine_facades + ursina_* helper modules + update() helper split
 - `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py: removed duplicate module-level block (lines 119–819); imports from ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim; grass albedo path uses PROJECT_ROOT import; ursina_renderer.py: UrsinaTerrainFogCollab(self) + UrsinaEntityRenderCollab(self) in __init__ after _setup_scene_lighting(); deleted 6 terrain/fog methods + 11 entity-render staticmethods; update() and sync paths delegate to collaborators
 - `wk43-building-nature-stage1`
+- `wk44-stage2-dynamic-trees`
+- `wk45-stage2_5-sapling-spawning`
 
-**Archived sprints:** 26
+**Archived sprints:** 28
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `wk32-camera-construction-nature-polish`
-- `wk34-3d-final-model-pass-v1-5`
 - `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
+- `wk39-refactor-stage4-pygame-renderer`
+- `ursina-ranged-vfx-visibility-2026-04`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -94,15 +94,15 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk18-llm-merger-and-mechanics`
-- `wk30-buildings-pipeline`
 - `wk31-kingdom-perf-economy`
 - `wk32-camera-construction-nature-polish`
 - `wk33-terrain-lair-economy-prefabs`
 - `wk34-3d-final-model-pass`
 - `wk43-building-nature-stage1`
+- `wk44-stage2-dynamic-trees`
+- `wk45-stage2_5-sapling-spawning`
 
-**Archived sprints:** 10
+**Archived sprints:** 12
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
@@ -113,6 +113,8 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - `wk12-chronos`
 - `wk13-living-interiors`
 - `wk17-quality-logic-immersion`
+- `wk18-llm-merger-and-mechanics`
+- `wk30-buildings-pipeline`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -230,26 +232,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_11_QA_TestEngineering_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk37-refactor-stage2-simengine-presentation-split` — Agent 11 session spinup: re-ran merge gates; no repository code changes.
-- `wk38-refactor-stage3-gamecommands` — No repository code changes (Agent 11 R3: final gate stack + optional rg sanity on input_handler).
 - `wk39-refactor-stage4-pygame-renderer` — No repository code changes (Agent 11 R3: final gate stack after Agent 03 hardening + tests; Jaimie manual per PM).
 - `wk40-refactor-stage5-cleanup` — WK40 Wave 2 Workstream C: no game code; ran full automated gate stack per pm_agent_prompts['11'] and sprint plan L68–73.
 - `wk41-mechanical-module-split` — No repository code changes (Agent 11 gate validation only).
 - `wk42-renderer-dedupe-wire-collabs` — No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack.
 - `wk43-building-nature-stage1` — No repository code changes (Agent 11 gate validation only).; Ran WK43 required full gate stack; recorded exit codes.
+- `wk44-stage2-dynamic-trees` — No repository code changes (Agent 11 gate validation only).; Ran full gate stack on current workspace state.
+- `wk45-stage2_5-sapling-spawning` — No repository code changes (Agent 11 gate validation only).; Ran sprint-required gates per PM prompt.
 
-**Archived sprints:** 25
+**Archived sprints:** 27
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk32-camera-construction-nature-polish`
-- `wk33-terrain-lair-economy-prefabs`
 - `wk34-final-3d-model-pass-pre-v1-5`
 - `wk35-refactor-stage0-regression-baseline`
 - `wk36-refactor-stage1-snapshot-decouple`
+- `wk37-refactor-stage2-simengine-presentation-split`
+- `wk38-refactor-stage3-gamecommands`
 
 ### 12 — ToolsDevEx_Lead
 

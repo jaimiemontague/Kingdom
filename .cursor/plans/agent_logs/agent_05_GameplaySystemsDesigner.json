@@ -9,98 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk18-llm-merger-and-mechanics": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk18_llm_merger_and_mechanics.plan.md",
-        "notes": "WK18: LLM-AI Merger, Physicality, & Dev Tools."
-      },
-      "rounds": {
-        "wk18_r1_kickoff": {
-          "round_id": "wk18_r1_kickoff",
-          "sprint_id": "wk18-llm-merger-and-mechanics",
-          "round_meta": {
-            "prompt_set_id": "wk18_r1_kickoff_v1",
-            "build_target": "BuildA_midweek"
-          },
-          "response": {
-            "status": "done",
-            "agent_fields": {
-              "what_i_changed": [
-                "config.py: INN_ENTRY_FEE=2, INN_LOITER_FEE_GOLD_PER_SEC=0.5.",
-                "game/entities/buildings/economic.py: Inn.on_hero_enter deducts entry fee (hero.gold, up to INN_ENTRY_FEE); Blacksmith.on_hero_enter/on_hero_exit call super() for occupant tracking (WK18-BUG-001).",
-                "game/entities/hero.py: In update_resting and in update (brief inside), when inside_building is Inn: deduct loiter fee each tick; if hero.gold < 1 call pop_out_of_building() (WK18-FEAT-002).",
-                "game/cleanup_manager.py: Before removing destroyed buildings, eject all occupants via hero.pop_out_of_building() (WK18-BUG-002).",
-                "tests/test_hero.py: test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate sets hero.gold=20 so hero can rest with Inn fee."
-              ],
-              "how_to_test": [
-                "python tools/qa_smoke.py --quick",
-                "Manual: hero at Inn with low gold gets ejected when gold < 1; destroy building with hero inside, hero pops to adjacent tile."
-              ],
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                }
-              },
-              "blockers": []
-            }
-          }
-        }
-      }
-    },
-    "wk30-buildings-pipeline": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
-        "notes": "WK30 R1: footprint reconciliation audit (read-only); plan section 4.4."
-      },
-      "rounds": {
-        "wk30_r1_execution": {
-          "round_id": "wk30_r1_execution",
-          "sprint_id": "wk30-buildings-pipeline",
-          "round_meta": {
-            "prompt_set_id": "wk30_r1_execution_v1",
-            "build_target": "BuildA_midweek+BuildB_endweek",
-            "ticket_ref": "WK30-AUDIT-001"
-          },
-          "response": {
-            "status": "done",
-            "agent_fields": {
-              "what_i_changed": [
-                "WK30-AUDIT-001: Read-only comparison of prefab footprint_tiles vs config.py BUILDING_SIZES for peasant_house_small_v1 (house), castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, wizard_guild_v1. No edits to config.py or prefabs."
-              ],
-              "footprint_audit_bullets": [
-                "house | config (1, 1) | prefab peasant_house_small_v1 [1, 1] | OK",
-                "castle | config (3, 3) | prefab castle_v1 [3, 3] | OK",
-                "warrior_guild | config (2, 2) | prefab warrior_guild_v1 [2, 2] | OK",
-                "ranger_guild | config (2, 2) | prefab ranger_guild_v1 [2, 2] | OK",
-                "rogue_guild | config (2, 2) | prefab rogue_guild_v1 [2, 2] | OK",
-                "wizard_guild | config (2, 2) | prefab wizard_guild_v1 [2, 2] | OK"
-              ],
-              "handoff_to_agent_15": "All footprints match BUILDING_SIZES; no prefab shrink request.",
-              "how_to_test": [
-                "python tools/qa_smoke.py --quick",
-                "python tools/validate_assets.py --report"
-              ],
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                },
-                "validate_assets_report": {
-                  "command": "python tools/validate_assets.py --report",
-                  "status": "PASS",
-                  "exit_code": 0,
-                  "notes": "errors=0 warns=46 (legacy manifest missing single-file .glb stubs for many entity types; expected WARNs)"
-                }
-              },
-              "blockers": []
-            }
-          }
-        }
-      }
-    },
     "wk31-kingdom-perf-economy": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
@@ -414,6 +322,99 @@
                 },
                 "qa_smoke_quick": {
                   "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
+    },
+    "wk44-stage2-dynamic-trees": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
+        "notes": "WK44 Stage 2: dynamic tree growth sim components (Tree + NatureSystem + unit tests). Integration owned by Agent 03."
+      },
+      "rounds": {
+        "wk44_r0_nature_system_tree_entity": {
+          "round_id": "wk44_r0_nature_system_tree_entity",
+          "sprint_id": "wk44-stage2-dynamic-trees",
+          "round_meta": {
+            "prompt_set_id": "wk44_r0_kickoff",
+            "build_target": "stage2_sim_only_new_files",
+            "created_utc": "2026-04-28T16:25:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration)."
+              ],
+              "what_i_changed": [
+                "game/entities/nature.py (new): Tree dataclass with grid_x/grid_y, growth_percentage (default 0.25), growth_ms_accum and stable (tx,ty) key.",
+                "game/systems/nature.py (new): NatureSystem.tick(dt, trees) advances growth deterministically in discrete steps 0.25->0.5->0.75->1.0, with 2 minutes per transition (~6 minutes total).",
+                "tests/test_nature_growth.py (new): verifies growth hits 0.25/0.5/0.75/1.0 at 0/2/4/6 minutes."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest tests/test_nature_growth.py"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest tests/test_nature_growth.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
+    },
+    "wk45-stage2_5-sapling-spawning": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
+        "notes": "WK45 Stage 2.5: sapling spawning logic in NatureSystem + tests (no integration files touched; Agent 03 owns wiring + removal-on-build)."
+      },
+      "rounds": {
+        "wk45_r0_sapling_spawning_sim_only": {
+          "round_id": "wk45_r0_sapling_spawning_sim_only",
+          "sprint_id": "wk45-stage2_5-sapling-spawning",
+          "round_meta": {
+            "prompt_set_id": "wk45_r0_kickoff",
+            "build_target": "stage2_5_sapling_spawn_logic",
+            "created_utc": "2026-04-28T18:05:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/sim_engine.py, game/world.py, or any game/graphics files (Agent 03 owns integration + removal-on-build)."
+              ],
+              "what_i_changed": [
+                "game/systems/nature.py: added deterministic sapling spawning (1 per 30s global cadence) with cap=50; prefers near existing trees; falls back to any valid GRASS+buildable tile; marks world tile to TileType.TREE on spawn; added helper remove_trees_in_footprint for integration.",
+                "tests/test_nature_spawns_saplings.py (new): verifies cadence, tile marking, and cap enforcement."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest tests/test_nature_growth.py tests/test_nature_spawns_saplings.py"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest tests/test_nature_growth.py tests/test_nature_spawns_saplings.py",
                   "status": "PASS",
                   "exit_code": 0
                 }

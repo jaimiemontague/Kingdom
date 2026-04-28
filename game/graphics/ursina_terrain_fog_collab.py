@@ -467,6 +467,9 @@ class UrsinaTerrainFogCollab:
                     )
                     _finalize_kenney_scatter_entity(tree_ent, tree_model)
                     self.track_visibility_gated_terrain(tree_ent, tx, ty)
+                    # WK44: keep a stable handle for per-tile growth scaling.
+                    self._r._tree_entities[(int(tx), int(ty))] = tree_ent
+                    tree_ent._ks_tree_base_scale = float(tm)
                 elif (
                     tile == TileType.GRASS
                     and on_scatter_grid
@@ -514,3 +517,94 @@ class UrsinaTerrainFogCollab:
         # WK22 perf note: revisit batching once path meshes use a single atlas or baked strip.
         # root.flattenStrong()
         self._r._terrain_entity = root
+
+    def sync_dynamic_trees(self, world, snapshot_trees) -> None:
+        """WK44/WK45: scale existing 3D tree entities using sim Tree.growth_percentage.
+
+        WK45: saplings can spawn (create entity) and can be removed when building over them.
+        """
+        ents = getattr(self._r, "_tree_entities", None)
+        if not ents:
+            return
+        if not snapshot_trees:
+            return
+
+        # WK45: saplings can spawn on previously-grass tiles. Create new tree Entities on-demand
+        # so spawned saplings are visible in Ursina without rebuilding the whole terrain.
+        root = getattr(self._r, "_terrain_entity", None)
+        if root is None:
+            return
+
+        try:
+            tree_models = _environment_tree_model_list()
+        except Exception:
+            tree_models = []
+
+        try:
+            m = float(getattr(config, "TILE_SIZE", 32))
+            tm = (m / SCALE) * float(TREE_SCALE_MULTIPLIER)
+        except Exception:
+            tm = 1.0
+
+        growth_by_tile: dict[tuple[int, int], float] = {}
+        for t in snapshot_trees:
+            try:
+                tx = int(getattr(t, "grid_x", 0))
+                ty = int(getattr(t, "grid_y", 0))
+                g = float(getattr(t, "growth_percentage", 1.0))
+            except Exception:
+                continue
+            if g < 0.0:
+                g = 0.0
+            if g > 1.0:
+                g = 1.0
+            growth_by_tile[(tx, ty)] = g
+
+            key = (tx, ty)
+            if key not in ents:
+                if not tree_models:
+                    continue
+                try:
+                    wx, wz = sim_px_to_world_xz(tx * int(config.TILE_SIZE), ty * int(config.TILE_SIZE))
+                    ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
+                    tree_model = tree_models[ti]
+                    tree_ent = Entity(
+                        parent=root,
+                        model=tree_model,
+                        position=(wx, 0.0, wz),
+                        scale=(tm, tm, tm),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                        add_to_scene_entities=False,
+                    )
+                    _finalize_kenney_scatter_entity(tree_ent, tree_model)
+                    self.track_visibility_gated_terrain(tree_ent, tx, ty)
+                    ents[key] = tree_ent
+                    tree_ent._ks_tree_base_scale = float(tm)
+                except Exception:
+                    # Spawn visibility should never crash the renderer.
+                    pass
+
+        for key, ent in list(ents.items()):
+            g = growth_by_tile.get(key)
+            if g is None:
+                # If a tree entity exists but the sim no longer reports a Tree at this tile,
+                # and the world tile is no longer TREE, destroy it (sapling built over).
+                try:
+                    if world is not None and int(world.get_tile(int(key[0]), int(key[1]))) != int(TileType.TREE):
+                        import ursina as u
+
+                        u.destroy(ent)
+                        ents.pop(key, None)
+                except Exception:
+                    pass
+                continue
+            base = float(getattr(ent, "_ks_tree_base_scale", 1.0))
+            # Visual mapping: keep saplings visible at 25% without letting them block (blocking is sim-side).
+            # Map growth 0..1 -> visual_scale 0.25..1.0 (linear).
+            s = base * (0.25 + 0.75 * g)
+            # Avoid churn if the scale is already correct.
+            if getattr(ent, "_ks_tree_growth", None) != g:
+                ent.scale = (s, s, s)
+                ent._ks_tree_growth = g

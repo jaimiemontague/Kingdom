@@ -9,289 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk39-refactor-stage4-pygame-renderer": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "notes": "WK39 Stage 4: PygameRenderer extraction (R1–R3). Follow-on Ursina VFX work logged under ursina-ranged-vfx-visibility-2026-04.",
-        "pm_closure": {
-          "status": "ready_for_pm_close",
-          "definition": "DoD from wk39_stage4_pygame_renderer.plan.md; gates + Jaimie manual",
-          "human_playtest": "pass",
-          "verified_by": "Jaimie",
-          "verified_at_local": "2026-04-27"
-        }
-      },
-      "rounds": {
-        "wk39_r1_pygame_renderer_extraction": {
-          "sprint_id": "wk39-refactor-stage4-pygame-renderer",
-          "round_id": "wk39_r1_pygame_renderer_extraction",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "WK39 Stage 4 R1: PygameRenderer; world block from GameEngine.render; build_snapshot(); gates pytest, qa_smoke, validate_assets.",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "Added game/graphics/pygame_renderer.py: PygameRenderer.render_world(screen, snapshot, ...) drives terrain/buildings/units/VFX/fog/bounties/zoom scale from SimStateSnapshot + bounty_system.update_ui_metrics ordering preserved.",
-              "BuildingMenu + BuildingListPanel stay in-world (view_surface path); BuildingPanel/build catalog/HUD/etc. unchanged in GameEngine.render.",
-              "engine.py: build_snapshot() each render(); delegates world pass to pygame_renderer when pygame_renderer + screen + _scaled_surface present; skip_pygame_world Ursina branch unchanged for bounty metrics.",
-              "Zoom offscreen surfaces moved to PygameRenderer (_view_surface cache)."
-            ],
-            "files_changed": [
-              "game/graphics/pygame_renderer.py",
-              "game/engine.py",
-              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
-            ],
-            "how_to_test": [
-              "python -m pytest tests/",
-              "python tools/qa_smoke.py --quick",
-              "python tools/validate_assets.py --report",
-              "python main.py --no-llm",
-              "python main.py --renderer ursina --no-llm"
-            ],
-            "evidence": {
-              "pytest": {
-                "command": "python -m pytest tests/",
-                "exit_code": 0,
-                "status": "PASS",
-                "note": "110 passed"
-              },
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              },
-              "validate_assets_report": {
-                "command": "python tools/validate_assets.py --report",
-                "exit_code": 0,
-                "status": "PASS",
-                "summary": "errors=0 warns=46 (baseline)"
-              }
-            },
-            "blockers": []
-          }
-        },
-        "wk39_r2_snapshot_context_minimap": {
-          "sprint_id": "wk39-refactor-stage4-pygame-renderer",
-          "round_id": "wk39_r2_snapshot_context_minimap",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "WK39-R2: PygameWorldRenderContext; snapshot-first minimap dedupe via render_minimap_contents / _draw_world_layers.",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "Added PygameWorldRenderContext dataclass (registry, bounty_system, vfx, building_menu, building_list_panel, economy); PygameRenderer(ctx) replaces six loose ctor args.",
-              "_draw_world_layers(...) factors shared terrain→units→optional UI/VFX/fog/bounty pipeline; render_world and new render_minimap_contents(snapshot-first) call it with flags.",
-              "GameEngine.render passes same-frame snapshot into _render_hero_minimap(..., snapshot); minimap uses PygameRenderer.render_minimap_contents (no placement UI/VFX/bounties). Headless fallback retained when pygame_renderer is None."
-            ],
-            "files_changed": [
-              "game/graphics/pygame_renderer.py",
-              "game/engine.py",
-              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
-            ],
-            "how_to_test": [
-              "python -m pytest tests/",
-              "python tools/qa_smoke.py --quick",
-              "python tools/validate_assets.py --report"
-            ],
-            "evidence": {
-              "pytest": {
-                "command": "python -m pytest tests/",
-                "exit_code": 0,
-                "status": "PASS",
-                "note": "110 passed"
-              },
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              },
-              "validate_assets_report": {
-                "command": "python tools/validate_assets.py --report",
-                "exit_code": 0,
-                "status": "PASS",
-                "summary": "errors=0 warns=46 (baseline)"
-              }
-            },
-            "blockers": []
-          }
-        },
-        "wk39_r3_hardening_tests": {
-          "sprint_id": "wk39-refactor-stage4-pygame-renderer",
-          "round_id": "wk39_r3_hardening_tests",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "WK39-R3: tests, engine_access_inventory; final gates; Jaimie manual.",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "tests/test_pygame_renderer_wk39.py: 3 tests — module exports; headless_ui pygame_renderer + build_snapshot; render_world(skip_pygame_world=True) smoke (no full-frame raster in-file: Windows SDL/font order flakiness; full draw still in qa_smoke).",
-              "docs/refactor/engine_access_inventory.md: new section PygameRenderer + GameEngine.render (WK39)."
-            ],
-            "files_changed": [
-              "tests/test_pygame_renderer_wk39.py",
-              "docs/refactor/engine_access_inventory.md",
-              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
-            ],
-            "how_to_test": [
-              "python -m pytest tests/",
-              "python tools/qa_smoke.py --quick",
-              "python tools/validate_assets.py --report"
-            ],
-            "evidence": {
-              "pytest": {
-                "command": "python -m pytest tests/",
-                "exit_code": 0,
-                "status": "PASS",
-                "note": "113 passed"
-              },
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              },
-              "validate_assets_report": {
-                "command": "python tools/validate_assets.py --report",
-                "exit_code": 0,
-                "status": "PASS",
-                "summary": "errors=0 warns=46 (baseline)"
-              }
-            },
-            "blockers": [],
-            "pm_handoff_jaimie": [
-              "python main.py --no-llm",
-              "python main.py --renderer ursina --no-llm"
-            ],
-            "human_verification": {
-              "result": "pass",
-              "verified_by": "Jaimie",
-              "verified_at_local": "2026-04-27",
-              "note": "Ursina VFX follow-up (projectiles) signed off in same play session"
-            }
-          }
-        }
-      }
-    },
-    "ursina-ranged-vfx-visibility-2026-04": {
-      "sprint_meta": {
-        "plan_ref": "Playtest: skeleton archer projectiles invisible in Ursina (Agent 11 handoff)",
-        "notes": "R1: billboard Y/depth; R2: build_snapshot get_active_projectiles; R3: scale + playtest signoff. PM may close with WK39 or as hotfix line.",
-        "pm_closure": {
-          "status": "ready_for_pm_close",
-          "human_playtest": "pass",
-          "verified_by": "Jaimie",
-          "verified_at_local": "2026-04-27"
-        }
-      },
-      "rounds": {
-        "r1_projectile_billboard_fix": {
-          "sprint_id": "ursina-ranged-vfx-visibility-2026-04",
-          "round_id": "r1_projectile_billboard_fix",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "Ursina: skeleton archer projectiles not visible; pygame OK.",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "ursina_renderer: PROJECTILE_BILLBOARD_SCALE 0.1→0.3; Y from s*0.05 to PROJECTILE_BILLBOARD_Y (=ENEMY_SCALE*0.5) so billboards sit in unit band, not z-fighting the floor.",
-              "ursina_renderer: per-projectile entity set_depth_test(False) + render_queue=2 so arrows draw above terrain (one-time flags).",
-              "engine _finalize_update(headless): after flush, call vfx_system.update(dt) so headless sims age projectiles same as live Ursina path."
-            ],
-            "files_changed": [
-              "game/graphics/ursina_renderer.py",
-              "game/engine.py",
-              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
-            ],
-            "evidence": {
-              "pytest": {
-                "command": "python -m pytest tests/",
-                "exit_code": 0,
-                "status": "PASS",
-                "note": "113 passed"
-              },
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              },
-              "validate_assets_report": {
-                "command": "python tools/validate_assets.py --report",
-                "exit_code": 0,
-                "summary": "errors=0 warns=46"
-              }
-            },
-            "how_to_test": [
-              "python main.py --renderer ursina --no-llm — watch skeleton archer volleys; arrows should be visible in 3D view"
-            ],
-            "blockers": []
-          }
-        },
-        "r2_build_snapshot_vfx_getter": {
-          "sprint_id": "ursina-ranged-vfx-visibility-2026-04",
-          "round_id": "r2_build_snapshot_vfx_getter",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "All ranged: build_snapshot used getattr(vfx, active_projectiles) but VFX only has get_active_projectiles()",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "Root cause: GameEngine.build_snapshot() used getattr(vfx_system, \"active_projectiles\", []) which always defaulted to () — VFXSystem exposes get_active_projectiles() only. Ursina (and any snapshot-based path) had empty vfx_projectiles; pygame still drew via vfx_system.render(self._projectiles).",
-              "engine.py: build_snapshot calls get_active_projectiles() when present.",
-              "tests/test_renderer_snapshot_contract.py: test_build_snapshot_pulls_vfx_projectiles_via_get_active_projectiles."
-            ],
-            "files_changed": [
-              "game/engine.py",
-              "tests/test_renderer_snapshot_contract.py",
-              ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json"
-            ],
-            "evidence": {
-              "pytest": {
-                "command": "python -m pytest tests/",
-                "exit_code": 0,
-                "status": "PASS",
-                "note": "114 passed"
-              },
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              },
-              "validate_assets_report": {
-                "command": "python tools/validate_assets.py --report",
-                "exit_code": 0,
-                "summary": "errors=0"
-              }
-            },
-            "blockers": []
-          }
-        },
-        "r3_scale_and_playtest_signoff": {
-          "sprint_id": "ursina-ranged-vfx-visibility-2026-04",
-          "round_id": "r3_scale_and_playtest_signoff",
-          "round_meta": {
-            "sent_at_local": "2026-04-27"
-          },
-          "prompt_text": "Tuning: projectile billboards 25% of interim size; Jaimie confirmed looks great; PM sprint closeout.",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "ursina_renderer: PROJECTILE_BILLBOARD_SCALE 0.3 → 0.075 (25% of the post-fix size) for readable but non-dominant arrows.",
-              "Jaimie playtest: pass (projectiles visible + size OK).",
-              "Agent 03: no open technical blockers for Agent 01 closeout on WK39 + this Ursina VFX thread."
-            ],
-            "files_changed": [
-              "game/graphics/ursina_renderer.py"
-            ],
-            "pm_handoff_agent_01": "Closeout: WK39 Stage 4 (PygameRenderer) delivered R1–R3 with gates; manual parity confirmed. Ursina ranged VFX: root fix build_snapshot get_active_projectiles; billboard tuning; human playtest pass. CHANGELOG / version bump per PM process (Jaimie)."
-          }
-        }
-      }
-    },
     "wk40-default-renderer-ursina-2026-04": {
       "sprint_meta": {
         "plan_ref": "Jaimie / WK40 follow-up: default renderer Ursina",
@@ -705,6 +422,164 @@
           "notes": [
             "Ursina construction-stage prefab selection is handled via _resolve_construction_staged_prefab when a prefab_path resolves; food_stand/farm stage JSONs were added in this sprint by Agent 15."
           ]
+        }
+      }
+    },
+    "wk44-stage2-dynamic-trees": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "notes": "WK44 Stage 2: dynamic tree growth entities + snapshot plumbing + world blocking threshold growth>=0.75 + Ursina scaling."
+      },
+      "rounds": {
+        "wk44_r0_kickoff": {
+          "sprint_id": "wk44-stage2-dynamic-trees",
+          "round_id": "wk44_r0_kickoff",
+          "round_meta": {
+            "sent_at_local": "2026-04-28",
+            "pm_ref": "sprints[wk44-stage2-dynamic-trees].rounds[wk44_r0_kickoff]"
+          },
+          "status": "done",
+          "summary_bullets": [
+            "Snapshot contract: SimStateSnapshot now includes trees tuple; SimEngine populates it from self.trees.",
+            "Sim wiring: SimEngine initializes trees from world TileType.TREE tiles, ticks NatureSystem each update, and injects world.tree_growth_lookup to enforce growth-based blocking.",
+            "World: terrain generation now produces clustered forests; trees block iff growth >= 0.75 (TileType.TREE remains on grid).",
+            "Ursina: terrain collaborator keeps per-tile tree Entity refs and scales them per snapshot Tree.growth_percentage each frame."
+          ],
+          "files_changed": [
+            "game/sim/snapshot.py",
+            "game/sim_engine.py",
+            "game/world.py",
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_terrain_fog_collab.py"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "116 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (pre-existing missing optional model files)"
+            }
+          },
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "followups": [
+            {
+              "added_at_local": "2026-04-28",
+              "topic": "Ursina tree visibility at 25%",
+              "what_i_changed": [
+                "Adjusted Ursina dynamic tree scaling to keep 25% growth saplings visibly present: scale = base * (0.25 + 0.75*growth)."
+              ],
+              "files_changed": [
+                "game/graphics/ursina_terrain_fog_collab.py"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              }
+            },
+            {
+              "added_at_local": "2026-04-28",
+              "topic": "Startup trees should be mature",
+              "what_i_changed": [
+                "SimEngine tree initialization from world now creates mature trees at 100% growth; saplings are reserved for any future trees spawned after startup."
+              ],
+              "files_changed": [
+                "game/sim_engine.py"
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "exit_code": 0,
+                  "status": "PASS"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "wk45-stage2_5-sapling-spawning": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "notes": "WK45 Stage 2.5: NatureSystem spawns saplings over time; TileType.TREE set on spawn; building placement removes saplings under footprint; Ursina creates/destroys tree entities dynamically for spawned/removed saplings."
+      },
+      "rounds": {
+        "wk45_r0_kickoff": {
+          "sprint_id": "wk45-stage2_5-sapling-spawning",
+          "round_id": "wk45_r0_kickoff",
+          "round_meta": {
+            "sent_at_local": "2026-04-28",
+            "pm_ref": "sprints[wk45-stage2_5-sapling-spawning].rounds[wk45_r0_kickoff]"
+          },
+          "status": "done",
+          "summary_bullets": [
+            "SimEngine integration: NatureSystem.tick supports optional world arg; newly spawned saplings force world tile to TileType.TREE and tree_growth_lookup is refreshed so saplings stay non-blocking until growth>=0.75.",
+            "Building placement integration: placing a building removes any Tree entities under the footprint and clears those tiles from TileType.TREE to grass so no invisible blocking trees remain.",
+            "Ursina visuals: terrain/fog collaborator now creates tree Entities on-demand for newly spawned saplings and destroys tree Entities when saplings are removed (built over)."
+          ],
+          "files_changed": [
+            "game/sim_engine.py",
+            "game/engine.py",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "118 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "blockers": []
         }
       }
     }

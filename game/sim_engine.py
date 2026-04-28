@@ -46,6 +46,8 @@ from config import (
 )
 
 from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
+from game.entities.nature import Tree
+from game.systems.nature import NatureSystem
 
 
 class SimEngine:
@@ -78,9 +80,16 @@ class SimEngine:
         self.heroes = []
         self.enemies = []
         self.bounties = []
+        self.trees: list[Tree] = []
         self.peasants = []
         self.guards = []
         self.peasant_spawn_timer = 0.0
+
+        # WK44 Stage 2: nature growth system.
+        self.nature_system = NatureSystem()
+        self._tree_growth_by_tile: dict[tuple[int, int], float] = {}
+        self._init_trees_from_world()
+        self.world.tree_growth_lookup = self._tree_growth_lookup
 
         # Systems (sim-owned)
         self.combat_system = CombatSystem()
@@ -106,6 +115,65 @@ class SimEngine:
         # Fog-of-war dirty check state (Ursina consumes via snapshot.fog_revision)
         self._fog_revision = 0
         self._fog_revealers_snapshot = None
+
+    def _init_trees_from_world(self) -> None:
+        """WK44: Build sim tree entities from world TileType.TREE grid."""
+        try:
+            from game.world import TileType
+        except Exception:
+            return
+        self.trees = []
+        for ty in range(int(getattr(self.world, "height", 0))):
+            row = self.world.tiles[ty]
+            for tx in range(int(getattr(self.world, "width", 0))):
+                if int(row[tx]) == int(TileType.TREE):
+                    # Startup trees are mature. Only newly spawned trees after startup should be saplings.
+                    self.trees.append(Tree(int(tx), int(ty), growth_percentage=1.0, growth_ms_accum=10**9))
+        self._tree_growth_by_tile = {t.key: float(getattr(t, "growth_percentage", 0.25)) for t in self.trees}
+
+    def _tree_growth_lookup(self, tx: int, ty: int) -> float:
+        """World callback: return current tree growth for a tile (0..1)."""
+        return float(self._tree_growth_by_tile.get((int(tx), int(ty)), 1.0))
+
+    def remove_trees_in_footprint(self, grid_x: int, grid_y: int, w_tiles: int, h_tiles: int) -> int:
+        """WK45: when placing a building, remove any Tree entities under its footprint."""
+        gx = int(grid_x)
+        gy = int(grid_y)
+        w = max(0, int(w_tiles))
+        h = max(0, int(h_tiles))
+        if w <= 0 or h <= 0 or not self.trees:
+            return 0
+
+        removed_keys: set[tuple[int, int]] = set()
+        kept: list[Tree] = []
+        for t in self.trees:
+            tx, ty = int(getattr(t, "grid_x", 0)), int(getattr(t, "grid_y", 0))
+            if gx <= tx < (gx + w) and gy <= ty < (gy + h):
+                removed_keys.add((tx, ty))
+            else:
+                kept.append(t)
+
+        if not removed_keys:
+            return 0
+
+        self.trees = kept
+
+        # If the underlying tile is a TREE tile, clear it so we don't leave a "tree" behind
+        # with no Tree entity/growth entry (which would default to growth=1.0 and block forever).
+        try:
+            from game.world import TileType
+
+            for tx, ty in removed_keys:
+                if int(self.world.get_tile(int(tx), int(ty))) == int(TileType.TREE):
+                    self.world.set_tile(int(tx), int(ty), int(TileType.GRASS))
+        except Exception:
+            pass
+
+        # Keep lookup consistent immediately (used by World.is_buildable/is_walkable).
+        for k in removed_keys:
+            self._tree_growth_by_tile.pop(k, None)
+
+        return len(removed_keys)
 
     def _emit_hud_message(self, text: str, color_rgb: tuple[int, int, int] | None = None) -> None:
         self.event_bus.emit(
@@ -225,6 +293,7 @@ class SimEngine:
             peasants=tuple(self.peasants),
             guards=tuple(self.guards),
             bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
+            trees=tuple(self.trees),
             world=self.world,
             fog_revision=int(getattr(self, "_fog_revision", 0)),
             gold=int(getattr(self.economy, "player_gold", 0)),
@@ -263,6 +332,32 @@ class SimEngine:
                 building.set_event_bus(self.event_bus)
 
         system_ctx = self._build_system_context()
+
+        # WK44 Stage 2: tree growth (affects world blocking + renderer scale).
+        pre_keys = set(self._tree_growth_by_tile.keys())
+        try:
+            # WK45: NatureSystem may spawn new saplings and may need world context.
+            self.nature_system.tick(dt, self.trees, world=self.world, buildings=self.buildings)  # type: ignore[call-arg]
+        except TypeError:
+            self.nature_system.tick(dt, self.trees)
+
+        # Ensure world tiles reflect newly spawned saplings (TileType.TREE immediately),
+        # and keep growth lookup consistent for buildability/blocking rules.
+        if self.trees:
+            # First refresh growth lookup so newly spawned saplings don't default to 1.0.
+            self._tree_growth_by_tile = {
+                t.key: float(getattr(t, "growth_percentage", 0.25)) for t in self.trees
+            }
+            new_keys = set(self._tree_growth_by_tile.keys()) - pre_keys
+            if new_keys:
+                try:
+                    from game.world import TileType
+
+                    for tx, ty in sorted(new_keys):
+                        if int(self.world.get_tile(int(tx), int(ty))) != int(TileType.TREE):
+                            self.world.set_tile(int(tx), int(ty), int(TileType.TREE))
+                except Exception:
+                    pass
 
         # AI + hero updates
         if self.ai_controller:

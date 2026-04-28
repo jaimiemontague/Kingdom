@@ -4633,6 +4633,197 @@
           "bugs_found": []
         }
       }
+    },
+    "wk37-refactor-stage2-simengine-presentation-split": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk37_stage2_simengine_split_1bc48a29.plan.md",
+        "notes": "Stage 2 consult QA: re-run gates after Agent 03 lands each round."
+      },
+      "rounds": {
+        "wk37_r1_simengine_scaffold": {
+          "round_id": "wk37_r1_simengine_scaffold",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only for WK37 R1).",
+            "Ran post-merge validation gates."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report_2026_04_27": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders; non-blocking as long as exit 0)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk37_r2_move_update_loop": {
+          "round_id": "wk37_r2_move_update_loop",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 consult-only for WK37 R2).",
+            "Ran post-merge gates per PM prompt (qa_smoke + validate_assets)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_27": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "DONE: PASS — determinism_guard + pytest (107) + observe_sync profiles."
+              ]
+            },
+            "validate_assets_report_2026_04_27": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders; non-blocking as long as exit 0)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "qa_onboarding_2026_04_27": {
+          "round_id": "qa_onboarding_2026_04_27",
+          "status": "done",
+          "what_i_changed": [
+            "Agent 11 session spinup: re-ran merge gates; no repository code changes."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-27: determinism_guard PASS; pytest 107 PASS; observe_sync DONE: PASS (all profiles including speed_scaling, interior_view, quest_panel, conversation)."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file for 3D manifest placeholders; non-blocking)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
+    },
+    "wk38-refactor-stage3-gamecommands": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+        "notes": "Agent 11: post-Agent-03 gate runs per PM pm_jaimie_send_order (wave 2 / 4 / 6 for QA)."
+      },
+      "rounds": {
+        "wk38_r1_gamecommands_scaffold": {
+          "round_id": "wk38_r1_gamecommands_scaffold",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R1: validation only after Agent 03 landed GameCommands + InputHandler scaffold)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "2026-04-27 post–Agent-03 R1: determinism_guard + pytest 107 + observe_sync profiles; DONE: PASS."
+              ]
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk38_r2_mechanical_migration": {
+          "round_id": "wk38_r2_mechanical_migration",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R2: post–Agent-03 mechanical InputHandler→GameCommands migration gate)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "Post–Agent-03 R2: determinism_guard + pytest + observe_sync; DONE: PASS."
+              ]
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk38_r3_hardening_tests_ux": {
+          "round_id": "wk38_r3_hardening_tests_ux",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 R3: final gate stack + optional rg sanity on input_handler)."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "110 passed, 1 warning (pkg_resources deprecation)."
+              ]
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "DONE: PASS."
+              ]
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file placeholders; non-blocking)"
+            },
+            "grep_input_handler_engine": {
+              "command": "rg \"self\\\\.engine|engine = self\\\\.engine\" game/input_handler.py",
+              "status": "PASS",
+              "notes": [
+                "No matches (clean per WK38-R3 grep_sanity)."
+              ]
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

@@ -26,7 +26,7 @@ TILE_COLORS = {
 }
 
 # Tiles that block movement
-BLOCKING_TILES = {TileType.WATER, TileType.TREE}
+BLOCKING_TILES = {TileType.WATER}
 
 
 class Visibility:
@@ -44,6 +44,8 @@ class World:
         self.tiles = [[TileType.GRASS for _ in range(self.width)] for _ in range(self.height)]
         # Deterministic world-gen stream (independent of other RNG usage).
         self.rng = get_rng("world_gen")
+        # WK44 Stage 2: injected by SimEngine; called as tree_growth_lookup(tx,ty)->0..1
+        self.tree_growth_lookup = None
         self.generate_terrain()
 
         # Fog-of-war visibility grid (tile-based).
@@ -73,8 +75,40 @@ class World:
                 dist = ((x - lake_x) ** 2 + (y - lake_y) ** 2) ** 0.5
                 if dist < lake_radius:
                     self.tiles[y][x] = TileType.WATER
-                # Add scattered trees
-                elif rng.random() < 0.06:
+
+        # WK44: clustered forests (not per-tile independent noise)
+        # Deterministic blobs: pick a handful of centers then spray points with jitter.
+        # Target: noticeably forested maps (avoid barren look) while leaving plenty of buildable space.
+        area = int(self.width) * int(self.height)
+        cluster_count = max(22, area // 900)
+        for _ in range(int(cluster_count)):
+            cx = rng.randint(0, self.width - 1)
+            cy = rng.randint(0, self.height - 1)
+            if self.tiles[cy][cx] == TileType.WATER:
+                continue
+            radius = rng.randint(5, 12)
+            points = rng.randint(90, 220)
+            for _k in range(points):
+                dx = rng.randint(-radius, radius)
+                dy = rng.randint(-radius, radius)
+                x = cx + dx
+                y = cy + dy
+                if not (0 <= x < self.width and 0 <= y < self.height):
+                    continue
+                if self.tiles[y][x] == TileType.WATER:
+                    continue
+                # Slight falloff to keep clusters organic.
+                if (dx * dx + dy * dy) > (radius * radius):
+                    continue
+                if rng.random() < 0.92:
+                    self.tiles[y][x] = TileType.TREE
+
+        # Light background sprinkle to connect clusters (keeps edges from feeling empty).
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.tiles[y][x] != TileType.GRASS:
+                    continue
+                if rng.random() < 0.045:
                     self.tiles[y][x] = TileType.TREE
         
         # Create paths from edges to center
@@ -91,6 +125,21 @@ class World:
             self.tiles[y][center_x] = TileType.PATH
             if center_x + 1 < self.width:
                 self.tiles[y][center_x + 1] = TileType.PATH
+
+        # WK45: trim excess TREE tiles AFTER carving paths (paths erase lots of trees along the cross).
+        # Target ~600 visible forest tiles at match start; sapling spawning uses a separate total cap.
+        max_starting_trees = 750
+        tree_tiles: list[tuple[int, int]] = []
+        for ty in range(self.height):
+            row = self.tiles[ty]
+            for tx in range(self.width):
+                if row[tx] == TileType.TREE:
+                    tree_tiles.append((tx, ty))
+        if len(tree_tiles) > max_starting_trees:
+            rng.shuffle(tree_tiles)
+            for tx, ty in tree_tiles[max_starting_trees:]:
+                if self.tiles[ty][tx] == TileType.TREE:
+                    self.tiles[ty][tx] = TileType.GRASS
     
     def get_tile(self, x: int, y: int) -> int:
         """Get tile type at grid position."""
@@ -106,7 +155,19 @@ class World:
     def is_walkable(self, x: int, y: int) -> bool:
         """Check if a tile can be walked on."""
         tile = self.get_tile(x, y)
-        return tile not in BLOCKING_TILES
+        if tile in BLOCKING_TILES:
+            return False
+        if tile == TileType.TREE:
+            g = 1.0
+            fn = getattr(self, "tree_growth_lookup", None)
+            if callable(fn):
+                try:
+                    g = float(fn(int(x), int(y)))
+                except Exception:
+                    g = 1.0
+            # WK44: blocking threshold is growth >= 0.75
+            return g < 0.75
+        return True
     
     def is_buildable(self, x: int, y: int, width: int = 1, height: int = 1) -> bool:
         """Check if an area can have a building placed on it."""
@@ -115,6 +176,16 @@ class World:
                 tile = self.get_tile(x + dx, y + dy)
                 if tile in BLOCKING_TILES:
                     return False
+                if tile == TileType.TREE:
+                    g = 1.0
+                    fn = getattr(self, "tree_growth_lookup", None)
+                    if callable(fn):
+                        try:
+                            g = float(fn(int(x + dx), int(y + dy)))
+                        except Exception:
+                            g = 1.0
+                    if g >= 0.75:
+                        return False
         return True
     
     def world_to_grid(self, world_x: float, world_y: float) -> tuple:

@@ -667,6 +667,14 @@ class GameEngine:
         if building is None:
             return
 
+        # WK45: If the player builds over a sapling, remove it (and clear the tile) so it
+        # doesn't persist as an invisible blocking TREE tile.
+        try:
+            w, h = getattr(building, "size", (1, 1))
+            self.sim.remove_trees_in_footprint(int(grid_x), int(grid_y), int(w), int(h))
+        except Exception:
+            pass
+
         # Newly placed buildings start unconstructed (1 HP, non-targetable) until a peasant begins building.
         if hasattr(building, "mark_unconstructed"):
             building.mark_unconstructed()
