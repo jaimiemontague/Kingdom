@@ -1634,6 +1634,216 @@
         }
       },
       "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
+    },
+    "wk42-renderer-dedupe-wire-collabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T00:40:00Z",
+        "notes": "WK42: finish WK41. Delete the 819-line duplicate module-level block in ursina_renderer.py (Track A); wire UrsinaTerrainFogCollab as live terrain/fog path and delete 6 duplicated methods (Track B); wire UrsinaEntityRenderCollab and delete 11 duplicated entity-render methods (Track C). Expected: ursina_renderer.py drops from 2,094 to ~700 lines. No behavior change.",
+        "pm_audit_finding": "2026-04-27 audit confirmed: ursina_environment.py, ursina_prefabs.py, ursina_coords.py, ursina_units_anim.py each contain functions that are ALSO defined in ursina_renderer.py — 35 functions total, 100% duplication, renderer imports none of the new modules. UrsinaTerrainFogCollab and UrsinaEntityRenderCollab are never imported or instantiated by UrsinaRenderer.",
+        "pm_jaimie_send_order": [
+          "STEP 1 — Agent 03 (MEDIUM): WK42-R1 Track A only. Pre-flight diff first. Delete lines 119-819 from ursina_renderer.py; replace with imports from the 4 new modules. Run gates. Report.",
+          "STEP 2 — Agent 11 (LOW): After Step 1 reports done. Run full gate stack. Log.",
+          "STEP 3 — Agent 03 (MEDIUM): WK42-R2 Track B. Wire UrsinaTerrainFogCollab; delete 6 duplicated methods; replace call sites. Run gates. Report.",
+          "STEP 4 — PARALLEL (two Cursor chats after Step 3): Agent 11 (LOW) full gate stack; Agent 10 (LOW consult) ~5 min Ursina FPS check.",
+          "STEP 5 — Agent 03 (MEDIUM): WK42-R3 Track C. Wire UrsinaEntityRenderCollab; delete 11 duplicated methods; replace call sites. Run gates. Report.",
+          "STEP 6 — PARALLEL (two Cursor chats after Step 5): Agent 11 (LOW) full gate stack; Agent 10 (LOW consult) FPS check.",
+          "STEP 7 — Jaimie manual smokes: python main.py --renderer ursina --no-llm (5-10 min); python main.py --renderer pygame --no-llm (5 min). Sprint closes on PASS."
+        ]
+      },
+      "rounds": {
+        "wk42_r1_track_a_module_block": {
+          "round_meta": {
+            "round_id": "wk42_r1_track_a_module_block",
+            "build_target": "Delete_819_line_duplicate_block_replace_with_imports",
+            "created_utc": "2026-04-28T00:40:00Z",
+            "visibility": "Implementer: 03. QA: 11 after merge."
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "focus": "Track A: delete ursina_renderer.py lines 119-819 (35 module-level functions that are exact duplicates of ursina_environment.py, ursina_prefabs.py, ursina_coords.py, ursina_units_anim.py). Replace with import block. Pre-flight diff required first.",
+            "gates": {
+              "determinism_guard": "python tools/determinism_guard.py PASS",
+              "pytest": "python -m pytest tests/ PASS",
+              "qa_smoke_quick": "python tools/qa_smoke.py --quick PASS",
+              "validate_assets": "python tools/validate_assets.py --report errors=0"
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Run pre-flight: diff each of the 35 functions between ursina_renderer.py and its new module. If any diverged, update the MODULE file to match the renderer (renderer is the running copy). Log any divergences found.",
+                "Delete ursina_renderer.py lines 119-819 entirely.",
+                "Add import block at top of ursina_renderer.py (after existing stdlib/ursina imports) importing all 35 names from the 4 new modules.",
+                "Ensure PROJECT_ROOT and any other module-level constants from that block are also exported from the relevant module.",
+                "Run gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report",
+                "Report: file line count before/after, any divergences found in pre-flight, gate exit codes."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_r1_done",
+              "asks": [
+                "After Agent 03 reports R1 done: run full gate stack; log exit codes in agent_11 JSON."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_11",
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": { "03": "medium", "11": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK42 R1 Track A (Tech, MEDIUM): Read the sprint plan FIRST: .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R1). PRE-FLIGHT: diff each function that exists in both ursina_renderer.py (lines 119-819) and ursina_environment.py / ursina_prefabs.py / ursina_coords.py / ursina_units_anim.py. If any diverged, update the MODULE file to match the renderer version. Then: delete lines 119-819 from ursina_renderer.py; add the import block as specified in the plan. Check that PROJECT_ROOT and any module-level constants from that block are also exported from the relevant module. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log pre-flight findings, line count before/after, gate exit codes in agent_03 JSON.",
+            "11": "WK42 R1 Track A (QA, LOW): After Agent 03 lands R1, run from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log all commands and exit codes in agent_11 JSON. Report PASS or any failures to PM/Jaimie."
+          }
+        },
+        "wk42_r2_track_b_terrain_collab": {
+          "round_meta": {
+            "round_id": "wk42_r2_track_b_terrain_collab",
+            "build_target": "Wire_UrsinaTerrainFogCollab_delete_6_renderer_methods",
+            "created_utc": "2026-04-28T00:40:00Z",
+            "visibility": "Implementer: 03. QA: 11 after merge. Perf consult: 10 after merge."
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "focus": "Track B: instantiate UrsinaTerrainFogCollab in UrsinaRenderer.__init__; delete the 6 terrain/fog methods from UrsinaRenderer; replace all call sites with self._terrain_fog.* delegation.",
+            "terrain_methods_to_remove": [
+              "_ensure_fog_overlay (L961)",
+              "_track_visibility_gated_terrain (L1076)",
+              "_sync_terrain_prop_tile_visibility (L1085)",
+              "_sync_visibility_gated_terrain (L1097)",
+              "_ensure_grid_debug_overlay (L1126)",
+              "_build_3d_terrain (L1217)"
+            ],
+            "gates": {
+              "determinism_guard": "PASS",
+              "pytest": "PASS",
+              "qa_smoke_quick": "PASS",
+              "validate_assets": "errors=0",
+              "ursina_fps_consult": "Agent 10: python main.py --renderer ursina --no-llm ~5 min, no regression"
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "blocked_until_r1_pass",
+              "asks": [
+                "Pre-flight: verify the 6 UrsinaTerrainFogCollab methods cover the same instance-variable surface (self.XXX = assignments) as the 6 UrsinaRenderer methods they replace. Add any missing state to the collab's __init__ before wiring.",
+                "In UrsinaRenderer.__init__: add 'from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab' and 'self._terrain_fog = UrsinaTerrainFogCollab(self)'.",
+                "Delete the 6 methods from UrsinaRenderer; replace all self._METHOD(...) call sites with self._terrain_fog.METHOD(...) (drop leading underscore on collab side).",
+                "Run full gate stack."
+              ]
+            },
+            "11": { "status": "blocked_until_03_r2_done" },
+            "10": { "status": "consult_after_11_starts", "asks": ["After 03 reports R2 done: python main.py --renderer ursina --no-llm ~5 min. Note FPS/feel vs baseline. Log in agent_10 JSON."] }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_11_10",
+            "then_in_order": ["03"],
+            "then_parallel": ["11", "10"],
+            "intelligence_by_agent": { "03": "medium", "11": "low", "10": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK42 R2 Track B (Tech, MEDIUM): Read .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R2). Pre-flight: check the 6 UrsinaTerrainFogCollab methods for instance-variable coverage vs the 6 UrsinaRenderer methods. Add any missing init state to the collab. Then wire: import UrsinaTerrainFogCollab in UrsinaRenderer.__init__; create self._terrain_fog = UrsinaTerrainFogCollab(self); delete the 6 methods (_ensure_fog_overlay L961, _track_visibility_gated_terrain L1076, _sync_terrain_prop_tile_visibility L1085, _sync_visibility_gated_terrain L1097, _ensure_grid_debug_overlay L1126, _build_3d_terrain L1217) and replace every call site with self._terrain_fog.METHOD_WITHOUT_LEADING_UNDERSCORE(...). Gates: determinism_guard; pytest; qa_smoke --quick; validate_assets. Log pre-flight findings + line count + gate exit codes in agent_03 JSON.",
+            "11": "WK42 R2 Track B (QA, LOW): After Agent 03 lands R2, run full gate stack (determinism_guard; pytest; qa_smoke --quick; validate_assets). Log commands + exit codes in agent_11 JSON. Parallel with Agent 10.",
+            "10": "WK42 R2 Track B (Perf, LOW consult): After Agent 03 lands R2, run python main.py --renderer ursina --no-llm for ~5 minutes. Watch FPS/feel vs baseline (no new stutter, no visual regression). Log result in agent_10 JSON. Parallel with Agent 11."
+          }
+        },
+        "wk42_r3_track_c_entity_collab": {
+          "round_meta": {
+            "round_id": "wk42_r3_track_c_entity_collab",
+            "build_target": "Wire_UrsinaEntityRenderCollab_delete_11_renderer_methods",
+            "created_utc": "2026-04-28T00:40:00Z",
+            "visibility": "Implementer: 03. QA: 11 after merge. Perf consult: 10 after merge. Human: Jaimie manual smokes."
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "focus": "Track C: instantiate UrsinaEntityRenderCollab in UrsinaRenderer.__init__; delete the 11 entity-render methods from UrsinaRenderer; replace all call sites with self._entity_render.* delegation.",
+            "entity_methods_to_remove": [
+              "_apply_pixel_billboard_settings (L1431)",
+              "_sync_inside_hero_draw_layer (L1444)",
+              "_set_texture_if_changed (L1462)",
+              "_set_shader_if_changed (L1469)",
+              "_sync_billboard_entity (L1476)",
+              "_get_or_create_entity (L1501)",
+              "_apply_lit_3d_building_settings (L1531)",
+              "_get_or_create_3d_building_entity (L1548)",
+              "_sync_3d_building_entity (L1579)",
+              "_get_or_create_prefab_building_entity (L1611)",
+              "_sync_prefab_building_entity (L1641)"
+            ],
+            "gates": {
+              "determinism_guard": "PASS",
+              "pytest": "PASS",
+              "qa_smoke_quick": "PASS",
+              "validate_assets": "errors=0",
+              "ursina_fps_consult": "Agent 10: no regression",
+              "manual_jaimie": "python main.py --renderer ursina --no-llm 5-10 min + pygame 5 min PASS"
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "blocked_until_r2_pass",
+              "asks": [
+                "Pre-flight: verify UrsinaEntityRenderCollab's 11 methods access shared renderer state (_entities, _unit_anim_state, etc.) only through self.renderer.* — not through stale local copies.",
+                "In UrsinaRenderer.__init__: add 'from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab' and 'self._entity_render = UrsinaEntityRenderCollab(self)'.",
+                "Delete the 11 methods; replace all self._METHOD(...) call sites with self._entity_render.METHOD(...).",
+                "Run full gate stack."
+              ]
+            },
+            "11": { "status": "blocked_until_03_r3_done" },
+            "10": { "status": "consult_after_11_starts" }
+          },
+          "pm_send_list_minimal": {
+            "order": "03_then_parallel_11_10_then_jaimie",
+            "then_in_order": ["03"],
+            "then_parallel": ["11", "10"],
+            "then_human": "Jaimie manual smokes",
+            "intelligence_by_agent": { "03": "medium", "11": "low", "10": "low" }
+          },
+          "pm_agent_prompts": {
+            "03": "WK42 R3 Track C (Tech, MEDIUM): Read .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R3). Pre-flight: verify UrsinaEntityRenderCollab's 11 methods access all shared renderer state through self.renderer.* consistently. Then wire: import UrsinaEntityRenderCollab in UrsinaRenderer.__init__; create self._entity_render = UrsinaEntityRenderCollab(self); delete the 11 methods (_apply_pixel_billboard_settings L1431, _sync_inside_hero_draw_layer L1444, _set_texture_if_changed L1462, _set_shader_if_changed L1469, _sync_billboard_entity L1476, _get_or_create_entity L1501, _apply_lit_3d_building_settings L1531, _get_or_create_3d_building_entity L1548, _sync_3d_building_entity L1579, _get_or_create_prefab_building_entity L1611, _sync_prefab_building_entity L1641) and replace every call site with self._entity_render.METHOD_WITHOUT_LEADING_UNDERSCORE(...). Gates: determinism_guard; pytest; qa_smoke --quick; validate_assets. Report final ursina_renderer.py line count + gate exit codes in agent_03 JSON. Tell Jaimie/PM when ready for manual smokes.",
+            "11": "WK42 R3 Track C (QA, LOW): After Agent 03 lands R3, run full gate stack (determinism_guard; pytest; qa_smoke --quick; validate_assets errors=0). Log all commands and exit codes in agent_11 JSON. Parallel with Agent 10.",
+            "10": "WK42 R3 Track C (Perf, LOW consult): After Agent 03 lands R3, run python main.py --renderer ursina --no-llm ~5 min. Note FPS/feel. Log in agent_10 JSON. Parallel with Agent 11."
+          }
+        },
+        "wk42_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk42_sprint_closeout",
+            "created_utc": "2026-04-27T00:00:00Z",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
+            "commit_message": "Sprint WK42: Ursina renderer dedupe, terrain/entity collaborators, CHANGELOG v1.5.1"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK42 closed. Duplicate module block removed from ursina_renderer.py; UrsinaTerrainFogCollab + UrsinaEntityRenderCollab wired; UrsinaRenderer.update() regression fixed before ship. Gates PASS (Agent 11); perf consult no blocker (Agent 10); Jaimie manual Ursina + pygame PASS; CHANGELOG v1.5.1 WK42 section added."
+          },
+          "pm_accepted_deliverables": [
+            "game/graphics/ursina_renderer.py orchestrator-scale file; imports from ursina_environment, ursina_prefabs, ursina_coords, ursina_units_anim",
+            "Terrain/fog + entity rendering delegation via UrsinaTerrainFogCollab and UrsinaEntityRenderCollab",
+            "CHANGELOG.md — WK42 under Prototype v1.5.1"
+          ],
+          "pm_evidence": {
+            "agent_logs": "agent_03 TechnicalDirector — wk42_r1_r2_r3_complete; agent_11 — wk42_post_integration_full_stack + R2/R3 verification; agent_10 — wk42_r2_r3_perf_consult",
+            "human_playtest": "Jaimie Ursina + pygame manual PASS",
+            "gates": "determinism_guard, pytest 114, qa_smoke --quick, validate_assets errors=0"
+          },
+          "pm_next_actions_by_agent": {
+            "01": { "status": "closed", "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at sprint boundary" },
+            "03": { "status": "done" },
+            "10": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk42-renderer-dedupe-wire-collabs**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md`\n2) Read the PM Executive Producer hub for your round assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk42-renderer-dedupe-wire-collabs\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"<your round id>\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow ONLY your numbered prompt and your track. Do not expand scope.\n4) When done: update YOUR agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **delete duplicate code, wire the collaborators, no behavior change**.",
+      "pm_send_list_minimal": {
+        "do_not_send": ["01", "02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
+        "rationale": "Single implementer (03) per round, sequential. 11 gates after each 03 round. 10 FPS consult after R2 and R3 only. Jaimie manual after R3 gates pass."
+      }
     }
   }
 }

@@ -730,6 +730,77 @@
           }
         }
       }
+    },
+    "wk42-renderer-dedupe-wire-collabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
+        "notes": "Perf consult Steps 4 & 6: Ursina FPS after R2 terrain/fog collab wire + R3 entity collab wire (merged tree)."
+      },
+      "rounds": {
+        "wk42_r2_r3_perf_consult": {
+          "sprint_id": "wk42-renderer-dedupe-wire-collabs",
+          "round_id": "wk42_r2_r3_perf_consult",
+          "round_meta": {
+            "prompt_set_id": "wk42_parallel_11_10",
+            "pm_steps": ["STEP_4_after_R2", "STEP_6_after_R3"],
+            "sent_at_local": "2026-04-27",
+            "note": "Repo state has Track A+B+C applied (696-line ursina_renderer.py). Single probe satisfies PM parallel perf checks for both rounds."
+          },
+          "response": {
+            "status": "complete",
+            "raw": "WK42 Agent 10 consult (R2+R3 merged verification): Sprint goal was delete duplicate renderer code and delegate terrain/fog to UrsinaTerrainFogCollab and entities to UrsinaEntityRenderCollab with no behavior change. Verified wiring present in game/graphics/ursina_renderer.py (__init__ creates self._terrain_fog and self._entity_render; call sites delegate). Headless perf_benchmark: ms/tick total ~1.28 — consistent with recent refactor-era band (~1.0–1.3). Ursina automated FPS probe: 300s wall time, 10s warmup, --no-llm — avg_fps 33.6, p50 29.6, heroes=29 at sample end; ursina_renderer stage avg ~5.42ms. Min/p10 tails reflect occasional hitches/GC (min_fps 5.3, p10 12.5) — same class of variance as WK41 probes, not a new sustained-collapse pattern attributable to delegation. No Agent 10 code edits.",
+            "summary_bullets": [
+              "ursina_renderer.py line count: 696 (plan target ≤900 / ~700).",
+              "perf_benchmark (default 12s): ~1.280 ms/tick total; PF ~0.879 ms/tick — OK.",
+              "Ursina 300s FPS probe: avg_fps 33.6, p50 29.6; ursina_renderer avg ~5.42ms — playable; compare to WK41 probes with hero/scene variance.",
+              "Regression verdict for WK42 dedupe + collab wiring: no blocking perf regression.",
+              "Blockers: none."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/perf_benchmark.py",
+              "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "Manual (Jaimie per plan): python main.py --renderer ursina --no-llm 5–10 min; python main.py --renderer pygame --no-llm 5 min"
+            ],
+            "evidence": {
+              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
+              "perf_benchmark_exit_code": 0,
+              "perf_benchmark_ms_per_tick_total": 1.28,
+              "perf_benchmark_pf_ms_per_tick": 0.879,
+              "ursina_300s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
+              "ursina_300s_exit_code": 0,
+              "ursina_fps_probe": {
+                "heroes": 29,
+                "frames": 6021,
+                "avg_fps": 33.6,
+                "min_fps": 5.3,
+                "p10_fps": 12.5,
+                "p50_fps": 29.6,
+                "p90_fps": 73.4,
+                "max_fps": 105.3
+              },
+              "ursina_probe_stages_ms": {
+                "hud_texture_upload_avg_ms": 23.756,
+                "hud_texture_upload_p90_ms": 48.958,
+                "hud_texture_upload_max_ms": 77.951,
+                "pygame_hud_render_avg_ms": 2.27,
+                "tick_simulation_avg_ms": 2.693,
+                "tick_simulation_max_ms": 21.879,
+                "ursina_renderer_avg_ms": 5.416,
+                "ursina_renderer_p90_ms": 8.81,
+                "ursina_renderer_max_ms": 71.143
+              },
+              "ursina_renderer_line_count": 696,
+              "wk42_regression_verdict": "no"
+            },
+            "agent_fields": {
+              "reviewed_files": [
+                "game/graphics/ursina_renderer.py (collab wiring + delegations)"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

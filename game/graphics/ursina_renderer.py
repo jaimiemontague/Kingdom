@@ -32,7 +32,6 @@ import json
 import os
 import re
 import time
-import zlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -64,39 +63,21 @@ COLOR_BUILDING = color.light_gray
 COLOR_CASTLE = color.gold
 COLOR_LAIR = color.brown
 
-# 1 world unit along the floor == 1 tile == 32 px (unchanged from ortho MVP)
-SCALE = 32.0
+
+# 1 world unit along the floor == 1 tile == 32 px (scale lives in ursina_coords)
+from game.graphics.ursina_coords import SCALE, px_to_world, sim_px_to_world_xz
 
 # v1.5 Sprint 1.2: uniform scale for Kenney OBJ tiles (1×1 plane ≈ one sim tile).
 TERRAIN_SCALE_MULTIPLIER = 1.0
 # Props sit on the same grid; tune if authored mesh bounds drift.
 # Trees are *not* part of the WK34 ground-scatter 4× pass (only rocks + grass clumps).
-# Kenney tree GLBs are already tall; keep this near 1.0 to avoid “massive” canopy scale.
+# Kenney tree GLBs are already tall; keep this near 1.0 to avoid "massive" canopy scale.
 TREE_SCALE_MULTIPLIER = 1.15
 ROCK_SCALE_MULTIPLIER = 1.68  # 4× of pre-WK34 0.42
 # Grass tiles use organic scatter doodads on the base plane, not full-tile voxels.
 GRASS_SCATTER_SCALE_MULTIPLIER = 2.08  # 4× of pre-WK34 0.52
 # Flower / log / mushroom mesh instances: half the scatter scale of other ground props (2× original vs 4×).
 GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE = 0.5
-
-# Vertical extents (world units), from Agent 09 volumetric mapping table
-H_CASTLE = 2.2
-H_BUILDING_3X3 = 1.6
-H_BUILDING_2X2 = 1.4
-H_BUILDING_1X1 = 0.9
-H_LAIR = 1.0
-
-# v1.5 Sprint 2.1 (Agent 09): XZ inset so 1×1 houses sit side-by-side; castle/lair
-# fill most of the sim footprint (matches BUILDING_SIZES × TILE_SIZE / SCALE).
-BUILDING_3D_HOUSE_XZ_INSET = 0.88
-BUILDING_3D_CASTLE_XZ_INSET = 0.98
-BUILDING_3D_LAIR_XZ_INSET = 0.94
-
-# WK30: XZ inset applied to prefab-backed buildings after fit-to-footprint scaling.
-# 1.0 = prefab's authored extent fills the sim footprint exactly; anything <1 leaves a
-# small margin so meshes never visually overlap grid lines / adjacent buildings. Tune
-# here rather than per-type — prefab authors pick their own authored extent already.
-_PREFAB_FIT_INSET = 1.0
 
 # Pixel billboard height in world units (32px sprite read at map scale)
 UNIT_BILLBOARD_SCALE = 0.62
@@ -112,710 +93,60 @@ GUARD_SCALE_Y = 0.7
 # Ranged VFX billboards — smaller than unit sprites, readable in perspective.
 # 0.3 was large in playtest; 25% of that keeps arrows visible (snapshot + depth fix) without dominating the frame.
 PROJECTILE_BILLBOARD_SCALE = 0.075
-# Vertical lift: match enemy sprite center (ENEMY_SCALE*0.5) so arrows aren’t drawn under terrain.
+# Vertical lift: match enemy sprite center (ENEMY_SCALE*0.5) so arrows aren't drawn under terrain.
 PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 
-
-def sim_px_to_world_xz(px_x: float, px_y: float) -> tuple[float, float]:
-    """Map sim pixel coords to the X/Z floor (Y-up world)."""
-    return px_x / SCALE, -px_y / SCALE
-
-
-def px_to_world(px_x: float, px_y: float) -> tuple[float, float]:
-    """Backward-compatible name: returns (world_x, world_z) for the floor plane."""
-    return sim_px_to_world_xz(px_x, px_y)
-
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_ENV_MODEL_DIR = _PROJECT_ROOT / "assets" / "models" / "environment"
-# WK29/WK30: prefab JSONs for kitbashed buildings (authored by Agent 15).
-_PREFAB_BUILDINGS_DIR = _PROJECT_ROOT / "assets" / "prefabs" / "buildings"
-
-# WK30 (Agent 03): single-source lookup table for ``building_type`` -> prefab filename.
-# Non-convention entries are listed explicitly; anything not in this table falls back to
-# the ``<building_type>_v1.json`` convention in ``_resolve_prefab_path``. Keep this table
-# sorted and minimal — the expectation is that new buildings land under the convention.
-_PREFAB_BUILDING_TYPE_TO_FILE: dict[str, str] = {
-    # WK31 economy: inn_v2, farm_v2, food_stand_v2. WK34: removed gnome_hovel (deprecated).
-    "farm": "farm_v2.json",
-    "food_stand": "food_stand_v2.json",
-    # WK29 shipped the first house under a descriptive filename (not ``house_v1``).
-    "house": "peasant_house_small_v1.json",
-    "inn": "inn_v2.json",
-    # WK33 economy buildings (prefab convention: <building_type>_v1.json)
-    "marketplace": "marketplace_v1.json",
-    "blacksmith": "blacksmith_v1.json",
-    "trading_post": "trading_post_v1.json",
-    # WK34: explicit prefabs (convention also resolves ``<type>_v1.json`` when present).
-    "ranger_guild": "ranger_guild_v1.json",
-    "temple": "temple_v1.json",
-    "guardhouse": "guardhouse_v1.json",
-}
-
-
-def _environment_model_path(kind: str) -> str:
-    """Resolve ``assets/models/environment/<kind>.{glb,gltf,obj}`` for Ursina ``Entity(model=...)``."""
-    for ext in (".glb", ".gltf", ".obj"):
-        p = _ENV_MODEL_DIR / f"{kind}{ext}"
-        if p.is_file():
-            return f"assets/models/environment/{kind}{ext}"
-    if kind == "lair":
-        # WK33: if an explicit `lair.*` doesn't exist yet, allow a named graveyard mesh
-        # to be dropped into assets/models/environment/ and picked deterministically.
-        try:
-            candidates: list[Path] = []
-            for ext in (".glb", ".gltf", ".obj"):
-                candidates.extend(_ENV_MODEL_DIR.glob(f"*{ext}"))
-            picks = sorted(
-                (
-                    p
-                    for p in candidates
-                    if any(k in p.stem.lower() for k in ("graveyard", "mausoleum", "crypt", "tomb", "gy"))
-                ),
-                key=lambda p: p.name.lower(),
-            )
-            if picks:
-                return f"assets/models/environment/{picks[0].name}"
-        except Exception:
-            pass
-    return "cube"
-
-
-def _grass_scatter_jitter(tx: int, ty: int) -> tuple[float, float, float]:
-    """Deterministic XZ offset + yaw (degrees) so grass doodads read as scattered foliage."""
-    h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
-    jx = ((h & 0xFFFF) / 65535.0 - 0.5) * 0.38
-    jz = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 0.38
-    yaw = float((tx * 127 + ty * 331) % 360)
-    return jx, jz, yaw
-
-
-# WK32 r3: default preview budget is intentionally lower than screenshot density.
-# Use KINGDOM_URSINA_GRASS_DENSITY=low|default|high (or off) to tune preview startup.
-_GRASS_DENSITY_PROFILES: dict[str, tuple[int, int]] = {
-    "off": (0, 1),
-    "low": (1, 3),
-    "default": (1, 3),
-    "medium": (1, 2),
-    "high": (3, 1),
-}
-
-
-def _grass_density_budget() -> tuple[int, int]:
-    """Return ``(clumps_per_selected_tile, tile_sampling_stride)`` for grass preview density."""
-    raw = os.environ.get("KINGDOM_URSINA_GRASS_DENSITY", "default").strip().lower()
-    if raw in _GRASS_DENSITY_PROFILES:
-        return _GRASS_DENSITY_PROFILES[raw]
-    try:
-        clumps = max(0, min(3, int(raw)))
-    except ValueError:
-        return _GRASS_DENSITY_PROFILES["default"]
-    return clumps, 1 if clumps >= 3 else 2
-
-
-def _grass_tile_selected(tx: int, ty: int, stride: int) -> bool:
-    """Deterministic sparse sampling without a visible modulo grid."""
-    if stride <= 1:
-        return True
-    h = (tx * 92837111 ^ ty * 689287499 ^ 0xA511E9B3) & 0xFFFFFFFF
-    return (h % max(1, stride * stride)) == 0
-
-
-def _grass_clump_offset(
-    tx: int, ty: int, slot: int, world_half: float
-) -> tuple[float, float, float]:
-    """Deterministic sub-tile XZ + yaw; fills the cell so scatter does not read as a coarse grid."""
-    h = (tx * 92837111 ^ ty * 689287499 ^ (slot * 0x5BD1E995) ^ (slot * 101)) & 0xFFFFFFFF
-    jx = ((h & 0xFFFF) / 65535.0 - 0.5) * 2.0 * world_half * 0.95
-    jz = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 2.0 * world_half * 0.95
-    yaw = float((tx * 127 + ty * 331 + slot * 47) % 360)
-    return jx, jz, yaw
-
-
-_ENV_SCATTER_MODELS: tuple[list[str], list[str]] | None = None
-_ENV_TREE_MODELS: list[str] | None = None
-
-
-def _environment_mesh_priority(suffix: str) -> int:
-    """Prefer ``.glb`` over ``.gltf`` over ``.obj`` when the same stem exists twice."""
-    s = suffix.lower()
-    if s == ".glb":
-        return 0
-    if s == ".gltf":
-        return 1
-    if s == ".obj":
-        return 2
-    return 9
-
-
-def _dedupe_env_rels_by_stem(rels: list[str]) -> list[str]:
-    """One file per basename; duplicate stems keep the highest-priority extension."""
-    best: dict[str, tuple[str, int]] = {}
-    for rel in rels:
-        stem = Path(rel).stem.lower()
-        pri = _environment_mesh_priority(Path(rel).suffix)
-        prev = best.get(stem)
-        if prev is None or pri < prev[1]:
-            best[stem] = (rel, pri)
-    return [best[k][0] for k in sorted(best.keys())]
-
-
-def _is_grass_scatter_stem(name: str) -> bool:
-    """Small ground foliage: grass tufts, flowers, Nature Kit ``plant_flat*``."""
-    return (
-        name.startswith("grass")
-        or "tuft" in name
-        or "wildflower" in name
-        or name.startswith("flower")
-        or name.startswith("plant_flat")
-    )
-
-
-def _is_doodad_scatter_stem(name: str) -> bool:
-    """Rocks, logs, stumps, mushrooms, bushes — includes Kenney ``plant_bush*`` and ``stone*``."""
-    return (
-        name.startswith("bush")
-        or name.startswith("plant_bush")
-        or name.startswith("log")
-        or name.startswith("stump")
-        or name.startswith("mushroom")
-        or name.startswith("rock")
-        or name.startswith("stone")
-    )
-
-
-def _stem_is_flower_ground_scatter(name: str) -> bool:
-    """Flower-style meshes in the grass scatter list (not grass tufts)."""
-    s = str(name).lower()
-    return "wildflower" in s or s.startswith("flower") or s.startswith("plant_flat")
-
-
-def _stem_is_log_or_mushroom_ground_scatter(name: str) -> bool:
-    """Log and mushroom doodads — scaled down vs rocks/bushes/stumps."""
-    s = str(name).lower()
-    return s.startswith("log") or s.startswith("mushroom")
-
-
-def _environment_grass_and_doodad_model_lists() -> tuple[list[str], list[str]]:
-    """WK32: scan ``assets/models/environment`` for grass vs other nature props (fallback to legacy names)."""
-    global _ENV_SCATTER_MODELS
-    if _ENV_SCATTER_MODELS is not None:
-        return _ENV_SCATTER_MODELS
-    grass: list[str] = []
-    doodad: list[str] = []
-    default_grass = _environment_model_path("grass")
-    default_rock = _environment_model_path("rock")
-    if _ENV_MODEL_DIR.is_dir():
-        for p in sorted(_ENV_MODEL_DIR.iterdir()):
-            if p.suffix.lower() not in (".glb", ".gltf", ".obj"):
-                continue
-            rel = f"assets/models/environment/{p.name}"
-            name = p.stem.lower()
-            if name.startswith("tree"):
-                continue
-            if _is_grass_scatter_stem(name):
-                grass.append(rel)
-            elif _is_doodad_scatter_stem(name):
-                doodad.append(rel)
-    grass = _dedupe_env_rels_by_stem(grass)
-    doodad = _dedupe_env_rels_by_stem(doodad)
-    if not grass:
-        grass = [default_grass]
-    if not doodad:
-        doodad = [default_rock]
-    _ENV_SCATTER_MODELS = (grass, doodad)
-    return _ENV_SCATTER_MODELS
-
-
-def _environment_tree_model_list() -> list[str]:
-    """All ``tree_*`` meshes under environment (Kenney Nature pines/oaks/etc.); fallback to ``tree_pine``."""
-    global _ENV_TREE_MODELS
-    if _ENV_TREE_MODELS is not None:
-        return _ENV_TREE_MODELS
-    out: list[str] = []
-    default = _environment_model_path("tree_pine")
-    if _ENV_MODEL_DIR.is_dir():
-        for p in sorted(_ENV_MODEL_DIR.iterdir()):
-            if p.suffix.lower() not in (".glb", ".gltf", ".obj"):
-                continue
-            name = p.stem.lower()
-            if name.startswith("tree"):
-                out.append(f"assets/models/environment/{p.name}")
-    out = _dedupe_env_rels_by_stem(out)
-    if not out:
-        out = [default]
-    _ENV_TREE_MODELS = out
-    return _ENV_TREE_MODELS
-
-
-def _scatter_model_index(tx: int, ty: int, n: int, salt: int) -> int:
-    if n <= 1:
-        return 0
-    h = (tx * 92837111 ^ ty * 689287499 ^ int(salt) * 1009) & 0xFFFFFFFF
-    return int(h % n)
-
-
-def _building_occupied_tiles(buildings) -> set[tuple[int, int]]:
-    """Grid cells covered by any building footprint (for scatter exclusion)."""
-    occ: set[tuple[int, int]] = set()
-    for b in buildings or []:
-        try:
-            gx, gy = int(b.grid_x), int(b.grid_y)
-            sw, sh = int(b.size[0]), int(b.size[1])
-        except Exception:
-            continue
-        for dx in range(sw):
-            for dy in range(sh):
-                occ.add((gx + dx, gy + dy))
-    return occ
-
-
-def _apply_kenney_scatter_mesh_shading_only(ent: Entity, model_rel: str) -> None:
-    """Fix factor-only / flat materials on env meshes without changing ``entity.color``."""
-    try:
-        from tools.model_viewer_kenney import _apply_gltf_color_and_shading
-
-        if getattr(ent, "model", None) is None:
-            return
-        # GLB/GLTF paths usually expose GeomNodes under ``ent.model``. Runtime OBJ
-        # scatter can place them under the Entity NodePath instead, so apply both.
-        label = model_rel.replace("\\", "/")
-        _apply_gltf_color_and_shading(ent.model, debug_materials=False, model_label=label)
-        _apply_gltf_color_and_shading(ent, debug_materials=False, model_label=label)
-    except Exception:
-        pass
-
-
-def _finalize_kenney_scatter_entity(
-    ent: Entity, model_rel: str, *, apply_pack_tint: bool = True
-) -> None:
-    """Grass/rock/tree/doodad scatter: same material path as path_stone + optional pack tint.
-
-    Without ``_apply_gltf_color_and_shading``, factor-only GLBs read as flat white; rocks look
-    unshaded. ``model_rel`` is a repo-relative path using forward slashes, e.g.
-    ``assets/models/environment/grass.obj``.
-
-    Set ``apply_pack_tint=False`` when ``entity.color`` is authored (e.g. water blue tint).
-    """
-    try:
-        from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity
-
-        _apply_kenney_scatter_mesh_shading_only(ent, model_rel)
-        if apply_pack_tint:
-            apply_kenney_pack_color_tint_to_entity(ent, model_rel.replace("\\", "/"))
-        # WK33: lift scatter brightness after the WK32 "dark pass" tinting.
-        try:
-            m = float(getattr(config, "URSINA_ENV_SCATTER_BRIGHTNESS", 1.0))
-        except Exception:
-            m = 1.0
-        if m > 1.0001:
-            try:
-                ent.color = color.rgba(
-                    min(1.0, float(ent.color.r) * m),
-                    min(1.0, float(ent.color.g) * m),
-                    min(1.0, float(ent.color.b) * m),
-                    float(ent.color.a),
-                )
-            except Exception:
-                pass
-        ent._ks_base_color = ent.color
-    except Exception:
-        pass
-
-
-def _set_static_prop_fog_tint(ent: Entity, fog_mult: float) -> None:
-    """Apply explored-fog darkening to a static terrain prop without compounding tint."""
-    if getattr(ent, "_ks_fog_mult", None) == fog_mult:
-        return
-    base = getattr(ent, "_ks_base_color", None)
-    if base is None:
-        base = ent.color
-        ent._ks_base_color = base
-    try:
-        ent.color = color.rgba(
-            float(base.r) * float(fog_mult),
-            float(base.g) * float(fog_mult),
-            float(base.b) * float(fog_mult),
-            float(base.a),
-        )
-    except Exception:
-        ent.color = base
-    ent._ks_fog_mult = fog_mult
-
-
-def _building_type_str(bt) -> str:
-    if bt is None:
-        return ""
-    return str(getattr(bt, "value", bt) or "")
-
-
-def _footprint_tiles(building_type) -> tuple[int, int]:
-    key = getattr(building_type, "value", building_type)
-    return config.BUILDING_SIZES.get(key, (2, 2))
-
-
-def _is_3d_mesh_building(bts: str, building) -> bool:
-    """Castle, peasant house, and monster lairs render as lit 3D meshes (not sprite billboards)."""
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-        return True
-    return bts in ("castle", "house")
-
-
-def _mesh_kind_for_building(bts: str, building) -> str:
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-        return "lair"
-    if bts == "castle":
-        return "castle"
-    return "house"
-
-
-def _building_3d_origin_y(model_path: str, sy: float) -> float:
-    """Ursina ``cube`` is centered on its local origin; scale ``sy`` is the world height."""
-    if model_path == "cube":
-        return sy * 0.5
-    # Authored meshes: assume pivot near ground (common for env exports); adjust per-asset if needed.
-    return 0.0
-
-
-def _footprint_scale_3d(
-    mesh_kind: str, fx: float, fz: float, hy: float
-) -> tuple[float, float, float]:
-    """Fill sim footprint in XZ with small insets so adjacent 1×1 houses do not overlap meshes."""
-    ix = iz = 1.0
-    if mesh_kind == "house":
-        ix = iz = BUILDING_3D_HOUSE_XZ_INSET
-    elif mesh_kind == "castle":
-        ix = iz = BUILDING_3D_CASTLE_XZ_INSET
-    elif mesh_kind == "lair":
-        ix = iz = BUILDING_3D_LAIR_XZ_INSET
-    return (fx * ix, hy, fz * iz)
-
-
-def _building_height_y(
-    tw: int, th: int, building_type, is_lair: bool, is_castle: bool
-) -> float:
-    if is_castle:
-        return H_CASTLE
-    if is_lair:
-        return H_LAIR
-    if tw >= 3 and th >= 3:
-        return H_BUILDING_3X3
-    if tw == 1 and th == 1:
-        return H_BUILDING_1X1
-    return H_BUILDING_2X2
-
-
-def _stage_prefab_path_candidates(base_prefab: Path, stage: str) -> list[Path]:
-    """Intermediate JSON candidates: prefer ``<stem>_build_<stage>_v1`` (e.g. inn_v2 → inn_v2_build_20_v1)."""
-    stem = base_prefab.stem
-    out: list[Path] = []
-    seen: set[str] = set()
-
-    def add(p: Path) -> None:
-        s = str(p)
-        if s not in seen:
-            seen.add(s)
-            out.append(p)
-
-    add(_PREFAB_BUILDINGS_DIR / f"{stem}_build_{stage}_v1.json")
-    m = re.match(r"^(.+)_v(\d+)$", stem)
-    if m:
-        core, ver = m.group(1), m.group(2)
-        add(_PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v{ver}.json")
-    return out
-
-
-def _plot_prefab_candidates(tw: int, th: int) -> list[Path]:
-    """Ordered plot prefab paths: exact ``plot_wxh`` first, then sensible larger plot fallbacks (WK32 r2)."""
-    w, h = int(tw), int(th)
-    out: list[Path] = []
-    seen: set[str] = set()
-
-    def add(p: Path) -> None:
-        s = str(p)
-        if s not in seen:
-            seen.add(s)
-            out.append(p)
-
-    add(_PREFAB_BUILDINGS_DIR / f"plot_{w}x{h}_v1.json")
-    wc = max(1, min(3, w))
-    hc = max(1, min(3, h))
-    if (wc, hc) != (w, h):
-        add(_PREFAB_BUILDINGS_DIR / f"plot_{wc}x{hc}_v1.json")
-    side = max(1, min(3, max(w, h)))
-    add(_PREFAB_BUILDINGS_DIR / f"plot_{side}x{side}_v1.json")
-    for sq in (3, 2, 1):
-        add(_PREFAB_BUILDINGS_DIR / f"plot_{sq}x{sq}_v1.json")
-    return out
-
-
-def _first_existing(paths: list[Path]) -> Path | None:
-    for p in paths:
-        if p.is_file():
-            return p
-    return None
-
-
-def _first_existing_groups(groups: list[list[Path]]) -> Path | None:
-    for grp in groups:
-        hit = _first_existing(grp)
-        if hit is not None:
-            return hit
-    return None
-
-
-def _resolve_construction_staged_prefab(
-    building,
-    base_prefab: Path,
-    tw: int,
-    th: int,
-) -> Path:
-    """WK32 (rev 2026-04-18): stage prefab from ``construction_progress`` + file fallback.
-
-    Thresholds (must match Agent 15 filenames):
-      progress == 0.0            -> plot_{w}x{h}_v1
-      0.0 < progress < 0.50      -> <base>_build_20_v*.json
-      0.50 <= progress < 1.0     -> <base>_build_50_v*.json
-      progress >= 1.0 (built)    -> final base prefab
-
-    Fallback when a stage file is missing (never crash): try alternate filenames per group, then next stage.
-    Non-square plots try ``plot_{w}x{h}_v1`` before square ``plot_{s}x{s}`` (never prefer plot_1x1 while a larger plot exists).
-    Inn stages: ``inn_v2_build_20_v1`` (full stem) before legacy ``inn_build_20_v2``-style names.
-    ``KINGDOM_URSINA_PREFAB_TEST=0`` skips the whole prefab path upstream (no staging).
-    """
-    if bool(getattr(building, "is_constructed", True)):
-        return base_prefab
-    prog = float(getattr(building, "construction_progress", 0.0) or 0.0)
-    prog = min(1.0, max(0.0, prog))
-    if prog >= 1.0:
-        return base_prefab
-
-    plot_cands = _plot_prefab_candidates(tw, th)
-    c20 = _stage_prefab_path_candidates(base_prefab, "20")
-    c50 = _stage_prefab_path_candidates(base_prefab, "50")
-    base_list = [base_prefab] if base_prefab.is_file() else []
-
-    # Only the initial instant (no build work yet) uses the empty plot; any HP gain uses 20%/50%.
-    at_plot = prog <= 1e-9
-    if at_plot:
-        groups = [plot_cands, c50, c20, base_list]
-    elif prog < 0.5:
-        groups = [c20, c50, base_list, plot_cands]
-    elif prog < 1.0:
-        groups = [c50, base_list, c20, plot_cands]
-    else:
-        groups = [base_list]
-
-    picked = _first_existing_groups(groups) if groups else None
-    if picked is not None:
-        return picked
-    if base_prefab.is_file():
-        return base_prefab
-    if plot_cands:
-        return plot_cands[0]
-    return base_prefab
-
-
-def _resolve_prefab_path(bts: str, building) -> Path | None:
-    """WK30: default-on prefab resolution by ``building_type``.
-
-    Returns the Path of the prefab JSON to load for this building, or ``None`` if the
-    legacy (static mesh / billboard) render path should be used instead.
-
-    Decision rules (short-circuit in order):
-
-    1. ``KINGDOM_URSINA_PREFAB_TEST=0`` (explicit zero) → force legacy path for everything.
-       Any other value, or env unset, keeps prefabs on.
-    2. No ``building_type`` string → legacy.
-    3. Lairs: if ``assets/prefabs/buildings/lair_v1.json`` exists, all lair types use that
-       prefab (Graveyard kitbash). Otherwise fall through to legacy ``lair`` static mesh.
-    4. Filename = explicit ``_PREFAB_BUILDING_TYPE_TO_FILE`` entry, else convention
-       ``<building_type>_v1.json``.
-    5. File must exist under ``_PREFAB_BUILDINGS_DIR``; otherwise → legacy.
-    """
-    if os.environ.get("KINGDOM_URSINA_PREFAB_TEST") == "0":
-        return None
-    if not bts:
-        return None
-    if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-        p = _PREFAB_BUILDINGS_DIR / "lair_v1.json"
-        return p if p.is_file() else None
-    filename = _PREFAB_BUILDING_TYPE_TO_FILE.get(bts) or f"{bts}_v1.json"
-    path = _PREFAB_BUILDINGS_DIR / filename
-    return path if path.is_file() else None
-
-
-def _load_prefab_instance(prefab_path: Path, world_pos: Vec3) -> Entity:
-    """Instantiate a prefab JSON as a container Entity with one child model per piece.
-
-    Applies ``tools.model_viewer_kenney._apply_gltf_color_and_shading`` per piece (two-path
-    classifier: textured vs factor-only). Import kept in tools/ for WK29 spike (single source
-    of truth with the Kenney viewer).
-
-    Schema v0.2 (WK30 hotfix-to-R1): the loader **auto-centers** the piece XZ bounding box
-    onto the root origin, and stashes ``authored_footprint_tiles`` + piece XZ spread on the
-    root so ``_sync_prefab_building_entity`` can fit-scale the cluster to the sim footprint.
-    Piece Y values are honored verbatim (vertical stacking is an author intent we do not
-    distort). Effect: prefabs with different per-prefab anchors (WK28 assembler) all render
-    centered on the sim building's footprint-center, and the visible mesh extent fits
-    within the sim footprint.
-    """
-    from game.graphics.prefab_texture_overrides import (
-        apply_prefab_texture_override,
-        parse_object_uv_scale_field,
-    )
-    from tools.kenney_pack_scale import apply_kenney_pack_color_tint_to_entity, pack_extent_multiplier_for_rel
-    from tools.model_viewer_kenney import _apply_gltf_color_and_shading
-
-    raw = json.loads(prefab_path.read_text(encoding="utf-8"))
-    pieces = raw.get("pieces") or []
-    ga = float(raw.get("ground_anchor_y", 0.0))
-    authored_ft_raw = raw.get("footprint_tiles", [1, 1]) or [1, 1]
-    try:
-        authored_w = float(authored_ft_raw[0])
-        authored_d = float(authored_ft_raw[1])
-    except (TypeError, ValueError, IndexError):
-        authored_w = authored_d = 1.0
-
-    if isinstance(world_pos, Vec3):
-        wp = (world_pos.x, world_pos.y, world_pos.z)
-    else:
-        wp = (float(world_pos[0]), float(world_pos[1]), float(world_pos[2]))
-
-    # WK30: compute XZ bounding box from piece positions so the cluster can be centered.
-    xs = [float(pp.get("pos", [0, 0, 0])[0]) for pp in pieces] or [0.0]
-    zs = [float(pp.get("pos", [0, 0, 0])[2]) for pp in pieces] or [0.0]
-    min_x, max_x = min(xs), max(xs)
-    min_z, max_z = min(zs), max(zs)
-    centroid_x = (min_x + max_x) * 0.5
-    centroid_z = (min_z + max_z) * 0.5
-    spread_x = max_x - min_x
-    spread_z = max_z - min_z
-
-    root = Entity(position=wp, collider=None)
-    root._ks_prefab_container = True
-    root._ks_ground_anchor_y = ga
-    root._ks_prefab_source = str(prefab_path)
-    root._ks_prefab_authored_ft = (authored_w, authored_d)
-    root._ks_prefab_xz_spread = (spread_x, spread_z)
-    root._ks_prefab_xz_centroid = (centroid_x, centroid_z)
-
-    models_root = _PROJECT_ROOT / "assets" / "models"
-
-    for piece in pieces:
-        rel = str(piece.get("model", "")).replace("\\", "/").lstrip("/")
-        if not rel:
-            continue
-        abs_model = models_root / rel
-        if not abs_model.is_file():
-            continue
-        model_str = f"assets/models/{rel}"
-        ppos = piece.get("pos", [0, 0, 0])
-        prot = piece.get("rot", [0, 0, 0])
-        psc = piece.get("scale", [1, 1, 1])
-        # WK31: Kenney pack uniform scale vs Retro (single source: tools/kenney_pack_scale.py).
-        pf = pack_extent_multiplier_for_rel(rel)
-        # WK30 auto-center: subtract the XZ centroid so the cluster is centered on (0, 0)
-        # in root-local space. Y is left alone (vertical stacking stays as authored).
-        cpos_x = float(ppos[0]) - centroid_x
-        cpos_z = float(ppos[2]) - centroid_z
-        child = Entity(
-            parent=root,
-            model=model_str,
-            position=(cpos_x, float(ppos[1]), cpos_z),
-            rotation=(float(prot[0]), float(prot[1]), float(prot[2])),
-            scale=(
-                float(psc[0]) * pf,
-                float(psc[1]) * pf,
-                float(psc[2]) * pf,
-            ),
-            collider=None,
-            double_sided=True,
-        )
-        child.collision = False
-        child.render_queue = 1
-        try:
-            child.set_depth_test(True)
-            child.set_depth_write(True)
-        except Exception:
-            pass
-        try:
-            if child.model is not None:
-                _apply_gltf_color_and_shading(
-                    child.model,
-                    debug_materials=False,
-                    model_label=rel,
-                )
-                apply_kenney_pack_color_tint_to_entity(child, rel)
-        except Exception:
-            pass
-        try:
-            apply_prefab_texture_override(
-                child,
-                piece.get("texture_override"),
-                piece.get("texture_override_mode"),
-                object_uv_scale=parse_object_uv_scale_field(piece.get("texture_override_object_scale")),
-            )
-        except Exception:
-            pass
-
-    return root
-
-
-def _frame_index_for_clip(clip: AnimationClip, elapsed: float) -> tuple[int, bool]:
-    """Match ``AnimationPlayer`` timing: non-looping finishes after n frame-times."""
-    n = len(clip.frames)
-    ft = clip.frame_time_sec
-    if n == 0:
-        return 0, True
-    if ft <= 0:
-        return 0, False
-    if clip.loop:
-        cycle = n * ft
-        if cycle <= 0:
-            return 0, False
-        t = elapsed % cycle
-        idx = int(t / ft) % n
-        return idx, False
-    steps = int(elapsed / ft)
-    if steps >= n:
-        return n - 1, True
-    return steps, False
-
-
-def _hero_base_clip(hero) -> str:
-    if bool(getattr(hero, "is_inside_building", False)):
-        return "inside"
-    state = getattr(hero, "state", None)
-    state_name = str(getattr(state, "name", state))
-    if state_name in ("MOVING", "RETREATING"):
-        return "walk"
-    return "idle"
-
-
-def _enemy_base_clip(enemy) -> str:
-    state = getattr(enemy, "state", None)
-    state_name = str(getattr(state, "name", state))
-    return "walk" if state_name == "MOVING" else "idle"
-
-
-def _worker_idle_surface(worker_type: str):
-    wt = str(worker_type or "peasant").lower()
-    clips = WorkerSpriteLibrary.clips_for(wt)
-    return clips["idle"].frames[0]
-
-
-def _visibility_signature(world) -> int:
-    """Cheap checksum so we only rebuild the fog texture when the grid changes.
-
-    WK22 Agent-10 perf note: this is O(W*H) — ~22,500 tiles at default map size.
-    Callers should gate on ``engine._fog_revision`` to avoid running this every frame.
-    """
-    h = zlib.crc32(b"")
-    for y in range(world.height):
-        h = zlib.crc32(bytes(world.visibility[y]), h)
-    return h & 0xFFFFFFFF
-
+# ---------------------------------------------------------------------------
+# Helpers imported from focused sub-modules (extracted WK41, wired WK42)
+# ---------------------------------------------------------------------------
+from game.graphics.ursina_environment import (
+    PROJECT_ROOT,
+    _environment_model_path,
+    _grass_scatter_jitter,
+    _grass_density_budget,
+    _grass_tile_selected,
+    _grass_clump_offset,
+    _environment_mesh_priority,
+    _dedupe_env_rels_by_stem,
+    _is_grass_scatter_stem,
+    _is_doodad_scatter_stem,
+    _stem_is_flower_ground_scatter,
+    _stem_is_log_or_mushroom_ground_scatter,
+    _environment_grass_and_doodad_model_lists,
+    _environment_tree_model_list,
+    _scatter_model_index,
+    _building_occupied_tiles,
+    _apply_kenney_scatter_mesh_shading_only,
+    _finalize_kenney_scatter_entity,
+    _set_static_prop_fog_tint,
+    _visibility_signature,
+)
+from game.graphics.ursina_prefabs import (
+    _PREFAB_FIT_INSET,
+    _building_type_str,
+    _footprint_tiles,
+    _is_3d_mesh_building,
+    _mesh_kind_for_building,
+    _building_3d_origin_y,
+    _footprint_scale_3d,
+    _building_height_y,
+    _stage_prefab_path_candidates,
+    _plot_prefab_candidates,
+    _first_existing,
+    _first_existing_groups,
+    _resolve_construction_staged_prefab,
+    _resolve_prefab_path,
+    _load_prefab_instance,
+)
+from game.graphics.ursina_units_anim import (
+    _frame_index_for_clip,
+    _hero_base_clip,
+    _enemy_base_clip,
+    _worker_idle_surface,
+)
+
+from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab
+from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab
 
 class UrsinaRenderer:
     def __init__(self, world):
@@ -858,6 +189,9 @@ class UrsinaRenderer:
         self._directional_light = None
         self._shadow_bounds_initialized = False
         self._setup_scene_lighting()
+
+        self._terrain_fog = UrsinaTerrainFogCollab(self)
+        self._entity_render = UrsinaEntityRenderCollab(self)
 
     def _setup_scene_lighting(self) -> None:
         """Dim gray-blue ambient + warm directional sun; directional casts shadow maps when enabled.
@@ -958,738 +292,6 @@ class UrsinaRenderer:
         cache_key = (cache_prefix, "anim", class_key, clip_name, idx, int(config.TILE_SIZE))
         return surf, cache_key
 
-    def _ensure_fog_overlay(self, world, fog_revision: int) -> None:
-        """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
-
-        WK22: Rebuild only when ``engine._fog_revision`` advances (revealer crossed a tile).
-
-        WK23 follow-up: removed throttle; removed CRC skip path; advance ``_fog_revision_seen`` only
-        after a successful GPU upload. In perspective, this quad is ground fog only; vertical
-        props are separately gated by tile visibility so camera angle cannot make them leak.
-        """
-        if self._terrain_entity is None:
-            return
-        my_rev = getattr(self, "_fog_revision_seen", -1)
-        if int(fog_revision) == my_rev and self._fog_entity is not None:
-            return
-
-        tw, th = int(world.width), int(world.height)
-
-        # WK22 Agent-10 perf: render fog at TILE resolution (1 px per tile)
-        # instead of pixel resolution (TILE_SIZE px per tile).  This shrinks
-        # the surface from 4800×4800 (92 MB) to 150×150 (90 KB) — a ~1000×
-        # reduction in tobytes / PIL / GPU upload cost.  The GPU upscales
-        # the texture to cover the terrain quad; nearest-neighbor filtering
-        # keeps hard tile edges.
-        #
-        # WK22 R3 bug hunt: building the fog surface with set_at() per tile
-        # costs tens of ms (Python call overhead) and caused rhythmic hitches
-        # whenever visibility changed.  Fill a packed RGBA bytearray instead.
-        need = tw * th * 4
-        if self._fog_tile_buf is None or len(self._fog_tile_buf) != need:
-            self._fog_tile_buf = bytearray(need)
-        buf = self._fog_tile_buf
-        row_unseen = b"\x00\x00\x00\xff" * tw
-        for ty in range(th):
-            buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
-        vis_b = b"\x00\x00\x00\x00"
-        try:
-            seen_a = int(getattr(config, "URSINA_FOG_SEEN_ALPHA", 0xAA))
-        except Exception:
-            seen_a = 0xAA
-        seen_a = max(0, min(255, int(seen_a)))
-        seen_b = bytes((0, 0, 0, seen_a))
-        # WK23 FIX: write rows in REVERSE sim-Y order so the texture's row-0
-        # corresponds to map-south (sim_py == th*ts).  sim_px_to_world_xz negates
-        # the Y axis (world_z = -py/SCALE), so map-south ends at world_z=0 (the
-        # +Z edge of the quad after rotation_x=90°).  Without this reversal the
-        # fog is mirrored North↔South and the lit circle tracks the wrong half of
-        # the map relative to where heroes actually stand.
-        for ty in range(th):
-            row = world.visibility[ty]
-            # Map sim row ty → buf row (th-1-ty) to flip N/S in texture space.
-            buf_row = th - 1 - ty
-            base = buf_row * tw * 4
-            for tx in range(tw):
-                st = row[tx]
-                if st == Visibility.VISIBLE:
-                    o = base + tx * 4
-                    buf[o : o + 4] = vis_b
-                elif st == Visibility.SEEN:
-                    o = base + tx * 4
-                    buf[o : o + 4] = seen_b
-
-        surf = pygame.image.frombuffer(buf, (tw, th), "RGBA")
-        self._fog_full_surf = surf
-
-        ftex = TerrainTextureBridge.refresh_surface_texture(surf, cache_key=_FOG_TEX_KEY)
-        if ftex is None:
-            # Do not advance _fog_revision_seen — otherwise we never retry and fog stays stale.
-            return
-
-        ts = int(config.TILE_SIZE)
-        # WK23 R1: Quad size + center MUST match _build_3d_terrain() map extent — any drift
-        # misaligns fog vs terrain and makes FOW “slide” relative to heroes/units.
-        w_world = (tw * ts) / SCALE
-        d_world = (th * ts) / SCALE
-        cx_px = tw * ts * 0.5
-        cy_px = th * ts * 0.5
-        wx, wz = sim_px_to_world_xz(cx_px, cy_px)
-
-        from panda3d.core import TransparencyAttrib
-
-        # SPRINT-BUG-008: keep fog well above the terrain quad.
-        fog_y = float(getattr(config, "URSINA_FOG_QUAD_Y", 0.12))
-
-        if self._fog_entity is None:
-            self._fog_entity = Entity(
-                model="quad",
-                texture=ftex,
-                scale=(w_world, d_world, 1),
-                rotation=(90, 0, 0),
-                position=(wx, fog_y, wz),
-                color=color.white,
-                double_sided=True,
-            )
-            if self._fog_entity.texture:
-                self._fog_entity.texture.filtering = None
-            self._fog_entity.texture_scale = Vec2(1, -1)
-            self._fog_entity.texture_offset = Vec2(0, 1)
-            self._fog_entity.setTransparency(TransparencyAttrib.M_alpha)
-            self._fog_entity.set_depth_write(False)
-            # Overlay must not depth-fail against billboards/terrain or FOW darkening desyncs visually.
-            self._fog_entity.set_depth_test(False)
-            self._fog_entity.shader = unlit_shader
-            self._fog_entity.hide(0b0001)
-            # Ground fog must render before buildings/props; vertical objects are hidden by tile visibility.
-            self._fog_entity.render_queue = 0
-        else:
-            self._fog_entity.texture = ftex
-            self._fog_entity.position = (wx, fog_y, wz)
-            self._fog_entity.scale = (w_world, d_world, 1)
-            self._fog_entity.texture_scale = Vec2(1, -1)
-            self._fog_entity.texture_offset = Vec2(0, 1)
-            self._fog_entity.render_queue = 0
-
-        self._fog_revision_seen = int(fog_revision)
-
-    def _track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
-        """Register vertical terrain props that should disappear only in unexplored fog."""
-        # Vertical props must draw after the ground-fog quad; otherwise their tops can be clipped
-        # by fog that is visually behind them at shallow perspective camera angles.
-        ent.render_queue = 1
-        key = (int(tx), int(ty))
-        self._visibility_gated_terrain.append((ent, key[0], key[1]))
-        self._visibility_gated_terrain_by_tile.setdefault(key, []).append(ent)
-
-    def _sync_terrain_prop_tile_visibility(self, ent: Entity, vis: Visibility) -> None:
-        is_visible = vis != Visibility.UNSEEN
-        if getattr(ent, "_ks_prop_enabled", None) is not is_visible:
-            ent.enabled = bool(is_visible)
-            ent._ks_prop_enabled = bool(is_visible)
-        if is_visible:
-            try:
-                seen_mult = float(getattr(config, "URSINA_SEEN_PROP_FOG_MULT", 0.5))
-            except Exception:
-                seen_mult = 0.5
-            _set_static_prop_fog_tint(ent, seen_mult if vis == Visibility.SEEN else 1.0)
-
-    def _sync_visibility_gated_terrain(self, world, fog_revision: int) -> None:
-        """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
-        engine_rev = int(fog_revision)
-        if self._terrain_visibility_revision_seen == engine_rev:
-            return
-
-        current_visible = set(getattr(world, "_currently_visible", set()) or set())
-        if self._terrain_visible_tiles_seen is None:
-            for ent, tx, ty in self._visibility_gated_terrain:
-                if 0 <= ty < world.height and 0 <= tx < world.width:
-                    vis = world.visibility[ty][tx]
-                else:
-                    vis = Visibility.UNSEEN
-                self._sync_terrain_prop_tile_visibility(ent, vis)
-        else:
-            changed_tiles = self._terrain_visible_tiles_seen ^ current_visible
-            for tx, ty in changed_tiles:
-                ents = self._visibility_gated_terrain_by_tile.get((int(tx), int(ty)))
-                if not ents:
-                    continue
-                if 0 <= ty < world.height and 0 <= tx < world.width:
-                    vis = world.visibility[ty][tx]
-                else:
-                    vis = Visibility.UNSEEN
-                for ent in ents:
-                    self._sync_terrain_prop_tile_visibility(ent, vis)
-        self._terrain_visible_tiles_seen = current_visible
-        self._terrain_visibility_revision_seen = engine_rev
-
-    def _ensure_grid_debug_overlay(self, world, buildings) -> None:
-        """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
-
-        Off by default. When enabled, renders one line-mesh Entity spanning a
-        configurable square region around the castle (smaller than the full map so the
-        lines read clearly from a close camera). The region size in tiles is controlled
-        by ``KINGDOM_URSINA_GRID_DEBUG_TILES`` (default 20). Slightly above ``y=0`` to
-        avoid z-fighting with the terrain quad.
-        """
-        if os.environ.get("KINGDOM_URSINA_GRID_DEBUG") != "1":
-            if self._grid_debug_entity is not None:
-                try:
-                    import ursina as u
-
-                    u.destroy(self._grid_debug_entity)
-                except Exception:
-                    pass
-                self._grid_debug_entity = None
-            return
-        if self._grid_debug_entity is not None:
-            return
-        try:
-            from ursina import Mesh
-        except Exception:
-            return
-
-        tw, th = int(world.width), int(world.height)
-        ts = int(config.TILE_SIZE)
-
-        try:
-            radius_tiles = int(os.environ.get("KINGDOM_URSINA_GRID_DEBUG_TILES", "") or "0")
-        except ValueError:
-            radius_tiles = 0
-        # Anchor on the castle for debug focus; fall back to map center.
-        castle = next(
-            (
-                b
-                for b in (buildings or [])
-                if getattr(b, "building_type", None) == "castle"
-            ),
-            None,
-        )
-        if castle is not None:
-            cx_tiles = int(castle.grid_x) + int(castle.size[0]) // 2
-            cy_tiles = int(castle.grid_y) + int(castle.size[1]) // 2
-        else:
-            cx_tiles = tw // 2
-            cy_tiles = th // 2
-
-        if radius_tiles <= 0:
-            tx_lo, tx_hi = 0, tw
-            ty_lo, ty_hi = 0, th
-        else:
-            tx_lo = max(0, cx_tiles - radius_tiles)
-            tx_hi = min(tw, cx_tiles + radius_tiles + 1)
-            ty_lo = max(0, cy_tiles - radius_tiles)
-            ty_hi = min(th, cy_tiles + radius_tiles + 1)
-
-        y = 0.02  # just above terrain to avoid z-fighting; still below building meshes.
-        x_min_world = (tx_lo * ts) / SCALE
-        x_max_world = (tx_hi * ts) / SCALE
-        z_max_world = -(ty_lo * ts) / SCALE
-        z_min_world = -(ty_hi * ts) / SCALE
-
-        verts: list[tuple[float, float, float]] = []
-        for tx in range(tx_lo, tx_hi + 1):
-            x = (tx * ts) / SCALE
-            verts.append((x, y, z_min_world))
-            verts.append((x, y, z_max_world))
-        for ty in range(ty_lo, ty_hi + 1):
-            z = -(ty * ts) / SCALE
-            verts.append((x_min_world, y, z))
-            verts.append((x_max_world, y, z))
-
-        grid_mesh = Mesh(vertices=verts, mode="line", thickness=2.5)
-        self._grid_debug_entity = Entity(
-            model=grid_mesh,
-            color=color.rgba(1.0, 0.95, 0.3, 0.95),
-            shader=unlit_shader,
-            collider=None,
-        )
-        try:
-            from panda3d.core import TransparencyAttrib
-
-            self._grid_debug_entity.setTransparency(TransparencyAttrib.M_alpha)
-        except Exception:
-            pass
-        self._grid_debug_entity.set_depth_write(False)
-        # Render above the terrain quad but below fog and billboards.
-        self._grid_debug_entity.render_queue = 3
-
-    def _build_3d_terrain(self, world, buildings) -> None:
-        """Per-tile path/water meshes + scatter grass doodads on a full-map base plane (v1.5 Sprint 1.2)."""
-        if self._terrain_entity is not None:
-            return
-
-        tw, th = int(world.width), int(world.height)
-        ts = int(config.TILE_SIZE)
-        m = float(TERRAIN_SCALE_MULTIPLIER)
-        grass_models, doodad_models = _environment_grass_and_doodad_model_lists()
-        tree_models = _environment_tree_model_list()
-        # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
-        path_model = _environment_model_path("path_stone")
-        rock_model = _environment_model_path("rock")
-        occupied_tiles = _building_occupied_tiles(buildings)
-        tm = m * float(TREE_SCALE_MULTIPLIER)
-        rm = m * float(ROCK_SCALE_MULTIPLIER)
-        g_sc = m * float(GRASS_SCATTER_SCALE_MULTIPLIER)
-        scatter_stride = max(1, int(getattr(config, "URSINA_TERRAIN_SCATTER_STRIDE", 1)))
-        grass_clumps, grass_stride = _grass_density_budget()
-
-        root = Entity(name="terrain_3d_root")
-        water_tint = color.rgb(0.24, 0.48, 0.82)
-
-        # Cohesive green ground plane under the grid (organic scatter sits on y≈0 above this).
-        w_world = (tw * ts) / SCALE
-        d_world = (th * ts) / SCALE
-        cx_px = tw * ts * 0.5
-        cy_px = th * ts * 0.5
-        base_wx, base_wz = sim_px_to_world_xz(cx_px, cy_px)
-        ground_ent = Entity(
-            parent=root,
-            model="quad",
-            color=color.white,
-            scale=(w_world, d_world, 1),
-            rotation=(90, 0, 0),
-            position=(base_wx, -0.05, base_wz),
-            collision=False,
-            double_sided=True,
-            shader=unlit_shader,
-            add_to_scene_entities=False,
-        )
-        # WK33: tile the user-provided grass albedo across the entire ground plane.
-        try:
-            from ursina import Texture
-            from PIL import Image
-
-            if getattr(self, "_ks_ground_tex", None) is None:
-                p = (
-                    _PROJECT_ROOT
-                    / "assets"
-                    / "models"
-                    / "Models"
-                    / "Textures"
-                    / "floor_ground_grass.png"
-                )
-                if p.is_file():
-                    img = Image.open(p).convert("RGBA")
-                    self._ks_ground_tex = Texture(img, filtering=None)
-                else:
-                    self._ks_ground_tex = None
-
-            if self._ks_ground_tex is not None:
-                ground_ent.texture = self._ks_ground_tex
-                # Default: 1 repeat per ~2 tiles (override for quick tuning).
-                tiles_per_repeat = 2.0
-                try:
-                    raw = os.environ.get("KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT", "").strip()
-                    if raw:
-                        tiles_per_repeat = max(0.25, float(raw))
-                except Exception:
-                    tiles_per_repeat = 2.0
-                ground_ent.texture_scale = Vec2(float(tw) / tiles_per_repeat, float(th) / tiles_per_repeat)
-        except Exception:
-            pass
-
-        for ty in range(th):
-            for tx in range(tw):
-                tile = int(world.tiles[ty][tx])
-                cx_px = tx * ts + ts * 0.5
-                cy_px = ty * ts + ts * 0.5
-                wx, wz = px_to_world(cx_px, cy_px)
-
-                if tile == TileType.PATH:
-                    path_ent = Entity(
-                        parent=root,
-                        model=path_model,
-                        position=(wx, 0.0, wz),
-                        scale=(m, m, m),
-                        color=color.white,
-                        collision=False,
-                        double_sided=True,
-                        add_to_scene_entities=False,
-                    )
-                    _finalize_kenney_scatter_entity(path_ent, path_model)
-                elif tile == TileType.WATER:
-                    # WK32-BUG-007: flat water plane — not a tinted grass cross-mesh.
-                    tile_w = (float(ts) / SCALE) * m
-                    Entity(
-                        parent=root,
-                        model="quad",
-                        rotation=(90, 0, 0),
-                        position=(wx, 0.005, wz),
-                        scale=(tile_w, tile_w, 1),
-                        color=water_tint,
-                        collision=False,
-                        double_sided=True,
-                        shader=unlit_shader,
-                        add_to_scene_entities=False,
-                    )
-
-                # WK31: optional stride thins non-grass props (doodads/rocks).
-                # WK32 r3: grass keeps r2 sub-tile jitter but now has a startup budget.
-                on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
-                in_occ = (tx, ty) in occupied_tiles
-                grass_here = (
-                    grass_clumps > 0
-                    and (tile == TileType.GRASS or tile == TileType.TREE)
-                    and not in_occ
-                    and _grass_tile_selected(tx, ty, grass_stride)
-                )
-                if grass_here:
-                    tile_w = float(ts) / float(SCALE)
-                    wh = tile_w * 0.46
-                    for slot in range(int(grass_clumps)):
-                        jx, jz, yaw = _grass_clump_offset(tx, ty, slot, wh)
-                        gi = _scatter_model_index(
-                            tx, ty, len(grass_models), salt=11 + slot * 17
-                        )
-                        gm = grass_models[gi]
-                        g_stem = Path(gm).stem
-                        g_mul = (
-                            float(GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE)
-                            if _stem_is_flower_ground_scatter(g_stem)
-                            else 1.0
-                        )
-                        g_scale = g_sc * g_mul
-                        g_ent = Entity(
-                            parent=root,
-                            model=gm,
-                            position=(wx + jx, 0.0, wz + jz),
-                            scale=(g_scale, g_scale, g_scale),
-                            rotation=(0, yaw, 0),
-                            color=color.white,
-                            collision=False,
-                            double_sided=True,
-                            add_to_scene_entities=False,
-                        )
-                        _finalize_kenney_scatter_entity(g_ent, gm)
-                        self._track_visibility_gated_terrain(g_ent, tx, ty)
-
-                if tile == TileType.TREE:
-                    ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
-                    tree_model = tree_models[ti]
-                    tree_ent = Entity(
-                        parent=root,
-                        model=tree_model,
-                        position=(wx, 0.0, wz),
-                        scale=(tm, tm, tm),
-                        color=color.white,
-                        collision=False,
-                        double_sided=True,
-                        add_to_scene_entities=False,
-                    )
-                    _finalize_kenney_scatter_entity(tree_ent, tree_model)
-                    self._track_visibility_gated_terrain(tree_ent, tx, ty)
-                elif (
-                    tile == TileType.GRASS
-                    and on_scatter_grid
-                    and not in_occ
-                    and ((tx * 131 + ty * 17) % 11 == 0)
-                ):
-                    di = _scatter_model_index(tx, ty, len(doodad_models), salt=29)
-                    dm = doodad_models[di]
-                    jx, jz, yaw = _grass_scatter_jitter(tx + 101, ty + 67)
-                    dstem = Path(dm).stem
-                    dm_scale = rm * (0.85 if "bush" in dstem.lower() else 1.0)
-                    if _stem_is_log_or_mushroom_ground_scatter(dstem):
-                        dm_scale *= float(GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE)
-                    doodad_ent = Entity(
-                        parent=root,
-                        model=dm,
-                        position=(wx + jx * 0.55, 0.0, wz + jz * 0.55),
-                        scale=(dm_scale, dm_scale, dm_scale),
-                        rotation=(0, yaw, 0),
-                        color=color.white,
-                        collision=False,
-                        double_sided=True,
-                        add_to_scene_entities=False,
-                    )
-                    _finalize_kenney_scatter_entity(doodad_ent, dm)
-                    self._track_visibility_gated_terrain(doodad_ent, tx, ty)
-                elif tile == TileType.GRASS and on_scatter_grid and not in_occ:
-                    h = (tx * 92837111 ^ ty * 689287499) & 0xFFFFFFFF
-                    if h % 503 == 0:
-                        rock_ent = Entity(
-                            parent=root,
-                            model=rock_model,
-                            position=(wx, 0.0, wz),
-                            scale=(rm, rm, rm),
-                            color=color.white,
-                            collision=False,
-                            double_sided=True,
-                            add_to_scene_entities=False,
-                        )
-                        _finalize_kenney_scatter_entity(rock_ent, rock_model)
-                        self._track_visibility_gated_terrain(rock_ent, tx, ty)
-
-        # Do not flattenStrong() the terrain root: Panda3D merge can strip per-tile glTF
-        # material state and turn Kenney path_stone (and similar) into uniform white strips.
-        # WK22 perf note: revisit batching once path meshes use a single atlas or baked strip.
-        # root.flattenStrong()
-        self._terrain_entity = root
-
-    @staticmethod
-    def _apply_pixel_billboard_settings(ent: Entity) -> None:
-        """Alpha-cutout sprites: discard transparent texels; sort/blend without black halos."""
-        from panda3d.core import TransparencyAttrib
-
-        ent.shader = sprite_unlit_shader
-        ent.double_sided = True
-        ent.setTransparency(TransparencyAttrib.M_alpha)
-        ent.set_depth_write(False)
-        ent.render_queue = 1
-        # WK22 SPRINT-BUG-006: exclude alpha billboards from directional shadow pass (mask 0b0001).
-        ent.hide(0b0001)
-
-    @staticmethod
-    def _sync_inside_hero_draw_layer(ent: Entity, is_inside: bool) -> None:
-        """Stack order like a 2D top layer: same world position, drawn after buildings, no depth reject.
-
-        When a hero uses the ``inside`` clip (bubble/circle), the quad must composite over the
-        building façade pixels — not float in Y. Terrain/fog stay 0–2; inside heroes use queue 3.
-        """
-        want = bool(is_inside)
-        if getattr(ent, "_ks_inside_layer", None) is want:
-            return
-        ent._ks_inside_layer = want
-        if want:
-            ent.render_queue = 3
-            ent.set_depth_test(False)
-        else:
-            ent.render_queue = 1
-            ent.set_depth_test(True)
-
-    @staticmethod
-    def _set_texture_if_changed(ent: Entity, tex) -> None:
-        """Avoid model.setTexture every frame — Ursina's texture setter always reapplies (WK22 R3)."""
-        if getattr(ent, "_texture", None) is tex:
-            return
-        ent.texture = tex
-
-    @staticmethod
-    def _set_shader_if_changed(ent: Entity, sh) -> None:
-        """Avoid setShader + default_input churn every frame (major cost when hiring many heroes)."""
-        if getattr(ent, "_shader", None) is sh:
-            return
-        ent.shader = sh
-
-    @staticmethod
-    def _sync_billboard_entity(
-        ent: Entity,
-        *,
-        tex,
-        tint_col,
-        scale_xyz: tuple[float, float, float],
-        pos_xyz: tuple[float, float, float],
-        shader,
-    ) -> None:
-        """Position every frame; avoid re-setting billboard/scale/shader when unchanged (Ursina churn)."""
-        UrsinaRenderer._set_texture_if_changed(ent, tex)
-        target_color = color.white if tex is not None else tint_col
-        if getattr(ent, "_ks_last_color", None) != target_color:
-            ent.color = target_color
-            ent._ks_last_color = target_color
-        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
-            ent.scale = scale_xyz
-            ent._ks_last_scale = scale_xyz
-        if not getattr(ent, "_ks_billboard_configured", False):
-            ent.billboard = True
-            UrsinaRenderer._apply_pixel_billboard_settings(ent)
-            ent._ks_billboard_configured = True
-        UrsinaRenderer._set_shader_if_changed(ent, shader)
-        ent.position = pos_xyz
-
-    def _get_or_create_entity(
-        self,
-        sim_obj,
-        *,
-        model="cube",
-        col=color.white,
-        scale=(1, 1, 1),
-        rotation=(0, 0, 0),
-        texture=None,
-        billboard=False,
-    ):
-        obj_id = id(sim_obj)
-        if obj_id not in self._entities:
-            kw = dict(
-                model=model,
-                color=col,
-                scale=scale,
-                rotation=rotation,
-                billboard=billboard,
-            )
-            if texture is not None:
-                kw["texture"] = texture
-            ent = Entity(**kw)
-            if billboard:
-                self._apply_pixel_billboard_settings(ent)
-                ent._ks_billboard_configured = True
-            self._entities[obj_id] = ent
-        return self._entities[obj_id], obj_id
-
-    @staticmethod
-    def _apply_lit_3d_building_settings(ent: Entity) -> None:
-        """Lit meshes use the same shader as world geometry (lit + shadows), not sprite_unlit."""
-        from panda3d.core import TransparencyAttrib
-
-        ent.billboard = False
-        _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
-        ent.shader = lit_with_shadows_shader if _shadows else unlit_shader
-        ent.double_sided = True
-        ent.render_queue = 1
-        ent.collision = False
-        try:
-            ent.setTransparency(TransparencyAttrib.M_none)
-        except Exception:
-            pass
-        ent.set_depth_test(True)
-        ent.set_depth_write(True)
-
-    def _get_or_create_3d_building_entity(
-        self, sim_obj, model_path: str, col
-    ) -> tuple:
-        """Replace a prior billboard entity for the same sim object if switching render mode."""
-        import ursina as u
-
-        obj_id = id(sim_obj)
-        if obj_id in self._entities:
-            ent = self._entities[obj_id]
-            if getattr(ent, "_ks_building_mode", None) != "mesh_3d":
-                u.destroy(ent)
-                del self._entities[obj_id]
-            elif getattr(ent, "_ks_mesh_model_path", None) != model_path:
-                u.destroy(ent)
-                del self._entities[obj_id]
-
-        if obj_id not in self._entities:
-            ent = Entity(
-                model=model_path,
-                color=col,
-                collider=None,
-                double_sided=True,
-            )
-            ent._ks_building_mode = "mesh_3d"
-            ent._ks_mesh_model_path = model_path
-            ent._ks_billboard_configured = False
-            self._apply_lit_3d_building_settings(ent)
-            self._entities[obj_id] = ent
-        return self._entities[obj_id], obj_id
-
-    @staticmethod
-    def _sync_3d_building_entity(
-        ent: Entity,
-        *,
-        mesh_kind: str,
-        model_path: str,
-        wx: float,
-        wz: float,
-        fx: float,
-        fz: float,
-        hy: float,
-        tint_col,
-        state: str,
-    ) -> None:
-        """Position/scale lit mesh to footprint; sim-agnostic (render only)."""
-        UrsinaRenderer._set_texture_if_changed(ent, None)
-        scale_xyz = _footprint_scale_3d(mesh_kind, fx, fz, hy)
-        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
-            ent.scale = scale_xyz
-            ent._ks_last_scale = scale_xyz
-        _sx, sy, _sz = scale_xyz
-        oy = _building_3d_origin_y(model_path, sy)
-        ent.position = (wx, oy, wz)
-        _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
-        want_shader = lit_with_shadows_shader if _shadows else unlit_shader
-        UrsinaRenderer._set_shader_if_changed(ent, want_shader)
-        if state == "damaged":
-            ent.color = color.rgb(0.78, 0.42, 0.42)
-        elif state == "construction":
-            ent.color = color.rgb(0.72, 0.72, 0.65)
-        else:
-            ent.color = tint_col
-
-    def _get_or_create_prefab_building_entity(
-        self, sim_obj, prefab_path: Path, col
-    ) -> tuple:
-        """WK30: multi-piece prefab root for any building type.
-
-        Replaces a prior billboard / static-mesh / mismatched-prefab entity for the same
-        sim object so mode switches (env flag flipped, prefab added/removed at runtime,
-        building type churn) destroy + rebuild cleanly.
-        """
-        import ursina as u
-
-        obj_id = id(sim_obj)
-        if obj_id in self._entities:
-            ent = self._entities[obj_id]
-            if getattr(ent, "_ks_building_mode", None) != "prefab" or getattr(
-                ent, "_ks_prefab_path", None
-            ) != str(prefab_path):
-                u.destroy(ent)
-                del self._entities[obj_id]
-
-        if obj_id not in self._entities:
-            root = _load_prefab_instance(prefab_path, Vec3(0, 0, 0))
-            root.color = col
-            root._ks_building_mode = "prefab"
-            root._ks_prefab_path = str(prefab_path)
-            root.collision = False
-            self._entities[obj_id] = root
-        return self._entities[obj_id], obj_id
-
-    @staticmethod
-    def _sync_prefab_building_entity(
-        ent: Entity,
-        *,
-        mesh_kind: str,
-        wx: float,
-        wz: float,
-        fx: float,
-        fz: float,
-        hy: float,
-        tint_col,
-        state: str,
-    ) -> None:
-        """WK30 fit-scale: map authored prefab extent to the sim footprint (XZ only).
-
-        ``fx`` / ``fz`` are the sim footprint extents in world units (1 unit = 1 tile).
-        ``hy`` is the legacy sim-height hint; **we deliberately do not scale Y** — piece
-        vertical stacking stays as authored to avoid squashing roofs / towers.
-
-        Scale rule (WK31: anisotropic XZ for non-square sim footprints):
-          effective_w = max(authored_w, spread_x + 1.0)  # 1.0 = assumed Kenney piece width
-          effective_d = max(authored_d, spread_z + 1.0)
-          scale_x     = (fx / max(effective_w, 1e-6)) * PREFAB_FIT_INSET
-          scale_z     = (fz / max(effective_d, 1e-6)) * PREFAB_FIT_INSET
-
-        **Why not uniform** ``min(fx/ew, fz/ed)`` on both axes: for a 3×2 building, one
-        ratio is often smaller; uniform scaling under-fills the long edge (inn looked
-        squeezed into ~2×2). Independent X/Z mapping fills the sim ``fx × fz`` rect.
-
-        When the sim footprint is square and effective_w ≈ effective_d, scale_x ≈ scale_z.
-        When a prefab overflows its authored footprint, the max(..) effective_* terms
-        still apply; tighten piece layouts in JSON if stretching is undesirable.
-        """
-        UrsinaRenderer._set_texture_if_changed(ent, None)
-        authored_w, authored_d = getattr(ent, "_ks_prefab_authored_ft", (1.0, 1.0))
-        spread_x, spread_z = getattr(ent, "_ks_prefab_xz_spread", (0.0, 0.0))
-        effective_w = max(float(authored_w), float(spread_x) + 1.0)
-        effective_d = max(float(authored_d), float(spread_z) + 1.0)
-        scale_x = (fx / max(effective_w, 1e-6)) * _PREFAB_FIT_INSET
-        scale_z = (fz / max(effective_d, 1e-6)) * _PREFAB_FIT_INSET
-        scale_xyz = (scale_x, 1.0, scale_z)
-        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
-            ent.scale = scale_xyz
-            ent._ks_last_scale = scale_xyz
-        ga = float(getattr(ent, "_ks_ground_anchor_y", 0.0))
-        ent.position = (wx, ga, wz)
-        if state == "damaged":
-            ent.color = color.rgb(0.78, 0.42, 0.42)
-        elif state == "construction":
-            ent.color = color.rgb(0.72, 0.72, 0.65)
-        else:
-            ent.color = tint_col
-
     def update(self, snapshot: "SimStateSnapshot"):
         """Called every frame by the Ursina app loop."""
         try:
@@ -1701,10 +303,10 @@ class UrsinaRenderer:
 
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
-        self._build_3d_terrain(world, getattr(snapshot, "buildings", ()))
-        self._ensure_fog_overlay(world, fog_revision)
-        self._sync_visibility_gated_terrain(world, fog_revision)
-        self._ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
+        self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        self._terrain_fog.ensure_fog_overlay(world, fog_revision)
+        self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
+        self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
         active_ids = set()
         self._sync_snapshot_buildings(snapshot, world, active_ids)
@@ -1776,10 +378,10 @@ class UrsinaRenderer:
             prefab_path = _resolve_prefab_path(bts, b)
             if prefab_path is not None:
                 staged = _resolve_construction_staged_prefab(b, prefab_path, tw, th)
-                ent, obj_id = self._get_or_create_prefab_building_entity(
+                ent, obj_id = self._entity_render.get_or_create_prefab_building_entity(
                     b, staged, col
                 )
-                self._sync_prefab_building_entity(
+                self._entity_render.sync_prefab_building_entity(
                     ent,
                     mesh_kind=bts,
                     wx=wx,
@@ -1796,8 +398,8 @@ class UrsinaRenderer:
             if _is_3d_mesh_building(bts, b):
                 mesh_kind = _mesh_kind_for_building(bts, b)
                 model_path = _environment_model_path(mesh_kind)
-                ent, obj_id = self._get_or_create_3d_building_entity(b, model_path, col)
-                self._sync_3d_building_entity(
+                ent, obj_id = self._entity_render.get_or_create_3d_building_entity(b, model_path, col)
+                self._entity_render.sync_3d_building_entity(
                     ent,
                     mesh_kind=mesh_kind,
                     model_path=model_path,
@@ -1825,7 +427,7 @@ class UrsinaRenderer:
 
             # Facade width ≈ larger footprint edge; one textured face (no cube "roof" duplicate).
             face_w = max(fx, fz)
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 b,
                 model="quad",
                 col=col,
@@ -1835,11 +437,11 @@ class UrsinaRenderer:
             if not getattr(ent, "_ks_billboard_configured", False):
                 ent.model = "quad"
                 ent.billboard = True
-                self._apply_pixel_billboard_settings(ent)
+                self._entity_render.apply_pixel_billboard_settings(ent)
                 ent._ks_billboard_configured = True
             # Do not assign ent.model every frame — model_setter reloads the mesh (WK22 R2).
             ent.rotation = (0, 0, 0)
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=b_tex if b_tex is not None else None,
                 tint_col=col,
@@ -1870,7 +472,7 @@ class UrsinaRenderer:
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
             clips_h = HeroSpriteLibrary.clips_for(hc_key, size=int(config.TILE_SIZE))
             sy = UNIT_BILLBOARD_SCALE
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 h,
                 model="quad",
                 col=color.white,
@@ -1884,7 +486,7 @@ class UrsinaRenderer:
             htex = TerrainTextureBridge.surface_to_texture(hsurf, cache_key=h_cache_key)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             y_center = sy * 0.5
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=htex,
                 tint_col=col,
@@ -1894,7 +496,7 @@ class UrsinaRenderer:
             )
             # Layer compositing (not Y offset): draw after building billboards; skip depth so the
             # "inside" bubble paints over the same footprint as the façade.
-            self._sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
+            self._entity_render.sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
             active_ids.add(obj_id)
 
         
@@ -1913,7 +515,7 @@ class UrsinaRenderer:
             col = COLOR_ENEMY
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
             clips_e = EnemySpriteLibrary.clips_for(et_key, size=int(config.TILE_SIZE))
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 e,
                 model="quad",
                 col=color.white,
@@ -1926,7 +528,7 @@ class UrsinaRenderer:
             )
             etex = TerrainTextureBridge.surface_to_texture(esurf, cache_key=e_cache_key)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=etex,
                 tint_col=col,
@@ -1948,7 +550,7 @@ class UrsinaRenderer:
             ptex = TerrainTextureBridge.surface_to_texture(
                 psurf, cache_key=("worker_idle", "peasant", int(config.TILE_SIZE))
             )
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 p,
                 model="quad",
                 col=color.white,
@@ -1957,7 +559,7 @@ class UrsinaRenderer:
                 billboard=True,
             )
             wx, wz = sim_px_to_world_xz(p.x, p.y)
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=ptex,
                 tint_col=col,
@@ -1980,7 +582,7 @@ class UrsinaRenderer:
             )
             sxz = GUARD_SCALE_XZ
             sy = GUARD_SCALE_Y
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 g,
                 model="quad",
                 col=color.white,
@@ -1989,7 +591,7 @@ class UrsinaRenderer:
                 billboard=True,
             )
             wx, wz = sim_px_to_world_xz(g.x, g.y)
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=gtex,
                 tint_col=col,
@@ -2013,7 +615,7 @@ class UrsinaRenderer:
                     tcsurf, cache_key=("worker_idle", "tax_collector", int(config.TILE_SIZE))
                 )
                 s = PEASANT_SCALE
-                ent, obj_id = self._get_or_create_entity(
+                ent, obj_id = self._entity_render.get_or_create_entity(
                     tc,
                     model="quad",
                     col=color.white,
@@ -2022,7 +624,7 @@ class UrsinaRenderer:
                     billboard=True,
                 )
                 wx, wz = sim_px_to_world_xz(tc.x, tc.y)
-                self._sync_billboard_entity(
+                self._entity_render.sync_billboard_entity(
                     ent,
                     tex=tctex,
                     tint_col=col,
@@ -2043,7 +645,7 @@ class UrsinaRenderer:
         ptex = self._projectile_tex
         for proj in getattr(snapshot, "vfx_projectiles", ()) or ():
             s = PROJECTILE_BILLBOARD_SCALE
-            ent, obj_id = self._get_or_create_entity(
+            ent, obj_id = self._entity_render.get_or_create_entity(
                 proj,
                 model="quad",
                 col=color.white,
@@ -2054,7 +656,7 @@ class UrsinaRenderer:
             if not getattr(ent, "_ks_billboard_configured", False):
                 ent.model = "quad"
                 ent.billboard = True
-                self._apply_pixel_billboard_settings(ent)
+                self._entity_render.apply_pixel_billboard_settings(ent)
                 ent._ks_billboard_configured = True
             # Draw above the floor plane: tiny Y (s*0.5) caused depth-fighting with terrain; stack with units.
             if not getattr(ent, "_ks_projectile_depth", False):
@@ -2062,7 +664,7 @@ class UrsinaRenderer:
                 ent.render_queue = 2
                 ent._ks_projectile_depth = True
             wx, wz = sim_px_to_world_xz(proj.x, proj.y)
-            self._sync_billboard_entity(
+            self._entity_render.sync_billboard_entity(
                 ent,
                 tex=ptex,
                 tint_col=color.white,

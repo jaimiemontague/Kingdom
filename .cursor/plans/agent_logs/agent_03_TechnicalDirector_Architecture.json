@@ -1429,6 +1429,76 @@
           "next_steps_pm": "PM Step 8 Jaimie manual smokes; optional Agent 13 CHANGELOG draft if release"
         }
       }
+    },
+    "wk42-renderer-dedupe-wire-collabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
+        "notes": "WK42 R1–R3: dedupe module block + wire UrsinaTerrainFogCollab + UrsinaEntityRenderCollab"
+      },
+      "rounds": {
+        "wk42_r1_r2_r3_complete": {
+          "round_id": "wk42_r1_r2_r3_complete",
+          "what_i_changed": [
+            "ursina_renderer.py: removed duplicate module-level block (lines 119–819); imports from ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim; grass albedo path uses PROJECT_ROOT import",
+            "ursina_renderer.py: UrsinaTerrainFogCollab(self) + UrsinaEntityRenderCollab(self) in __init__ after _setup_scene_lighting(); deleted 6 terrain/fog methods + 11 entity-render staticmethods; update() and sync paths delegate to collaborators",
+            "Removed unused zlib import from ursina_renderer.py"
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "metrics": {
+            "ursina_renderer_line_count_before": 2094,
+            "ursina_renderer_line_count_after": 669
+          },
+          "preflight_diff_note": "Split modules from WK41 matched the running renderer copy; no cross-file divergence fixes required in this session.",
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "114 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0"
+            }
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm",
+            "python main.py --renderer pygame --no-llm"
+          ],
+          "next_steps_pm": "Jaimie: manual smokes per sprint plan (Ursina 5–10 min + pygame 5 min). Agent 11/10: confirm parallel gate/FPS consult per PM send order if not yet executed per round.",
+          "wk42_hotfix_restore_update_2026_04_27": {
+            "issue": "Agent 11 blocker: AttributeError UrsinaRenderer has no attribute update — R3 mechanical delete removed update() which lived between entity staticmethods and _ensure_shadow_bounds_once",
+            "what_i_changed": [
+              "game/graphics/ursina_renderer.py: restored def update(self, snapshot) — behavior matches git ca86a76 / pre-regression flow with WK42 delegation (self._terrain_fog.build_3d_terrain, ensure_fog_overlay, sync_visibility_gated_terrain, ensure_grid_debug_overlay)"
+            ],
+            "recovery_source": "Logic reconciled from git show ca86a76:game/graphics/ursina_renderer.py update() body + current _terrain_fog wiring (not blind paste)",
+            "evidence": {
+              "determinism_guard": { "command": "python tools/determinism_guard.py", "exit_code": 0, "status": "PASS" },
+              "pytest": { "command": "python -m pytest tests/", "exit_code": 0, "status": "PASS", "note": "114 passed" },
+              "qa_smoke_quick": { "command": "python tools/qa_smoke.py --quick", "exit_code": 0, "status": "PASS" },
+              "validate_assets": { "command": "python tools/validate_assets.py --report", "exit_code": 0, "status": "PASS", "note": "errors=0" }
+            },
+            "how_to_test": [
+              "python main.py --renderer ursina --no-llm"
+            ]
+          }
+        }
+      }
     }
   }
 }

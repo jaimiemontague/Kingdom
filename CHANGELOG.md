@@ -13,6 +13,14 @@ Internal/code organization follow-up after the refactor (plan: `.cursor/plans/wk
 - **Docs:** Refactor inventory (`docs/refactor/engine_access_inventory.md`) lists the new modules for anyone tracing **snapshot → renderer → Ursina**.
 - **Reminder:** You can still run without API keys: **`python main.py --no-llm`** or **`python main.py --provider mock`**.
 
+### WK42 — Ursina renderer dedupe & collaborator wiring (readability; no gameplay change)
+
+Finish WK41 mechanical split by **removing duplicated module-level code** from `game/graphics/ursina_renderer.py` and **routing** terrain/fog/grid through **`UrsinaTerrainFogCollab`** and units/buildings/prefabs through **`UrsinaEntityRenderCollab`** (plan: `.cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md`). Presentation should match pre-WK42 behavior.
+
+- **Under the hood:** Duplicate helpers (~lines 119–819) deleted from the renderer in favor of imports from **`ursina_environment`**, **`ursina_prefabs`**, **`ursina_coords`**, **`ursina_units_anim`**; **`ursina_renderer.py`** reduced to an orchestrator scale (~700 lines vs ~2k).
+- **Collaborators:** **`self._terrain_fog`** and **`self._entity_render`** own the former inlined static methods; **`update()`** delegates to them (restored after a brief regression where **`update`** was accidentally removed—fixed before ship).
+- **Quality:** Automated gates (**`python tools/qa_smoke.py --quick`**, **`python tools/validate_assets.py --report`**) plus human playtest on **Ursina** and **pygame** renderers PASS.
+
 ## Prototype v1.5.0 — The Game Goes 3D
 
 This update completes the **Phase 1–2** transition to a cohesive **static 3D** Ursina presentation (environment + kitbash buildings + tooling). Animated 3D units remain a possible **1.5.x** follow-up. Roadmap: `.cursor/plans/master_plan_3d_graphics_v1_5.md`.
