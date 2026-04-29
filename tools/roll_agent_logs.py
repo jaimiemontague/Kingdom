@@ -46,6 +46,9 @@ def _write_json(path: Path, obj: Dict[str, Any]) -> None:
     # Keep stable, readable formatting. Do not sort keys: sprint key order matters.
     text = json.dumps(obj, indent=2, ensure_ascii=False)
     path.write_text(text + "\n", encoding="utf-8")
+    # Failsafe: ensure the file we wrote is valid JSON.
+    # This is intentionally simple and fast; it prevents partial writes from silently corrupting logs.
+    json.loads(path.read_text(encoding="utf-8"))
 
 
 def _is_schema_log(obj: Any) -> bool:
@@ -63,6 +66,62 @@ def _is_schema_log(obj: Any) -> bool:
 def _agent_id(obj: Dict[str, Any]) -> str:
     agent = obj.get("agent") or {}
     return str(agent.get("id", "unknown"))
+
+def _parse_created_utc(sprint_obj: Any) -> Optional[_dt.datetime]:
+    """
+    Best-effort parse of sprint_meta.created_utc for chronological ordering.
+
+    Many logs include ISO-8601 like: 2026-04-28T00:00:00Z.
+    If missing/unparseable, return None and fall back to insertion order.
+    """
+    if not isinstance(sprint_obj, dict):
+        return None
+    meta = sprint_obj.get("sprint_meta")
+    if not isinstance(meta, dict):
+        return None
+    raw = meta.get("created_utc")
+    if not raw:
+        return None
+    s = str(raw).strip()
+    try:
+        # Accept trailing Z.
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = _dt.datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt.astimezone(_dt.timezone.utc)
+    except Exception:
+        return None
+
+def _ordered_sprint_keys(sprints: Dict[str, Any]) -> List[str]:
+    """
+    Return sprint keys in chronological order when possible.
+
+    Rolling logs are dicts; insertion order is usually chronological but can be wrong if old
+    sprint blocks are edited/added later. Prefer created_utc when present.
+    """
+    keys = list(sprints.keys())
+    if not keys:
+        return []
+    # If none of the sprints have created_utc, keep insertion order.
+    created_any = False
+    parsed: Dict[str, Optional[_dt.datetime]] = {}
+    for k in keys:
+        dt = _parse_created_utc(sprints.get(k))
+        parsed[k] = dt
+        if dt is not None:
+            created_any = True
+    if not created_any:
+        return keys
+    # Stable sort: primary by created_utc (None sorts oldest), secondary by original insertion index.
+    index = {k: i for i, k in enumerate(keys)}
+    def _key(k: str) -> tuple:
+        dt = parsed.get(k)
+        # None -> sort first (oldest) so “keep last N” keeps newest dated sprints.
+        dt_key = dt or _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
+        return (dt_key, index[k])
+    return sorted(keys, key=_key)
 
 
 def _backup_file(path: Path) -> Path:
@@ -124,7 +183,8 @@ def _roll_one(
     result["agent_id"] = agent_id
 
     sprints: Dict[str, Any] = rolling_obj["sprints"]
-    sprint_keys = list(sprints.keys())
+    # IMPORTANT: Prefer chronological ordering by created_utc when available.
+    sprint_keys = _ordered_sprint_keys(sprints)
     result["sprints_total"] = len(sprint_keys)
 
     archive_path = _archive_path_for(rolling_path)

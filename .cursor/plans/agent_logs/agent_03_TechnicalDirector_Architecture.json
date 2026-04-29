@@ -9,52 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk40-default-renderer-ursina-2026-04": {
-      "sprint_meta": {
-        "plan_ref": "Jaimie / WK40 follow-up: default renderer Ursina",
-        "notes": "main.py default --renderer ursina; docs and studio rules; headless/QA still observe_sync (not main.py)."
-      },
-      "rounds": {
-        "r0_default_ursina": {
-          "round_id": "r0_default_ursina",
-          "prompt_text": "WK40 follow-up: make Ursina the default renderer for python main.py; align docs; qa_smoke PASS",
-          "response": {
-            "status": "complete",
-            "summary_bullets": [
-              "main.py: --renderer default pygame → ursina; help text for 2D override.",
-              "02-project-layout.mdc, README.md, 00-shell, 04-qa-gates, 06-workflow-sop: default Ursina; pygame explicit for 2D path.",
-              "master_plan_architecture_refactor.md, wk40_stage_5_sprint, wk38 plan, panda_bam_cache.md, tools/ursina_screenshot.py, PM hub wk40 Jaimie manual (pygame 2nd smoke) aligned."
-            ],
-            "files_changed": [
-              "main.py",
-              ".cursor/rules/02-project-layout.mdc",
-              ".cursor/rules/04-qa-gates.mdc",
-              ".cursor/rules/06-workflow-sop.mdc",
-              ".cursor/rules/00-shell-powershell-default.mdc",
-              "README.md",
-              "docs/dev/panda_bam_cache.md",
-              "tools/ursina_screenshot.py",
-              ".cursor/plans/master_plan_architecture_refactor.md",
-              ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
-              ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
-              ".cursor/plans/wk38_stage_3_gamecommands_43565672.plan.md",
-              ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json"
-            ],
-            "evidence": {
-              "qa_smoke_quick": {
-                "command": "python tools/qa_smoke.py --quick",
-                "exit_code": 0,
-                "status": "PASS"
-              }
-            },
-            "how_to_test": [
-              "python main.py --no-llm",
-              "python main.py --renderer pygame --no-llm"
-            ]
-          }
-        }
-      }
-    },
     "wk40-post-assessor-presentationlayer-doc-2026-04": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk40_post_assessor_tidy_prompts.md (engine doc + PresentationLayer alias)",
@@ -580,6 +534,99 @@
             "python main.py --renderer ursina --no-llm"
           ],
           "blockers": []
+        }
+      }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "notes": "WK46 Stage 3: BuilderPeasant gathers per-peasant wood by chopping trees (5s) + harvesting log pile (5s) before building; chopping only on tiles with Visibility != UNSEEN; log piles are render-only via snapshot.log_stacks."
+      },
+      "rounds": {
+        "wk46_r0_kickoff": {
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_id": "wk46_r0_kickoff",
+          "status": "done",
+          "summary_bullets": [
+            "SimEngine: added deterministic Stage 3 helpers (find_nearest_choppable_tree_for_builder, chop_tree_at, harvest_log_at) enforcing Visibility != UNSEEN and growth >= 0.50; chop clears TileType.TREE->GRASS and updates growth lookup immediately.",
+            "Snapshot contract: added SimStateSnapshot.log_stacks and wired SimEngine.log_stacks into build_snapshot; game_state now includes sim bridge (game_state['sim']=self) for BuilderPeasant to call helpers without import cycles.",
+            "Ursina: added sync_log_stacks() (log_stackLarge model, scale by growth) and renderer wiring; HUD shows peasant Wood X / required when fields exist."
+          ],
+          "files_changed": [
+            "game/entities/nature.py",
+            "game/entities/builder_peasant.py",
+            "game/sim/snapshot.py",
+            "game/sim_engine.py",
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/ui/hud.py"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "121 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "blockers": [
+            "Plan note: runtime model file assets/models/environment/log_stackLarge.glb is owned by Agent 15; this round assumes it exists so Ursina can load via _environment_model_path('log_stackLarge')."
+          ]
+        },
+        "wk46_r0_followup_construction_stage_prefabs": {
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_id": "wk46_r0_followup_construction_stage_prefabs",
+          "status": "done",
+          "summary_bullets": [
+            "Fixed Ursina prefab staging for versioned base prefabs (farm_v2/food_stand_v2) so they can still pick existing stage JSONs named farm_build_20_v1 / farm_build_50_v1 and food_stand_build_20_v1 / food_stand_build_50_v1.",
+            "Result: farms/food stands now render plot → 20% → 50% → final prefab during construction instead of jumping from plot to final."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_prefabs.py"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "125 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ]
         }
       }
     }

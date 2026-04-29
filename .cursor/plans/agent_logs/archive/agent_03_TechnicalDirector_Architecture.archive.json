@@ -4575,6 +4575,52 @@
           }
         }
       }
+    },
+    "wk40-default-renderer-ursina-2026-04": {
+      "sprint_meta": {
+        "plan_ref": "Jaimie / WK40 follow-up: default renderer Ursina",
+        "notes": "main.py default --renderer ursina; docs and studio rules; headless/QA still observe_sync (not main.py)."
+      },
+      "rounds": {
+        "r0_default_ursina": {
+          "round_id": "r0_default_ursina",
+          "prompt_text": "WK40 follow-up: make Ursina the default renderer for python main.py; align docs; qa_smoke PASS",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "main.py: --renderer default pygame → ursina; help text for 2D override.",
+              "02-project-layout.mdc, README.md, 00-shell, 04-qa-gates, 06-workflow-sop: default Ursina; pygame explicit for 2D path.",
+              "master_plan_architecture_refactor.md, wk40_stage_5_sprint, wk38 plan, panda_bam_cache.md, tools/ursina_screenshot.py, PM hub wk40 Jaimie manual (pygame 2nd smoke) aligned."
+            ],
+            "files_changed": [
+              "main.py",
+              ".cursor/rules/02-project-layout.mdc",
+              ".cursor/rules/04-qa-gates.mdc",
+              ".cursor/rules/06-workflow-sop.mdc",
+              ".cursor/rules/00-shell-powershell-default.mdc",
+              "README.md",
+              "docs/dev/panda_bam_cache.md",
+              "tools/ursina_screenshot.py",
+              ".cursor/plans/master_plan_architecture_refactor.md",
+              ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
+              ".cursor/plans/wk38_stage3_input_gamecommands.plan.md",
+              ".cursor/plans/wk38_stage_3_gamecommands_43565672.plan.md",
+              ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json"
+            ],
+            "evidence": {
+              "qa_smoke_quick": {
+                "command": "python tools/qa_smoke.py --quick",
+                "exit_code": 0,
+                "status": "PASS"
+              }
+            },
+            "how_to_test": [
+              "python main.py --no-llm",
+              "python main.py --renderer pygame --no-llm"
+            ]
+          }
+        }
+      }
     }
   }
 }

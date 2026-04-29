@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.1"
-    game_title: str = "Kingdom Sim (Prototype v1.5.1) — 3D Native with major Refactor"
+    prototype_version: str = "1.5.2"
+    game_title: str = "Kingdom Sim (Prototype v1.5.2) — Lumberjacks and Town Building"
     default_borderless: bool = True
 
 
@@ -182,6 +182,14 @@ EARLY_PACING_NUDGE_MODE = SIM.early_pacing_nudge_mode
 TILE_SIZE = MAP.tile_size
 MAP_WIDTH = MAP.width
 MAP_HEIGHT = MAP.height
+
+# WK46 Stage 3: Lumberjack builders (local wood, per BuilderPeasant).
+BUILDER_CHOP_DURATION_S = 5.0
+BUILDER_HARVEST_DURATION_S = 5.0
+BUILDER_WOOD_COST_HOUSE = 10
+BUILDER_WOOD_COST_FOOD_STAND = 10
+BUILDER_WOOD_COST_FARM = 20
+BUILDER_MIN_CHOP_GROWTH = 0.50
 
 # Camera / view settings
 CAMERA_SPEED_PX_PER_SEC = CAMERA.speed_px_per_sec

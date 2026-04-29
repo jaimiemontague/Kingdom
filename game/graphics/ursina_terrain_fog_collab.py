@@ -608,3 +608,95 @@ class UrsinaTerrainFogCollab:
             if getattr(ent, "_ks_tree_growth", None) != g:
                 ent.scale = (s, s, s)
                 ent._ks_tree_growth = g
+
+    def sync_log_stacks(self, world, snapshot_log_stacks) -> None:
+        """WK46 Stage 3: render chopped-tree log piles keyed by tile.
+
+        Visibility gating rules:
+        - enabled only if tile visibility != UNSEEN
+        - apply fog tint multiplier when SEEN (reuse existing helper)
+        """
+        ents = getattr(self._r, "_log_stack_entities", None)
+        if ents is None:
+            return
+
+        root = getattr(self._r, "_terrain_entity", None)
+        if root is None:
+            return
+
+        want_by_tile: dict[tuple[int, int], float] = {}
+        for ls in snapshot_log_stacks or ():
+            try:
+                tx = int(getattr(ls, "grid_x", 0))
+                ty = int(getattr(ls, "grid_y", 0))
+                sc = float(getattr(ls, "scale", 1.0))
+            except Exception:
+                continue
+            if sc < 0.0:
+                sc = 0.0
+            if sc > 1.0:
+                sc = 1.0
+            want_by_tile[(tx, ty)] = sc
+
+        if not want_by_tile and not ents:
+            return
+
+        try:
+            base = float(getattr(config, "TILE_SIZE", 32)) / SCALE
+        except Exception:
+            base = 1.0
+        base_scale = base * 0.60
+
+        try:
+            model_path = _environment_model_path("log_stackLarge")
+        except Exception:
+            model_path = None
+
+        for key, sc in want_by_tile.items():
+            tx, ty = int(key[0]), int(key[1])
+            if model_path is None:
+                continue
+            if key not in ents:
+                try:
+                    wx, wz = sim_px_to_world_xz(tx * int(config.TILE_SIZE), ty * int(config.TILE_SIZE))
+                    ent = Entity(
+                        parent=root,
+                        model=model_path,
+                        position=(wx, 0.0, wz),
+                        scale=(base_scale, base_scale, base_scale),
+                        color=color.white,
+                        collision=False,
+                        double_sided=True,
+                        add_to_scene_entities=False,
+                    )
+                    _finalize_kenney_scatter_entity(ent, model_path)
+                    self.track_visibility_gated_terrain(ent, tx, ty)
+                    ents[key] = ent
+                    ent._ks_log_base_scale = float(base_scale)
+                except Exception:
+                    pass
+            ent = ents.get(key)
+            if ent is None:
+                continue
+            b = float(getattr(ent, "_ks_log_base_scale", base_scale))
+            s = b * float(sc if sc > 0.0 else 0.0)
+            if getattr(ent, "_ks_log_scale", None) != sc:
+                ent.scale = (s, s, s)
+                ent._ks_log_scale = sc
+            # Ensure visibility gating applies even if fog revision doesn't change (cheap, per-stack).
+            try:
+                vis = world.visibility[ty][tx]
+            except Exception:
+                vis = Visibility.UNSEEN
+            self.sync_terrain_prop_tile_visibility(ent, vis)
+
+        for key, ent in list(ents.items()):
+            if key in want_by_tile:
+                continue
+            try:
+                import ursina as u
+
+                u.destroy(ent)
+            except Exception:
+                pass
+            ents.pop(key, None)

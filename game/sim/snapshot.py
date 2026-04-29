@@ -32,6 +32,7 @@ class SimStateSnapshot:
     # --- World / map ---
     world: Any
     trees: tuple = ()
+    log_stacks: tuple = ()
     fog_revision: int = 0
 
     # --- Economy / game state ---

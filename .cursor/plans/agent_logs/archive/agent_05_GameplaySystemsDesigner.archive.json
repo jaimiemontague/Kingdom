@@ -1348,6 +1348,43 @@
           }
         }
       }
+    },
+    "wk31-kingdom-perf-economy": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
+        "notes": "WK31 follow-up: Inn sim footprint 3×2 to match inn_v2 prefab."
+      },
+      "rounds": {
+        "wk31_inn_footprint_3x2": {
+          "round_id": "wk31_inn_footprint_3x2",
+          "sprint_id": "wk31-kingdom-perf-economy",
+          "round_meta": {
+            "prompt_set_id": "wk31_inn_footprint_v1",
+            "build_target": "sim_prefab_alignment"
+          },
+          "response": {
+            "status": "done",
+            "agent_fields": {
+              "what_i_changed": [
+                "config.py: BUILDING_SIZES[\"inn\"] (2, 2) → (3, 2).",
+                "tests/test_building.py: test_inn_footprint_is_three_by_two_grid_occupancy (config + occupies_tile corners)."
+              ],
+              "coordination": [
+                "Agent 15: inn_v2.json footprint_tiles [3, 2] already matches config; inn_v1.json remains [2, 2] for legacy v1 kitbash only.",
+                "Agent 03: Ursina uses building.width/height from sim size × TILE_SIZE; no square-footprint assumption found for inn."
+              ],
+              "evidence": {
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -380,6 +380,41 @@ class HUD:
             },
         )
 
+        # WK46 Stage 3: BuilderPeasant wood inventory (per-peasant, not a player resource).
+        wood = getattr(peasant, "wood_inventory", None)
+        req = getattr(peasant, "required_wood", None)
+        if wood is not None or req is not None:
+            y += 14
+            TextLabel.render(
+                surface,
+                self.theme.font_small,
+                "Wood",
+                (x, y),
+                (180, 180, 200),
+                shadow_color=(20, 20, 30),
+            )
+            y += self.theme.font_small.get_height() + 4
+            if wood is None:
+                wood = 0
+            if req is None:
+                TextLabel.render(
+                    surface,
+                    self.theme.font_body,
+                    f"{int(wood)}",
+                    (x, y),
+                    (220, 220, 220),
+                    shadow_color=(20, 20, 30),
+                )
+            else:
+                TextLabel.render(
+                    surface,
+                    self.theme.font_body,
+                    f"{int(wood)} / {int(req)}",
+                    (x, y),
+                    (220, 220, 220),
+                    shadow_color=(20, 20, 30),
+                )
+
     def _render_right_panel_overview(
         self, surface: pygame.Surface, right: pygame.Rect, game_state: dict
     ) -> None:

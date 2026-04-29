@@ -9,43 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk31-kingdom-perf-economy": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
-        "notes": "WK31 follow-up: Inn sim footprint 3×2 to match inn_v2 prefab."
-      },
-      "rounds": {
-        "wk31_inn_footprint_3x2": {
-          "round_id": "wk31_inn_footprint_3x2",
-          "sprint_id": "wk31-kingdom-perf-economy",
-          "round_meta": {
-            "prompt_set_id": "wk31_inn_footprint_v1",
-            "build_target": "sim_prefab_alignment"
-          },
-          "response": {
-            "status": "done",
-            "agent_fields": {
-              "what_i_changed": [
-                "config.py: BUILDING_SIZES[\"inn\"] (2, 2) → (3, 2).",
-                "tests/test_building.py: test_inn_footprint_is_three_by_two_grid_occupancy (config + occupies_tile corners)."
-              ],
-              "coordination": [
-                "Agent 15: inn_v2.json footprint_tiles [3, 2] already matches config; inn_v1.json remains [2, 2] for legacy v1 kitbash only.",
-                "Agent 03: Ursina uses building.width/height from sim size × TILE_SIZE; no square-footprint assumption found for inn."
-              ],
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                }
-              },
-              "blockers": []
-            }
-          }
-        }
-      }
-    },
     "wk32-camera-construction-nature-polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
@@ -415,6 +378,135 @@
                 },
                 "pytest": {
                   "command": "python -m pytest tests/test_nature_growth.py tests/test_nature_spawns_saplings.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        }
+      }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "notes": "WK46 Stage 3: BuilderPeasant gathers local wood (per-peasant) before building; integration of sim helpers + log stack visuals owned by Agent 03."
+      },
+      "rounds": {
+        "wk46_r0_builder_lumberjack_state_machine_and_tests": {
+          "round_id": "wk46_r0_builder_lumberjack_state_machine_and_tests",
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_meta": {
+            "prompt_set_id": "wk46_r0_kickoff",
+            "build_target": "Stage3_lumberjack_builders_agent05",
+            "created_utc": "2026-04-29T12:15:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration + renderer)."
+              ],
+              "what_i_changed": [
+                "config.py: added Stage 3 constants (BUILDER_CHOP_DURATION_S, BUILDER_HARVEST_DURATION_S, BUILDER_WOOD_COST_* and BUILDER_MIN_CHOP_GROWTH).",
+                "game/entities/builder_peasant.py: added wood-gathering phases (FIND_TREE/MOVE_TO_TREE/CHOPPING/HARVESTING/WAIT_ON_PLOT_NO_TREES) and per-peasant wood_inventory; prefers calling game_state['sim'] helpers (find_nearest_choppable_tree_for_builder / chop_tree_at / harvest_log_at) when present.",
+                "tests/test_wood_yield_by_growth.py: unit test for yield thresholds (1.0/0.75/0.50).",
+                "tests/test_builder_lumberjack_house.py: proves builder does not build until wood >= 10, then completes construction.",
+                "tests/test_builder_lumberjack_farm.py: proves farm requires multiple harvests to reach wood >= 20 before building.",
+                "tests/test_builder_lifecycle.py: updated harness to include minimal world + a tree so Stage 3 builder can complete."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest -q tests/test_builder_lumberjack_house.py tests/test_builder_lumberjack_farm.py tests/test_wood_yield_by_growth.py tests/test_builder_lifecycle.py"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest -q tests/test_builder_lumberjack_house.py tests/test_builder_lumberjack_farm.py tests/test_wood_yield_by_growth.py tests/test_builder_lifecycle.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "coordination_notes_for_agent_03": [
+                "BuilderPeasant expects integration helpers on sim exposed via game_state['sim']: find_nearest_choppable_tree_for_builder(from_tx,from_ty)->(tx,ty,growth)|None; chop_tree_at(tx,ty)->growth; harvest_log_at(tx,ty)->wood_amount.",
+                "HARVESTING phase no longer checks for TileType.TREE (tree should be removed on chop); it trusts harvest_log_at at completion time."
+              ],
+              "blockers": []
+            }
+          }
+        },
+        "wk46_r1_bugfix_builder_respawn_and_progress_unblock": {
+          "round_id": "wk46_r1_bugfix_builder_respawn_and_progress_unblock",
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_meta": {
+            "prompt_set_id": "wk46_r1_hotfix",
+            "build_target": "hotfix_builder_only_plot_deadlock",
+            "created_utc": "2026-04-29T12:30:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/systems/neutral_buildings.py: if any pending builder-only plots exist and there is no active BuilderPeasant, auto-spawn a replacement BuilderPeasant from the castle targeting the oldest pending plot; still blocks spawning new plots while one is pending.",
+                "game/entities/builder_peasant.py: if target plot has construction_started=True, skip wood gathering and resume BUILDING immediately (prevents double-paying wood when replacement builder is spawned mid-build).",
+                "tests/test_builder_lifecycle.py: added regression test test_builder_replaced_if_dies_mid_construction_and_plot_unblocks (builder dies mid-build -> replacement spawns -> plot completes).",
+                "game/systems/neutral_buildings.py: throughput tweak — allow up to 3 concurrent pending builder-only plots and up to 3 BuilderPeasants active at once (prevents slow ramp when hero count is high).",
+                "tests/test_builder_lifecycle.py: added test_neutral_buildings_allow_up_to_three_concurrent_plots_and_builders.",
+                "game/systems/neutral_buildings.py: queue mixing policy — with 3 slots and demand for multiple types, ensure houses + food can start without waiting for all houses; introduce first farm once, then strict priority for new slots: house > food_stand > farm.",
+                "tests/test_builder_lifecycle.py: added test_neutral_buildings_mix_types_before_stacking_houses and test_neutral_buildings_respects_priority_after_one_of_each."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest -q tests/test_builder_lifecycle.py tests/test_builder_lumberjack_house.py tests/test_builder_lumberjack_farm.py tests/test_wood_yield_by_growth.py"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest -q tests/test_builder_lifecycle.py tests/test_builder_lumberjack_house.py tests/test_builder_lumberjack_farm.py tests/test_wood_yield_by_growth.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                }
+              },
+              "blockers": []
+            }
+          }
+        },
+        "wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders": {
+          "round_id": "wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders",
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_meta": {
+            "prompt_set_id": "wk46_r2_playtest_hotfix",
+            "build_target": "peasant_respawn_builder_count_bugfix",
+            "created_utc": "2026-04-29T13:01:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "what_i_changed": [
+                "game/sim_engine.py: peasant respawn logic now counts only regular Peasants (non-BuilderPeasant) toward the baseline 'keep 2 alive' workforce; prevents BuilderPeasants from suppressing respawns needed to finish player-placed buildings.",
+                "tests/test_peasant_respawn_does_not_count_builder.py (new): regression test ensuring regular peasant respawn occurs even when BuilderPeasants are alive."
+              ],
+              "how_to_test": [
+                "python tools/determinism_guard.py",
+                "python -m pytest -q tests/test_peasant_respawn_does_not_count_builder.py"
+              ],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "status": "PASS",
+                  "exit_code": 0
+                },
+                "pytest": {
+                  "command": "python -m pytest -q tests/test_peasant_respawn_does_not_count_builder.py",
                   "status": "PASS",
                   "exit_code": 0
                 }

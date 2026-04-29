@@ -200,14 +200,40 @@ class NeutralBuildingSystem(GameSystem):
                 if getattr(p, "is_alive", True) and not getattr(p, "should_despawn", False)
             ]
 
-        # WK43: while there are any builder-only plots or an active builder, do not spawn new plots.
-        if any(
-            getattr(b, "requires_builder_peasant", False) and getattr(b, "hp", 0) > 0
+        # WK43/WK46/WK46+: builder-only plots are constructed by BuilderPeasants.
+        #
+        # Throughput: allow up to N plots/builders concurrently so large hero counts can ramp faster.
+        MAX_CONCURRENT_BUILDER_PLOTS = 3
+        MAX_CONCURRENT_BUILDERS = 3
+
+        pending_builder_plots = [
+            b
             for b in (buildings or [])
-        ):
-            return
-        if any(isinstance(p, BuilderPeasant) for p in (peasants or [])):
-            return
+            if getattr(b, "requires_builder_peasant", False)
+            and getattr(b, "hp", 0) > 0
+            and not getattr(b, "is_constructed", False)
+        ]
+
+        # Spawn replacement/new builders for pending plots, up to MAX_CONCURRENT_BUILDERS, without duplicates.
+        active_builders = [p for p in (peasants or []) if isinstance(p, BuilderPeasant)]
+        active_builders_by_plot_id = {
+            id(getattr(p, "target_building", None))
+            for p in active_builders
+            if getattr(p, "target_building", None) is not None and getattr(getattr(p, "target_building", None), "hp", 0) > 0
+        }
+
+        if pending_builder_plots and peasants is not None:
+            pending_builder_plots.sort(
+                key=lambda b: (getattr(b, "placed_time_ms", 0), int(getattr(b, "grid_x", 0)), int(getattr(b, "grid_y", 0)))
+            )
+            for plot in pending_builder_plots:
+                if len(active_builders) >= int(MAX_CONCURRENT_BUILDERS):
+                    break
+                if id(plot) in active_builders_by_plot_id:
+                    continue
+                peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
+                active_builders.append(peasants[-1])
+                active_builders_by_plot_id.add(id(plot))
 
         hero_count = len([h for h in (heroes or []) if getattr(h, "is_alive", False)])
         want_houses = max(0, hero_count)
@@ -225,9 +251,71 @@ class NeutralBuildingSystem(GameSystem):
             return
         self._spawn_timer = 0.0
 
+        # If we already have enough pending builder-only plots, don't spawn more this tick.
+        if len(pending_builder_plots) >= int(MAX_CONCURRENT_BUILDER_PLOTS):
+            return
+
         # Spawn one per tick (keeps “popping up” gradual and avoids spikes).
-        # Priority: Houses near castle, then FoodStands, then Farms.
-        if cur_houses < want_houses:
+        #
+        # Queue policy (WK46 throughput): with up to 3 concurrent builders, we should not wait for
+        # all houses to finish before starting food/farm. We enforce:
+        # - First, ensure at most one "in-flight" plot exists for each demanded type (house, food, farm).
+        # - Then, fill remaining in-flight slots by priority: house -> food_stand -> farm.
+
+        def _pending_count(bt: str) -> int:
+            return sum(1 for b in pending_builder_plots if _building_type_str(getattr(b, "building_type", "")) == bt)
+
+        pending_house = _pending_count("house")
+        pending_food = _pending_count("food_stand")
+        pending_farm = _pending_count("farm")
+
+        def _needs(bt: str) -> bool:
+            if bt == "house":
+                return cur_houses < want_houses
+            if bt == "food_stand":
+                return cur_food < want_food
+            if bt == "farm":
+                return cur_farms < want_farms
+            return False
+
+        def _pick_next_type() -> str | None:
+            # Rule set (player-facing):
+            # - With multiple builder slots, don't wait for all houses to finish before starting food/farm.
+            # - After at least one of a type has been introduced, follow strict priority:
+            #   house > food_stand > farm (farm is always the lowest priority queue).
+            #
+            # To avoid starving farms forever, we "introduce" the first farm once when:
+            # there is farm demand, there is already at least one house+food underway, and there are no farms at all yet.
+
+            if _needs("house") and pending_house == 0:
+                return "house"
+            if _needs("food_stand") and pending_food == 0:
+                return "food_stand"
+
+            # Introduce the first farm once (so farms can start existing), but do not re-prioritize farms after that.
+            if (
+                _needs("farm")
+                and pending_farm == 0
+                and int(cur_farms) == 0
+                and pending_house > 0
+                and pending_food > 0
+            ):
+                return "farm"
+
+            # Main priority once underway: house, then food, then farm.
+            if _needs("house"):
+                return "house"
+            if _needs("food_stand"):
+                return "food_stand"
+            if _needs("farm"):
+                return "farm"
+            return None
+
+        bt = _pick_next_type()
+        if bt is None:
+            return
+
+        if bt == "house":
             spot = self._find_spot(
                 castle=castle,
                 buildings=buildings,
@@ -240,10 +328,11 @@ class NeutralBuildingSystem(GameSystem):
                 plot = House(*spot, is_constructed=False)
                 buildings.append(plot)
                 if peasants is not None:
-                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
+                    if sum(1 for p in peasants if isinstance(p, BuilderPeasant)) < int(MAX_CONCURRENT_BUILDERS):
+                        peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
-        if cur_food < want_food:
+        if bt == "food_stand":
             market = self._find_marketplace(buildings)
             spot = None
             # WK34: first 2 food stands try to spawn very near the marketplace (2–3 tiles).
@@ -281,10 +370,11 @@ class NeutralBuildingSystem(GameSystem):
                 plot = FoodStand(*spot, is_constructed=False)
                 buildings.append(plot)
                 if peasants is not None:
-                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
+                    if sum(1 for p in peasants if isinstance(p, BuilderPeasant)) < int(MAX_CONCURRENT_BUILDERS):
+                        peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
-        if cur_farms < want_farms:
+        if bt == "farm":
             fw, fh = BUILDING_SIZES.get("farm", (3, 2))
             spot = self._find_spot(
                 castle=castle,
@@ -298,7 +388,8 @@ class NeutralBuildingSystem(GameSystem):
                 plot = Farm(*spot, is_constructed=False)
                 buildings.append(plot)
                 if peasants is not None:
-                    peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
+                    if sum(1 for p in peasants if isinstance(p, BuilderPeasant)) < int(MAX_CONCURRENT_BUILDERS):
+                        peasants.append(BuilderPeasant.spawn_from_castle(castle=castle, target_building=plot))
             return
 
 

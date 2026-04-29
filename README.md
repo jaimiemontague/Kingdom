@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.1 — 3D Native with major Refactor** (see `config.py`).
+This repository is currently stamped as **Prototype v1.5.2 — Lumberjacks and Town Building** (see `config.py`).
 
 ## Overview
 

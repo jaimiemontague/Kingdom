@@ -10,284 +10,6 @@
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
   "sprints": {
-    "wk39-refactor-stage4-pygame-renderer": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "master_plan_section": "Stage 4: Render Method Extraction (approx. L861+)",
-        "created_utc": "2026-04-28T00:00:00Z",
-        "notes": "WK39 CLOSED: Stage 4 PygameRenderer + Jaimie human playtest PASS. Follow-on Ursina ranged VFX (build_snapshot get_active_projectiles, billboard/depth) logged in agent_03 ursina-ranged-vfx-2026-04; same play session signoff.",
-        "pm_jaimie_send_order": [
-          "1) Agent 03 (MEDIUM) — wk39_r1_pygame_renderer_extraction. No other implementer starts first.",
-          "2) Agent 11 (LOW) — after 03 reports R1 done: pytest, qa_smoke, validate_assets; log.",
-          "3) Agent 03 (MEDIUM) — wk39_r2_snapshot_context_minimap.",
-          "4) Agent 11 (LOW) — after R2.",
-          "5) Agent 03 (MEDIUM) — wk39_r3_hardening_tests.",
-          "6) Agent 11 (LOW) — final gate stack after R3; then Jaimie optional manual: python main.py --no-llm and python main.py --renderer ursina --no-llm per plan."
-        ]
-      },
-      "rounds": {
-        "wk39_r1_pygame_renderer_extraction": {
-          "round_meta": {
-            "prompt_set_id": "wk39_r1",
-            "build_target": "PygameRenderer_scaffold + world_block_move_from_engine",
-            "visibility": "Implementer: 03. QA: 11 post-merge."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Create PygameRenderer; move view_surface setup through world/entities/fog/bounties/scale-blit from GameEngine.render (approx. L1442-1556) with no behavior change. Document building_menu / building_list_panel placement inside world layer. Preserve skip_pygame_world and Ursina compositing path.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0 (warnings acceptable baseline)."
-            }
-          },
-          "pm_bug_tickets": [],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done",
-              "asks": [
-                "Read .cursor/plans/wk39_stage4_pygame_renderer.plan.md and master plan Stage 4.",
-                "Implement game/graphics/pygame_renderer.py; wire from game/engine.py render().",
-                "Run pytest, qa_smoke, validate_assets; update agent_03 log."
-              ],
-              "acceptance_criteria": [
-                "World draw path lives in PygameRenderer or clearly delegated; engine.render() thinner for world portion.",
-                "Gates PASS."
-              ]
-            },
-            "11": {
-              "status": "done",
-              "asks": [
-                "After 03 R1: run full gate line; log exit codes in agent_11 log."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low"
-            },
-            "rationale": "03 lands code; 11 validates."
-          },
-          "pm_agent_prompts": {
-            "03": "WK39 Stage 4 R1 (Tech, MEDIUM): Per .cursor/plans/wk39_stage4_pygame_renderer.plan.md WK39-R1 and master plan Stage 4. Add game/graphics/pygame_renderer.py; extract world rendering block from game/engine.py render() (preserve draw order, skip_pygame_world branch, bounty update_ui_metrics ordering). Use build_snapshot() as appropriate. Gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log in agent_03 JSON.",
-            "11": "WK39 Stage 4 R1 (QA, LOW): After 03 lands R1, run pytest, qa_smoke, validate_assets; log commands and exit_code in agent_11 JSON."
-          }
-        },
-        "wk39_r2_snapshot_context_minimap": {
-          "round_meta": {
-            "prompt_set_id": "wk39_r2",
-            "build_target": "Snapshot_first_iteration + optional_minimap_dedupe",
-            "visibility": "Implementer: 03. QA: 11 post-merge."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Prefer iterating from SimStateSnapshot in PygameRenderer; narrow context for non-snapshot refs; optional share helper with _render_hero_minimap.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0."
-            }
-          },
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK39 Stage 4 R2 (Tech, MEDIUM): WK39-R2 per wk39 plan. Snapshot-first + context cleanup; optional minimap dedupe. Same gates. Update agent_03 log.",
-            "11": "WK39 Stage 4 R2 (QA, LOW): After 03 R2, run gates; log in agent_11 log."
-          }
-        },
-        "wk39_r3_hardening_tests": {
-          "round_meta": {
-            "prompt_set_id": "wk39_r3",
-            "build_target": "Tests_docs_final_gates",
-            "visibility": "Implementer: 03. QA: 11. Human: Jaimie manual."
-          },
-          "pm_status_summary": {
-            "overall_status": "complete",
-            "focus": "Small tests (e.g. render smoke headless); optional docs/refactor update; final gates; Jaimie pygame + Ursina parity check.",
-            "gates": {
-              "pytest": "python -m pytest tests/ must PASS.",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick must PASS.",
-              "validate_assets": "python tools/validate_assets.py --report must exit 0."
-            }
-          },
-          "pm_manual_jaimie": [
-            "python main.py --no-llm",
-            "python main.py --renderer ursina --no-llm"
-          ],
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK39 Stage 4 R3 (Tech, MEDIUM): WK39-R3 per wk39 plan. Tests + any engine_access_inventory.md note; final gates. Update agent_03 log. Tell PM when ready for Jaimie manual.",
-            "11": "WK39 Stage 4 R3 (QA, LOW): After 03 R3, full pytest, qa_smoke, validate_assets; log all exit codes."
-          }
-        },
-        "wk39_sprint_closeout": {
-          "round_meta": {
-            "closed_at_local": "2026-04-27",
-            "closed_by": "Agent_01_ExecutiveProducer_PM",
-            "build_target": "Sprint_Close_WK39_Stage4_Plus_UrsinaVfxParity"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK39 Stage 4 (PygameRenderer) complete: R1–R3 delivered; Agent 11 gates all PASS. Jaimie human playtest PASS (default + Ursina). Playtest follow-up: Ursina projectiles invisible — fixed by Agent 03 (build_snapshot get_active_projectiles + ursina_renderer billboard/depth/scale) logged in agent_03 ursina-ranged-vfx-2026-04; same sign-off."
-          },
-          "pm_gates": {
-            "pytest": "PASS 114+ per final agent_03 (snapshot contract test added in VFX thread)",
-            "qa_smoke_quick": "PASS exit 0 (per logs)",
-            "validate_assets": "errors=0 warns=46 baseline"
-          },
-          "pm_deliverables": [
-            "game/graphics/pygame_renderer.py + PygameWorldRenderContext (GameEngine still owns HUD/panels/overlay UIs).",
-            "game/engine.py — render() delegates world pass; build_snapshot() includes vfx projectiles via get_active_projectiles().",
-            "tests/test_pygame_renderer_wk39.py; tests/test_renderer_snapshot_contract addition for VFX list.",
-            "docs/refactor/engine_access_inventory.md — PygameRenderer section.",
-            "Ursina: ursina_renderer.py projectile billboards/depth/scale; engine vfx_system update path as logged.",
-            ".cursor/plans/wk39_stage4_pygame_renderer.plan.md"
-          ],
-          "pm_evidence": {
-            "agent_03": "wk39-refactor-stage4-pygame-renderer (R1–R3) + ursina-ranged-vfx-2026-04 in agent_03_TechnicalDirector_Architecture.json",
-            "agent_11": "wk39 rounds wk39_r1–r3 in agent_11 JSON — all done",
-            "human_playtest": "Jaimie: pass including Ursina VFX after fix (2026-04-27 per agent_03 human_verification)"
-          },
-          "pm_next_actions": [
-            "Optional: git save-state commit if not already pushed; CHANGELOG / version bump is Jaimie's call (Agent 13 for notes).",
-            "Next architecture stage: **Stage 5** per master plan — root script cleanup, update .cursor/rules/02-project-layout.mdc, final integration gate (Agent 12 + 01 + 11; Agent 12 LOW / 11)."
-          ]
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint wk39-refactor-stage4-pygame-renderer (Architecture Refactor Stage 4: PygameRenderer extraction).\\n\\n1) Read the sprint plan FIRST:\\n   .cursor/plans/wk39_stage4_pygame_renderer.plan.md\\n2) Read master plan (Stage 4 only):\\n   .cursor/plans/master_plan_architecture_refactor.md\\n   Section: Stage 4: Render Method Extraction\\n3) Read the PM log for this sprint and YOUR round assignment:\\n   .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\\n   -> sprints[\\\"wk39-refactor-stage4-pygame-renderer\\\"]\\n   -> rounds[<round id: start wk39_r1_pygame_renderer_extraction unless PM says otherwise>]\\n   -> pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"] and pm_next_actions_by_agent[YOUR_NUMBER]\\n4) Send order: see sprint_meta.pm_jaimie_send_order in that sprint block.\\n5) When done: update YOUR agent log; run listed gates; report files, commands, exit codes, blockers to Jaimie/PM.",
-      "pm_send_list_minimal": {
-        "kickoff_note": "Serpentine only: 03 then 11 per round. No parallel implementation agents. No second agent in step 1.",
-        "waves": [
-          {
-            "wave": 1,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "medium",
-                "round": "wk39_r1_pygame_renderer_extraction"
-              }
-            ]
-          },
-          {
-            "wave": 2,
-            "parallel": false,
-            "depends_on": "wave1_03_r1",
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk39_r1_pygame_renderer_extraction"
-              }
-            ]
-          },
-          {
-            "wave": 3,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "medium",
-                "round": "wk39_r2_snapshot_context_minimap"
-              }
-            ]
-          },
-          {
-            "wave": 4,
-            "parallel": false,
-            "depends_on": "wave3_03_r2",
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk39_r2_snapshot_context_minimap"
-              }
-            ]
-          },
-          {
-            "wave": 5,
-            "parallel": false,
-            "agents": [
-              {
-                "id": "03",
-                "intel": "medium",
-                "round": "wk39_r3_hardening_tests"
-              }
-            ]
-          },
-          {
-            "wave": 6,
-            "parallel": false,
-            "depends_on": "wave5_03_r3",
-            "agents": [
-              {
-                "id": "11",
-                "intel": "low",
-                "round": "wk39_r3_hardening_tests"
-              }
-            ]
-          }
-        ],
-        "do_not_send": [
-          "01",
-          "02",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "12",
-          "13",
-          "14",
-          "15"
-        ],
-        "rationale": "Stage 4 is engine/render extraction; 03 only implements. 11 runs gates. Others silent unless escalated."
-      }
-    },
     "wk40-refactor-stage5-cleanup": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
@@ -1431,6 +1153,286 @@
             "11": {
               "status": "done"
             }
+          }
+        }
+      }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "master_plan_section": "Stage 3: Lumberjack Economy",
+        "status": "closed_success",
+        "created_utc": "2026-04-29T12:00:00Z",
+        "notes": "Stage 3: BuilderPeasant gathers local wood by chopping trees (5s) then harvesting log pile (5s) until they have enough wood for their assigned plot (house/food_stand=10, farm=20). Chopping allowed only on tiles with Visibility != UNSEEN (SEEN or VISIBLE). Tree yields by growth: >=1.0 -> 10, >=0.75 -> 7, >=0.50 -> 5; cannot chop below 0.50. Logs are visual-only: render `log_stackLarge` model at the chopped tile with scale matching tree growth; disappear after harvest."
+      },
+      "rounds": {
+        "wk46_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk46_r0_kickoff",
+            "prompt_set_id": "wk46_r0",
+            "build_target": "Stage3_lumberjack_builders",
+            "visibility": "Implementers: 05 (BuilderPeasant wood logic), 03 (SimEngine helpers + snapshot + Ursina log render), 15 (move/copy log_stackLarge.glb into runtime env path). QA: 11 after integration. Art consult: 09 optional scale sanity."
+          },
+          "pm_status_summary": {
+            "overall_status": "assigned",
+            "focus": "Implement Stage 3 lumberjack builders per plan; ensure deterministic tree targeting; fog rule: may chop SEEN or VISIBLE tiles, never UNSEEN. Ensure runtime model paths do not point into raw Kenney download folders."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [
+            {
+              "id": "WK46-FEAT-Stage3-LumberjackBuilders",
+              "title": "Builder peasants chop trees for local wood before building",
+              "owner_agents": [
+                "05_GameplaySystemsDesigner",
+                "03_TechnicalDirector_Architecture"
+              ],
+              "acceptance": [
+                "When a neutral plot spawns, BuilderPeasant gathers wood locally and only then builds.",
+                "Wood inventory is per-peasant (not player).",
+                "Chopping only allowed on SEEN or VISIBLE tiles; UNSEEN trees are ignored.",
+                "Yields/costs match spec: 10/10/20 cost; yields 10/7/5 by growth; no chopping < 0.5.",
+                "Log stack appears during harvest window and is scaled by growth; disappears when harvested.",
+                "Gates PASS: qa_smoke --quick; validate_assets --report; and pytest baseline."
+              ]
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "15": {
+              "status": "assigned_active",
+              "asks": [
+                "Move/copy the user-provided Kenney model from `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit/Models/GLTF format/log_stackLarge.glb` into the runtime-resolved folder: `assets/models/environment/log_stackLarge.glb`.",
+                "Do not rename the stem (must be `log_stackLarge` so `_environment_model_path('log_stackLarge')` can resolve it).",
+                "Confirm `python tools/validate_assets.py --report` still exits 0 (errors=0).",
+                "If attribution needs an update, add the minimal entry (but prefer not to change licensing text unless the repo requires it)."
+              ],
+              "acceptance_criteria": [
+                "Runtime path exists: `assets/models/environment/log_stackLarge.glb`.",
+                "Asset gate still passes: validate_assets exit 0."
+              ]
+            },
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement BuilderPeasant Stage 3 wood-gathering state machine per the sprint plan.",
+                "Wood is per-builder only: track `wood_inventory` on the BuilderPeasant; do not add player/global wood.",
+                "Tree yields by growth: >=1.0 => 10, >=0.75 => 7, >=0.50 => 5; cannot chop below 0.50.",
+                "Durations: 5s chop + 5s harvest per tree.",
+                "If no eligible trees (SEEN/VISIBLE only), builder should go stand on assigned plot (no crash / no infinite loop).",
+                "Add focused unit tests for yield/cost gating (farm requires 2 full trees or equivalent).",
+                "Do NOT edit engine/renderer files owned by Agent 03."
+              ],
+              "acceptance_criteria": [
+                "Builder does not build until wood >= required_wood for that building type.",
+                "Farm requires 20 wood (multiple chops if needed).",
+                "Tests added and PASS."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Add SimEngine helpers for Stage 3 so BuilderPeasant can find/chop/harvest trees deterministically and safely.",
+                "Fog rule: eligible tree tiles must have `world.visibility[ty][tx] != Visibility.UNSEEN` (SEEN or VISIBLE).",
+                "Chop must remove the Tree entity, clear world TileType.TREE to GRASS, and update `_tree_growth_by_tile` immediately.",
+                "Add a render-facing `log_stacks` list to SimEngine + snapshot so Ursina can render log piles keyed by tile; destroy them on harvest.",
+                "Ursina: render `log_stackLarge` at the chopped tile with scale matching growth (0.5/0.75/1.0). Use runtime path under `assets/models/environment/` (do not reference raw Kenney folders).",
+                "Add minimal HUD support so selecting a peasant can show wood inventory if present (optional but recommended).",
+                "Run full gates after integration."
+              ],
+              "acceptance_criteria": [
+                "Snapshot includes log stacks and Ursina renders them when present.",
+                "Building placement + sapling removal rules remain correct (no invisible blockers).",
+                "Gates PASS."
+              ]
+            },
+            "09": {
+              "status": "consult_optional",
+              "asks": [
+                "Visual sanity check only: confirm log stack scale reads well at 0.5 / 0.75 / 1.0 and does not Z-fight terrain.",
+                "If it looks off, recommend a small scale multiplier constant tweak instead of re-exporting assets."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_integrated",
+              "asks": [
+                "After Agents 03/05/15 report integration complete: run gates from repo root: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report.",
+                "If failures: capture last ~50 lines and report which gate failed."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Kickoff: send universal prompt to 15 + 05 + 03 in parallel; when implementers report done, send to 11 for gates; optionally ask 09 for a quick visual consult if log scale looks wrong."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel_then_11_then_optional_consult",
+            "batch_1_parallel": [
+              "15",
+              "05",
+              "03"
+            ],
+            "then_in_order": [
+              "11"
+            ],
+            "optional_consult_after": [
+              "09"
+            ],
+            "intelligence_by_agent": {
+              "15": "medium",
+              "05": "high",
+              "03": "high",
+              "11": "low",
+              "09": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "10",
+              "12",
+              "13",
+              "14"
+            ],
+            "rationale": "Parallelize asset placement (15), BuilderPeasant logic/tests (05), and SimEngine+Ursina integration (03). QA (11) runs gates only after integration to avoid churn. Art consult (09) only if visuals need tuning."
+          },
+          "pm_agent_prompts": {
+            "15": "WK46 Stage 3 (Model/Assets, MEDIUM): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Task: copy `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit/Models/GLTF format/log_stackLarge.glb` into `assets/models/environment/log_stackLarge.glb` so Ursina can load it via `_environment_model_path('log_stackLarge')`. Do not reference raw download paths at runtime. Run: python tools/validate_assets.py --report. Report back with files touched + command + exit code.",
+            "05": "WK46 Stage 3 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Implement BuilderPeasant lumberjack behavior: per-peasant wood inventory; chop 5s + harvest 5s; yields 10/7/5 for growth >=1.0/0.75/0.50; costs house=10, food_stand=10, farm=20; cannot chop <0.50. Fog rule: trees in UNSEEN fog cannot be chopped (SEEN/VISIBLE allowed). If no eligible trees, builder stands on assigned plot. Add focused tests proving builder does not build until wood threshold met. Do NOT edit engine/renderer files. Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new tests). Report files touched + exit codes.",
+            "03": "WK46 Stage 3 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Integrate Stage 3 into SimEngine + snapshot + Ursina: add sim helpers to find/chop/harvest trees deterministically, respecting fog rule (visibility != UNSEEN). Maintain world TileType + tree_growth_lookup consistency when chopping. Add sim `log_stacks` list and include it in SimStateSnapshot so Ursina can render `log_stackLarge` (runtime path `assets/models/environment/log_stackLarge.glb`) scaled by growth (0.5/0.75/1.0). Destroy log entities when harvested. Run full gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Report files touched + exit codes.",
+            "11": "WK46 Stage 3 (QA, LOW): After 03/05/15 say Stage 3 is integrated, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and any failures in agent_11 log.",
+            "09": "WK46 Stage 3 (Art consult, LOW): Optional visual check: run `python main.py --renderer ursina --no-llm` and watch a builder chop a tree. Confirm log stack scale looks correct at 0.5/0.75/1.0 and doesn't clip terrain; if off, recommend a small scale multiplier constant tweak. No code changes unless asked."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r0_kickoff**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the master plan context (Stage 3): `.cursor/plans/master_plan_building_nature_sprints.md`\\n3) Read the PM hub for your assignment:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   → `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r0_kickoff\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n4) Stay in scope: Stage 3 lumberjack builders only (no global player wood).\\n5) Determinism + fog rule: may chop only tiles with `Visibility != UNSEEN` (SEEN/VISIBLE).\\n6) Update your agent log with: files touched, commands run, exit codes, and any blockers.\\n\\nOne line: **Builders chop (5s) + harvest (5s) trees for local wood before building; logs are visual-only and scaled by tree growth.**"
+        },
+        "wk46_r1_bugfix_builder_respawn_and_progress_unblock": {
+          "round_meta": {
+            "round_id": "wk46_r1_bugfix_builder_respawn_and_progress_unblock",
+            "prompt_set_id": "wk46_r1",
+            "build_target": "Bugfix_builder_respawn + unblock_food_farm_spawn",
+            "created_utc": "2026-04-29T12:30:00Z",
+            "reported_by": "human_playtest",
+            "notes": "Playtest: no FoodStands/Farms ever built; Houses partially built then builder dies -> plot never completes. Root cause likely: NeutralBuildingSystem returns early whenever ANY requires_builder_peasant plot exists, but does not spawn a replacement builder for that plot if the original builder dies; this blocks all further plot spawning including food/farm."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK46-BUG-001",
+              "title": "Food stands and farms never build (blocked by builder-only plot gate)",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py --renderer ursina --no-llm",
+                "Play until multiple plots spawn (houses should appear).",
+                "Observe that FoodStand and Farm plots are never completed (and may never spawn if houses are stuck)."
+              ],
+              "expected": "After some time, at least one FoodStand and one Farm should be constructed (once hero_count thresholds are met).",
+              "actual": "No FoodStands/Farms are built in playtest session; progression appears stuck behind houses.",
+              "acceptance_test": [
+                "Manual: python main.py --renderer ursina --no-llm (5–10 minutes) — observe at least one FoodStand and Farm get constructed in a typical run.",
+                "Automated: python tools/qa_smoke.py --quick must PASS."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK46-BUG-002",
+              "title": "If builder peasant dies mid-construction, plot never completes (no replacement builder)",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run: python main.py --renderer ursina --no-llm",
+                "Wait for a House plot to start construction (partially built).",
+                "Allow the BuilderPeasant to die (enemy attack) before completion.",
+                "Observe that the plot stays partially built forever; no new builder arrives."
+              ],
+              "expected": "If a BuilderPeasant dies, another BuilderPeasant should spawn from the castle and resume/finish the partially built plot (no additional wood/resources needed).",
+              "actual": "Partially built plot never completes once the builder dies.",
+              "acceptance_test": [
+                "Unit: add/extend a test to simulate builder death and assert a replacement builder spawns and finishes the plot.",
+                "Manual: python main.py --renderer ursina --no-llm — kill builder mid-build and observe replacement completes it.",
+                "Automated: python tools/qa_smoke.py --quick must PASS."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Fix NeutralBuildingSystem gating so builder-only plots do NOT permanently block progression when no BuilderPeasant is alive.",
+                "Implement replacement builder spawning: if there exists any plot/building with requires_builder_peasant==True and hp>0 and is_constructed==False, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (prefer the oldest/nearest).",
+                "After spawning a replacement builder, return early (do not spawn new plots in the same tick).",
+                "Ensure this unblocks FoodStand/Farm spawning once houses are caught up (do not require all houses to be built forever due to a stuck plot).",
+                "Stage 3 rule: If a plot is already partially built (construction_started==True or construction_progress>0), the replacement builder should resume BUILDING without requiring additional wood (no double-paying).",
+                "Add/extend tests: a test that simulates a partially built plot + dead builder and asserts a new builder is spawned and finishes the building.",
+                "Run: python -m pytest tests/ and python tools/qa_smoke.py --quick."
+              ],
+              "acceptance_criteria": [
+                "FoodStand/Farm progression resumes in a typical run (not blocked forever by one stuck house plot).",
+                "Replacement builder spawns and completes partially built plot after builder death (no extra wood required).",
+                "Gates PASS."
+              ]
+            },
+            "03": {
+              "status": "consult_needed",
+              "asks": [
+                "Review the fix for any cross-system issues: BuilderPeasant state machine should be able to resume partial construction without wood and without breaking determinism.",
+                "If the solution requires a small SimEngine helper (e.g., selecting the oldest builder-only plot), implement minimally and coordinate with Agent 05."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_05_done",
+              "asks": [
+                "After Agent 05 reports fix landed, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes."
+              ]
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "05_then_03_consult_then_11",
+            "then_in_order": [
+              "05",
+              "03",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "medium",
+              "11": "low"
+            },
+            "rationale": "Primary fix lives in NeutralBuildingSystem + BuilderPeasant logic (Agent 05). Agent 03 reviews/integrates only if needed. Agent 11 validates gates after fix."
+          },
+          "pm_agent_prompts": {
+            "05": "WK46 R1 BUGFIX (Gameplay, HIGH): Playtest reports: (1) no FoodStands/Farms built, (2) if BuilderPeasant dies mid-build the plot never completes. Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md and then open the PM hub: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → wk46-stage3-lumberjack-builders → rounds → wk46_r1_bugfix_builder_respawn_and_progress_unblock. Root cause likely in game/systems/neutral_buildings.py: it returns early if ANY requires_builder_peasant plot exists, but does not spawn replacement builders. Implement: if there is any plot with requires_builder_peasant==True and hp>0 and not is_constructed, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (pick deterministic order: e.g., lowest (grid_y,grid_x) or oldest inserted). After spawning, return early. Also: if plot is already partially built (construction_started==True or construction_progress>0), replacement builder must resume building without requiring additional wood (no double-paying). Add/extend a unit test to simulate: spawn plot, advance some work, mark builder dead/removed, tick NeutralBuildingSystem -> asserts new builder spawns and finishes. Run: python -m pytest tests/; python tools/qa_smoke.py --quick. Report files + exit codes.",
+            "03": "WK46 R1 BUGFIX (Tech consult, MEDIUM): Review Agent 05’s fix for determinism + any needed SimEngine helper. Only implement minimal integration changes if required. Gates: python tools/qa_smoke.py --quick after changes.",
+            "11": "WK46 R1 BUGFIX (QA, LOW): After Agent 05 reports done, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r1_bugfix_builder_respawn_and_progress_unblock**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the PM hub for your specific prompt:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   → `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r1_bugfix_builder_respawn_and_progress_unblock\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n3) Fix: replacement builder spawning so partially built plots complete; unblock FoodStand/Farm progression.\\n4) Update your agent log with files changed + commands + exit codes.\\n\\nOne line: **If a builder dies mid-build, spawn a replacement builder to finish the plot; do not let one stuck house block all other neutral buildings forever.**"
+        },
+        "wk46_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk46_sprint_closeout",
+            "created_utc": "2026-04-29T13:15:00Z",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK46 closed. Builder peasants chop + harvest trees for local wood before building; log piles render in 3D; replacement builder spawns if one dies mid-build; neutral plots/builders can run concurrently so food stands/farms build in practice. Gates PASS (Agent 11) and playtesting confirmed behavior."
+          },
+          "pm_accepted_deliverables": [
+            "Stage 3 BuilderPeasant wood-gathering state machine (local wood inventory; yields by growth; costs for house/food stand/farm).",
+            "SimEngine helpers + snapshot.log_stacks + Ursina log stack rendering + HUD wood display.",
+            "Bugfix: replacement builder spawns for pending plots; partial-build resumes without double-paying; allow limited concurrency and mixed-type progression.",
+            "Runtime model: assets/models/environment/log_stackLarge.glb."
+          ],
+          "pm_evidence": {
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk46-stage3-lumberjack-builders (wk46_r0_kickoff, wk46_r1_bugfix_builder_respawn_and_progress_unblock, wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders)",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk46-stage3-lumberjack-builders.wk46_r0_kickoff + wk46_r0_followup_construction_stage_prefabs",
+            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json → wk46-stage3-lumberjack-builders.wk46_r0_kickoff",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk46-stage3-lumberjack-builders.wk46_r_final_gates_2026_04_29",
+            "human_playtest": "Jaimie: confirmed builders build + farms/food stands can complete; replacement builders spawn when needed (2026-04-29)"
           }
         }
       }

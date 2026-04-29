@@ -9,132 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk39-refactor-stage4-pygame-renderer": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk39_stage4_pygame_renderer.plan.md",
-        "notes": "Agent 11: gates after each Agent 03 round per pm_jaimie_send_order."
-      },
-      "rounds": {
-        "wk39_r1_pygame_renderer_extraction": {
-          "round_id": "wk39_r1_pygame_renderer_extraction",
-          "status": "done",
-          "what_i_changed": [
-            "No repository code changes (Agent 11 R1: validation after Agent 03 PygameRenderer scaffold + engine.render delegation)."
-          ],
-          "how_to_test": [
-            "python -m pytest tests/",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "evidence": {
-            "pytest": {
-              "command": "python -m pytest tests/",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "110 passed, 1 warning (pkg_resources deprecation)."
-              ]
-            },
-            "qa_smoke_quick": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "DONE: PASS."
-              ]
-            },
-            "validate_assets_report": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46 (missing_model_file placeholders; baseline)"
-            }
-          },
-          "blockers": [],
-          "bugs_found": []
-        },
-        "wk39_r2_snapshot_context_minimap": {
-          "round_id": "wk39_r2_snapshot_context_minimap",
-          "status": "done",
-          "what_i_changed": [
-            "No repository code changes (Agent 11 R2: gates after Agent 03 snapshot-first / context / optional minimap dedupe)."
-          ],
-          "how_to_test": [
-            "python -m pytest tests/",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "evidence": {
-            "pytest": {
-              "command": "python -m pytest tests/",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "110 passed, 1 warning (pkg_resources deprecation)."
-              ]
-            },
-            "qa_smoke_quick": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "DONE: PASS."
-              ]
-            },
-            "validate_assets_report": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46"
-            }
-          },
-          "blockers": [],
-          "bugs_found": []
-        },
-        "wk39_r3_hardening_tests": {
-          "round_id": "wk39_r3_hardening_tests",
-          "status": "done",
-          "what_i_changed": [
-            "No repository code changes (Agent 11 R3: final gate stack after Agent 03 hardening + tests; Jaimie manual per PM)."
-          ],
-          "how_to_test": [
-            "python -m pytest tests/",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "evidence": {
-            "pytest": {
-              "command": "python -m pytest tests/",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "113 passed, 1 warning (pkg_resources deprecation)."
-              ]
-            },
-            "qa_smoke_quick": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": [
-                "DONE: PASS."
-              ]
-            },
-            "validate_assets_report": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46"
-            }
-          },
-          "pm_manual_for_jaimie": [
-            "python main.py --no-llm",
-            "python main.py --renderer ursina --no-llm"
-          ],
-          "blockers": [],
-          "bugs_found": []
-        }
-      }
-    },
     "wk40-refactor-stage5-cleanup": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
@@ -894,6 +768,54 @@
           "bugs_found": [],
           "recommended_next_actions": [
             "If WK45 implementation commits land after this run: re-run qa_smoke --quick and validate_assets --report and append a new round entry."
+          ]
+        }
+      }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "pm_rounds": [
+          "wk46_r0_kickoff",
+          "wk46_r1_bugfix_builder_respawn_and_progress_unblock"
+        ],
+        "notes": "Agent 11 scope: final-round gate validation after Stage 3 integration + follow-up bugfix. Required gates per plan/PM: qa_smoke --quick and validate_assets --report."
+      },
+      "rounds": {
+        "wk46_r_final_gates_2026_04_29": {
+          "round_id": "wk46_r_final_gates_2026_04_29",
+          "status": "complete",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran sprint-required gates for WK46 Stage 3 + bugfix integration."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS.",
+                "pytest: 126 passed (1 warning: pygame pkg_resources deprecation).",
+                "observe_sync profiles: DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_29": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "If Jaimie is preparing a release candidate: run manual smoke per release checklist (python main.py --no-llm; python main.py --provider mock).",
+            "Optional visual-only sanity: watch builder chop/harvest log pile lifecycle in Ursina (see wk46 plan)."
           ]
         }
       }

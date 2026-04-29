@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk39-refactor-stage4-pygame-renderer`
 - `wk40-refactor-stage5-cleanup`
 - `wk41-mechanical-module-split`
 - `wk42-renderer-dedupe-wire-collabs`
 - `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
+- `wk46-stage3-lumberjack-builders`
 
-**Archived sprints:** 30
+**Archived sprints:** 31
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `wk33-midsprint-assembler-scale-hotkeys`
 - `wk34-3d-final-model-pass-v1-5`
 - `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
+- `wk39-refactor-stage4-pygame-renderer`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -52,26 +52,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk40-default-renderer-ursina-2026-04` — main.py: --renderer default pygame → ursina; help text for 2D override.; 02-project-layout.mdc, README.md, 00-shell, 04-qa-gates, 06-workflow-sop: default Ursina; pygame explicit for 2D path.
 - `wk40-post-assessor-presentationlayer-doc-2026-04` — game/engine.py: module docstring = presentation shell wrapping SimEngine; design doc name PresentationLayer vs public GameEngine.; GameEngine class docstring: 1–2 sentences, owns pygame/HUD/loop, sim on self.sim.
 - `wk41-mechanical-module-split` — ursina_renderer.py: UrsinaRenderer.update() thin orchestration — _ensure_shadow_bounds_once, _sync_snapshot_buildings/heroes/enemies/peasants/guards/tax_collector/projectiles, _update_debug_status_text, _destroy_removed_entities (logic unchanged; mechanical extraction); docs/refactor/engine_access_inventory.md: WK41 subsection listing engine_facades + ursina_* helper modules + update() helper split
 - `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py: removed duplicate module-level block (lines 119–819); imports from ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim; grass albedo path uses PROJECT_ROOT import; ursina_renderer.py: UrsinaTerrainFogCollab(self) + UrsinaEntityRenderCollab(self) in __init__ after _setup_scene_lighting(); deleted 6 terrain/fog methods + 11 entity-render staticmethods; update() and sync paths delegate to collaborators
 - `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
+- `wk46-stage3-lumberjack-builders`
 
-**Archived sprints:** 28
+**Archived sprints:** 29
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
 - `ursina-ranged-vfx-visibility-2026-04`
+- `wk40-default-renderer-ursina-2026-04`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -94,27 +94,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk31-kingdom-perf-economy`
 - `wk32-camera-construction-nature-polish`
 - `wk33-terrain-lair-economy-prefabs`
 - `wk34-3d-final-model-pass`
 - `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
+- `wk46-stage3-lumberjack-builders`
 
-**Archived sprints:** 12
+**Archived sprints:** 13
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `v1.3-visual-polish-journey-ai`
-- `wk8-engine-entities-refactor`
-- `wk11-building-interiors-llm-setup`
-- `wk12-chronos`
+- `…`
 - `wk13-living-interiors`
 - `wk17-quality-logic-immersion`
 - `wk18-llm-merger-and-mechanics`
 - `wk30-buildings-pipeline`
+- `wk31-kingdom-perf-economy`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -232,26 +231,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_11_QA_TestEngineering_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk39-refactor-stage4-pygame-renderer` — No repository code changes (Agent 11 R3: final gate stack after Agent 03 hardening + tests; Jaimie manual per PM).
 - `wk40-refactor-stage5-cleanup` — WK40 Wave 2 Workstream C: no game code; ran full automated gate stack per pm_agent_prompts['11'] and sprint plan L68–73.
 - `wk41-mechanical-module-split` — No repository code changes (Agent 11 gate validation only).
 - `wk42-renderer-dedupe-wire-collabs` — No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack.
 - `wk43-building-nature-stage1` — No repository code changes (Agent 11 gate validation only).; Ran WK43 required full gate stack; recorded exit codes.
 - `wk44-stage2-dynamic-trees` — No repository code changes (Agent 11 gate validation only).; Ran full gate stack on current workspace state.
 - `wk45-stage2_5-sapling-spawning` — No repository code changes (Agent 11 gate validation only).; Ran sprint-required gates per PM prompt.
+- `wk46-stage3-lumberjack-builders` — No repository code changes (Agent 11 gate validation only).; Ran sprint-required gates for WK46 Stage 3 + bugfix integration.
 
-**Archived sprints:** 27
+**Archived sprints:** 28
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk34-final-3d-model-pass-pre-v1-5`
 - `wk35-refactor-stage0-regression-baseline`
 - `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
+- `wk39-refactor-stage4-pygame-renderer`
 
 ### 12 — ToolsDevEx_Lead
 
@@ -301,13 +300,14 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_15_ModelAssembler_KitbashLead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk32-camera-construction-nature-polish` — assets/prefabs/buildings/plot_3x2_v1.json — 3×2 empty plot (7 pcs: corner stones + scaffold + planks) for Inn footprint; building_type plot_3x2.; assets/prefabs/buildings/inn_v2_build_20_v1.json — 10 piece subset: first 6 stone walls + 4 road-curbs (inn_v2 construction ~20%).
 - `wk31-perf-fps-and-pack-scale` — assets/prefabs/buildings/inn_v2.json — watermill-wide-fantasy-town + cart + stall-bench + fence + planks (5 pieces); FT-only attribution.; assets/prefabs/buildings/farm_v2.json — windmill-fantasy-town.glb single hero (1 piece).
 - `wk30-buildings-pipeline` — assets/prefabs/buildings/castle_v1.json — Jaimie kitbashed interactively (20 pieces, 4 corner towers, fortified perimeter with central gate). Agent 15 post-save: trimmed coarse attribution from [retro-fantasy-kit, survival-kit] to [retro-fantasy-kit] (no Survival pieces placed).; assets/prefabs/buildings/warrior_guild_v1.json — Agent 15 hand-authored (8 pieces). 2x2 painted-plaster armory with high-pitched gable roof. Reference kit for Ranger/Rogue palette swaps.
 - `wk29-first-house-playtest` — assets/prefabs/buildings/peasant_house_small_v1.json — kitbashed by Jaimie in tools/model_assembler_kenney.py; 2 Retro Fantasy pieces (wall-door.glb at base, roof.glb lifted +1.0 on Y); saved and round-trip confirmed by reopening with --open.; assets/prefabs/buildings/peasant_house_small_v1.json — Agent 15 hand-trimmed attribution from ['kenney_retro-fantasy-kit','kenney_survival-kit'] (coarse auto-inference) down to ['kenney_retro-fantasy-kit'] only, since neither piece comes from the Survival kit.
 - `wk28-assembler-spike` — Log only — no new prefab files this round.
 - `wk34-final-3d-model-pass-pre-v1-5` — Regenerated assets/prefabs/buildings/temple_build_20_v1.json and temple_build_50_v1.json from current temple_v1.json (14 plinth+road+hedge+obelisk; 29 = full wall shell without roof or temple_frame_quad overlays).
 - `wk43-building-nature-stage1` — assets/prefabs/buildings/food_stand_build_20_v1.json — 20% stage (plot pad + crate + shovel) for a clear under-construction read.; assets/prefabs/buildings/food_stand_build_50_v1.json — 50% stage (stall-fantasy-town) with the same wood stall texture override as the completed Food Stand.
+- `wk46-stage3-lumberjack-builders` — assets/models/environment/log_stackLarge.glb — copied from Kenney Nature Kit raw downloads into runtime-resolved environment path (do not reference raw folders at runtime).
 
-**Archived sprints:** 1
+**Archived sprints:** 2
 - `wk33-terrain-lair-economy-prefabs`
+- `wk32-camera-construction-nature-polish`

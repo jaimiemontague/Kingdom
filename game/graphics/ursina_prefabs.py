@@ -118,6 +118,9 @@ def _stage_prefab_path_candidates(base_prefab: Path, stage: str) -> list[Path]:
     if m:
         core, ver = m.group(1), m.group(2)
         add(_PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v{ver}.json")
+        # Some assets were authored as v1 even when the "final" prefab is v2+.
+        # Example: farm_v2.json uses farm_build_20_v1.json / farm_build_50_v1.json.
+        add(_PREFAB_BUILDINGS_DIR / f"{core}_build_{stage}_v1.json")
     return out
 
 

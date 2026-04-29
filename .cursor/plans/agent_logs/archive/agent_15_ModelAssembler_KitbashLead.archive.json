@@ -93,6 +93,210 @@
           }
         }
       }
+    },
+    "wk32-camera-construction-nature-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
+        "notes": "WK32 r1 Agent 15: workstreams B.3, C.1, D.1 — plots, pilot intermediates, grass + nature GLBs under environment/."
+      },
+      "rounds": {
+        "wk32_r1_execution": {
+          "round_id": "wk32_r1_execution",
+          "round_meta": {
+            "prompt_set_id": "wk32_r1",
+            "build_target": "9 prefab JSONs + 12 environment GLB copies + manifest + ATTRIBUTION",
+            "completed_at_local": "2026-04-18T00:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/plot_1x1_v1.json, plot_2x2_v1.json, plot_3x3_v1.json — WK32 empty plots (Retro floor/structure + Nature logs/rocks or Survival poles/canvas).",
+            "assets/prefabs/buildings/peasant_house_small_build_20_v1.json (floor-flat), peasant_house_small_build_50_v1.json (wall-door only).",
+            "assets/prefabs/buildings/castle_build_20_v1.json (5 pieces), castle_build_50_v1.json (12 pieces) — prefixes of castle_v1.json.",
+            "assets/prefabs/buildings/warrior_guild_build_20_v1.json (2 pieces), warrior_guild_build_50_v1.json (5 pieces) — subsets of warrior_guild_v1.json.",
+            "assets/models/environment — grass_tuft_a/b, grass_flower_red/yellow, nature_bush_small/large, nature_rock_a/b/c, nature_log, nature_stump, nature_mushroom (.glb copies from Models/GLTF format).",
+            "tools/assets_manifest.json — prefabs.buildings.optional lists 9 new ids; environment.types lists 12 new kinds.",
+            "assets/ATTRIBUTION.md — new Kenney Nature Kit section + environment paths.",
+            "docs/screenshots/wk32_agent15/screenshot_checkpoint.txt — screenshot reminders (no PNGs in-repo this round)."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open plot_2x2_v1",
+            "python tools/model_assembler_kenney.py --open warrior_guild_build_50_v1",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS (errors=0; warns=46 pre-existing)"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "Hand-authored JSON; Jaimie to --open each new prefab id in assembler."
+            }
+          },
+          "blockers": [],
+          "handoff": {
+            "agent_03": "Construction resolver + grass/doodad scatter should reference new prefab filenames and environment/*.glb stems.",
+            "agent_12": "Pack color multiplier (E) and any manifest tweaks if resolver naming differs."
+          }
+        },
+        "wk32_r1_revision_2026_04_18": {
+          "round_id": "wk32_r1_revision_2026_04_18",
+          "round_meta": {
+            "prompt_set_id": "wk32_r1_rewrite_2026_04_18",
+            "build_target": "PM revised prompt: pre-code checklist + scanner-safe env names + plot/intermediate polish + visual loop folder",
+            "completed_at_local": "2026-04-18T12:00:00"
+          },
+          "pm_status_summary_revision_ref": "pm_status_summary.revision_2026_04_18",
+          "pre_code_checklist": {
+            "file_map": [
+              "assets/models/environment/* — scatter mesh sources; filename stems must match _environment_grass_and_doodad_model_lists() token rules.",
+              "assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit — GLB/GLTF source for grass/flower/bush copies.",
+              "assets/models/Models/Kenny raw downloads (for exact paths)/kenney_graveyard-kit_5.0/Models/OBJ format — rock OBJ promotion targets.",
+              "assets/models/Models/Kenny raw downloads (for exact paths)/kenney_survival-kit/Models/OBJ format — log OBJ promotion targets.",
+              "game/graphics/ursina_renderer.py — _environment_grass_and_doodad_model_lists (grass vs doodad buckets by stem prefix).",
+              "assets/prefabs/buildings/*.json — plot + construction intermediates.",
+              "tools/assets_manifest.json — prefabs.buildings.optional + environment.types validation list.",
+              "assets/prefabs/schema.md — building_type contract (plot_* exception).",
+              "assets/ATTRIBUTION.md — pack + environment file rollup.",
+              "tools/model_assembler_kenney.py — --open round-trip for prefabs.",
+              ".cursor/plans/kenney_assets_models_mapping.plan.md — pack inventory reference."
+            ],
+            "architecture_options": [
+              "OPT A — Promote/rename under assets/models/environment/ with scanner-friendly stems (grass*, tuft*, flower*, bush*, rock*, log*, stump*, mushroom*). PROS: zero renderer code. CONS: duplicate bytes vs raw tree. RISK: LOW. EFFORT: M.",
+              "OPT B — Broaden scanner in ursina_renderer to match nature_* prefixes. PROS: keep arbitrary names. CONS: code churn; violates PM recommendation. RISK: MED. EFFORT: S for 03.",
+              "OPT C — Sidecar manifest of env meshes. PROS: explicit curation. CONS: new contract + reader. RISK: MED. EFFORT: L."
+            ],
+            "architecture_chosen": "OPT A — aligns with PM pre-reasoned recommendation; fixes silent failure where nature_bush_* did not match bush* prefix.",
+            "existing_code_conflicts": [
+              "Stems must start with bush/log/stump/mushroom/rock for doodad bucket — documented in PM hub BUG-003/004 notes.",
+              "pack_color_multiplier (Agent 12) will darken env/ meshes — pick sources that read acceptable at ~0.75.",
+              "Plot JSON building_type plot vs sim keys — resolver loads plot_{w}x{h}_v1.json by path; schema documents plot_1x1 / plot_2x2 / plot_3x3 exception."
+            ]
+          },
+          "status": "complete_revision_pass",
+          "what_i_changed": [
+            "Renamed environment GLBs: bush_small/large, rock_small_a/b/c, log_wide, stump_round, mushroom_tan (scanner-compatible; replaces nature_* names that did not match token rules).",
+            "Promoted Graveyard rocks-graveyard.obj → rock_gy_cluster.obj, rocks-tall-graveyard.obj → rock_gy_tall.obj (+ mtls); Survival tree-log.obj → log_survival.obj, tree-log-small.obj → log_small.obj (+ mtls).",
+            "Re-authored plot_1x1_v1 (≤3 pcs: pad, rope crate, shovel), plot_2x2_v1 (5 corner stones + scaffold), plot_3x3_v1 (7 pcs foundation ring + beams); building_type plot_1x1 / plot_2x2 / plot_3x3.",
+            "Tightened peasant_house_small_build_20_v1 (1 pc) and build_50_v1 (1 pc) to meet piece-count discipline vs final (2 pcs).",
+            "tools/assets_manifest.json — environment.types updated to new stems + rock_gy_* / log_survival / log_small.",
+            "assets/prefabs/schema.md — building_type row notes plot_* exception.",
+            "assets/ATTRIBUTION.md — environment path lines updated for renamed + OBJ promotions.",
+            "docs/screenshots/wk32_nature/ — folder for PM visual acceptance PNGs (local playtest; see visual_acceptance_loop note)."
+          ],
+          "visual_acceptance_loop": {
+            "folder": "docs/screenshots/wk32_nature",
+            "naming": "<yyyymmdd_HHMM>_<step>.png",
+            "note": "Automated agent session cannot drive Ursina F12; Jaimie to capture meadow/plot/assembler frames per PM loop and drop PNGs here. Issues logged: prior nature_* filenames broke scatter variety (fixed by stem renames)."
+          },
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open plot_1x1_v1",
+            "python main.py --renderer ursina",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            }
+          },
+          "blockers": []
+        },
+        "wk32_r2_nature_kit_inventory_and_scanner_fix": {
+          "round_id": "wk32_r2_nature_kit_inventory_and_scanner_fix",
+          "round_meta": {
+            "prompt_set_id": "wk32_r2_jaimie_nature_ref",
+            "build_target": "Kenney Nature GLB promotion + scanner fixes + tree variety; human in-game screenshot loop",
+            "completed_at_local": "2026-04-19T00:00:00"
+          },
+          "status": "complete_code_and_assets_pending_human_screenshot_loop",
+          "what_i_changed": [
+            "Copied 57 Nature Kit .glb from assets/models/Models/GLTF format/ → assets/models/environment/ (grass_*, plant_bush*, plant_flat*, mushroom_*, rock_*, stone_*, log*, stump_*, tree_pine* / tree_oak / tree_simple / tree_default per Jaimie's reference sheet).",
+            "game/graphics/ursina_renderer.py — classify plant_bush*, plant_flat*, stone*; dedupe same stem (.glb over .obj); skip tree_* from grass/doodad; new _environment_tree_model_list() + per-tile index for TREE tiles (pine/oak variety).",
+            "Visual loop (human): python main.py --renderer ursina → F12 → docs/screenshots/wk32_nature/ — repeat after each tweak; agent cannot automate Ursina capture."
+          ],
+          "how_to_test": [
+            "python main.py --renderer ursina",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "In-game meadow + tree tiles — confirm variety vs single grass/tuft; adjust copy list or stride if too dense."
+            }
+          },
+          "blockers": []
+        },
+        "wk32_r2_visual_followup": {
+          "round_id": "wk32_r2_visual_followup",
+          "round_meta": {
+            "prompt_set_id": "wk32_r2",
+            "pm_ref": "sprints.wk32-camera-construction-nature-polish.rounds.wk32_r2_visual_followup",
+            "completed_at_local": "2026-04-25T00:00:00"
+          },
+          "status": "complete",
+          "what_i_changed": [
+            "assets/prefabs/buildings/plot_3x2_v1.json — 3×2 empty plot (7 pcs: corner stones + scaffold + planks) for Inn footprint; building_type plot_3x2.",
+            "assets/prefabs/buildings/inn_v2_build_20_v1.json — 10 piece subset: first 6 stone walls + 4 road-curbs (inn_v2 construction ~20%).",
+            "assets/prefabs/buildings/inn_v2_build_50_v1.json — 24 piece subset: full stone, partial wood, 3 roof corners, 6 curbs; no custom window/door OBJ panels.",
+            "assets/models/environment — promoted Kenney Nature OBJ+MTL: tree_meadow_tall/small/thin, rock_meadow_flat/spire/chunk; fixed mtllib names; removed tree_pine.obj + tree_pine.glb (legacy billboard pine — WK32-R2-BUG-002; scatter now uses 3× meadow trees + existing Nature GLB tree_* pool).",
+            "tools/assets_manifest.json — required plot_3x2_v1; optional inn_v2_build_20/50; env: tree_meadow_* + rock_meadow_*; dropped tree_pine kind.",
+            "assets/ATTRIBUTION.md — new promotion lines; docs/screenshots/wk32_r2_agent15_screenshot_note.txt — human Ursina capture instructions."
+          ],
+          "how_to_test": [
+            "python tools/model_assembler_kenney.py --open plot_3x2_v1",
+            "python tools/model_assembler_kenney.py --open inn_v2_build_50_v1",
+            "python tools/validate_assets.py --report",
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina"
+          ],
+          "evidence": {
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS errors=0 warns=46 pre-existing"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "bug_wk32_r2_bug_002": {
+              "suspect_removed": "assets/models/environment/tree_pine.glb (and tree_pine.obj); replaced by tree_meadow_*.obj from Nature kit"
+            },
+            "visual_review": {
+              "status": "pending_human",
+              "note": "Confirm meadow trees after tint; Inn construction stages once Agent 03 resolver is wired"
+            }
+          },
+          "blockers": []
+        }
+      }
     }
   }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Prototype v1.5.2 — Lumberjacks and Town Building
+
+- Buildings no longer “pop in”: **Builder Peasants** must gather **local wood** by chopping visible/explored trees (5s chop + 5s harvest) before they can finish **Houses, Food Stands, and Farms**.
+- Wood is **per-peasant only** (not a player resource) and shown when selecting a peasant; yields scale with tree growth (50%/75%/100% trees give **5/7/10** wood).
+- **Resilience fix**: if a builder dies mid-construction, the castle spawns a **replacement builder** to finish the partially built plot (no double-paying wood).
+- **Town growth unblocked**: neutral construction can run multiple plots/builders concurrently and mixes building types so food/farms don’t get stuck behind an endless house queue.
+- Visuals: chopped trees spawn a temporary **log stack** pile in 3D (`log_stackLarge`) during harvesting, scaled by the tree’s growth stage.
+
 ## Prototype v1.5.1 — 3D Native with major Refactor
 
 Post–v1.5.0 **architecture refactor** (Stages 0–5, see `.cursor/plans/master_plan_architecture_refactor.md`): **`SimEngine`** simulation core in `game/sim_engine.py`, read-only **`SimStateSnapshot`** for renderers, **`GameCommands`** for input (no raw `GameEngine` in `InputHandler`), **`PygameRenderer`** for the pygame world pass, **Ursina** as the default renderer (`python main.py` / `main.py --renderer ursina`), root script archive under `tools/archive/`, updated **`.cursor/rules/02-project-layout.mdc`**, and **BuildingPanel** Ursina HUD re-upload via **`on_request_ursina_hud_upload`** (no `panel.engine` reference). `python main.py --renderer pygame` remains for 2D. Gates: `python tools/qa_smoke.py --quick`, `python tools/validate_assets.py --report`.
