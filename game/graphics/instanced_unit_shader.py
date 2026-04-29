@@ -25,7 +25,8 @@ void main() {
     vec4 uvRegion = texelFetch(instanceData, base + 1);
 
     vec3 instancePos = posScale.xyz;
-    float scale = posScale.w;
+    /* Negative w: projectile flag — billboard uses magnitude only (wk48 shadows skip via sign). */
+    float scale = abs(posScale.w);
 
     vec3 camRight = vec3(
         p3d_ModelViewMatrix[0][0],

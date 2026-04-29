@@ -6,6 +6,7 @@ from typing import Dict, Tuple
 
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
+from game.graphics.vfx import get_projectile_billboard_surface
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
 # Normalized UV region on the atlas: (u_start, v_start, u_width, v_height)
@@ -92,3 +93,7 @@ class UnitAtlasBuilder:
             for action, clip in clips.items():
                 for fi, surf in enumerate(clip.frames):
                     self._pack_frame(surf, ("worker", wt, action, fi), cursor)
+
+        # Ranged VFX — shared billboard texture with pygame/Ursina legacy path (wk48 instancing).
+        proj_surf = get_projectile_billboard_surface()
+        self._pack_frame(proj_surf, ("vfx", "projectile", "arrow", 0), cursor)

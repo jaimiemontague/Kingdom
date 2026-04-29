@@ -644,6 +644,56 @@
           ]
         }
       }
+    },
+    "wk48_hd2d_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk48_hd2d_polish.plan.md",
+        "notes": "Wave 1: sub-pixel smoothing + inside-building instancing pass"
+      },
+      "rounds": {
+        "wk48_r1_wave1_smoothing_compositing": {
+          "sprint_id": "wk48_hd2d_polish",
+          "round_id": "wk48_r1_wave1_smoothing_compositing",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/instanced_unit_renderer.py: _visual_pos_by_id + exponential smoothing (SMOOTHING_SPEED=15) with snap past TELEPORT_DIST_SQ; dual RGBA32F buffers and GeomNodes (_geom_node_outside transparent bin 1 / _geom_node_inside depth_test off + bin fixed order 100, MAX_INSIDE_INSTANCES=128); two-pass pack — outside heroes + enemies + workers, then inside-building heroes; prune stale visual positions with anim state.",
+            "set_instances/test_draw: upload outside buffer only; zero inside instance count.",
+            "No edits to game/graphics/ursina_renderer.py — render order handled entirely in InstancedUnitRenderer."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS (~34s)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts\" complete --cwd \"C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom\" --sprint \"wk48_hd2d_polish\" --round \"wk48_r1_wave1_smoothing_compositing\" --agent \"03\" --token \"b22512a6-e4a0-4514-9b70-1c8d04df83e9\" --status done --summary \"WK48 Wave 1: exponential visual smoothing + dual-buffer inside/outside instancing; qa_smoke PASS.\" --log-path \".cursor\\\\plans\\\\agent_logs\\\\agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk48_hd2d_polish\\\"].rounds[\\\"wk48_r1_wave1_smoothing_compositing\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Orchestrator receipt: tools/ai_studio_orchestrator/runs/inbox/b22512a6-e4a0-4514-9b70-1c8d04df83e9.completion.json"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "determinism_guard + pytest 126 passed + observe_sync scenarios DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "wk48 Wave 2 (Agent 09): blob shadow GeomNode binds to outside buffer only."
+          ]
+        }
+      }
     }
   }
 }

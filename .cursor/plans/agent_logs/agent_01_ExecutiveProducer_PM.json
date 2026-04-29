@@ -2079,6 +2079,263 @@
           }
         }
       }
+    },
+    "wk48_hd2d_polish": {
+      "sprint_meta": {
+        "sprint_id": "wk48_hd2d_polish",
+        "goal": "HD-2D polish on WK47 instancing: render-only smoothing + inside compositing, blob shadows + projectile instancing, default instancing pipeline + QA/perf evidence.",
+        "plan_ref": ".cursor/plans/wk48_hd2d_polish.plan.md",
+        "created_utc": "2026-04-29T12:00:00Z",
+        "status": "in_progress",
+        "notes": "Sequential waves: R1 Agent 03 → R2 Agent 09 → R3 Agent 03 code cleanup + Agents 10/11 gates. Orchestrator kickoff uses explicit --round wk48_r1_wave1_smoothing_compositing (lastKey(rounds) would otherwise resolve to R3)."
+      },
+      "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**. Read `.cursor/plans/wk48_hd2d_polish.plan.md` for full technical detail. Read PM hub → `sprints[\"wk48_hd2d_polish\"].rounds[<YOUR_ROUND>].pm_agent_prompts[YOUR_NUMBER]`. Composer 2 only. Receipt flow: `.cursor/rules/10-orchestrator-logging-contract.mdc`. After work: own agent log at `sprints.wk48_hd2d_polish.rounds.<round_id>`, run required gates, `python -m json.tool` your log, then run the exact `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...` line from your SDK prompt. No version bump / commit / push unless Jaimie asks.",
+      "rounds": {
+        "wk48_r1_wave1_smoothing_compositing": {
+          "round_meta": {
+            "round_id": "wk48_r1_wave1_smoothing_compositing",
+            "build_target": "Exponential visual position smoothing + inside/outside GeomNode or dual-buffer compositing",
+            "created_utc": "2026-04-29T12:00:00Z",
+            "depends_on": "wk47_unit_instancing_core"
+          },
+          "pm_status_summary": "Wave 1 (Agent 03): Implement render-only movement smoothing in InstancedUnitRenderer and fix inside-building draw order per plan § Wave 1.",
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "monitoring",
+              "next_action": "After R1 receipt: prompt Jaimie optional Ursina playtest (smooth walk + hero inside building); advance hub to R2 when 03 done."
+            },
+            "03": {
+              "status": "assigned_active",
+              "next_action": "Implement Wave 1 in game/graphics per plan; qa_smoke --quick; update agent log; orchestrator complete receipt."
+            }
+          },
+          "pm_integration_order": [
+            "wk48_r1_wave1_smoothing_compositing (03)",
+            "wk48_r2_wave2_shadows_projectiles (09)",
+            "wk48_r3_gate_removal_qa (03 then 10+11)"
+          ],
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture), sprint **wk48_hd2d_polish**, round **wk48_r1_wave1_smoothing_compositing** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` — **Wave 1: Sub-Pixel Smoothing & Compositing** (full code sketch and caveats).\n\n## Scope\n- `game/graphics/instanced_unit_renderer.py` (primary): `_visual_pos_by_id`, exponential smoothing with snap on teleport, pack smoothed positions into instance buffer; cleanup stale ids.\n- Inside-building compositing: two-pass packing — outside vs inside — per plan (prefer small `_instance_buffer_inside` if Panda offset is awkward).\n- Render-only: **no** sim/determinism changes.\n\n## Files you may touch\n- `game/graphics/instanced_unit_renderer.py`\n- Minimal glue in `game/graphics/ursina_renderer.py` only if required for ordering/bin setup.\n\n## Gates\n```powershell\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\n```\n\n## Log\nWrite `sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r1_wave1_smoothing_compositing\"]` with orchestrator-required fields + evidence.\n\nThen run the **exact** orchestrator `complete` command from your Cursor SDK prompt."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "03"
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 1: Agent 03 only — instancing renderer integration."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03"
+            ],
+            "dependencies": [
+              {
+                "id": "wave_r1",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "visual_approval",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**, round **wk48_r1_wave1_smoothing_compositing**. Read `pm_agent_prompts[YOUR_NUMBER]` in this round. Plan: `.cursor/plans/wk48_hd2d_polish.plan.md`. Composer 2 only; receipt per orchestrator contract."
+        },
+        "wk48_r2_wave2_shadows_projectiles": {
+          "round_meta": {
+            "round_id": "wk48_r2_wave2_shadows_projectiles",
+            "build_target": "Blob shadow GeomNode + shader; projectile rows in instancing path",
+            "depends_on": "wk48_r1_wave1_smoothing_compositing"
+          },
+          "pm_status_summary": "Wave 2 (Agent 09): Blob shadows sharing instance data + projectile instancing per plan § Wave 2.",
+          "pm_next_actions_by_agent": {
+            "09": {
+              "status": "blocked_until_r1_done",
+              "next_action": "Implement Wave 2 after R1 merged; use capture_screenshots.py or manual PNG if take_screenshot.py absent."
+            }
+          },
+          "pm_agent_prompts": {
+            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), sprint **wk48_hd2d_polish**, round **wk48_r2_wave2_shadows_projectiles** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` — **Wave 2: Environmental Grounding & Projectiles**.\n\n## Scope\n- New `game/graphics/shadow_instanced_shader.py` (or name aligned with repo conventions): GLSL vertex/fragment as in plan; radial gradient alpha; render bin before units.\n- `InstancedUnitRenderer`: second GeomNode for shadows bound to outside buffer only; skip projectiles and inside-buffer units.\n- `unit_atlas.py`: pack the projectile billboard surface from `game/graphics/vfx.py` (existing helper) under a stable atlas key (plan suggests vfx/projectile/arrow row — match existing atlas conventions).\n- Extend instanced `update()` loop for `snapshot.vfx_projectiles` per plan; ensure arrows do **not** receive blob shadows (flag/w-component discard per plan).\n\n## Verification\n- PNG proof: save under `docs/art/` or skimmable path and cite in your agent log (avoid introducing new tools).\n- `python tools/qa_smoke.py --quick`\n\n## Log + receipt\n`sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r2_wave2_shadows_projectiles\"]` + orchestrator `complete`.\n\nCoordinate with Agent 03 if UrsinaRenderer touch is unavoidable — prefer minimal cross-edit."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "09"
+            ],
+            "intelligence_by_agent": {
+              "09": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 2: Agent 09 — shaders + atlas/VFX integration."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "09"
+            ],
+            "dependencies": [
+              {
+                "id": "wave_r2",
+                "agents": [
+                  "09"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "screenshot_proof",
+              "visual_approval",
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**, round **wk48_r2_wave2_shadows_projectiles**. Read `pm_agent_prompts[YOUR_NUMBER]`. Plan: `.cursor/plans/wk48_hd2d_polish.plan.md` Wave 2."
+        },
+        "wk48_r3_gate_removal_qa": {
+          "round_meta": {
+            "round_id": "wk48_r3_gate_removal_qa",
+            "build_target": "Default instancing path; remove legacy sync; QA + perf stress",
+            "depends_on": "wk48_r2_wave2_shadows_projectiles"
+          },
+          "pm_status_summary": "Wave 3: Agent 03 removes KINGDOM_URSINA_INSTANCING gate and legacy paths; Agents 10+11 parallel perf + gates.",
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "blocked_until_r2_done",
+              "next_action": "Delete env gate; remove legacy _sync_snapshot_* billboards from UrsinaRenderer; InstancedUnitRenderer default."
+            },
+            "10": {
+              "status": "blocked_until_r2_done",
+              "next_action": "perf_stress_test matrix per prompt (LOW)."
+            },
+            "11": {
+              "status": "blocked_until_r2_done",
+              "next_action": "qa_smoke + validate_assets (LOW)."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (HIGH intelligence).\n\n## Source of truth\nPlan § **Wave 3** — with **ownership correction**: you implement code in `game/graphics/ursina_renderer.py` (and related), **not** Agent 11.\n\n## Tasks\n1. Remove `KINGDOM_URSINA_INSTANCING` branching; InstancedUnitRenderer is always on for Ursina unit path.\n2. Delete obsolete `_sync_snapshot_heroes`, `_sync_snapshot_enemies`, etc., and `_sync_snapshot_projectiles` if superseded by instancing — only after confirming no regressions in headless/sim.\n3. Keep presentation stable; run `python tools/qa_smoke.py --quick` before receipt.\n\n## Log + receipt\nRound path `wk48_r3_gate_removal_qa` under sprint `wk48_hd2d_polish`.",
+            "10": "You are Agent 10, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (LOW intelligence).\n\nRun perf comparison (instancing default):\n```powershell\n$env:KINGDOM_URSINA_INSTANCING = \"0\"\npython tools/perf_stress_test.py --units 500 --frames 300\n$env:KINGDOM_URSINA_INSTANCING = \"1\"\npython tools/perf_stress_test.py --units 500 --frames 300\n```\nIf env var no longer applies after Agent 03, run twice documenting branch state from 03's log. Record JSON/output paths in agent log.\n\n`python tools/qa_smoke.py --quick` optional consult-only if not duplicated.\n\nOrchestrator `complete` after logging.",
+            "11": "You are Agent 11, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (LOW intelligence).\n\n```powershell\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n```\n\nRecord exit codes in your agent log. Use Agent 10 log as source for perf numbers.\n\nDo **not** edit `game/` unless PM escalates — verification only.\n\nOrchestrator `complete` after logging."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "10",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "10": "low",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave order is defined by round.automation.dependencies (03 sequential, then 10+11 parallel). then_in_order here is documentation only — orchestrator uses dependencies array."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "10",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "code_cleanup",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_parallel",
+                "after": [
+                  "code_cleanup"
+                ],
+                "agents": [
+                  "10",
+                  "11"
+                ],
+                "parallel": true
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa**. Wave 3: Agent 03 completes code removal first; Agents 10 and 11 verify in parallel after 03. Read your `pm_agent_prompts[YOUR_NUMBER]`."
+        }
+      }
     }
   }
 }

@@ -1,11 +1,13 @@
-"""Hardware-instanced unit draw path: GeomNode + buffer texture (wk47).
+"""Hardware-instanced unit draw path: dual GeomNodes + buffer textures (wk47–wk48).
 
-When ``InstancedUnitRenderer.update(snapshot)`` is used by ``UrsinaRenderer``, all heroes,
-enemies, and workers sync from ``SimStateSnapshot`` into one instanced draw. Legacy per-Entity
-unit billboards are skipped for that scene (see ``KINGDOM_URSINA_INSTANCING`` gate).
+When ``InstancedUnitRenderer.update(snapshot)`` is used by ``UrsinaRenderer``, heroes,
+enemies, and workers sync from ``SimStateSnapshot`` into instanced draws (outside + optional
+inside-building pass). Legacy per-Entity unit billboards are skipped for that scene
+(instancing opt-in: ``KINGDOM_URSINA_INSTANCING=1``; default legacy Entity billboards).
 """
 from __future__ import annotations
 
+import math
 import struct
 import time
 from typing import TYPE_CHECKING, Sequence
@@ -19,6 +21,7 @@ from game.graphics.animation import AnimationClip
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.instanced_unit_shader import instanced_unit_shader
+from game.graphics.shadow_instanced_shader import shadow_instanced_shader
 from game.graphics.unit_atlas import FRAME_SIZE, UnitAtlasBuilder
 from game.graphics.ursina_coords import sim_px_to_world_xz
 from game.graphics.ursina_texture_bridge import pygame_surface_to_ursina_texture
@@ -35,7 +38,13 @@ if TYPE_CHECKING:
 import config
 
 MAX_INSTANCES = 1024
+# Inside-building heroes are a small slice; separate buffer avoids Panda instance offset limits.
+MAX_INSIDE_INSTANCES = 128
 BYTES_PER_TEXEL = 16  # RGBA32F
+
+# Render-only visual trailing (not sim-step interpolation).
+SMOOTHING_SPEED = 15.0
+TELEPORT_DIST_SQ = 2.25  # 1.5^2 — snap past this (teleport / building entry)
 
 # Match Ursina legacy billboard scales (`ursina_renderer.py`)
 HERO_SCALE = 0.62
@@ -43,32 +52,46 @@ ENEMY_SCALE = 0.5
 PEASANT_SCALE = 0.465
 GUARD_SCALE_UNIFORM = 0.5  # legacy xz; Y was 0.7 — single-instanced quad uses xz scale
 
+# Match ``ursina_renderer.PROJECTILE_*`` — instanced arrow billboards + shadow skip via negative scale.w.
+PROJECTILE_BILLBOARD_SCALE = 0.075
+PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
+
 
 class InstancedUnitRenderer:
-    """Single GeomNode draw with ``NodePath.set_instance_count(N)`` and a float buffer texture.
+    """Dual ``GeomNode`` draws with ``NodePath.set_instance_count(N)`` and float buffer textures.
 
-    Panda3D 1.10.x exposes hardware instance count on ``NodePath``, not ``Geom``.
+    Outside units use the main buffer; heroes with ``is_inside_building`` use a small secondary
+    buffer drawn in a late fixed bin (over building façades). Panda3D 1.10.x exposes hardware
+    instance count on ``NodePath``, not ``Geom``.
     """
 
     __slots__ = (
         "_atlas_builder",
         "_atlas_tex",
         "_instance_buffer",
-        "_geom_node_path",
+        "_instance_buffer_inside",
+        "_geom_node_outside",
+        "_geom_node_inside",
+        "_shadow_geom_node",
         "_initialized",
         "_geom",
         "_unit_anim_state",
+        "_visual_pos_by_id",
     )
 
     def __init__(self) -> None:
         self._atlas_builder = UnitAtlasBuilder.get()
         self._atlas_tex = None
         self._instance_buffer: Texture | None = None
-        self._geom_node_path: NodePath | None = None
+        self._instance_buffer_inside: Texture | None = None
+        self._geom_node_outside: NodePath | None = None
+        self._geom_node_inside: NodePath | None = None
+        self._shadow_geom_node: NodePath | None = None
         self._geom: Geom | None = None
         self._initialized = False
         # Mirror ``UrsinaRenderer._unit_anim_surface`` triggers + locomotion timing (wall clock).
         self._unit_anim_state: dict[int, dict] = {}
+        self._visual_pos_by_id: dict[int, tuple[float, float, float]] = {}
 
     def _ensure_initialized(self) -> None:
         if self._initialized:
@@ -91,17 +114,50 @@ class InstancedUnitRenderer:
             GeomEnums.UH_dynamic,
         )
 
-        self._geom_node_path = self._create_instanced_quad()
+        self._instance_buffer_inside = Texture("unit_instance_data_inside")
+        self._instance_buffer_inside.setup_buffer_texture(
+            MAX_INSIDE_INSTANCES * 2,
+            Texture.T_float,
+            Texture.F_rgba32,
+            GeomEnums.UH_dynamic,
+        )
+
+        np_outside, geom_out = self._create_instanced_quad("instanced_units_outside")
+        self._geom_node_outside = np_outside
+        self._geom = geom_out
+        np_inside, _ = self._create_instanced_quad("instanced_units_inside")
+        self._geom_node_inside = np_inside
+
+        np_shadow, _ = self._create_instanced_quad("instanced_units_shadow")
+        self._shadow_geom_node = np_shadow
+        ssh = shadow_instanced_shader._shader
+        self._shadow_geom_node.set_shader(ssh)
+        self._shadow_geom_node.set_shader_input("instanceData", self._instance_buffer)
+        self._shadow_geom_node.set_transparency(TransparencyAttrib.M_alpha)
+        self._shadow_geom_node.set_depth_write(False)
+        self._shadow_geom_node.set_bin("transparent", 0)
+        # Ground plane + scatter sit near y≈-0.05 .. 0; flat blob must not be backface-culled and
+        # needs a slight depth bias or it loses every depth test vs terrain/grass from tilted RTS cam.
+        self._shadow_geom_node.set_two_sided(True)
+        self._shadow_geom_node.set_depth_offset(10, 0)
 
         sh = instanced_unit_shader._shader
-        self._geom_node_path.set_shader(sh)
-        self._geom_node_path.set_shader_input("p3d_Texture0", panda_atlas)
-        self._geom_node_path.set_shader_input("instanceData", self._instance_buffer)
-        self._geom_node_path.set_transparency(TransparencyAttrib.M_alpha)
-        self._geom_node_path.set_depth_write(False)
-        self._geom_node_path.set_bin("transparent", 1)
+        self._geom_node_outside.set_shader(sh)
+        self._geom_node_outside.set_shader_input("p3d_Texture0", panda_atlas)
+        self._geom_node_outside.set_shader_input("instanceData", self._instance_buffer)
+        self._geom_node_outside.set_transparency(TransparencyAttrib.M_alpha)
+        self._geom_node_outside.set_depth_write(False)
+        self._geom_node_outside.set_bin("transparent", 1)
 
-    def _create_instanced_quad(self) -> NodePath:
+        self._geom_node_inside.set_shader(sh)
+        self._geom_node_inside.set_shader_input("p3d_Texture0", panda_atlas)
+        self._geom_node_inside.set_shader_input("instanceData", self._instance_buffer_inside)
+        self._geom_node_inside.set_transparency(TransparencyAttrib.M_alpha)
+        self._geom_node_inside.set_depth_write(False)
+        self._geom_node_inside.set_depth_test(False)
+        self._geom_node_inside.set_bin("fixed", 100)
+
+    def _create_instanced_quad(self, geom_name: str) -> tuple[NodePath, Geom]:
         fmt = GeomVertexFormat.get_v3t2()
         vdata = GeomVertexData("unit_quad", fmt, GeomEnums.UH_static)
         vdata.set_num_rows(4)
@@ -126,16 +182,15 @@ class InstancedUnitRenderer:
         geom = Geom(vdata)
         geom.add_primitive(tris)
 
-        node = GeomNode("instanced_units")
+        node = GeomNode(geom_name)
         node.add_geom(geom)
-        self._geom = geom
 
         from ursina import scene
 
         np = NodePath(node)
         np.reparent_to(scene)
         np.set_instance_count(0)
-        return np
+        return np, geom
 
     def _resolve_unit_anim_clip_frame(
         self,
@@ -196,33 +251,79 @@ class InstancedUnitRenderer:
         idx, _ = _frame_index_for_clip(clip_obj, elapsed)
         return clip_name, idx
 
+    def _smooth_visual_position(
+        self,
+        obj_id: int,
+        wx: float,
+        wy: float,
+        wz: float,
+        dt: float,
+    ) -> tuple[float, float, float]:
+        """Render-space exponential smoothing; snap past ``TELEPORT_DIST_SQ`` (teleports, building hops)."""
+        tx, ty, tz = wx, wy, wz
+        prev = self._visual_pos_by_id.get(obj_id)
+        if prev is None:
+            self._visual_pos_by_id[obj_id] = (tx, ty, tz)
+            return tx, ty, tz
+        vx, vy, vz = prev
+        dist_sq = (tx - vx) ** 2 + (ty - vy) ** 2 + (tz - vz) ** 2
+        if dist_sq > TELEPORT_DIST_SQ:
+            self._visual_pos_by_id[obj_id] = (tx, ty, tz)
+            return tx, ty, tz
+        lerp = 1.0 - math.exp(-SMOOTHING_SPEED * dt)
+        nx = vx + (tx - vx) * lerp
+        ny = vy + (ty - vy) * lerp
+        nz = vz + (tz - vz) * lerp
+        new_pos = (nx, ny, nz)
+        self._visual_pos_by_id[obj_id] = new_pos
+        return new_pos
+
     def update(self, snapshot: "SimStateSnapshot") -> set:
-        """Pack snapshot units into the instance buffer; return active sim object ids for cleanup."""
+        """Pack snapshot units into outside + inside buffers; return active sim object ids for cleanup."""
+        from ursina import time as ursina_time
+
         self._ensure_initialized()
         assert self._instance_buffer is not None
+        assert self._instance_buffer_inside is not None
         assert self._geom is not None
 
+        dt = max(float(ursina_time.dt), 0.0)
         active_ids: set[int] = set()
-        instance_count = 0
-        buf = memoryview(self._instance_buffer.modify_ram_image())
+
+        buf_out = memoryview(self._instance_buffer.modify_ram_image())
+        buf_in = memoryview(self._instance_buffer_inside.modify_ram_image())
+
+        count_outside = 0
+        count_inside = 0
+
+        def pack_outside(vx: float, vy: float, vz: float, scale: float, uv) -> None:
+            nonlocal count_outside
+            if count_outside >= MAX_INSTANCES:
+                return
+            offset = count_outside * 2 * BYTES_PER_TEXEL
+            struct.pack_into("ffff", buf_out, offset, vx, vy, vz, scale)
+            struct.pack_into("ffff", buf_out, offset + BYTES_PER_TEXEL, *uv)
+            count_outside += 1
+
+        def pack_inside(vx: float, vy: float, vz: float, scale: float, uv) -> None:
+            nonlocal count_inside
+            if count_inside >= MAX_INSIDE_INSTANCES:
+                return
+            offset = count_inside * 2 * BYTES_PER_TEXEL
+            struct.pack_into("ffff", buf_in, offset, vx, vy, vz, scale)
+            struct.pack_into("ffff", buf_in, offset + BYTES_PER_TEXEL, *uv)
+            count_inside += 1
 
         world = getattr(snapshot, "world", None)
         ts = float(config.TILE_SIZE)
 
-        def pack_instance(wx: float, wy: float, wz: float, scale: float, uv) -> None:
-            nonlocal instance_count
-            if instance_count >= MAX_INSTANCES:
-                return
-            offset = instance_count * 2 * BYTES_PER_TEXEL
-            struct.pack_into("ffff", buf, offset, wx, wy, wz, scale)
-            struct.pack_into("ffff", buf, offset + BYTES_PER_TEXEL, *uv)
-            instance_count += 1
-
-        # --- Heroes ---
+        # --- Outside pass: surface heroes + enemies + workers (smooth into main buffer). ---
         for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
                 continue
-            if instance_count >= MAX_INSTANCES:
+            if bool(getattr(h, "is_inside_building", False)):
+                continue
+            if count_outside >= MAX_INSTANCES:
                 break
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
             clips_h = HeroSpriteLibrary.clips_for(hc_key, size=FRAME_SIZE)
@@ -233,7 +334,8 @@ class InstancedUnitRenderer:
             uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             wy = HERO_SCALE * 0.5
-            pack_instance(wx, wy, wz, HERO_SCALE, uv)
+            vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)
+            pack_outside(vx, vy, vz, HERO_SCALE, uv)
             active_ids.add(obj_id)
 
         # --- Enemies (fog visibility matches legacy) ---
@@ -245,7 +347,7 @@ class InstancedUnitRenderer:
                 if 0 <= ty < world.height and 0 <= tx < world.width:
                     if world.visibility[ty][tx] != Visibility.VISIBLE:
                         continue
-            if instance_count >= MAX_INSTANCES:
+            if count_outside >= MAX_INSTANCES:
                 break
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
             clips_e = EnemySpriteLibrary.clips_for(et_key, size=FRAME_SIZE)
@@ -256,44 +358,95 @@ class InstancedUnitRenderer:
             uv = self._atlas_builder.lookup_uv("enemy", et_key, clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             wy = ENEMY_SCALE * 0.5
-            pack_instance(wx, wy, wz, ENEMY_SCALE, uv)
+            vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)
+            pack_outside(vx, vy, vz, ENEMY_SCALE, uv)
             active_ids.add(obj_id)
 
-        # --- Workers: idle atlas frame 0 (matches legacy billboard idle surface) ---
+        # --- Workers ---
         for p in getattr(snapshot, "peasants", ()):
-            if not getattr(p, "is_alive", True) or instance_count >= MAX_INSTANCES:
+            if not getattr(p, "is_alive", True):
                 continue
+            if count_outside >= MAX_INSTANCES:
+                break
             uv = self._atlas_builder.lookup_uv("worker", "peasant", "idle", 0)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
             wy = PEASANT_SCALE * 0.5
-            pack_instance(wx, wy, wz, PEASANT_SCALE, uv)
-            active_ids.add(id(p))
+            oid = id(p)
+            vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
+            pack_outside(vx, vy, vz, PEASANT_SCALE, uv)
+            active_ids.add(oid)
 
         for g in getattr(snapshot, "guards", ()):
-            if not getattr(g, "is_alive", True) or instance_count >= MAX_INSTANCES:
+            if not getattr(g, "is_alive", True):
                 continue
+            if count_outside >= MAX_INSTANCES:
+                break
             uv = self._atlas_builder.lookup_uv("worker", "guard", "idle", 0)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
             wy = GUARD_SCALE_UNIFORM * 0.5
-            pack_instance(wx, wy, wz, GUARD_SCALE_UNIFORM, uv)
-            active_ids.add(id(g))
+            oid = id(g)
+            vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
+            pack_outside(vx, vy, vz, GUARD_SCALE_UNIFORM, uv)
+            active_ids.add(oid)
 
         tc = getattr(snapshot, "tax_collector", None)
-        if tc is not None and getattr(tc, "is_alive", True) and instance_count < MAX_INSTANCES:
+        if tc is not None and getattr(tc, "is_alive", True) and count_outside < MAX_INSTANCES:
             uv = self._atlas_builder.lookup_uv("worker", "tax_collector", "idle", 0)
             wx, wz = sim_px_to_world_xz(tc.x, tc.y)
             wy = PEASANT_SCALE * 0.5
-            pack_instance(wx, wy, wz, PEASANT_SCALE, uv)
-            active_ids.add(id(tc))
+            oid = id(tc)
+            vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
+            pack_outside(vx, vy, vz, PEASANT_SCALE, uv)
+            active_ids.add(oid)
 
-        assert self._geom_node_path is not None
-        self._geom_node_path.set_instance_count(instance_count)
+        # --- VFX projectiles (outside buffer only; negative scale.w skips blob shadow shader). ---
+        uv_proj = self._atlas_builder.lookup_uv("vfx", "projectile", "arrow", 0)
+        for proj in getattr(snapshot, "vfx_projectiles", ()) or ():
+            if count_outside >= MAX_INSTANCES:
+                break
+            wx, wz = sim_px_to_world_xz(proj.x, proj.y)
+            wy = PROJECTILE_BILLBOARD_Y
+            oid = id(proj)
+            pack_outside(wx, wy, wz, -PROJECTILE_BILLBOARD_SCALE, uv_proj)
+            active_ids.add(oid)
+
+        # --- Inside-building heroes (fixed bin draws after terrain/buildings). ---
+        for h in getattr(snapshot, "heroes", ()):
+            if not getattr(h, "is_alive", True):
+                continue
+            if not bool(getattr(h, "is_inside_building", False)):
+                continue
+            if count_inside >= MAX_INSIDE_INSTANCES:
+                break
+            hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
+            clips_h = HeroSpriteLibrary.clips_for(hc_key, size=FRAME_SIZE)
+            obj_id = id(h)
+            clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
+                obj_id, h, clips_h, _hero_base_clip
+            )
+            uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
+            wx, wz = sim_px_to_world_xz(h.x, h.y)
+            wy = HERO_SCALE * 0.5
+            vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)
+            pack_inside(vx, vy, vz, HERO_SCALE, uv)
+            active_ids.add(obj_id)
+
+        assert self._geom_node_outside is not None
+        assert self._geom_node_inside is not None
+        assert self._shadow_geom_node is not None
+        self._geom_node_outside.set_instance_count(count_outside)
+        self._geom_node_inside.set_instance_count(count_inside)
+        self._shadow_geom_node.set_instance_count(count_outside)
         self._instance_buffer.reload()
+        self._instance_buffer_inside.reload()
 
-        # Anim state bookkeeping: drop entries whose sim objects are gone from this frame's buffer.
         for oid in list(self._unit_anim_state.keys()):
             if oid not in active_ids:
                 self._unit_anim_state.pop(oid, None)
+
+        for oid in list(self._visual_pos_by_id.keys()):
+            if oid not in active_ids:
+                self._visual_pos_by_id.pop(oid, None)
 
         return active_ids
 
@@ -304,9 +457,10 @@ class InstancedUnitRenderer:
         scale: float = 0.62,
         uv_region: tuple[float, float, float, float] | None = None,
     ) -> int:
-        """Pack instance buffer and return instance count (capped at ``MAX_INSTANCES``)."""
+        """Pack the outside instance buffer and return instance count (capped at ``MAX_INSTANCES``)."""
         self._ensure_initialized()
         assert self._instance_buffer is not None
+        assert self._instance_buffer_inside is not None
         assert self._geom is not None
 
         if uv_region is None:
@@ -321,9 +475,14 @@ class InstancedUnitRenderer:
             struct.pack_into("ffff", buf, offset, px, py, pz, scale)
             struct.pack_into("ffff", buf, offset + BYTES_PER_TEXEL, *uv_region)
 
-        assert self._geom_node_path is not None
-        self._geom_node_path.set_instance_count(n)
+        assert self._geom_node_outside is not None
+        assert self._geom_node_inside is not None
+        assert self._shadow_geom_node is not None
+        self._geom_node_outside.set_instance_count(n)
+        self._geom_node_inside.set_instance_count(0)
+        self._shadow_geom_node.set_instance_count(n)
         self._instance_buffer.reload()
+        self._instance_buffer_inside.reload()
         return n
 
     def test_draw(
@@ -339,8 +498,15 @@ class InstancedUnitRenderer:
 
     def destroy(self) -> None:
         self._unit_anim_state.clear()
-        if self._geom_node_path is not None:
-            self._geom_node_path.remove_node()
-            self._geom_node_path = None
+        self._visual_pos_by_id.clear()
+        if self._geom_node_outside is not None:
+            self._geom_node_outside.remove_node()
+            self._geom_node_outside = None
+        if self._geom_node_inside is not None:
+            self._geom_node_inside.remove_node()
+            self._geom_node_inside = None
+        if self._shadow_geom_node is not None:
+            self._shadow_geom_node.remove_node()
+            self._shadow_geom_node = None
         self._geom = None
         self._initialized = False

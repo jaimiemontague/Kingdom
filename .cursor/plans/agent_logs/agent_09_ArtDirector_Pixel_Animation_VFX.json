@@ -869,6 +869,71 @@
           ]
         }
       }
+    },
+    "wk48_hd2d_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk48_hd2d_polish.plan.md",
+        "notes": "Wave 2: blob shadows + projectile instancing (shared outside instance buffer)."
+      },
+      "rounds": {
+        "wk48_r2_wave2_shadows_projectiles": {
+          "sprint_id": "wk48_hd2d_polish",
+          "round_id": "wk48_r2_wave2_shadows_projectiles",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added shadow_instanced_shader with radial gradient blob shadows on second GeomNode sharing the outside instance buffer (transparent bin 0 before units); negative scale.w skips shadows for projectiles. Packed projectile billboard surface into unit atlas key (vfx, projectile, arrow, 0). InstancedUnitRenderer packs snapshot.vfx_projectiles with negative PROJECTILE_BILLBOARD_SCALE; instanced_unit_shader uses abs(scale) for billboards. UrsinaRenderer skips legacy projectile Entities when instancing is on to avoid double draws. PNG proof under docs/art/.",
+            "files": [
+              "game/graphics/shadow_instanced_shader.py",
+              "game/graphics/instanced_unit_shader.py",
+              "game/graphics/instanced_unit_renderer.py",
+              "game/graphics/unit_atlas.py",
+              "game/graphics/ursina_renderer.py",
+              "docs/art/wk48_hd2d_wave2_shadows_units_proof.png"
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "$env:KINGDOM_URSINA_INSTANCING='1'; python tools/run_ursina_capture_once.py --seconds 8 --subdir wk48_wave2_art --stem wk48_shadows_units_proof --no-llm",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "copy to docs/art/wk48_hd2d_wave2_shadows_units_proof.png"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts\" complete --cwd \"C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom\" --sprint \"wk48_hd2d_polish\" --round \"wk48_r2_wave2_shadows_projectiles\" --agent \"09\" --token \"d8b23b0e-3bec-4bfb-8acb-ee76e5840ae6\" --status done --summary \"Agent 09 completed WK48 Wave 2 blob shadows + projectile instancing; qa_smoke PASS; PNG proof in docs/art/.\" --log-path \".cursor\\\\plans\\\\agent_logs\\\\agent_09_ArtDirector_Pixel_Animation_VFX.json\" --log-round \"sprints[\\\"wk48_hd2d_polish\\\"].rounds[\\\"wk48_r2_wave2_shadows_projectiles\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "orchestrator completion receipt"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "png_proof": {
+              "path": "docs/art/wk48_hd2d_wave2_shadows_units_proof.png",
+              "source_capture": "docs/screenshots/wk48_wave2_art/wk48_shadows_units_proof_20260429_155827_936.png",
+              "note": "Ursina capture with KINGDOM_URSINA_INSTANCING=1"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 03 Wave 3: remove KINGDOM_URSINA_INSTANCING gate and legacy billboard paths once QA confirms."
+          ]
+        }
+      }
     }
   }
 }

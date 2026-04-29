@@ -323,7 +323,8 @@ class UrsinaRenderer:
         self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
-        # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture) behind env gate.
+        # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
+        # Opt-in: set KINGDOM_URSINA_INSTANCING=1 (blob shadows + atlas path). Default 0 = legacy Entity billboards.
         if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
             if not hasattr(self, "_instanced_unit_renderer"):
                 from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
@@ -333,7 +334,7 @@ class UrsinaRenderer:
             self._sync_snapshot_buildings(snapshot, world, active_ids)
             unit_ids = self._instanced_unit_renderer.update(snapshot)
             active_ids.update(unit_ids)
-            self._sync_snapshot_projectiles(snapshot, active_ids)
+            # Projectiles draw inside ``InstancedUnitRenderer`` (wk48); skip legacy Entities.
             self._update_debug_status_text(snapshot)
             self._destroy_removed_entities(active_ids)
             return
