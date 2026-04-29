@@ -44,7 +44,7 @@ from ursina.shaders import lit_with_shadows_shader, unlit_shader
 from game.graphics.animation import AnimationClip
 from game.graphics.building_sprites import BuildingSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
-from game.graphics.hero_sprites import HeroSpriteLibrary
+from game.graphics.hero_sprites import HeroSpriteLibrary, HeroSpriteSpec
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
 from game.graphics.vfx import get_projectile_billboard_surface
@@ -54,8 +54,8 @@ from game.world import TileType, Visibility
 if TYPE_CHECKING:
     from game.sim.snapshot import SimStateSnapshot
 
-# Fallback tints when a texture is missing
-COLOR_HERO = color.azure
+# Fallback tint when hero class is unresolved or texture upload fails — match Warrior shirt (HeroSpriteSpec).
+COLOR_HERO = color.rgb(180 / 255.0, 45 / 255.0, 45 / 255.0)
 COLOR_ENEMY = color.red
 COLOR_PEASANT = color.orange
 COLOR_GUARD = color.yellow
@@ -293,7 +293,16 @@ class UrsinaRenderer:
         elapsed = time.time() - st["t0"]
         idx, _fin = _frame_index_for_clip(clip, elapsed)
         surf = clip.frames[idx]
-        cache_key = (cache_prefix, "anim", class_key, clip_name, idx, int(config.TILE_SIZE))
+        _spec = HeroSpriteSpec(size=int(config.TILE_SIZE))
+        cache_key = (
+            cache_prefix,
+            "anim",
+            class_key,
+            clip_name,
+            idx,
+            int(config.TILE_SIZE),
+            hash(_spec),
+        )
         return surf, cache_key
 
     def update(self, snapshot: "SimStateSnapshot"):
@@ -466,7 +475,9 @@ class UrsinaRenderer:
             col = COLOR_HERO
             if HeroClass:
                 hc = getattr(h, "hero_class", None)
-                if hc == HeroClass.RANGER or str(hc).lower() == "ranger":
+                if hc == HeroClass.WARRIOR or str(hc).lower() == "warrior":
+                    col = color.white
+                elif hc == HeroClass.RANGER or str(hc).lower() == "ranger":
                     col = color.lime
                 elif hc == HeroClass.WIZARD or str(hc).lower() == "wizard":
                     col = color.magenta

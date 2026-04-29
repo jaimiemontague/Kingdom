@@ -48,11 +48,25 @@ This is YOUR file. Only you write to it. Other agents read it.
 4. **Anything unexpected** (bugs found, scope changes, blockers)
 5. **Follow-ups needed** (tasks for other agents, deferred work)
 
+## Orchestrator-required fields
+
+If `tools/ai_studio_orchestrator` launched you, your round object must include these top-level fields:
+
+- `sprint_id`: exact sprint id from the orchestrator prompt
+- `round_id`: exact round id from the orchestrator prompt
+- `status`: `done`, `complete`, `blocked`, or `failed`
+- `what_i_changed`: summary and files touched
+- `commands_run`: exact commands and exit codes, if any
+- `evidence`: gate/test evidence
+- `blockers`: list, empty if none
+- `follow_ups` or `recommended_next_actions`: list, empty if none
+
 ## Rules
 
 - **Append, don't rewrite** — add new rounds, don't edit old ones
 - **Be specific** — "fixed hero click" is useless; "added 20px click radius buffer to try_select_hero in game/engine.py line 640" is useful
 - **Include test commands** — so anyone can verify your work. Every `how_to_test` entry must be a **copy-paste-ready** command from the repo root (e.g. `python tools/qa_smoke.py --quick`), not a prose description. If manual play is needed, include the exact `python main.py ...` line(s) and any env vars.
+- **Validate JSON before done** — run `python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json` after editing your log.
 - **Keep it concise** — bullet points, not essays
 
 ## Log rolling (context bloat control)

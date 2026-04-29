@@ -819,6 +819,212 @@
           ]
         }
       }
+    },
+    "orch_tiny_warrior_red": {
+      "sprint_meta": {
+        "pm_hub": "sprints['orch_tiny_warrior_red'].rounds['orch_r1_bugfix_warrior_red_visual']",
+        "notes": "Orchestrator validation sprint: Agent 09 warrior shirt Ursina cache fix (R1); Agent 11 qa_smoke --quick per pm_agent_prompts['11']."
+      },
+      "rounds": {
+        "orch_r0_impl_then_qa": {
+          "round_id": "orch_r0_impl_then_qa",
+          "status": "complete",
+          "pm_context": "orch_tiny_warrior_red / orch_r0_impl_then_qa — QA after Agent 09 implementer.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root (PowerShell) per PM."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29_orch": {
+              "command": "python tools/qa_smoke.py --quick",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard exit 0; pytest 126 passed (1 pygame pkg_resources deprecation warning).",
+                "observe_sync / qa_smoke profiles: determinism_guard, pytest, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1x/0.25x/0.5x/1.0x, interior_view, quest_panel, conversation — all exit_code=0.",
+                "Harness: DONE: PASS; elapsed_ms ~32219."
+              ]
+            }
+          },
+          "files_touched_by_agent_11": [],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          ],
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Remaining gate: human visual approval (warrior shirt dark red in pygame + Ursina). No version bump, commit, or push per sprint automation policy."
+          ]
+        },
+        "orch_r1_bugfix_warrior_red_visual": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r1_bugfix_warrior_red_visual",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r1_bugfix_warrior_red_visual — QA after Agent 09 R1 cache-key fix (HeroSpriteLibrary + Ursina texture keys).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root (PowerShell) after Agent 09 R1; refreshed log evidence for orchestrator verifier (2026-04-29 verification run)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29_orch_r1": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "elapsed_ms": 32572,
+              "result_line": "[qa_smoke] DONE: PASS",
+              "notes": [
+                "Verification run ended_at ~2026-04-29T17:06:13Z.",
+                "Harness: DONE: PASS.",
+                "determinism_guard exit 0.",
+                "pytest: 126 passed (1 pygame pkg_resources deprecation warning).",
+                "observe_sync profiles through conversation: all exit_code=0 (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1x–1.0x, interior_view, quest_panel, conversation)."
+              ]
+            }
+          },
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            }
+          ],
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "PASS (automated). Remaining gate: Jaimie visual (Ursina + pygame); confirm warrior shirt reads dark red. No version bump / commit / push per automation policy."
+          ],
+          "recommended_next_actions": []
+        },
+        "orch_r3_canonical_log_then_live_blue_diagnosis": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r3_canonical_log_then_live_blue_diagnosis — QA wave after Agent 09 R3; engineering proof existed before QA sign-off; human Ursina/pygame gate remains with Jaimie.",
+          "what_i_changed": [
+            "No repository game or tools code edits (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root after Agent 03 + Agent 09 R3 completions.",
+            "Appended orchestrator-contract round entry with sprint_id + round_id on canonical .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json per .cursor/rules/10-orchestrator-logging-contract.mdc."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard PASS; pytest 126 passed (1 pygame pkg_resources deprecation); observe_sync profiles through conversation all exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Post-edit JSON validation (orchestrator contract)"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_orch_r3": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "pytest": "126 passed",
+              "harness_close": "[qa_smoke] DONE: PASS"
+            },
+            "engineering_proof_for_blue_shirts_ursina": {
+              "summary": "Accepted from Agent 03 canonical log (+ Agent 09): live default Ursina path loads warrior frames from PNGs; shirt pixel probe on idle frame (16,18) yields RGBA (70,120,255,255); billboard uses texture RGB with white ent.color when tint_textured is false—not a cache-key regression alone.",
+              "reference_logs": [
+                ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json — sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json — same round"
+              ]
+            },
+            "human_visual_approval": {
+              "marked_by_agent_11": false,
+              "owner": "Jaimie",
+              "reason": "Per PM/orchestrator: automation stops before manual Ursina + pygame visual gate; QA does not pre-approve."
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Pending human visual: default Ursina and pygame warrior shirt color after any art/asset follow-up.",
+            "No version bump, commit, or push from Agent 11 per sprint automation policy."
+          ],
+          "recommended_next_actions": [
+            "Jaimie: manual visual check python main.py (default Ursina) and pygame path when ready to close ORCH-WARRIOR-RED-001."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r4_screenshot_proof_dark_red_warrior_shirt",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r4_screenshot_proof_dark_red_warrior_shirt — QA after Agent 09 R4 (PNG shirt remap + Ursina screenshot proof + their qa_smoke PASS).",
+          "what_i_changed": [
+            "No repository game or tools code edits (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root after Agent 09 completed R4 (screenshot + PASS in agent_09 log).",
+            "Appended orchestrator-contract round entry on agent_11_QA_TestEngineering_Lead.json."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; pytest 126 passed (1 pygame pkg_resources deprecation warning); observe_sync profiles through conversation all exit_code=0; elapsed_ms ~34082"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Post-edit JSON validation (orchestrator contract)"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_orch_r4": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result_line": "[qa_smoke] DONE: PASS",
+              "pytest": "126 passed"
+            },
+            "agent_09_visual_proof": {
+              "reference_log": ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "log_path": "sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r4_screenshot_proof_dark_red_warrior_shirt\"]",
+              "screenshot_png": "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png",
+              "shirt_verdict_per_agent_09": "dark_red",
+              "agent_09_qa_smoke": "Agent 09 R4 log: PASS exit_code 0; Agent 11 independently re-ran qa_smoke --quick (see qa_smoke_quick_orch_r4)."
+            },
+            "human_visual_approval": {
+              "marked_by_agent_11": false,
+              "owner": "Jaimie",
+              "reason": "Per PM/orchestrator: Jaimie retains final Ursina + pygame visual sign-off; QA does not pre-approve."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Pending human visual: Jaimie manual check default Ursina and pygame paths when ready.",
+            "No version bump, commit, or push from Agent 11 per sprint automation policy."
+          ],
+          "recommended_next_actions": [
+            "Jaimie: brief playtest to confirm warrior shirt reads dark red in her environment (python main.py / python main.py --renderer pygame --no-llm as per release habits)."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
     }
   }
 }

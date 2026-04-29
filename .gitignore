@@ -65,3 +65,11 @@ saves/
 .cursor/plans/agent_logs/*.bak_*
 .cursor/plans/agent_logs/archive/*.bak_*
 
+# AI Studio SDK orchestrator runtime artifacts
+tools/ai_studio_orchestrator/node_modules/
+tools/ai_studio_orchestrator/dist/
+tools/ai_studio_orchestrator/runs/
+
+# Local-only scratch (never commit)
+local/
+

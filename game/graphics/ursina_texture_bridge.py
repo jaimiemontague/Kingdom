@@ -16,7 +16,7 @@ import pygame
 from config import TILE_SIZE
 from game.graphics.building_sprites import BuildingSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
-from game.graphics.hero_sprites import HeroSpriteLibrary
+from game.graphics.hero_sprites import HeroSpriteLibrary, HeroSpriteSpec
 from game.graphics.tile_sprites import TileSpriteLibrary
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
@@ -108,7 +108,8 @@ def get_hero_idle_texture(hero_class: object, *, size: int = 32) -> Any:
     """First frame of hero idle clip → cached Ursina Texture."""
     hc = _normalize_class_name(hero_class)
     sz = int(size)
-    key = f"h:{hc}:{sz}:idle0"
+    spec = HeroSpriteSpec(size=sz)
+    key = f"h:{hc}:{sz}:idle0:ph{hash(spec) & 0xffffffff:08x}"
     hit = _texture_cache.get(key)
     if hit is not None:
         return hit

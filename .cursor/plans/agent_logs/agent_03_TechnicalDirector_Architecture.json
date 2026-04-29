@@ -629,6 +629,148 @@
           ]
         }
       }
+    },
+    "orch_tiny_warrior_red": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis",
+        "notes": "R3: canonical Agent 03 log + live Ursina blue-shirt proof for orchestrator verifier; pixel source remains tracked warrior PNGs until Agent 09 art pass."
+      },
+      "rounds": {
+        "orch_r2_diagnose_warrior_red_ursina_path": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r2_diagnose_warrior_red_ursina_path",
+          "status": "done",
+          "what_i_changed": [
+            "No code or asset edits. Traced live default Ursina path and verified shirt RGB comes from HeroSpriteLibrary loading assets/sprites/heroes/warrior/*/frame_*.png (shirt sample (70,120,255)), not from TerrainTextureBridge cache bugs or class tint (textured billboards force ent.color=white in sync_billboard_entity)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -c \"from game.graphics.hero_sprites import HeroSpriteLibrary; import config; HeroSpriteLibrary._cache.clear(); c=HeroSpriteLibrary.clips_for('warrior', size=int(config.TILE_SIZE)); print('idle0_shirt_px', c['idle'].frames[0].get_at((16,18)))\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Printed idle0_shirt_px (70, 120, 255, 255) — blue shirt from PNG pipeline"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "default_ursina_argv": {
+              "command_equivalent": "python main.py",
+              "source": "main.py parse_args: --renderer default \"ursina\"; omitted flags use config/env LLM provider",
+              "entry_chain": [
+                "main.py:main() branch args.renderer == \"ursina\"",
+                "game.graphics.ursina_app.UrsinaApp.__init__ → GameEngine(...); UrsinaRenderer(world) attached by app loop",
+                "UrsinaRenderer.update(snapshot) → _sync_snapshot_heroes",
+                "hc_key = str(getattr(h, \"hero_class\", \"warrior\") or \"warrior\").lower()  # sim heroes use string \"warrior\" (e.g. game/engine.py HeroClass.WARRIOR.value)",
+                "HeroSpriteLibrary.clips_for(hc_key, size=config.TILE_SIZE) → _try_load_asset_frames loads assets/sprites/heroes/<class>/<action>/*.png when present, else procedural",
+                "_unit_anim_surface → surface = clip.frames[idx]; cache_key = (\"hero\", \"anim\", class_key, clip_name, idx, TILE_SIZE, hash(HeroSpriteSpec))",
+                "TerrainTextureBridge.surface_to_texture(hsurf, cache_key=…) → GPU texture",
+                "UrsinaEntityRenderCollab.sync_billboard_entity(..., tex=htex, tint_col=col, shader=sprite_unlit_shader): if tex is not None, ent.color forced to color.white unless tint_textured=True (heroes use default False) — shirt color is texture RGB only"
+              ]
+            },
+            "verification": {
+              "png_source": "git ls-files assets/sprites/heroes/warrior/idle/ includes frame_000.png … frame_005.png",
+              "pixel_sample_tile": "(16,18) on idle frame 0 after cache clear",
+              "rgba_observed": "(70, 120, 255, 255)",
+              "target_spec": "HeroSpriteSpec.warrior procedural = (180, 45, 45) — used only when PNG folder has no loadable frames",
+              "contrast_enum_path": "str(HeroClass.WARRIOR) -> 'HeroClass.WARRIOR'; clips_for('heroclass.warrior') misses asset folder and falls back to procedural red — engine uses .value 'warrior' so live path loads PNGs"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 09: Recolor or replace tracked warrior PNGs under assets/sprites/heroes/warrior/ (idle/walk/attack/hurt as needed) so shirt matches dark red target (180,45,45), or remove PNGs to force procedural clips_for('warrior') until art is ready.",
+            "Human gate: Jaimie visual on `python main.py` (default Ursina) after Agent 09 lands art fix."
+          ]
+        },
+        "orch_r3_canonical_log_then_live_blue_diagnosis": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+          "status": "done",
+          "what_i_changed": [
+            "Wrote orchestrator-contract round on canonical `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` (fixes R2 verifier: expected sprint key on this path, not agent_03_AUTO.json).",
+            "Re-verified live default Ursina hero billboard path from `main.py` through `UrsinaRenderer._sync_snapshot_heroes` → `HeroSpriteLibrary.clips_for` → `TerrainTextureBridge.surface_to_texture` → `UrsinaEntityRenderCollab.sync_billboard_entity`; no plumbing/cache/tint bug — shirt RGB is still loaded from PNG frames.",
+            "No code edits (root cause is pixel content under `assets/sprites/heroes/warrior/`, Agent 09 ownership per AGENTS.md)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -c \"from game.graphics.hero_sprites import HeroSpriteLibrary; import config; HeroSpriteLibrary._cache.clear(); c=HeroSpriteLibrary.clips_for('warrior', size=int(config.TILE_SIZE)); print('idle0_shirt_px', c['idle'].frames[0].get_at((16,18)))\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Printed idle0_shirt_px (70, 120, 255, 255) — blue shirt from PNG, not procedural (180,45,45)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete --cwd <repo> --sprint orch_tiny_warrior_red --round orch_r3_canonical_log_then_live_blue_diagnosis --agent 03 --token 20bb24ec-0529-44e4-be72-a2c9818ea091 --status done --summary \"…\" --log-path .cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json --log-round 'sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"]'",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "PowerShell: use single quotes around --log-round so bracket/backslash escapes are not eaten; receipt wrote tools/ai_studio_orchestrator/runs/inbox/20bb24ec-0529-44e4-be72-a2c9818ea091.completion.json"
+            }
+          ],
+          "evidence": {
+            "default_ursina_argv": {
+              "command_equivalent": "python main.py",
+              "argv_notes": "main.py: --renderer default is \"ursina\" (line 47–51); --no-llm omitted uses .env LLM_PROVIDER",
+              "entry_chain": [
+                "main.py: main() → args.renderer == \"ursina\" → game.graphics.ursina_app.UrsinaApp",
+                "UrsinaRenderer.update(snapshot) → _sync_snapshot_heroes",
+                "hc_key = str(getattr(h, \"hero_class\", \"warrior\") or \"warrior\").lower()",
+                "HeroSpriteLibrary.clips_for(hc_key, size=config.TILE_SIZE) in game/graphics/hero_sprites.py — _try_load_asset_frames(hero_class, action) reads assets/sprites/heroes/<class>/<action>/*.png when present",
+                "UrsinaRenderer._unit_anim_surface → TerrainTextureBridge.surface_to_texture(hsurf, cache_key=...)",
+                "ursina_entity_render_collab.py sync_billboard_entity: when tex is not None and tint_textured is False, ent.color is forced to color.white — billboard displays unmultiplied texture RGB (no class tint on warriors)"
+              ]
+            },
+            "verification": {
+              "named_functions": [
+                "HeroSpriteLibrary.clips_for",
+                "HeroSpriteLibrary._try_load_asset_frames",
+                "UrsinaRenderer._sync_snapshot_heroes",
+                "UrsinaEntityRenderCollab.sync_billboard_entity",
+                "TerrainTextureBridge.surface_to_texture"
+              ],
+              "shirt_pixel_probe": {
+                "sample_xy": "(16, 18) on idle frame 0 after HeroSpriteLibrary._cache.clear()",
+                "rgba": "(70, 120, 255, 255)",
+                "interpretation": "Matches perceptual blue shirt on screen; procedural fallback would use HeroSpriteSpec.warrior (180, 45, 45) only if PNG folder had no loadable frames"
+              }
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 09: Recolor/replace warrior PNGs under assets/sprites/heroes/warrior/ (all actions) toward (180,45,45) shirt, or temporarily remove PNGs to force procedural red until art is ready.",
+            "Agent 11: qa_smoke + canonical log for this sprint/round after Agent 09 (per PM hub).",
+            "Human gate: Jaimie default Ursina visual only after engineering proof chain accepted (no commit/push)."
+          ]
+        }
+      }
     }
   }
 }

@@ -14,7 +14,7 @@ from game.graphics.animation import AnimationClip, AnimationPlayer, load_png_fra
 class HeroSpriteSpec:
     size: int = 32
     outline: Tuple[int, int, int] = (240, 240, 240)
-    warrior: Tuple[int, int, int] = (70, 120, 255)
+    warrior: Tuple[int, int, int] = (180, 45, 45)
     ranger: Tuple[int, int, int] = (70, 200, 120)
     rogue: Tuple[int, int, int] = (180, 180, 200)
     wizard: Tuple[int, int, int] = (170, 90, 230)
@@ -43,11 +43,11 @@ class HeroSpriteLibrary:
 
     @classmethod
     def clips_for(cls, hero_class: str, size: int = 32) -> Dict[str, AnimationClip]:
-        key = (str(hero_class or "warrior"), int(size))
-        if key in cls._cache:
-            return cls._cache[key]
-
         spec = HeroSpriteSpec(size=int(size))
+        cache_key = (str(hero_class or "warrior"), int(size), hash(spec))
+        if cache_key in cls._cache:
+            return cls._cache[cache_key]
+
         base_color = cls._class_color(spec, hero_class)
 
         actions = {
@@ -65,7 +65,7 @@ class HeroSpriteLibrary:
                 frames = cls._procedural_frames(hero_class, action, base_color, spec)
             clips[action] = AnimationClip(frames=frames, frame_time_sec=meta["frame_time"], loop=meta["loop"])
 
-        cls._cache[key] = clips
+        cls._cache[cache_key] = clips
         return clips
 
     @classmethod

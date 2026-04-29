@@ -51,3 +51,17 @@ This has your full history. Skim the latest sprint/round entry to understand wha
 See the other rules files for coding standards, QA gates, and log conventions.
 
 **Human testing:** When you ask Jaimie to run something by hand, always give the **exact terminal command** from the project root (see `06-workflow-sop.mdc` Phase 5 and `04-qa-gates.mdc`).
+
+## Step 5: If Launched By The Orchestrator
+
+If your prompt says you were launched by `tools/ai_studio_orchestrator`, also follow `.cursor/rules/10-orchestrator-logging-contract.mdc`.
+
+The orchestrator will fail your wave unless your own agent log contains valid JSON at:
+
+`sprints[SPRINT_ID].rounds[ROUND_ID]`
+
+Always validate your log before claiming done:
+
+```powershell
+python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json
+```

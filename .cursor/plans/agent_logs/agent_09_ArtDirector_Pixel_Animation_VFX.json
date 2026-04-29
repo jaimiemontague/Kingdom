@@ -684,6 +684,208 @@
           ]
         }
       }
+    },
+    "orch_tiny_warrior_red": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/orchestrator_tiny_sprint_warrior_red_1fbddbf6.plan.md",
+        "notes": "Orchestrator tiny sprint: warrior shirt blue→dark red (pygame + Ursina)."
+      },
+      "rounds": {
+        "orch_r0_impl_then_qa": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r0_impl_then_qa",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Set HeroSpriteSpec.warrior to (180,45,45) for procedural pygame sprites. Ursina: explicit warrior tint color.white so textured billboards match collab behavior (native sprite colors) and missing-texture fallback is not azure.",
+            "files": [
+              "game/graphics/hero_sprites.py",
+              "game/graphics/ursina_renderer.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "status": "PASS",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "tint_note": "UrsinaEntityRenderCollab.sync_billboard_entity already applies color.white when tex is present and tint_textured is false; warrior branch aligns tint_col with that path and fixes azure-only fallback if tex were absent."
+        },
+        "orch_r1_bugfix_warrior_red_visual": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r1_bugfix_warrior_red_visual",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "R0 changed HeroSpriteSpec.warrior to dark red but HeroSpriteLibrary and TerrainTextureBridge cached frames/GPU textures under keys that did not include the palette version, so Ursina could keep serving pre-R0 blue procedural pixels. R1: include hash(HeroSpriteSpec(size)) in HeroSpriteLibrary.clips_for cache keys; append same spec token to Ursina _unit_anim_surface texture cache keys; include spec hash in ursina_texture_bridge.get_hero_idle_texture keys. COLOR_HERO default tint set from azure to HeroSpriteSpec.warrior RGB for missing-texture / unknown-class fallback paths.",
+            "files": [
+              "game/graphics/hero_sprites.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_texture_bridge.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "status": "PASS",
+              "exit_code": 0
+            }
+          },
+          "root_cause_vs_r0": "R0 updated procedural pixels but cache keys stayed identical; Ursina billboard path reused stale AnimationClip surfaces and TerrainTextureBridge GPU uploads. Textured billboards still multiply with white (sync_billboard_entity); stale GPU data was the Ursina-blue failure mode.",
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: orchestrator qa_smoke + log fields; Jaimie Ursina + pygame visual gate."
+          ]
+        },
+        "orch_r3_canonical_log_then_live_blue_diagnosis": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+          "status": "done",
+          "what_i_changed": [
+            "No edits under game/graphics/ this round. Read Agent 03 canonical log at sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis in agent_03_TechnicalDirector_Architecture.json: live default Ursina path is correct (clips_for → PNG load → TerrainTextureBridge → sync_billboard_entity with white tint); blue warrior shirts are pixel content from assets/sprites/heroes/warrior/*/frame_*.png (shirt probe (70,120,255)), not procedural HeroSpriteSpec / cache-key bugs.",
+            "Per assignment: procedural/atlas/clips plumbing was not reassigned to art code — 03 closed the plumbing diagnosis; therefore no hero_sprites.py or bridge changes."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"orch_tiny_warrior_red\" --round \"orch_r3_canonical_log_then_live_blue_diagnosis\" --agent \"09\" --token \"e2b73169-159b-4017-bc6d-5a646f5a2dc4\" --status done --summary \"Agent 09: no game/graphics edits; cited Agent 03 PNG-pixel proof for blue shirts; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json\" --log-round \"sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Wrote tools/ai_studio_orchestrator/runs/inbox/e2b73169-159b-4017-bc6d-5a646f5a2dc4.completion.json"
+            }
+          ],
+          "evidence": {
+            "agent_03_proof_ref": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"] (shirt_pixel_probe rgba (70,120,255,255); entry_chain HeroSpriteLibrary.clips_for → PNG frames)",
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Recolor or replace warrior PNGs under assets/sprites/heroes/warrior/ toward shirt target (180,45,45), or temporarily remove PNG folders to force procedural clips — per Agent 03 recommended_next_actions; defer to a follow-up art commit before Jaimie visual gate."
+          ]
+        },
+        "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r4_screenshot_proof_dark_red_warrior_shirt",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Recolored tracked warrior hero PNG frames so shirt pixels match dark red target (~180,45,45) on the live Ursina billboard path (R3: blue came from asset pixels (70,120,255) / (50,100,235), not plumbing).",
+            "files": [
+              "assets/sprites/heroes/warrior/idle/frame_000.png",
+              "assets/sprites/heroes/warrior/idle/frame_001.png",
+              "assets/sprites/heroes/warrior/idle/frame_002.png",
+              "assets/sprites/heroes/warrior/idle/frame_003.png",
+              "assets/sprites/heroes/warrior/idle/frame_004.png",
+              "assets/sprites/heroes/warrior/idle/frame_005.png",
+              "assets/sprites/heroes/warrior/walk/frame_000.png",
+              "assets/sprites/heroes/warrior/walk/frame_001.png",
+              "assets/sprites/heroes/warrior/walk/frame_002.png",
+              "assets/sprites/heroes/warrior/walk/frame_003.png",
+              "assets/sprites/heroes/warrior/walk/frame_004.png",
+              "assets/sprites/heroes/warrior/walk/frame_005.png",
+              "assets/sprites/heroes/warrior/walk/frame_006.png",
+              "assets/sprites/heroes/warrior/walk/frame_007.png",
+              "assets/sprites/heroes/warrior/attack/frame_000.png",
+              "assets/sprites/heroes/warrior/attack/frame_001.png",
+              "assets/sprites/heroes/warrior/attack/frame_002.png",
+              "assets/sprites/heroes/warrior/attack/frame_003.png",
+              "assets/sprites/heroes/warrior/attack/frame_004.png",
+              "assets/sprites/heroes/warrior/attack/frame_005.png",
+              "assets/sprites/heroes/warrior/inside/frame_000.png",
+              "assets/sprites/heroes/warrior/inside/frame_001.png",
+              "assets/sprites/heroes/warrior/inside/frame_002.png",
+              "assets/sprites/heroes/warrior/inside/frame_003.png",
+              "assets/sprites/heroes/warrior/inside/frame_004.png",
+              "assets/sprites/heroes/warrior/inside/frame_005.png"
+            ],
+            "recolor_map": "(70,120,255)→(180,45,45); (50,100,235)→(155,35,35)"
+          },
+          "screenshot_attempts": [
+            {
+              "attempt": "01",
+              "screenshot_paths": [
+                "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png"
+              ],
+              "note": "PIL batch remap of shirt blues on warrior PNGs; Ursina capture via tools/run_ursina_capture_once.py (main.py --renderer ursina --no-llm) with KINGDOM_URSINA_HERO_FPS_PROBE_COUNT=5 for visible warriors.",
+              "self_inspection": "dark_red — torso reads dark red; image sampling finds (180,45,45) and no saturated blue shirt pixels in central ROI; PASS"
+            }
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/run_ursina_capture_once.py --seconds 10 --subdir orch_tiny_warrior_red/r4 --stem attempt01 --no-llm --hero-fps-probe-count 5",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"orch_tiny_warrior_red\" --round \"orch_r4_screenshot_proof_dark_red_warrior_shirt\" --agent \"09\" --token \"3fc5bd27-66fc-4321-9174-12f7042996cd\" --status done --summary \"Agent 09: warrior PNG shirt remap to dark red; Ursina screenshot PASS; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json\" --log-round \"sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "receipt: tools/ai_studio_orchestrator/runs/inbox/3fc5bd27-66fc-4321-9174-12f7042996cd.completion.json"
+            }
+          ],
+          "evidence": {
+            "ursina_screenshot": {
+              "path": "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png",
+              "heroes_visible": 5,
+              "shirt_verdict": "dark_red"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "summary": "errors=0 (pre-existing WARN missing_model_file entries)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: qa_smoke + contract log for this round; Jaimie retains final Ursina/pygame visual gate."
+          ]
+        }
+      }
     }
   }
 }

@@ -69,6 +69,64 @@ To keep the project moving, you must "manage upwards":
 4. **Take the Lead on Process:** Instruct Jaimie when it is time to copy-paste prompts, when to test the game, and when it is time to do a git commit save state. Do not wait for Jaimie to manage the Git flow.
 5. **Synthesize & Formalize Plan:** Jaimie will give you messy, high-level ideas. You must turn those into structured, technical Sprint Plans that the rest of the agents can actually execute.
 
+## Jaimie's Standard PM Prompt Modes
+
+Jaimie usually drives Agent 01 with three recurring prompt types. Detect which mode the current prompt is in and respond accordingly.
+
+### Mode 1 — Plan The Sprint
+
+Typical prompt:
+
+> Let's add the following features: ...
+> Ask questions, clarify and create a robust plan to implement this.
+
+Agent 01 must:
+
+- Ask clarifying questions when requirements, scope, human visual needs, or acceptance criteria are unclear.
+- Push back on unsafe scope, too many simultaneous systems, or assumptions that conflict with project constraints.
+- Create a robust sprint plan under `.cursor/plans/` with clear goal, scope, out-of-scope, files likely touched, risks, dependencies, integration order, human gates, and Definition of Done.
+- Do as much reasoning as possible for downstream agents. Assume other agents are less capable and do not share your context.
+- Give each agent self-contained instructions: what to do, why, where to look, what files they may edit, what files they must not edit, and exactly how to verify their own work.
+- Include concrete implementation guidance or code-shape examples when that reduces ambiguity, while still leaving implementation to the owning agent.
+- Include exact PowerShell-compatible verification commands and screenshot/tool commands where relevant.
+- Decide whether the sprint is orchestrator-runnable; if yes, design a simple DAG and human gates suitable for `tools/ai_studio_orchestrator`.
+
+### Mode 2 — Begin / Kick Off The Sprint
+
+Typical prompt:
+
+> Alright, please kickoff the sprint by updating your log with instructions and then providing me a universal prompt...
+
+Agent 01 must:
+
+- Update the PM hub at `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` with the sprint/round, `pm_status_summary`, `pm_next_actions_by_agent`, `pm_agent_prompts`, `pm_send_list_minimal`, and `pm_universal_prompt`.
+- If the sprint can run through the SDK, add an `automation` block following `.cursor/plans/ai_studio_automation_contract.md`.
+- Use as much safe parallelism as possible, but never run agents in parallel when their work depends on prior output or would collide on the same files.
+- Provide Jaimie a send list with agent numbers, order/waves, and intelligence tags.
+- For orchestrated sprints, also provide the exact validate/dry-run/live orchestrator commands.
+- Ensure every `pm_agent_prompts` entry tells the worker to update its own log and run/record required gates.
+
+### Mode 3 — All Agents Are Done / Review And Close
+
+Typical prompt:
+
+> All agents are done, please review their logs and let me know the current status of the sprint...
+
+Agent 01 must:
+
+- Read the relevant agent logs, not just chat summaries.
+- Summarize sprint status: complete, blocked, needs follow-up round, needs Jaimie playtest, or ready to close.
+- Tell Jaimie whether manual game testing is useful, with exact PowerShell commands, duration, steps, pass/fail checks, and what to report if it fails.
+- Point Jaimie to 1–2 key docs/plan sections worth reviewing to stay in the loop.
+- Update the PM hub with status, evidence, blockers, next actions, and closeout notes.
+- Run or request log rolling at sprint boundaries:
+  ```powershell
+  python tools/roll_agent_logs.py --keep 7 --dry-run
+  python tools/roll_agent_logs.py --keep 7 --write-index
+  ```
+- If and only if Jaimie explicitly asks in the current chat to commit/push, perform the save-state commit/push flow. If Jaimie asks to close/wrap but does not explicitly say commit/push, ask for permission first.
+- If Jaimie asks for a version bump/changelog/README update, coordinate Agent 13 or update allowed PM/ops files only as permitted; do not invent a version number.
+
 ## How Agent Activation Works
 
 This is a Cursor IDE workflow, not a traditional CI pipeline:
@@ -81,6 +139,16 @@ This is a Cursor IDE workflow, not a traditional CI pipeline:
 6. Jaimie tells you when agents are done, and you review
 
 **Keep prompts short.** Agents get stuck when given too much context. Point them to the PM hub log instead of embedding everything in the prompt.
+
+## SDK Automation Readiness
+
+Some sprints may be routed by the Cursor SDK orchestrator instead of manual copy/paste. When preparing a sprint for automation:
+
+- Keep `pm_send_list_minimal` machine-readable: include `waves` or `batch_1_parallel` / `then_in_order`, `intelligence_by_agent`, and `do_not_send`.
+- Add an `automation` block when the sprint should run in `assist` or `auto_until_human_gate` mode. Follow `.cursor/plans/ai_studio_automation_contract.md`.
+- Treat all automated agents and subagents as **Composer 2 only**. Intelligence tags still mean risk/care level, not automatic model upgrades.
+- List human gates explicitly: manual playtest, visual approval, version bump, git commit, and git push must stop for Jaimie.
+- Worker agents write their own logs only. The orchestrator may prompt Agent 01 after a wave to synthesize logs and update the PM hub.
 
 ## Your PM Hub Log Structure
 

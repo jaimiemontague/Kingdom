@@ -1,0 +1,70 @@
+---
+description: Mandatory log and onboarding contract for Cursor SDK orchestrated agents.
+alwaysApply: true
+---
+
+# Orchestrator Logging Contract
+
+When you are launched by `tools/ai_studio_orchestrator`, the orchestrator advances from your explicit completion receipt, then a verifier checks your log. Your log remains mandatory audit evidence, but the receipt is the handoff trigger.
+
+## Start Every Orchestrated Run
+
+1. Confirm your identity: `Agent NN`.
+2. Onboard before doing assignment work:
+   - Read `.cursor/rules/01-studio-onboarding.mdc`.
+   - Read your role rule, e.g. `.cursor/rules/agent-NN-...-onboarding.mdc`.
+   - Read `AGENTS.md`.
+   - Read the PM hub sprint/round assigned in the prompt.
+   - Skim your own agent log's current sprint/round if present.
+3. Then perform only the assigned work.
+
+## Required Log Write
+
+Before you report done, update only your own log:
+
+`.cursor/plans/agent_logs/agent_NN_YourRole.json`
+
+You must create:
+
+`sprints[SPRINT_ID].rounds[ROUND_ID]`
+
+The round object must include these top-level fields:
+
+- `sprint_id`: exact sprint id from the orchestrator prompt.
+- `round_id`: exact round id from the orchestrator prompt.
+- `status`: `done`, `complete`, `blocked`, or `failed`.
+- `what_i_changed`: concise summary and files touched.
+- `commands_run`: list of exact commands and exit codes, if any.
+- `evidence`: gate/test/manual evidence, especially `qa_smoke`.
+- `blockers`: list, empty if none.
+- `follow_ups` or `recommended_next_actions`: list, empty if none.
+
+## JSON Safety
+
+- Never leave your log invalid, truncated, or missing closing braces.
+- After editing your log, run:
+
+```powershell
+python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json
+```
+
+- If that command fails, fix the JSON before doing anything else.
+- If you cannot safely update the log, stop and report `BLOCKED: log update failed`.
+
+## Completion Rule
+
+Do not claim "done" until:
+
+- The assigned work is complete or clearly blocked.
+- Required gates were run or delegated as instructed.
+- Your log entry exists at the exact sprint/round path.
+- Your log JSON validates with `python -m json.tool`.
+- You ran the exact `npx tsx tools\ai_studio_orchestrator\src\cli.ts complete ...` command from your prompt.
+
+## Completion Receipt
+
+Your orchestrator prompt includes a tokenized completion command. Run it exactly before your final response. You may change only the `--summary` text if needed.
+
+The receipt command tells the orchestrator that your work is ready for the log-reader/verifier agent. Do not invent your own token, sprint id, round id, or agent id.
+
+If your log is malformed or incomplete, the verifier will mark the wave `needs_log_repair` and the orchestrator will stop or route a repair task.

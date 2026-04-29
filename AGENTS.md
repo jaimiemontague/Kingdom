@@ -13,6 +13,7 @@ If an agent is unsure whether a change is “in their lane”, the default is:
 - **Gates before claiming done**: if you changed code, run `python tools/qa_smoke.py --quick` (and `python tools/validate_assets.py --report` if assets/manifests changed).
 - **Determinism boundary is sacred**: do not introduce wall‑clock time / global RNG inside sim code.
 - **PowerShell commands**: all human-facing commands must be Windows PowerShell compatible.
+- **Orchestrator receipt + log contract is mandatory**: SDK-launched agents must onboard first, write a valid JSON log entry at `sprints[SPRINT_ID].rounds[ROUND_ID]` in their own agent log, validate it with `python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json`, then run the exact `npx tsx tools\ai_studio_orchestrator\src\cli.ts complete ...` receipt command from their prompt before claiming done. Required log fields: `sprint_id`, `round_id`, `status`, `what_i_changed`, `commands_run`, `evidence`, `blockers`, and `follow_ups` or `recommended_next_actions`.
 
 ---
 
@@ -89,6 +90,7 @@ python tools/validate_assets.py --report  # only if assets/manifests changed
 Report back with:
 - Files touched
 - Commands run + exit codes
+- Agent log path + sprint/round entry written
 - Any follow-ups / risks
 ```
 
