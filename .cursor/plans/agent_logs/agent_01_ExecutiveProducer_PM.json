@@ -1816,7 +1816,10 @@
         "goal": "Replace per-Entity unit billboards with a single hardware-instanced draw call (texture atlas + custom GLSL shader + Panda3D buffer texture instancing). Feature-gated behind KINGDOM_URSINA_INSTANCING=1. Target: 500 units at 60 FPS.",
         "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
         "created_utc": "2026-04-29T19:07:00Z",
-        "version_target": "no version bump this sprint (infra only)"
+        "version_target": "no version bump this sprint (infra only)",
+        "status": "closed_success",
+        "closed_utc": "2026-04-29T23:59:00Z",
+        "notes": "Shipped instanced unit path + perf validation; human playtest pass; agent logs rolled; git save state pushed (main)."
       },
       "rounds": {
         "wk47_r1_baseline_atlas": {
@@ -2032,6 +2035,47 @@
               "14",
               "15"
             ]
+          }
+        },
+        "wk47_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk47_sprint_closeout",
+            "created_utc": "2026-04-29T23:59:00Z",
+            "source": "pm_closeout_after_gates_human_playtest_git_save_state",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK47 closed. Ursina unit instancing (atlas + buffer-tex instanced draw + KINGDOM_URSINA_INSTANCING gate) shipped; perf_stress_test + R3 matrix documented; qa_smoke/validate_assets green; Panda 1.10 uses NodePath.set_instance_count + samplerBuffer shader fix; fog visibility bookkeeping leak fixed (trees/log piles). Jaimie playtest: acceptable jitter, 30+ heroes did not worsen FPS (goal validated). Repo: agent logs rolled (--keep 7); commit pushed to main."
+          },
+          "pm_accepted_deliverables": [
+            "tools/perf_stress_test.py + WK47 perf JSON baselines; game/graphics/unit_atlas.py (Agent 09 R1 + Agent 12 tool).",
+            "game/graphics/instanced_unit_shader.py, instanced_unit_renderer.py, UrsinaRenderer integration + gate (Agent 03 R2a–R2b).",
+            "R3 perf matrix + Agent 10 log; Agent 11 qa_smoke + validate_assets.",
+            "game/graphics/ursina_terrain_fog_collab.py: untrack_visibility_gated_terrain on tree/log destroy.",
+            "tools/ai_studio_orchestrator/run_remaining_rounds.ps1 + README note for chained rounds."
+          ],
+          "pm_evidence": {
+            "gates": "python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report 0 errors (per Agent 11 / sprint practice).",
+            "perf": "tools/perf_wk47_r3_inst*.json + Agent 10 log sprints.wk47_unit_instancing_core.rounds.wk47_r3_validation",
+            "human_playtest": "Jaimie: instancing on — smooth with 30+ heroes; residual jitter noted non-blocking.",
+            "git": "main: Sprint WK47 save state committed and pushed (post roll_agent_logs)."
+          },
+          "pm_follow_ups": [
+            "Optional: default KINGDOM_URSINA_INSTANCING=1 for release when ready; document in README/Steam.",
+            "Optional jitter pass: F2 stage split (HUD vs ursina_renderer vs sim) if polish sprint scheduled."
+          ],
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Plan next sprint (content vs polish vs Steam); roll_agent_logs already run at close."
+            },
+            "03": { "status": "done" },
+            "09": { "status": "done" },
+            "10": { "status": "done" },
+            "11": { "status": "done" },
+            "12": { "status": "done" }
           }
         }
       }
