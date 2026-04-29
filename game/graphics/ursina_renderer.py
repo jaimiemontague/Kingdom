@@ -323,6 +323,21 @@ class UrsinaRenderer:
         self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
+        # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture) behind env gate.
+        if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
+            if not hasattr(self, "_instanced_unit_renderer"):
+                from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
+
+                self._instanced_unit_renderer = InstancedUnitRenderer()
+            active_ids: set[int] = set()
+            self._sync_snapshot_buildings(snapshot, world, active_ids)
+            unit_ids = self._instanced_unit_renderer.update(snapshot)
+            active_ids.update(unit_ids)
+            self._sync_snapshot_projectiles(snapshot, active_ids)
+            self._update_debug_status_text(snapshot)
+            self._destroy_removed_entities(active_ids)
+            return
+
         active_ids = set()
         self._sync_snapshot_buildings(snapshot, world, active_ids)
         self._sync_snapshot_heroes(snapshot, active_ids, HeroClass)

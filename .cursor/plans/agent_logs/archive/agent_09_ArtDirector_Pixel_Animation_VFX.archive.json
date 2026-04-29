@@ -2656,6 +2656,78 @@
           ]
         }
       }
+    },
+    "wk27-sprint-2-1-3d-buildings": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk27_sprint_2_1_buildings.plan.md",
+        "notes": "Sprint 2.1: Art polish on 3D castle/house/lair meshes — footprint scale, lit shaders, shadows."
+      },
+      "rounds": {
+        "sprint_2_1_execution": {
+          "sprint_id": "wk27-sprint-2-1-3d-buildings",
+          "round_id": "sprint_2_1_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "v1.5 Sprint 2.1 (Agent 09): Polished lit 3D building path in ursina_renderer.py. Added _footprint_scale_3d() with per-kind XZ insets (house 0.88, castle 0.98, lair 0.94) so 1×1 houses sit side-by-side without mesh overlap and castles/lairs fill footprints cleanly. _apply_lit_3d_building_settings now sets lit_with_shadows_shader vs unlit_shader from config (not sprite_unlit); collision=False. _sync_3d_building_entity passes mesh_kind, keeps shader in sync via _set_shader_if_changed, and uses scaled height for cube origin Y.",
+            "files": [
+              "game/graphics/ursina_renderer.py"
+            ]
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 03: _sync_buildings 3D interception + model paths; missing assets still fall back to cube.",
+            "Manual: verify castle/house/lair scale vs grid and shadow reception in Ursina."
+          ]
+        }
+      }
+    },
+    "wk29-first-house-playtest": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk29_first_house_playtest.plan.md",
+        "notes": "WK29 R1: Agent 09 consult — style review on peasant_house_small_v1 after Agents 15 + 03; no prefab edits by Agent 09."
+      },
+      "rounds": {
+        "wk29_r1_execution": {
+          "sprint_id": "wk29-first-house-playtest",
+          "round_id": "wk29_r1_execution",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Consult only (PM assignment): no code or prefab edits. Confirmed WK29 gated path in game/graphics/ursina_renderer.py: _use_wk29_prefab_house (env KINGDOM_URSINA_PREFAB_TEST=1 + type house + peasant_house_small_v1.json exists), _load_prefab_instance + per-piece _apply_gltf_color_and_shading, _get_or_create_prefab_house_entity / _sync_prefab_house_entity. Reviewed assets/prefabs/buildings/peasant_house_small_v1.json: 2 pieces (wall-door.glb + roof.glb), footprint [1,1], ground_anchor_y 0, Retro Fantasy attribution, ≤8 pieces. Style: silhouette is a readable small hut (facade + roof stack); Retro Fantasy stone/wood should cohere with wk25/wk26 meadow + directional lighting. No severe ground/bury clipping expected from piece offsets (roof at y=1). Optional polish for Agent 15: prefab is minimal two-plane; add side/back walls if it reads too flat at camera distance. Note: rotation_steps in JSON is not consumed by loader (no matches in ursina_renderer); flag to Agent 03 if yaw is wrong in playtest.",
+            "files": []
+          },
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "$env:KINGDOM_URSINA_PREFAB_TEST='1'; python main.py --renderer ursina --no-llm"
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "style_review": {
+              "mode": "prefab_json_plus_code_path_review",
+              "in_game_visual": "Not run in this session; Jaimie should confirm plan section 6 checklist with env var ON vs OFF."
+            }
+          },
+          "blockers": [],
+          "coordination_notes": [
+            "Agent 15: optional mesh density pass if playtest looks too thin; do not block on Agent 09.",
+            "Agent 03: rotation_steps field in schema not applied by _load_prefab_instance — follow-up if orientation needs to match sim."
+          ]
+        }
+      }
     }
   }
 }

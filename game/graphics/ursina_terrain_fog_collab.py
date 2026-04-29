@@ -170,6 +170,27 @@ class UrsinaTerrainFogCollab:
         self._r._visibility_gated_terrain.append((ent, key[0], key[1]))
         self._r._visibility_gated_terrain_by_tile.setdefault(key, []).append(ent)
 
+    def untrack_visibility_gated_terrain(self, ent: Entity) -> None:
+        """Remove a terrain prop from fog bookkeeping when its Entity is destroyed.
+
+        Without this, ``sync_dynamic_trees`` / ``sync_log_stacks`` leave zombie entries in
+        ``_visibility_gated_*``. Those lists grow forever and each fog revision revisits dead
+        NodePaths — progressively slower FPS during longer sessions.
+        """
+        self._r._visibility_gated_terrain = [
+            row for row in self._r._visibility_gated_terrain if row[0] is not ent
+        ]
+        bt = self._r._visibility_gated_terrain_by_tile
+        empty_keys: list[tuple[int, int]] = []
+        for key, lst in list(bt.items()):
+            filtered = [e for e in lst if e is not ent]
+            if filtered:
+                bt[key] = filtered
+            else:
+                empty_keys.append(key)
+        for key in empty_keys:
+            bt.pop(key, None)
+
     def sync_terrain_prop_tile_visibility(self, ent: Entity, vis: Visibility) -> None:
         is_visible = vis != Visibility.UNSEEN
         if getattr(ent, "_ks_prop_enabled", None) is not is_visible:
@@ -595,6 +616,7 @@ class UrsinaTerrainFogCollab:
                     if world is not None and int(world.get_tile(int(key[0]), int(key[1]))) != int(TileType.TREE):
                         import ursina as u
 
+                        self.untrack_visibility_gated_terrain(ent)
                         u.destroy(ent)
                         ents.pop(key, None)
                 except Exception:
@@ -696,6 +718,7 @@ class UrsinaTerrainFogCollab:
             try:
                 import ursina as u
 
+                self.untrack_visibility_gated_terrain(ent)
                 u.destroy(ent)
             except Exception:
                 pass

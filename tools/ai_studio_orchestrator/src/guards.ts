@@ -27,7 +27,7 @@ const PATH_RE = /(?:`([^`]+)`)|(?<![A-Za-z0-9_])((?:\.cursor|game|ai|tools|asset
 
 const OWNERSHIP: Record<string, RegExp[]> = {
   "01": [/^\.cursor\/plans\//, /^\.cursor\/rules\//, /^AGENTS\.md$/],
-  "03": [/^game\/sim\//, /^game\/sim_engine\.py$/, /^game\/engine\.py$/, /^game\/game_commands\.py$/, /^game\/input_handler\.py$/, /^game\/graphics\/ursina_/, /^game\/graphics\/pygame_renderer\.py$/, /^assets\/models\//, /^docs\/refactor\//, /^tests\//],
+  "03": [/^game\/sim\//, /^game\/sim_engine\.py$/, /^game\/engine\.py$/, /^game\/game_commands\.py$/, /^game\/input_handler\.py$/, /^game\/graphics\/ursina_/, /^game\/graphics\/instanced_/, /^game\/graphics\/pygame_renderer\.py$/, /^assets\/models\//, /^docs\/refactor\//, /^tests\//],
   "05": [/^game\/entities\//, /^game\/systems\//, /^config\.py$/, /^tests\//],
   "06": [/^ai\//, /^tests\//],
   "08": [/^game\/ui\//, /^assets\/ui\//, /^tests\//],
@@ -175,6 +175,7 @@ function isReadOnlyReferencePath(filePath: string): boolean {
     filePath.startsWith(".cursor/plans/agent_logs/") ||
     filePath.startsWith(".cursor/plans/wk") ||
     filePath.startsWith(".cursor/plans/master_plan") ||
+    filePath.startsWith(".cursor/plans/unit_instancing_master_plan") ||
     filePath.startsWith(".cursor/plans/ai_studio_automation_contract");
 }
 

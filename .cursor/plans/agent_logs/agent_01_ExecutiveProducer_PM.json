@@ -10,172 +10,6 @@
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
   ],
   "sprints": {
-    "wk40-refactor-stage5-cleanup": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md",
-        "plan_index_ref": ".cursor/plans/wk40_stage5_cleanup_dod.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "master_plan_section": "Stage 5: Cleanup, Consolidation, and Definition of Done (L896+)",
-        "status": "active",
-        "created_utc": "2026-04-28T12:00:00Z",
-        "notes": "WK40 kickoff: post-WK39 Stage 5. Parallel Wave1 = Agent 12 (root/tools archive) + Agent 01 (02-project-layout.mdc); Wave2 = Agent 11 full gates; Wave3 = Jaimie manual + optional Agent 13 CHANGELOG if Jaimie approves version.",
-        "pm_jaimie_send_order": [
-          "WAVE 1 (run in parallel — start both at once): Agent 12 (LOW intelligence) + Agent 01 (LOW intelligence). 12 owns root script archive/delete; 01 owns .cursor/rules/02-project-layout.mdc. No file overlap; merge to main branch or coordinate if both touch same files (they should not).",
-          "WAVE 2 (after Wave 1 both report done, or PRs merged): Agent 11 (LOW intelligence) — run determinism, pytest, qa_smoke, validate_assets; review Global DoD (master plan L925–939); log evidence.",
-          "WAVE 3 (human, after Agent 11 PASS): Jaimie — manual smokes: python main.py --no-llm (10m, default Ursina); python main.py --renderer pygame --no-llm (10m, 2D); python main.py --provider mock (5m) from repo root in PowerShell.",
-          "WAVE 3b (optional): Agent 13 (LOW) — CHANGELOG / patch-note draft only if Jaimie approves a version bump. No version number without Jaimie."
-        ],
-        "pm_tech_debt": [
-          {
-            "id": "REFACTOR-TECH-001",
-            "title": "Decouple BuildingPanel from raw GameEngine reference (building_panel.engine + economic_panel getattr)",
-            "severity": "polish",
-            "status": "done",
-            "closed_note": "2026-04-28: BuildingPanel takes on_request_ursina_hud_upload=; GameEngine._request_ursina_hud_upload; economic_panel uses panel.on_request_ursina_hud_upload",
-            "owner_suggested": {
-              "primary": "08_UX_UI",
-              "consult": "03_TechnicalDirector"
-            },
-            "rationale": "Assessor: game/engine.py sets self.building_panel.engine = self. game/ui/building_renderers/economic_panel._request_live_hud_upload_for_ursina uses getattr(panel, 'engine', None) to set _ursina_hud_force_upload. Replace with explicit callback or small interface on BuildingPanel, not a full engine reference.",
-            "files_hint": [
-              "game/engine.py",
-              "game/ui/building_panel.py",
-              "game/ui/building_renderers/economic_panel.py"
-            ],
-            "plan_ref": ".cursor/plans/wk40_post_assessor_tidy_prompts.md"
-          }
-        ]
-      },
-      "rounds": {
-        "wk40_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk40_r0_kickoff",
-            "build_target": "Root_cleanup_ProjectLayout_DoD_Gates",
-            "created_utc": "2026-04-28T12:00:00Z"
-          },
-          "pm_status_summary": {
-            "status": "in_progress",
-            "summary": "WK40 Stage 5: cleanup, updated project layout rules, final gates + manual smokes, optional CHANGELOG. Escalate sim/renderer gaps to Agent 03; do not expand scope into new features."
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "done",
-              "next_action": "Workstream B complete 2026-04-28: .cursor/rules/02-project-layout.mdc rewritten with SimEngine, GameEngine-as-PresentationLayer, SimStateSnapshot, PygameRenderer/Ursina, GameCommands, master plan + engine_access_inventory pointers; run list includes --renderer ursina."
-            },
-            "11": {
-              "status": "blocked_until_wave1",
-              "next_action": "After 12+01 done: run full stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Jaimie manual list; document Global DoD review in agent_11 log."
-            },
-            "12": {
-              "status": "ready",
-              "next_action": "Task 5-A: root scratch/pm_*/extract_*/get_agent_responses.py/test_llm per plan; do not move scripts under .cursor/plans/agent_logs/; run pytest + validate_assets after; log."
-            },
-            "13": {
-              "status": "optional",
-              "next_action": "Only if Jaimie requests: CHANGELOG prose; no version bump without Jaimie."
-            }
-          },
-          "pm_send_list_minimal": {
-            "rationale": "WAVE1: 12 and 01 touch disjoint paths (root/tools vs .cursor/rules) — run in parallel for speed. WAVE2: 11 must run after repo reflects both. WAVE3: human; 13 optional. Agents 02–10, 14–15 silent unless PM escalates.",
-            "intelligence_by_agent": {
-              "12": "low",
-              "01": "low",
-              "11": "low",
-              "13": "low"
-            },
-            "do_not_send": [
-              "02",
-              "03",
-              "04",
-              "05",
-              "06",
-              "07",
-              "08",
-              "09",
-              "10",
-              "14",
-              "15"
-            ],
-            "waves": [
-              {
-                "wave": 1,
-                "parallel": true,
-                "note": "Start two Cursor chats: paste universal prompt; assign Agent 12 in one, Agent 01 in the other.",
-                "agents": [
-                  {
-                    "id": "12",
-                    "intel": "low"
-                  },
-                  {
-                    "id": "01",
-                    "intel": "low"
-                  }
-                ]
-              },
-              {
-                "wave": 2,
-                "parallel": false,
-                "depends_on": "wave1_12_01_merged_or_both_report_done",
-                "agents": [
-                  {
-                    "id": "11",
-                    "intel": "low"
-                  }
-                ]
-              },
-              {
-                "wave": 3,
-                "parallel": false,
-                "depends_on": "wave2_11_gates_PASS",
-                "note": "Jaimie human manual smokes (see sprint_meta.pm_jaimie_send_order).",
-                "human": "Jaimie"
-              },
-              {
-                "wave": "3b_optional",
-                "parallel": false,
-                "depends_on": "Jaimie_approval",
-                "agents": [
-                  {
-                    "id": "13",
-                    "intel": "low"
-                  }
-                ]
-              }
-            ]
-          },
-          "pm_agent_prompts": {
-            "01": "WK40 Stage 5 (PM, LOW): You own Workstream B in .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md. Update ONLY .cursor/rules/02-project-layout.mdc (and at most a one-line cross-link elsewhere if the plan says so) to document SimEngine + PresentationLayer, SimStateSnapshot / build_snapshot(), PygameRenderer vs ursina_renderer, main.py / ursina_app wiring, and how to run with --renderer ursina. Link docs/refactor/engine_access_inventory.md and point to master_plan_architecture_refactor.md for Stage history. When done: append entry to this PM log file (agent_01) under the current round if needed, and/or .cursor/plans/agent_logs/ agent_01 if your studio log lives there. No production game code. Optional: python tools/qa_smoke.py --quick for sanity (not required for doc-only).",
-            "12": "WK40 Stage 5 (Tools, LOW): You own Workstream A in .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md (Task 5-A from master plan Stage 5). Archive or delete root scratch_debug_glb*.py, root pm_*.py, root extract_*.py, get_agent_responses.py; move or remove test_llm.py per plan. Do NOT delete or move scripts that live only under .cursor/plans/agent_logs/ — those are out of scope. Grep README/docs for stale references. When done: python -m pytest tests/ ; python tools/validate_assets.py --report ; at minimum your changes should allow python tools/qa_smoke.py --quick to still PASS. Update agent_12 log with files, commands, exit codes.",
-            "11": "WK40 Stage 5 (QA, LOW): Start AFTER Agent 12 and Agent 01 have finished and changes are in your workspace/branch. Workstream C: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report (0 errors). Review Global Definition of Done checklist in .cursor/plans/master_plan_architecture_refactor.md L925–939; if something is not satisfied, file in agent_11 log with owner Agent 03 vs PM. Prepare exact manual commands for Jaimie (already in plan). Log all evidence.",
-            "13": "WK40 Stage 5 (optional, Marketing/Ops, LOW): Only if Jaimie explicitly wants release notes. Draft a short player-facing or internal-facing CHANGELOG entry for this refactor-cleanup tranche. Do not bump version or edit CHANGELOG.md until Jaimie approves. Coordinate with plan Workstream D."
-          }
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint wk40-refactor-stage5-cleanup (Architecture Refactor Stage 5: Cleanup, consolidation, Definition of Done), round wk40_r0_kickoff.\\n\\n1) Read the sprint plan FIRST: .cursor/plans/wk40_stage_5_sprint_404c01dc.plan.md (short index: .cursor/plans/wk40_stage5_cleanup_dod.plan.md).\\n2) Read the master plan Stage 5: .cursor/plans/master_plan_architecture_refactor.md (approx. L896+, Task 5-A through Global DoD).\\n3) Read the PM Executive Producer log for this sprint: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\\\"wk40-refactor-stage5-cleanup\\\"] -> rounds[\\\"wk40_r0_kickoff\\\"] -> pm_agent_prompts[\\\"YOUR_NUMBER\\\"] and pm_next_actions_by_agent.\\n4) Follow Jaimie's send order in that sprint block (sprint_meta.pm_jaimie_send_order). Wave 1: Agents 12 and 01 in parallel. Wave 2: Agent 11. Wave 3: Jaimie manual. Wave 3b optional: Agent 13.\\n5) When done: update your own agent log JSON; run the gates in your numbered prompt; report to Jaimie: files, commands, exit codes, blockers.\\n\\nOne line: root script cleanup + 02-project-layout update + final gates and manual smokes; no new gameplay or renderer refactors in this sprint unless a gate requires a hotfix (escalate to PM / Agent 03).",
-      "pm_send_list_minimal": {
-        "rationale": "WAVE1 parallel: 12 (low) + 01 (low), disjoint file ownership. WAVE2: 11 (low) after both land. WAVE3: Jaimie human. 3b optional: 13 (low). Others silent.",
-        "intelligence_by_agent": {
-          "12": "low",
-          "01": "low",
-          "11": "low",
-          "13": "low"
-        },
-        "do_not_send": [
-          "02",
-          "03",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "14",
-          "15"
-        ],
-        "kickoff": "Open TWO chats in WAVE1 (same prompt): Agent 12 in one, Agent 01 in the other. When BOTH done, one chat Agent 11. Then Jaimie does manual. Optional: Agent 13 for CHANGELOG with Jaimie OK."
-      }
-    },
     "wk41-mechanical-module-split": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
@@ -422,273 +256,6 @@
         }
       },
       "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
-    },
-    "wk42-renderer-dedupe-wire-collabs": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "status": "closed_success",
-        "created_utc": "2026-04-28T00:40:00Z",
-        "notes": "WK42: finish WK41. Delete the 819-line duplicate module-level block in ursina_renderer.py (Track A); wire UrsinaTerrainFogCollab as live terrain/fog path and delete 6 duplicated methods (Track B); wire UrsinaEntityRenderCollab and delete 11 duplicated entity-render methods (Track C). Expected: ursina_renderer.py drops from 2,094 to ~700 lines. No behavior change.",
-        "pm_audit_finding": "2026-04-27 audit confirmed: ursina_environment.py, ursina_prefabs.py, ursina_coords.py, ursina_units_anim.py each contain functions that are ALSO defined in ursina_renderer.py — 35 functions total, 100% duplication, renderer imports none of the new modules. UrsinaTerrainFogCollab and UrsinaEntityRenderCollab are never imported or instantiated by UrsinaRenderer.",
-        "pm_jaimie_send_order": [
-          "STEP 1 — Agent 03 (MEDIUM): WK42-R1 Track A only. Pre-flight diff first. Delete lines 119-819 from ursina_renderer.py; replace with imports from the 4 new modules. Run gates. Report.",
-          "STEP 2 — Agent 11 (LOW): After Step 1 reports done. Run full gate stack. Log.",
-          "STEP 3 — Agent 03 (MEDIUM): WK42-R2 Track B. Wire UrsinaTerrainFogCollab; delete 6 duplicated methods; replace call sites. Run gates. Report.",
-          "STEP 4 — PARALLEL (two Cursor chats after Step 3): Agent 11 (LOW) full gate stack; Agent 10 (LOW consult) ~5 min Ursina FPS check.",
-          "STEP 5 — Agent 03 (MEDIUM): WK42-R3 Track C. Wire UrsinaEntityRenderCollab; delete 11 duplicated methods; replace call sites. Run gates. Report.",
-          "STEP 6 — PARALLEL (two Cursor chats after Step 5): Agent 11 (LOW) full gate stack; Agent 10 (LOW consult) FPS check.",
-          "STEP 7 — Jaimie manual smokes: python main.py --renderer ursina --no-llm (5-10 min); python main.py --renderer pygame --no-llm (5 min). Sprint closes on PASS."
-        ]
-      },
-      "rounds": {
-        "wk42_r1_track_a_module_block": {
-          "round_meta": {
-            "round_id": "wk42_r1_track_a_module_block",
-            "build_target": "Delete_819_line_duplicate_block_replace_with_imports",
-            "created_utc": "2026-04-28T00:40:00Z",
-            "visibility": "Implementer: 03. QA: 11 after merge."
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "focus": "Track A: delete ursina_renderer.py lines 119-819 (35 module-level functions that are exact duplicates of ursina_environment.py, ursina_prefabs.py, ursina_coords.py, ursina_units_anim.py). Replace with import block. Pre-flight diff required first.",
-            "gates": {
-              "determinism_guard": "python tools/determinism_guard.py PASS",
-              "pytest": "python -m pytest tests/ PASS",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick PASS",
-              "validate_assets": "python tools/validate_assets.py --report errors=0"
-            }
-          },
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Run pre-flight: diff each of the 35 functions between ursina_renderer.py and its new module. If any diverged, update the MODULE file to match the renderer (renderer is the running copy). Log any divergences found.",
-                "Delete ursina_renderer.py lines 119-819 entirely.",
-                "Add import block at top of ursina_renderer.py (after existing stdlib/ursina imports) importing all 35 names from the 4 new modules.",
-                "Ensure PROJECT_ROOT and any other module-level constants from that block are also exported from the relevant module.",
-                "Run gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report",
-                "Report: file line count before/after, any divergences found in pre-flight, gate exit codes."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_r1_done",
-              "asks": [
-                "After Agent 03 reports R1 done: run full gate stack; log exit codes in agent_11 JSON."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_11",
-            "then_in_order": [
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK42 R1 Track A (Tech, MEDIUM): Read the sprint plan FIRST: .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R1). PRE-FLIGHT: diff each function that exists in both ursina_renderer.py (lines 119-819) and ursina_environment.py / ursina_prefabs.py / ursina_coords.py / ursina_units_anim.py. If any diverged, update the MODULE file to match the renderer version. Then: delete lines 119-819 from ursina_renderer.py; add the import block as specified in the plan. Check that PROJECT_ROOT and any module-level constants from that block are also exported from the relevant module. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log pre-flight findings, line count before/after, gate exit codes in agent_03 JSON.",
-            "11": "WK42 R1 Track A (QA, LOW): After Agent 03 lands R1, run from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log all commands and exit codes in agent_11 JSON. Report PASS or any failures to PM/Jaimie."
-          }
-        },
-        "wk42_r2_track_b_terrain_collab": {
-          "round_meta": {
-            "round_id": "wk42_r2_track_b_terrain_collab",
-            "build_target": "Wire_UrsinaTerrainFogCollab_delete_6_renderer_methods",
-            "created_utc": "2026-04-28T00:40:00Z",
-            "visibility": "Implementer: 03. QA: 11 after merge. Perf consult: 10 after merge."
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "focus": "Track B: instantiate UrsinaTerrainFogCollab in UrsinaRenderer.__init__; delete the 6 terrain/fog methods from UrsinaRenderer; replace all call sites with self._terrain_fog.* delegation.",
-            "terrain_methods_to_remove": [
-              "_ensure_fog_overlay (L961)",
-              "_track_visibility_gated_terrain (L1076)",
-              "_sync_terrain_prop_tile_visibility (L1085)",
-              "_sync_visibility_gated_terrain (L1097)",
-              "_ensure_grid_debug_overlay (L1126)",
-              "_build_3d_terrain (L1217)"
-            ],
-            "gates": {
-              "determinism_guard": "PASS",
-              "pytest": "PASS",
-              "qa_smoke_quick": "PASS",
-              "validate_assets": "errors=0",
-              "ursina_fps_consult": "Agent 10: python main.py --renderer ursina --no-llm ~5 min, no regression"
-            }
-          },
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "blocked_until_r1_pass",
-              "asks": [
-                "Pre-flight: verify the 6 UrsinaTerrainFogCollab methods cover the same instance-variable surface (self.XXX = assignments) as the 6 UrsinaRenderer methods they replace. Add any missing state to the collab's __init__ before wiring.",
-                "In UrsinaRenderer.__init__: add 'from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab' and 'self._terrain_fog = UrsinaTerrainFogCollab(self)'.",
-                "Delete the 6 methods from UrsinaRenderer; replace all self._METHOD(...) call sites with self._terrain_fog.METHOD(...) (drop leading underscore on collab side).",
-                "Run full gate stack."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_r2_done"
-            },
-            "10": {
-              "status": "consult_after_11_starts",
-              "asks": [
-                "After 03 reports R2 done: python main.py --renderer ursina --no-llm ~5 min. Note FPS/feel vs baseline. Log in agent_10 JSON."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_parallel_11_10",
-            "then_in_order": [
-              "03"
-            ],
-            "then_parallel": [
-              "11",
-              "10"
-            ],
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low",
-              "10": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK42 R2 Track B (Tech, MEDIUM): Read .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R2). Pre-flight: check the 6 UrsinaTerrainFogCollab methods for instance-variable coverage vs the 6 UrsinaRenderer methods. Add any missing init state to the collab. Then wire: import UrsinaTerrainFogCollab in UrsinaRenderer.__init__; create self._terrain_fog = UrsinaTerrainFogCollab(self); delete the 6 methods (_ensure_fog_overlay L961, _track_visibility_gated_terrain L1076, _sync_terrain_prop_tile_visibility L1085, _sync_visibility_gated_terrain L1097, _ensure_grid_debug_overlay L1126, _build_3d_terrain L1217) and replace every call site with self._terrain_fog.METHOD_WITHOUT_LEADING_UNDERSCORE(...). Gates: determinism_guard; pytest; qa_smoke --quick; validate_assets. Log pre-flight findings + line count + gate exit codes in agent_03 JSON.",
-            "11": "WK42 R2 Track B (QA, LOW): After Agent 03 lands R2, run full gate stack (determinism_guard; pytest; qa_smoke --quick; validate_assets). Log commands + exit codes in agent_11 JSON. Parallel with Agent 10.",
-            "10": "WK42 R2 Track B (Perf, LOW consult): After Agent 03 lands R2, run python main.py --renderer ursina --no-llm for ~5 minutes. Watch FPS/feel vs baseline (no new stutter, no visual regression). Log result in agent_10 JSON. Parallel with Agent 11."
-          }
-        },
-        "wk42_r3_track_c_entity_collab": {
-          "round_meta": {
-            "round_id": "wk42_r3_track_c_entity_collab",
-            "build_target": "Wire_UrsinaEntityRenderCollab_delete_11_renderer_methods",
-            "created_utc": "2026-04-28T00:40:00Z",
-            "visibility": "Implementer: 03. QA: 11 after merge. Perf consult: 10 after merge. Human: Jaimie manual smokes."
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "focus": "Track C: instantiate UrsinaEntityRenderCollab in UrsinaRenderer.__init__; delete the 11 entity-render methods from UrsinaRenderer; replace all call sites with self._entity_render.* delegation.",
-            "entity_methods_to_remove": [
-              "_apply_pixel_billboard_settings (L1431)",
-              "_sync_inside_hero_draw_layer (L1444)",
-              "_set_texture_if_changed (L1462)",
-              "_set_shader_if_changed (L1469)",
-              "_sync_billboard_entity (L1476)",
-              "_get_or_create_entity (L1501)",
-              "_apply_lit_3d_building_settings (L1531)",
-              "_get_or_create_3d_building_entity (L1548)",
-              "_sync_3d_building_entity (L1579)",
-              "_get_or_create_prefab_building_entity (L1611)",
-              "_sync_prefab_building_entity (L1641)"
-            ],
-            "gates": {
-              "determinism_guard": "PASS",
-              "pytest": "PASS",
-              "qa_smoke_quick": "PASS",
-              "validate_assets": "errors=0",
-              "ursina_fps_consult": "Agent 10: no regression",
-              "manual_jaimie": "python main.py --renderer ursina --no-llm 5-10 min + pygame 5 min PASS"
-            }
-          },
-          "pm_next_actions_by_agent": {
-            "03": {
-              "status": "blocked_until_r2_pass",
-              "asks": [
-                "Pre-flight: verify UrsinaEntityRenderCollab's 11 methods access shared renderer state (_entities, _unit_anim_state, etc.) only through self.renderer.* — not through stale local copies.",
-                "In UrsinaRenderer.__init__: add 'from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab' and 'self._entity_render = UrsinaEntityRenderCollab(self)'.",
-                "Delete the 11 methods; replace all self._METHOD(...) call sites with self._entity_render.METHOD(...).",
-                "Run full gate stack."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_r3_done"
-            },
-            "10": {
-              "status": "consult_after_11_starts"
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "03_then_parallel_11_10_then_jaimie",
-            "then_in_order": [
-              "03"
-            ],
-            "then_parallel": [
-              "11",
-              "10"
-            ],
-            "then_human": "Jaimie manual smokes",
-            "intelligence_by_agent": {
-              "03": "medium",
-              "11": "low",
-              "10": "low"
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK42 R3 Track C (Tech, MEDIUM): Read .cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md (Round WK42-R3). Pre-flight: verify UrsinaEntityRenderCollab's 11 methods access all shared renderer state through self.renderer.* consistently. Then wire: import UrsinaEntityRenderCollab in UrsinaRenderer.__init__; create self._entity_render = UrsinaEntityRenderCollab(self); delete the 11 methods (_apply_pixel_billboard_settings L1431, _sync_inside_hero_draw_layer L1444, _set_texture_if_changed L1462, _set_shader_if_changed L1469, _sync_billboard_entity L1476, _get_or_create_entity L1501, _apply_lit_3d_building_settings L1531, _get_or_create_3d_building_entity L1548, _sync_3d_building_entity L1579, _get_or_create_prefab_building_entity L1611, _sync_prefab_building_entity L1641) and replace every call site with self._entity_render.METHOD_WITHOUT_LEADING_UNDERSCORE(...). Gates: determinism_guard; pytest; qa_smoke --quick; validate_assets. Report final ursina_renderer.py line count + gate exit codes in agent_03 JSON. Tell Jaimie/PM when ready for manual smokes.",
-            "11": "WK42 R3 Track C (QA, LOW): After Agent 03 lands R3, run full gate stack (determinism_guard; pytest; qa_smoke --quick; validate_assets errors=0). Log all commands and exit codes in agent_11 JSON. Parallel with Agent 10.",
-            "10": "WK42 R3 Track C (Perf, LOW consult): After Agent 03 lands R3, run python main.py --renderer ursina --no-llm ~5 min. Note FPS/feel. Log in agent_10 JSON. Parallel with Agent 11."
-          }
-        },
-        "wk42_sprint_closeout": {
-          "round_meta": {
-            "round_id": "wk42_sprint_closeout",
-            "created_utc": "2026-04-27T00:00:00Z",
-            "closed_by": "Agent_01_ExecutiveProducer_PM",
-            "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
-            "commit_message": "Sprint WK42: Ursina renderer dedupe, terrain/entity collaborators, CHANGELOG v1.5.1"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK42 closed. Duplicate module block removed from ursina_renderer.py; UrsinaTerrainFogCollab + UrsinaEntityRenderCollab wired; UrsinaRenderer.update() regression fixed before ship. Gates PASS (Agent 11); perf consult no blocker (Agent 10); Jaimie manual Ursina + pygame PASS; CHANGELOG v1.5.1 WK42 section added."
-          },
-          "pm_accepted_deliverables": [
-            "game/graphics/ursina_renderer.py orchestrator-scale file; imports from ursina_environment, ursina_prefabs, ursina_coords, ursina_units_anim",
-            "Terrain/fog + entity rendering delegation via UrsinaTerrainFogCollab and UrsinaEntityRenderCollab",
-            "CHANGELOG.md — WK42 under Prototype v1.5.1"
-          ],
-          "pm_evidence": {
-            "agent_logs": "agent_03 TechnicalDirector — wk42_r1_r2_r3_complete; agent_11 — wk42_post_integration_full_stack + R2/R3 verification; agent_10 — wk42_r2_r3_perf_consult",
-            "human_playtest": "Jaimie Ursina + pygame manual PASS",
-            "gates": "determinism_guard, pytest 114, qa_smoke --quick, validate_assets errors=0"
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "closed",
-              "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at sprint boundary"
-            },
-            "03": {
-              "status": "done"
-            },
-            "10": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          }
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint **wk42-renderer-dedupe-wire-collabs**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md`\n2) Read the PM Executive Producer hub for your round assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk42-renderer-dedupe-wire-collabs\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"<your round id>\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow ONLY your numbered prompt and your track. Do not expand scope.\n4) When done: update YOUR agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **delete duplicate code, wire the collaborators, no behavior change**.",
-      "pm_send_list_minimal": {
-        "do_not_send": [
-          "01",
-          "02",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "12",
-          "13",
-          "14",
-          "15"
-        ],
-        "rationale": "Single implementer (03) per round, sequential. 11 gates after each 03 round. 10 FPS consult after R2 and R3 only. Jaimie manual after R3 gates pass."
-      }
     },
     "wk43-building-nature-stage1": {
       "sprint_meta": {
@@ -2240,6 +1807,232 @@
             "11": "ORCH TINY SPRINT — **R4 QA** (**LOW** intelligence): After Agent 09 completes (including **screenshot proof** + PASS qa_smoke in their log):\\n\\n`python tools/qa_smoke.py --quick`\\n\\nWrite `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]` with orchestrator-contract fields on the round object: **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r4_screenshot_proof_dark_red_warrior_shirt`, status, what_i_changed, commands_run, evidence (cite Agent 09 screenshot paths from their log if helpful), blockers, follow_ups **or** recommended_next_actions.\\n\\n**Do not** mark Jaimie's visual gate approved — she still owns final Ursina/pygame sign-off. Run orchestrator **complete** receipt from your prompt. **Composer 2 only.**"
           },
           "pm_universal_prompt": "You are activated for sprint **orch_tiny_warrior_red**, round **orch_r4_screenshot_proof_dark_red_warrior_shirt**.\\n\\n1) Open PM hub → `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"].pm_agent_prompts[YOUR_NUMBER]`.\\n\\n2) **Composer 2 only** — receipt flow per `.cursor/rules/10-orchestrator-logging-contract.mdc`.\\n\\n3) Agent 09: **screenshot-driven iteration is mandatory** before your completion receipt — saved PNG must visibly show **dark red** warrior shirt.\\n\\n4) Agent 11: qa_smoke after 09.\\n\\n5) Stop before Jaimie manual visual approval / playtest sign-off; no version bump, commit, or push."
+        }
+      }
+    },
+    "wk47_unit_instancing_core": {
+      "sprint_meta": {
+        "sprint_id": "wk47_unit_instancing_core",
+        "goal": "Replace per-Entity unit billboards with a single hardware-instanced draw call (texture atlas + custom GLSL shader + Panda3D buffer texture instancing). Feature-gated behind KINGDOM_URSINA_INSTANCING=1. Target: 500 units at 60 FPS.",
+        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
+        "created_utc": "2026-04-29T19:07:00Z",
+        "version_target": "no version bump this sprint (infra only)"
+      },
+      "rounds": {
+        "wk47_r1_baseline_atlas": {
+          "round_meta": {
+            "round_id": "wk47_r1_baseline_atlas",
+            "build_target": "Stress test baseline + atlas generator",
+            "created_utc": "2026-04-29T19:07:00Z"
+          },
+          "pm_status_summary": "Wave 1 (parallel): Agent 12 builds stress-test benchmark tool. Agent 09 builds texture atlas generator. Independent, no file overlap.",
+          "pm_next_actions_by_agent": {
+            "12": "Build tools/perf_stress_test.py (MEDIUM intelligence)",
+            "09": "Build game/graphics/unit_atlas.py (HIGH intelligence)"
+          },
+          "pm_agent_prompts": {
+            "12": "You are Agent 12 (ToolsDevEx_Lead), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild tools/perf_stress_test.py — a stress test tool that measures Ursina renderer performance at high unit counts.\n\n## What To Build\n\nA script that:\n1. Launches the game with Ursina renderer in a non-interactive mode\n2. Overrides enemy/hero counts to spawn N units (configurable: 200, 500, 1000)\n3. Runs for 300 frames measuring frame time\n4. Reports: average frame time (ms), min/max, 1% low FPS\n5. Saves results to tools/perf_stress_baseline_wk47.json (under tools/ only)\n\n## Implementation Approach\n\nUse the existing headless sim + Ursina renderer. Key steps:\n- Import SimEngine from game.sim_engine and manually add entities to create high unit counts (imports only; do not edit game package files)\n- Import UrsinaRenderer and call update(snapshot) in a timed loop\n- Before the loop, programmatically spawn extra enemies/heroes by appending to the engine live lists\n- Time each update() call with time.perf_counter()\n- Print a table of results and write JSON\n\nNote: you may need to initialize pygame display (pygame.display.set_mode((1,1))) and Ursina (from ursina import Ursina; app = Ursina(...)) before using the renderer. Use web/docs or existing tools patterns under tools/ if you need bootstrap hints — do not edit game package files.\n\n## CLI Interface\n\npython tools/perf_stress_test.py --units 200 --frames 300\npython tools/perf_stress_test.py --units 500 --frames 300\npython tools/perf_stress_test.py --units 1000 --frames 300\n\n## Files You May Edit\n- tools/perf_stress_test.py (NEW)\n- tools/perf_stress_baseline_wk47.json (NEW, output)\n\n## Scope boundary\n- Implement and edit files under tools/ only. Do not modify game/, ai/, config, or root entry scripts.\n\n## Verification\n1. python tools/perf_stress_test.py --units 200 --frames 300 runs and prints results\n2. python tools/qa_smoke.py --quick still passes\n3. Update your agent log at sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]\n4. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild `game/graphics/unit_atlas.py` — a module that packs ALL unit sprite frames (heroes, enemies, workers) into a single 2048x2048 RGBA texture atlas at game boot, with a lookup dict mapping `(unit_type, class_key, action, frame_index)` to normalized UV coordinates.\n\n## Why This Matters\n\nThe current renderer creates a separate Ursina Entity per unit with per-entity texture changes. We are moving to hardware instancing where ALL units share ONE texture (the atlas). Your atlas is the foundation the instanced shader (Agent 03, Wave 2) will sample from.\n\n## What To Build\n\nA class `UnitAtlasBuilder` with:\n- Singleton pattern (built once at first access via `UnitAtlasBuilder.get()`)\n- `atlas_surface` property returning `pygame.Surface` (2048x2048 RGBA)\n- `lookup_uv(unit_type, class_key, action, frame_idx)` returning `(u_start, v_start, u_width, v_height)` in [0,1] normalized coordinates\n- `frame_count` property returning total frames packed (for debug)\n\n## Sprites To Pack\n\n**Heroes** (5 classes x 5 actions x variable frames):\n- Classes: `warrior`, `ranger`, `rogue`, `wizard`, `cleric`\n- Actions: `idle`, `walk`, `attack`, `hurt`, `inside`\n- Use: `HeroSpriteLibrary.clips_for(class_name, size=32)` returns dict of AnimationClip, each clip has `.frames` list of pygame.Surface\n\n**Enemies** (6 types x variable actions x variable frames):\n- Types: `goblin`, `wolf`, `skeleton`, `skeleton_archer`, `spider`, `bandit`\n- Use: `EnemySpriteLibrary.clips_for(enemy_type, size=32)` returns dict of AnimationClip\n\n**Workers** (3 types x variable actions x variable frames):\n- Types: `peasant`, `guard`, `tax_collector`\n- Use: `WorkerSpriteLibrary.clips_for(worker_type, size=32)` returns dict of AnimationClip\n\n## Packing Algorithm\n\nSimple row-based shelf packing:\n- All sprites are 32x32 pixels\n- 2048 / 32 = 64 frames per row\n- 64 rows = 4096 total frame capacity (far more than needed)\n- Fill left-to-right, top-to-bottom\n- Track cursor_x, cursor_y\n\n## EXACT Code To Write\n\nFile: `game/graphics/unit_atlas.py`\n\n```python\n\"\"\"Unit sprite atlas generator for instanced rendering (wk47).\"\"\"\nfrom __future__ import annotations\n\nimport pygame\nfrom typing import Dict, Tuple\n\nfrom game.graphics.hero_sprites import HeroSpriteLibrary\nfrom game.graphics.enemy_sprites import EnemySpriteLibrary\nfrom game.graphics.worker_sprites import WorkerSpriteLibrary\n\n# Normalized UV region on the atlas: (u_start, v_start, u_width, v_height)\nUVRegion = Tuple[float, float, float, float]\n\n# Key for looking up a specific frame: (unit_type, class_key, action, frame_index)\n# Examples: (\"hero\", \"warrior\", \"idle\", 0), (\"enemy\", \"goblin\", \"walk\", 3)\nAtlasKey = Tuple[str, str, str, int]\n\nATLAS_SIZE = 2048\nFRAME_SIZE = 32\n\n\nclass UnitAtlasBuilder:\n    \"\"\"Packs all unit sprite frames into one GPU-friendly atlas.\"\"\"\n\n    _instance: \"UnitAtlasBuilder | None\" = None\n\n    def __init__(self):\n        self._atlas_surface: pygame.Surface | None = None\n        self._uv_map: Dict[AtlasKey, UVRegion] = {}\n\n    @classmethod\n    def get(cls) -> \"UnitAtlasBuilder\":\n        \"\"\"Singleton access. Builds atlas on first call.\"\"\"\n        if cls._instance is None:\n            cls._instance = cls()\n            cls._instance._build()\n        return cls._instance\n\n    @property\n    def atlas_surface(self) -> pygame.Surface:\n        assert self._atlas_surface is not None\n        return self._atlas_surface\n\n    @property\n    def frame_count(self) -> int:\n        return len(self._uv_map)\n\n    def lookup_uv(self, unit_type: str, class_key: str, action: str, frame_idx: int) -> UVRegion:\n        \"\"\"Look up the atlas UV region for a given unit frame.\"\"\"\n        key: AtlasKey = (unit_type, class_key, action, frame_idx)\n        fallback: UVRegion = (0.0, 0.0, FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)\n        return self._uv_map.get(key, fallback)\n\n    def _pack_frame(self, surf: pygame.Surface, key: AtlasKey, cursor: list[int]) -> None:\n        \"\"\"Blit one frame onto the atlas and record its UV region.\"\"\"\n        cx, cy = cursor\n        if cx + FRAME_SIZE > ATLAS_SIZE:\n            cx = 0\n            cy += FRAME_SIZE\n        self._atlas_surface.blit(surf, (cx, cy))\n        self._uv_map[key] = (\n            cx / ATLAS_SIZE,\n            cy / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n        )\n        cursor[0] = cx + FRAME_SIZE\n        cursor[1] = cy\n\n    def _build(self) -> None:\n        self._atlas_surface = pygame.Surface((ATLAS_SIZE, ATLAS_SIZE), pygame.SRCALPHA)\n        self._atlas_surface.fill((0, 0, 0, 0))\n        cursor = [0, 0]  # [x, y] mutable for _pack_frame\n\n        # Heroes\n        for hc in (\"warrior\", \"ranger\", \"rogue\", \"wizard\", \"cleric\"):\n            clips = HeroSpriteLibrary.clips_for(hc, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"hero\", hc, action, fi), cursor)\n\n        # Enemies\n        for et in (\"goblin\", \"wolf\", \"skeleton\", \"skeleton_archer\", \"spider\", \"bandit\"):\n            clips = EnemySpriteLibrary.clips_for(et, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"enemy\", et, action, fi), cursor)\n\n        # Workers\n        for wt in (\"peasant\", \"guard\", \"tax_collector\"):\n            clips = WorkerSpriteLibrary.clips_for(wt, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"worker\", wt, action, fi), cursor)\n```\n\n## CRITICAL Notes\n- The atlas surface must use `pygame.SRCALPHA` flag (RGBA)\n- All frames are 32x32 — do not resize\n- UV coordinates are NORMALIZED to [0,1] range (divide pixel coords by ATLAS_SIZE)\n- The UV origin (0,0) is TOP-LEFT of the atlas (pygame convention matches)\n\n## Files You May Edit\n- `game/graphics/unit_atlas.py` (NEW)\n\n## Files You Must NOT Edit\n- `game/graphics/hero_sprites.py`, `enemy_sprites.py`, `worker_sprites.py` (read only)\n- `game/graphics/ursina_renderer.py` (Agent 03 wires this)\n\n## Verification\n1. Run this test from repo root:\n   ```powershell\n   python -c \"import pygame; pygame.init(); pygame.display.set_mode((1,1)); from game.graphics.unit_atlas import UnitAtlasBuilder; a = UnitAtlasBuilder.get(); print(f'Atlas: {a.atlas_surface.get_size()}, Frames: {a.frame_count}'); uv = a.lookup_uv('hero', 'warrior', 'idle', 0); print(f'Warrior idle 0 UV: {uv}'); assert uv[2] > 0; print('PASS')\"\n   ```\n2. `python tools/qa_smoke.py --quick` passes\n3. Update your agent log at `sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]`\n4. Validate JSON: `python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json`"
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "12",
+              "09"
+            ],
+            "intelligence_by_agent": {
+              "12": "medium",
+              "09": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "10",
+              "11",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 1: Agent 12 (medium — tooling pattern) + Agent 09 (high — sprite library edge cases). Parallel, zero file overlap."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "12",
+              "09"
+            ],
+            "dependencies": [
+              {
+                "id": "wave_1",
+                "agents": [
+                  "12",
+                  "09"
+                ],
+                "parallel": true
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n1) Read PM hub: `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` -> `sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"].pm_agent_prompts[YOUR_NUMBER]`.\n\n2) Full plan context: `.cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md`\n\n3) After completing: update your agent log, run `python tools/qa_smoke.py --quick`, validate your log JSON with `python -m json.tool`.\n\n4) No version bump, commit, or push."
+        },
+        "wk47_r2a_shader_geomnode": {
+          "round_meta": {
+            "round_id": "wk47_r2a_shader_geomnode",
+            "build_target": "Custom GLSL instanced shader + bare GeomNode quad",
+            "depends_on": "wk47_r1_baseline_atlas"
+          },
+          "pm_status_summary": "Wave 2a: Agent 03 builds custom GLSL instanced billboard shader AND Panda3D GeomNode quad with buffer texture setup. GPU skeleton only — no game integration yet.",
+          "pm_next_actions_by_agent": {
+            "03": "Build instanced_unit_shader.py + instanced_unit_renderer.py skeleton (HIGH intelligence)"
+          },
+          "pm_agent_prompts": {
+            "03": "Agent 03 prompt for R2a is defined in the master plan. Read `.cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md` section 'Wave 2a'. Build: `game/graphics/instanced_unit_shader.py` (custom GLSL) + `game/graphics/instanced_unit_renderer.py` (GeomNode + buffer texture + test_draw method). Do NOT wire into UrsinaRenderer yet."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "03"
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03"
+            ],
+            "dependencies": [
+              {
+                "id": "wave_r2a",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint **wk47_unit_instancing_core**, round **wk47_r2a_shader_geomnode**. Read PM hub pm_agent_prompts[YOUR_NUMBER]. Technical detail lives in .cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md (search for Wave 2a). After work: write agent log at sprints.wk47_unit_instancing_core.rounds.wk47_r2a_shader_geomnode; run python tools/qa_smoke.py --quick; python -m json.tool your agent log; run the exact npx tsx orchestrator receipt line from your SDK prompt. Composer 2 only. No version bump / git save."
+        },
+        "wk47_r2b_sync_integration": {
+          "round_meta": {
+            "round_id": "wk47_r2b_sync_integration",
+            "build_target": "Full pipeline integration with snapshot sync + animation + feature gate",
+            "depends_on": "wk47_r2a_shader_geomnode"
+          },
+          "pm_status_summary": "Wave 2b: Agent 03 wires instanced renderer to SimStateSnapshot, implements animation resolution, integrates behind KINGDOM_URSINA_INSTANCING=1.",
+          "pm_next_actions_by_agent": {
+            "03": "Wire InstancedUnitRenderer.update(snapshot) + integrate into UrsinaRenderer (HIGH intelligence)"
+          },
+          "pm_agent_prompts": {
+            "03": "Agent 03 prompt for R2b is defined in the master plan. Read `.cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md` section 'Wave 2b'. Wire: snapshot sync loop, animation state resolution (copy from _unit_anim_surface), feature gate in UrsinaRenderer.update()."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "03"
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          }
+        },
+        "wk47_r3_validation": {
+          "round_meta": {
+            "round_id": "wk47_r3_validation",
+            "build_target": "Performance validation + QA gates",
+            "depends_on": "wk47_r2b_sync_integration"
+          },
+          "pm_status_summary": "Wave 3 (parallel): Agent 10 runs perf benchmark before/after. Agent 11 runs QA gates.",
+          "pm_next_actions_by_agent": {
+            "10": "Run perf_stress_test.py with/without instancing, report numbers (LOW intelligence)",
+            "11": "Run qa_smoke + validate_assets, confirm no regressions (LOW intelligence)"
+          },
+          "pm_agent_prompts": {
+            "10": "You are Agent 10, sprint wk47_unit_instancing_core, round wk47_r3_validation. Run:\n```\n$env:KINGDOM_URSINA_INSTANCING = \"0\"\npython tools/perf_stress_test.py --units 200 --frames 300\npython tools/perf_stress_test.py --units 500 --frames 300\n$env:KINGDOM_URSINA_INSTANCING = \"1\"\npython tools/perf_stress_test.py --units 200 --frames 300\npython tools/perf_stress_test.py --units 500 --frames 300\n```\nRecord all results in your agent log. Validate JSON.",
+            "11": "You are Agent 11, sprint wk47_unit_instancing_core, round wk47_r3_validation. Run:\n```\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n```\nRecord exit codes and status in your agent log. Validate JSON."
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "10",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "10": "low",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          }
         }
       }
     }

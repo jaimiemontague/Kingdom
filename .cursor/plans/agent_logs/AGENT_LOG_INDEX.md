@@ -12,26 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk40-refactor-stage5-cleanup`
 - `wk41-mechanical-module-split`
-- `wk42-renderer-dedupe-wire-collabs`
 - `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
 - `wk46-stage3-lumberjack-builders`
+- `orch_tiny_warrior_red`
+- `wk47_unit_instancing_core`
 
-**Archived sprints:** 31
+**Archived sprints:** 33
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `wk34-3d-final-model-pass-v1-5`
-- `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
+- `wk42-renderer-dedupe-wire-collabs`
+- `wk40-refactor-stage5-cleanup`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -52,26 +52,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk40-post-assessor-presentationlayer-doc-2026-04` — game/engine.py: module docstring = presentation shell wrapping SimEngine; design doc name PresentationLayer vs public GameEngine.; GameEngine class docstring: 1–2 sentences, owns pygame/HUD/loop, sim on self.sim.
-- `wk41-mechanical-module-split` — ursina_renderer.py: UrsinaRenderer.update() thin orchestration — _ensure_shadow_bounds_once, _sync_snapshot_buildings/heroes/enemies/peasants/guards/tax_collector/projectiles, _update_debug_status_text, _destroy_removed_entities (logic unchanged; mechanical extraction); docs/refactor/engine_access_inventory.md: WK41 subsection listing engine_facades + ursina_* helper modules + update() helper split
 - `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py: removed duplicate module-level block (lines 119–819); imports from ursina_coords, ursina_environment, ursina_prefabs, ursina_units_anim; grass albedo path uses PROJECT_ROOT import; ursina_renderer.py: UrsinaTerrainFogCollab(self) + UrsinaEntityRenderCollab(self) in __init__ after _setup_scene_lighting(); deleted 6 terrain/fog methods + 11 entity-render staticmethods; update() and sync paths delegate to collaborators
 - `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
 - `wk46-stage3-lumberjack-builders`
+- `orch_tiny_warrior_red` — Wrote orchestrator-contract round on canonical `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` (fixes R2 verifier: expected sprint key on this path, not agent_03_AUTO.json).; Re-verified live default Ursina hero billboard path from `main.py` through `UrsinaRenderer._sync_snapshot_heroes` → `HeroSpriteLibrary.clips_for` → `TerrainTextureBridge.surface_to_texture` → `UrsinaEntityRenderCollab.sync_billboard_entity`; no plumbing/cache/tint bug — shirt RGB is still loaded from PNG frames.
+- `wk47_unit_instancing_core` — game/graphics/instanced_unit_renderer.py: InstancedUnitRenderer.update(snapshot) — buffer uploads for heroes, enemies (fog-visible), peasants/guards/tax_collector; UV from UnitAtlasBuilder; _resolve_unit_anim_clip_frame parallels UrsinaRenderer._unit_anim_surface (_hero_base_clip / _enemy_base_clip, triggers, wall-clock _frame_index_for_clip); anim-dict pruning for removed ids; keep set_instances/test_draw for smokes.; game/graphics/ursina_renderer.py: when KINGDOM_URSINA_INSTANCING=1, after terrain/fog/grid — sync buildings only, InstancedUnitRenderer.update for units, then projectiles, status text, _destroy_removed_entities; legacy unit billboards skipped.
 
-**Archived sprints:** 29
+**Archived sprints:** 31
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `wk37-refactor-stage2-simengine-presentation-split`
-- `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
 - `ursina-ranged-vfx-visibility-2026-04`
 - `wk40-default-renderer-ursina-2026-04`
+- `wk40-post-assessor-presentationlayer-doc-2026-04`
+- `wk41-mechanical-module-split`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -176,26 +176,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_09_ArtDirector_Pixel_Animation_VFX.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk27-sprint-2-1-3d-buildings`
-- `wk29-first-house-playtest`
 - `wk30-buildings-pipeline`
 - `wk32-inn-texture-polish`
 - `wk32-camera-construction-nature-polish`
 - `wk33-terrain-lair-economy-prefabs`
 - `ad_hoc-cleric-hero-pixel-sprites`
+- `orch_tiny_warrior_red`
+- `wk47_unit_instancing_core`
 
-**Archived sprints:** 14
+**Archived sprints:** 16
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk22-3d-refinement`
-- `wk23-final-bug-hunt`
 - `wk24-ui-and-renderer-polish`
 - `v1_5_3d_graphics_transition`
 - `wk26-sprint-1-2-base-terrain`
+- `wk27-sprint-2-1-3d-buildings`
+- `wk29-first-house-playtest`
 
 ### 10 — PerformanceStability_Lead
 
@@ -203,27 +203,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_10_PerformanceStability_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk31-perf-fps-and-pack-scale` — Headless perf_benchmark: ~1.07 ms/tick total (20/20 heroes/enemies + bounties) — sim not primary suspect for Ursina lag.; Top GPU suspects: URSINA_DIRECTIONAL_SHADOWS=True vs config comment; per-tile terrain Entities without batching; prefab piece count; HUD texture upload on change.
 - `wk32-camera-construction-nature-polish` — Headless profiler: total_frame stays <1ms up to 8 heroes (0 enemies) → sim CPU not the cause of low FPS after heroes spawn.; Most likely culprit is renderer/HUD/scene-graph cost (Agent 03 domain), not AI/LLM (Agent 06) by default.
 - `wk33-terrain-lair-economy-prefabs`
 - `wk36-refactor-stage1-snapshot-decouple` — Ursina FPS probe (no-LLM): avg_fps 58.4, p10 51.1, p50 60.2, p90 63.7; min 12.0 during OBJ->BAM cache writes.; HUD pipeline probes: hud_texture_upload avg 0.258ms; pygame_hud_render avg 0.924ms; ursina_renderer avg 0.320ms (probe output).
 - `wk37-refactor-stage2-simengine-presentation-split` — Ursina 300s + 4 hired warriors: avg_fps 41.7, p50 42.9; min_fps 3.5 — treat as outlier spike, not sustained collapse.; Probe stages: tick_simulation p90 ~1.07ms avg but rare max ~265ms; ursina_renderer avg ~1.7ms — flag for Agent 03 only if human playtest sees repeated hitching after cache warm.
 - `wk41-mechanical-module-split` — Context: peasant/FOW routing bug found in playtest — fixed by Agent 03 before final signoff.; Headless: perf_benchmark default profile ~1.291 ms/tick total, PF ~0.850 ms/tick — OK vs refactor-era band.
 - `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py line count: 696 (plan target ≤900 / ~700).; perf_benchmark (default 12s): ~1.280 ms/tick total; PF ~0.879 ms/tick — OK.
+- `wk47_unit_instancing_core`
 
-**Archived sprints:** 12
+**Archived sprints:** 13
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
-- `wk12-chronos`
-- `wk13-living-interiors`
-- `wk17-quality-logic-immersion`
+- `…`
 - `wk22-3d-refinement`
 - `wk27-sprint-2-1-3d-buildings`
 - `wk29-first-house-playtest`
 - `wk30-buildings-pipeline`
+- `wk31-perf-fps-and-pack-scale`
 
 ### 11 — QA_TestEngineering_Lead
 
@@ -231,26 +230,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_11_QA_TestEngineering_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk40-refactor-stage5-cleanup` — WK40 Wave 2 Workstream C: no game code; ran full automated gate stack per pm_agent_prompts['11'] and sprint plan L68–73.
-- `wk41-mechanical-module-split` — No repository code changes (Agent 11 gate validation only).
 - `wk42-renderer-dedupe-wire-collabs` — No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack.
 - `wk43-building-nature-stage1` — No repository code changes (Agent 11 gate validation only).; Ran WK43 required full gate stack; recorded exit codes.
 - `wk44-stage2-dynamic-trees` — No repository code changes (Agent 11 gate validation only).; Ran full gate stack on current workspace state.
 - `wk45-stage2_5-sapling-spawning` — No repository code changes (Agent 11 gate validation only).; Ran sprint-required gates per PM prompt.
 - `wk46-stage3-lumberjack-builders` — No repository code changes (Agent 11 gate validation only).; Ran sprint-required gates for WK46 Stage 3 + bugfix integration.
+- `orch_tiny_warrior_red` — No repository game or tools code edits (Agent 11 gate validation only).; Ran python tools/qa_smoke.py --quick from repo root after Agent 09 completed R4 (screenshot + PASS in agent_09 log).
+- `wk47_unit_instancing_core` — No repository code changes (Agent 11 gate validation only).; Ran PM-assigned gates for wk47_r3_validation: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report.
 
-**Archived sprints:** 28
+**Archived sprints:** 30
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk35-refactor-stage0-regression-baseline`
-- `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk38-refactor-stage3-gamecommands`
 - `wk39-refactor-stage4-pygame-renderer`
+- `wk40-refactor-stage5-cleanup`
+- `wk41-mechanical-module-split`
 
 ### 12 — ToolsDevEx_Lead
 
@@ -258,16 +257,17 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_12_ToolsDevEx_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk2-hero-polish-ai-sprites` — observe_sync prints a deterministic single-line scenario counter summary in --qa mode; Stable counter keys: scenario, stuck_events, unstuck_attempts, inside_attack_blocks, max_stuck_ms
 - `wk3-ui-polish-1080p-pixelart` — Release gates PASS (qa_smoke --quick; validate_assets --strict --check-attribution); Rolling wk3_baseline_v2_next snapshots regenerated and compare_gallery rebuilt successfully
 - `wk4-new-enemy-skeleton-archer` — Context refreshed: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates); Role-specific deliverables: manifest-driven snapshot inclusion, atomic manifest+placeholder changes, strict validator coverage, snapshot artifacts, gallery buildability
 - `wk5-demolition-projectiles-workers` — Added scenario_building_debris() function to tools/screenshot_scenarios.py; Registered building_debris in get_scenario() registry
 - `v1.3-visual-polish-journey-ai`
 - `wk8-engine-entities-refactor`
 - `wk9-sim-render-tests-ui`
+- `wk47_unit_instancing_core`
 
-**Archived sprints:** 1
+**Archived sprints:** 2
 - `wk1-broad-sweep-midweek-endweek`
+- `wk2-hero-polish-ai-sprites`
 
 ### 13 — SteamRelease_Ops_Marketing
 

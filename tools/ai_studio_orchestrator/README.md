@@ -51,6 +51,17 @@ Show the latest ledger and write a dashboard:
 npm run studio -- status --write-dashboard
 ```
 
+### Multiple rounds in one go (chain)
+
+The CLI accepts one `--round` per `run`. To run several rounds back-to-back (e.g. WK47 R2b then R3), from repo root:
+
+```powershell
+$env:CURSOR_API_KEY = "crsr_..."
+.\tools\ai_studio_orchestrator\run_remaining_rounds.ps1
+```
+
+Defaults: sprint `wk47_unit_instancing_core`, rounds `wk47_r2b_sync_integration` then `wk47_r3_validation`. Override: `-Sprint <id> -Rounds @('round_a','round_b')`.
+
 Prompt Agent 01 to synthesize a completed wave:
 
 ```powershell

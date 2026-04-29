@@ -9,65 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk31-perf-fps-and-pack-scale": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk31_kingdom_perf_and_economy.plan.md",
-        "notes": "WK31 R1 Part A.1 FPS baseline + hotspots; Part A.2 pack scale owned by Agents 12/15."
-      },
-      "rounds": {
-        "wk31_r1_execution": {
-          "sprint_id": "wk31-perf-fps-and-pack-scale",
-          "round_id": "wk31_r1_execution",
-          "round_meta": {
-            "prompt_set_id": "wk31_r1",
-            "sent_at_local": "2026-04-18"
-          },
-          "prompt_text": "WK31 R1: Baseline Ursina FPS (F2 + busy scene); perf_benchmark for sim split; prioritized hotspot list for Agent 03; re-measure after fixes.",
-          "response": {
-            "status": "complete",
-            "raw": "WK31 R1 (Agent 10): Part A.1 baseline and hotspot brief for Agent 03 (pre-engineering-fix).\n\nMeasurement methodology:\n- Headless sim: python tools/perf_benchmark.py (default and --heroes 20 --enemies 20 --bounties 5 --seed 3). Confirms sim tick cost is low vs reported Ursina lag; isolate renderer/GPU.\n- Ursina: window.fps_counter is enabled in game/graphics/ursina_app.py (true 3D frame rate). F2 pygame perf overlay (game/engine.py render_perf_overlay) shows pygame clock FPS and loop EMA events/update/render — those timings are dominated by headless UI + HUD composite, not Panda3D; use Ursina counter for GPU-bound diagnosis.\n- Busy prefab scene: KINGDOM_URSINA_PREFAB_TEST_LAYOUT=1 places castle + guilds + house row (see _add_wk30_debug_prefab_layout in ursina_app.py).\n\nHeadless baselines (this machine, 2026-04-18):\n- Default profile: ms/tick total ~1.08; PF ~0.74 ms/tick (720 ticks / 12 s).\n- 20 heroes/20 enemies/5 bounties: ms/tick total ~1.07; PF ~0.71 ms/tick.\n\nPrioritized hotspots for Agent 03 (Ursina/renderer):\n1) Directional shadows + lit shader: config.py URSINA_DIRECTIONAL_SHADOWS=True and URSINA_SHADOW_MAP_SIZE=512 — comment block says keep shadows off by default for playable FPS but flag is True. ursina_app.py sets Entity.default_shader from this. Mitigation: default shadows off or quality preset; lower shadow map; optional unlit path for distant terrain.\n2) Terrain entity count: ursina_renderer.py _build_3d_terrain builds many per-tile Entity nodes (paths, grass scatter, trees); flattenStrong avoided (WK22 note). Large scene graph to draw/state cost. Mitigation: batching/instancing, reduce scatter density, LOD.\n3) HUD GPU upload: ursina_app.py _refresh_ui_overlay_texture — full-surface tobytes+PIL+Texture.apply when CRC says changed; can hitch when HUD animates. Already CRC-skipped when static.\n4) Prefab multi-mesh: ursina_renderer _load_prefab_instance / prefab roots — draw calls scale with piece count (wk30: up to ~63 mesh entities if all military prefab types visible). Baker deferred unless still over budget after 1–3.\n5) Instrumentation clarity: engine.py render_perf_overlay FPS is pygame clock — not Ursina; label or add Ursina ms/frame if we add dev overlay.\n\nPrefab baker: NOT requested this round — JSON prefab path still plausible; first-line fixes are shadows/terrain batching/GPU settings.\n\nPost-fix re-measure: pending Agent 03 mitigations; Agent 10 will log before/after Ursina fps_counter + optional F2 when fixes land.",
-            "summary_bullets": [
-              "Headless perf_benchmark: ~1.07 ms/tick total (20/20 heroes/enemies + bounties) — sim not primary suspect for Ursina lag.",
-              "Top GPU suspects: URSINA_DIRECTIONAL_SHADOWS=True vs config comment; per-tile terrain Entities without batching; prefab piece count; HUD texture upload on change.",
-              "Use Ursina fps_counter for real FPS; F2 overlay shows pygame/HUD pipeline timing — interpret differently in --renderer ursina.",
-              "Post-fix FPS + F2 comparison: pending Agent 03; baker sprint only if still over budget after reasonable renderer fixes."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/perf_benchmark.py",
-              "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 5 --seed 3",
-              "python main.py --renderer ursina --no-llm (with KINGDOM_URSINA_PREFAB_TEST_LAYOUT=1 for busy prefabs); read top-left FPS; F2 for HUD/sim timing context"
-            ],
-            "evidence": {
-              "perf_benchmark_default_2026_04_18": "ms/tick total ~1.078; 720 ticks/12s; heroes=20 profile",
-              "perf_benchmark_heavy_2026_04_18": "ms/tick total ~1.066; heroes=20 enemies=20 bounties=5; PF ~0.706 ms/tick",
-              "qa_smoke_quick": "python tools/qa_smoke.py --quick — PASS",
-              "qa_smoke_exit_code": 0,
-              "validate_assets_report": "python tools/validate_assets.py --report — errors=0 warns=46 (pre-existing placeholder 3D manifest WARNs)",
-              "validate_assets_exit_code": 0,
-              "ursina_fps_note": "Automated Ursina ms/frame not captured in CI; use window.fps_counter + manual busy scene",
-              "prefab_baker_flag": false,
-              "post_fix_measurement": "pending_agent_03"
-            },
-            "agent_fields": {
-              "hotspots_for_agent_03": [
-                "config.py + ursina_app.py: directional shadows default-on vs playability comment — tune shadow map / default off / quality tier",
-                "ursina_renderer.py _build_3d_terrain: O(tiles) Entity nodes — batching/instancing/LOD",
-                "ursina_app.py _refresh_ui_overlay_texture: full-frame GPU upload when HUD dirty",
-                "ursina_renderer.py prefab path: draw calls scale with JSON piece count",
-                "engine.py render_perf_overlay: F2 FPS is pygame — pair with Ursina fps_counter"
-              ],
-              "reviewed_files": [
-                "config.py",
-                "game/graphics/ursina_app.py",
-                "game/graphics/ursina_renderer.py",
-                "game/engine.py"
-              ]
-            }
-          }
-        }
-      }
-    },
     "wk32-camera-construction-nature-polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
@@ -697,6 +638,116 @@
               ]
             }
           }
+        }
+      }
+    },
+    "wk47_unit_instancing_core": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
+        "notes": "WK47 R3 validation: perf stress baseline vs KINGDOM_URSINA_INSTANCING on/off."
+      },
+      "rounds": {
+        "wk47_r3_validation": {
+          "sprint_id": "wk47_unit_instancing_core",
+          "round_id": "wk47_r3_validation",
+          "status": "done",
+          "what_i_changed": "Benchmark-only: re-ran full PM perf matrix after Agent 03 fixes (NodePath.set_instance_count on Panda 1.10.16; instanced_unit_shader uses samplerBuffer + GLSL 330 for buffer texture). Wrote per-run JSON under tools/perf_wk47_r3_*.json. No perf_stress_test.py logic edits this round.",
+          "commands_run": [
+            {
+              "shell": "PowerShell",
+              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"0\"; python tools/perf_stress_test.py --units 200 --frames 300 --json-out tools/perf_wk47_r3_inst0_u200.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"0\"; python tools/perf_stress_test.py --units 500 --frames 300 --json-out tools/perf_wk47_r3_inst0_u500.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"1\"; python tools/perf_stress_test.py --units 200 --frames 300 --json-out tools/perf_wk47_r3_inst1_u200.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"1\"; python tools/perf_stress_test.py --units 500 --frames 300 --json-out tools/perf_wk47_r3_inst1_u500.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "machine_note": "Win32; Python 3.13.2; Ursina 8.3.0; Panda3D 1.10.16 wglGraphicsPipe; same session back-to-back runs.",
+            "perf_json_outputs": [
+              "tools/perf_wk47_r3_inst0_u200.json",
+              "tools/perf_wk47_r3_inst0_u500.json",
+              "tools/perf_wk47_r3_inst1_u200.json",
+              "tools/perf_wk47_r3_inst1_u500.json"
+            ],
+            "perf_stress_KINGDOM_URSINA_INSTANCING_0": {
+              "units_200": {
+                "heroes_enemies": "100 / 100",
+                "avg_frame_ms": 4.351,
+                "min_max_ms": [
+                  2.575,
+                  8.956
+                ],
+                "avg_fps": 229.85,
+                "one_pct_low_fps": 124.56,
+                "p99_ms": 7.242
+              },
+              "units_500": {
+                "heroes_enemies": "250 / 250",
+                "avg_frame_ms": 7.339,
+                "min_max_ms": [
+                  4.979,
+                  15.5
+                ],
+                "avg_fps": 136.25,
+                "one_pct_low_fps": 67.11,
+                "p99_ms": 14.029
+              }
+            },
+            "perf_stress_KINGDOM_URSINA_INSTANCING_1": {
+              "units_200": {
+                "heroes_enemies": "100 / 100",
+                "avg_frame_ms": 3.196,
+                "min_max_ms": [
+                  1.697,
+                  12.448
+                ],
+                "avg_fps": 312.93,
+                "one_pct_low_fps": 107.62,
+                "p99_ms": 5.009
+              },
+              "units_500": {
+                "heroes_enemies": "250 / 250",
+                "avg_frame_ms": 3.991,
+                "min_max_ms": [
+                  2.506,
+                  7.966
+                ],
+                "avg_fps": 250.56,
+                "one_pct_low_fps": 134.49,
+                "p99_ms": 7.001
+              }
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "note": "Inst-on improved avg FPS vs billboards on this machine for the stressed hero/enemy mix; results vary by GPU/driver."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Jaimie manual playtest with $env:KINGDOM_URSINA_INSTANCING=\"1\"; python main.py --no-llm",
+            "Optional: re-run orchestrator verify-receipt for Agent 10 if sprint requires SDK completion token."
+          ],
+          "follow_ups": []
         }
       }
     }

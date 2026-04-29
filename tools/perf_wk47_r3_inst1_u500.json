@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "last_run": {
+    "schema_version": 1,
+    "tool": "perf_stress_test",
+    "generated_utc": "2026-04-29T20:56:29.830292+00:00",
+    "units_total": 500,
+    "units_heroes": 250,
+    "units_enemies": 250,
+    "warmup_frames": 30,
+    "measured_frames": 300,
+    "avg_frame_ms": 3.991096,
+    "min_frame_ms": 2.5063,
+    "max_frame_ms": 7.9657,
+    "avg_fps": 250.5577,
+    "one_percent_low_mean_ms": 7.4356,
+    "one_percent_low_fps": 134.4881,
+    "p99_frame_ms": 7.0009
+  },
+  "history": []
+}
