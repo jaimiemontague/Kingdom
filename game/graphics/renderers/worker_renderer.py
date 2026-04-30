@@ -36,7 +36,7 @@ class WorkerRenderer:
         self._init_animation_player()
 
     def _init_animation_player(self) -> None:
-        if self.worker_type in ("peasant", "tax_collector", "guard"):
+        if self.worker_type in ("peasant", "peasant_builder", "tax_collector", "guard"):
             self._anim = WorkerSpriteLibrary.create_player(self.worker_type, size=self.size_px)
             self._anim_base = "idle"
             self._anim_lock_one_shot = None
@@ -78,6 +78,8 @@ class WorkerRenderer:
                 self._anim_base = "return"
             elif state_name == "MOVING_TO_GUILD":
                 self._anim_base = "walk"
+            elif state_name == "RESTING_AT_CASTLE":
+                self._anim_base = "rest"
             else:
                 self._anim_base = "idle"
         elif self.worker_type == "guard":

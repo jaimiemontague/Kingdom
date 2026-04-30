@@ -31,6 +31,8 @@ from game.graphics.ursina_units_anim import (
     _frame_index_for_clip,
     _guard_base_clip,
     _hero_base_clip,
+    _peasant_base_clip,
+    _tax_collector_base_clip,
 )
 from game.world import Visibility
 
@@ -365,16 +367,23 @@ class InstancedUnitRenderer:
             pack_outside(vx, vy, vz, ENEMY_SCALE, uv)
             active_ids.add(obj_id)
 
-        # --- Workers ---
+        # --- Workers (peasants / builder variant — animated UVs like guards) ---
         for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
                 continue
+            if bool(getattr(p, "is_inside_castle", False)):
+                continue
             if count_outside >= MAX_INSTANCES:
                 break
-            uv = self._atlas_builder.lookup_uv("worker", "peasant", "idle", 0)
+            wk = str(getattr(p, "render_worker_type", "peasant") or "peasant")
+            clips_p = WorkerSpriteLibrary.clips_for(wk, size=FRAME_SIZE)
+            oid = id(p)
+            clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
+                oid, p, clips_p, _peasant_base_clip
+            )
+            uv = self._atlas_builder.lookup_uv("worker", wk, clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
             wy = PEASANT_SCALE * 0.5
-            oid = id(p)
             vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
             pack_outside(vx, vy, vz, PEASANT_SCALE, uv)
             active_ids.add(oid)
@@ -398,10 +407,14 @@ class InstancedUnitRenderer:
 
         tc = getattr(snapshot, "tax_collector", None)
         if tc is not None and getattr(tc, "is_alive", True) and count_outside < MAX_INSTANCES:
-            uv = self._atlas_builder.lookup_uv("worker", "tax_collector", "idle", 0)
+            clips_tc = WorkerSpriteLibrary.clips_for("tax_collector", size=FRAME_SIZE)
+            oid = id(tc)
+            clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
+                oid, tc, clips_tc, _tax_collector_base_clip
+            )
+            uv = self._atlas_builder.lookup_uv("worker", "tax_collector", clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(tc.x, tc.y)
             wy = PEASANT_SCALE * 0.5
-            oid = id(tc)
             vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
             pack_outside(vx, vy, vz, PEASANT_SCALE, uv)
             active_ids.add(oid)

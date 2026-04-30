@@ -58,6 +58,36 @@ def _guard_base_clip(guard) -> str:
     return "idle"
 
 
+def _peasant_base_clip(peasant) -> str:
+    """Locomotion clip for peasants / builder peasants; must match WorkerRenderer peasant branch."""
+    if not getattr(peasant, "is_alive", True):
+        return "dead"
+    state = getattr(peasant, "state", None)
+    state_name = str(getattr(state, "name", state))
+    if state_name == "DEAD":
+        return "dead"
+    if state_name == "WORKING":
+        return "work"
+    if state_name == "MOVING":
+        return "walk"
+    return "idle"
+
+
+def _tax_collector_base_clip(tc) -> str:
+    """Locomotion clip for tax collector; must match WorkerRenderer tax_collector branch."""
+    state = getattr(tc, "state", None)
+    state_name = str(getattr(state, "name", state))
+    if state_name == "COLLECTING":
+        return "collect"
+    if state_name == "RETURNING":
+        return "return"
+    if state_name == "MOVING_TO_GUILD":
+        return "walk"
+    if state_name == "RESTING_AT_CASTLE":
+        return "rest"
+    return "idle"
+
+
 def _worker_idle_surface(worker_type: str):
     wt = str(worker_type or "peasant").lower()
     sz = int(getattr(config, "UNIT_SPRITE_PIXELS", 32))

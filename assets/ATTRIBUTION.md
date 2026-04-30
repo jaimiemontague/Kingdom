@@ -231,6 +231,19 @@ Use this exact bullet structure (one bullet per pack):
 - **File locations**:
   - `assets/audio/ambient/ambient_loop.wav`
 
+### Pack: Legacy Vania NPC v7 (Itch.io — purchased license)
+- **Author / publisher**: Adrien Combecau (DidiGameboy) — `https://didigameboy.itch.io`
+- **License**: Itch.io Asset Licence Agreement (see `assets/sprites/vendor/legacy-vania-npc-v7/Game Pack Licence.txt`; single Media Product use; credit “additional art assets”)
+- **Source**: Legacy Vania / NPC pack (vendor folder `legacy-vania-npc-v7`)
+- **Retrieved**: 2026-04-30
+- **Modifications**: Horizontal strips split to per-frame PNGs; black background keyed to alpha; character scaled by `--content-scale` (default 0.5) then letterboxed into `UNIT_SPRITE_PIXELS`; builder variant: straw-hat pixels only recolored to green via `tools/legacy_vania_export_worker_frames.py`. Peasant walk: if `npc-villager1-fisherman_walk.png` is a tiny stub (~600 bytes), exporter uses `npc-villager10-anim-walk_strip6.png`. Tax collector uses **npc-cape2** strips without knife walk/attack (idle stance, walk + walk-stance, jab for collect, hurt/fall/recover, waiting crouch); run `python tools/legacy_vania_export_worker_frames.py --execute`.
+- **Used for**: Worker sprites — peasants (fisherman walk with fallback), tax collector (npc-cape2 only), builder peasant (green-hat variant)
+- **File locations**:
+  - `assets/sprites/vendor/legacy-vania-npc-v7/spritesheets/*.png` (source strips)
+  - `assets/sprites/workers/peasant/{idle,walk,work}/frame_*.png`
+  - `assets/sprites/workers/peasant_builder/{idle,walk,work}/frame_*.png`
+  - `assets/sprites/workers/tax_collector/{idle,walk,collect,return,hurt,dead,rest}/frame_*.png`
+
 ### wk14: Interior ambient and building-under-attack (optional)
 
 Interior ambient loops (per building type) and the building-under-attack rumble SFX are **optional**. When CC0 assets are added, they will be listed here with pack, license, and file locations. Until then, the game runs without these files (fail silently). Required filenames: see `game/audio/EVENT_CONTRACT.md` (Interior ambient + Interior building-under-attack sections).

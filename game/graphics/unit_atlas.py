@@ -89,7 +89,7 @@ class UnitAtlasBuilder:
                     self._pack_frame(surf, ("enemy", et, action, fi), cursor)
 
         # Workers
-        for wt in ("peasant", "guard", "tax_collector"):
+        for wt in ("peasant", "peasant_builder", "guard", "tax_collector"):
             clips = WorkerSpriteLibrary.clips_for(wt, size=FRAME_SIZE)
             for action, clip in clips.items():
                 for fi, surf in enumerate(clip.frames):

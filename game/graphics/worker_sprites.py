@@ -51,11 +51,22 @@ class WorkerSpriteLibrary:
 
         # Define actions per worker type
         if wt == "tax_collector":
+            # Frame counts match `tools/legacy_vania_export_worker_frames.py` (npc-cape2 only).
+            actions = {
+                "idle": dict(frame_time=0.14, loop=True),  # 4
+                "walk": dict(frame_time=0.09, loop=True),  # 10 (stance + walk)
+                "collect": dict(frame_time=0.12, loop=True),  # 3 (jab only, no knife strip)
+                "return": dict(frame_time=0.09, loop=True),  # 10 (same as walk)
+                "rest": dict(frame_time=0.22, loop=True),  # 3 waiting crouch variants
+                "hurt": dict(frame_time=0.075, loop=False),  # 5 (stronghurt + hurt + recover)
+                "dead": dict(frame_time=0.11, loop=False),  # 10 fall
+            }
+        elif wt == "peasant_builder":
+            # Same contract as peasant; distinct asset folder (green-hat builder variant).
             actions = {
                 "idle": dict(frame_time=0.14, loop=True),
                 "walk": dict(frame_time=0.10, loop=True),
-                "collect": dict(frame_time=0.12, loop=True),
-                "return": dict(frame_time=0.10, loop=True),
+                "work": dict(frame_time=0.12, loop=True),
                 "hurt": dict(frame_time=0.06, loop=False),
                 "dead": dict(frame_time=0.10, loop=False),
             }
@@ -99,6 +110,8 @@ class WorkerSpriteLibrary:
             return spec.tax_collector
         if wt == "guard":
             return spec.guard
+        if wt == "peasant_builder":
+            return spec.peasant
         return spec.peasant
 
     @classmethod
@@ -247,11 +260,21 @@ class WorkerSpriteLibrary:
             pygame.draw.circle(surf, spec.outline, body_center, r, 2)
 
             # Simple worker glyph (fallback only)
-            glyph = "P" if worker_type == "peasant" else "$"
+            glyph = "P" if (worker_type or "").lower() in ("peasant", "peasant_builder") else "$"
             font = pygame.font.Font(None, max(12, s // 2))
             txt = font.render(glyph, True, (250, 250, 250))
             rect = txt.get_rect(center=body_center)
             surf.blit(txt, rect)
+
+        if action == "rest":
+            frames = []
+            for i in range(6):
+                t = i / 6.0
+                surf = mk_surface()
+                bob = math.sin(t * math.tau) * 1.2
+                draw_base(surf, bob_px=bob, lean=0.0, brighten=1.0)
+                frames.append(surf)
+            return frames
 
         if action == "idle":
             frames = []

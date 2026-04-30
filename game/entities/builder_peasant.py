@@ -56,6 +56,11 @@ class BuilderPeasant(Peasant):
         # Minimal visual distinction until renderer support (Agent 03).
         self.color = (110, 220, 110)
 
+    @property
+    def render_worker_type(self) -> str:
+        """WorkerSpriteLibrary key (Legacy Vania green-hat builder variant)."""
+        return "peasant_builder"
+
     @classmethod
     def spawn_from_castle(cls, *, castle, target_building) -> "BuilderPeasant":
         x = float(getattr(castle, "center_x", 0.0))

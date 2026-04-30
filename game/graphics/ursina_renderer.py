@@ -57,7 +57,6 @@ if TYPE_CHECKING:
 # Fallback tint when hero class is unresolved or texture upload fails — match Warrior shirt (HeroSpriteSpec).
 COLOR_HERO = color.rgb(180 / 255.0, 45 / 255.0, 45 / 255.0)
 COLOR_ENEMY = color.red
-COLOR_PEASANT = color.orange
 COLOR_BUILDING = color.light_gray
 COLOR_CASTLE = color.gold
 COLOR_LAIR = color.brown
@@ -147,7 +146,8 @@ from game.graphics.ursina_units_anim import (
     _guard_base_clip,
     _hero_base_clip,
     _enemy_base_clip,
-    _worker_idle_surface,
+    _peasant_base_clip,
+    _tax_collector_base_clip,
 )
 
 from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab
@@ -579,38 +579,28 @@ class UrsinaRenderer:
 
         
     def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Peasants — billboards
+        # Peasants — billboards (Legacy Vania / procedural; time-based clips like guards).
         for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
                 continue
+            if bool(getattr(p, "is_inside_castle", False)):
+                continue
             s = PEASANT_SCALE
-            # Default: preserve sprite native colors (no tint multiplier).
             col = color.white
-            tint_textured = False
-            raw_col = getattr(p, "color", None)
-            if isinstance(raw_col, tuple) and len(raw_col) >= 3:
-                try:
-                    r, g, b = int(raw_col[0]), int(raw_col[1]), int(raw_col[2])
-                    col = color.rgb(r / 255.0, g / 255.0, b / 255.0)
-                except Exception:
-                    col = color.white
-
-            # Builder peasants should be visibly distinct (green tint).
-            # Avoid importing sim classes into renderer; use a lightweight type-name check.
-            if getattr(p, "__class__", None) is not None and getattr(p.__class__, "__name__", "") == "BuilderPeasant":
-                tint_textured = True
-            psurf = _worker_idle_surface("peasant")
-            ptex = TerrainTextureBridge.surface_to_texture(
-                psurf, cache_key=("worker_idle", "peasant", _unit_raster_px())
-            )
+            wk = str(getattr(p, "render_worker_type", "peasant") or "peasant")
+            clips_p = WorkerSpriteLibrary.clips_for(wk, size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 p,
                 model="quad",
                 col=color.white,
                 scale=(s, s, 1),
-                texture=ptex,
+                texture=None,
                 billboard=True,
             )
+            psurf, p_cache_key = self._unit_anim_surface(
+                obj_id, p, clips_p, _peasant_base_clip, "worker", wk
+            )
+            ptex = TerrainTextureBridge.surface_to_texture(psurf, cache_key=p_cache_key)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
             self._entity_render.sync_billboard_entity(
                 ent,
@@ -619,7 +609,7 @@ class UrsinaRenderer:
                 scale_xyz=(s, s, 1),
                 pos_xyz=(wx, s * 0.5, wz),
                 shader=sprite_unlit_shader,
-                tint_textured=tint_textured,
+                tint_textured=False,
             )
             active_ids.add(obj_id)
 
@@ -656,26 +646,27 @@ class UrsinaRenderer:
 
         
     def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Tax Collector — billboards
+        # Tax Collector — billboards (Legacy Vania believer; time-based clips).
         tc = getattr(snapshot, "tax_collector", None)
         if tc is not None:
             if not getattr(tc, "is_alive", True):
                 pass
             else:
-                col = COLOR_PEASANT
-                tcsurf = _worker_idle_surface("tax_collector")
-                tctex = TerrainTextureBridge.surface_to_texture(
-                    tcsurf, cache_key=("worker_idle", "tax_collector", _unit_raster_px())
-                )
+                col = color.white
+                clips_tc = WorkerSpriteLibrary.clips_for("tax_collector", size=_unit_raster_px())
                 s = PEASANT_SCALE
                 ent, obj_id = self._entity_render.get_or_create_entity(
                     tc,
                     model="quad",
                     col=color.white,
                     scale=(s, s, 1),
-                    texture=tctex,
+                    texture=None,
                     billboard=True,
                 )
+                tcsurf, tc_cache_key = self._unit_anim_surface(
+                    obj_id, tc, clips_tc, _tax_collector_base_clip, "worker", "tax_collector"
+                )
+                tctex = TerrainTextureBridge.surface_to_texture(tcsurf, cache_key=tc_cache_key)
                 wx, wz = sim_px_to_world_xz(tc.x, tc.y)
                 self._entity_render.sync_billboard_entity(
                     ent,
