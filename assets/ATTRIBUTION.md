@@ -132,6 +132,23 @@ Use this exact bullet structure (one bullet per pack):
 
 ---
 
+### Pack: Tiny RPG Character Asset Pack v1.03
+- **Author / publisher**: Zerie
+- **License**: Custom itch.io asset license — personal/commercial use and editing allowed; resale/redistribution of the asset pack prohibited.
+- **Source**: `https://zerie.itch.io/tiny-rpg-character-asset-pack`
+- **Retrieved**: 2026-04-30
+- **Modifications**:
+  - sliced 100×100 animation strips into per-action `frame_###.png` files
+  - cropped visible content and centered native pixels inside 48×48 transparent runtime canvases
+  - recolored Archer-derived rogue frames toward steel/purple accents
+- **Used for**: hero and enemy unit sprites
+- **File locations**:
+  - `assets/sprites/vendor/tiny_rpg_pack_v1_03/`
+  - `assets/sprites/heroes/<warrior|ranger|rogue|wizard|cleric>/{idle,walk,attack,hurt,inside}/frame_###.png`
+  - `assets/sprites/enemies/<bandit|goblin|skeleton|skeleton_archer>/{idle,walk,attack,hurt,dead}/frame_###.png`
+
+---
+
 ### Pack: kingdomsim_ui_cc0
 - **Author / publisher**: Kingdom Sim (Jaimie Montague + AI-assisted tooling)
 - **License**: CC0-1.0 (see `assets/third_party/kingdomsim_ui_cc0/LICENSE_CC0-1.0.txt`)

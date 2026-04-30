@@ -12,7 +12,7 @@
     "wk30-buildings-pipeline": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk30_buildings_pipeline.plan.md",
-        "notes": "WK30 R1: Agent 09 consult — silhouette + palette cohesion vs wk25/wk26; Agents 15/03/12 implement prefabs + default-on loader + validator."
+        "notes": "WK30 R1: Agent 09 consult \u2014 silhouette + palette cohesion vs wk25/wk26; Agents 15/03/12 implement prefabs + default-on loader + validator."
       },
       "rounds": {
         "wk30_r1_execution": {
@@ -20,7 +20,7 @@
           "round_id": "wk30_r1_execution",
           "status": "done",
           "what_i_changed": {
-            "summary": "Consult only (PM): no prefab or code edits. Confirmed Agents 15+03 landed: required prefabs under assets/prefabs/buildings/ (castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, peasant_house_small_v1) plus optional wizard_guild_v1; piece counts castle=20 (at budget), warrior=8, ranger=6, rogue=6, wizard=11, house=2. game/graphics/ursina_renderer.py uses _resolve_prefab_path (default-on; KINGDOM_URSINA_PREFAB_TEST=0 opt-out), _PREFAB_BUILDING_TYPE_TO_FILE house→peasant_house_small_v1.json, convention <type>_v1.json otherwise; _load_prefab_instance auto-centers XZ per WK30 hotfix notes. Style (data review): Castle mixes Retro Fantasy + Survival Kit — good visual anchor vs green terrain; guild set stays Retro Fantasy — cohesive low-poly fantasy with wk25/wk26 lighting. Silhouette differentiation: ranger uses fence/canvas vs warrior wall-paint stack; rogue uses door/window mix and rotated pieces; wizard taller multi-wall stack — likely distinct at default zoom; confirm in Ursina. Optional for Agent 15: if guilds still read too samey at distance, push stronger roof/banner/accent differentiation (do not edit prefabs from Agent 09). Full plan §6 checklist: Jaimie in-game.",
+            "summary": "Consult only (PM): no prefab or code edits. Confirmed Agents 15+03 landed: required prefabs under assets/prefabs/buildings/ (castle_v1, warrior_guild_v1, ranger_guild_v1, rogue_guild_v1, peasant_house_small_v1) plus optional wizard_guild_v1; piece counts castle=20 (at budget), warrior=8, ranger=6, rogue=6, wizard=11, house=2. game/graphics/ursina_renderer.py uses _resolve_prefab_path (default-on; KINGDOM_URSINA_PREFAB_TEST=0 opt-out), _PREFAB_BUILDING_TYPE_TO_FILE house\u2192peasant_house_small_v1.json, convention <type>_v1.json otherwise; _load_prefab_instance auto-centers XZ per WK30 hotfix notes. Style (data review): Castle mixes Retro Fantasy + Survival Kit \u2014 good visual anchor vs green terrain; guild set stays Retro Fantasy \u2014 cohesive low-poly fantasy with wk25/wk26 lighting. Silhouette differentiation: ranger uses fence/canvas vs warrior wall-paint stack; rogue uses door/window mix and rotated pieces; wizard taller multi-wall stack \u2014 likely distinct at default zoom; confirm in Ursina. Optional for Agent 15: if guilds still read too samey at distance, push stronger roof/banner/accent differentiation (do not edit prefabs from Agent 09). Full plan \u00a76 checklist: Jaimie in-game.",
             "files": []
           },
           "how_to_test": [
@@ -39,7 +39,7 @@
               "status": "PASS",
               "command": "python tools/validate_assets.py --report",
               "exit_code": 0,
-              "note": "errors=0; warns=46 (missing placeholder building/hero model files — pre-existing pattern; prefab section clean)"
+              "note": "errors=0; warns=46 (missing placeholder building/hero model files \u2014 pre-existing pattern; prefab section clean)"
             },
             "style_review": {
               "mode": "prefab_json_plus_loader_review",
@@ -453,7 +453,7 @@
     "wk32-camera-construction-nature-polish": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
-        "notes": "WK32 R2 — Agent 09 consult (no code)"
+        "notes": "WK32 R2 \u2014 Agent 09 consult (no code)"
       },
       "rounds": {
         "wk32_r2_visual_followup": {
@@ -462,18 +462,18 @@
           "status": "done",
           "prompt_text": "After Agents 03 and 15 land: review circled tree fix, denser non-grid grass, added rocks, Inn construction stages. Concise keep/change signoff; no code edits.",
           "what_i_changed": {
-            "summary": "Repo audit and art-direction notes only (no files changed). Confirmed ursina_renderer has _plot_prefab_path(tw,th) → plot_{w}x{h}_v1 for w,h in 1..3, _stage_prefab_path so inn_v2 → inn_v2_build_20_v1 / inn_v2_build_50_v1, _grass_scatter_jitter on grass and doodad placement, and construction staged prefab resolution. R2 prefabs not yet present: missing assets/prefabs/buildings/plot_3x2_v1.json, inn_v2_build_20_v1.json, inn_v2_build_50_v1.json (Inn is 3×2 per inn_v2.json). Until 15 ships those files, the Inn cannot show correct empty plot or partial stages; resolver will fall back per _first_existing. Rocks present with scanner prefix rock: rock.obj, rock_gy_cluster.obj, rock_gy_tall.obj. Tree tiles: only tree_pine.obj matches tree*; circled outlier in Jaimie's screenshot not re-captured here—recommend 15 add/replace a second low-poly pine or tune scale of tree_pine after in-game check.",
+            "summary": "Repo audit and art-direction notes only (no files changed). Confirmed ursina_renderer has _plot_prefab_path(tw,th) \u2192 plot_{w}x{h}_v1 for w,h in 1..3, _stage_prefab_path so inn_v2 \u2192 inn_v2_build_20_v1 / inn_v2_build_50_v1, _grass_scatter_jitter on grass and doodad placement, and construction staged prefab resolution. R2 prefabs not yet present: missing assets/prefabs/buildings/plot_3x2_v1.json, inn_v2_build_20_v1.json, inn_v2_build_50_v1.json (Inn is 3\u00d72 per inn_v2.json). Until 15 ships those files, the Inn cannot show correct empty plot or partial stages; resolver will fall back per _first_existing. Rocks present with scanner prefix rock: rock.obj, rock_gy_cluster.obj, rock_gy_tall.obj. Tree tiles: only tree_pine.obj matches tree*; circled outlier in Jaimie's screenshot not re-captured here\u2014recommend 15 add/replace a second low-poly pine or tune scale of tree_pine after in-game check.",
             "files_touched": []
           },
           "how_to_test": [
             "python main.py --renderer ursina",
-            "After plot_3x2_v1 + inn_v2_build_* land: place Inn, observe plot → 20% → 50% → final; frame meadow for grass/doodad cohesion",
+            "After plot_3x2_v1 + inn_v2_build_* land: place Inn, observe plot \u2192 20% \u2192 50% \u2192 final; frame meadow for grass/doodad cohesion",
             "python tools/qa_smoke.py --quick",
             "python tools/validate_assets.py --report"
           ],
           "evidence": {
             "screenshots": {
-              "note": "No new captures this round — signoff pending Agent 15 prefabs + Jaimie replaytest"
+              "note": "No new captures this round \u2014 signoff pending Agent 15 prefabs + Jaimie replaytest"
             },
             "qa_smoke": {
               "status": "PASS",
@@ -487,15 +487,15 @@
               "note": "errors=0; warns=46 (pre-existing missing placeholder model files)"
             }
           },
-          "art_signoff": "Partial / conditional. **Keep:** Renderer-side WK32 work (_grass_scatter_jitter, non-square plot path for plot_3x2_v1, inn_v2_build_* stems, water quad) is the right contract. **Change / pending:** (1) Ship plot_3x2_v1.json and inn_v2_build_20_v1.json + inn_v2_build_50_v1.json (Agent 15) so 3×2 Inn construction reads as designed. (2) **Tree:** With only `assets/models/environment/tree_pine.obj` in tree* set, any single ugly pine is likely the same asset at a bad transform or scale; replace or add a second compatible pine and re-shot Jaimie meadow. (3) **Rocks:** Three `rock*.obj` variants present — good direction; re-check value balance vs bushes after 0.75 tint in live scene. Re-run this consult with one meadow screenshot when 15+03 land.",
+          "art_signoff": "Partial / conditional. **Keep:** Renderer-side WK32 work (_grass_scatter_jitter, non-square plot path for plot_3x2_v1, inn_v2_build_* stems, water quad) is the right contract. **Change / pending:** (1) Ship plot_3x2_v1.json and inn_v2_build_20_v1.json + inn_v2_build_50_v1.json (Agent 15) so 3\u00d72 Inn construction reads as designed. (2) **Tree:** With only `assets/models/environment/tree_pine.obj` in tree* set, any single ugly pine is likely the same asset at a bad transform or scale; replace or add a second compatible pine and re-shot Jaimie meadow. (3) **Rocks:** Three `rock*.obj` variants present \u2014 good direction; re-check value balance vs bushes after 0.75 tint in live scene. Re-run this consult with one meadow screenshot when 15+03 land.",
           "blockers": [
             "plot_3x2_v1.json not in repo",
             "inn_v2_build_20_v1.json and inn_v2_build_50_v1.json not in repo",
             "No post-fix screenshot for circled tree (Human + Agent 15 asset pass required for final PASS)"
           ],
           "coordination_notes": [
-            "Workstream F (auto-spawn spacing) is Agent 05 — not reviewed here per role boundaries.",
-            "Agent 12 manifest follow-through after 15; Agent 10 perf after 03 density — per PM integration order."
+            "Workstream F (auto-spawn spacing) is Agent 05 \u2014 not reviewed here per role boundaries.",
+            "Agent 12 manifest follow-through after 15; Agent 10 perf after 03 density \u2014 per PM integration order."
           ]
         }
       }
@@ -511,7 +511,7 @@
           "sprint_id": "wk33-terrain-lair-economy-prefabs",
           "round_id": "wk33_r0_kickoff",
           "status": "done",
-          "prompt_text": "WK33: art direction only — lair Graveyard choice, economy building silhouettes, ground texture approval per wk33 plan and master plan Phase 1–2",
+          "prompt_text": "WK33: art direction only \u2014 lair Graveyard choice, economy building silhouettes, ground texture approval per wk33 plan and master plan Phase 1\u20132",
           "references_reviewed": [
             ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
             ".cursor/plans/master_plan_3d_graphics_v1_5.md (Phase 1 Static Environments; Phase 2 kitbash/texture override bullets)",
@@ -523,8 +523,8 @@
             "lair_mesh": {
               "choice": "crypt-large-graveyard",
               "source_path": "assets/models/Models/GLB format/crypt-large-graveyard.glb",
-              "export_target": "assets/models/environment/lair_graveyard_crypt_large.glb (or in-place replace assets/models/environment/lair.glb — confirm with Agent 03 wiring)",
-              "rationale": "Single static mesh; strong crypt silhouette readable at strategy distance; matches undead / monster-lair fantasy. Lair BUILDING_SIZES span 2x2 (goblin_camp, wolf_den, spider_nest) to 3x3 (skeleton_crypt, bandit_camp) — this asset reads 'building-sized'; Agent 03 should scale/anchor so footprint feels OK for all shared lair types.",
+              "export_target": "assets/models/environment/lair_graveyard_crypt_large.glb (or in-place replace assets/models/environment/lair.glb \u2014 confirm with Agent 03 wiring)",
+              "rationale": "Single static mesh; strong crypt silhouette readable at strategy distance; matches undead / monster-lair fantasy. Lair BUILDING_SIZES span 2x2 (goblin_camp, wolf_den, spider_nest) to 3x3 (skeleton_crypt, bandit_camp) \u2014 this asset reads 'building-sized'; Agent 03 should scale/anchor so footprint feels OK for all shared lair types.",
               "alternates_if_too_tall": [
                 "crypt-a-graveyard.glb or crypt-b-graveyard.glb (smaller A/B crypt variants in same pack)"
               ],
@@ -533,7 +533,7 @@
               ]
             },
             "marketplace_silhouette": {
-              "mood": "Open-air market: stall awnings or canopy, low wall / rail, plaza feel — not a sealed fort.",
+              "mood": "Open-air market: stall awnings or canopy, low wall / rail, plaza feel \u2014 not a sealed fort.",
               "pieces": "Bias Fantasy Town (stalls, cloth, wood trim) + sparse Graveyard/earth props only if it sells 'old kingdom market'; keep piece count low.",
               "readability": "2x2 footprint per config: silhouette wider than tall; entrance/gap readable toward path."
             },
@@ -545,7 +545,7 @@
             "ground_texture_floor_ground_grass": {
               "approved": true,
               "use": "Full-map repeating albedo on base terrain quad (per Agent 03); seamless tile pattern is suitable.",
-              "caveat": "Texture is **low-value / quite dark** as painted — OK as baseline. After WK33 ~20% scatter lift, if ground still looks muddy or mismatched vs SEEN fog, Agent 03 may apply a **slight** Entity.color multiply on the ground only (e.g. 1.05–1.1) and tune SEEN prop tint separately — do not push grass PNG to 'neon' in isolation."
+              "caveat": "Texture is **low-value / quite dark** as painted \u2014 OK as baseline. After WK33 ~20% scatter lift, if ground still looks muddy or mismatched vs SEEN fog, Agent 03 may apply a **slight** Entity.color multiply on the ground only (e.g. 1.05\u20131.1) and tune SEEN prop tint separately \u2014 do not push grass PNG to 'neon' in isolation."
             }
           },
           "what_i_changed": {
@@ -616,7 +616,7 @@
     "orch_tiny_warrior_red": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/orchestrator_tiny_sprint_warrior_red_1fbddbf6.plan.md",
-        "notes": "Orchestrator tiny sprint: warrior shirt blue→dark red (pygame + Ursina)."
+        "notes": "Orchestrator tiny sprint: warrior shirt blue\u2192dark red (pygame + Ursina)."
       },
       "rounds": {
         "orch_r0_impl_then_qa": {
@@ -683,8 +683,8 @@
           "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
           "status": "done",
           "what_i_changed": [
-            "No edits under game/graphics/ this round. Read Agent 03 canonical log at sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis in agent_03_TechnicalDirector_Architecture.json: live default Ursina path is correct (clips_for → PNG load → TerrainTextureBridge → sync_billboard_entity with white tint); blue warrior shirts are pixel content from assets/sprites/heroes/warrior/*/frame_*.png (shirt probe (70,120,255)), not procedural HeroSpriteSpec / cache-key bugs.",
-            "Per assignment: procedural/atlas/clips plumbing was not reassigned to art code — 03 closed the plumbing diagnosis; therefore no hero_sprites.py or bridge changes."
+            "No edits under game/graphics/ this round. Read Agent 03 canonical log at sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis in agent_03_TechnicalDirector_Architecture.json: live default Ursina path is correct (clips_for \u2192 PNG load \u2192 TerrainTextureBridge \u2192 sync_billboard_entity with white tint); blue warrior shirts are pixel content from assets/sprites/heroes/warrior/*/frame_*.png (shirt probe (70,120,255)), not procedural HeroSpriteSpec / cache-key bugs.",
+            "Per assignment: procedural/atlas/clips plumbing was not reassigned to art code \u2014 03 closed the plumbing diagnosis; therefore no hero_sprites.py or bridge changes."
           ],
           "commands_run": [
             {
@@ -705,7 +705,7 @@
             }
           ],
           "evidence": {
-            "agent_03_proof_ref": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"] (shirt_pixel_probe rgba (70,120,255,255); entry_chain HeroSpriteLibrary.clips_for → PNG frames)",
+            "agent_03_proof_ref": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u2192 sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"] (shirt_pixel_probe rgba (70,120,255,255); entry_chain HeroSpriteLibrary.clips_for \u2192 PNG frames)",
             "qa_smoke": {
               "command": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
@@ -714,7 +714,7 @@
           },
           "blockers": [],
           "recommended_next_actions": [
-            "Recolor or replace warrior PNGs under assets/sprites/heroes/warrior/ toward shirt target (180,45,45), or temporarily remove PNG folders to force procedural clips — per Agent 03 recommended_next_actions; defer to a follow-up art commit before Jaimie visual gate."
+            "Recolor or replace warrior PNGs under assets/sprites/heroes/warrior/ toward shirt target (180,45,45), or temporarily remove PNG folders to force procedural clips \u2014 per Agent 03 recommended_next_actions; defer to a follow-up art commit before Jaimie visual gate."
           ]
         },
         "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
@@ -751,7 +751,7 @@
               "assets/sprites/heroes/warrior/inside/frame_004.png",
               "assets/sprites/heroes/warrior/inside/frame_005.png"
             ],
-            "recolor_map": "(70,120,255)→(180,45,45); (50,100,235)→(155,35,35)"
+            "recolor_map": "(70,120,255)\u2192(180,45,45); (50,100,235)\u2192(155,35,35)"
           },
           "screenshot_attempts": [
             {
@@ -760,7 +760,7 @@
                 "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png"
               ],
               "note": "PIL batch remap of shirt blues on warrior PNGs; Ursina capture via tools/run_ursina_capture_once.py (main.py --renderer ursina --no-llm) with KINGDOM_URSINA_HERO_FPS_PROBE_COUNT=5 for visible warriors.",
-              "self_inspection": "dark_red — torso reads dark red; image sampling finds (180,45,45) and no saturated blue shirt pixels in central ROI; PASS"
+              "self_inspection": "dark_red \u2014 torso reads dark red; image sampling finds (180,45,45) and no saturated blue shirt pixels in central ROI; PASS"
             }
           ],
           "commands_run": [
@@ -818,14 +818,14 @@
     "wk47_unit_instancing_core": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
-        "notes": "WK47 R1 baseline atlas: single 2048² RGBA texture packing all hero/enemy/worker frames for instanced shader sampling."
+        "notes": "WK47 R1 baseline atlas: single 2048\u00b2 RGBA texture packing all hero/enemy/worker frames for instanced shader sampling."
       },
       "rounds": {
         "wk47_r1_baseline_atlas": {
           "sprint_id": "wk47_unit_instancing_core",
           "round_id": "wk47_r1_baseline_atlas",
           "status": "done",
-          "what_i_changed": "Added game/graphics/unit_atlas.py: UnitAtlasBuilder singleton packing heroes (5 classes), enemies (6 types), and workers (3 types) via HeroSpriteLibrary / EnemySpriteLibrary / WorkerSpriteLibrary clips_for(size=32); row-based shelf layout into 2048×2048 SRCALPHA surface; normalized UV map keyed by (unit_type, class_key, action, frame_index); lookup_uv fallback to first-cell UV; frame_count for debug.",
+          "what_i_changed": "Added game/graphics/unit_atlas.py: UnitAtlasBuilder singleton packing heroes (5 classes), enemies (6 types), and workers (3 types) via HeroSpriteLibrary / EnemySpriteLibrary / WorkerSpriteLibrary clips_for(size=32); row-based shelf layout into 2048\u00d72048 SRCALPHA surface; normalized UV map keyed by (unit_type, class_key, action, frame_index); lookup_uv fallback to first-cell UV; frame_count for debug.",
           "commands_run": [
             {
               "command": "python -c \"import pygame; pygame.init(); pygame.display.set_mode((1,1)); from game.graphics.unit_atlas import UnitAtlasBuilder; a = UnitAtlasBuilder.get(); print(f'Atlas: {a.atlas_surface.get_size()}, Frames: {a.frame_count}'); uv = a.lookup_uv('hero', 'warrior', 'idle', 0); print(f'Warrior idle 0 UV: {uv}'); assert uv[2] > 0; print('PASS')\"",
@@ -931,6 +931,114 @@
           "follow_ups": [],
           "recommended_next_actions": [
             "Agent 03 Wave 3: remove KINGDOM_URSINA_INSTANCING gate and legacy billboard paths once QA confirms."
+          ]
+        }
+      }
+    },
+    "tiny_rpg_sprite_rebuild": {
+      "sprint_meta": {
+        "notes": "Direct human request: rebuild Tiny RPG hero/enemy sprites from clean vendor crops."
+      },
+      "rounds": {
+        "direct_agent09_reexport_20260430": {
+          "sprint_id": "tiny_rpg_sprite_rebuild",
+          "round_id": "direct_agent09_reexport_20260430",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Rebuilt Tiny RPG-backed hero/enemy PNG exports as 48x48 transparent runtime canvases with native source pixels centered inside; fixed exporter bbox X/Y handling and alpha-only crop bounds so black outline/face/sword details are preserved; remapped rogue to Archer-derived frames with steel/purple recolor; excluded spider, wolf, and workers.",
+            "files": [
+              "tools/tiny_rpg_export_frames.py",
+              "assets/sprites/vendor/tiny_rpg_pack_v1_03/Map.csv",
+              "assets/sprites/vendor/tiny_rpg_pack_v1_03/Map_actions.csv",
+              "assets/sprites/vendor/tiny_rpg_pack_v1_03/README_EXPORT.md",
+              "assets/ATTRIBUTION.md",
+              "assets/sprites/heroes/{warrior,ranger,rogue,wizard,cleric}/**/frame_*.png",
+              "assets/sprites/enemies/{bandit,goblin,skeleton,skeleton_archer}/**/frame_*.png",
+              "docs/screenshots/tiny_rpg_export_verify/*.png",
+              "docs/screenshots/tiny_rpg_sprite_rebuild/after_reexport_20260430_125028_490.png"
+            ]
+          },
+          "commands_run": [
+            {
+              "command": "python tools/tiny_rpg_export_frames.py --dry-run",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/tiny_rpg_export_frames.py --execute --clean-action --verify --only-unit heroes/warrior --only-unit heroes/ranger --only-unit heroes/rogue",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pilot export; rerun after bbox X/Y fix"
+            },
+            {
+              "command": "python tools/tiny_rpg_export_frames.py --execute --clean-action --verify",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -c <verify exported Tiny RPG-backed frames are 48x48>",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "checked 45 action folders; bad_sizes=[]"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/run_ursina_capture_once.py --seconds 10 --subdir tiny_rpg_sprite_rebuild --stem after_reexport --no-llm --hero-fps-probe-count 5",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "verify_sheets": [
+              "docs/screenshots/tiny_rpg_export_verify/heroes__warrior__attack__frame_014.png",
+              "docs/screenshots/tiny_rpg_export_verify/heroes__warrior__idle__frame_000.png",
+              "docs/screenshots/tiny_rpg_export_verify/heroes__ranger__attack__frame_010.png",
+              "docs/screenshots/tiny_rpg_export_verify/heroes__rogue__attack__frame_010.png",
+              "docs/screenshots/tiny_rpg_export_verify/enemies__goblin__idle__frame_000.png",
+              "docs/screenshots/tiny_rpg_export_verify/enemies__skeleton_archer__attack__frame_004.png",
+              "docs/screenshots/tiny_rpg_export_verify/heroes__cleric__inside__frame_003.png",
+              "docs/screenshots/tiny_rpg_export_verify/heroes__wizard__attack__frame_006.png"
+            ],
+            "visual_inspection": "Pilot sheets confirmed warrior face/outline/sword pixels preserved, warrior attack crescent retained without shrinking body, ranger remains source Archer quality, rogue uses Archer silhouette with cooler accent recolor. Full export spot-checks for goblin, skeleton archer, cleric, and wizard retained native detail inside 48x48 canvases.",
+            "frame_size_check": {
+              "status": "PASS",
+              "checked_action_folders": 45,
+              "bad_sizes": []
+            },
+            "validate_assets": {
+              "status": "PASS",
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "summary": "errors=0; warns=46 existing missing_model_file warnings"
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "ursina_capture": {
+              "path": "docs/screenshots/tiny_rpg_sprite_rebuild/after_reexport_20260430_125028_490.png",
+              "note": "Overview capture saved with hero FPS probe; detailed verification sheets provide close-up crop proof."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human visual review in live Ursina at normal zoom is still useful because the automated capture is an overview shot.",
+            "If attack arcs feel too wide for the 48x48 slot during play, tune per-action crop/anchor for those specific strips rather than scaling all frames."
           ]
         }
       }

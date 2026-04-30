@@ -7,6 +7,6 @@ enemies,spider,,Not from this pack — keep procedural / existing game art only
 enemies,wolf,,Not from this pack — keep procedural / existing game art only
 heroes,cleric,Priest,Priest-Heal strip maps to hero inside action
 heroes,ranger,Archer,Bow ranged
-heroes,rogue,Soldier,Light melee distinct from ranger
+heroes,rogue,Archer,Archer-derived rogue with adjusted steel/purple color theme
 heroes,warrior,Knight,Armored melee
 heroes,wizard,Wizard,Arcane caster

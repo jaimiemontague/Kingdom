@@ -9,8 +9,9 @@ Tiny RPG characters occupy only the center of each 100x100 cell. By default we:
   2) Crop every frame with that same rect (aligned motion).
   3) Uniform-scale + letterbox into --out-w x --out-h (nearest neighbor; no squash).
 
-Default on-disk size is 16x16; runtime scales once via ``load_png_frames(..., scale_to=)``
-using ``config.UNIT_SPRITE_PIXELS``.
+Default on-disk size is 48x48: a transparent runtime canvas with the native
+Tiny RPG crop pasted into the center. That keeps the pack's original pixels
+intact because ``load_png_frames(..., scale_to=(48, 48))`` becomes a no-op.
 
 Usage (repo root, PowerShell):
   python tools/tiny_rpg_export_frames.py --pack assets/sprites/vendor/tiny_rpg_pack_v1_03 --dry-run
@@ -29,8 +30,8 @@ from typing import Iterable
 
 import pygame
 
-# Native character resolution in pack; game upscales at load to UNIT_SPRITE_PIXELS.
-_DEFAULT_EXPORT_PX = 16
+# Runtime unit sprite canvas. Visible characters stay native-size inside it.
+_DEFAULT_EXPORT_PX = 48
 
 
 def _repo_root() -> Path:
@@ -82,19 +83,22 @@ def _content_bbox(
     alpha_threshold: int = 10,
     black_threshold: int = 10,
 ) -> pygame.Rect | None:
-    """Bounding rect of non-transparent, non-pure-black pixels. None if empty."""
+    """Bounding rect of visible pixels. None if empty.
+
+    The Tiny RPG sheets use transparent backgrounds, while black pixels are real
+    outline/face/weapon detail. Keep those black pixels in the content bounds.
+    ``black_threshold`` remains in the signature for compatibility with older
+    calls, but is intentionally unused.
+    """
     s = surf.convert_alpha()
     w, h = s.get_size()
     try:
         import numpy as np
-        from pygame.surfarray import array3d, array_alpha
+        from pygame.surfarray import array_alpha
 
-        rgb = array3d(s)  # 3 x w x h
         a = array_alpha(s)
-        opaque = a > alpha_threshold
-        not_black = np.any(rgb > black_threshold, axis=0)
-        mask = opaque & not_black
-        ys, xs = np.where(mask)
+        mask = a > alpha_threshold
+        xs, ys = np.where(mask)
         if xs.size == 0:
             return None
         min_x, max_x = int(xs.min()), int(xs.max())
@@ -107,8 +111,6 @@ def _content_bbox(
             for x in range(w):
                 r, g, b, a = s.get_at((x, y))
                 if a <= alpha_threshold:
-                    continue
-                if r <= black_threshold and g <= black_threshold and b <= black_threshold:
                     continue
                 if x < min_x:
                     min_x = x
@@ -180,6 +182,55 @@ def _crop_fit_canvas(source: pygame.Surface, out_w: int, out_h: int) -> pygame.S
     y = (out_h - nh) // 2
     canvas.blit(scaled, (x, y))
     return canvas
+
+
+def _crop_native_canvas(
+    source: pygame.Surface,
+    crop: pygame.Rect,
+    *,
+    out_w: int,
+    out_h: int,
+    frame_w: int,
+    frame_h: int,
+) -> pygame.Surface:
+    """Paste the unscaled crop into an output canvas using the source cell center.
+
+    This preserves native Tiny RPG pixels and keeps body position stable between
+    idle/walk and wide attack frames. The source cell center maps to the output
+    canvas center; pygame clips automatically if an extreme effect exceeds 48px.
+    """
+    sub = source.subsurface(crop).copy()
+    canvas = pygame.Surface((out_w, out_h), pygame.SRCALPHA)
+    canvas.fill((0, 0, 0, 0))
+    x = int(round((out_w - frame_w) / 2 + crop.x))
+    y = int(round((out_h - frame_h) / 2 + crop.y))
+    canvas.blit(sub, (x, y))
+    return canvas
+
+
+def _apply_rogue_recolor(source: pygame.Surface) -> pygame.Surface:
+    """Shift Archer-derived rogue accents toward cool steel/purple tones."""
+    surf = source.copy().convert_alpha()
+    w, h = surf.get_size()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = surf.get_at((x, y))
+            if a <= 0:
+                continue
+            # Preserve skin, bone, dark outlines, and bow/string detail.
+            if r > 170 and g > 110 and b < 110:
+                continue
+            if max(r, g, b) < 55:
+                continue
+            # Re-theme saturated green/yellow cloth accents from Archer to Rogue.
+            if g >= r and g >= b and g > 80:
+                v = max(65, min(210, int((r + g + b) / 3)))
+                surf.set_at((x, y), (min(220, v + 18), min(220, v + 12), min(235, v + 42), a))
+            elif r > 120 and g > 110 and b < 90:
+                # Warm gold trim becomes muted steel so the rogue is distinct.
+                v = max(70, min(200, int((r + g + b) / 3)))
+                surf.set_at((x, y), (min(210, v + 8), min(210, v + 8), min(230, v + 28), a))
+    return surf
 
 
 def _scale_full_frame_nearest(f: pygame.Surface, out_w: int, out_h: int) -> pygame.Surface:
@@ -321,6 +372,8 @@ def export_all(
     content_crop: bool,
     content_pad: int,
     crop_cap_factor: int,
+    scale_crop_to_fit: bool,
+    only_units: set[tuple[str, str]] | None,
     verify: bool,
 ) -> int:
     rows = _load_map_rows(map_csv)
@@ -338,6 +391,8 @@ def export_all(
     errors = 0
     for key, parts in sorted(groups.items(), key=lambda kv: kv[0]):
         kc, ku, character, action = key
+        if only_units and (kc, ku) not in only_units:
+            continue
         inner = _resolve_inner_character_dir(pack_root, character)
         out_dir = _out_action_dir(repo, kc, ku, action)
         all_frames: list[pygame.Surface] = []
@@ -398,10 +453,23 @@ def export_all(
         scaled: list[pygame.Surface] = []
         for f in all_frames:
             if content_crop:
-                sub = f.subsurface(crop).copy()
-                scaled.append(_crop_fit_canvas(sub, out_w, out_h))
+                if scale_crop_to_fit:
+                    sub = f.subsurface(crop).copy()
+                    out = _crop_fit_canvas(sub, out_w, out_h)
+                else:
+                    out = _crop_native_canvas(
+                        f,
+                        crop,
+                        out_w=out_w,
+                        out_h=out_h,
+                        frame_w=frame_w,
+                        frame_h=frame_h,
+                    )
             else:
-                scaled.append(_scale_full_frame_nearest(f, out_w, out_h))
+                out = _scale_full_frame_nearest(f, out_w, out_h)
+            if kc == "heroes" and ku == "rogue":
+                out = _apply_rogue_recolor(out)
+            scaled.append(out)
 
         if not dry_run:
             for i, surf in enumerate(scaled):
@@ -416,12 +484,13 @@ def export_all(
                 for idx in idxs:
                     raw = all_frames[idx]
                     sub = raw.subsurface(crop).copy()
+                    output = scaled[idx]
                     vpath = verify_root / f"{kc}__{ku}__{action}__frame_{idx:03d}.png"
                     _verify_strip(
                         raw_cell=raw,
                         crop_rect=crop,
                         cropped_source=sub,
-                        output=scaled[idx],
+                        output=output,
                         out_path=vpath,
                     )
                     print(f"  verify -> {vpath}")
@@ -452,13 +521,13 @@ def main() -> int:
         "--out-w",
         type=int,
         default=_DEFAULT_EXPORT_PX,
-        help="Exported frame width (default 16 native pixels).",
+        help="Exported frame width (default 48 runtime canvas pixels).",
     )
     parser.add_argument(
         "--out-h",
         type=int,
         default=_DEFAULT_EXPORT_PX,
-        help="Exported frame height (default 16 native pixels).",
+        help="Exported frame height (default 48 runtime canvas pixels).",
     )
     parser.add_argument("--repo", type=Path, default=_repo_root(), help="Repository root.")
     parser.add_argument("--execute", action="store_true", help="Write PNGs (default is dry-run if neither flag).")
@@ -482,8 +551,20 @@ def main() -> int:
     parser.add_argument(
         "--crop-cap-factor",
         type=int,
-        default=3,
-        help="If max(union w,h) > max(out)*factor, shrink to a centered square cap (default 3). 0 = never shrink.",
+        default=0,
+        help="If max(union w,h) > max(out)*factor, shrink to a centered square cap (default 0 = never shrink).",
+    )
+    parser.add_argument(
+        "--scale-crop-to-fit",
+        action="store_true",
+        help="Legacy mode: scale the content crop to fill the output canvas instead of pasting native pixels.",
+    )
+    parser.add_argument(
+        "--only-unit",
+        action="append",
+        default=[],
+        metavar="CATEGORY/UNIT",
+        help="Optional filter, e.g. heroes/warrior. Can be passed more than once.",
     )
     parser.add_argument(
         "--verify",
@@ -513,8 +594,18 @@ def main() -> int:
     print(f"map_csv={map_csv}")
     print(
         f"frame={args.frame_w}x{args.frame_h} -> out={args.out_w}x{args.out_h} "
-        f"content_crop={content_crop} dry_run={dry_run}"
+        f"content_crop={content_crop} native_canvas={not args.scale_crop_to_fit} dry_run={dry_run}"
     )
+    only_units: set[tuple[str, str]] | None = None
+    if args.only_unit:
+        only_units = set()
+        for raw in args.only_unit:
+            parts = str(raw).strip().lower().replace("\\", "/").split("/")
+            if len(parts) != 2 or parts[0] not in {"heroes", "enemies"} or not parts[1]:
+                print(f"Invalid --only-unit {raw!r}; expected heroes/<unit> or enemies/<unit>", file=sys.stderr)
+                return 2
+            only_units.add((parts[0], parts[1]))
+        print(f"only_units={sorted(only_units)}")
 
     err = export_all(
         pack_root=pack_root,
@@ -529,6 +620,8 @@ def main() -> int:
         content_crop=content_crop,
         content_pad=max(0, int(args.content_pad)),
         crop_cap_factor=max(0, int(args.crop_cap_factor)),
+        scale_crop_to_fit=bool(args.scale_crop_to_fit),
+        only_units=only_units,
         verify=bool(args.verify),
     )
     return 1 if err else 0
