@@ -130,6 +130,17 @@ class UrsinaApp:
             self._add_hero_fps_probe_layout(self._hero_fps_probe_count)
 
         self._setup_ursina_camera_for_castle()
+
+        self._worker_scale_shot_reattach = 0
+        if os.environ.get("KINGDOM_URSINA_WORKER_SCALE_SHOT", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        ):
+            self._install_worker_scale_comparison_shot()
+            # Sim ticks spawn peasants; re-apply for several seconds so the auto-screenshot sees exactly one.
+            self._worker_scale_shot_reattach = 420
         self._install_ursina_input_hook()
         # Left click deferred to start of update() so MOUSEMOTION is processed first (placement preview).
         self._pending_lmb = False
@@ -683,6 +694,41 @@ class UrsinaApp:
         except Exception as exc:
             print(f"[wk30-debug-layout] fog reveal failed: {exc}")
 
+    def _install_worker_scale_comparison_shot(self) -> None:
+        """Place one warrior + one peasant beside the castle for Ursina scale QA (see tools/run_worker_scale_ursina_shot.py)."""
+        from config import TILE_SIZE
+
+        from game.entities.hero import Hero
+        from game.entities.peasant import Peasant
+
+        eng = self.engine
+        castle = next((b for b in eng.buildings if getattr(b, "building_type", "") == "castle"), None)
+        if castle is None:
+            print("[worker-scale-shot] no castle; skipping")
+            return
+        cx = float(getattr(castle, "center_x", 0.0))
+        cy = float(getattr(castle, "center_y", 0.0))
+        wx = cx + TILE_SIZE * 2.5
+        wy = cy
+        px = wx + TILE_SIZE * 1.0
+        py = wy
+        # Isolate one warrior vs one peasant (default match spawns many heroes + tax collector).
+        eng.heroes.clear()
+        eng.heroes.append(Hero(wx, wy, hero_class="warrior"))
+        eng.peasants.clear()
+        eng.peasants.append(Peasant(px, py))
+        eng.tax_collector = None
+        eng.enemies.clear()
+        eng.guards.clear()
+        setattr(eng.sim, "_worker_scale_shot_hold", True)
+        if hasattr(eng, "screenshot_hide_ui"):
+            eng.screenshot_hide_ui = True
+        try:
+            z = float(getattr(eng, "zoom", 1.0) or 1.0)
+            eng.zoom = max(z, 2.25)
+        except Exception:
+            pass
+
     def _add_hero_fps_probe_layout(self, hero_count: int) -> None:
         """WK32 r5 debug: deterministic warrior guild + N warriors for renderer FPS probes."""
         engine = self.engine
@@ -903,6 +949,10 @@ class UrsinaApp:
             _stage_t0 = pytime.perf_counter()
             self.engine.tick_simulation(dt)
             self._record_fps_probe_stage_ms("tick_simulation", _stage_t0)
+
+            if getattr(self, "_worker_scale_shot_reattach", 0) > 0:
+                self._worker_scale_shot_reattach -= 1
+                self._install_worker_scale_comparison_shot()
 
             # WK31: EMA of 1/dt for F2 overlay — pygame clock FPS is not Panda3D/GPU FPS in this mode.
             try:

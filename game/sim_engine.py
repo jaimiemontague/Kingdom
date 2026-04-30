@@ -513,7 +513,12 @@ class SimEngine:
             for p in self.peasants
             if getattr(p, "is_alive", False) and not isinstance(p, BuilderPeasant)
         ]
-        if castle and len(alive_regular_peasants) < 2 and self.peasant_spawn_timer >= 5.0:
+        if (
+            not getattr(self, "_worker_scale_shot_hold", False)
+            and castle
+            and len(alive_regular_peasants) < 2
+            and self.peasant_spawn_timer >= 5.0
+        ):
             self.peasant_spawn_timer = 0.0
             self.peasants.append(Peasant(castle.center_x, castle.center_y))
         for peasant in self.peasants:

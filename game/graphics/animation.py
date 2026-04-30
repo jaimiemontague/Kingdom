@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 
 import pygame
 
+from game.graphics.pixel_scale import scale_surface_nearest
+
 
 @dataclass(frozen=True)
 class AnimationClip:
@@ -93,9 +95,8 @@ def load_png_frames(folder: str | Path, scale_to: Optional[tuple[int, int]] = No
         img = pygame.image.load(str(f))
         if display_surface is not None:
             img = img.convert_alpha()
-        if scale_to is not None:
-            # Pixel art should remain crisp; avoid filtered scaling.
-            img = pygame.transform.scale(img, scale_to)
+        if scale_to is not None and img.get_size() != tuple(scale_to):
+            img = scale_surface_nearest(img, int(scale_to[0]), int(scale_to[1]))
         frames.append(img)
     return frames
 

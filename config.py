@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.2"
-    game_title: str = "Kingdom Sim (Prototype v1.5.2) — Lumberjacks and Town Building"
+    prototype_version: str = "1.5.3"
+    game_title: str = "Kingdom Sim (Prototype v1.5.3) — Major Unit Art Update"
     default_borderless: bool = True
 
 
@@ -185,6 +185,14 @@ MAP_HEIGHT = MAP.height
 
 # 2D unit sprite raster size (PNG scale for heroes/enemies/workers). Simulation grid stays TILE_SIZE px/tile.
 UNIT_SPRITE_PIXELS = int(os.getenv("KINGDOM_UNIT_SPRITE_PX", "48"))
+
+# Ursina 3D: worker billboards (see ``ursina_renderer.PEASANT_SCALE_*``).
+# ``BASE`` scales X/Z; ``Y_SCALE_MUL`` squashes quad height so tall Legacy Vania sprites match
+# hero silhouette without blurring textures in the exporter. Env: KINGDOM_URSINA_WORKER_SCALE,
+# KINGDOM_URSINA_WORKER_Y_MUL.
+# Default 0.42 ≈ 1.5× the prior 0.28 pass (readability vs heroes); tune with env / Y_MUL as needed.
+URSINA_WORKER_BILLBOARD_BASE = float(os.getenv("KINGDOM_URSINA_WORKER_SCALE", "0.42"))
+URSINA_WORKER_BILLBOARD_Y_SCALE_MUL = float(os.getenv("KINGDOM_URSINA_WORKER_Y_MUL", "0.55"))
 
 # WK46 Stage 3: Lumberjack builders (local wood, per BuilderPeasant).
 BUILDER_CHOP_DURATION_S = 5.0

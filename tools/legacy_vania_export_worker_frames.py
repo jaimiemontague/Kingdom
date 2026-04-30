@@ -7,9 +7,10 @@ Tax collector: **npc-cape2** character only — composes vendor strips into
 workers/tax_collector/{idle,walk,return,collect,hurt,dead,rest}/frame_*.png
 (no knife walk or knife-attack strips; collect uses jab only; return matches walk).
 
-Letterboxing: uniform nearest-neighbor scale to fit inside the output square, centered
-on transparency. ``--content-scale`` (default 0.5) scales the character before the fit
-step (0.5 ~= half linear size vs unscaled art on the same canvas).
+Letterboxing: **nearest-neighbor** scale to fit inside the output square (no bilinear blur).
+Optional ``--content-scale`` (< 1) shrinks the source *before* the fit (legacy tuning); default **1.0**
+keeps vendor resolution. On-screen size in Ursina is controlled by ``URSINA_WORKER_BILLBOARD_BASE``
+in ``config.py``, not by shrinking textures here.
 
 PowerShell (repo root):
   python tools/legacy_vania_export_worker_frames.py --execute
@@ -25,6 +26,12 @@ import sys
 from pathlib import Path
 
 import pygame
+
+_REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORT))
+
+from game.graphics.pixel_scale import scale_surface_nearest
 
 
 def _ensure_pygame_headless() -> None:
@@ -43,7 +50,7 @@ WORKERS_ROOT = REPO_ROOT / "assets" / "sprites" / "workers"
 DEFAULT_PEASANT_WALK = "npc-villager1-fisherman_walk.png"
 FALLBACK_PEASANT_WALK = "npc-villager10-anim-walk_strip6.png"
 LIKELY_STUB_MAX_BYTES = 600
-DEFAULT_CONTENT_SCALE = 0.5
+DEFAULT_CONTENT_SCALE = 1.0
 
 
 def _is_stub_file(path: Path) -> bool:
@@ -123,20 +130,20 @@ def _key_black_background(surf: pygame.Surface, *, threshold: int = 12) -> pygam
 
 
 def letterbox_nearest(src: pygame.Surface, size: int, *, content_scale: float = 1.0) -> pygame.Surface:
-    """Scale by ``content_scale``, then uniform-scale to fit inside ``size`` (nearest-neighbor)."""
+    """Uniform nearest-neighbor scale to fit inside ``size``×``size``; center on transparency."""
     sw, sh = src.get_width(), src.get_height()
     if sw <= 0 or sh <= 0:
         raise ValueError("empty surface")
     if content_scale != 1.0:
-        src = pygame.transform.scale(
-            src,
-            (max(1, int(round(sw * content_scale))), max(1, int(round(sh * content_scale)))),
-        )
+        tsw = max(1, int(round(sw * content_scale)))
+        tsh = max(1, int(round(sh * content_scale)))
+        if (tsw, tsh) != (sw, sh):
+            src = scale_surface_nearest(src, tsw, tsh)
         sw, sh = src.get_width(), src.get_height()
     scale = min(size / sw, size / sh)
     nw = max(1, int(round(sw * scale)))
     nh = max(1, int(round(sh * scale)))
-    scaled = pygame.transform.scale(src, (nw, nh))
+    scaled = scale_surface_nearest(src, nw, nh) if (nw, nh) != (sw, sh) else src.copy()
     canvas = pygame.Surface((size, size), pygame.SRCALPHA)
     canvas.fill((0, 0, 0, 0))
     ox = (size - nw) // 2

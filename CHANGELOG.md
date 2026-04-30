@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.5.3 — Major Unit Art Update
+
+- **Tiny RPG Character Asset Pack** (see `assets/ATTRIBUTION.md`): class hero sprites under `assets/sprites/heroes/` and **guardhouse guards** with idle / walk / attack (plus hurt/dead) wired through **pygame**, **Ursina billboards**, and the optional **instanced unit atlas** path.
+- **Legacy Vania NPC pack** (vendor spritesheets): animated **peasants**, **tax collector** (idle, walk, collect/return/rest, hurt, dead), and **peasant_builder** (green-hat variant for construction workers); hurts/dead fall back to procedural art where strips are absent.
+- **Pipeline:** `tools/legacy_vania_export_worker_frames.py` splits vendor strips, optional letterbox to `UNIT_SPRITE_PIXELS`, and emits `assets/sprites/workers/<type>/<action>/frame_*.png`.
+- **Readability:** Ursina worker billboard default scale raised (~**1.5×** vs the prior pass) so peasants and collectors read better next to heroes; tune with `KINGDOM_URSINA_WORKER_SCALE` / `KINGDOM_URSINA_WORKER_Y_MUL` if needed.
+
 ## Prototype v1.5.2 — Lumberjacks and Town Building
 
 - Buildings no longer “pop in”: **Builder Peasants** must gather **local wood** by chopping visible/explored trees (5s chop + 5s harvest) before they can finish **Houses, Food Stands, and Farms**.

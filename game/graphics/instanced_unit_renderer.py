@@ -54,7 +54,10 @@ TELEPORT_DIST_SQ = 2.25  # 1.5^2 — snap past this (teleport / building entry)
 _US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(config.TILE_SIZE)
 HERO_SCALE = 0.62 * _US
 ENEMY_SCALE = 0.5 * _US
-PEASANT_SCALE = 0.465 * _US
+_WB = float(getattr(config, "URSINA_WORKER_BILLBOARD_BASE", 0.42))
+_WYM = float(getattr(config, "URSINA_WORKER_BILLBOARD_Y_SCALE_MUL", 0.55))
+# Single uniform scale ≈ legacy squashed height (see ``ursina_renderer.PEASANT_SCALE_Y``).
+PEASANT_SCALE = _WB * _WYM * _US
 GUARD_SCALE_UNIFORM = 0.5 * _US  # legacy xz; Y was 0.7 — single-instanced quad uses xz scale
 
 # Match ``ursina_renderer.PROJECTILE_*`` — instanced arrow billboards + shadow skip via negative scale.w.

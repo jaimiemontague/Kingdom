@@ -85,7 +85,12 @@ UNIT_BILLBOARD_SCALE = 0.62 * _US
 _FOG_TEX_KEY = "kingdom_ursina_fog_overlay"
 
 ENEMY_SCALE = 0.5 * _US
-PEASANT_SCALE = 0.465 * _US
+_WB = float(getattr(config, "URSINA_WORKER_BILLBOARD_BASE", 0.42))
+_WYM = float(getattr(config, "URSINA_WORKER_BILLBOARD_Y_SCALE_MUL", 0.55))
+PEASANT_SCALE_XZ = _WB * _US
+PEASANT_SCALE_Y = PEASANT_SCALE_XZ * _WYM
+# Instanced path uses a single uniform scale — approximate squashed height.
+PEASANT_SCALE = PEASANT_SCALE_Y
 GUARD_SCALE_XZ = 0.5 * _US
 GUARD_SCALE_Y = 0.7 * _US
 
@@ -585,7 +590,8 @@ class UrsinaRenderer:
                 continue
             if bool(getattr(p, "is_inside_castle", False)):
                 continue
-            s = PEASANT_SCALE
+            sx = PEASANT_SCALE_XZ
+            sy = PEASANT_SCALE_Y
             col = color.white
             wk = str(getattr(p, "render_worker_type", "peasant") or "peasant")
             clips_p = WorkerSpriteLibrary.clips_for(wk, size=_unit_raster_px())
@@ -593,7 +599,7 @@ class UrsinaRenderer:
                 p,
                 model="quad",
                 col=color.white,
-                scale=(s, s, 1),
+                scale=(sx, sy, 1),
                 texture=None,
                 billboard=True,
             )
@@ -606,8 +612,8 @@ class UrsinaRenderer:
                 ent,
                 tex=ptex,
                 tint_col=col,
-                scale_xyz=(s, s, 1),
-                pos_xyz=(wx, s * 0.5, wz),
+                scale_xyz=(sx, sy, 1),
+                pos_xyz=(wx, sy * 0.5, wz),
                 shader=sprite_unlit_shader,
                 tint_textured=False,
             )
@@ -654,12 +660,13 @@ class UrsinaRenderer:
             else:
                 col = color.white
                 clips_tc = WorkerSpriteLibrary.clips_for("tax_collector", size=_unit_raster_px())
-                s = PEASANT_SCALE
+                sx = PEASANT_SCALE_XZ
+                sy = PEASANT_SCALE_Y
                 ent, obj_id = self._entity_render.get_or_create_entity(
                     tc,
                     model="quad",
                     col=color.white,
-                    scale=(s, s, 1),
+                    scale=(sx, sy, 1),
                     texture=None,
                     billboard=True,
                 )
@@ -672,8 +679,8 @@ class UrsinaRenderer:
                     ent,
                     tex=tctex,
                     tint_col=col,
-                    scale_xyz=(s, s, 1),
-                    pos_xyz=(wx, s * 0.5, wz),
+                    scale_xyz=(sx, sy, 1),
+                    pos_xyz=(wx, sy * 0.5, wz),
                     shader=sprite_unlit_shader,
                 )
                 active_ids.add(obj_id)
