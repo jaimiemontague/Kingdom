@@ -45,6 +45,19 @@ def _enemy_base_clip(enemy) -> str:
     return "walk" if state_name == "MOVING" else "idle"
 
 
+def _guard_base_clip(guard) -> str:
+    """Locomotion clip for guards; must match WorkerRenderer guard mapping (game/graphics/renderers/worker_renderer.py)."""
+    state = getattr(guard, "state", None)
+    state_name = str(getattr(state, "name", state))
+    if state_name == "DEAD":
+        return "dead"
+    if state_name == "ATTACKING":
+        return "attack"
+    if state_name == "MOVING":
+        return "walk"
+    return "idle"
+
+
 def _worker_idle_surface(worker_type: str):
     wt = str(worker_type or "peasant").lower()
     sz = int(getattr(config, "UNIT_SPRITE_PIXELS", 32))

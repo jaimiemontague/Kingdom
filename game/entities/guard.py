@@ -70,6 +70,8 @@ class Guard:
         if self.hp <= 0:
             self.state = GuardState.DEAD
             return True
+        # One-shot hurt clip on billboard paths (_unit_anim_surface / instancing).
+        setattr(self, "_render_anim_trigger", "hurt")
         return False
 
     def move_towards(self, target_x: float, target_y: float, dt: float) -> bool:

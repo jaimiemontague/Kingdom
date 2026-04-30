@@ -1231,6 +1231,10 @@ class GameEngine:
                 t = getattr(enemy, "_render_anim_trigger", None)
                 if t:
                     enemy._ursina_anim_trigger = str(t)
+            for guard in self.guards:
+                t = getattr(guard, "_render_anim_trigger", None)
+                if t:
+                    guard._ursina_anim_trigger = str(t)
         self.renderer_registry.update_animations(
             dt=dt,
             heroes=self.heroes,

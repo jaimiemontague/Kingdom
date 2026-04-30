@@ -58,7 +58,6 @@ if TYPE_CHECKING:
 COLOR_HERO = color.rgb(180 / 255.0, 45 / 255.0, 45 / 255.0)
 COLOR_ENEMY = color.red
 COLOR_PEASANT = color.orange
-COLOR_GUARD = color.yellow
 COLOR_BUILDING = color.light_gray
 COLOR_CASTLE = color.gold
 COLOR_LAIR = color.brown
@@ -145,6 +144,7 @@ from game.graphics.ursina_prefabs import (
 )
 from game.graphics.ursina_units_anim import (
     _frame_index_for_clip,
+    _guard_base_clip,
     _hero_base_clip,
     _enemy_base_clip,
     _worker_idle_surface,
@@ -625,32 +625,31 @@ class UrsinaRenderer:
 
         
     def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Guards — billboards
+        # Guards — pixel billboards (same clip/frame contract as heroes; Tiny RPG Soldier PNGs).
         for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
                 continue
-            col = COLOR_GUARD
-            gsurf = _worker_idle_surface("guard")
-            gtex = TerrainTextureBridge.surface_to_texture(
-                gsurf, cache_key=("worker_idle", "guard", _unit_raster_px())
-            )
-            sxz = GUARD_SCALE_XZ
-            sy = GUARD_SCALE_Y
+            col = color.white
+            clips_g = WorkerSpriteLibrary.clips_for("guard", size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 g,
                 model="quad",
                 col=color.white,
-                scale=(sxz, sy, 1),
-                texture=gtex,
+                scale=(GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
+                texture=None,
                 billboard=True,
             )
+            gsurf, g_cache_key = self._unit_anim_surface(
+                obj_id, g, clips_g, _guard_base_clip, "worker", "guard"
+            )
+            gtex = TerrainTextureBridge.surface_to_texture(gsurf, cache_key=g_cache_key)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=gtex,
                 tint_col=col,
-                scale_xyz=(sxz, sy, 1),
-                pos_xyz=(wx, sy * 0.5, wz),
+                scale_xyz=(GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
+                pos_xyz=(wx, GUARD_SCALE_Y * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)

@@ -20,6 +20,7 @@ from panda3d.core import TransparencyAttrib
 from game.graphics.animation import AnimationClip
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.hero_sprites import HeroSpriteLibrary
+from game.graphics.worker_sprites import WorkerSpriteLibrary
 from game.graphics.instanced_unit_shader import instanced_unit_shader
 from game.graphics.shadow_instanced_shader import shadow_instanced_shader
 from game.graphics.unit_atlas import FRAME_SIZE, UnitAtlasBuilder
@@ -28,6 +29,7 @@ from game.graphics.ursina_texture_bridge import pygame_surface_to_ursina_texture
 from game.graphics.ursina_units_anim import (
     _enemy_base_clip,
     _frame_index_for_clip,
+    _guard_base_clip,
     _hero_base_clip,
 )
 from game.world import Visibility
@@ -382,10 +384,14 @@ class InstancedUnitRenderer:
                 continue
             if count_outside >= MAX_INSTANCES:
                 break
-            uv = self._atlas_builder.lookup_uv("worker", "guard", "idle", 0)
+            clips_g = WorkerSpriteLibrary.clips_for("guard", size=FRAME_SIZE)
+            oid = id(g)
+            clip_name, frame_idx = self._resolve_unit_anim_clip_frame(
+                oid, g, clips_g, _guard_base_clip
+            )
+            uv = self._atlas_builder.lookup_uv("worker", "guard", clip_name, frame_idx)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
             wy = GUARD_SCALE_UNIFORM * 0.5
-            oid = id(g)
             vx, vy, vz = self._smooth_visual_position(oid, wx, wy, wz, dt)
             pack_outside(vx, vy, vz, GUARD_SCALE_UNIFORM, uv)
             active_ids.add(oid)
