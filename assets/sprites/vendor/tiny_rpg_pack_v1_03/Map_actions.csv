@@ -53,3 +53,10 @@ enemies,skeleton_archer,Skeleton Archer,walk,Skeleton Archer-Walk.png,0
 enemies,skeleton_archer,Skeleton Archer,attack,Skeleton Archer-Attack.png,0
 enemies,skeleton_archer,Skeleton Archer,hurt,Skeleton Archer-Hurt.png,0
 enemies,skeleton_archer,Skeleton Archer,dead,Skeleton Archer-Death.png,0
+workers,guard,Soldier,idle,Soldier-Idle.png,0
+workers,guard,Soldier,walk,Soldier-Walk.png,0
+workers,guard,Soldier,attack,Soldier-Attack01.png,0
+workers,guard,Soldier,attack,Soldier-Attack02.png,1
+workers,guard,Soldier,attack,Soldier-Attack03.png,2
+workers,guard,Soldier,hurt,Soldier-Hurt.png,0
+workers,guard,Soldier,dead,Soldier-Death.png,0

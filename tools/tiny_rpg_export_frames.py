@@ -319,8 +319,10 @@ def _out_action_dir(repo: Path, kingdom_category: str, kingdom_unit: str, kingdo
         base = repo / "assets" / "sprites" / "heroes"
     elif kc == "enemies":
         base = repo / "assets" / "sprites" / "enemies"
+    elif kc == "workers":
+        base = repo / "assets" / "sprites" / "workers"
     else:
-        raise ValueError(f"Unknown kingdom_category {kingdom_category!r} (expected heroes|enemies)")
+        raise ValueError(f"Unknown kingdom_category {kingdom_category!r} (expected heroes|enemies|workers)")
     return base / (kingdom_unit or "").strip().lower() / (kingdom_action or "").strip().lower()
 
 
@@ -601,8 +603,11 @@ def main() -> int:
         only_units = set()
         for raw in args.only_unit:
             parts = str(raw).strip().lower().replace("\\", "/").split("/")
-            if len(parts) != 2 or parts[0] not in {"heroes", "enemies"} or not parts[1]:
-                print(f"Invalid --only-unit {raw!r}; expected heroes/<unit> or enemies/<unit>", file=sys.stderr)
+            if len(parts) != 2 or parts[0] not in {"heroes", "enemies", "workers"} or not parts[1]:
+                print(
+                    f"Invalid --only-unit {raw!r}; expected heroes/<unit> or enemies/<unit> or workers/<unit>",
+                    file=sys.stderr,
+                )
                 return 2
             only_units.add((parts[0], parts[1]))
         print(f"only_units={sorted(only_units)}")

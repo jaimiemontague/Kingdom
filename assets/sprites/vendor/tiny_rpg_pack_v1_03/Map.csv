@@ -10,3 +10,4 @@ heroes,ranger,Archer,Bow ranged
 heroes,rogue,Archer,Archer-derived rogue with adjusted steel/purple color theme
 heroes,warrior,Knight,Armored melee
 heroes,wizard,Wizard,Arcane caster
+workers,guard,Soldier,Guard unit (guard tower) uses Soldier strips
