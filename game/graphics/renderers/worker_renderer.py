@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 import pygame
 
-from config import COLOR_GREEN, COLOR_RED, COLOR_WHITE
+from config import COLOR_GREEN, COLOR_RED, COLOR_WHITE, UNIT_SPRITE_PIXELS
 from game.graphics.font_cache import get_font, render_text_cached
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
@@ -25,10 +25,10 @@ class WorkerRenderer:
     - guard
     """
 
-    def __init__(self, worker_id: str, worker_type: str, *, size_px: int = 32):
+    def __init__(self, worker_id: str, worker_type: str, *, size_px: int | None = None):
         self.worker_id = str(worker_id)
         self.worker_type = str(worker_type or "peasant")
-        self.size_px = int(size_px)
+        self.size_px = int(size_px if size_px is not None else UNIT_SPRITE_PIXELS)
 
         self._anim: Any | None = None
         self._anim_base = "idle"
@@ -254,19 +254,19 @@ class WorkerRenderer:
 class PeasantRenderer(WorkerRenderer):
     """Compatibility wrapper used by RendererRegistry."""
 
-    def __init__(self, peasant_id: int | str):
-        super().__init__(worker_id=str(peasant_id), worker_type="peasant")
+    def __init__(self, peasant_id: int | str, *, size_px: int | None = None):
+        super().__init__(worker_id=str(peasant_id), worker_type="peasant", size_px=size_px)
 
 
 class TaxCollectorRenderer(WorkerRenderer):
     """Compatibility wrapper used by RendererRegistry."""
 
-    def __init__(self, collector_id: int | str):
-        super().__init__(worker_id=str(collector_id), worker_type="tax_collector")
+    def __init__(self, collector_id: int | str, *, size_px: int | None = None):
+        super().__init__(worker_id=str(collector_id), worker_type="tax_collector", size_px=size_px)
 
 
 class GuardRenderer(WorkerRenderer):
     """Compatibility wrapper used by RendererRegistry."""
 
-    def __init__(self):
-        super().__init__(worker_id="guard", worker_type="guard")
+    def __init__(self, *, size_px: int | None = None):
+        super().__init__(worker_id="guard", worker_type="guard", size_px=size_px)

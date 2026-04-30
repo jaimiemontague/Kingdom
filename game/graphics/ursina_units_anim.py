@@ -5,6 +5,8 @@ from __future__ import annotations
 from game.graphics.animation import AnimationClip
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 
+import config
+
 
 def _frame_index_for_clip(clip: AnimationClip, elapsed: float) -> tuple[int, bool]:
     """Match ``AnimationPlayer`` timing: non-looping finishes after n frame-times."""
@@ -45,5 +47,6 @@ def _enemy_base_clip(enemy) -> str:
 
 def _worker_idle_surface(worker_type: str):
     wt = str(worker_type or "peasant").lower()
-    clips = WorkerSpriteLibrary.clips_for(wt)
+    sz = int(getattr(config, "UNIT_SPRITE_PIXELS", 32))
+    clips = WorkerSpriteLibrary.clips_for(wt, size=sz)
     return clips["idle"].frames[0]

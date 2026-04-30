@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pygame
 
+from config import UNIT_SPRITE_PIXELS
+
 from .bounty_renderer import BountyRenderer
 from .building_renderer import BuildingRenderer
 from .enemy_renderer import EnemyRenderer
@@ -19,7 +21,7 @@ class RendererRegistry:
         self._enemy_renderers: dict[int, EnemyRenderer] = {}
         self._peasant_renderers: dict[int, PeasantRenderer] = {}
         self._collector_renderers: dict[int, TaxCollectorRenderer] = {}
-        self._guard_renderer = GuardRenderer()
+        self._guard_renderer = GuardRenderer(size_px=UNIT_SPRITE_PIXELS)
         self._building_renderer = BuildingRenderer()
         self._bounty_renderer = BountyRenderer()
 
@@ -31,7 +33,11 @@ class RendererRegistry:
         key = self._key(hero)
         renderer = self._hero_renderers.get(key)
         if renderer is None:
-            renderer = HeroRenderer(hero_id=key, hero_class=str(getattr(hero, "hero_class", "warrior")))
+            renderer = HeroRenderer(
+                hero_id=key,
+                hero_class=str(getattr(hero, "hero_class", "warrior")),
+                size_px=UNIT_SPRITE_PIXELS,
+            )
             self._hero_renderers[key] = renderer
         return renderer
 
@@ -39,7 +45,11 @@ class RendererRegistry:
         key = self._key(enemy)
         renderer = self._enemy_renderers.get(key)
         if renderer is None:
-            renderer = EnemyRenderer(enemy_id=key, enemy_type=str(getattr(enemy, "enemy_type", "goblin")))
+            renderer = EnemyRenderer(
+                enemy_id=key,
+                enemy_type=str(getattr(enemy, "enemy_type", "goblin")),
+                size_px=UNIT_SPRITE_PIXELS,
+            )
             self._enemy_renderers[key] = renderer
         return renderer
 
@@ -47,7 +57,7 @@ class RendererRegistry:
         key = self._key(peasant)
         renderer = self._peasant_renderers.get(key)
         if renderer is None:
-            renderer = PeasantRenderer(peasant_id=key)
+            renderer = PeasantRenderer(peasant_id=key, size_px=UNIT_SPRITE_PIXELS)
             self._peasant_renderers[key] = renderer
         return renderer
 
@@ -55,7 +65,7 @@ class RendererRegistry:
         key = self._key(collector)
         renderer = self._collector_renderers.get(key)
         if renderer is None:
-            renderer = TaxCollectorRenderer(collector_id=key)
+            renderer = TaxCollectorRenderer(collector_id=key, size_px=UNIT_SPRITE_PIXELS)
             self._collector_renderers[key] = renderer
         return renderer
 

@@ -135,7 +135,12 @@ class EnemySpriteLibrary:
             else:
                 pygame.draw.circle(surf, col, center, r)
 
-            pygame.draw.circle(surf, spec.outline, center, max(2, r), 2)
+            # Spider body is drawn at r-2; a full-radius outline reads as a bright halo ring.
+            if et == "spider":
+                orad = max(1, r - 2)
+                pygame.draw.circle(surf, spec.outline, center, orad, 1)
+            else:
+                pygame.draw.circle(surf, spec.outline, center, max(2, r), 2)
 
         if action == "idle":
             frames = []

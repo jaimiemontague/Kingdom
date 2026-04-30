@@ -2086,8 +2086,9 @@
         "goal": "HD-2D polish on WK47 instancing: render-only smoothing + inside compositing, blob shadows + projectile instancing, default instancing pipeline + QA/perf evidence.",
         "plan_ref": ".cursor/plans/wk48_hd2d_polish.plan.md",
         "created_utc": "2026-04-29T12:00:00Z",
-        "status": "in_progress",
-        "notes": "Sequential waves: R1 Agent 03 → R2 Agent 09 → R3 Agent 03 code cleanup + Agents 10/11 gates. Orchestrator kickoff uses explicit --round wk48_r1_wave1_smoothing_compositing (lastKey(rounds) would otherwise resolve to R3)."
+        "closed_utc": "2026-04-30T12:00:00Z",
+        "status": "closed_success",
+        "notes": "CLOSED human signoff (Jaimie): many units + smooth motion meets sprint intent; no visible blob shadows in playtest (acceptable). R1+R2 delivered per agent logs; R3 (KINGDOM_URSINA_INSTANCING removal + legacy _sync_snapshot_* cleanup + perf matrix) DEFERRED — schedule in a follow-up sprint if still desired. Original wave order: R1 Agent 03 → R2 Agent 09 → R3 Agent 03 + 10/11."
       },
       "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**. Read `.cursor/plans/wk48_hd2d_polish.plan.md` for full technical detail. Read PM hub → `sprints[\"wk48_hd2d_polish\"].rounds[<YOUR_ROUND>].pm_agent_prompts[YOUR_NUMBER]`. Composer 2 only. Receipt flow: `.cursor/rules/10-orchestrator-logging-contract.mdc`. After work: own agent log at `sprints.wk48_hd2d_polish.rounds.<round_id>`, run required gates, `python -m json.tool` your log, then run the exact `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...` line from your SDK prompt. No version bump / commit / push unless Jaimie asks.",
       "rounds": {

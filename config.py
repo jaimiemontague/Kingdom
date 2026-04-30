@@ -183,6 +183,9 @@ TILE_SIZE = MAP.tile_size
 MAP_WIDTH = MAP.width
 MAP_HEIGHT = MAP.height
 
+# 2D unit sprite raster size (PNG scale for heroes/enemies/workers). Simulation grid stays TILE_SIZE px/tile.
+UNIT_SPRITE_PIXELS = int(os.getenv("KINGDOM_UNIT_SPRITE_PX", "48"))
+
 # WK46 Stage 3: Lumberjack builders (local wood, per BuilderPeasant).
 BUILDER_CHOP_DURATION_S = 5.0
 BUILDER_HARVEST_DURATION_S = 5.0

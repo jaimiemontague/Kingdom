@@ -1,0 +1,12 @@
+﻿Kingdom Category,Kingdom Unit,Tiny RPG Character,Notes
+enemies,bandit,Swordsman,Melee sword bandit
+enemies,goblin,Orc,Small brutish melee
+enemies,skeleton,Skeleton,Undead melee
+enemies,skeleton_archer,Skeleton Archer,Ranged undead
+enemies,spider,,Not from this pack — keep procedural / existing game art only
+enemies,wolf,,Not from this pack — keep procedural / existing game art only
+heroes,cleric,Priest,Priest-Heal strip maps to hero inside action
+heroes,ranger,Archer,Bow ranged
+heroes,rogue,Soldier,Light melee distinct from ranger
+heroes,warrior,Knight,Armored melee
+heroes,wizard,Wizard,Arcane caster

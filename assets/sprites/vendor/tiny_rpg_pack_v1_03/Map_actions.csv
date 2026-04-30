@@ -1,0 +1,56 @@
+kingdom_category,kingdom_unit,tiny_rpg_character,kingdom_action,source_filename,merge_index
+heroes,warrior,Knight,idle,Knight-Idle.png,0
+heroes,warrior,Knight,walk,Knight-Walk.png,0
+heroes,warrior,Knight,attack,Knight-Attack01.png,0
+heroes,warrior,Knight,attack,Knight-Attack02.png,1
+heroes,warrior,Knight,attack,Knight-Attack03.png,2
+heroes,warrior,Knight,hurt,Knight-Hurt.png,0
+heroes,warrior,Knight,inside,Knight-Idle.png,0
+heroes,ranger,Archer,idle,Archer-Idle.png,0
+heroes,ranger,Archer,walk,Archer-Walk.png,0
+heroes,ranger,Archer,attack,Archer-Attack01.png,0
+heroes,ranger,Archer,attack,Archer-Attack02.png,1
+heroes,ranger,Archer,hurt,Archer-Hurt.png,0
+heroes,ranger,Archer,inside,Archer-Idle.png,0
+heroes,rogue,Soldier,idle,Soldier-Idle.png,0
+heroes,rogue,Soldier,walk,Soldier-Walk.png,0
+heroes,rogue,Soldier,attack,Soldier-Attack01.png,0
+heroes,rogue,Soldier,attack,Soldier-Attack02.png,1
+heroes,rogue,Soldier,attack,Soldier-Attack03.png,2
+heroes,rogue,Soldier,hurt,Soldier-Hurt.png,0
+heroes,rogue,Soldier,inside,Soldier-Idle.png,0
+heroes,wizard,Wizard,idle,Wizard-Idle.png,0
+heroes,wizard,Wizard,walk,Wizard-Walk.png,0
+heroes,wizard,Wizard,attack,Wizard-Attack01.png,0
+heroes,wizard,Wizard,attack,Wizard-Attack02.png,1
+heroes,wizard,Wizard,hurt,Wizard-Hurt.png,0
+heroes,wizard,Wizard,inside,Wizard-Idle.png,0
+heroes,cleric,Priest,idle,Priest-Idle.png,0
+heroes,cleric,Priest,walk,Priest-Walk.png,0
+heroes,cleric,Priest,attack,Priest-Attack.png,0
+heroes,cleric,Priest,hurt,Priest-Hurt.png,0
+heroes,cleric,Priest,inside,Priest-Heal.png,0
+enemies,bandit,Swordsman,idle,Swordsman-Idle.png,0
+enemies,bandit,Swordsman,walk,Swordsman-Walk.png,0
+enemies,bandit,Swordsman,attack,Swordsman-Attack01.png,0
+enemies,bandit,Swordsman,attack,Swordsman-Attack02.png,1
+enemies,bandit,Swordsman,attack,Swordsman-Attack3.png,2
+enemies,bandit,Swordsman,hurt,Swordsman-Hurt.png,0
+enemies,bandit,Swordsman,dead,Swordsman-Death.png,0
+enemies,goblin,Orc,idle,Orc-Idle.png,0
+enemies,goblin,Orc,walk,Orc-Walk.png,0
+enemies,goblin,Orc,attack,Orc-Attack01.png,0
+enemies,goblin,Orc,attack,Orc-Attack02.png,1
+enemies,goblin,Orc,hurt,Orc-Hurt.png,0
+enemies,goblin,Orc,dead,Orc-Death.png,0
+enemies,skeleton,Skeleton,idle,Skeleton-Idle.png,0
+enemies,skeleton,Skeleton,walk,Skeleton-Walk.png,0
+enemies,skeleton,Skeleton,attack,Skeleton-Attack01.png,0
+enemies,skeleton,Skeleton,attack,Skeleton-Attack02.png,1
+enemies,skeleton,Skeleton,hurt,Skeleton-Hurt.png,0
+enemies,skeleton,Skeleton,dead,Skeleton-Death.png,0
+enemies,skeleton_archer,Skeleton Archer,idle,Skeleton Archer-Idle.png,0
+enemies,skeleton_archer,Skeleton Archer,walk,Skeleton Archer-Walk.png,0
+enemies,skeleton_archer,Skeleton Archer,attack,Skeleton Archer-Attack.png,0
+enemies,skeleton_archer,Skeleton Archer,hurt,Skeleton Archer-Hurt.png,0
+enemies,skeleton_archer,Skeleton Archer,dead,Skeleton Archer-Death.png,0

@@ -4,6 +4,7 @@ from __future__ import annotations
 import pygame
 from typing import Dict, Tuple
 
+import config
 from game.graphics.hero_sprites import HeroSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.vfx import get_projectile_billboard_surface
@@ -17,7 +18,7 @@ UVRegion = Tuple[float, float, float, float]
 AtlasKey = Tuple[str, str, str, int]
 
 ATLAS_SIZE = 2048
-FRAME_SIZE = 32
+FRAME_SIZE = int(getattr(config, "UNIT_SPRITE_PIXELS", 32))
 
 
 class UnitAtlasBuilder:

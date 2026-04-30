@@ -46,11 +46,12 @@ BYTES_PER_TEXEL = 16  # RGBA32F
 SMOOTHING_SPEED = 15.0
 TELEPORT_DIST_SQ = 2.25  # 1.5^2 — snap past this (teleport / building entry)
 
-# Match Ursina legacy billboard scales (`ursina_renderer.py`)
-HERO_SCALE = 0.62
-ENEMY_SCALE = 0.5
-PEASANT_SCALE = 0.465
-GUARD_SCALE_UNIFORM = 0.5  # legacy xz; Y was 0.7 — single-instanced quad uses xz scale
+# Match Ursina legacy billboard scales (`ursina_renderer.py`); scale with UNIT_SPRITE_PIXELS.
+_US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(config.TILE_SIZE)
+HERO_SCALE = 0.62 * _US
+ENEMY_SCALE = 0.5 * _US
+PEASANT_SCALE = 0.465 * _US
+GUARD_SCALE_UNIFORM = 0.5 * _US  # legacy xz; Y was 0.7 — single-instanced quad uses xz scale
 
 # Match ``ursina_renderer.PROJECTILE_*`` — instanced arrow billboards + shadow skip via negative scale.w.
 PROJECTILE_BILLBOARD_SCALE = 0.075

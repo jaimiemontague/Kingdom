@@ -79,22 +79,27 @@ GRASS_SCATTER_SCALE_MULTIPLIER = 2.08  # 4× of pre-WK34 0.52
 # Flower / log / mushroom mesh instances: half the scatter scale of other ground props (2× original vs 4×).
 GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE = 0.5
 
-# Pixel billboard height in world units (32px sprite read at map scale)
-UNIT_BILLBOARD_SCALE = 0.62
+# Pixel billboard height in world units; scales with UNIT_SPRITE_PIXELS so larger raster reads larger on screen.
+_US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(config.TILE_SIZE)
+UNIT_BILLBOARD_SCALE = 0.62 * _US
 
 # Stable bridge keys — never use id(surface) alone for multi-megapixel sheets (see terrain_texture_bridge).
 _FOG_TEX_KEY = "kingdom_ursina_fog_overlay"
 
-ENEMY_SCALE = 0.5
-PEASANT_SCALE = 0.465
-GUARD_SCALE_XZ = 0.5
-GUARD_SCALE_Y = 0.7
+ENEMY_SCALE = 0.5 * _US
+PEASANT_SCALE = 0.465 * _US
+GUARD_SCALE_XZ = 0.5 * _US
+GUARD_SCALE_Y = 0.7 * _US
 
 # Ranged VFX billboards — smaller than unit sprites, readable in perspective.
 # 0.3 was large in playtest; 25% of that keeps arrows visible (snapshot + depth fix) without dominating the frame.
 PROJECTILE_BILLBOARD_SCALE = 0.075
 # Vertical lift: match enemy sprite center (ENEMY_SCALE*0.5) so arrows aren't drawn under terrain.
 PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
+
+
+def _unit_raster_px() -> int:
+    return int(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE))
 
 # ---------------------------------------------------------------------------
 # Helpers imported from focused sub-modules (extracted WK41, wired WK42)
@@ -293,14 +298,15 @@ class UrsinaRenderer:
         elapsed = time.time() - st["t0"]
         idx, _fin = _frame_index_for_clip(clip, elapsed)
         surf = clip.frames[idx]
-        _spec = HeroSpriteSpec(size=int(config.TILE_SIZE))
+        upx = _unit_raster_px()
+        _spec = HeroSpriteSpec(size=upx)
         cache_key = (
             cache_prefix,
             "anim",
             class_key,
             clip_name,
             idx,
-            int(config.TILE_SIZE),
+            upx,
             hash(_spec),
         )
         return surf, cache_key
@@ -503,7 +509,7 @@ class UrsinaRenderer:
                     col = color.rgb(48 / 255, 186 / 255, 178 / 255)
 
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
-            clips_h = HeroSpriteLibrary.clips_for(hc_key, size=int(config.TILE_SIZE))
+            clips_h = HeroSpriteLibrary.clips_for(hc_key, size=_unit_raster_px())
             sy = UNIT_BILLBOARD_SCALE
             ent, obj_id = self._entity_render.get_or_create_entity(
                 h,
@@ -547,7 +553,7 @@ class UrsinaRenderer:
             s = ENEMY_SCALE
             col = COLOR_ENEMY
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
-            clips_e = EnemySpriteLibrary.clips_for(et_key, size=int(config.TILE_SIZE))
+            clips_e = EnemySpriteLibrary.clips_for(et_key, size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 e,
                 model="quad",
@@ -595,7 +601,7 @@ class UrsinaRenderer:
                 tint_textured = True
             psurf = _worker_idle_surface("peasant")
             ptex = TerrainTextureBridge.surface_to_texture(
-                psurf, cache_key=("worker_idle", "peasant", int(config.TILE_SIZE))
+                psurf, cache_key=("worker_idle", "peasant", _unit_raster_px())
             )
             ent, obj_id = self._entity_render.get_or_create_entity(
                 p,
@@ -626,7 +632,7 @@ class UrsinaRenderer:
             col = COLOR_GUARD
             gsurf = _worker_idle_surface("guard")
             gtex = TerrainTextureBridge.surface_to_texture(
-                gsurf, cache_key=("worker_idle", "guard", int(config.TILE_SIZE))
+                gsurf, cache_key=("worker_idle", "guard", _unit_raster_px())
             )
             sxz = GUARD_SCALE_XZ
             sy = GUARD_SCALE_Y
@@ -660,7 +666,7 @@ class UrsinaRenderer:
                 col = COLOR_PEASANT
                 tcsurf = _worker_idle_surface("tax_collector")
                 tctex = TerrainTextureBridge.surface_to_texture(
-                    tcsurf, cache_key=("worker_idle", "tax_collector", int(config.TILE_SIZE))
+                    tcsurf, cache_key=("worker_idle", "tax_collector", _unit_raster_px())
                 )
                 s = PEASANT_SCALE
                 ent, obj_id = self._entity_render.get_or_create_entity(

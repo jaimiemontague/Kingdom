@@ -13,7 +13,7 @@ from typing import Any, Dict
 
 import pygame
 
-from config import TILE_SIZE
+from config import TILE_SIZE, UNIT_SPRITE_PIXELS
 from game.graphics.building_sprites import BuildingSpriteLibrary
 from game.graphics.enemy_sprites import EnemySpriteLibrary
 from game.graphics.hero_sprites import HeroSpriteLibrary, HeroSpriteSpec
@@ -104,10 +104,10 @@ def _normalize_class_name(value: object) -> str:
     return str(v).lower()
 
 
-def get_hero_idle_texture(hero_class: object, *, size: int = 32) -> Any:
+def get_hero_idle_texture(hero_class: object, *, size: int | None = None) -> Any:
     """First frame of hero idle clip → cached Ursina Texture."""
     hc = _normalize_class_name(hero_class)
-    sz = int(size)
+    sz = int(size if size is not None else UNIT_SPRITE_PIXELS)
     spec = HeroSpriteSpec(size=sz)
     key = f"h:{hc}:{sz}:idle0:ph{hash(spec) & 0xffffffff:08x}"
     hit = _texture_cache.get(key)
@@ -122,12 +122,12 @@ def get_hero_idle_texture(hero_class: object, *, size: int = 32) -> Any:
     return pygame_surface_to_ursina_texture(surf, cache_key=key)
 
 
-def get_enemy_idle_texture(enemy_type: object, *, size: int = 32) -> Any:
+def get_enemy_idle_texture(enemy_type: object, *, size: int | None = None) -> Any:
     """First frame of enemy idle clip → cached Ursina Texture."""
     et = _normalize_class_name(enemy_type)
     if et in ("", "none"):
         et = "goblin"
-    sz = int(size)
+    sz = int(size if size is not None else UNIT_SPRITE_PIXELS)
     key = f"e:{et}:{sz}:idle0"
     hit = _texture_cache.get(key)
     if hit is not None:
@@ -141,12 +141,12 @@ def get_enemy_idle_texture(enemy_type: object, *, size: int = 32) -> Any:
     return pygame_surface_to_ursina_texture(surf, cache_key=key)
 
 
-def get_worker_idle_texture(worker_type: object, *, size: int = 32) -> Any:
+def get_worker_idle_texture(worker_type: object, *, size: int | None = None) -> Any:
     """First frame of worker idle clip → cached Ursina Texture."""
     wt = _normalize_class_name(worker_type)
     if wt in ("", "none"):
         wt = "peasant"
-    sz = int(size)
+    sz = int(size if size is not None else UNIT_SPRITE_PIXELS)
     key = f"w:{wt}:{sz}:idle0"
     hit = _texture_cache.get(key)
     if hit is not None:

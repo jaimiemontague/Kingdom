@@ -1,16 +1,16 @@
 ---
 name: Unit Instancing HD-2D Visual Polish
-overview: "Sprint 2 of the Unit Instancing Master Plan (wk48). Reinvests reclaimed CPU/GPU performance into premium visual polish. Delivers sub-pixel movement interpolation (exponential smoothing), performant blob shadows via shared instance buffers, projectile instancing, and removes the feature gate to make instancing the default pipeline."
+overview: "Sprint 2 of the Unit Instancing Master Plan (wk48). CLOSED 2026-04-30 — human signoff. Smooth instanced unit motion + high unit counts validated in playtest; blob shadows not player-visible (acceptable). Wave 3 (default instancing / remove KINGDOM_URSINA_INSTANCING + legacy sync cleanup) deferred to a future sprint."
 todos:
   - id: sprint2-wave1
     content: "Sprint 2 Wave 1: Agent 03 implements visual position caching & exponential smoothing (lerping) + inside-building layer separation."
-    status: pending
+    status: completed
   - id: sprint2-wave2
-    content: "Sprint 2 Wave 2: Agent 09 implements Blob Shadows (second GeomNode + custom shader) & Projectile instancing."
-    status: pending
+    content: "Sprint 2 Wave 2: Agent 09 — projectile instancing + instancing polish; blob shadows optional / not required in playtest."
+    status: completed
   - id: sprint2-wave3
-    content: "Sprint 2 Wave 3: Agent 11 removes feature gate, deprecates legacy paths, and runs QA gates."
-    status: pending
+    content: "Sprint 2 Wave 3: Remove feature gate, deprecate legacy Ursina billboard paths, QA/perf (Agent 03 + 10/11). DEFERRED — not executed this sprint."
+    status: cancelled
 isProject: false
 ---
 
