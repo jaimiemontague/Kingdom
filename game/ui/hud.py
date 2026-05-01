@@ -15,7 +15,12 @@ from game.ui.quest_view_panel import QuestViewPanel
 from game.ui.speed_control import SpeedControlBar
 from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
+from game.ui.hero_panel import truncate_panel_line
+from game.ui.pin_slot import PinSlot
 from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
+
+COLOR_PIN_GOLD = (220, 180, 50)
+RECALL_BTN_W = 180
 
 
 class HUD:
@@ -183,9 +188,24 @@ class HUD:
         self.messages: list[dict] = []
         self.message_duration = 3000
 
+        self._pin_slot = PinSlot()
+        self.pin_button_rect: pygame.Rect | None = None
+        self.recall_rect: pygame.Rect | None = None
+        self._recall_label_sig: tuple[str, bool] | None = None
+        self._recall_label_surf: pygame.Surface | None = None
+
     def _layout_rects_for_screen(
         self, w: int, h: int, *, show_right_panel: bool
-    ) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+    ) -> tuple[
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+    ]:
         """Geometry only — shared by _compute_layout and Ursina pointer routing."""
         top_h = int(getattr(self.theme, "top_bar_h", 48))
         bottom_h = int(getattr(self.theme, "bottom_bar_h", 96))
@@ -222,22 +242,34 @@ class HUD:
 
         minimap_size = max(64, bottom_h - 2 * margin)
         minimap = pygame.Rect(margin, bottom.y + margin, minimap_size, minimap_size)
-        cmd_x = minimap.right + gutter
+        recall = pygame.Rect(minimap.right + gutter, minimap.y, RECALL_BTN_W, minimap_size)
+        cmd_x = recall.right + gutter
         cmd_w = max(0, speed_rect.left - cmd_x - gutter)
         command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
-        return top, bottom, left, right, minimap, command, speed_rect
+        return top, bottom, left, right, minimap, command, speed_rect, recall
 
-    def _compute_layout(self, surface: pygame.Surface) -> tuple[pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect, pygame.Rect]:
+    def _compute_layout(
+        self, surface: pygame.Surface
+    ) -> tuple[
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+        pygame.Rect,
+    ]:
         """Compute UI rects from current surface size. Returns top, bottom, left, right, minimap, command, speed_rect."""
         w, h = surface.get_width(), surface.get_height()
         self.screen_width = int(w)
         self.screen_height = int(h)
         show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
-        top, bottom, left, right, minimap, command, speed_rect = self._layout_rects_for_screen(
+        top, bottom, left, right, minimap, command, speed_rect, recall = self._layout_rects_for_screen(
             w, h, show_right_panel=show_right
         )
         self.side_panel_width = right.width
-        return top, bottom, left, right, minimap, command, speed_rect
+        return top, bottom, left, right, minimap, command, speed_rect, recall
 
     def virtual_pointer_in_hud_chrome(
         self, pos: tuple[int, int], surface: pygame.Surface, game_state: dict
@@ -252,10 +284,17 @@ class HUD:
             return False
         has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
         show_right = self.right_panel_visible and has_right_content
-        top, bottom, left, right, minimap, command, speed_rect = self._layout_rects_for_screen(
+        top, bottom, left, right, minimap, command, speed_rect, recall = self._layout_rects_for_screen(
             w, h, show_right_panel=show_right
         )
+        profiles = game_state.get("hero_profiles_by_id") or {}
+        pin = self._pin_slot
+        if pin.hero_id is not None:
+            hero_alive = pin.hero_id in profiles
+            pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
         regions = [top, bottom, minimap, command, speed_rect]
+        if pin.hero_id is not None:
+            regions.append(recall)
         if show_right and right.width > 0:
             regions.append(right)
         if game_state.get("selected_hero") is not None or game_state.get("selected_peasant") is not None:
@@ -501,6 +540,76 @@ class HUD:
         )
         self.left_close_rect = pygame.Rect(self._left_close_button.rect)
 
+    def _render_pin_button(self, surface: pygame.Surface, left_rect: pygame.Rect, game_state: dict) -> None:
+        """WK51: small pin toggle to the left of the panel close button."""
+        sel = game_state.get("selected_hero")
+        if sel is None:
+            self.pin_button_rect = None
+            return
+        pin_size = 20
+        gap = 6
+        x_surf = TextLabel.get_surface(self.theme.font_small, "X", (240, 240, 240))
+        close_size = max(18, x_surf.get_height() + 6)
+        close_x = int(left_rect.right - close_size - 6)
+        pin_x = int(close_x - gap - pin_size)
+        pin_y = int(left_rect.y + 6)
+        self.pin_button_rect = pygame.Rect(pin_x, pin_y, pin_size, pin_size)
+        pr = self.pin_button_rect
+        sel_id = str(getattr(sel, "hero_id", "") or "")
+        pinned = bool(sel_id and self._pin_slot.hero_id == sel_id)
+        cx, cy = pr.centerx, pr.centery
+        if pinned:
+            pygame.draw.circle(surface, COLOR_PIN_GOLD, (cx, cy), pin_size // 2 - 1)
+            pygame.draw.circle(surface, self._frame_outer, (cx, cy), pin_size // 2 - 1, 2)
+            col = (255, 255, 255)
+        else:
+            pygame.draw.circle(surface, self._frame_inner, (cx, cy), pin_size // 2 - 1, 2)
+            col = (150, 150, 160)
+        p_surf = TextLabel.get_surface(self.theme.font_small, "P", col)
+        surface.blit(p_surf, (cx - p_surf.get_width() // 2, cy - p_surf.get_height() // 2))
+
+    def _render_recall_button(self, surface: pygame.Surface, recall_rect: pygame.Rect, game_state: dict) -> None:
+        """WK51: bottom-bar recall when a hero is pinned."""
+        profiles = game_state.get("hero_profiles_by_id") or {}
+        pin = self._pin_slot
+        if pin.hero_id is None:
+            self.recall_rect = None
+            return
+        hero_alive = pin.hero_id in profiles
+        pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+        if pin.hero_id is None:
+            self.recall_rect = None
+            return
+        self.recall_rect = pygame.Rect(recall_rect)
+        prof = profiles.get(pin.hero_id)
+        name = "Hero"
+        if prof is not None:
+            idn = getattr(prof, "identity", None)
+            if idn is not None:
+                name = str(getattr(idn, "name", "Hero"))
+        fallen = pin.is_fallen()
+        label = f"{name} (fallen)" if fallen else f"\u21a9 {truncate_panel_line(name, max_chars=14)}"
+        sig = (str(pin.hero_id), fallen, label)
+        if self._recall_label_sig != sig or self._recall_label_surf is None:
+            self._recall_label_sig = sig
+            col = (160, 160, 165) if fallen else (240, 240, 240)
+            self._recall_label_surf = self.theme.font_small.render(label, True, col)
+        tex = self._button_tex_pressed if fallen else self._button_tex_normal
+        NineSlice.render(surface, recall_rect, tex, border=self._button_slice_border)
+        if fallen:
+            overlay = pygame.Surface((recall_rect.width, recall_rect.height), pygame.SRCALPHA)
+            overlay.fill((40, 40, 50, 150))
+            surface.blit(overlay, recall_rect.topleft)
+        if self._recall_label_surf is not None:
+            lw, lh = self._recall_label_surf.get_size()
+            surface.blit(
+                self._recall_label_surf,
+                (
+                    recall_rect.x + (recall_rect.width - lw) // 2,
+                    recall_rect.y + (recall_rect.height - lh) // 2,
+                ),
+            )
+
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
         x = rect.x + int(self.theme.margin)
         y = rect.y + self._right_panel_top_pad(rect)
@@ -665,7 +774,7 @@ class HUD:
         )
         self._show_right_panel = self.right_panel_visible and has_right_content
 
-        top, bottom, left, right, minimap, cmd, speed_rect = self._compute_layout(surface)
+        top, bottom, left, right, minimap, cmd, speed_rect, recall = self._compute_layout(surface)
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
@@ -680,7 +789,6 @@ class HUD:
         self.left_close_rect = None
         if selected_hero is not None:
             self._panel_left.render(surface)
-            self._render_left_close_button(surface, left)
             self._hero_panel.render(
                 surface,
                 selected_hero,
@@ -689,6 +797,9 @@ class HUD:
                 debug_ui=bool(game_state.get("debug_ui", False)),
                 hero_profile=game_state.get("selected_hero_profile"),
             )
+            # Pin + close must render after HeroPanel header fill or they are painted over (WK51 r6).
+            self._render_pin_button(surface, left, game_state)
+            self._render_left_close_button(surface, left)
         elif selected_peasant is not None:
             self._panel_left.render(surface)
             self._render_left_close_button(surface, left)
@@ -718,6 +829,8 @@ class HUD:
                 )
             sep_x = minimap.right + int(self.theme.gutter // 2)
             pygame.draw.line(surface, self._frame_outer, (sep_x, bottom.y + 8), (sep_x, bottom.bottom - 8), 2)
+
+        self._render_recall_button(surface, recall, game_state)
 
         self.quit_rect = self._top_bar.render(surface, top, game_state)
 
@@ -788,10 +901,24 @@ class HUD:
     def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:
         x = int(mouse_pos[0])
         y = int(mouse_pos[1])
+        profiles = game_state.get("hero_profiles_by_id") or {}
+        pin = self._pin_slot
+        if pin.hero_id is not None:
+            hero_alive = pin.hero_id in profiles
+            pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+
         if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
             return "quit"
         if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
             return "close_selection"
+        if getattr(self, "pin_button_rect", None) is not None and self.pin_button_rect.collidepoint((x, y)):
+            sel = game_state.get("selected_hero")
+            sel_id = str(getattr(sel, "hero_id", "") or "") if sel is not None else ""
+            if not sel_id:
+                return None
+            if pin.hero_id == sel_id:
+                return "unpin_hero"
+            return "pin_hero"
         if self.left_close_rect is not None and self.left_close_rect.collidepoint((x, y)):
             return "close_selection"
         if self._right_rect is not None and self._right_rect.collidepoint((x, y)):
@@ -823,6 +950,10 @@ class HUD:
                 return "exit_quest"
             if action == "exit_hero_focus":
                 return "end_conversation"
+        if getattr(self, "recall_rect", None) is not None and self.recall_rect.collidepoint((x, y)):
+            if not pin.is_fallen():
+                return "recall_pinned_hero"
+            return None
         action = self._command_bar.handle_click((x, y))
         if action:
             return action

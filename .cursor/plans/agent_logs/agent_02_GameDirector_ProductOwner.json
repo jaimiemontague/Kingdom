@@ -791,6 +791,53 @@
         }
       }
     }
+    ,
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "roadmap_ref": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+        "notes": "WK51 Pin + Recall MVP; Wave 0 design guardrails — Agent 02 acceptance only."
+      },
+      "rounds": {
+        "wk51_r1_design_guardrails": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Added docs/sprint/wk51_attachment_ux_acceptance.md: player-facing 7-item checklist for Pin (left panel header), Recall (bottom HUD), single-slot replacement, fallen ~10s greyed state, sub-second camera+panel Recall in Ursina and Pygame (--renderer pygame), non-interference with world/sim, and seeded determinism proof path via Agent 11 test module. Docs only; no application code.",
+          "commands_run": [
+            {
+              "command": "Test-Path docs/sprint/wk51_attachment_ux_acceptance.md (PowerShell)",
+              "exit_code": 0,
+              "note": "Output True"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_02_GameDirector_ProductOwner.json",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r1_design_guardrails\" --agent \"02\" --token \"c8d7a874-6ab3-49ea-965b-0e06955a3a85\" --status done --summary \"Agent 02: WK51 Wave 0 player-facing Pin/Recall acceptance checklist added at docs/sprint/wk51_attachment_ux_acceptance.md; design guardrails complete.\" --log-path \".cursor\\plans\\agent_logs\\agent_02_GameDirector_ProductOwner.json\" --log-round 'sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r1_design_guardrails\"]'",
+              "exit_code": 0,
+              "note": "First attempt using prompt-default --log-round with backslash escapes failed on PowerShell (exit 1, unknown option)."
+            },
+            {
+              "command": "(failed) same npx complete with --log-round \"sprints[\\\"wk51_attachment_ux_phase3\\\"].rounds[\\\"wk51_r1_design_guardrails\\\"]\"",
+              "exit_code": 1
+            }
+          ],
+          "evidence": [
+            "docs/sprint/wk51_attachment_ux_acceptance.md",
+            "Plans: .cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md; WK49 Phase 3 Attachment UX section in .cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+            "PM hub sprint/round confirmed: agent_01 sprints[wk51_attachment_ux_phase3].rounds[wk51_r1_design_guardrails]"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Agents 03/08/11: implement and verify against this checklist; Agent 11 to land tests/test_wk51_pin_determinism.py for checklist item 7 binary proof.",
+            "Human playtest gate per plan still uses Agent 11 step list + this doc.",
+            "When feature lands, run self-verify: Test-Path docs/sprint/wk51_attachment_ux_acceptance.md; manual 5-minute mock pass items 1–6 in both renderers."
+          ]
+        }
+      }
+    }
   }
 }
 

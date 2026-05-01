@@ -59,6 +59,10 @@ python main.py --provider mock  # 5-10 minutes
 - `bounty_responder_attr_present` — bounty has `.responders` and `.attractiveness_tier` fields
 - `intent_attr_present` — at least one hero has a non-empty `.intent` field
 
+## UI / graphics acceptance (when QA owns signoff)
+
+For sprints that change **on-screen** behavior, the implementer (08/09) should run `tools/capture_screenshots.py` and **iterate** until PNGs show the feature. When you review or sign off: if the task is player-visible, require **evidence** — capture output paths, or a short note that the assignee **opened the PNGs** and confirmed. If the after shot still looks like “nothing changed,” **do not** close the round; send the owner back to fix and re-capture. See `.cursor/rules/06-workflow-sop.mdc` Phase 4b.
+
 ## Your Typical Sprint Role
 
 - **R1 (Contracts)**: Review new features for testability; propose new assertions needed

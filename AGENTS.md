@@ -11,6 +11,7 @@ If an agent is unsure whether a change is “in their lane”, the default is:
 
 - **No silent scope expansion**: implement only what’s in the sprint plan / assigned prompt.
 - **Gates before claiming done**: if you changed code, run `python tools/qa_smoke.py --quick` (and `python tools/validate_assets.py --report` if assets/manifests changed).
+- **UI / visible graphics — screenshot loop**: if the player can see the change, use `python tools/capture_screenshots.py` (or an agreed scenario) to produce PNGs, **inspect** them, and **iterate** (fix → re-capture) until the images show the expected result. See `.cursor/rules/06-workflow-sop.mdc` Phase 4b. Do not mark work complete if the latest capture still looks wrong.
 - **Determinism boundary is sacred**: do not introduce wall‑clock time / global RNG inside sim code.
 - **PowerShell commands**: all human-facing commands must be Windows PowerShell compatible.
 - **Orchestrator receipt + log contract is mandatory**: SDK-launched agents must onboard first, write a valid JSON log entry at `sprints[SPRINT_ID].rounds[ROUND_ID]` in their own agent log, validate it with `python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json`, then run the exact `npx tsx tools\ai_studio_orchestrator\src\cli.ts complete ...` receipt command from their prompt before claiming done. Required log fields: `sprint_id`, `round_id`, `status`, `what_i_changed`, `commands_run`, `evidence`, `blockers`, and `follow_ups` or `recommended_next_actions`.

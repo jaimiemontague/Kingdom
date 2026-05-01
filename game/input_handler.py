@@ -371,6 +371,10 @@ class InputHandler:
                         c.selected_building = None
                         c.selected_peasant = None
                         return
+                    if action in ("pin_hero", "unpin_hero", "recall_pinned_hero"):
+                        if hasattr(c, "apply_hud_pin_action"):
+                            c.apply_hud_pin_action(action)
+                        return
                     if action == "exit_interior":
                         if getattr(c, "micro_view", None) is not None:
                             if getattr(c, "audio_system", None) is not None:

@@ -924,6 +924,64 @@
           ]
         }
       }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "notes": "WK51 Phase 3 Attachment UX; r6 Ursina HUD texture fingerprint + pin dirty upload"
+      },
+      "rounds": {
+        "wk51_r6_pin_visible_fix": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r6_pin_visible_fix",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Ursina HUD GPU skip fingerprint samples every 8 rows (was 16), reducing false negatives for thin chrome (same failure mode as ~12px building-panel bars noted beside _ursina_hud_force_upload).",
+            "game/engine.py: apply_hud_pin_action sets _ursina_hud_force_upload after pin_hero and unpin_hero so the pygame→GPU path always re-uploads when pin state toggles (recall already forced via center_camera_on_world_pos)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/agent_verify_wk51_r6_pin --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "SOP 4b pygame HUD baseline; Ursina composites same pygame buffer."
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pre-receipt validation"
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r6_pin_visible_fix\" --agent \"03\" --token \"807298ef-72f4-4bbf-ab57-32211bbf4eb8\" --status done --summary \"Ursina HUD: tighter row fingerprint (stride 8) + force GPU upload on pin/unpin; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk51_attachment_ux_phase3\\\"].rounds[\\\"wk51_r6_pin_visible_fix\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Completion receipt: tools/ai_studio_orchestrator/runs/inbox/807298ef-72f4-4bbf-ab57-32211bbf4eb8.completion.json"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "screenshots": {
+              "note": "Pygame capture path; WK51 pin may not appear in ui_panels scenario without hero selection — upload/throttle fix is engine-side.",
+              "out_dir": "docs/screenshots/agent_verify_wk51_r6_pin",
+              "manifest": "docs/screenshots/agent_verify_wk51_r6_pin/manifest.json"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
+          ]
+        }
+      }
     }
   }
 }

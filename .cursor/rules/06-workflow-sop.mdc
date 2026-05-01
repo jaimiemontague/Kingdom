@@ -47,6 +47,28 @@ Follow these steps in order every time you receive a task.
     python tools/validate_assets.py --report
     ```
 
+### Phase 4b — UI / HUD / on-screen graphics (mandatory visual proof)
+
+If your assignment changes **anything the player sees** (HUD, panels, menus, fonts, chrome, world sprites/VFX, Ursina-facing presentation hooks), **do not claim done from code inspection alone**.
+
+**Loop until screenshots prove the change:**
+
+1. Run the deterministic capture tool from repo root (pygame / `GameEngine` — this is the automated Visual Snapshot path):
+
+   ```powershell
+   python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/agent_verify_<feature> --size 1920x1080 --ticks 480
+   ```
+
+   Pick a scenario that exercises your UI (`ui_panels`, `ui_pause_menu`, `base_overview`, `ui_build_catalog`, etc. — see `tools/screenshot_scenarios.py`). Adjust `--ticks` if panels need time to appear.
+
+2. **Inspect the output PNGs** under `--out` (use the agent Read tool on images, or open locally). Confirm the expected widget, layout shift, or pixel change is **actually visible**.
+
+3. **If you do not see the change** — treat that as a failed verification: adjust code or scenario coverage, **re-run capture**, and repeat until the PNGs show what the sprint expects.
+
+4. **Ursina (`python main.py` default)** uses a different renderer than the capture tool. If your change must hold in 3D mode, say so explicitly in your log and either capture evidence via a **manual run + screenshot** you attach to the log notes, or coordinate to extend tooling — still **do not** skip visual confirmation for “Ursina-only” work.
+
+5. Record in your agent **`evidence`**: command line used, output directory, and which filenames prove the UI change.
+
 ## Phase 5: Report
 
 12. **Update your agent log** with:
@@ -61,6 +83,7 @@ Follow these steps in order every time you receive a task.
 
 ## Common Mistakes to Avoid
 
+- **Don't ship HUD/UI/graphics changes without screenshot proof** — follow Phase 4b; iterate capture → inspect → fix until PNGs match acceptance
 - **Don't ask the human to test without exact commands** — always paste the full `python ...` line(s) from repo root
 - **Don't dive into code before reading your assignment** — you'll solve the wrong problem
 - **Don't make changes without running the QA gate** — broken gates block everyone

@@ -136,6 +136,7 @@ class UrsinaApp:
             self._add_hero_fps_probe_layout(self._hero_fps_probe_count)
 
         self._setup_ursina_camera_for_castle()
+        self.engine._ursina_recenter_fn = self._recenter_editor_camera_to_sim_xy
 
         self._worker_scale_shot_reattach = 0
         if os.environ.get("KINGDOM_URSINA_WORKER_SCALE_SHOT", "").strip().lower() in (
@@ -218,12 +219,16 @@ class UrsinaApp:
 
     @staticmethod
     def _hud_quick_fingerprint(surf: pygame.Surface) -> int:
-        """~0.3–0.5 ms @ 1080p: sample every 16th row plus top/bottom chrome rows."""
+        """~0.5–0.8 ms @ 1080p: sample every 8th row plus top/bottom chrome rows.
+
+        Stride 16 missed thin HUD deltas (~12px building bars; WK22). WK51 r6: stride 8 so
+        header/footer chrome (pin, recall) cannot fall entirely between sampled rows.
+        """
         w, h = surf.get_size()
         mv = memoryview(surf.get_view("1"))
         row = w * 4
         acc = zlib.crc32(b"")
-        rows: set[int] = set(range(0, h, 16))
+        rows: set[int] = set(range(0, h, 8))
         for y in (0, 1, 2, h - 3, h - 2, h - 1):
             if 0 <= y < h:
                 rows.add(y)
@@ -421,6 +426,13 @@ class UrsinaApp:
         ec.target_z = camera.z
         self._editor_camera = ec
 
+    def _recenter_editor_camera_to_sim_xy(self, sim_x: float, sim_y: float) -> None:
+        """WK51: move EditorCamera pivot to follow recall / camera snap (sim pixel coords)."""
+        wx, wz = sim_px_to_world_xz(float(sim_x), float(sim_y))
+        ec = getattr(self, "_editor_camera", None)
+        if ec is not None:
+            ec.position = Vec3(wx, 0.0, wz)
+
     def _sync_ursina_camera_fov_from_zoom(self) -> None:
         """Keep perspective FOV tied to engine.zoom so wheel, +/-, and Q/E match HUD/world mapping."""
         eng = self.engine
@@ -563,7 +575,8 @@ class UrsinaApp:
         except Exception:
             quick = None
 
-        # Building panel research bars are ~12px tall; row-sampled CRC often misses them → stale GPU texture.
+        # WK51 r6: stride-8 row fingerprint catches thin header/footer HUD (pin/recall); pin/unpin
+        # also sets _ursina_hud_force_upload in GameEngine.apply_hud_pin_action.
         force_upload = bool(getattr(self.engine, "_ursina_hud_force_upload", False))
         if force_upload:
             setattr(self.engine, "_ursina_hud_force_upload", False)

@@ -442,6 +442,53 @@
           "recommended_next_actions": []
         }
       }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "notes": "WK51 r6: Pin toggle visible above HeroPanel header fill"
+      },
+      "rounds": {
+        "wk51_r6_pin_visible_fix": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r6_pin_visible_fix",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: When a hero is selected, render HeroPanel first, then WK51 pin toggle and left close chrome so the HeroPanel header band no longer paints over them."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "root_cause_one_liner": "HeroPanel._render_standard_hero fills a full-width header_rect after HUD drew pin/close; those controls were overwritten.",
+            "screenshots_before": "docs/screenshots/wk51_r6_pin_before/ui_panels_hero.png (Pin/P not visible in header)",
+            "screenshots_after": "docs/screenshots/wk51_r6_pin_after/ui_panels_hero.png (P pin control visible beside close X)",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick exit_code=0 PASS",
+            "renderer_note": "capture_screenshots uses shared HUD on pygame framebuffer; Ursina overlays same HUD raster — layering fix applies to both paths."
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

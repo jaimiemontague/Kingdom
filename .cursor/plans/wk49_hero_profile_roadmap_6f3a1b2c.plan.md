@@ -1,6 +1,7 @@
 ---
 name: WK49 Hero Profile Roadmap
 overview: "Long-term roadmap for turning heroes into inspectable, memorable, LLM-ready people: stable identity, profile snapshots, memory, known places, attachment UX, skills/spells, life stories, emotions, relationships, and future quest scaffolding."
+todos: []
 isProject: false
 ---
 

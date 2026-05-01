@@ -869,6 +869,66 @@
           ]
         }
       }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "notes": "WK51 Wave 0: determinism design guardrails for PinSlot + HUD recall actions (log-only round)."
+      },
+      "rounds": {
+        "wk51_r1_design_guardrails": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Determinism review of WK51 Phase 3 plan (PinSlot data contract, engine action tokens pin_hero/unpin_hero/recall_pinned_hero). Updated only this orchestrator log entry; no edits to game/, tools/, tests/, or docs.",
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_04_NetworkingDeterminism_Lead.json",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r1_design_guardrails\" --agent \"04\" --token \"34e12ec3-33bd-4efe-b738-cb7fac60a341\" --status done --summary \"Agent 04 WK51 Wave 0 determinism review done: PinSlot plan approved log-only; determinism_guard PASS baseline.\" --log-path \".cursor\\plans\\agent_logs\\agent_04_NetworkingDeterminism_Lead.json\" --log-round 'sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r1_design_guardrails\"]'",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "note": "PowerShell: single-quoted --log-round; receipt written tools/ai_studio_orchestrator/runs/inbox/34e12ec3-33bd-4efe-b738-cb7fac60a341.completion.json"
+            }
+          ],
+          "evidence": {
+            "determinism_guard_baseline": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found"
+            },
+            "plan_data_contract_review": {
+              "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+              "pin_slot_snippet": "PinSlot accepts now_ms as int arguments to pin() and update_liveness(); uses PIN_FALLEN_DISPLAY_MS integer delta on sim-ms timestamps; no time.time, pygame.time, or RNG in the shown dataclass.",
+              "implementation_note": "Agent 03 plan requires callers (HUD/engine) to pass sim time e.g. int(sim_now_ms()); pin_slot.py stays import-clean (no wall-clock APIs inside the module)."
+            },
+            "determinism_review_checklist": [
+              "No new wall-clock in PinSlot design: planned API is purely passed-in now_ms integers; liveness uses elapsed sim-ms (PIN_FALLEN_DISPLAY_MS). Verified against parent plan Data Contract snippet (lines ~86–123). Call sites must use sim timebase ms, not pygame ticks.",
+              "No new RNG: PinSlot fields and methods are deterministic (hero_id, ints, optional int); no random module or get_rng.",
+              "Sim boundary: planned module path game/ui/pin_slot.py — presentation/UI state outside entities/systems/ai/sim determinism scan scope; must not write heroes or sim collections.",
+              "recall_pinned_hero (planned): read-only on sim — iterates self.heroes for lookup, sets selected_hero and camera/presentation only; matches engine-layer player-input pattern.",
+              "MP-readiness: PinSlot/HUD-owned pin state is per-client UI; must remain out of lockstep/serialized authoritative sim state."
+            ],
+            "approval_statement": "Approved with no required code changes; the proposed PinSlot design is determinism-clean as long as it stays in the UI layer and uses sim-time milliseconds exclusively."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03: implement PinSlot under game/ui/ only; wire pin timestamps and update_liveness(now_ms) from sim_now_ms() (or timebase equivalent), never pygame.time.get_ticks or time.time.",
+            "Agent 11 (WK51 Wave 3): keep determinism_guard green after landing pin/recall wiring; add/extend tests proving zero sim mutation from pin/recall as planned."
+          ],
+          "recommended_next_actions": [
+            "Proceed Wave 1 (Agent 03) per plan; re-run python tools/determinism_guard.py after any engine/hud touch that might leak patterns into scanned dirs."
+          ]
+        }
+      }
     }
   },
   "wk11-building-interiors-llm": {

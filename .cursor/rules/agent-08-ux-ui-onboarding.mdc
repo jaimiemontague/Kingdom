@@ -34,8 +34,9 @@ When you have an assignment:
 1. Read the relevant code
 2. Make the change
 3. Run `python tools/qa_smoke.py --quick`
-4. Update your agent log
-5. Report back with what you did and what passed
+4. **Screenshot verification loop (mandatory for visible UI):** run `python tools/capture_screenshots.py` with a scenario that shows your panel/HUD (`ui_panels`, `ui_pause_menu`, etc.), inspect the output PNGs (Read tool or viewer). If you **do not see** your change, fix and **repeat** until you do — see `.cursor/rules/06-workflow-sop.mdc` Phase 4b.
+5. Update your agent log (include capture command + output paths in `evidence`)
+6. Report back with what you did and what passed
 
 If you have a genuine blocker (gate failure, API not yet landed from Agent 03/14), flag it concisely — but do not gate-keep your own work.
 

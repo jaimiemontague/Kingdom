@@ -134,17 +134,20 @@ Sprint history (what was built — do not re-do):
 
 ## Step 6: Before/after workflow for visual changes
 
+**Iterate until PNGs prove the change.** Open each capture output (agent Read on PNGs or local viewer). If you **do not see** the terrain/unit/VFX difference you intended, adjust assets or rendering and **re-run capture** — do not report done while “after” shots match baseline or lack the new pixels. Same loop as `.cursor/rules/06-workflow-sop.mdc` Phase 4b.
+
 1. Capture baseline screenshots if not already done:
    ```
    python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/before_<feature> --size 1920x1080 --ticks 0
    ```
 2. Make the change.
 3. Capture after screenshots to the same structure but `after_<feature>`.
-4. Run the compare gallery if available:
+4. **Inspect** before vs after; if the visible delta is wrong or missing, go back to step 2.
+5. Run the compare gallery if available:
    ```
    python tools/build_gallery.py --shots docs/screenshots/after_<feature> --refs docs/screenshots/before_<feature> --out docs/art/compare_gallery.html
    ```
-5. Run QA gate:
+6. Run QA gate:
    ```
    python tools/qa_smoke.py --quick
    ```
@@ -178,6 +181,7 @@ Your log: `.cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.jso
 | Creating per-frame Surface allocations | Cache all generated surfaces in a dict |
 | Editing `game/ui/` files | That is Agent 08's domain — coordinate or hand off |
 | Reporting "done" without running `qa_smoke --quick` | Always run and include exit code in log |
+| Reporting "done" without screenshot proof when pixels changed | Capture → inspect PNGs → iterate until visible delta matches intent |
 | Writing essays in your log | Use bullets and file:line references |
 
 ---

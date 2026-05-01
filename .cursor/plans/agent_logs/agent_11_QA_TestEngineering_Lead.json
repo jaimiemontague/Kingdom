@@ -1727,6 +1727,66 @@
           ]
         }
       }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "pm_hub_round": "wk51_r6_pin_visible_fix",
+        "notes": "WK51 R6 wave 2: Phase 4b png proof for Pin visibility + qa_smoke quick gate."
+      },
+      "rounds": {
+        "wk51_r6_pin_visible_fix": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r6_pin_visible_fix",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Ran tools/capture_screenshots.py ui_panels per sprint prompt; opened ui_panels_hero.png — Pin shows as white letter P in hero panel header immediately left of the X close control.",
+            "Ran python tools/qa_smoke.py --quick — harness DONE: PASS."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_qa_verify --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "screenshot_ui_panels_hero_wk51_r6": {
+              "paths": [
+                "docs/screenshots/wk51_r6_qa_verify/ui_panels_hero.png",
+                "docs/screenshots/wk51_r6_qa_verify/manifest.json"
+              ],
+              "visual_verdict": "PASS: P pin control visible at top-right of left Gareth hero panel header, left of X.",
+              "capture_command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_qa_verify --size 1920x1080 --ticks 480"
+            },
+            "qa_smoke_quick_wk51_r6": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "docs/screenshots/wk51_r6_qa_verify/ui_panels_hero.png",
+            "docs/screenshots/wk51_r6_qa_verify/manifest.json"
+          ]
+        }
+      }
     }
   }
 }

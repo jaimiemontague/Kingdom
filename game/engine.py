@@ -1350,6 +1350,58 @@ class GameEngine:
         """Center camera on the castle; optionally reset zoom to the starting zoom."""
         return self._camera_display.center_on_castle(reset_zoom=reset_zoom, castle=castle)
 
+    def center_camera_on_world_pos(self, world_x: float, world_y: float) -> None:
+        """Snap presentation camera to center on world pixel coordinates (pygame + Ursina)."""
+        self._camera_display.center_on_world_px(world_x, world_y)
+        fn = getattr(self, "_ursina_recenter_fn", None)
+        if callable(fn):
+            try:
+                fn(float(world_x), float(world_y))
+            except Exception:
+                pass
+        setattr(self, "_ursina_hud_force_upload", True)
+
+    def _find_hero_by_id(self, hero_id: str):
+        for h in self.heroes:
+            if str(getattr(h, "hero_id", "")) == str(hero_id):
+                return h
+        return None
+
+    def apply_hud_pin_action(self, action: str) -> None:
+        """WK51: Pin / unpin / recall (UI state + camera + selection only)."""
+        from game.sim.timebase import now_ms as sim_now_ms
+
+        hud = getattr(self, "hud", None)
+        if hud is None:
+            return
+        pin_slot = getattr(hud, "_pin_slot", None)
+        if pin_slot is None:
+            return
+        now_ms = int(sim_now_ms())
+        if action == "pin_hero":
+            sel = getattr(self, "selected_hero", None)
+            if sel is None:
+                return
+            hid = str(getattr(sel, "hero_id", "") or "").strip()
+            if not hid:
+                return
+            pin_slot.pin(hid, now_ms)
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
+        if action == "unpin_hero":
+            pin_slot.unpin()
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
+        if action == "recall_pinned_hero":
+            if pin_slot.is_fallen() or pin_slot.hero_id is None:
+                return
+            target = self._find_hero_by_id(pin_slot.hero_id)
+            if target is None:
+                return
+            self.selected_hero = target
+            self.center_camera_on_world_pos(float(target.x), float(target.y))
+            return
+
     def capture_screenshot(self):
         """Capture a screenshot to docs/screenshots/manual/ with timestamp filename."""
         return self._camera_display.capture_screenshot()

@@ -60,6 +60,15 @@ class EngineCameraDisplay:
         e.camera_x = max(0, min(max_x, e.camera_x))
         e.camera_y = max(0, min(max_y, e.camera_y))
 
+    def center_on_world_px(self, world_x: float, world_y: float) -> None:
+        """Center the 2D camera on a world point (sim pixel coordinates)."""
+        e = self._e
+        win_w = int(e.window_width)
+        win_h = int(e.window_height)
+        e.camera_x = float(world_x) - win_w // 2
+        e.camera_y = float(world_y) - win_h // 2
+        self.clamp_camera()
+
     def center_on_castle(self, reset_zoom: bool = True, castle=None):
         e = self._e
         if reset_zoom:
