@@ -981,6 +981,54 @@
           }
         }
       }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "notes": "WK49 r6: LLM readiness review only; no LLM behavior changes"
+      },
+      "rounds": {
+        "wk49_r6_readiness_qa_perf": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r6_readiness_qa_perf",
+          "status": "done",
+          "what_i_changed": [
+            "docs/ai/hero_profile_llm_readiness.md: LLM readiness review — profile_to_dict suitability, storage vs prompt limits, merge strategy with ContextBuilder, missing fields before Phase 2 adapter."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "POST-DOC gate"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk49_hero_profile_foundation\" --round \"wk49_r6_readiness_qa_perf\" --agent \"06\" --token \"e7f941e8-46d4-4256-8edb-389826cc3124\" --status done --summary \"Agent 06: LLM readiness doc...\" --log-path \".cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json\" --log-round 'sprints[\"wk49_hero_profile_foundation\"].rounds[\"wk49_r6_readiness_qa_perf\"]'",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "summary truncated in log; receipt inbox e7f941e8-46d4-4256-8edb-389826cc3124.completion.json"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "doc": "docs/ai/hero_profile_llm_readiness.md"
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Phase 2 (LLM Context Adapter): add profile_to_llm_context with known_place_limit (~8) and memory_limit (~12), importance-first memory, merge with bounded tactical dict from ContextBuilder.",
+            "When narrative seeds live on Hero, extend build_hero_profile_snapshot to populate HeroNarrativeSeedSnapshot; align location label vocabulary between profile compact strings and ContextBuilder."
+          ]
+        }
+      }
     }
   }
 }

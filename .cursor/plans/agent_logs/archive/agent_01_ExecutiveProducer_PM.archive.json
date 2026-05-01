@@ -9553,6 +9553,474 @@
         ],
         "kickoff": "Open TWO chats in WAVE1 (same prompt): Agent 12 in one, Agent 01 in the other. When BOTH done, one chat Agent 11. Then Jaimie does manual. Optional: Agent 13 for CHANGELOG with Jaimie OK."
       }
+    },
+    "wk43-building-nature-stage1": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T14:34:00Z",
+        "notes": "WK43 kickoff: Stage 1 only. Neutral buildings spawn as unconstructed plots; BuilderPeasant spawns from Castle, builds assigned plot, returns to Castle, despawns. Construction stage prefabs (0/20/50) REQUIRED for Food Stand + Farm. Peasant LoS r=6 (per master plan). Ursina manual smoke primary; pygame smoke once at end."
+      },
+      "rounds": {
+        "wk43_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk43_r0_kickoff",
+            "created_utc": "2026-04-28T14:34:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Kickoff round. Parallelize prefabs (15) and core sim/entity work (05) where possible; engine/renderer wiring (03) starts after 05 lands signature changes; QA (11) runs full gate stack after integration; Jaimie does Ursina manual smoke as primary."
+          },
+          "pm_accepted_deliverables": [
+            "Neutral buildings (House/FoodStand/Farm) can spawn as plots: is_constructed=False and hp=1; normal peasants do not construct plots.",
+            "BuilderPeasant spawns from Castle, moves to assigned plot, builds to completion, returns to Castle, despawns.",
+            "Construction stage prefabs (0/20/50) exist for Food Stand + Farm and are used during construction (Ursina at minimum).",
+            "Fog-of-war includes peasant LoS radius 6 tiles."
+          ],
+          "pm_next_actions_by_agent": {
+            "15": {
+              "status": "assigned_active",
+              "asks": [
+                "Create/verify construction stage prefabs for Food Stand + Farm using the 0%/20%/50% convention in assets/prefabs/buildings/ (match repo naming convention used by other buildings).",
+                "Ensure attribution stays valid if any new models/textures are introduced (typically none).",
+                "Run: python tools/validate_assets.py --report (errors=0).",
+                "Report: exact prefab filenames created/updated and validate_assets output/exit code."
+              ]
+            },
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 1 core sim behavior per WK43 plan: plots + BuilderPeasant lifecycle.",
+                "Change NeutralBuildingSystem.tick signature to accept peasants list and spawn BuilderPeasant into sim.",
+                "Add BuilderPeasant entity (inherit from Peasant) with lifecycle MOVE_TO_PLOT -> BUILDING -> RETURN_TO_CASTLE -> DESPAWN; remove it when it reaches Castle radius.",
+                "Update House/FoodStand/Farm constructors to accept is_constructed=False (hp=1, is_constructed=False).",
+                "Add tests: tests/test_builder_lifecycle.py (plot spawns unconstructed, builder spawns, building completes, builder removed).",
+                "Run gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick."
+              ]
+            },
+            "03": {
+              "status": "blocked_until_05_core_ready",
+              "asks": [
+                "After Agent 05 lands the NeutralBuildingSystem tick signature + BuilderPeasant entity: wire sim_engine call sites (pass peasants list) and ensure builder peasants are updated per tick.",
+                "Update SimEngine._update_fog_of_war to include peasants LoS radius r=6.",
+                "Ursina presentation: visually distinguish BuilderPeasant (minimal: green tint) and use construction-stage prefab selection (0/20/50) for Food Stand + Farm during construction.",
+                "Run full gate stack: determinism_guard; pytest; qa_smoke --quick; validate_assets --report."
+              ]
+            },
+            "12": {
+              "status": "consult_if_needed",
+              "asks": [
+                "Only if validate_assets requires explicit listing for any new prefabs: update tools/assets_manifest.json accordingly and rerun validate_assets to errors=0."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_integration_done",
+              "asks": [
+                "After Agent 03 reports integration done: run full gate stack from repo root and log exit codes.",
+                "Commands: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Send universal prompt to agents per pm_jaimie_send_order; track results; close kickoff round on gates + manual smoke PASS."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "parallel_then_sequential_then_parallel_then_human",
+            "batch_1_parallel": [
+              "15",
+              "05"
+            ],
+            "then_in_order": [
+              "03"
+            ],
+            "then_parallel": [
+              "11"
+            ],
+            "then_human": "Jaimie manual smokes",
+            "intelligence_by_agent": {
+              "15": "high",
+              "05": "high",
+              "03": "medium",
+              "11": "low",
+              "12": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "13",
+              "14"
+            ]
+          },
+          "pm_agent_prompts": {
+            "15": "WK43 Stage 1 (Prefabs, HIGH): Read the sprint plan: .cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md. Deliver construction-stage prefabs (0%/20%/50%) for Food Stand + Farm under assets/prefabs/buildings/ using the repo naming convention used by existing build-stage prefabs. Keep validate_assets green. Run: python tools/validate_assets.py --report (errors=0). Log prefab filenames + command output/exit code in your agent log.",
+            "05": "WK43 Stage 1 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 1 section). Implement plots + BuilderPeasant lifecycle. Required: NeutralBuildingSystem.tick signature becomes tick(dt, buildings, heroes, peasants, castle) and spawns BuilderPeasant into peasants list. Add BuilderPeasant (inherit from Peasant) with lifecycle MOVE_TO_PLOT -> BUILDING -> RETURN_TO_CASTLE -> DESPAWN (remove from sim when reaches Castle radius). Ensure House/FoodStand/Farm can spawn with is_constructed=False (hp=1, is_constructed=False). Add tests: tests/test_builder_lifecycle.py. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick. Log commands + exit codes in your agent log.",
+            "03": "WK43 Stage 1 (Tech, MEDIUM): After Agent 05 lands core signature + BuilderPeasant entity, wire SimEngine call sites and update loops. Update SimEngine._update_fog_of_war to include peasants with LoS radius r=6. Ursina: visually distinguish BuilderPeasant (minimal green tint) and use construction-stage prefab selection (0/20/50) for Food Stand + Farm during construction (Ursina at minimum). Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes in agent log.",
+            "12": "WK43 Stage 1 (Tools, LOW consult): Only if validate_assets fails due to missing prefab listing: update tools/assets_manifest.json to include the new prefab JSONs, then rerun python tools/validate_assets.py --report until errors=0. Log changes + exit codes.",
+            "11": "WK43 Stage 1 (QA, LOW): After Agent 03 reports integration complete, run full gate stack from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log commands + exit codes in agent_11 JSON and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk43-building-nature-stage1**, round **wk43_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk43-building-nature-stage1\"].rounds[\"wk43_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay strictly in scope: Stage 1 plots + BuilderPeasant lifecycle + required construction-stage prefabs for Food Stand + Farm. No Stage 2/3.\n4) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n5) Run required gates for your role (listed in your prompt). Report PASS or blockers to Jaimie.\n\nOne line: **Neutral buildings construct over time via a dedicated builder peasant; construction-stage prefabs required; Ursina smoke primary.**"
+        },
+        "wk43_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk43_sprint_closeout",
+            "created_utc": "2026-04-28T15:12:00Z",
+            "source": "pm_closeout_after_agent_logs_and_human_playtest",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK43 closed. Neutral buildings now spawn as builder-only plots (hp=1, is_constructed=False) with a dedicated BuilderPeasant spawned from the Castle. Builder constructs the assigned plot, returns to Castle, and despawns. Food Stand + Farm have 20% and 50% construction-stage prefabs, and construction-stage selection is wired in Ursina. Fog-of-war now includes peasant LoS r=6. Gates PASS and Jaimie manual playtest PASS."
+          },
+          "pm_accepted_deliverables": [
+            "Stage 1 plots: House/FoodStand/Farm can spawn unconstructed (hp=1, is_constructed=False, requires_builder_peasant=True).",
+            "BuilderPeasant lifecycle: spawn from Castle, move-to-plot, build, return-to-castle, despawn; normal peasants do not build these plots.",
+            "Construction stage prefabs: food_stand_build_20_v1, food_stand_build_50_v1, farm_build_20_v1, farm_build_50_v1.",
+            "Renderer: BuilderPeasant visually distinct (green-tinted) in Ursina; construction-stage prefabs used during construction (Ursina at minimum).",
+            "Fog-of-war: peasants contribute LoS radius r=6 tiles."
+          ],
+          "pm_evidence": {
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk43-building-nature-stage1.wk43_r0_builder_peasant_stage1 (115 passed; qa_smoke PASS)",
+            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json → wk43-building-nature-stage1.wk43_r0_kickoff (validate_assets errors=0; qa_smoke PASS; prefabs added)",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk43-building-nature-stage1.wk43_r0_kickoff (validate_assets PASS; qa_smoke PASS; peasant LoS + Ursina wiring)",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk43-building-nature-stage1.wk43_r0_kickoff_gates_2026_04_28 (full gate stack PASS)",
+            "human_playtest": "Jaimie: BuilderPeasant lifecycle PASS + green tint verified"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Optional: run python tools/roll_agent_logs.py --keep 7 at sprint boundary; then plan WK44 (Stage 2 NatureSystem + dynamic trees)."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            },
+            "15": {
+              "status": "done"
+            }
+          }
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk43-building-nature-stage1**, round **wk43_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk43-building-nature-stage1\"].rounds[\"wk43_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay strictly in scope: Stage 1 plots + BuilderPeasant lifecycle + required construction-stage prefabs for Food Stand + Farm. No Stage 2/3.\n4) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n5) Run required gates for your role (listed in your prompt). Report PASS or blockers to Jaimie.\n\nOne line: **Neutral buildings construct over time via a dedicated builder peasant; construction-stage prefabs required; Ursina smoke primary.**",
+      "pm_send_list_minimal": {
+        "order": "batch_1_parallel_then_03_then_11_then_human",
+        "batch_1_parallel": [
+          "15",
+          "05"
+        ],
+        "then_in_order": [
+          "03"
+        ],
+        "then_in_order_note": "03 starts after 05 lands the tick signature + BuilderPeasant entity. 03 may pull prefab filenames from 15.",
+        "then_in_order_2": [
+          "11"
+        ],
+        "then_human": "Jaimie manual smokes",
+        "intelligence_by_agent": {
+          "15": "high",
+          "05": "high",
+          "03": "medium",
+          "11": "low",
+          "12": "low"
+        },
+        "do_not_send": [
+          "02",
+          "04",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "13",
+          "14"
+        ],
+        "rationale": "Parallelize 15 (prefabs) + 05 (sim/entity) first. 03 depends on 05 signature changes and benefits from 15 filenames for stage-prefab mapping. 11 runs gates post-integration. Human manual smoke closes."
+      }
+    },
+    "wk44-stage2-dynamic-trees": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T15:41:00Z",
+        "closed_utc": "2026-04-30T23:59:00Z",
+        "notes": "PM retrospective close: Stage 2 dynamic trees + NatureSystem shipped through WK44→WK45→WK46 integration (growth tests, lumberjack/tree blocking). sprint_meta was left active in error; no open engineering work remains."
+      },
+      "rounds": {
+        "wk44_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk44_r0_kickoff",
+            "created_utc": "2026-04-28T15:41:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Kickoff round. Parallelize Agent 05 (NatureSystem + Tree entity + tests) with Agent 03 (engine/snapshot/world/ursina wiring) by splitting file ownership to avoid conflicts. QA (11) runs full gate stack after integration; Jaimie manual Ursina smoke after gates."
+          },
+          "pm_accepted_deliverables": [
+            "New sim entities: sim.trees list of Tree objects with deterministic growth 0.25->0.5->0.75->1.0 over ~6 minutes.",
+            "New system: NatureSystem ticks tree growth deterministically.",
+            "World gen: clustered forests (no per-tile independent noise).",
+            "Blocking rule: a tree is blocking iff growth >= 0.75.",
+            "Snapshot contract: SimStateSnapshot includes trees tuple; Ursina terrain collab syncs tree scale from snapshot."
+          ],
+          "pm_jaimie_send_order": [
+            "STEP 1 — PARALLEL: Agent 05 (HIGH) + Agent 03 (HIGH) with split file boundaries to avoid conflicts.",
+            "STEP 2 — Agent 11 (LOW): full gate stack after integration.",
+            "STEP 3 — Jaimie manual smoke (Ursina primary)."
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement Stage 2 sim pieces WITHOUT touching engine/world/renderer files (to avoid conflicts with Agent 03).",
+                "Add new files: game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem).",
+                "Add unit test: tests/test_nature_growth.py covering deterministic growth to 1.0 over ~6 minutes and intermediate steps.",
+                "Do NOT edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files in this round.",
+                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum run the new test file); report exit codes."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Wire Stage 2 plumbing + Ursina sync. You own integration files to avoid merge conflicts.",
+                "Edit: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forests + blocking rule growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (store tree entities dict + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees).",
+                "Coordinate with Agent 05 for Tree/NatureSystem APIs; if needed, adapt integration to match their implementation.",
+                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_done",
+              "asks": [
+                "After Agent 03 reports integration complete: run full gate stack from repo root and log exit codes.",
+                "Commands: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel_then_11_then_human",
+            "batch_1_parallel": [
+              "05",
+              "03"
+            ],
+            "then_in_order": [
+              "11"
+            ],
+            "then_human": "Jaimie manual smoke",
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
+          },
+          "pm_agent_prompts": {
+            "05": "WK44 Stage 2 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). Implement ONLY new sim components: add game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem). Add tests/test_nature_growth.py verifying deterministic growth from 0.25 to 1.0 over ~6 minutes and intermediate step(s). Do NOT edit game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration to avoid conflicts). Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new test). Log files touched + commands + exit codes in your agent log.",
+            "03": "WK44 Stage 2 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). You own integration files: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forest gen + blocking iff growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (tree entity dict keyed by (tx,ty) + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees(snapshot.trees)). Coordinate with Agent 05 for Tree/NatureSystem APIs. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes + key files changed in your agent log.",
+            "11": "WK44 Stage 2 (QA, LOW): After Agent 03 reports integration complete, run full gate stack from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log commands + exit codes in agent_11 JSON and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**"
+        }
+      },
+      "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**",
+      "pm_send_list_minimal": {
+        "order": "batch_1_parallel_then_11_then_human",
+        "batch_1_parallel": [
+          "05",
+          "03"
+        ],
+        "then_in_order": [
+          "11"
+        ],
+        "then_human": "Jaimie manual smoke",
+        "intelligence_by_agent": {
+          "05": "high",
+          "03": "high",
+          "11": "low"
+        },
+        "do_not_send": [
+          "02",
+          "04",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "12",
+          "13",
+          "14",
+          "15"
+        ],
+        "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
+      }
+    },
+    "wk45-stage2_5-sapling-spawning": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "status": "closed_success",
+        "created_utc": "2026-04-28T17:02:00Z",
+        "notes": "WK45 Stage 2.5: NatureSystem spawns new saplings over time (no lumberjack). Rate: 1 sapling / 30s global, cap 50 trees. Saplings set TileType.TREE immediately but remain non-blocking until growth>=0.75. If a building is placed on a sapling tile, the sapling is removed."
+      },
+      "rounds": {
+        "wk45_r0_kickoff": {
+          "round_meta": {
+            "round_id": "wk45_r0_kickoff",
+            "created_utc": "2026-04-28T17:02:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Kickoff round. Parallelize Agent 05 (nature spawning + tests) with Agent 03 (integration + removal-on-build). QA (11) runs gates after integration. Jaimie manual Ursina smoke afterwards."
+          },
+          "pm_accepted_deliverables": [
+            "NatureSystem spawns saplings deterministically: 1/30s global, cap 50 trees total.",
+            "Saplings spawn with growth=0.25, set TileType.TREE immediately, remain non-blocking until growth>=0.75 (existing blocking rule).",
+            "If a building is placed covering a sapling tile, that sapling Tree entity is removed.",
+            "Tests cover sapling spawn and removal-on-build footprint.",
+            "Gates PASS: qa_smoke --quick; validate_assets --report"
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned_active",
+              "asks": [
+                "Implement sapling spawning logic inside NatureSystem without touching engine/world/renderer files (avoid conflicts with Agent 03).",
+                "Update game/systems/nature.py and (if needed) game/entities/nature.py to support spawning metadata/state.",
+                "Add tests: tests/test_nature_spawns_saplings.py and (if needed) extend tests/test_nature_growth.py.",
+                "Do NOT edit: game/sim_engine.py, game/world.py, or any game/graphics files.",
+                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new tests)."
+              ]
+            },
+            "03": {
+              "status": "assigned_active",
+              "asks": [
+                "Integrate sapling spawning in SimEngine tick loop and ensure world tiles are updated to TileType.TREE when saplings spawn.",
+                "Implement removal-on-build: when placing a building, remove any Tree entities under the footprint (and ensure world growth lookup no longer reports them).",
+                "Coordinate with Agent 05 for the NatureSystem API; adapt integration accordingly.",
+                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+              ]
+            },
+            "11": {
+              "status": "blocked_until_03_done",
+              "asks": [
+                "After Agent 03 reports integration complete: run gates from repo root: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report (optionally full stack).",
+                "Log exit codes in agent_11 JSON."
+              ]
+            },
+            "01": {
+              "status": "active",
+              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
+            }
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel_then_11_then_human",
+            "batch_1_parallel": [
+              "05",
+              "03"
+            ],
+            "then_in_order": [
+              "11"
+            ],
+            "then_human": "Jaimie manual Ursina smoke",
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "high",
+              "11": "low"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallelize 05 (NatureSystem spawning + tests) and 03 (engine/world integration + removal-on-build). 11 runs gates post-integration. Human confirms visuals."
+          },
+          "pm_agent_prompts": {
+            "05": "WK45 Stage 2.5 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Implement sapling spawning in NatureSystem: rate 1 sapling/30s global, cap 50 total trees. Saplings start at growth=0.25 and use existing discrete growth steps. Prefer spawning near existing trees, but fall back to valid grass/buildable tiles. Do NOT edit game/sim_engine.py, game/world.py, or any game/graphics files (Agent 03 owns integration). Add tests: tests/test_nature_spawns_saplings.py (and extend growth test if needed). Run: python tools/determinism_guard.py; python -m pytest tests/. Log files touched + commands + exit codes in your agent log.",
+            "03": "WK45 Stage 2.5 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Integrate sapling spawning: ensure SimEngine/world reflect new saplings by setting TileType.TREE on spawn and keeping world.tree_growth_lookup consistent. Implement removal-on-build: when a building is placed covering a sapling tile, remove the Tree entity (and ensure growth lookup no longer reports it). Coordinate with Agent 05’s NatureSystem API. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes in your agent log.",
+            "11": "WK45 Stage 2.5 (QA, LOW): After Agent 03 reports integration complete, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. If either fails, capture the failure output. Log commands + exit codes in agent_11 JSON and report PASS/failures."
+          },
+          "pm_universal_prompt": "You are being activated for sprint **wk45-stage2_5-sapling-spawning**, round **wk45_r0_kickoff**.\n\n1) Read the sprint plan FIRST: `.cursor/plans/wk45_stage2_5_sapling_spawning.plan.md`\n2) Read the PM hub for your assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk45-stage2_5-sapling-spawning\"].rounds[\"wk45_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: sapling spawning only; no lumberjack economy.\n4) Parallel safety: Agent 05 must not edit engine/world/graphics; Agent 03 owns integration files.\n5) Update your agent log with files touched, commands, and exit codes.\n\nOne line: **Saplings spawn over time and can be built over (removes sapling).**"
+        },
+        "wk45_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk45_sprint_closeout",
+            "created_utc": "2026-04-29T00:00:00Z",
+            "source": "pm_closeout_after_agent_logs_and_human_playtest_waiver",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK45 closed. Saplings spawn over time (1/30s global, cap 50); TileType.TREE on spawn; non-blocking until growth>=0.75; building placement removes trees under footprint; Ursina creates/destroys tree entities for spawned/removed saplings. Gates PASS (Agent 11). Jaimie: playtest accepted as good enough for now (no extra manual session required for closeout)."
+          },
+          "pm_accepted_deliverables": [
+            "NatureSystem: deterministic sapling spawn cadence, cap, near-forest preference, tests in tests/test_nature_spawns_saplings.py (Agent 05).",
+            "SimEngine + engine + Ursina: world tile + growth lookup on spawn; remove_trees on build; dynamic tree entity create/destroy (Agent 03).",
+            "Gates: determinism_guard, pytest 118, qa_smoke --quick, validate_assets errors=0 (Agent 03 + Agent 11)."
+          ],
+          "pm_evidence": {
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk45-stage2_5-sapling-spawning.wk45_r0_sapling_spawning_sim_only",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff (118 passed; full gate stack PASS)",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff_gates_2026_04_28",
+            "human_playtest": "Jaimie: playtesting good enough for closeout (2026-04)"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at sprint boundary; plan WK46 Stage 3 lumberjack economy or polish."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        }
+      }
     }
   }
 }

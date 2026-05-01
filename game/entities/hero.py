@@ -8,6 +8,9 @@ from game.systems.buffs import Buff
 from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
 from game.sim.contracts import HeroDecisionRecord, HeroIntentSnapshot
+from game.sim.hero_profile import HeroMemoryEntry, KnownPlaceSnapshot
+from game.systems import hero_memory
+from game.systems.hero_memory import stable_place_id
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
     HERO_SPEED, COLOR_BLUE, TAX_RATE
@@ -34,16 +37,39 @@ HERO_NAMES = [
     "Cedric", "Kira", "Magnus", "Freya", "Aldric", "Seraphina", "Dante", "Nova"
 ]
 
+_fallback_hero_seq = 0
+
+
+def _allocate_fallback_hero_id() -> str:
+    """Monotonic id when caller did not supply ``hero_id`` (deterministic spawn order)."""
+    global _fallback_hero_seq
+    _fallback_hero_seq += 1
+    return f"h{_fallback_hero_seq:08d}"
+
 
 class Hero:
     """A hero unit controlled by basic AI + LLM decisions."""
     
-    def __init__(self, x: float, y: float, hero_class: str = "warrior"):
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        hero_class: str = "warrior",
+        *,
+        hero_id: str | None = None,
+        name: str | None = None,
+    ):
         self.x = x
         self.y = y
         self.hero_class = hero_class
+        # Stable profile identity (never ``id(self)``); optional explicit id from engine/tests.
+        hid = str(hero_id).strip() if hero_id is not None else ""
+        self.hero_id = hid if hid else _allocate_fallback_hero_id()
         # Deterministic (seeded) identity when determinism is enabled.
-        self.name = get_rng().choice(HERO_NAMES)
+        if name is not None:
+            self.name = str(name)
+        else:
+            self.name = get_rng().choice(HERO_NAMES)
         
         # Stats
         self.level = 1
@@ -163,7 +189,20 @@ class Hero:
         # Anti-oscillation commitment windows (sim-time based; controlled by AI)
         self._target_commit_until_ms: int = 0
         self._bounty_commit_until_ms: int = 0
-        
+
+        # WK49: Bounded profile memory + known places + career counters (mutable sim state).
+        self._next_profile_memory_entry_id: int = 1
+        self.profile_memory: list[HeroMemoryEntry] = []
+        self.known_places: dict[str, KnownPlaceSnapshot] = {}
+        self.profile_career: dict[str, int] = {
+            "tiles_revealed": 0,
+            "places_discovered": 0,
+            "enemies_defeated": 0,
+            "bounties_claimed": 0,
+            "gold_earned": 0,
+            "purchases_made": 0,
+        }
+
     @property
     def attack(self) -> int:
         """Total attack including weapon bonus."""
@@ -254,11 +293,112 @@ class Hero:
     
     def add_gold(self, amount: int):
         """Add gold with automatic 25% tax reservation."""
-        tax_amount = int(amount * TAX_RATE)
-        spendable = amount - tax_amount
+        gross = int(amount)
+        if gross > 0:
+            self.increment_career_stat("gold_earned", gross)
+        tax_amount = int(gross * TAX_RATE)
+        spendable = gross - tax_amount
         self.gold += spendable
         self.taxed_gold += tax_amount
-    
+
+    def increment_career_stat(self, name: str, amount: int = 1) -> None:
+        """Bump a fixed career counter (ignored if unknown key)."""
+        if name not in self.profile_career:
+            return
+        self.profile_career[name] = int(self.profile_career[name]) + int(amount)
+
+    def record_profile_memory(
+        self,
+        *,
+        event_type: str,
+        sim_time_ms: int,
+        summary: str,
+        subject_type: str = "",
+        subject_id: str = "",
+        subject_name: str = "",
+        tile: tuple[int, int] | None = None,
+        world_pos: tuple[float, float] | None = None,
+        tags: tuple[str, ...] = (),
+        importance: int = 1,
+    ) -> HeroMemoryEntry:
+        """Append a memory row; drops oldest entries past the configured cap."""
+        eid = self._next_profile_memory_entry_id
+        self._next_profile_memory_entry_id += 1
+        entry = HeroMemoryEntry(
+            entry_id=int(eid),
+            hero_id=str(self.hero_id),
+            event_type=str(event_type),
+            sim_time_ms=int(sim_time_ms),
+            summary=str(summary),
+            subject_type=str(subject_type),
+            subject_id=str(subject_id),
+            subject_name=str(subject_name),
+            tile=tile,
+            world_pos=world_pos,
+            tags=tags,
+            importance=int(importance),
+        )
+        self.profile_memory.append(entry)
+        while len(self.profile_memory) > hero_memory.PROFILE_MEMORY_MAX_ENTRIES:
+            self.profile_memory.pop(0)
+        return entry
+
+    def remember_known_place(
+        self,
+        *,
+        place_type: str,
+        display_name: str,
+        tile: tuple[int, int],
+        world_pos: tuple[float, float],
+        sim_time_ms: int,
+        place_id: str | None = None,
+        building_type: str | None = None,
+        grid_x: int | None = None,
+        grid_y: int | None = None,
+        explicit_place_key: str | None = None,
+        is_destroyed: bool = False,
+    ) -> KnownPlaceSnapshot:
+        """
+        Upsert a known place. First sight increments ``places_discovered``; revisits bump visits.
+        """
+        pid = stable_place_id(
+            str(building_type or place_type),
+            int(grid_x if grid_x is not None else tile[0]),
+            int(grid_y if grid_y is not None else tile[1]),
+            explicit_id=explicit_place_key or place_id,
+        )
+        existing = self.known_places.get(pid)
+        first = existing is None
+        if first:
+            self.increment_career_stat("places_discovered", 1)
+
+        visits = 1 if first else int(existing.visits) + 1  # type: ignore[union-attr]
+        first_seen = int(sim_time_ms) if first else int(existing.first_seen_ms)  # type: ignore[union-attr]
+        last_visited = int(sim_time_ms) if visits > 1 else None
+        snap = KnownPlaceSnapshot(
+            place_id=str(pid),
+            place_type=str(place_type),
+            display_name=str(display_name),
+            tile=(int(tile[0]), int(tile[1])),
+            world_pos=(float(world_pos[0]), float(world_pos[1])),
+            first_seen_ms=first_seen,
+            last_seen_ms=int(sim_time_ms),
+            visits=int(visits),
+            last_visited_ms=last_visited,
+            is_destroyed=bool(is_destroyed),
+        )
+        self.known_places[str(pid)] = snap
+        self._trim_known_places_if_needed()
+        return snap
+
+    def _trim_known_places_if_needed(self) -> None:
+        while len(self.known_places) > hero_memory.KNOWN_PLACES_MAX_ENTRIES:
+            drop_key = min(
+                self.known_places.keys(),
+                key=lambda k: (self.known_places[k].first_seen_ms, self.known_places[k].place_id),
+            )
+            del self.known_places[drop_key]
+
     def should_go_home_to_rest(self) -> bool:
         """Check if hero should return home to rest."""
         damage_taken = self.max_hp - self.hp
@@ -468,7 +608,14 @@ class Hero:
         while self.xp >= self.xp_to_level:
             self.xp -= self.xp_to_level
             self.level_up()
-    
+
+    def grant_tile_exploration_xp(self, tiles: int = 1) -> None:
+        """XP for revealing overworld tiles (ranger fog). Must route through level-ups."""
+        n = int(tiles)
+        if n <= 0:
+            return
+        self.add_xp(n)
+
     def level_up(self):
         """Level up the hero."""
         self.level += 1
@@ -502,6 +649,7 @@ class Hero:
         except Exception:
             self.last_purchase_ms = None
         self.last_purchase_type = str(item.get("type", "")) if item else ""
+        self.increment_career_stat("purchases_made", 1)
         return True
     
     def wants_to_shop(self, marketplace_has_potions: bool) -> bool:
@@ -791,8 +939,9 @@ class Hero:
 
     def on_attack_landed(self, target, damage: int, killed: bool):
         """Called by CombatSystem when this hero lands an attack."""
-        # For now, just play an attack one-shot.
-        _ = (target, damage, killed)
+        if killed and getattr(target, "enemy_type", None) is not None:
+            self.increment_career_stat("enemies_defeated", 1)
+        _ = damage
         self._queue_render_animation("attack")
     
     def get_context_for_llm(self, game_state: dict) -> dict:

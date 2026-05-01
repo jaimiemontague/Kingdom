@@ -9,165 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk42-renderer-dedupe-wire-collabs": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
-        "notes": "QA: full gate stack after each Agent 03 round (R1 Track A, R2 terrain/fog collab, R3 entity collab)."
-      },
-      "rounds": {
-        "wk42_r0_agent11_spinup_2026_04_28": {
-          "round_id": "wk42_r0_agent11_spinup_2026_04_28",
-          "status": "complete",
-          "what_i_changed": [
-            "Agent 11 onboarding spinup: no repo code changes; baseline automated gates for active sprint WK42."
-          ],
-          "how_to_test": [
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "pm_assignment": "After Agent 03 completes each WK42 round (wk42_r1_track_a_module_block, wk42_r2_track_b_terrain_collab, wk42_r3_track_c_entity_collab): run determinism_guard.py; pytest tests/; qa_smoke --quick; validate_assets --report (errors=0). R2/R3: parallel optional Agent 10 FPS consult per PM hub.",
-          "evidence": {
-            "qa_smoke_quick_2026_04_28": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "DONE: PASS — determinism_guard; pytest 114 passed; headless profiles through conversation scenario."
-            },
-            "validate_assets_2026_04_28": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46 (missing_model_file baseline)"
-            }
-          },
-          "blockers": [],
-          "bugs_found": []
-        },
-        "wk42_post_integration_full_stack_2026_04_28": {
-          "round_id": "wk42_post_integration_full_stack_2026_04_28",
-          "status": "complete",
-          "pm_steps_covered": "PM pm_jaimie_send_order Steps 2 + 4 + 6 — single integrated tree with R1 Track A imports, R2 UrsinaTerrainFogCollab, R3 UrsinaEntityRenderCollab (verify with Agent 03 log if per-step PASS needed).",
-          "what_i_changed": [
-            "No repository code changes (Agent 11 gate validation only).",
-            "Recorded game/graphics/ursina_renderer.py line count 669 (plan DoD ≤900, target ~700)."
-          ],
-          "how_to_test": [
-            "python tools/determinism_guard.py",
-            "python -m pytest tests/",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "evidence": {
-            "determinism_guard": {
-              "command": "python tools/determinism_guard.py",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "no violations found"
-            },
-            "pytest": {
-              "command": "python -m pytest tests/",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
-            },
-            "qa_smoke_quick": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "DONE: PASS (full profile set)"
-            },
-            "validate_assets": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46 (missing_model_file baseline)"
-            },
-            "ursina_renderer_line_count": {
-              "file": "game/graphics/ursina_renderer.py",
-              "lines": 669
-            }
-          },
-          "recommended_next_actions": [
-            "Jaimie: STEP 7 manual smokes per plan: python main.py --renderer ursina --no-llm (5-10 min); python main.py --renderer pygame --no-llm (5 min).",
-            "Agent 10: confirm R2/R3 FPS consult logged if not already."
-          ],
-          "blockers": [],
-          "bugs_found": []
-        },
-        "wk42_r2_r3_track_verification_post_agent03_confirm": {
-          "round_id": "wk42_r2_r3_track_verification_post_agent03_confirm",
-          "status": "complete",
-          "pm_rounds": [
-            "wk42_r2_track_b_terrain_collab",
-            "wk42_r3_track_c_entity_collab"
-          ],
-          "what_i_changed": [
-            "No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack."
-          ],
-          "static_review": {
-            "wk42_r2_track_b": {
-              "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md Round WK42-R2",
-              "PASS": [
-                "UrsinaTerrainFogCollab imported; self._terrain_fog = UrsinaTerrainFogCollab(self) in UrsinaRenderer.__init__",
-                "update() delegates build_3d_terrain, ensure_fog_overlay, sync_visibility_gated_terrain, ensure_grid_debug_overlay to self._terrain_fog.*",
-                "No self._ensure_fog_overlay / self._build_3d_terrain / self._sync_visibility_gated_* call sites on UrsinaRenderer (legacy paths removed)",
-                "track_visibility_gated_terrain / sync_terrain_prop_tile_visibility live inside UrsinaTerrainFogCollab (internal)"
-              ]
-            },
-            "wk42_r3_track_c": {
-              "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md Round WK42-R3",
-              "PASS": [
-                "UrsinaEntityRenderCollab imported; self._entity_render = UrsinaEntityRenderCollab(self) in __init__",
-                "update() uses self._entity_render for prefab/3d/billboard paths: get_or_create_entity, sync_billboard_entity, apply_pixel_billboard_settings, sync_inside_hero_draw_layer, get_or_create_prefab_building_entity, sync_prefab_building_entity, get_or_create_3d_building_entity, sync_3d_building_entity",
-                "No self._get_or_create_entity( / self._sync_billboard_entity( on renderer (delegation-only)"
-              ]
-            },
-            "ursina_renderer_line_count": {
-              "file": "game/graphics/ursina_renderer.py",
-              "lines": 696
-            }
-          },
-          "how_to_test": [
-            "python tools/determinism_guard.py",
-            "python -m pytest tests/",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report"
-          ],
-          "evidence": {
-            "determinism_guard": {
-              "command": "python tools/determinism_guard.py",
-              "exit_code": 0,
-              "status": "PASS"
-            },
-            "pytest": {
-              "command": "python -m pytest tests/",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "114 passed"
-            },
-            "qa_smoke_quick": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS",
-              "notes": "DONE: PASS"
-            },
-            "validate_assets": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "status": "PASS",
-              "summary": "errors=0 warns=46"
-            }
-          },
-          "recommended_next_actions": [
-            "Agent 01: mark WK42 R2/R3 QA PASS in PM hub if pending.",
-            "Agent 10: Ursina FPS spot-check for R2/R3 per plan if not logged.",
-            "Jaimie: pygame manual smoke if only Ursina was playtested: python main.py --renderer pygame --no-llm"
-          ],
-          "blockers": [],
-          "bugs_found": []
-        }
-      }
-    },
     "wk43-building-nature-stage1": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
@@ -680,6 +521,183 @@
           ],
           "files_touched_by_agent_11": [
             ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "pm_hub_round": "wk49_r6_readiness_qa_perf",
+        "notes": "WK49 R6: automated gates + ui_panels screenshot verification for Hero Profile MVP."
+      },
+      "rounds": {
+        "wk49_r6_readiness_qa_perf": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r6_readiness_qa_perf",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 QA verification only).",
+            "Ran pytest, qa_smoke --quick, validate_assets --report; ran python -m tools.capture_screenshots with plan args (ui_panels, seed 3, 1920x1080, 480 ticks, out docs/screenshots/wk49_hero_profile).",
+            "Inspected ui_panels_hero.png: selected-hero profile present with hero_id line, XP/HP, vitals/economy/gear, location/intent/state/last decision, memory/Known places; left panel text readable without obvious overlap with global HUD.",
+            "Regression: duplicate names keep distinct hero_id (test_hero_identity); selected_hero_profile non-null when hero selected (test_hero_profile_integration)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk49_r6": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "148 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick_wk49_r6": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation all exit_code=0"
+            },
+            "validate_assets_wk49_r6": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "screenshot_ui_panels_hero": {
+              "paths": [
+                "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+                "docs/screenshots/wk49_hero_profile/manifest.json"
+              ],
+              "capture_command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "checksum_sha256_manifest": "f9328c35eb3081d83795fe0a8593f7f58fca3ae723e5e55e64055205b5d2ef7a",
+              "visual_notes": "Left panel shows Gareth / Warrior Lv:1 / hero_id, XP bar, HP bar, Vitals ATK/DEF, Economy, Gear, Out|goal, Intent/State/Last decision, Memory none yet, Known places 0; no obvious overlapping labels within panel."
+            },
+            "profile_contract_tests": {
+              "duplicate_name_hero_id": "tests/test_hero_identity.py::test_duplicate_names_remain_distinct_hero_ids",
+              "selected_hero_profile_in_game_state": "tests/test_hero_profile_integration.py::test_get_game_state_exposes_profile_maps"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Sprint human gate: Jaimie 5-minute manual smoke (python main.py --no-llm) per plan — not executed by Agent 11."
+          ],
+          "recommended_next_actions": [
+            "Agent 10: perf consult for wk49_r6 per PM hub.",
+            "Agent 06: LLM readiness review for wk49_r6 per PM hub."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk49_r8_bugfix_known_places_ranger_xp": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r8_bugfix_known_places_ranger_xp",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Re-ran pytest, qa_smoke --quick, validate_assets --report; re-captured ui_panels screenshot (seed 3, 480 ticks).",
+            "Evidence: Known places >0 via integration tests plus screenshot Known places: 1 with Discovered Inn; ranger XP capped below next level via tests/test_hero_progression_invariant.py and snapshot field equality."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk49_r8": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "153 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick_wk49_r8": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation exit_code=0"
+            },
+            "validate_assets_wk49_r8": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "known_places_behavior": {
+              "integration_tests": [
+                "tests/test_hero_profile_integration.py::test_fog_discovery_records_place_once_not_spam_memory",
+                "tests/test_hero_profile_integration.py::test_encounter_discovery_when_visible_without_new_reveals_populates_known_places"
+              ],
+              "screenshot_ui_panels_hero": {
+                "path": "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+                "manifest_sha256": "fc53767e3caa6642d35d333d19d7a05a5e6e2f0a4b6fa20316058a1317017782",
+                "visual_check": "Panel shows Known places: 1 and Recent Discovered Inn (Warrior hero Gareth in scenario)."
+              }
+            },
+            "ranger_xp_invariant": {
+              "tests": [
+                "tests/test_hero_progression_invariant.py::test_grant_tile_exploration_xp_many_small_grants_never_exceed_cap",
+                "tests/test_hero_progression_invariant.py::test_grant_tile_exploration_xp_large_burst_matches_single_add_xp",
+                "tests/test_hero_progression_invariant.py::test_profile_snapshot_progression_respects_cap_after_exploration_xp"
+              ],
+              "assertion_summary": "Live Hero.xp stays strictly below xp_to_level after ranger tile exploration grants; HeroProfileSnapshot progression fields mirror hero and obey xp < xp_to_level."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: extended ui_panels scenario selecting a ranger with exploration XP ticks if PM wants pixel proof of ranger bar specifically (automated invariant already covered by unit tests)."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+            "docs/screenshots/wk49_hero_profile/manifest.json"
           ]
         }
       }

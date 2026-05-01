@@ -115,15 +115,23 @@ class MicroViewManager:
                 surface.blit(txt, (right_rect.x + 12, right_rect.y + pad))
             return None
         if self.mode == ViewMode.HERO_FOCUS and self.quest_hero is not None:
-            # We defer rendering the minimap and chat to hud.py directly for layout simplicity,
-            # or we can ask the chat_panel to render in the bottom half.
+            # Upper half: profile summary (WK49); lower half remains chat-only.
+            if hasattr(hud, "_render_hero_focus_profile"):
+                top_rect = pygame.Rect(
+                    right_rect.x,
+                    right_rect.y,
+                    right_rect.width,
+                    right_rect.height // 2,
+                )
+                hud._render_hero_focus_profile(surface, top_rect, game_state)
+
             if chat_panel is not None:
                 # Tell chat panel to activate if it isn't already for this hero
                 if not getattr(chat_panel, "is_active", lambda: False)():
                     if hasattr(chat_panel, "start_conversation"):
                         chat_panel.start_conversation(self.quest_hero)
-                
-                # Split rect into top (minimap) and bottom (chat)
+
+                # Split rect into top (hero focus extras) and bottom (chat)
                 chat_rect = pygame.Rect(
                     right_rect.x,
                     right_rect.y + right_rect.height // 2,

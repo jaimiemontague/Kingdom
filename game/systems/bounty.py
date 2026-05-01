@@ -75,6 +75,8 @@ class Bounty:
                 hero.add_gold(self.reward)
             else:
                 hero.gold += self.reward
+            if hasattr(hero, "increment_career_stat"):
+                hero.increment_career_stat("bounties_claimed", 1)
             self.claimed_time_ms = sim_now_ms()
             return True
         return False

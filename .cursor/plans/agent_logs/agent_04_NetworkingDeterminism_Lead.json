@@ -745,6 +745,65 @@
           }
         }
       }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "notes": "WK49 Wave 0: design guardrails; Agent 04 determinism review only—no hero_profile implementation in this round."
+      },
+      "rounds": {
+        "wk49_r1_design_guardrails": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Design-time determinism review for planned Hero Profile and memory architecture (WK49 sprint plan + roadmap). No implementation; no edits to game/ai/sim code. Guidance for Agents 03/05 on wall-clock vs sim time, stable IDs vs id/hash, ordered iteration/bounds/sorting.",
+          "commands_run": [
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_04_NetworkingDeterminism_Lead.json",
+              "cwd": null,
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/determinism_guard.py",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete (orchestrator receipt; PowerShell --log-round used single quotes to avoid escaping issues)",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "note": "Scans game/entities, game/systems, ai (game/sim excluded from scan by design)",
+              "result": "PASS (exit_code 0 at time of this log)"
+            },
+            "risk_review": [
+              "Wall-clock: Plan correctly mandates now_ms()/sim time for memory and known-place timestamps; forbid time.time/datetime/pygame ticks in Hero profile recording and snapshot builders in game/entities, game/systems, game/sim/hero_profile.",
+              "id/hash: Do not derive hero_id, place_id, or memory keys from id(obj) or hash(); prefer explicit deterministic strings/counters seeded from hero creation order or world ids.",
+              "Unordered iteration: Iterating dict known_places or set _revealed_tiles for serialization must not define output order; sort before emitting tuples/take ordered slice (plan: sort buildings by building_type then tile for discovery hooks). Memory list should stay append-order or sort by sim_time_ms then entry_id tie-break.",
+              "Unbounded memory: Enforce caps (plan: ~30 recent memory, ~100 known places)—eviction policy must be deterministic (FIFO by entry_id or lowest importance tie-broken).",
+              "Snapshot order: HeroProfileSnapshot should use tuples; build path must assemble known_places and recent_memory via explicit comparator (first_seen_ms then place_id; memory chronological).",
+              "JSON/floats: Prefer ints for sim timestamps; floats in percents acceptable if derived consistently from integers.",
+              "determinism_guard gap: hero_profile modules under game/sim are not statically scanned yet—Agent 03/12 should extend guard paths if profile builder lives there and assigns sim-visible state.",
+              "UI: Rendering profile from snapshot is nondeterministic-ok for MP if UI never feeds sim; Agent 08 must keep writes client-side only."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "After game/sim/hero_profile.py lands, extend determinism_guard --paths if needed so profile builder cannot ship wall-clock or hash-based IDs.",
+            "Agent 03: Implement sort_known_places / sort_memory_entries helpers plus contract tests asserting stable ordering.",
+            "Agent 05: Bounded deque/list + monotonic entry_id allocator per hero tied to deterministic counter, not insertion order alone if events can reorder."
+          ],
+          "recommended_next_actions": [
+            "Agents 03/05 integrate review bullets into acceptance tests before merge.",
+            "Re-run python tools/determinism_guard.py after touching game/entities/hero.py, new game/systems/hero_memory.py, and game/sim/hero_profile.py.",
+            "If profile code is added solely under game/sim, request Agent 12 add that path to DEFAULT_SCAN_DIRS or run targeted scans in CI."
+          ]
+        }
+      }
     }
   },
   "wk11-building-interiors-llm": {

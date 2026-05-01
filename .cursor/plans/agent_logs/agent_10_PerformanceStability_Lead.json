@@ -9,144 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk32-camera-construction-nature-polish": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
-        "notes": "WK32 r2 perf consult after grass density/jitter + rock variants (Agents 03/15)"
-      },
-      "rounds": {
-        "wk32_r2_visual_followup": {
-          "sprint_id": "wk32-camera-construction-nature-polish",
-          "round_id": "wk32_r2_visual_followup",
-          "round_meta": {
-            "prompt_set_id": "wk32_r2",
-            "sent_at_local": "2026-04-25"
-          },
-          "prompt_text": "After Agent 03 increases grass density/jitter and Agent 15 adds rocks, rerun the WK31 Part A perf comparison. If outside budget, recommend a density/stride ceiling or clump count limit. Do not ask to revert visuals unless there is no cheaper ceiling.",
-          "response": {
-            "status": "complete",
-            "raw": "WK32 r2 (Agent 10): Re-ran WK31 Part A methodology (same CLI as wk31_r1_execution). Machine: win32, Python 3.13.2, repo root.\n\nHeadless perf_benchmark (does NOT include Ursina 3D terrain/grass/rock draw — sim + pygame path only):\n- Default: ms/tick total 1.458 (720 ticks / 12 s) — see evidence.perf_default.\n- Heavy: ms/tick total 1.435 (--seconds 12 --heroes 20 --enemies 20 --bounties 5 --seed 3) — see evidence.perf_heavy.\n\nWK31 archived baselines (agent log, 2026-04-18): default ~1.078, heavy ~1.066. Delta vs archive: +35.3% default, +34.6% heavy — outside ±15% *if* the April numbers are taken as a strict same-machine contract. Likely causes: (1) different CPU/background load or codepath drift since April; (2) headless breakdown shows elevated pathfinding and enemy-bucket ms — not grass (grass is renderer-only). Treat headless as regression watch for *sim*, not for WK32 scatter art.\n\nUrsina / meadow (WK32 r2 actual risk): If Jaimie sees FPS loss after dense grass + rocks, first-line mitigations for Agent 03 (no art revert): raise URSINA_TERRAIN_SCATTER_STRIDE (config default 2; env KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE clamped 1..8 in config.py) to reduce grass Entity count; reduce doodad/rock spawn frequency in ursina_renderer _build_3d_terrain (modulo gates on GRASS) if still GPU-bound. Prefab baker not indicated from this headless run.\n\nGates: qa_smoke --quick PASS; validate_assets --report exit 0 (errors=0; pre-existing WARNs on missing placeholder GLB paths).",
-            "summary_bullets": [
-              "Headless: default 1.458 ms/tick, heavy 1.435 ms/tick (2026-04-25); vs WK31 log +35% — interpret as sim/archive drift + not a grass probe.",
-              "WK32 grass/rock cost: validate with Ursina fps_counter (window) on meadow; perf_benchmark does not model Ursina scatter.",
-              "If GPU-bound: tune URSINA_TERRAIN_SCATTER_STRIDE (or env) and/or doodad/rock spawn moduli in ursina_renderer — prefer ceilings over revert.",
-              "qa_smoke --quick PASS; validate_assets errors=0."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/perf_benchmark.py",
-              "python tools/perf_benchmark.py --seconds 12 --heroes 20 --enemies 20 --bounties 5 --seed 3",
-              "python tools/qa_smoke.py --quick",
-              "python tools/validate_assets.py --report",
-              "Ursina spot-check (human): python main.py --renderer ursina --no-llm — frame castle/meadow; read top-left FPS; F2 for overlay context"
-            ],
-            "evidence": {
-              "perf_default_2026_04_25": "ms/tick total 1.458; ticks=720/12s; heroes=20 enemies(end)=0 bounties=0",
-              "perf_heavy_2026_04_25": "ms/tick total 1.435; --heroes 20 --enemies 20 --bounties 5 --seed 3; PF ms/tick 1.105",
-              "wk31_log_reference": "default ~1.078, heavy ~1.066 (2026-04-18, same tool)",
-              "within_15pct_vs_wk31_archive": false,
-              "interpretation": "Headless delta likely multi-factor; not validated as Ursina grass regression. Re-baseline on one machine for trendline if PM needs strict ms/tick budget.",
-              "qa_smoke": "python tools/qa_smoke.py --quick",
-              "qa_smoke_exit_code": 0,
-              "qa_smoke_status": "PASS (determinism_guard + pytest 93 + observe profiles)",
-              "validate_assets": "python tools/validate_assets.py --report",
-              "validate_assets_exit_code": 0,
-              "validate_assets_errors": 0,
-              "validate_assets_warns": 46,
-              "screenshots": "N/A (CLI perf evidence; optional Ursina meadow screenshot for human FPS record)"
-            },
-            "agent_fields": {
-              "ursina_mitigation_order": [
-                "Increase URSINA_TERRAIN_SCATTER_STRIDE (or KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE) to cut grass entity count",
-                "Tighten doodad modulo / rock hash rarity in ursina_renderer if still over GPU budget"
-              ],
-              "prefab_baker_flag": false
-            }
-          }
-        },
-        "wk32_r3_preview_load_hotfix": {
-          "sprint_id": "wk32-camera-construction-nature-polish",
-          "round_id": "wk32_r3_preview_load_hotfix",
-          "round_meta": {
-            "prompt_set_id": "wk32_r3",
-            "sent_at_local": "2026-04-25"
-          },
-          "prompt_text": "After Agent 03 lands the density/startup hotfix, measure startup usability and FPS for low/default/high grass density settings. Recommend the default Jaimie should use for normal preview.",
-          "response": {
-            "status": "blocked_waiting_on_agent_03",
-            "raw": "WK32 r3 (Agent 10): PM hub indicates Ursina preview is blocked by very slow startup after r2. Terminal shows Panda3D OBJ->BAM cache generation for new environment models (looks like ':loader(error): Unable to open models_compressed/... .bam' followed by 'saved .bam to ...'; this is expected first-run cache miss + cache write).\n\nPerf-relevant finding before 03's hotfix lands: current grass scatter in game/graphics/ursina_renderer.py hardwires _GRASS_CLUMPS_PER_TILE=3 and spawns clumps for every eligible GRASS/TREE tile, explicitly bypassing URSINA_TERRAIN_SCATTER_STRIDE for grass. This removes the only existing preview density knob (KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE) from affecting the main cost center (grass Entities + model instantiation + first-run OBJ conversion).\n\nRecommendation to Agent 03 / PM (no code change by Agent 10): keep non-grid jitter/clumps, but add a budget knob to cap grass instantiation. Suggested knobs (PowerShell-friendly):\n- KINGDOM_URSINA_GRASS_CLUMPS_PER_TILE={0,1,2,3} (default 1 for preview; 3 for screenshots)\n- optionally KINGDOM_URSINA_GRASS_SAMPLE_STRIDE (or reuse URSINA_TERRAIN_SCATTER_STRIDE for grass too) so grass can be thinned deterministically.\n\nMeasurement plan once hotfix lands:\n- Low/default/high commands per 03's documented knobs; record time-to-window usability + meadow FPS (Ursina fps_counter).\n\nImmediate human guidance until hotfix: allow first run of `python main.py --renderer ursina --no-llm` to complete so Panda finishes writing .bam caches; killing early can cause repeated partial-conversion overhead on next run.",
-            "summary_bullets": [
-              "Panda ':loader(error) Unable to open ... .bam' + 'saved .bam' is usually expected first-run cache generation, not a fatal missing asset.",
-              "Root perf issue: grass ignores URSINA_TERRAIN_SCATTER_STRIDE and spawns 3 clumps per eligible tile → no usable preview density knob.",
-              "Hotfix needs a grass budget knob (e.g., clumps-per-tile and/or sample stride) to keep non-grid look but restore preview playability.",
-              "Agent 10 will measure low/default/high once Agent 03 lands the knob and recommend default."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python main.py --renderer ursina --no-llm",
-              "Allow first run to finish so Panda .bam cache generation completes."
-            ],
-            "evidence": {
-              "terminal_ref": "C:/Users/Jaimie Montague/.cursor/projects/c-Users-Jaimie-Montague-OneDrive-Documents-Kingdom/terminals/1.txt lines 484-526 show OBJ->BAM cache misses + saves for new environment assets",
-              "code_ref": "game/graphics/ursina_renderer.py: _GRASS_CLUMPS_PER_TILE=3 and grass loop spawns clumps for every grass/treef tile (ignores stride for grass)",
-              "gates": "N/A (consult-only; no code changes)"
-            },
-            "agent_fields": {
-              "recommended_preview_knobs": [
-                "KINGDOM_URSINA_GRASS_CLUMPS_PER_TILE (clamp 0..3, default 1)",
-                "Optionally reuse KINGDOM_URSINA_TERRAIN_SCATTER_STRIDE for grass or add KINGDOM_URSINA_GRASS_SAMPLE_STRIDE"
-              ]
-            }
-          }
-        },
-        "wk32_r4_tree_fog_perf_hotfix": {
-          "sprint_id": "wk32-camera-construction-nature-polish",
-          "round_id": "wk32_r4_tree_fog_perf_hotfix",
-          "round_meta": {
-            "prompt_set_id": "wk32_r4",
-            "sent_at_local": "2026-04-25"
-          },
-          "prompt_text": "Diagnose severe lag / low FPS after the first few heroes spawn. Separate sim/AI vs Ursina renderer vs HUD upload vs entity count. Provide owner-specific recommendation; do not guess. If renderer-side, coordinate with Agent 03. If AI/LLM-side, tell PM to activate Agent 06.",
-          "response": {
-            "status": "complete",
-            "raw": "WK32 r4 (Agent 10): Diagnosed hero-spawn lag via headless differential frame profiler + controlled Ursina auto-exit runs.\n\nKey result: simulation-side frame cost remains extremely low as heroes are hired. tools/ursina_frame_profiler.py (headless, no GPU) shows total_frame ~0.046 ms baseline and ~0.670 ms at 8 heroes (0 enemies). This is sub-1ms and scales roughly linearly; entity separation scaling check is linear/sub-quadratic. Therefore, the reported 'tons of lag / low FPS after the first few heroes spawn' is very unlikely to be simulation CPU cost.\n\nInterpretation: culprit category is almost certainly renderer/HUD (Ursina scene graph, hero render path, texture upload, or grass/tree entity count) rather than sim/AI. LLM/provider latency could also manifest as stutter, but the baseline should be established with --no-llm; if lag persists there, it is renderer/HUD.\n\nAutomated Ursina capture (tools/run_ursina_capture_once.py) confirms the app can run and exit, but does not expose live FPS in logs; use manual Ursina fps_counter + F2 overlay to confirm the drop moment.\n\nOwner recommendation: assign renderer/HUD investigation and mitigation to Agent 03 first. Activate Agent 06 only if manual test shows lag occurs only when LLM is enabled (provider != --no-llm) and disappears with --no-llm.\n\nTooling fix (to enable this diagnosis on Windows): patched tools/ursina_frame_profiler.py to avoid Unicode Δ output (cp1252 terminal crash). This is a tools-only change; qa_smoke --quick PASS.",
-            "summary_bullets": [
-              "Headless profiler: total_frame stays <1ms up to 8 heroes (0 enemies) → sim CPU not the cause of low FPS after heroes spawn.",
-              "Most likely culprit is renderer/HUD/scene-graph cost (Agent 03 domain), not AI/LLM (Agent 06) by default.",
-              "Use --no-llm vs default to decide if Agent 06 needs activation; if lag persists with --no-llm, it is renderer/HUD.",
-              "Fixed tools/ursina_frame_profiler.py Windows Unicode crash; qa_smoke PASS."
-            ],
-            "what_i_changed": [
-              "tools/ursina_frame_profiler.py: replace Unicode delta symbol with ASCII so Windows terminals don't crash"
-            ],
-            "how_to_test": [
-              "Headless profiling: python tools/ursina_frame_profiler.py --max-hires 8",
-              "Manual isolate (renderer vs LLM):",
-              "  python main.py --renderer ursina --no-llm",
-              "  python main.py --renderer ursina --provider mock",
-              "Watch top-left Ursina fps_counter before/after heroes spawn; toggle F2 overlay for context"
-            ],
-            "evidence": {
-              "ursina_frame_profiler_cmd": "python tools/ursina_frame_profiler.py --max-hires 8",
-              "ursina_frame_profiler_key_numbers": "baseline total_frame 0.046 ms; hire_8 total_frame 0.670 ms; entity_sep scaling N 1->22 cost 0.0032->0.0652 (linear/sub-quadratic)",
-              "ursina_auto_exit_no_llm_cmd": "python tools/run_ursina_capture_once.py --seconds 25 --no-llm --no-screenshot",
-              "ursina_auto_exit_default_cmd": "python tools/run_ursina_capture_once.py --seconds 25 --no-screenshot",
-              "qa_smoke": "python tools/qa_smoke.py --quick",
-              "qa_smoke_exit_code": 0
-            },
-            "agent_fields": {
-              "owner_recommendation": "03_TechnicalDirector_Architecture (renderer/HUD/entity count). Only activate 06 if lag reproduces only with LLM enabled.",
-              "next_renderer_hypotheses_for_03": [
-                "Hero render path in Ursina: per-hero Entity count, billboard updates, or per-frame mesh/material churn",
-                "Headless UI texture upload to Ursina (ursina_app.py _refresh_ui_overlay_texture) becoming dirty every frame after heroes spawn",
-                "Grass/trees/props entity count overwhelming scene graph once simulation begins (not just at startup)",
-                "Directional shadows/shader settings if enabled"
-              ]
-            }
-          }
-        }
-      }
-    },
     "wk33-terrain-lair-economy-prefabs": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
@@ -748,6 +610,72 @@
             "Optional: re-run orchestrator verify-receipt for Agent 10 if sprint requires SDK completion token."
           ],
           "follow_ups": []
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "roadmap_ref": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+        "notes": "R6 readiness: perf consult + code skim; no game code edits (consult-only)."
+      },
+      "rounds": {
+        "wk49_r6_readiness_qa_perf": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r6_readiness_qa_perf",
+          "status": "done",
+          "what_i_changed": "No code changes. Consult: reviewed get_game_state hero profile build path (sim_engine.py + game/sim/hero_profile.py) and hero-side bounds (game/entities/hero.py + game/systems/hero_memory.py). Ran headless perf_benchmark and full qa_smoke --quick.",
+          "commands_run": [
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/perf_benchmark.py",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk49_hero_profile_foundation\" --round \"wk49_r6_readiness_qa_perf\" --agent \"10\" --token \"e2eed7f0-a655-42c4-a1bf-58ee670ebd6f\" --status done --summary \"Perf consult: perf_benchmark 1.344 ms/tick (exit 0), qa_smoke --quick PASS (exit 0). Profile snapshots rebuilt per get_game_state per hero; sorts bounded (<=100 places, <=30 memory). No game edits.\" --log-path \".cursor\\plans\\agent_logs\\agent_10_PerformanceStability_Lead.json\" --log-round 'sprints[\"wk49_hero_profile_foundation\"].rounds[\"wk49_r6_readiness_qa_perf\"]'",
+              "exit_code": 0,
+              "note": "PowerShell requires single quotes around --log-round so [ and \\ inside double quotes are not misparsed."
+            }
+          ],
+          "evidence": {
+            "perf_benchmark": {
+              "command": "python tools/perf_benchmark.py",
+              "exit_code": 0,
+              "ms_per_tick_total": 1.344,
+              "ticks": 720,
+              "seconds": 12.0,
+              "heroes": 20,
+              "note": "Headless sim only; no Ursina/UI draw. Pathfinding ms/tick 0.873 — dominant vs profile work."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS (determinism_guard + pytest 148 passed + observe_sync scenarios)"
+            },
+            "profile_snapshot_perf_review": {
+              "get_game_state_builds": "build_hero_profile_snapshot for each hero with hero_id on every get_game_state call (typical once/frame).",
+              "per_hero_sorts": "sort_known_places + sort_memory_entries in build_hero_profile_snapshot; sizes bounded by KNOWN_PLACES_MAX_ENTRIES=100 and PROFILE_MEMORY_MAX_ENTRIES=30.",
+              "memory_bounds": "Hero.record_profile_memory trims list; known_places trimmed via _trim_known_places_if_needed — no unbounded growth at caps.",
+              "watch_if_scaled": "If hero counts march to dozens+ and get_game_state is invoked multiple times per frame, consider caching snapshots or building only selected_hero_profile eagerly; not indicated by current headless ms/tick.",
+              "sim_engine_other_sorted": "pre-existing sorted() on trees/new_keys/revealers in sim_engine — unrelated to WK49 profile path."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: if PM raises caps on known_places or profile_memory sharply, re-profile UI/renderer sessions (F2 / run_ursina_capture_once) — snapshot sorts scale O(n log n) but n is small today."
+          ]
         }
       }
     }

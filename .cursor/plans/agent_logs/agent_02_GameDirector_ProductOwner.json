@@ -721,6 +721,42 @@
         }
       }
     }
+    ,
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "roadmap_ref": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+        "notes": "WK49 Hero Profile Foundation: Agent 02 owns player-facing acceptance; implementation agents 03/05/08/11 reference docs/sprint/wk49_hero_profile_acceptance.md."
+      },
+      "rounds": {
+        "wk49_r1_design_guardrails": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Created docs/sprint/wk49_hero_profile_acceptance.md with player-facing pass/fail tables for Hero Profile MVP: identity, level/XP, vitals, economy, gear, personality/narrative seed (compact), location, intent/state/target/last decision, career stats, known places (with empty states), recent memory (bounded, deterministic event expectation); 1920x1080 readability, no duplicate-name confusion, regression guard for prior panel; explicit scope cuts (LLM/skills/quests/emotion-driven behavior out); right-panel expansion marked secondary per plan.",
+          "commands_run": [
+            {
+              "command": "python -m json.tool C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_02_GameDirector_ProductOwner.json",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\src\\cli.ts complete (wk49 receipt; PowerShell used single-quoted --log-round)",
+              "exit_code": 0
+            }
+          ],
+          "evidence": [
+            "Primary deliverable: docs/sprint/wk49_hero_profile_acceptance.md",
+            "Aligned to .cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md and wk49_hero_profile_roadmap_6f3a1b2c.plan.md"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08 (wk49_r5): implement HeroPanel / hero focus against this checklist using selected_hero_profile.",
+            "Agent 11 (wk49_r6): screenshot + automated verification; Agent 02 reviews screenshot output when posted.",
+            "Optional: PM link this path from sprint plan or PM hub notes for discoverability (Agent 01)."
+          ]
+        }
+      }
+    }
   }
 }
 

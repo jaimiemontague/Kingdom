@@ -2672,6 +2672,40 @@
           }
         }
       }
+    },
+    "wk16-ux-interactions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk16_ux_and_interactions_sprint.plan.md",
+        "notes": "Sprint wk16 UX & Interactions. Agent 08: 16A Menu Alignment & Hero Selection Contexts."
+      },
+      "rounds": {
+        "wk16_r1_16a_menu_and_hero_selection": {
+          "sprint_id": "wk16-ux-interactions",
+          "round_id": "wk16_r1_16a_menu_and_hero_selection",
+          "round_meta": {
+            "build_target": "wk16",
+            "sent_at_local": "2026-02-19"
+          },
+          "prompt_text": "16A: Pause menu alignment (blank icon for resume/quit when missing); hero global selection from interior click and chat header click -> selected_hero, left panel.",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/pause_menu.py: When icon_play.png/icon_quit.png fail to load, use pygame.Surface((16,16), SRCALPHA) for resume/quit in _icon_map so Button layout aligns all 5 main menu buttons.",
+              "game/input_handler.py: On start_conversation dict set engine.selected_hero = hero, engine.selected_building = None so left panel shows hero when clicking hero in interior. On select_hero dict set selected_hero and selected_building = None (chat header click).",
+              "game/ui/chat_panel.py: Store _header_rect in render(); handle_click returns {\"type\": \"select_hero\", \"hero\": hero_target} when click on header (portrait/name). Return type str | dict | None."
+            ],
+            "how_to_test": [
+              "ESC -> Pause menu: Resume and Quit buttons align with Graphics/Audio/Controls (same icon slot width).",
+              "Enter building, click a hero: left panel shows that hero; conversation can start as before.",
+              "In chat with a hero, click the header (name/portrait): left panel shows that hero's details."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

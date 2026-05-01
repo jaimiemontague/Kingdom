@@ -627,6 +627,22 @@ class HUD:
     def toggle_right_panel(self) -> None:
         self.right_panel_visible = not self.right_panel_visible
 
+    def _render_hero_focus_profile(self, surface: pygame.Surface, rect: pygame.Rect, game_state: dict) -> None:
+        """Top half of HERO_FOCUS mode: condensed profile/memory (WK49)."""
+        hero = game_state.get("selected_hero")
+        profile = game_state.get("selected_hero_profile")
+        if hero is None:
+            qh = getattr(self._micro_view, "quest_hero", None)
+            hero = qh
+        if hero is None:
+            return
+        self._hero_panel.render_focus_top(
+            surface,
+            rect,
+            hero,
+            hero_profile=profile,
+        )
+
     def on_resize(self, screen_width: int, screen_height: int) -> None:
         self.screen_width = int(screen_width)
         self.screen_height = int(screen_height)
@@ -671,6 +687,7 @@ class HUD:
                 left,
                 right_close_rect=None,
                 debug_ui=bool(game_state.get("debug_ui", False)),
+                hero_profile=game_state.get("selected_hero_profile"),
             )
         elif selected_peasant is not None:
             self._panel_left.render(surface)

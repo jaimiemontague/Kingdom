@@ -8,7 +8,7 @@ Stage 2 refactor: split the former GameEngine "god object" into:
 
 from __future__ import annotations
 
-from game.world import World
+from game.world import Visibility, World
 from game.events import EventBus, GameEventType
 from game.sim.determinism import set_sim_seed
 from game.sim.timebase import set_time_multiplier
@@ -237,6 +237,20 @@ class SimEngine:
         llm_available: bool,
         ui_cursor_pos,
     ) -> dict:
+        from game.sim.hero_profile import build_hero_profile_snapshot
+        from game.sim.timebase import now_ms as sim_now_ms
+
+        _ms = int(sim_now_ms())
+        hero_profiles_by_id: dict[str, object] = {}
+        for _h in self.heroes:
+            _hid = getattr(_h, "hero_id", None)
+            if _hid is None:
+                continue
+            hero_profiles_by_id[str(_hid)] = build_hero_profile_snapshot(_h, self, now_ms=_ms)
+        _sel = getattr(self, "selected_hero", None)
+        _sel_id = str(getattr(_sel, "hero_id", "")) if _sel is not None else ""
+        selected_hero_profile = hero_profiles_by_id.get(_sel_id) if _sel_id else None
+
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
         return {
             "screen_w": int(screen_w),
@@ -256,6 +270,8 @@ class SimEngine:
             "bounty_system": self.bounty_system,
             "wave": self.spawner.wave_number,
             "selected_hero": self.selected_hero,
+            "hero_profiles_by_id": hero_profiles_by_id,
+            "selected_hero_profile": selected_hero_profile,
             "selected_building": getattr(self, "selected_building", None),
             "selected_peasant": getattr(self, "selected_peasant", None),
             "castle": castle,
@@ -910,5 +926,31 @@ class SimEngine:
                         if (dx * dx + dy * dy) <= radius_sq:
                             if (grid_x, grid_y) not in hero._revealed_tiles:
                                 hero._revealed_tiles.add((grid_x, grid_y))
-                                hero.xp += 1
+                                hero.grant_tile_exploration_xp(1)
+                                hero.increment_career_stat("tiles_revealed", 1)
+
+        # WK49: Known places — runs on every FoW rebuild (not only frontier reveals). POIs uncovered
+        # by castle/neutral/other revealers use the visibility-frame encounter path inside discovery.
+        if hero_revealers:
+            from game.sim.hero_profile import discover_known_buildings_after_fog
+            from game.sim.timebase import now_ms as fog_profile_now_ms
+
+            w = self.world
+
+            def _tile_currently_visible(gx: int, gy: int) -> bool:
+                if gx < 0 or gy < 0 or gx >= w.width or gy >= w.height:
+                    return False
+                return w.visibility[gy][gx] == Visibility.VISIBLE
+
+            hero_grids: list[tuple[object, int, int, int]] = []
+            for hero, hx, hy, radius in hero_revealers:
+                gx, gy = self.world.world_to_grid(hx, hy)
+                hero_grids.append((hero, gx, gy, radius))
+            discover_known_buildings_after_fog(
+                buildings=self.buildings,
+                heroes_world_vision=hero_grids,
+                newly_revealed=newly_revealed or (),
+                now_ms=int(fog_profile_now_ms()),
+                tile_currently_visible=_tile_currently_visible,
+            )
 

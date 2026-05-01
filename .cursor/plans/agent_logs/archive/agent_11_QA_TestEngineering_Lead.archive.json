@@ -5355,6 +5355,165 @@
           ]
         }
       }
+    },
+    "wk42-renderer-dedupe-wire-collabs": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
+        "notes": "QA: full gate stack after each Agent 03 round (R1 Track A, R2 terrain/fog collab, R3 entity collab)."
+      },
+      "rounds": {
+        "wk42_r0_agent11_spinup_2026_04_28": {
+          "round_id": "wk42_r0_agent11_spinup_2026_04_28",
+          "status": "complete",
+          "what_i_changed": [
+            "Agent 11 onboarding spinup: no repo code changes; baseline automated gates for active sprint WK42."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "pm_assignment": "After Agent 03 completes each WK42 round (wk42_r1_track_a_module_block, wk42_r2_track_b_terrain_collab, wk42_r3_track_c_entity_collab): run determinism_guard.py; pytest tests/; qa_smoke --quick; validate_assets --report (errors=0). R2/R3: parallel optional Agent 10 FPS consult per PM hub.",
+          "evidence": {
+            "qa_smoke_quick_2026_04_28": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS — determinism_guard; pytest 114 passed; headless profiles through conversation scenario."
+            },
+            "validate_assets_2026_04_28": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk42_post_integration_full_stack_2026_04_28": {
+          "round_id": "wk42_post_integration_full_stack_2026_04_28",
+          "status": "complete",
+          "pm_steps_covered": "PM pm_jaimie_send_order Steps 2 + 4 + 6 — single integrated tree with R1 Track A imports, R2 UrsinaTerrainFogCollab, R3 UrsinaEntityRenderCollab (verify with Agent 03 log if per-step PASS needed).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Recorded game/graphics/ursina_renderer.py line count 669 (plan DoD ≤900, target ~700)."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "no violations found"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "ursina_renderer_line_count": {
+              "file": "game/graphics/ursina_renderer.py",
+              "lines": 669
+            }
+          },
+          "recommended_next_actions": [
+            "Jaimie: STEP 7 manual smokes per plan: python main.py --renderer ursina --no-llm (5-10 min); python main.py --renderer pygame --no-llm (5 min).",
+            "Agent 10: confirm R2/R3 FPS consult logged if not already."
+          ],
+          "blockers": [],
+          "bugs_found": []
+        },
+        "wk42_r2_r3_track_verification_post_agent03_confirm": {
+          "round_id": "wk42_r2_r3_track_verification_post_agent03_confirm",
+          "status": "complete",
+          "pm_rounds": [
+            "wk42_r2_track_b_terrain_collab",
+            "wk42_r3_track_c_entity_collab"
+          ],
+          "what_i_changed": [
+            "No repository code changes (Agent 11 verification only). Agent 03 confirmed R2+R3 landed; QA re-checked wiring + full gate stack."
+          ],
+          "static_review": {
+            "wk42_r2_track_b": {
+              "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md Round WK42-R2",
+              "PASS": [
+                "UrsinaTerrainFogCollab imported; self._terrain_fog = UrsinaTerrainFogCollab(self) in UrsinaRenderer.__init__",
+                "update() delegates build_3d_terrain, ensure_fog_overlay, sync_visibility_gated_terrain, ensure_grid_debug_overlay to self._terrain_fog.*",
+                "No self._ensure_fog_overlay / self._build_3d_terrain / self._sync_visibility_gated_* call sites on UrsinaRenderer (legacy paths removed)",
+                "track_visibility_gated_terrain / sync_terrain_prop_tile_visibility live inside UrsinaTerrainFogCollab (internal)"
+              ]
+            },
+            "wk42_r3_track_c": {
+              "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md Round WK42-R3",
+              "PASS": [
+                "UrsinaEntityRenderCollab imported; self._entity_render = UrsinaEntityRenderCollab(self) in __init__",
+                "update() uses self._entity_render for prefab/3d/billboard paths: get_or_create_entity, sync_billboard_entity, apply_pixel_billboard_settings, sync_inside_hero_draw_layer, get_or_create_prefab_building_entity, sync_prefab_building_entity, get_or_create_3d_building_entity, sync_3d_building_entity",
+                "No self._get_or_create_entity( / self._sync_billboard_entity( on renderer (delegation-only)"
+              ]
+            },
+            "ursina_renderer_line_count": {
+              "file": "game/graphics/ursina_renderer.py",
+              "lines": 696
+            }
+          },
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "114 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS"
+            },
+            "validate_assets": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            }
+          },
+          "recommended_next_actions": [
+            "Agent 01: mark WK42 R2/R3 QA PASS in PM hub if pending.",
+            "Agent 10: Ursina FPS spot-check for R2/R3 per plan if not logged.",
+            "Jaimie: pygame manual smoke if only Ursina was playtested: python main.py --renderer pygame --no-llm"
+          ],
+          "blockers": [],
+          "bugs_found": []
+        }
+      }
     }
   }
 }

@@ -7,7 +7,8 @@
   "notes": [
     "This file is owned by Agent 01 only.",
     "Structure nests rounds inside sprints to keep history organized.",
-    "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds."
+    "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds.",
+    "v1.5.3 (Major Unit Art) shipped without a formal pre-sprint; see sprints[\"v1_5_3_major_unit_art_adhoc\"] for PM retrospective record (Agent 09 + Jaimie)."
   ],
   "sprints": {
     "wk41-mechanical-module-split": {
@@ -256,473 +257,6 @@
         }
       },
       "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
-    },
-    "wk43-building-nature-stage1": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
-        "status": "closed_success",
-        "created_utc": "2026-04-28T14:34:00Z",
-        "notes": "WK43 kickoff: Stage 1 only. Neutral buildings spawn as unconstructed plots; BuilderPeasant spawns from Castle, builds assigned plot, returns to Castle, despawns. Construction stage prefabs (0/20/50) REQUIRED for Food Stand + Farm. Peasant LoS r=6 (per master plan). Ursina manual smoke primary; pygame smoke once at end."
-      },
-      "rounds": {
-        "wk43_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk43_r0_kickoff",
-            "created_utc": "2026-04-28T14:34:00Z",
-            "source": "pm_kickoff",
-            "closed_by": null
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "summary": "Kickoff round. Parallelize prefabs (15) and core sim/entity work (05) where possible; engine/renderer wiring (03) starts after 05 lands signature changes; QA (11) runs full gate stack after integration; Jaimie does Ursina manual smoke as primary."
-          },
-          "pm_accepted_deliverables": [
-            "Neutral buildings (House/FoodStand/Farm) can spawn as plots: is_constructed=False and hp=1; normal peasants do not construct plots.",
-            "BuilderPeasant spawns from Castle, moves to assigned plot, builds to completion, returns to Castle, despawns.",
-            "Construction stage prefabs (0/20/50) exist for Food Stand + Farm and are used during construction (Ursina at minimum).",
-            "Fog-of-war includes peasant LoS radius 6 tiles."
-          ],
-          "pm_next_actions_by_agent": {
-            "15": {
-              "status": "assigned_active",
-              "asks": [
-                "Create/verify construction stage prefabs for Food Stand + Farm using the 0%/20%/50% convention in assets/prefabs/buildings/ (match repo naming convention used by other buildings).",
-                "Ensure attribution stays valid if any new models/textures are introduced (typically none).",
-                "Run: python tools/validate_assets.py --report (errors=0).",
-                "Report: exact prefab filenames created/updated and validate_assets output/exit code."
-              ]
-            },
-            "05": {
-              "status": "assigned_active",
-              "asks": [
-                "Implement Stage 1 core sim behavior per WK43 plan: plots + BuilderPeasant lifecycle.",
-                "Change NeutralBuildingSystem.tick signature to accept peasants list and spawn BuilderPeasant into sim.",
-                "Add BuilderPeasant entity (inherit from Peasant) with lifecycle MOVE_TO_PLOT -> BUILDING -> RETURN_TO_CASTLE -> DESPAWN; remove it when it reaches Castle radius.",
-                "Update House/FoodStand/Farm constructors to accept is_constructed=False (hp=1, is_constructed=False).",
-                "Add tests: tests/test_builder_lifecycle.py (plot spawns unconstructed, builder spawns, building completes, builder removed).",
-                "Run gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick."
-              ]
-            },
-            "03": {
-              "status": "blocked_until_05_core_ready",
-              "asks": [
-                "After Agent 05 lands the NeutralBuildingSystem tick signature + BuilderPeasant entity: wire sim_engine call sites (pass peasants list) and ensure builder peasants are updated per tick.",
-                "Update SimEngine._update_fog_of_war to include peasants LoS radius r=6.",
-                "Ursina presentation: visually distinguish BuilderPeasant (minimal: green tint) and use construction-stage prefab selection (0/20/50) for Food Stand + Farm during construction.",
-                "Run full gate stack: determinism_guard; pytest; qa_smoke --quick; validate_assets --report."
-              ]
-            },
-            "12": {
-              "status": "consult_if_needed",
-              "asks": [
-                "Only if validate_assets requires explicit listing for any new prefabs: update tools/assets_manifest.json accordingly and rerun validate_assets to errors=0."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_integration_done",
-              "asks": [
-                "After Agent 03 reports integration done: run full gate stack from repo root and log exit codes.",
-                "Commands: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
-              ]
-            },
-            "01": {
-              "status": "active",
-              "next_action": "Send universal prompt to agents per pm_jaimie_send_order; track results; close kickoff round on gates + manual smoke PASS."
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "parallel_then_sequential_then_parallel_then_human",
-            "batch_1_parallel": [
-              "15",
-              "05"
-            ],
-            "then_in_order": [
-              "03"
-            ],
-            "then_parallel": [
-              "11"
-            ],
-            "then_human": "Jaimie manual smokes",
-            "intelligence_by_agent": {
-              "15": "high",
-              "05": "high",
-              "03": "medium",
-              "11": "low",
-              "12": "low"
-            },
-            "do_not_send": [
-              "02",
-              "04",
-              "06",
-              "07",
-              "08",
-              "09",
-              "10",
-              "13",
-              "14"
-            ]
-          },
-          "pm_agent_prompts": {
-            "15": "WK43 Stage 1 (Prefabs, HIGH): Read the sprint plan: .cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md. Deliver construction-stage prefabs (0%/20%/50%) for Food Stand + Farm under assets/prefabs/buildings/ using the repo naming convention used by existing build-stage prefabs. Keep validate_assets green. Run: python tools/validate_assets.py --report (errors=0). Log prefab filenames + command output/exit code in your agent log.",
-            "05": "WK43 Stage 1 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 1 section). Implement plots + BuilderPeasant lifecycle. Required: NeutralBuildingSystem.tick signature becomes tick(dt, buildings, heroes, peasants, castle) and spawns BuilderPeasant into peasants list. Add BuilderPeasant (inherit from Peasant) with lifecycle MOVE_TO_PLOT -> BUILDING -> RETURN_TO_CASTLE -> DESPAWN (remove from sim when reaches Castle radius). Ensure House/FoodStand/Farm can spawn with is_constructed=False (hp=1, is_constructed=False). Add tests: tests/test_builder_lifecycle.py. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick. Log commands + exit codes in your agent log.",
-            "03": "WK43 Stage 1 (Tech, MEDIUM): After Agent 05 lands core signature + BuilderPeasant entity, wire SimEngine call sites and update loops. Update SimEngine._update_fog_of_war to include peasants with LoS radius r=6. Ursina: visually distinguish BuilderPeasant (minimal green tint) and use construction-stage prefab selection (0/20/50) for Food Stand + Farm during construction (Ursina at minimum). Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes in agent log.",
-            "12": "WK43 Stage 1 (Tools, LOW consult): Only if validate_assets fails due to missing prefab listing: update tools/assets_manifest.json to include the new prefab JSONs, then rerun python tools/validate_assets.py --report until errors=0. Log changes + exit codes.",
-            "11": "WK43 Stage 1 (QA, LOW): After Agent 03 reports integration complete, run full gate stack from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log commands + exit codes in agent_11 JSON and report PASS/failures."
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk43-building-nature-stage1**, round **wk43_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk43-building-nature-stage1\"].rounds[\"wk43_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay strictly in scope: Stage 1 plots + BuilderPeasant lifecycle + required construction-stage prefabs for Food Stand + Farm. No Stage 2/3.\n4) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n5) Run required gates for your role (listed in your prompt). Report PASS or blockers to Jaimie.\n\nOne line: **Neutral buildings construct over time via a dedicated builder peasant; construction-stage prefabs required; Ursina smoke primary.**"
-        },
-        "wk43_sprint_closeout": {
-          "round_meta": {
-            "round_id": "wk43_sprint_closeout",
-            "created_utc": "2026-04-28T15:12:00Z",
-            "source": "pm_closeout_after_agent_logs_and_human_playtest",
-            "closed_by": "Agent_01_ExecutiveProducer_PM"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK43 closed. Neutral buildings now spawn as builder-only plots (hp=1, is_constructed=False) with a dedicated BuilderPeasant spawned from the Castle. Builder constructs the assigned plot, returns to Castle, and despawns. Food Stand + Farm have 20% and 50% construction-stage prefabs, and construction-stage selection is wired in Ursina. Fog-of-war now includes peasant LoS r=6. Gates PASS and Jaimie manual playtest PASS."
-          },
-          "pm_accepted_deliverables": [
-            "Stage 1 plots: House/FoodStand/Farm can spawn unconstructed (hp=1, is_constructed=False, requires_builder_peasant=True).",
-            "BuilderPeasant lifecycle: spawn from Castle, move-to-plot, build, return-to-castle, despawn; normal peasants do not build these plots.",
-            "Construction stage prefabs: food_stand_build_20_v1, food_stand_build_50_v1, farm_build_20_v1, farm_build_50_v1.",
-            "Renderer: BuilderPeasant visually distinct (green-tinted) in Ursina; construction-stage prefabs used during construction (Ursina at minimum).",
-            "Fog-of-war: peasants contribute LoS radius r=6 tiles."
-          ],
-          "pm_evidence": {
-            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk43-building-nature-stage1.wk43_r0_builder_peasant_stage1 (115 passed; qa_smoke PASS)",
-            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json → wk43-building-nature-stage1.wk43_r0_kickoff (validate_assets errors=0; qa_smoke PASS; prefabs added)",
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk43-building-nature-stage1.wk43_r0_kickoff (validate_assets PASS; qa_smoke PASS; peasant LoS + Ursina wiring)",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk43-building-nature-stage1.wk43_r0_kickoff_gates_2026_04_28 (full gate stack PASS)",
-            "human_playtest": "Jaimie: BuilderPeasant lifecycle PASS + green tint verified"
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "closed",
-              "next_action": "Optional: run python tools/roll_agent_logs.py --keep 7 at sprint boundary; then plan WK44 (Stage 2 NatureSystem + dynamic trees)."
-            },
-            "03": {
-              "status": "done"
-            },
-            "05": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            },
-            "15": {
-              "status": "done"
-            }
-          }
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint **wk43-building-nature-stage1**, round **wk43_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk43-building-nature-stage1\"].rounds[\"wk43_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay strictly in scope: Stage 1 plots + BuilderPeasant lifecycle + required construction-stage prefabs for Food Stand + Farm. No Stage 2/3.\n4) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n5) Run required gates for your role (listed in your prompt). Report PASS or blockers to Jaimie.\n\nOne line: **Neutral buildings construct over time via a dedicated builder peasant; construction-stage prefabs required; Ursina smoke primary.**",
-      "pm_send_list_minimal": {
-        "order": "batch_1_parallel_then_03_then_11_then_human",
-        "batch_1_parallel": [
-          "15",
-          "05"
-        ],
-        "then_in_order": [
-          "03"
-        ],
-        "then_in_order_note": "03 starts after 05 lands the tick signature + BuilderPeasant entity. 03 may pull prefab filenames from 15.",
-        "then_in_order_2": [
-          "11"
-        ],
-        "then_human": "Jaimie manual smokes",
-        "intelligence_by_agent": {
-          "15": "high",
-          "05": "high",
-          "03": "medium",
-          "11": "low",
-          "12": "low"
-        },
-        "do_not_send": [
-          "02",
-          "04",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "13",
-          "14"
-        ],
-        "rationale": "Parallelize 15 (prefabs) + 05 (sim/entity) first. 03 depends on 05 signature changes and benefits from 15 filenames for stage-prefab mapping. 11 runs gates post-integration. Human manual smoke closes."
-      }
-    },
-    "wk44-stage2-dynamic-trees": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
-        "status": "active",
-        "created_utc": "2026-04-28T15:41:00Z",
-        "notes": "WK44: Stage 2 Dynamic Tree Growth. Keep TileType.TREE on world grid, but add sim.trees list + NatureSystem for growth. Trees become blocking at growth >= 0.75. Ursina sync scales trees via terrain/fog collaborator dict keyed by (tx,ty)."
-      },
-      "rounds": {
-        "wk44_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk44_r0_kickoff",
-            "created_utc": "2026-04-28T15:41:00Z",
-            "source": "pm_kickoff",
-            "closed_by": null
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "summary": "Kickoff round. Parallelize Agent 05 (NatureSystem + Tree entity + tests) with Agent 03 (engine/snapshot/world/ursina wiring) by splitting file ownership to avoid conflicts. QA (11) runs full gate stack after integration; Jaimie manual Ursina smoke after gates."
-          },
-          "pm_accepted_deliverables": [
-            "New sim entities: sim.trees list of Tree objects with deterministic growth 0.25->0.5->0.75->1.0 over ~6 minutes.",
-            "New system: NatureSystem ticks tree growth deterministically.",
-            "World gen: clustered forests (no per-tile independent noise).",
-            "Blocking rule: a tree is blocking iff growth >= 0.75.",
-            "Snapshot contract: SimStateSnapshot includes trees tuple; Ursina terrain collab syncs tree scale from snapshot."
-          ],
-          "pm_jaimie_send_order": [
-            "STEP 1 — PARALLEL: Agent 05 (HIGH) + Agent 03 (HIGH) with split file boundaries to avoid conflicts.",
-            "STEP 2 — Agent 11 (LOW): full gate stack after integration.",
-            "STEP 3 — Jaimie manual smoke (Ursina primary)."
-          ],
-          "pm_next_actions_by_agent": {
-            "05": {
-              "status": "assigned_active",
-              "asks": [
-                "Implement Stage 2 sim pieces WITHOUT touching engine/world/renderer files (to avoid conflicts with Agent 03).",
-                "Add new files: game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem).",
-                "Add unit test: tests/test_nature_growth.py covering deterministic growth to 1.0 over ~6 minutes and intermediate steps.",
-                "Do NOT edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files in this round.",
-                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum run the new test file); report exit codes."
-              ]
-            },
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Wire Stage 2 plumbing + Ursina sync. You own integration files to avoid merge conflicts.",
-                "Edit: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forests + blocking rule growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (store tree entities dict + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees).",
-                "Coordinate with Agent 05 for Tree/NatureSystem APIs; if needed, adapt integration to match their implementation.",
-                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_done",
-              "asks": [
-                "After Agent 03 reports integration complete: run full gate stack from repo root and log exit codes.",
-                "Commands: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
-              ]
-            },
-            "01": {
-              "status": "active",
-              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "batch_1_parallel_then_11_then_human",
-            "batch_1_parallel": [
-              "05",
-              "03"
-            ],
-            "then_in_order": [
-              "11"
-            ],
-            "then_human": "Jaimie manual smoke",
-            "intelligence_by_agent": {
-              "05": "high",
-              "03": "high",
-              "11": "low"
-            },
-            "do_not_send": [
-              "02",
-              "04",
-              "06",
-              "07",
-              "08",
-              "09",
-              "10",
-              "12",
-              "13",
-              "14",
-              "15"
-            ],
-            "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
-          },
-          "pm_agent_prompts": {
-            "05": "WK44 Stage 2 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). Implement ONLY new sim components: add game/entities/nature.py (Tree) and game/systems/nature.py (NatureSystem). Add tests/test_nature_growth.py verifying deterministic growth from 0.25 to 1.0 over ~6 minutes and intermediate step(s). Do NOT edit game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration to avoid conflicts). Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new test). Log files touched + commands + exit codes in your agent log.",
-            "03": "WK44 Stage 2 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md and master plan: .cursor/plans/master_plan_building_nature_sprints.md (Stage 2). You own integration files: game/sim_engine.py (add self.trees, tick NatureSystem, include trees in build_snapshot), game/sim/snapshot.py (add trees field), game/world.py (clustered forest gen + blocking iff growth>=0.75), game/graphics/ursina_terrain_fog_collab.py (tree entity dict keyed by (tx,ty) + sync_dynamic_trees), game/graphics/ursina_renderer.py (call sync_dynamic_trees(snapshot.trees)). Coordinate with Agent 05 for Tree/NatureSystem APIs. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes + key files changed in your agent log.",
-            "11": "WK44 Stage 2 (QA, LOW): After Agent 03 reports integration complete, run full gate stack from repo root: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log commands + exit codes in agent_11 JSON and report PASS/failures."
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**"
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint **wk44-stage2-dynamic-trees**, round **wk44_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md`\n2) Read the PM hub for your exact assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk44-stage2-dynamic-trees\"].rounds[\"wk44_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: Stage 2 dynamic tree growth only. Blocking threshold is **growth >= 0.75**. Keep `TileType.TREE` on grid.\n4) IMPORTANT parallel safety: follow the file-ownership boundaries in your prompt to avoid conflicts.\n5) After you finish: update your agent log JSON under `.cursor/plans/agent_logs/` with files touched, exact commands run, and exit codes.\n\nOne line: **Trees grow over time and sync to Ursina visuals via snapshot trees.**",
-      "pm_send_list_minimal": {
-        "order": "batch_1_parallel_then_11_then_human",
-        "batch_1_parallel": [
-          "05",
-          "03"
-        ],
-        "then_in_order": [
-          "11"
-        ],
-        "then_human": "Jaimie manual smoke",
-        "intelligence_by_agent": {
-          "05": "high",
-          "03": "high",
-          "11": "low"
-        },
-        "do_not_send": [
-          "02",
-          "04",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "12",
-          "13",
-          "14",
-          "15"
-        ],
-        "rationale": "Parallelize 05 (new NatureSystem/Tree + tests) and 03 (engine/world/renderer wiring) by explicitly splitting file ownership. 11 runs gates post-integration. Jaimie confirms Ursina visuals."
-      }
-    },
-    "wk45-stage2_5-sapling-spawning": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
-        "status": "closed_success",
-        "created_utc": "2026-04-28T17:02:00Z",
-        "notes": "WK45 Stage 2.5: NatureSystem spawns new saplings over time (no lumberjack). Rate: 1 sapling / 30s global, cap 50 trees. Saplings set TileType.TREE immediately but remain non-blocking until growth>=0.75. If a building is placed on a sapling tile, the sapling is removed."
-      },
-      "rounds": {
-        "wk45_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk45_r0_kickoff",
-            "created_utc": "2026-04-28T17:02:00Z",
-            "source": "pm_kickoff",
-            "closed_by": null
-          },
-          "pm_status_summary": {
-            "status": "assigned",
-            "summary": "Kickoff round. Parallelize Agent 05 (nature spawning + tests) with Agent 03 (integration + removal-on-build). QA (11) runs gates after integration. Jaimie manual Ursina smoke afterwards."
-          },
-          "pm_accepted_deliverables": [
-            "NatureSystem spawns saplings deterministically: 1/30s global, cap 50 trees total.",
-            "Saplings spawn with growth=0.25, set TileType.TREE immediately, remain non-blocking until growth>=0.75 (existing blocking rule).",
-            "If a building is placed covering a sapling tile, that sapling Tree entity is removed.",
-            "Tests cover sapling spawn and removal-on-build footprint.",
-            "Gates PASS: qa_smoke --quick; validate_assets --report"
-          ],
-          "pm_next_actions_by_agent": {
-            "05": {
-              "status": "assigned_active",
-              "asks": [
-                "Implement sapling spawning logic inside NatureSystem without touching engine/world/renderer files (avoid conflicts with Agent 03).",
-                "Update game/systems/nature.py and (if needed) game/entities/nature.py to support spawning metadata/state.",
-                "Add tests: tests/test_nature_spawns_saplings.py and (if needed) extend tests/test_nature_growth.py.",
-                "Do NOT edit: game/sim_engine.py, game/world.py, or any game/graphics files.",
-                "Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new tests)."
-              ]
-            },
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Integrate sapling spawning in SimEngine tick loop and ensure world tiles are updated to TileType.TREE when saplings spawn.",
-                "Implement removal-on-build: when placing a building, remove any Tree entities under the footprint (and ensure world growth lookup no longer reports them).",
-                "Coordinate with Agent 05 for the NatureSystem API; adapt integration accordingly.",
-                "Run full gate stack: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_03_done",
-              "asks": [
-                "After Agent 03 reports integration complete: run gates from repo root: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report (optionally full stack).",
-                "Log exit codes in agent_11 JSON."
-              ]
-            },
-            "01": {
-              "status": "active",
-              "next_action": "Send universal prompt to Agents 05 and 03 in parallel with file-boundary notes; then send to Agent 11; then Jaimie manual Ursina smoke."
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "batch_1_parallel_then_11_then_human",
-            "batch_1_parallel": [
-              "05",
-              "03"
-            ],
-            "then_in_order": [
-              "11"
-            ],
-            "then_human": "Jaimie manual Ursina smoke",
-            "intelligence_by_agent": {
-              "05": "high",
-              "03": "high",
-              "11": "low"
-            },
-            "do_not_send": [
-              "02",
-              "04",
-              "06",
-              "07",
-              "08",
-              "09",
-              "10",
-              "12",
-              "13",
-              "14",
-              "15"
-            ],
-            "rationale": "Parallelize 05 (NatureSystem spawning + tests) and 03 (engine/world integration + removal-on-build). 11 runs gates post-integration. Human confirms visuals."
-          },
-          "pm_agent_prompts": {
-            "05": "WK45 Stage 2.5 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Implement sapling spawning in NatureSystem: rate 1 sapling/30s global, cap 50 total trees. Saplings start at growth=0.25 and use existing discrete growth steps. Prefer spawning near existing trees, but fall back to valid grass/buildable tiles. Do NOT edit game/sim_engine.py, game/world.py, or any game/graphics files (Agent 03 owns integration). Add tests: tests/test_nature_spawns_saplings.py (and extend growth test if needed). Run: python tools/determinism_guard.py; python -m pytest tests/. Log files touched + commands + exit codes in your agent log.",
-            "03": "WK45 Stage 2.5 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk45_stage2_5_sapling_spawning.plan.md. Integrate sapling spawning: ensure SimEngine/world reflect new saplings by setting TileType.TREE on spawn and keeping world.tree_growth_lookup consistent. Implement removal-on-build: when a building is placed covering a sapling tile, remove the Tree entity (and ensure growth lookup no longer reports it). Coordinate with Agent 05’s NatureSystem API. Gates: python tools/determinism_guard.py; python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes in your agent log.",
-            "11": "WK45 Stage 2.5 (QA, LOW): After Agent 03 reports integration complete, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. If either fails, capture the failure output. Log commands + exit codes in agent_11 JSON and report PASS/failures."
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk45-stage2_5-sapling-spawning**, round **wk45_r0_kickoff**.\n\n1) Read the sprint plan FIRST: `.cursor/plans/wk45_stage2_5_sapling_spawning.plan.md`\n2) Read the PM hub for your assignment:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk45-stage2_5-sapling-spawning\"].rounds[\"wk45_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Stay in scope: sapling spawning only; no lumberjack economy.\n4) Parallel safety: Agent 05 must not edit engine/world/graphics; Agent 03 owns integration files.\n5) Update your agent log with files touched, commands, and exit codes.\n\nOne line: **Saplings spawn over time and can be built over (removes sapling).**"
-        },
-        "wk45_sprint_closeout": {
-          "round_meta": {
-            "round_id": "wk45_sprint_closeout",
-            "created_utc": "2026-04-29T00:00:00Z",
-            "source": "pm_closeout_after_agent_logs_and_human_playtest_waiver",
-            "closed_by": "Agent_01_ExecutiveProducer_PM",
-            "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK45 closed. Saplings spawn over time (1/30s global, cap 50); TileType.TREE on spawn; non-blocking until growth>=0.75; building placement removes trees under footprint; Ursina creates/destroys tree entities for spawned/removed saplings. Gates PASS (Agent 11). Jaimie: playtest accepted as good enough for now (no extra manual session required for closeout)."
-          },
-          "pm_accepted_deliverables": [
-            "NatureSystem: deterministic sapling spawn cadence, cap, near-forest preference, tests in tests/test_nature_spawns_saplings.py (Agent 05).",
-            "SimEngine + engine + Ursina: world tile + growth lookup on spawn; remove_trees on build; dynamic tree entity create/destroy (Agent 03).",
-            "Gates: determinism_guard, pytest 118, qa_smoke --quick, validate_assets errors=0 (Agent 03 + Agent 11)."
-          ],
-          "pm_evidence": {
-            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk45-stage2_5-sapling-spawning.wk45_r0_sapling_spawning_sim_only",
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff (118 passed; full gate stack PASS)",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk45-stage2_5-sapling-spawning.wk45_r0_kickoff_gates_2026_04_28",
-            "human_playtest": "Jaimie: playtesting good enough for closeout (2026-04)"
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "closed",
-              "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at sprint boundary; plan WK46 Stage 3 lumberjack economy or polish."
-            },
-            "03": {
-              "status": "done"
-            },
-            "05": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          }
-        }
-      }
     },
     "wk46-stage3-lumberjack-builders": {
       "sprint_meta": {
@@ -1006,9 +540,10 @@
     },
     "orch_tiny_warrior_red": {
       "sprint_meta": {
-        "status": "active",
+        "status": "closed_success",
         "created_utc": "2026-04-29T15:52:00Z",
-        "notes": "Orchestrator validation sprint: warrior shirt blue→dark red (pygame + Ursina). R0–R1: cache-key / bridge fixes + qa_smoke PASS; human Ursina visual still FAILED (blue). R2: orchestrator stopped (Agent 03 wrong log path). R3: ledger orch_tiny_warrior_red__orch_r3_canonical_log_then_live_blue_diagnosis__1777483415409.json — waves 03→09→11 verified; conclusion = warrior shirt RGB from tracked PNGs under assets/sprites/heroes/warrior/ (~70,120,255), not plumbing; Agent 09 made no game edits. Jaimie human visual gate FAILED again post-R3 (still blue). Active round: orch_r4_screenshot_proof_dark_red_warrior_shirt — Agent 09 screenshot-driven iteration + receipt; then Agent 11 qa_smoke; stop before Jaimie visual approval / commit / push / version bump."
+        "closed_utc": "2026-04-30T23:59:00Z",
+        "notes": "Orchestrator validation experiment (warrior shirt blue→red). R0–R3 diagnosed live PNG source; the original visual objective was superseded by the ad-hoc v1.5.3 Major Unit Art update (Tiny RPG hero sprite pack + broader Agent 09/Jaimie art pass). Historical rounds remain below for audit; reopen only if a red/blue warrior regression is reported."
       },
       "rounds": {
         "orch_r0_impl_then_qa": {
@@ -2071,11 +1606,21 @@
               "status": "closed",
               "next_action": "Plan next sprint (content vs polish vs Steam); roll_agent_logs already run at close."
             },
-            "03": { "status": "done" },
-            "09": { "status": "done" },
-            "10": { "status": "done" },
-            "11": { "status": "done" },
-            "12": { "status": "done" }
+            "03": {
+              "status": "done"
+            },
+            "09": {
+              "status": "done"
+            },
+            "10": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            },
+            "12": {
+              "status": "done"
+            }
           }
         }
       }
@@ -2335,6 +1880,780 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa**. Wave 3: Agent 03 completes code removal first; Agents 10 and 11 verify in parallel after 03. Read your `pm_agent_prompts[YOUR_NUMBER]`."
+        }
+      }
+    },
+    "v1_5_3_major_unit_art_adhoc": {
+      "sprint_meta": {
+        "sprint_id": "v1_5_3_major_unit_art_adhoc",
+        "goal": "Retrospective PM record — CHANGELOG Prototype v1.5.3 Major Unit Art Update (no formal sprint preceded this drop).",
+        "changelog_ref": "CHANGELOG.md — section Prototype v1.5.3 — Major Unit Art Update",
+        "status": "closed_success",
+        "created_utc": "2026-04-30T12:00:00Z",
+        "closed_utc": "2026-04-30T23:59:00Z",
+        "notes": "Work executed directly by Agent 09 (Art) with Jaimie — art/assets/pipeline/renderer readability; no PM hub kickoff or worker rounds at time."
+      },
+      "rounds": {
+        "v1_5_3_pm_record_closeout": {
+          "round_meta": {
+            "round_id": "v1_5_3_pm_record_closeout",
+            "created_utc": "2026-04-30T23:45:00Z",
+            "source": "pm_retrospective_record_adhoc_art_ship",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "plan_ref": ".cursor/plans/tiny_rpg_soldier_guard_animations_5689d615.plan.md"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "v1.5.3 logged in hub for continuity. Ship included Tiny RPG Character Pack heroes + guardhouse guards, Legacy Vania worker strips, export tooling, and Ursina worker billboard readability tuning."
+          },
+          "pm_accepted_deliverables": [
+            "Class hero sprites under assets/sprites/heroes/ (Tiny RPG pack; attribution in assets/ATTRIBUTION.md).",
+            "Guard animations wired for pygame, Ursina billboards, and optional instancing atlas path.",
+            "Legacy Vania NPC pipeline: tools/legacy_vania_export_worker_frames.py to assets/sprites/workers/ frame trees.",
+            "Worker billboard scale tuning for 3D readability."
+          ],
+          "pm_evidence": {
+            "changelog": "CHANGELOG.md — Prototype v1.5.3 — Major Unit Art Update",
+            "related_plans": [
+              ".cursor/plans/tiny_rpg_soldier_guard_animations_5689d615.plan.md",
+              ".cursor/plans/legacy_vania_workers_4acd1e09.plan.md"
+            ],
+            "gates_on_record": "python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report errors=0 (studio gate run 2026-04-30)"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "monitoring",
+              "next_action": "Proceed to next formal sprint from product priority."
+            },
+            "09": {
+              "status": "done",
+              "note": "Lead implementer for v1.5.3 art/asset integration."
+            }
+          }
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "sprint_id": "wk49_hero_profile_foundation",
+        "goal": "Build the first Hero Profile foundation: stable hero identity, read-only profile snapshots, deterministic memory/known-place scaffolding, expanded HeroPanel/Profile UI, and QA evidence.",
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "roadmap_ref": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+        "created_utc": "2026-04-30T23:21:00Z",
+        "status": "closed_success",
+        "closed_utc": "2026-05-01T01:31:00Z",
+        "notes": "WK49 closed successfully. Wave PM + orchestrated worker rounds built Hero Profile foundation; human retest confirmed Known Places and ranger XP bugfixes work. LLM behavior changes, emotional gameplay, skills/spells, full quests, and broad hero_id migration remain explicitly deferred."
+      },
+      "pm_universal_prompt": "You are activated for sprint wk49_hero_profile_foundation. Read the PM hub round assigned to you, the execution plan .cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md, and the roadmap .cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md. Keep scope to your prompt: build Hero Profile scaffolding/UI; do not implement full LLM behavior changes, emotional gameplay, skills/spells, or quests. After work: update your own log at sprints[\"wk49_hero_profile_foundation\"].rounds[ROUND_ID], run required gates, validate your log JSON, then run the exact orchestrator complete receipt command from your SDK prompt.",
+      "rounds": {
+        "wk49_r0_pm_roadmap_kickoff": {
+          "round_meta": {
+            "round_id": "wk49_r0_pm_roadmap_kickoff",
+            "created_utc": "2026-04-30T23:21:00Z",
+            "source": "Agent_01_manual_wave_pm",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Wave PM complete: roadmap plan created, execution plan updated, prior active sprint statuses cleaned up, and PM hub prepared for orchestrated worker rounds."
+          },
+          "pm_evidence": {
+            "roadmap": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+            "execution_plan": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "done",
+              "next_action": "Run orchestrator rounds wk49_r1 through wk49_r6 in order."
+            }
+          }
+        },
+        "wk49_r1_design_guardrails": {
+          "round_meta": {
+            "round_id": "wk49_r1_design_guardrails",
+            "build_target": "Acceptance criteria, determinism review, and future memory event taxonomy"
+          },
+          "pm_status_summary": "Wave 0: Agent 02 defines player acceptance, Agent 04 reviews determinism risks, Agent 07 defines future event taxonomy. No game code.",
+          "pm_next_actions_by_agent": {
+            "02": "Write acceptance checklist for Hero Profile MVP. Medium intelligence.",
+            "04": "Review profile/memory determinism risks. Medium intelligence.",
+            "07": "Define future-facing hero memory event taxonomy. Medium intelligence."
+          },
+          "pm_agent_prompts": {
+            "02": "You are Agent 02, sprint wk49_hero_profile_foundation, round wk49_r1_design_guardrails (MEDIUM). Task: define player-facing acceptance criteria for the Hero Profile MVP. Read the execution plan and roadmap. Focus on what the player should see when selecting a hero: identity, level/XP, vitals, economy, gear, personality, location, intent, career stats, known places, and recent memory. No code changes. Update your own log with sprint_id, round_id, status, what_i_changed, commands_run (empty if none), evidence, blockers, follow_ups. Validate your log JSON, then run the orchestrator complete receipt.",
+            "04": "You are Agent 04, sprint wk49_hero_profile_foundation, round wk49_r1_design_guardrails (MEDIUM). Task: determinism review for the Hero Profile and memory architecture. Read the execution plan and roadmap. Flag risks around wall-clock time, Python id/hash, unordered iteration, unbounded memory, snapshot order, and known-place sorting. No implementation unless PM escalates. Run python tools/determinism_guard.py if useful. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt.",
+            "07": "You are Agent 07, sprint wk49_hero_profile_foundation, round wk49_r1_design_guardrails (MEDIUM). Task: define future-facing hero memory event taxonomy for quests, stories, relationships, and LLM memory while keeping WK49 MVP small. Read execution plan and roadmap. Mark MVP events such as discovered_place, visited_building, bought_item if easy, and defeated_enemy if easy. No game code. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "02",
+              "04",
+              "07"
+            ],
+            "intelligence_by_agent": {
+              "02": "medium",
+              "04": "medium",
+              "07": "medium"
+            },
+            "do_not_send": [
+              "03",
+              "05",
+              "06",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallel consult/design guardrails before implementation."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "02",
+              "04",
+              "07"
+            ],
+            "dependencies": [
+              {
+                "id": "design_guardrails",
+                "agents": [
+                  "02",
+                  "04",
+                  "07"
+                ],
+                "parallel": true
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r2_profile_contracts": {
+          "round_meta": {
+            "round_id": "wk49_r2_profile_contracts",
+            "build_target": "HeroProfileSnapshot contracts and contract tests",
+            "depends_on": "wk49_r1_design_guardrails"
+          },
+          "pm_status_summary": "Wave 1: Agent 03 creates profile contract layer and contract tests.",
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk49_hero_profile_foundation, round wk49_r2_profile_contracts (HIGH). Task: create the Hero Profile contract layer. Read execution plan section Agent 03 Wave 1. You may edit game/sim/hero_profile.py and tests. Create frozen/slots dataclasses for identity, progression, vitals, inventory, known places, memory entries, career, narrative seed, and full HeroProfileSnapshot with to_dict. No UI or AI behavior changes. Run python -m pytest and python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "03"
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Architecture contract owner only."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03"
+            ],
+            "dependencies": [
+              {
+                "id": "profile_contracts",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r3_identity_memory": {
+          "round_meta": {
+            "round_id": "wk49_r3_identity_memory",
+            "build_target": "Stable hero_id, career counters, bounded memory, known-place storage",
+            "depends_on": "wk49_r2_profile_contracts"
+          },
+          "pm_status_summary": "Wave 2: Agent 05 adds hero-owned identity/profile state and tests.",
+          "pm_agent_prompts": {
+            "05": "You are Agent 05, sprint wk49_hero_profile_foundation, round wk49_r3_identity_memory (HIGH). Task: add stable hero identity and persistent profile state on the simulation side. Read execution plan section Agent 05. You may edit game/entities/hero.py, game/systems/hero_memory.py if useful, and tests. Add non-empty stable hero_id, bounded profile memory, known-place dedupe, and small career counters. Do not implement emotional behavior, quests, LLM behavior, or broad name-key migration. Run python -m pytest and python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "05"
+            ],
+            "intelligence_by_agent": {
+              "05": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Gameplay entity/system owner handles hero-owned state after contracts exist."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "05"
+            ],
+            "dependencies": [
+              {
+                "id": "identity_memory",
+                "agents": [
+                  "05"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r4_profile_integration": {
+          "round_meta": {
+            "round_id": "wk49_r4_profile_integration",
+            "build_target": "Profile builder wired into SimEngine game_state and discovery hooks",
+            "depends_on": "wk49_r3_identity_memory"
+          },
+          "pm_status_summary": "Wave 3: Agent 03 integrates profile snapshots into game_state and discovery hooks.",
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk49_hero_profile_foundation, round wk49_r4_profile_integration (HIGH). Task: wire profile snapshots into engine state. Read execution plan section Agent 03 Wave 3. You may edit game/sim/hero_profile.py, game/sim_engine.py, game/sim/snapshot.py only if needed, and tests. Add build_hero_profile_snapshot, hero_profiles_by_id, selected_hero_profile, compact current location/target labels, and a deterministic known-place discovery hook that avoids duplicate spam and preserves ranger XP behavior. Run python -m pytest and python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "03"
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Architecture owner integrates profile state into engine-facing read model."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03"
+            ],
+            "dependencies": [
+              {
+                "id": "profile_integration",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r5_profile_ui": {
+          "round_meta": {
+            "round_id": "wk49_r5_profile_ui",
+            "build_target": "Expanded HeroPanel/Profile UI using selected_hero_profile",
+            "depends_on": "wk49_r4_profile_integration"
+          },
+          "pm_status_summary": "Wave 4: Agent 08 renders the profile MVP in HeroPanel/hero focus UI.",
+          "pm_agent_prompts": {
+            "08": "You are Agent 08, sprint wk49_hero_profile_foundation, round wk49_r5_profile_ui (HIGH). Task: update hero UI to consume selected_hero_profile and show the Hero Profile MVP. Read execution plan section Agent 08. You may edit game/ui/hero_panel.py, game/ui/hud.py, game/ui/micro_view_manager.py if needed, and UI tests. Show identity, level/XP, HP, ATK/DEF, economy, gear, personality, location, intent, career stats, and recent memory/empty state compactly. Preserve chat behavior. For screenshot verification use the command from the sprint plan or python -m tools.capture_screenshots with the same arguments. Run python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "08"
+            ],
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "UX owner renders the first player-facing profile surface after data is integrated."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "08"
+            ],
+            "dependencies": [
+              {
+                "id": "profile_ui",
+                "agents": [
+                  "08"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r6_readiness_qa_perf": {
+          "round_meta": {
+            "round_id": "wk49_r6_readiness_qa_perf",
+            "build_target": "LLM readiness review, perf consult, QA gates and screenshots",
+            "depends_on": "wk49_r5_profile_ui"
+          },
+          "pm_status_summary": "Wave 5: Agent 06 reviews future LLM readiness, Agent 10 checks perf, Agent 11 verifies gates/screenshots.",
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk49_hero_profile_foundation, round wk49_r6_readiness_qa_perf (MEDIUM). Task: LLM readiness review only. Do not change LLM behavior. Read execution plan section Agent 06 and roadmap. Evaluate profile shape for future prompt use, recommended known-place and memory limits, and missing fields before a future LLM update. Prefer docs/log only. Run python tools/qa_smoke.py --quick if you make any code/doc-risk change. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt.",
+            "10": "You are Agent 10, sprint wk49_hero_profile_foundation, round wk49_r6_readiness_qa_perf (LOW). Task: performance consult. Run python tools/perf_benchmark.py if available and python tools/qa_smoke.py --quick. Watch for expensive profile snapshot scans, unbounded memory, or per-frame sorting. Do not edit game code unless PM escalates. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt.",
+            "11": "You are Agent 11, sprint wk49_hero_profile_foundation, round wk49_r6_readiness_qa_perf (MEDIUM). Task: QA verification. Run python -m pytest, python tools/qa_smoke.py --quick, and python tools/validate_assets.py --report. Capture/inspect Hero Profile UI using the sprint plan screenshot command or python -m tools.capture_screenshots with the same scenario, seed, output, size, and ticks. Verify selected hero profile exists, duplicate names have distinct IDs, and profile UI has no obvious overlap. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "06",
+              "10",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "06": "medium",
+              "10": "low",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Final consult and verification wave after UI integration."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06",
+              "10",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "readiness_qa_perf",
+                "agents": [
+                  "06",
+                  "10",
+                  "11"
+                ],
+                "parallel": true
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk49_r7_pm_orchestrator_summary": {
+          "round_meta": {
+            "round_id": "wk49_r7_pm_orchestrator_summary",
+            "created_utc": "2026-05-01T00:45:00Z",
+            "source": "pm_synthesis_after_orchestrator_chain",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_pending",
+            "summary": "All WK49 orchestrated worker rounds completed successfully. Receipts verified and logs passed for Agents 02, 04, 07, 03, 05, 03, 08, 06, 10, and 11 across rounds wk49_r1 through wk49_r6. Orchestrator stopped only at declared human gates: manual_playtest, version_bump, commit, push."
+          },
+          "pm_evidence": {
+            "orchestrator_command": ".\\tools\\ai_studio_orchestrator\\run_remaining_rounds.ps1 -Sprint \"wk49_hero_profile_foundation\" -Rounds @(\"wk49_r1_design_guardrails\", \"wk49_r2_profile_contracts\", \"wk49_r3_identity_memory\", \"wk49_r4_profile_integration\", \"wk49_r5_profile_ui\", \"wk49_r6_readiness_qa_perf\")",
+            "rounds_completed": [
+              "wk49_r1_design_guardrails",
+              "wk49_r2_profile_contracts",
+              "wk49_r3_identity_memory",
+              "wk49_r4_profile_integration",
+              "wk49_r5_profile_ui",
+              "wk49_r6_readiness_qa_perf"
+            ],
+            "receipt_verification": "All launched agents reported verification=verified and log=passed in orchestrator output.",
+            "roadmap": ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md",
+            "execution_plan": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md"
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "awaiting_human_gate",
+              "next_action": "After Jaimie manual playtest, review agent logs and decide close_success vs follow-up bug round. Do not commit/push unless Jaimie explicitly asks."
+            },
+            "02": {
+              "status": "done"
+            },
+            "03": {
+              "status": "done"
+            },
+            "04": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "06": {
+              "status": "done"
+            },
+            "07": {
+              "status": "done"
+            },
+            "08": {
+              "status": "done"
+            },
+            "10": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          },
+          "pm_human_test_request": {
+            "run": "python main.py --no-llm",
+            "duration": "5 minutes",
+            "steps": [
+              "Start the game and wait for heroes to move.",
+              "Click several heroes, especially if duplicate names appear.",
+              "Inspect the left Hero Profile panel for level/XP, vitals, economy, gear, personality, location, intent, career stats, known places, and recent memory.",
+              "Let at least one hero explore or move near buildings, then click the same hero again.",
+              "If the right hero-focus panel appears, check readability and that chat/profile areas do not overlap."
+            ],
+            "verify": [
+              "No crash when selecting heroes.",
+              "Profile is richer than before and readable at default resolution.",
+              "Known places or recent memory appears after exploration, or the empty state is clear.",
+              "Duplicate hero names do not visibly mix up profiles."
+            ],
+            "if_it_fails": "Screenshot the profile panel, copy the last ~30 terminal lines, and note which hero was clicked."
+          }
+        },
+        "wk49_r8_bugfix_known_places_ranger_xp": {
+          "round_meta": {
+            "round_id": "wk49_r8_bugfix_known_places_ranger_xp",
+            "created_utc": "2026-05-01T01:15:00Z",
+            "source": "human_playtest_bug_report",
+            "build_target": "Known Places populates; ranger XP/progression does not exceed max display contract",
+            "depends_on": "wk49_r6_readiness_qa_perf"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Human playtest passed most WK49 profile work, but Known Places stayed 0 and some rangers exceeded XP max. Follow-up bugfix completed: Agent 05 fixed ranger progression invariant, Agent 03 fixed known-place discovery/integration, Agent 11 verified gates/screenshots."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK49-BUG-001",
+              "title": "Hero Profile Known Places remains 0 for every hero",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py from repo root.",
+                "Let heroes move/explore near buildings.",
+                "Click several heroes and inspect Hero Profile.",
+                "Known Places remains 0 for everyone."
+              ],
+              "expected": "Known Places should increment when a hero discovers or knows a building/lair/shop according to the WK49 profile memory contract.",
+              "actual": "Known Places displays 0 for every selected hero.",
+              "acceptance_test": [
+                "A deterministic/headless test or scenario proves at least one hero profile has known_places count > 0 after reveal/discovery conditions.",
+                "Manual run: python main.py --no-llm; after heroes explore near buildings, at least one selected hero shows Known Places > 0."
+              ],
+              "status": "fixed_verified_human_retest"
+            },
+            {
+              "id": "WK49-BUG-002",
+              "title": "Some rangers show XP above the max/next-level value",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py from repo root.",
+                "Let rangers explore/reveal tiles.",
+                "Click ranger profiles and inspect XP.",
+                "Some rangers show current XP greater than the max/next-level value."
+              ],
+              "expected": "Hero progression should maintain a clear invariant: displayed current XP should not exceed the displayed max/next-level threshold; level-up or clamping behavior should be deterministic and readable.",
+              "actual": "Some ranger profiles display more XP than their max/next-level value.",
+              "acceptance_test": [
+                "A unit test proves ranger reveal XP cannot leave the profile with current XP > xp_to_level.",
+                "Profile UI shows a sane XP value/progress after ranger exploration."
+              ],
+              "status": "fixed_verified_human_retest"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "done"
+            },
+            "03": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            },
+            "01": {
+              "status": "closed",
+              "next_action": "Sprint accepted by Jaimie; run log cleanup, commit, and push per explicit request."
+            }
+          },
+          "pm_agent_prompts": {
+            "05": "You are Agent 05, sprint wk49_hero_profile_foundation, round wk49_r8_bugfix_known_places_ranger_xp (HIGH). Human playtest bug: some rangers show current XP above their displayed max/next-level value. Fix the hero progression invariant in gameplay-owned code: XP display/profile contract should never expose current XP greater than xp_to_level; level-up or carryover behavior must be deterministic and readable. Add/adjust focused tests proving ranger/exploration XP cannot violate the invariant. Do not edit UI or engine integration unless PM escalates. Run python -m pytest and python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt.",
+            "03": "You are Agent 03, sprint wk49_hero_profile_foundation, round wk49_r8_bugfix_known_places_ranger_xp (HIGH). Depends on Agent 05 in this round. Human playtest bug: Hero Profile Known Places remains 0 for everyone. Fix the profile discovery/integration path so at least one hero can gain known places when they reveal/encounter buildings/lairs/shops. Preserve determinism, avoid duplicate spam, and keep ranger reveal XP behavior compatible with Agent 05's invariant. Add/adjust focused tests proving known places can become >0 and do not duplicate every tick. Run python -m pytest and python tools/qa_smoke.py --quick. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt.",
+            "11": "You are Agent 11, sprint wk49_hero_profile_foundation, round wk49_r8_bugfix_known_places_ranger_xp (MEDIUM). Verify the bugfix round. Required checks: python -m pytest, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report. Confirm evidence that Known Places can become >0 after discovery/reveal and ranger profile XP no longer exceeds the displayed max/next-level value. If screenshot tooling is still available, capture the Hero Profile UI using the existing WK49 screenshot scenario and inspect the panel. Update your own log with required orchestrator fields, validate JSON, then run the complete receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "05",
+              "03",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Bugfix sequence: Agent 05 owns XP/progression invariant, Agent 03 owns engine/profile discovery integration, Agent 11 verifies gates and player-facing acceptance."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "05",
+              "03",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_xp_invariant",
+                "agents": [
+                  "05"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "fix_known_places",
+                "after": [
+                  "fix_xp_invariant"
+                ],
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_bugfixes",
+                "after": [
+                  "fix_known_places"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk49_hero_profile_foundation, round wk49_r8_bugfix_known_places_ranger_xp. Read pm_agent_prompts[YOUR_NUMBER]. This is a focused bugfix round only: Known Places must populate and ranger XP/profile progression must obey the max/next-level invariant. Do not expand scope. Update your own log, run required gates, validate JSON, then run the orchestrator complete receipt."
+        },
+        "wk49_r9_pm_bugfix_summary": {
+          "round_meta": {
+            "round_id": "wk49_r9_pm_bugfix_summary",
+            "created_utc": "2026-05-01T01:25:00Z",
+            "source": "pm_synthesis_after_bugfix_round",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK49 bugfix round passed. Agent 05 routed ranger tile exploration XP through the level-up invariant; Agent 03 fixed known-place discovery when visible buildings are encountered; Agent 11 verified full tests, qa_smoke, validate_assets, and screenshot evidence. Jaimie retested and confirmed everything works."
+          },
+          "pm_evidence": {
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk49_r8_bugfix_known_places_ranger_xp",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk49_r8_bugfix_known_places_ranger_xp",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk49_r8_bugfix_known_places_ranger_xp",
+            "automated_gates": "Agent 11: python -m pytest tests/ PASS (153 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
+            "screenshot_evidence": "docs/screenshots/wk49_hero_profile/ui_panels_hero.png shows Known places: 1 and Recent Discovered Inn."
+          },
+          "pm_human_retest_request": {
+            "run": "python main.py --no-llm",
+            "duration": "3-5 minutes",
+            "steps": [
+              "Start the game and wait for heroes to move.",
+              "Click heroes after they have moved near visible buildings.",
+              "Confirm at least one hero profile shows Known Places above 0.",
+              "Click rangers after exploration/reveals and confirm their XP bar/value does not show current XP greater than the max/next-level value."
+            ],
+            "verify": [
+              "Known Places is no longer stuck at 0 for everyone.",
+              "Ranger XP display remains sane after exploration.",
+              "No crash or obvious panel overlap."
+            ],
+            "if_it_fails": "Screenshot the profile panel and copy the last ~30 terminal lines."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Run log cleanup, then commit and push per Jaimie's explicit request."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          }
+        },
+        "wk49_r10_sprint_closeout": {
+          "round_meta": {
+            "round_id": "wk49_r10_sprint_closeout",
+            "created_utc": "2026-05-01T01:31:00Z",
+            "source": "human_retest_passed_pm_closeout",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK49 Hero Profile Foundation closed. Delivered stable hero_id/profile snapshot scaffolding, hero memory/known places, expanded Hero Profile UI, LLM readiness notes, QA/perf evidence, and bugfix follow-up for Known Places + ranger XP. Human retest: all working."
+          },
+          "pm_accepted_deliverables": [
+            "Hero Profile roadmap and execution plan under .cursor/plans/.",
+            "HeroProfileSnapshot contract, stable hero IDs, profile memory/known places, and profile integration into game_state.",
+            "Expanded HeroPanel/Profile UI with player-facing profile details.",
+            "Known Places discovery bug fixed and ranger XP invariant fixed after human playtest.",
+            "Agent 11 verification: pytest, qa_smoke, validate_assets, screenshot evidence."
+          ],
+          "pm_evidence": {
+            "human_retest": "Jaimie: 'yeah its all working now' (2026-04-30 19:31 local).",
+            "automated_gates": "Agent 11 r8: python -m pytest tests/ PASS (153 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
+            "screenshot_evidence": "docs/screenshots/wk49_hero_profile/ui_panels_hero.png shows Known places: 1 and Recent Discovered Inn.",
+            "orchestrator": "All WK49 worker rounds and r8 bugfix round receipts verified/logs passed."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Complete requested log cleanup, commit, and push."
+            },
+            "03": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "08": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
+          },
+          "pm_follow_ups": [
+            "Future sprint: LLM Profile Context Adapter should consume HeroProfileSnapshot with bounded known places/memory.",
+            "Future sprint: hero pin/watchlist UX and richer Majesty-style attachment features.",
+            "Future sprint: skills/spells and deterministic hero life story/emotional state after data scaffolding proves stable."
+          ]
         }
       }
     }

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pygame
 
 from config import COLOR_GOLD, COLOR_GREEN, COLOR_RED, COLOR_WHITE
@@ -9,6 +11,35 @@ from game.entities.guard import Guard
 from game.entities.tax_collector import TaxCollector
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.widgets import HPBar, TextLabel
+
+MAX_PANEL_CHARS = 48
+
+
+def truncate_panel_line(text: str, max_chars: int = MAX_PANEL_CHARS) -> str:
+    """Single-line truncation for narrow hero panel."""
+    s = str(text or "").replace("\n", " ").strip()
+    if len(s) <= max_chars:
+        return s
+    return s[: max(0, max_chars - 1)].rstrip() + "…"
+
+
+def intent_label_from_slug(intent: str) -> str:
+    """Readable intent sentence from snake_case profile intent slug."""
+    raw = str(intent or "").strip()
+    if not raw:
+        return "Idle"
+    mapping = {
+        "idle": "Idle",
+        "pursuing_bounty": "Pursuing bounty",
+        "shopping": "Shopping",
+        "returning_to_safety": "Returning to safety",
+        "engaging_enemy": "Engaging enemy",
+        "defending_building": "Defending building",
+        "attacking_lair": "Attacking lair",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return raw.replace("_", " ").title()
 
 
 class HeroPanel:
@@ -45,16 +76,7 @@ class HeroPanel:
                 if isinstance(snap, dict):
                     intent = str(snap.get("intent", "") or "")
                     if intent:
-                        mapping = {
-                            "idle": "Idle",
-                            "pursuing_bounty": "Pursuing bounty",
-                            "shopping": "Shopping",
-                            "returning_to_safety": "Returning to safety",
-                            "engaging_enemy": "Engaging enemy",
-                            "defending_building": "Defending building",
-                            "attacking_lair": "Attacking lair",
-                        }
-                        return mapping.get(intent, intent.replace("_", " ").title())
+                        return intent_label_from_slug(intent)
         except Exception:
             pass
 
@@ -84,14 +106,28 @@ class HeroPanel:
             return "Idle"
         return state.title() if state else "Idle"
 
-    def _format_last_decision(self, hero) -> tuple[str, tuple[int, int, int]]:
+    def _format_last_decision(
+        self, hero: Any, *, last_decision_override: dict[str, Any] | None = None
+    ) -> tuple[str, tuple[int, int, int]]:
         action = None
         target = ""
         reason = ""
         age_s = None
 
+        ld0 = last_decision_override if isinstance(last_decision_override, dict) else None
+        if ld0 is not None:
+            action = ld0.get("action", None)
+            reason_raw = ld0.get("reason", "")
+            reason = reason_raw if isinstance(reason_raw, str) else ""
+            age_ms = ld0.get("age_ms", None)
+            if age_ms is not None:
+                try:
+                    age_s = max(0.0, float(age_ms) / 1000.0)
+                except Exception:
+                    age_s = None
+
         try:
-            if hasattr(hero, "get_intent_snapshot"):
+            if action is None and hasattr(hero, "get_intent_snapshot"):
                 snap = hero.get_intent_snapshot(now_ms=int(sim_now_ms()))
                 if isinstance(snap, dict):
                     last_decision = snap.get("last_decision", None)
@@ -334,27 +370,142 @@ class HeroPanel:
             shadow_color=(25, 25, 35),
         )
 
-    def render(
+    def _render_standard_hero(
         self,
         surface: pygame.Surface,
-        hero,
+        hero: Any,
         rect: pygame.Rect,
         *,
-        right_close_rect: pygame.Rect | None = None,
-        debug_ui: bool = False,
+        hero_profile: Any | None,
+        right_close_rect: pygame.Rect | None,
+        debug_ui: bool,
     ) -> None:
-        if isinstance(hero, TaxCollector):
-            self._render_tax_collector(surface, rect, hero, right_close_rect=right_close_rect)
-            return
-        if isinstance(hero, Guard):
-            self._render_guard(surface, rect, hero, right_close_rect=right_close_rect)
-            return
-
+        """Main hero sheet — prefers ``hero_profile`` when present (WK49 read model)."""
         panel_width = int(rect.width)
         panel_x = int(rect.x)
         panel_y = int(rect.y)
         pad = self._right_panel_top_pad(rect, right_close_rect)
         y = panel_y + pad
+        bar_width = panel_width - (pad * 2)
+
+        prof = hero_profile
+
+        hid = ""
+        pname = str(getattr(hero, "name", "Hero"))
+        class_line = f"{str(getattr(hero, 'hero_class', 'hero')).replace('_',' ').title()} Lv.{int(getattr(hero, 'level', 1) or 1)}"
+        personality = str(getattr(hero, "personality", "") or "").strip()
+
+        xp_val = int(getattr(hero, "xp", 0) or 0)
+        xp_need = max(1, int(getattr(hero, "xp_to_level", 100) or 100))
+        hp_v = int(getattr(hero, "hp", 0) or 0)
+        max_hp_v = max(1, int(getattr(hero, "max_hp", 1) or 1))
+
+        atk_s = getattr(hero, "attack", 0)
+        atk_v = int(atk_s() if callable(atk_s) else atk_s)
+        def_s = getattr(hero, "defense", 0)
+        def_v = int(def_s() if callable(def_s) else def_s)
+
+        gold_v = int(getattr(hero, "gold", 0) or 0)
+        tax_v = int(getattr(hero, "taxed_gold", 0) or 0)
+        potion_count = int(getattr(hero, "potions", 0))
+        weapon_name = hero.weapon["name"] if getattr(hero, "weapon", None) else "Fists"
+        armor_name = hero.armor["name"] if getattr(hero, "armor", None) else "None"
+
+        intent_display = self._compute_hero_intent(hero)
+        state_display = str(getattr(getattr(hero, "state", None), "name", "IDLE"))
+
+        ld_override = None
+        locations_line = ""
+
+        known_places_live = 0
+        plc_discovered_stat = 0
+        tiles_r = atk_k = btc = gearn = buys = 0
+        memories: tuple[Any, ...] = ()
+
+        if prof is not None:
+            try:
+                idn = getattr(prof, "identity", None)
+                pname = str(getattr(idn, "name", pname))
+                hid = str(getattr(idn, "hero_id", "") or "").strip()
+                hc = str(getattr(idn, "hero_class", "") or "hero").replace("_", " ")
+                personality = str(getattr(idn, "personality", "") or "").strip()
+                class_line = f"{hc.title()} Lv.{int(getattr(idn, 'level', 1) or 1)}"
+            except Exception:
+                hid = ""
+
+            try:
+                pr = getattr(prof, "progression", None)
+                if pr is not None:
+                    xp_val = int(getattr(pr, "xp", xp_val))
+                    xp_need = max(1, int(getattr(pr, "xp_to_level", xp_need)))
+            except Exception:
+                pass
+
+            try:
+                vit = getattr(prof, "vitals", None)
+                if vit is not None:
+                    hp_v = int(getattr(vit, "hp", hp_v))
+                    max_hp_v = max(1, int(getattr(vit, "max_hp", max_hp_v)))
+                    atk_v = int(getattr(vit, "attack", atk_v))
+                    def_v = int(getattr(vit, "defense", def_v))
+            except Exception:
+                pass
+
+            try:
+                inv = getattr(prof, "inventory", None)
+                if inv is not None:
+                    gold_v = int(getattr(inv, "gold", gold_v))
+                    tax_v = int(getattr(inv, "taxed_gold", tax_v))
+                    potion_count = int(getattr(inv, "potions", potion_count))
+                    wpn = getattr(inv, "weapon_name", "")
+                    arm = getattr(inv, "armor_name", "")
+                    if str(wpn or "").strip():
+                        weapon_name = str(wpn)
+                    if str(arm or "").strip():
+                        armor_name = str(arm)
+            except Exception:
+                pass
+
+            try:
+                ld_override = getattr(prof, "last_decision", None)
+                ci = getattr(prof, "current_intent", "")
+                cs = getattr(prof, "current_state", "")
+                if str(ci):
+                    intent_display = intent_label_from_slug(str(ci))
+                if str(cs):
+                    state_display = str(cs)
+                locations_line = truncate_panel_line(
+                    f"{getattr(prof, 'current_location', '')} | {getattr(prof, 'current_target', '')}"
+                )
+            except Exception:
+                ld_override = None
+
+            try:
+                kpr = getattr(prof, "known_places", None)
+                known_places_live = len(tuple(kpr or ()))
+            except Exception:
+                known_places_live = 0
+
+            try:
+                cr = getattr(prof, "career", None)
+                if cr is not None:
+                    tiles_r = int(getattr(cr, "tiles_revealed", 0))
+                    plc_discovered_stat = int(getattr(cr, "places_discovered", 0))
+                    atk_k = int(getattr(cr, "enemies_defeated", 0))
+                    btc = int(getattr(cr, "bounties_claimed", 0))
+                    gearn = int(getattr(cr, "gold_earned", 0))
+                    buys = int(getattr(cr, "purchases_made", 0))
+            except Exception:
+                pass
+
+            try:
+                memories = tuple(getattr(prof, "recent_memory", ()) or ())
+            except Exception:
+                memories = ()
+
+        muted = (150, 150, 155)
+        line_skip_sm = self.theme.font_small.get_height()
+        line_skip_tiny = self.font_tiny.get_height()
 
         header_h = 28
         header_rect = pygame.Rect(panel_x + 6, panel_y + pad - 4, panel_width - 12, header_h)
@@ -370,42 +521,86 @@ class HeroPanel:
         TextLabel.render(
             surface,
             self.theme.font_title,
-            str(hero.name),
+            truncate_panel_line(pname, 42),
             (panel_x + pad, header_rect.y + (header_rect.height - self.theme.font_title.get_height()) // 2),
             COLOR_WHITE,
             shadow_color=(20, 20, 30),
         )
-        y = header_rect.bottom + 6
+        y = header_rect.bottom + 4
 
-        class_line = f"{hero.hero_class.title()} Lv.{hero.level}"
         TextLabel.render(
             surface,
             self.theme.font_small,
-            class_line,
+            truncate_panel_line(class_line),
             (panel_x + pad, y),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
-        y += self.theme.font_small.get_height() + 6
+        y += line_skip_sm + 2
 
-        hp_line = f"HP: {hero.hp}/{hero.max_hp}"
+        if hid and hid not in {"", "?"}:
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                truncate_panel_line(f"id:{hid}", 44),
+                (panel_x + pad, y),
+                muted,
+                shadow_color=(20, 20, 30),
+            )
+            y += line_skip_tiny + 2
+
+        if personality:
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                truncate_panel_line(f"Pers: {personality}"),
+                (panel_x + pad, y),
+                (210, 210, 235),
+                shadow_color=(20, 20, 30),
+            )
+            y += line_skip_tiny + 4
+
         TextLabel.render(
             surface,
-            self.theme.font_small,
-            hp_line,
+            self.font_tiny,
+            f"XP {xp_val}/{xp_need}",
             (panel_x + pad, y),
-            COLOR_WHITE,
-            shadow_color=(25, 25, 35),
+            (180, 200, 255),
+            shadow_color=(20, 20, 30),
         )
-        y += self.theme.font_small.get_height() + 6
-
-        bar_width = panel_width - (pad * 2)
-        bar_rect = pygame.Rect(panel_x + pad, y, bar_width, 8)
+        y += line_skip_tiny + 4
+        xp_bar = pygame.Rect(panel_x + pad, y, bar_width, 7)
         HPBar.render(
             surface,
-            bar_rect,
-            int(getattr(hero, "hp", 0)),
-            int(getattr(hero, "max_hp", 1)),
+            xp_bar,
+            xp_val,
+            xp_need,
+            color_scheme={
+                "bg": (45, 50, 62),
+                "good": (120, 170, 230),
+                "warn": (150, 190, 240),
+                "bad": (90, 120, 170),
+                "border": (20, 22, 30),
+            },
+        )
+        y += xp_bar.height + 8
+
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            f"HP: {hp_v}/{max_hp_v}",
+            (panel_x + pad, y),
+            COLOR_WHITE,
+            shadow_color=(25, 25, 35),
+        )
+        y += line_skip_sm + 4
+
+        hp_bar_rect = pygame.Rect(panel_x + pad, y, bar_width, 8)
+        HPBar.render(
+            surface,
+            hp_bar_rect,
+            hp_v,
+            max_hp_v,
             color_scheme={
                 "bg": (60, 60, 60),
                 "good": COLOR_GREEN,
@@ -414,7 +609,7 @@ class HeroPanel:
                 "border": (20, 20, 25),
             },
         )
-        y += bar_rect.height + 6
+        y += hp_bar_rect.height + 6
 
         self._draw_section_divider(surface, panel_x + pad, y, bar_width)
         y += 6
@@ -426,18 +621,16 @@ class HeroPanel:
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
-        y += self.theme.font_small.get_height() + 4
-
-        stats_line = f"ATK: {hero.attack}  DEF: {hero.defense}"
+        y += line_skip_sm + 4
         TextLabel.render(
             surface,
             self.theme.font_small,
-            stats_line,
+            truncate_panel_line(f"ATK: {atk_v}  DEF: {def_v}"),
             (panel_x + pad, y),
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
-        y += 16
+        y += 14
 
         self._draw_section_divider(surface, panel_x + pad, y, bar_width)
         y += 6
@@ -449,12 +642,12 @@ class HeroPanel:
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
-        y += self.theme.font_small.get_height() + 4
+        y += line_skip_sm + 4
 
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"Gold: {hero.gold}",
+            f"Gold: {gold_v}",
             (panel_x + pad, y),
             COLOR_GOLD,
             shadow_color=(25, 25, 35),
@@ -464,26 +657,25 @@ class HeroPanel:
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"Taxed: {hero.taxed_gold}",
+            f"Taxed: {tax_v}",
             (panel_x + pad, y),
             (220, 180, 90),
             shadow_color=(25, 25, 35),
         )
-        y += 16
+        y += 14
 
         self._draw_section_divider(surface, panel_x + pad, y, bar_width)
         y += 6
         TextLabel.render(
             surface,
             self.theme.font_small,
-            "Equipment",
+            "Gear",
             (panel_x + pad, y),
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
-        y += self.theme.font_small.get_height() + 4
+        y += line_skip_sm + 4
 
-        potion_count = int(getattr(hero, "potions", 0))
         TextLabel.render(
             surface,
             self.theme.font_small,
@@ -492,14 +684,12 @@ class HeroPanel:
             COLOR_GREEN,
             shadow_color=(25, 25, 35),
         )
-        y += 16
+        y += 14
 
-        weapon_name = hero.weapon["name"] if getattr(hero, "weapon", None) else "Fists"
-        armor_name = hero.armor["name"] if getattr(hero, "armor", None) else "None"
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"W: {weapon_name}",
+            truncate_panel_line(f"W: {weapon_name}"),
             (panel_x + pad, y),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
@@ -508,50 +698,50 @@ class HeroPanel:
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"A: {armor_name}",
+            truncate_panel_line(f"A: {armor_name}"),
             (panel_x + pad, y),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
-        y += 16
+        y += 14
 
         self._draw_section_divider(surface, panel_x + pad, y, bar_width)
         y += 6
-        TextLabel.render(
-            surface,
-            self.theme.font_small,
-            "Intent",
-            (panel_x + pad, y),
-            (180, 180, 200),
-            shadow_color=(20, 20, 30),
-        )
-        y += self.theme.font_small.get_height() + 4
+        if locations_line:
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                truncate_panel_line(locations_line),
+                (panel_x + pad, y),
+                (210, 220, 245),
+                shadow_color=(18, 18, 26),
+            )
+            y += line_skip_tiny + 4
 
-        intent = self._compute_hero_intent(hero)
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"Intent: {intent}",
+            truncate_panel_line(f"Intent: {intent_display}"),
             (panel_x + pad, y),
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
         y += 14
 
-        state_name = str(getattr(getattr(hero, "state", None), "name", "IDLE"))
         TextLabel.render(
             surface,
             self.theme.font_small,
-            f"State: {state_name}",
+            truncate_panel_line(f"State: {state_display}"),
             (panel_x + pad, y),
             (200, 200, 200),
             shadow_color=(25, 25, 35),
         )
         y += 14
 
-        decision_line, decision_color = self._format_last_decision(hero)
-        if len(decision_line) > 48:
-            decision_line = decision_line[:45].rstrip() + "..."
+        decision_line, decision_color = self._format_last_decision(
+            hero, last_decision_override=ld_override if isinstance(ld_override, dict) else None
+        )
+        decision_line = truncate_panel_line(decision_line)
         TextLabel.render(
             surface,
             self.font_tiny,
@@ -560,19 +750,81 @@ class HeroPanel:
             decision_color,
             shadow_color=(20, 20, 30),
         )
-        y += 16
+        y += 14
 
-        try:
-            if bool(getattr(hero, "is_inside_building", False)):
-                inside_building = getattr(hero, "inside_building", None)
-                building_name = None
-                if inside_building is not None:
-                    building_name = getattr(inside_building, "building_type", None) or inside_building.__class__.__name__
-                inside_line = f"Inside: {str(building_name).replace('_', ' ').title()}" if building_name else "Inside: yes"
-                TextLabel.render(surface, self.font_tiny, inside_line, (panel_x + pad, y), (220, 220, 255))
-                y += 14
-        except Exception:
-            pass
+        if prof is not None:
+            car = truncate_panel_line(
+                f"Career rnd{tiles_r} plc{plc_discovered_stat} atk{atk_k} btc{btc} +g{gearn} buy{buys}"
+            )
+
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                car,
+                (panel_x + pad, y),
+                muted,
+                shadow_color=(18, 18, 26),
+            )
+            y += line_skip_tiny + 2
+
+            tail = memories[-3:] if len(memories) > 3 else memories
+            if not tail:
+                TextLabel.render(
+                    surface,
+                    self.font_tiny,
+                    truncate_panel_line("Memory: none yet"),
+                    (panel_x + pad, y),
+                    muted,
+                    shadow_color=(18, 18, 26),
+                )
+                y += line_skip_tiny + 2
+            else:
+                TextLabel.render(
+                    surface,
+                    self.font_tiny,
+                    "Recent:",
+                    (panel_x + pad, y),
+                    (165, 180, 205),
+                    shadow_color=(18, 18, 26),
+                )
+                y += line_skip_tiny + 2
+                for ent in tail:
+                    try:
+                        sm = truncate_panel_line(str(getattr(ent, "summary", "") or ""))
+                        if sm:
+                            TextLabel.render(
+                                surface,
+                                self.font_tiny,
+                                f" -{sm}",
+                                (panel_x + pad, y),
+                                (200, 200, 210),
+                                shadow_color=(18, 18, 26),
+                            )
+                            y += line_skip_tiny + 1
+                    except Exception:
+                        continue
+
+            TextLabel.render(
+                surface,
+                self.font_tiny,
+                truncate_panel_line(f"Known places: {known_places_live}"),
+                (panel_x + pad, y),
+                (175, 200, 180),
+                shadow_color=(18, 18, 26),
+            )
+            y += line_skip_tiny + 4
+        else:
+            try:
+                if bool(getattr(hero, "is_inside_building", False)):
+                    inside_building = getattr(hero, "inside_building", None)
+                    building_name = None
+                    if inside_building is not None:
+                        building_name = getattr(inside_building, "building_type", None) or inside_building.__class__.__name__
+                    inside_line = f"Inside: {str(building_name).replace('_', ' ').title()}" if building_name else "Inside: yes"
+                    TextLabel.render(surface, self.font_tiny, truncate_panel_line(inside_line), (panel_x + pad, y), (220, 220, 255))
+                    y += 14
+            except Exception:
+                pass
 
         if not debug_ui:
             return
@@ -592,7 +844,7 @@ class HeroPanel:
                         stuck_line = f"STUCK: {reason} (attempts {attempts})"
                 else:
                     stuck_line = f"STUCK: {reason} (attempts {attempts})"
-                TextLabel.render(surface, self.font_tiny, stuck_line, (panel_x + pad, y), (255, 180, 100))
+                TextLabel.render(surface, self.font_tiny, truncate_panel_line(stuck_line), (panel_x + pad, y), (255, 180, 100))
                 y += 14
         except Exception:
             pass
@@ -602,6 +854,129 @@ class HeroPanel:
             if isinstance(can_attack, bool) and not can_attack:
                 reason = str(getattr(hero, "attack_blocked_reason", "") or "").strip()
                 line = f"ATK BLOCKED: {reason}" if reason else "ATK BLOCKED"
-                TextLabel.render(surface, self.font_tiny, line[:48], (panel_x + pad, y), (255, 160, 160))
+                TextLabel.render(surface, self.font_tiny, truncate_panel_line(line), (panel_x + pad, y), (255, 160, 160))
         except Exception:
             pass
+
+    def render_focus_top(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        hero: Any,
+        *,
+        hero_profile: Any | None = None,
+    ) -> None:
+        """HERO_FOCUS top-half: richer profile/memory without touching chat rectangle."""
+        if rect.width <= 0 or rect.height <= 0:
+            return
+
+        inset = pygame.Rect(rect.x + 4, rect.y + 6, rect.width - 8, rect.height - 10)
+        if inset.height > 0:
+            pygame.draw.rect(surface, (32, 32, 44), inset)
+            pygame.draw.rect(surface, self._frame_inner, inset, 1)
+
+        px, py = int(inset.x) + int(self.theme.margin), int(inset.y) + 4
+        y = py
+        line_h = max(13, self.font_tiny.get_height() + 1)
+        muted = (150, 150, 160)
+        teal = (180, 210, 235)
+
+        name = str(getattr(hero, "name", "Hero"))
+        if hero_profile is not None:
+            try:
+                idn = getattr(hero_profile, "identity", None)
+                if idn is not None:
+                    name = str(getattr(idn, "name", name))
+            except Exception:
+                pass
+
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            truncate_panel_line(f"Hero focus: {name}", max_chars=54),
+            (px, y),
+            COLOR_WHITE,
+            shadow_color=(15, 15, 22),
+        )
+        y += line_h + 4
+
+        if hero_profile is None:
+            TextLabel.render(surface, self.font_tiny, "Profile unavailable (legacy)", (px, y), muted)
+            return
+
+        nar = getattr(hero_profile, "narrative", None)
+        if nar is not None:
+            emo = str(getattr(nar, "emotional_state", "") or "").strip()
+            goal = str(getattr(nar, "personal_goal", "") or "").strip()
+            if emo or goal:
+                gn = truncate_panel_line(f"{emo} · {goal}" if emo else goal, 56)
+                TextLabel.render(surface, self.font_tiny, gn, (px, y), teal, shadow_color=(15, 15, 22))
+                y += line_h + 2
+
+        try:
+            kpl = tuple(getattr(hero_profile, "known_places", ()) or ())[-6:]
+        except Exception:
+            kpl = ()
+
+        TextLabel.render(surface, self.font_tiny, "Places", (px, y), muted, shadow_color=(15, 15, 22))
+        y += line_h
+        if not kpl:
+            TextLabel.render(surface, self.font_tiny, " none listed", (px, y), muted, shadow_color=(15, 15, 22))
+            y += line_h
+        else:
+            for p in kpl:
+                if y + line_h >= inset.bottom - 6:
+                    break
+                dn = truncate_panel_line(f" • {str(getattr(p, 'display_name', '') or '')}", 56)
+                TextLabel.render(surface, self.font_tiny, dn, (px, y), (200, 210, 200), shadow_color=(15, 15, 22))
+                y += line_h - 1
+
+        y += 2
+        if y + line_h >= inset.bottom - 4:
+            return
+
+        try:
+            mem = tuple(getattr(hero_profile, "recent_memory", ()) or ())[-10:]
+        except Exception:
+            mem = ()
+
+        TextLabel.render(surface, self.font_tiny, "Memory", (px, y), muted, shadow_color=(15, 15, 22))
+        y += line_h
+        if not mem:
+            TextLabel.render(surface, self.font_tiny, " empty", (px, y), muted, shadow_color=(15, 15, 22))
+            return
+
+        for m in mem:
+            if y + line_h >= inset.bottom - 6:
+                break
+            ms = truncate_panel_line(str(getattr(m, "summary", "") or ""), 58)
+            if not ms:
+                continue
+            TextLabel.render(surface, self.font_tiny, f" ·{ms}", (px, y), (210, 210, 218), shadow_color=(15, 15, 22))
+            y += line_h - 1
+
+    def render(
+        self,
+        surface: pygame.Surface,
+        hero,
+        rect: pygame.Rect,
+        *,
+        right_close_rect: pygame.Rect | None = None,
+        debug_ui: bool = False,
+        hero_profile: Any | None = None,
+    ) -> None:
+        if isinstance(hero, TaxCollector):
+            self._render_tax_collector(surface, rect, hero, right_close_rect=right_close_rect)
+            return
+        if isinstance(hero, Guard):
+            self._render_guard(surface, rect, hero, right_close_rect=right_close_rect)
+            return
+
+        self._render_standard_hero(
+            surface,
+            hero,
+            rect,
+            hero_profile=hero_profile,
+            right_close_rect=right_close_rect,
+            debug_ui=debug_ui,
+        )

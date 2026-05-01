@@ -9,129 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk32-camera-construction-nature-polish": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk32_camera_construction_nature_polish.plan.md",
-        "notes": "WK32 r1: B.4 construction_progress + F auto-spawn 1-tile Chebyshev gap (neutral buildings only)."
-      },
-      "rounds": {
-        "wk32_r1_execution": {
-          "round_id": "wk32_r1_execution",
-          "sprint_id": "wk32-camera-construction-nature-polish",
-          "round_meta": {
-            "prompt_set_id": "wk32_r1_v1",
-            "build_target": "construction_phases_plus_spawn_spacing",
-            "pm_rewrite_stamp": "wk32_r1_rewrite_2026_04_18",
-            "revision_note": "PM revised 2026-04-18: Agent 05 prompt is verification-first; implementation pre-existed."
-          },
-          "response": {
-            "status": "verified_2026_04_18",
-            "agent_fields": {
-              "pre_code_file_map": [
-                "game/entities/buildings/base.py — Building core; HP/work; construction_progress property (HP curve).",
-                "game/engine.py — get_game_state(); buildings list + buildings_construction_progress tuple.",
-                "game/systems/neutral_buildings.py — NeutralBuildingSystem; _find_spot; _violates_auto_spawn_gap / Chebyshev helpers.",
-                "game/entities/peasant.py — apply_work rates for construction vs repair (drives HP curve).",
-                "game/entities/neutral_buildings.py — NeutralBuilding subclasses (auto-spawn targets).",
-                "tests/test_building.py — construction_progress unit tests.",
-                "tests/test_neutral_buildings_wk32.py — gap helpers + long-run autospawn integration test.",
-                "game/graphics/ursina_renderer.py — consumes building.construction_progress (Agent 03); not edited by Agent 05."
-              ],
-              "architecture_options": [
-                "OPT A — Keep derived construction_progress property + tuple snapshot (current). PROS: single source of truth; no new sim state; matches peasant apply_work. CONS: renderer must treat damaged-built as full stage. RISK: LOW. EFFORT: S (already shipped).",
-                "OPT B — Store explicit float field updated in apply_work. PROS: obvious serialization. CONS: duplicate bookkeeping vs HP. RISK: MED (drift). EFFORT: M.",
-                "OPT C — Time-based progress from placed_time_ms. CONS: fights existing HP-based build; adds coupling. REJECTED."
-              ],
-              "architecture_chosen": "OPT A — accepted; PM confirms property already exists; revised round is verify-only.",
-              "existing_code_conflicts": "None for Agent 05. PM notes WK32-BUG-002 remaining work is Ursina resolver (Agent 03), not sim. pm_role_note: uncommitted PM edits are in ursina_renderer.py / ursina_app.py (Agent 03 ownership).",
-              "what_i_changed": [
-                "game/entities/buildings/base.py: Building.construction_progress property (0.0–1.0 from HP build curve; 1.0 when is_constructed including damaged-built).",
-                "game/engine.py: get_game_state() adds buildings_construction_progress tuple (parallel to buildings) + docstring.",
-                "game/systems/neutral_buildings.py: Chebyshev min-distance >= 2 between auto-spawn candidate footprint and any existing building (and optional same-tick pending footprints).",
-                "tests/test_building.py: construction_progress assertions + dedicated tests.",
-                "tests/test_neutral_buildings_wk32.py: gap helper unit tests + integration test test_neutral_autospawn_pairwise_min_chebyshev_ge2_vs_castle_and_each_other (WK32 revised verification)."
-              ],
-              "verification_2026_04_18": [
-                "(A) construction_progress: unit tests assert 0 at mark_unconstructed, mid-curve (hp-1)/(max-1), 1.0 when built/damaged-built; monotonicity implied by HP-only curve.",
-                "(B) auto-spawn spacing: integration test simulates 500 NeutralBuildingSystem ticks with 12 heroes; all pairwise building footprints (including castle) have min Chebyshev >= 2.",
-                "(C) qa_smoke --quick PASS post-verification."
-              ],
-              "feature_verification": {
-                "WK32-FEAT-002": "verified",
-                "WK32-FEAT-010": "verified",
-                "WK32-BUG-006": "verified (pm_note: code pre-existed; automated + evidence logged)"
-              },
-              "screenshots": [
-                "docs/screenshots/wk32_nature/20260418_1630_agent05_verification/ — pygame deterministic capture (base_overview scenario, seed 7); manifest.json + 4 PNGs committed (git add -f; parent docs/screenshots/ is gitignored by default)."
-              ],
-              "coordination": [
-                "Agent 03: consume construction_progress in Ursina prefab resolver (WK32-BUG-002); PM emergency scatter/camera diffs are Agent 03 to commit or revert per pm_role_note.",
-                "Agent 15: prefab assets independent of sim progress field.",
-                "PM: no config.py footprint edits; no CHANGELOG (complied)."
-              ],
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                },
-                "validate_assets_report": {
-                  "command": "python tools/validate_assets.py --report",
-                  "status": "PASS",
-                  "exit_code": 0,
-                  "notes": "errors=0 warns=46 (legacy missing stub .glb paths; expected)"
-                },
-                "determinism_guard": {
-                  "command": "python tools/determinism_guard.py",
-                  "status": "PASS"
-                },
-                "pytest": {
-                  "command": "python -m pytest -q",
-                  "status": "PASS",
-                  "notes": "full suite including test_neutral_autospawn integration"
-                }
-              },
-              "blockers": []
-            }
-          }
-        },
-        "wk32_r2_visual_followup": {
-          "round_id": "wk32_r2_visual_followup",
-          "sprint_id": "wk32-camera-construction-nature-polish",
-          "round_meta": {
-            "prompt_set_id": "wk32_r2",
-            "build_target": "workstream_f_autospawn_gap"
-          },
-          "response": {
-            "status": "complete",
-            "agent_fields": {
-              "summary": "WK32 R2 Workstream F: Re-ran multi-seed and 200-hero stress on full GameEngine; 0 sim pairwise Chebyshev violations (all building footprints min distance >=2). Hardened NeutralBuildingSystem._count with _building_type_str so str-Enum building types count toward spawn caps. Clarified in _violates_auto_spawn_gap that min_tile_gap=2 is the usual one empty grid cell between two rectangles. Added real-GameEngine parametric pytest (seeds 1, 42, 1337) and _count str/enum test. If Ursina playtest still shows edge-touching, treat as 3D mesh/prefab extent vs grid (Agent 03/09), not NeutralBuildingSystem math.",
-              "what_i_changed": [
-                "game/systems/neutral_buildings.py — _building_type_str(); _count normalizes building_type; docstring for min_tile_gap",
-                "tests/test_neutral_buildings_wk32.py — test_neutral_count_matches_str_and_enum_building_type; test_neutral_autospawn_real_engine_pairwise_min_chebyshev_ge2"
-              ],
-              "repro": "No failing sim seed in local stress (13 seeds + 200 heroes) — pairwise d<2 count 0. Ticket WK32-R2-BUG-003: if issue persists, capture seed/SIM_SEED and confirm observation is sim grid vs render mesh.",
-              "evidence": {
-                "qa_smoke_quick": {
-                  "command": "python tools/qa_smoke.py --quick",
-                  "status": "PASS",
-                  "exit_code": 0
-                },
-                "validate_assets": {
-                  "command": "python tools/validate_assets.py --report",
-                  "note": "exit 0 — no game assets changed this round"
-                },
-                "pytest": {
-                  "command": "python -m pytest -q tests/test_neutral_buildings_wk32.py",
-                  "status": "PASS",
-                  "exit_code": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "wk33-terrain-lair-economy-prefabs": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
@@ -514,6 +391,81 @@
               "blockers": []
             }
           }
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "notes": "WK49 Wave 2 Agent 05: sim-owned hero identity, bounded memory, known places, career counters."
+      },
+      "rounds": {
+        "wk49_r3_identity_memory": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r3_identity_memory",
+          "status": "done",
+          "what_i_changed": "Hero: non-empty hero_id (keyword hero_id= or monotonic h######## fallback), optional name= for tests; profile_memory (HeroMemoryEntry list, cap via hero_memory.PROFILE_MEMORY_MAX_ENTRIES), known_places dict with remember_known_place upsert/dedupe and trim by oldest first_seen; profile_career dict; increment_career_stat; record_profile_memory; hooks: add_gold -> gold_earned, buy_item -> purchases_made, on_attack_landed killed enemy -> enemies_defeated. game/systems/hero_memory.py: caps + stable_place_id. game/systems/bounty.py: bounties_claimed on claim. Tests: tests/test_hero_identity.py, tests/test_hero_memory.py.",
+          "commands_run": [
+            {
+              "command": "python -m pytest -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest -q",
+              "exit_code": 0,
+              "summary": "142 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "tiles_revealed: engine fog/reveal path still mutates _revealed_tiles directly; career counter needs Agent 03 discovery hook.",
+            "Gold grants that bypass Hero.add_gold do not increment gold_earned until broader economy attribution migrates to hero_id-aware helpers."
+          ]
+        },
+        "wk49_r8_bugfix_known_places_ranger_xp": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r8_bugfix_known_places_ranger_xp",
+          "status": "done",
+          "what_i_changed": "Root cause: ranger FoW tile XP used hero.xp += 1 in game/sim_engine.py, bypassing Hero.add_xp level-up loop so xp could stay >= xp_to_level. Added Hero.grant_tile_exploration_xp (delegates to add_xp) and wired fog reveal path to call it. New tests: tests/test_hero_progression_invariant.py (many small grants, burst vs add_xp parity, profile snapshot invariant).",
+          "commands_run": [
+            {
+              "command": "python -m pytest -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest -q",
+              "exit_code": 0,
+              "summary": "151 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }

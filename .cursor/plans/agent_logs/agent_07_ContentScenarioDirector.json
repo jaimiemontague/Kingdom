@@ -402,6 +402,131 @@
         }
       }
     }
+    ,
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "notes": "WK49 Hero Profile Foundation; R1 Agent 07 = memory event taxonomy design only (no code)."
+      },
+      "rounds": {
+        "wk49_r1_design_guardrails": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": [
+            "Defined a future-facing hero memory event taxonomy (quests, narrative/story beats, relationships/social edges, LLM/long-term recall) constrained to WK49 MVP: four concrete MVP event_type strings aligned with roadmap Phase 7 and roadmap Phase 6, mapped to HeroMemoryEntry-style fields.",
+            "Clarified semantics and subject fields for MVP events: discovered_place, visited_building, bought_item, defeated_enemy (stable keys for Agent 03/05 contract wiring; no gameplay or persistence implementation in this round).",
+            "Files touched: .cursor/plans/agent_logs/agent_07_ContentScenarioDirector.json only."
+          ],
+          "commands_run": [
+            "python -m json.tool .cursor/plans/agent_logs/agent_07_ContentScenarioDirector.json → exit_code=0",
+            "npx tsx tools/ai_studio_orchestrator/src/cli.ts complete --cwd C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom --sprint wk49_hero_profile_foundation --round wk49_r1_design_guardrails --agent 07 --token 0c1fb17d-b314-4093-9838-2c77b05c0511 --status done --summary \"Agent 07: hero memory event taxonomy v0 in log; MVP keys + deferred hooks. Design-only.\" --log-path .cursor/plans/agent_logs/agent_07_ContentScenarioDirector.json --log-round 'sprints[\"wk49_hero_profile_foundation\"].rounds[\"wk49_r1_design_guardrails\"]' → exit_code=0"
+          ],
+          "evidence": {
+            "design_only_no_code": true,
+            "references": [
+              ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md (HeroMemoryEntry contract)",
+              ".cursor/plans/wk49_hero_profile_roadmap_6f3a1b2c.plan.md (Phases 2 LLM adapter, 6 relationships, 7 quests)"
+            ],
+            "mvp_event_types_authoritative": [
+              "discovered_place",
+              "visited_building",
+              "bought_item",
+              "defeated_enemy"
+            ],
+            "hero_memory_taxonomy_v0": {
+              "conventions": [
+                "event_type uses lower_snake_case stable string keys; new types require PM + Agents 03/05 for contract collision review.",
+                "Each entry aligns with blueprint HeroMemoryEntry: sim_time_ms, summary (player-facing terse line), optional subject_type/subject_id/subject_name, optional tile/world_pos, tags tuple, importance 1–3 (cap in sim).",
+                "WK49 emits only MVP events plus generic scaffolding; deferred categories documented below remain spec-only."
+              ],
+              "mvp_band_wk49": {
+                "discovered_place": {
+                  "purpose": "First-class record when a meaningful place enters the hero known-places/read model (fog reveal to landmark correlation, ranger tile XP correlate, etc.).",
+                  "typical_subject_type": "place",
+                  "typical_subject_id": "Stable place_id (building instance, lair, POI shard—Agent 03 naming).",
+                  "dedupe_notes": "One memory row may accompany upsert into KnownPlaceSnapshot; suppress duplicate spam for repeat tile passes (deterministic merge policy is Agent 04/05).",
+                  "career_hook": "Increments places_discovered / complements tiles_revealed where distinct."
+                },
+                "visited_building": {
+                  "purpose": "Hero enters/leaves bounded interior or tagged building footprint (distinct from fog-only discovery).",
+                  "typical_subject_type": "building",
+                  "typical_subject_id": "building_id or prefab-backed instance key.",
+                  "dedupe_notes": "Optional revisit compression: periodic 'still_visiting_inn' merges vs per-frame spam (future tuning)."
+                },
+                "bought_item": {
+                  "purpose": "Deterministic economy spend at a shop/vendor (consumable restock or gear—not full equipment graph this sprint).",
+                  "typical_subject_type": "shop_or_vendor",
+                  "typical_subject_id": "building_id + optional sku tag in tags.",
+                  "career_hook": "purchases_made / optional gold_spent deltas from career counters."
+                },
+                "defeated_enemy": {
+                  "purpose": "Kill credited to hero (solo or dominant aggro attribution—defer multi-hero attribution rules to Agent 05).",
+                  "typical_subject_type": "enemy",
+                  "typical_subject_id": "enemy_spawn_id or type+shard per game policy.",
+                  "career_hook": "enemies_defeated",
+                  "relationship_seed_future": "May later fuse with met_hero or nemesis arcs (out of WK49)."
+                }
+              },
+              "future_quest_and_story_hooks": {
+                "description": "Roadmap Phase 7; consumes profile/memory, does not duplicate known_place rows.",
+                "event_types_reserved": [
+                  "rumor_heard",
+                  "quest_offer_received",
+                  "quest_accepted",
+                  "quest_objective_advanced",
+                  "quest_completed",
+                  "quest_failed",
+                  "chapter_milestone_reached",
+                  "bounty_linked_memory"
+                ],
+                "typical_subject_type": [
+                  "quest",
+                  "bounty",
+                  "world_hook",
+                  "inn_rumor_board"
+                ]
+              },
+              "future_relationships_and_reputation": {
+                "description": "Roadmap Phase 6; edges keyed by hero_id pairs or kingdom roles.",
+                "event_types_reserved": [
+                  "met_hero",
+                  "fought_alongside",
+                  "abandoned_ally_in_combat",
+                  "rescued_by",
+                  "hero_defeated_hero",
+                  "reputation_tag_earned"
+                ],
+                "typical_subject_type": [
+                  "hero",
+                  "npc_faction_stub"
+                ]
+              },
+              "future_llm_long_term_memory": {
+                "description": "Roadmap Phase 2: structured excerpts for prompts, never raw exhaustive logs.",
+                "event_policy": [
+                  "High-importance and recent windows surface first.",
+                  "Deterministic compaction may emit synthetic summarized_cluster entries later (explicitly synthetic, not forged gameplay facts)."
+                ],
+                "reserved_meta_tags": [
+                  "llm_excerpt_candidate",
+                  "prompt_window_recent",
+                  "prompt_window_high_importance"
+                ]
+              }
+            },
+            "qa_smoke": "Not run (design/log only; zero game/code changes)."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 03/05: implement MVP event emission + caps using these keys alongside HeroMemoryEntry snapshot builder.",
+            "Agent 04: confirm deterministic ordering/dedupe for discovered_place vs visited_building and known-place merges.",
+            "Agent 06 (later round): sanity-check excerpt policy vs Phase 2 LLM adapter.",
+            "PM: optionally move taxonomy into roadmap appendix if duplicated across agent logs."
+          ]
+        }
+      }
+    }
   },
   "wk14-persona-presence": {
     "sprint_meta": {
