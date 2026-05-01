@@ -468,6 +468,39 @@
           "follow_ups": []
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 Wave 0: gameplay safety consult for direct prompt refusal/redirect (Agent 05)."
+      },
+      "rounds": {
+        "wk50_r1_design_guardrails": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Consult-only — HP/potion/rest/target/shop guardrails for Phase 2B direct prompt validation and in-character refusal. No repo code edits. Policy: (A) Critical HP — current_hp/max_hp <= 0.25 (aligns with plan 25% critical): do not apply physical actions for explore_direction, discretionary go_to_known_place, or buy_potions unless already at shop interaction range with affordable potion; prefer seek_healing — use_potion if inventory count > 0, else retreat/move_to nearest resolvable known safety (home/castle, then inn/temple/healer if in known_places). LLM may return Defy with refusal_reason critical_health / unsafe_requested_action and redirect tool_action as above. (B) Low HP + low potions — hp/max_hp <= 0.50 AND potion_count <= 1: same veto bias for non-healing intents; buy_potions allowed only if gold covers at least one potion, known marketplace exists, and deterministic safety/range checks pass. (C) Unknown target — target_id not in hero known_places or natural language maps to zero or many IDs: no move/buy; force validator drop or map to no_action_chat_only; refusal_reason unknown_target; in-character ask to name a known place or offer status_report — never invent place IDs. (D) No gold / no shop — gold < cheapest potion price OR no known marketplace (profile): refuse buy_potions with refusal_reason no_gold or no_known_shop and spoken explanation; optional status_report. (E) Resting — rest_until_healed: if in combat or critical HP band, redirect to seek_healing first; if already in safe rest context (home/inn) and not threatened, allow rest/idle until healed; if HP already near full (>= plan RESTED_AND_READY band e.g. 95%), prefer no_action_chat_only with short reply. Thresholds stay consistent with Phase 2A LOW_HEALTH_COMBAT (50% consider, 25% critical) from the same sprint plan.",
+          "commands_run": [
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk50_llm_context_direct_prompts\" --round \"wk50_r1_design_guardrails\" --agent \"05\" --token \"bb215aa7-5667-457e-94da-9105be336f41\" --status done --summary \"Agent 05: WK50 gameplay safety consult for direct prompts. Log updated; no code changes.\" --log-path \".cursor\\plans\\agent_logs\\agent_05_GameplaySystemsDesigner.json\" --log-round 'sprints[\"wk50_llm_context_direct_prompts\"].rounds[\"wk50_r1_design_guardrails\"]'",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "consult_only": "Design consult for Agent 06 DirectPromptValidator / Agent 11 tests; no code or asset changes in this round.",
+            "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md"
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 06: implement refusal_reason and threshold checks in direct prompt validator; share constants with autonomous decision moments where sensible.",
+            "Agent 11: pytest cases for critical-HP defy+redirect, unknown target no physical action, broke hero cannot buy, rest redirect when unsafe."
+          ]
+        }
+      }
     }
   }
 }

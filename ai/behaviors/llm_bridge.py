@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from config import HEALTH_THRESHOLD_FOR_DECISION, LLM_DECISION_COOLDOWN, TILE_SIZE
+from config import LLM_DECISION_COOLDOWN, TILE_SIZE
 from ai.context_builder import ContextBuilder
+from ai.decision_moments import (
+    consult_suppressed_by_request_state,
+    determine_decision_moment,
+)
+from ai.profile_context_adapter import build_llm_context_for_moment
 from game.entities.hero import HeroState
 from game.sim.timebase import now_ms as sim_now_ms
 
@@ -39,46 +44,36 @@ def _resolve_move_target(target: str, game_state: dict, hero: Any) -> tuple[floa
 
 
 def should_consult_llm(ai: Any, hero: Any, game_state: dict) -> bool:
-    """Determine if we should ask the LLM for a decision."""
+    """Determine if we should ask the LLM for a decision (WK50: named decision moments)."""
     current_time = sim_now_ms()
-
-    # Respect cooldown.
-    if current_time - hero.last_llm_decision_time < LLM_DECISION_COOLDOWN:
+    moment = determine_decision_moment(hero, game_state, now_ms=current_time)
+    if moment is None:
         return False
-
-    # Don't stack requests.
-    if hero.pending_llm_decision:
+    cooldown_ms = max(LLM_DECISION_COOLDOWN, moment.cooldown_ms)
+    if consult_suppressed_by_request_state(hero, current_time, cooldown_ms) is not None:
         return False
-
-    # Critical decision points:
-    # 1. Health is low during combat.
-    if hero.state == HeroState.FIGHTING and hero.health_percent < HEALTH_THRESHOLD_FOR_DECISION:
-        return True
-
-    # 2. Has gold and near marketplace.
-    if hero.gold >= 30:
-        for building in game_state.get("buildings", []):
-            if building.building_type == "marketplace":
-                dist = hero.distance_to(building.center_x, building.center_y)
-                if dist < TILE_SIZE * 6:
-                    return True
-
-    return False
+    return True
 
 
 def request_llm_decision(ai: Any, hero: Any, game_state: dict) -> None:
     """Request a decision from the LLM brain."""
     if ai.llm_brain:
-        context = ContextBuilder.build_hero_context(hero, game_state)
+        now = sim_now_ms()
+        moment = determine_decision_moment(hero, game_state, now_ms=now)
+        if moment is None:
+            return
+        base_context = ContextBuilder.build_hero_context(hero, game_state)
+        autonomous = build_llm_context_for_moment(hero, game_state, moment, now_ms=now)
+        context = {**base_context, "wk50_autonomous": autonomous}
         ai.llm_brain.request_decision(hero.name, context)
         hero.pending_llm_decision = True
-        hero.last_llm_decision_time = sim_now_ms()
+        hero.last_llm_decision_time = now
         ai.record_decision(
             hero,
             action="request_llm",
-            reason="Consulting LLM for decision",
+            reason=f"Consulting LLM ({moment.moment_type.value})",
             intent=getattr(hero, "intent", "idle") or "idle",
-            inputs_summary=ContextBuilder.build_inputs_summary(context),
+            inputs_summary=ContextBuilder.build_inputs_summary(base_context),
             source="system",
         )
 

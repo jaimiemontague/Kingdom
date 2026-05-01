@@ -30,6 +30,73 @@ _COLOR_INPUT_BG = (45, 45, 55)
 _COLOR_TEXT = (240, 240, 240)
 _COLOR_MUTED = (180, 180, 180)
 _COLOR_THINKING = (160, 160, 160)
+_COLOR_DIRECT_HINT = (150, 175, 155)
+_COLOR_DIRECT_WARN = (200, 175, 130)
+
+# Human-readable refusal labels (validator slugs); keep short for chat rail.
+_REFUSAL_HINT_LABELS: dict[str, str] = {
+    "mvp_combat_deferred": "that kind of attack is not in the game yet",
+    "no_known_home": "no safe home is known yet",
+    "no_safe_haven_known": "no safe haven is known yet",
+    "unknown_place": "that place is not known yet",
+    "no_gold": "not enough gold",
+    "no_market_known": "no market is known yet",
+}
+
+
+def format_direct_prompt_hint(feedback: dict[str, Any] | None) -> str | None:
+    """
+    One-line HUD hint for WK50 direct prompts: applied vs redirected vs refused vs chat-only.
+    Returns None when no extra UI is useful (pure chat replies).
+
+    ``physical_committed`` (set by GameEngine after apply) gates any success line so we
+    never imply an order was carried out when the sim did not commit an effect.
+    """
+    if not feedback:
+        return None
+    raw_tool = feedback.get("tool_action")
+    tool_str = ""
+    if raw_tool is not None:
+        tool_str = str(raw_tool).strip().lower()
+    has_action = bool(tool_str) and tool_str not in ("null", "none")
+
+    obey = str(feedback.get("obey_defy") or "").strip().lower()
+    refusal = str(feedback.get("refusal_reason") or "").strip()
+    safety = str(feedback.get("safety_assessment") or "").strip().lower()
+    interpreted = str(feedback.get("interpreted_intent") or "").strip().lower()
+    physical = feedback.get("physical_committed")
+
+    def _refusal_line() -> str:
+        rl = refusal.lower()
+        detail = _REFUSAL_HINT_LABELS.get(rl)
+        if not detail:
+            detail = refusal.replace("_", " ").strip() if refusal else "cannot comply yet"
+            if not detail:
+                detail = "cannot comply yet"
+        return f"Refused — {detail}"
+
+    # Model/schema claimed a tool, but the engine did not commit a physical effect.
+    if has_action and physical is False:
+        if refusal:
+            return _refusal_line()
+        return "Not applied — no action committed"
+
+    if has_action and physical is not False:
+        if safety == "critical_redirect":
+            return "Redirected — safer option"
+        return "Order applied"
+
+    # No tool: refusal / soft redirect / chat-only
+    if obey == "defy" or refusal:
+        return _refusal_line()
+
+    if safety == "critical_redirect":
+        return "Redirected — safer path"
+
+    if interpreted in ("no_action_chat_only", "status_report"):
+        return None
+
+    return None
 
 
 def _wrap_text(font: pygame.font.Font, text: str, max_width: int) -> list[str]:
@@ -126,8 +193,12 @@ class ChatPanel:
         msg, self._pending_message = self._pending_message, None
         return msg
 
-    def receive_response(self, text: str) -> None:
-        self.conversation_history.append({"role": "hero", "text": text})
+    def receive_response(self, text: str, direct_feedback: dict[str, Any] | None = None) -> None:
+        entry: dict[str, str] = {"role": "hero", "text": text}
+        hint = format_direct_prompt_hint(direct_feedback)
+        if hint:
+            entry["direct_hint"] = hint
+        self.conversation_history.append(entry)
         self.waiting_for_response = False
         self._auto_scroll = True
         if len(self.conversation_history) > CONVERSATION_HISTORY_LIMIT:
@@ -195,7 +266,11 @@ class ChatPanel:
         total_lines = 0
         for entry in self.conversation_history:
             wrapped = _wrap_text(font, entry.get("text", ""), max_text_w)
-            total_lines += max(1, len(wrapped))
+            block_lines = max(1, len(wrapped))
+            dh = entry.get("direct_hint")
+            if dh:
+                block_lines += len(_wrap_text(font, dh, max_text_w))
+            total_lines += block_lines
         if self.waiting_for_response:
             total_lines += 1
         total_content_h = total_lines * line_h
@@ -226,6 +301,23 @@ class ChatPanel:
                         x = msg_rect.x + pad
                     surface.blit(surf, (x, content_y))
                 content_y += line_h
+            if role != "player":
+                dh = entry.get("direct_hint")
+                if dh:
+                    hint_color = (
+                        _COLOR_DIRECT_WARN
+                        if (
+                            dh.startswith("Refused")
+                            or dh.startswith("Not applied")
+                            or dh.startswith("Not carried")
+                        )
+                        else _COLOR_DIRECT_HINT
+                    )
+                    for hint_line in _wrap_text(font, dh, max_text_w):
+                        if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
+                            hs = font.render(hint_line, True, hint_color)
+                            surface.blit(hs, (msg_rect.x + pad, content_y))
+                        content_y += line_h
         if self.waiting_for_response:
             dots = "." * ((pygame.time.get_ticks() // 400) % 4)
             thinking = font.render(f"Thinking{dots}", True, _COLOR_THINKING)

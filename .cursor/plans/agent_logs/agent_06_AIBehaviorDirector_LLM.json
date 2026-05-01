@@ -1029,6 +1029,194 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "Phase 2A contracts only in wk50_r2; LLM bridge integration deferred to wk50_r3 per PM wave."
+      },
+      "rounds": {
+        "wk50_r2_phase2a_contracts": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r2_phase2a_contracts",
+          "status": "done",
+          "what_i_changed": [
+            "ai/decision_moments.py: DecisionMomentType, DecisionMoment, priority-ordered determine_decision_moment(), per-moment allowed_actions/context_focus/cooldown_ms, consult_suppressed_by_request_state().",
+            "ai/profile_context_adapter.py: build_llm_context_for_moment() merges build_hero_profile_snapshot with bounded ContextBuilder tactical slice (places/memory/enemies caps).",
+            "ai/prompt_packs.py: AUTONOMOUS_SYSTEM_PROMPT and build_autonomous_user_prompt() for strict JSON autonomous decisions.",
+            "ai/decision_output_validator.py: validate_autonomous_decision() allowlist + target rules for move_to/buy_item.",
+            "tests/test_wk50_phase2a_decision_contracts.py: moment ordering, post-combat gating, prompt pack, validator, context bounds."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "162 passed",
+            "qa_smoke_quick": "PASS (exit 0, DONE: PASS)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "wk50_r3: Wire determine_decision_moment + build_llm_context_for_moment + AUTONOMOUS prompt + validate_autonomous_decision into ai/behaviors/llm_bridge.py and LLMBrain request path; keep cooldown/pending guards."
+          ]
+        },
+        "wk50_r3_phase2a_integration": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r3_phase2a_integration",
+          "status": "done",
+          "what_i_changed": [
+            "ai/decision_moments.py: decision_moment_from_prompt_dict() to rebuild DecisionMoment from LLM context JSON.",
+            "ai/behaviors/llm_bridge.py: should_consult_llm uses determine_decision_moment + consult_suppressed_by_request_state with max(global LLM_DECISION_COOLDOWN, moment.cooldown_ms); request_llm_decision merges ContextBuilder base context with wk50_autonomous profile+moment payload.",
+            "ai/llm_brain.py: _process_autonomous_decision_request uses AUTONOMOUS_SYSTEM_PROMPT, build_autonomous_user_prompt, validate_autonomous_decision; invalid or unparseable output uses get_fallback_decision(base context).",
+            "ai/providers/mock_provider.py: _mock_autonomous_decision for deterministic WK50 autonomous JSON within allowed_actions.",
+            "tests/test_wk50_phase2a_decision_contracts.py: integration tests for bridge gating, LLMBrain autonomous validation, invalid-action fallback."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "166 passed",
+            "qa_smoke_quick": "PASS (exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "wk50_r5 Phase 2B: direct prompt contracts per PM hub; avoid reusing autonomous prompt path for chat."
+          ]
+        },
+        "wk50_r5_phase2b_direct_prompt_contracts": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r5_phase2b_direct_prompt_contracts",
+          "status": "done",
+          "what_i_changed": [
+            "ai/direct_prompt_validator.py: SUPPORTED_DIRECT_INTENTS, deferred combat intents, validate_direct_prompt_output() with known-place checks, critical HP redirect, MVP attack refusal, tool_action allowlist.",
+            "ai/prompt_packs.py: format_direct_system_prompt(), DIRECT_PROMPT_MARK, build_direct_prompt_messages() with full WK50 Phase 2B JSON schema in user blob.",
+            "ai/context_builder.py: known_places_llm (max 8) from build_hero_profile_snapshot for chat/direct validation.",
+            "ai/llm_brain.py: conversation path uses direct prompt pack + validate_direct_prompt_output; worker error path returns validated shape.",
+            "ai/providers/mock_provider.py: _mock_direct_prompt() deterministic phrases (go home, heal, buy potions, inn, explore east, status, attack lair deferral).",
+            "tests/test_wk50_phase2b_direct_prompt_contracts.py: intent/validator/mock/brain coverage."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "177 passed",
+            "qa_smoke_quick": "PASS (exit 0, DONE: PASS)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "wk50_r6: Agent 03 engine-side explore_direction / known_place resolution if needed beyond current _resolve_move_target.",
+            "Optional: chat UX (Agent 08) for obey/defy and refusal_reason display."
+          ]
+        },
+        "wk50_r9_hotfix_llm_bridge_herostate_import": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r9_hotfix_llm_bridge_herostate_import",
+          "status": "done",
+          "what_i_changed": [
+            "ai/behaviors/llm_bridge.py: import HeroState from game.entities.hero so apply_llm_decision fight / leave_building / move_to branches do not raise NameError.",
+            "tests/test_llm_bridge_apply_decision.py: regression tests for fight state, leave_building idle exit, move_to resolved vs explore fallback."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "191 passed",
+            "qa_smoke_quick": "DONE: PASS (exit 0); conversation mock scenario exit 0"
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "what_i_changed": [
+            "ai/direct_prompt_validator.py: player_message param for compass parsing; explore_direction refuses without parseable heading; buy_potions handles cannot-afford and no-potion-at-shop; critical explore/go_to with no potions and no home refuses instead of retreat-without-target; rest/seek failures set Defy + reasons; sync Obey/refusal/safety when tool_action is committed vs absent.",
+            "ai/llm_brain.py: pass player_message into validate_direct_prompt_output on conversation path (incl. worker error recovery).",
+            "ai/providers/mock_provider.py: direct prompt JSON always post-processed through validator; removed bogus home=places[0] fallback; tuned go home / buy / explore phrasing.",
+            "ai/prompt_packs.py: schema/instructions for obey_defy vs executable tool_action.",
+            "tests/test_wk50_phase2b_direct_prompt_contracts.py: coverage for explore heading, shop edge cases, forced Obey on commit."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "198 passed",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

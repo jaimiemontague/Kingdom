@@ -804,6 +804,71 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 Wave 0: determinism / MP-readiness design guardrails for Phase 2A decision moments and Phase 2B direct prompts."
+      },
+      "rounds": {
+        "wk50_r1_design_guardrails": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Design-only determinism/MP-readiness review against WK50 plan and current llm_bridge/engine paths. No code or docs files edited; added this orchestrator log entry only.",
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_04_NetworkingDeterminism_Lead.json",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete ... --log-round \"sprints[\\\"wk50_llm_context_direct_prompts\\\"].rounds[\\\"wk50_r1_design_guardrails\\\"]\"",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 1,
+              "note": "PowerShell misparsed --log-round; CLI reported Unknown option"
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete ... --log-round 'sprints[\"wk50_llm_context_direct_prompts\"].rounds[\"wk50_r1_design_guardrails\"]' (same flags/token/summary/log-path as SDK prompt)",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "note": "Receipt written tools/ai_studio_orchestrator/runs/inbox/3af2778f-4a88-41e0-9264-e11e43783e3e.completion.json"
+            }
+          ],
+          "evidence": {
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found"
+            },
+            "wk50_plan_alignment": [
+              "Sim-time gating: Plan requires DecisionMoment cooldown_ms and trigger evaluation on sim time only; existing autonomous path already uses sim_now_ms() for LLM consult cooldown and last_llm_decision_time (ai/behaviors/llm_bridge.py).",
+              "Finding — conversation throttle: GameEngine.send_player_message uses pygame.time.get_ticks() for CONVERSATION_COOLDOWN_MS (game/engine.py). That is presentation/wall-clock, not sim time; acceptable for local UX today but not MP/replay-safe if chat becomes authoritative input — Agent 03/06 should align cooldown with sim_now_ms when DETERMINISTIC_SIM or future lockstep applies.",
+              "Deterministic moment ordering: When multiple heroes qualify in one tick, hero iteration order must be stable (explicit sort by hero key/id before evaluating moments). When multiple DecisionMoment candidates exist for one hero, plan urgency then stable tie-break (moment enum order, then fixed rule). Avoid set/dict iteration for eligibility scans.",
+              "LLM advisory only: WK50 mandates OutputValidator / DirectPromptValidator before apply_llm_decision; today chat maps tool_action straight into apply_llm_decision — Phase 2B must insert validator + intent allow-list so model output never applies unsupported physics.",
+              "Bounded prompt/history: Plan caps profile context (places, memory, enemies, etc.); CONVERSATION_HISTORY_LIMIT already slices UI history before request_conversation. Do not add unbounded transcript blobs to hero or game_state snapshots; keep prompts constructed per request from bounded slices.",
+              "Async worker: LLMBrain thread latency is fine for SP; for MP, only enqueue/consume decisions on sim boundaries with deterministic ordering — document-only note for future rollback layer."
+            ],
+            "qa_smoke": "Not run (no code changes this round; assignment preferred log-only)."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: Implement DecisionMoment policy with sim-time cooldowns only; stable ordering for multi-moment and multi-hero eligibility.",
+            "Agent 06/03: Add DirectPromptValidator before apply_llm_decision(source=\"chat\"); route conversation cooldown through sim time where determinism is required.",
+            "Agent 11: Tests asserting invalid/unauthorized tool_action never mutates hero intent when validator rejects.",
+            "Agent 12 (optional): Extend determinism_guard paths if new LLM modules under ai/ omit coverage."
+          ],
+          "recommended_next_actions": [
+            "Proceed WK50 Wave 1 Phase 2A contracts with validator skeleton wired so LLM JSON cannot bypass allowed_actions.",
+            "After Phase 2B lands, re-run determinism_guard and add replay-focused note if chat cooldown stays pygame-driven."
+          ]
+        }
+      }
     }
   },
   "wk11-building-interiors-llm": {

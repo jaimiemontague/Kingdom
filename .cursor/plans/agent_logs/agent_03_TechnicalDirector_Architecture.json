@@ -688,6 +688,105 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 Phase 2B engine: deterministic direct-prompt target resolution"
+      },
+      "rounds": {
+        "wk50_r6_phase2b_engine_ui": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r6_phase2b_engine_ui",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_targets.py: resolve known-place IDs via HeroProfileSnapshot world_pos; parse compass headings; deterministic explore waypoint (map-clamped); strip untrusted coordinate keys from LLM-shaped dicts.",
+            "game/sim/direct_prompt_exec.py: apply_validated_direct_prompt_physical — move_to uses engine resolution first; explore_direction sets llm_move_request from compass + player message (chat text stays on spoken_response path only).",
+            "game/engine.py: store last chat player message for direction parsing; route chat tool actions through direct_prompt_exec instead of raw apply_llm_decision.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: unit coverage for resolution helpers."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "182 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_commit.py: sovereign movement commit (hero.target type direct_prompt, TTL expiry helpers, clear on urgency).",
+            "game/sim/direct_prompt_exec.py: successful move_to and explore_direction now call attach_direct_prompt_move (immediate set_target_position) instead of deferring via llm_move_request only; explore uses MOVING + moving_to_destination intent.",
+            "ai/basic_ai.py: direct_prompt in committed-destination set; expire TTL each tick; clear commit when castle is under attack or damaged defend path takes over.",
+            "ai/behaviors/bounty_pursuit.py: arrival handling for direct_prompt (return_home rest at nearest home/castle/inn; buy_potions -> marketplace brief enter/SHOPPING; other sub_intents idle); treat direct_prompt and bounty as non-interrupt in tail guard.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: commit + exec regression tests."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "193 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06/08: align spoken obey/refusal copy with commit outcomes per same-round PM prompts (UI must not claim accepted without commit)."
+          ]
+        }
+      }
     }
   }
 }

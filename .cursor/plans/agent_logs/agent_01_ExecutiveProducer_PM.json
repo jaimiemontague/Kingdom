@@ -2656,6 +2656,888 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "sprint_id": "wk50_llm_context_direct_prompts",
+        "goal": "Phase 2A/2B LLM layer: rare event-gated autonomous decision moments using HeroProfileSnapshot context, plus direct prompt command interpreter for safe core player-to-hero requests.",
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "created_utc": "2026-05-01T02:42:00Z",
+        "status": "human_gate_pending",
+        "notes": "All orchestrated WK50 rounds completed; HeroState hotfix and direct prompt execution/feedback fix both verified. Sprint now needs Jaimie manual mock-provider retest. MVP direct prompts execute safe core commands only; attack lair/enemy, personal quests, emotional behavior, and relationship systems remain explicitly deferred."
+      },
+      "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts. Read the assigned PM hub round and the sprint plan .cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md. Scope: Phase 2A rare LLM decision moments and Phase 2B safe direct-prompt commands. Do not implement attack lair/enemy commands, emotional behavior, quests, relationship systems, or direct control. Update your own log at sprints[\"wk50_llm_context_direct_prompts\"].rounds[ROUND_ID], run required gates, validate your log JSON, then run the exact orchestrator complete receipt from your SDK prompt.",
+      "rounds": {
+        "wk50_r0_pm_kickoff": {
+          "round_meta": {
+            "round_id": "wk50_r0_pm_kickoff",
+            "created_utc": "2026-05-01T02:42:00Z",
+            "source": "Agent_01_PM_kickoff",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "PM hub updated with WK50 orchestration rounds. Sprint plan is .cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "done",
+              "next_action": "Run orchestrator rounds wk50_r1 through wk50_r7 in order."
+            }
+          }
+        },
+        "wk50_r1_design_guardrails": {
+          "round_meta": {
+            "round_id": "wk50_r1_design_guardrails",
+            "build_target": "Acceptance criteria, determinism review, and gameplay safety thresholds"
+          },
+          "pm_status_summary": "Wave 0: Agents 02/04/05 define game-feel, determinism, and safety guardrails before implementation. No gameplay code expected.",
+          "pm_next_actions_by_agent": {
+            "02": "Write acceptance criteria for rare LLM decision moments and direct prompt commands. Medium intelligence.",
+            "04": "Review determinism/MP readiness for decision moments and direct prompt physical effects. Medium intelligence.",
+            "05": "Define gameplay safety thresholds for refusal/redirect. Medium intelligence consult."
+          },
+          "pm_agent_prompts": {
+            "02": "You are Agent 02, sprint wk50_llm_context_direct_prompts, round wk50_r1_design_guardrails (MEDIUM). Task: define player-facing acceptance criteria for Phase 2A rare LLM decision moments and Phase 2B direct prompt commands. Read the full WK50 plan. Focus on game feel: LLM use should feel rare/meaningful; direct prompts preserve indirect control; heroes usually obey safe supported requests but refuse unsafe/impossible ones in character. MVP direct commands are safe core only; attack lair/enemy commands are future. No code changes. Update your log with required orchestrator fields, validate JSON, then complete.",
+            "04": "You are Agent 04, sprint wk50_llm_context_direct_prompts, round wk50_r1_design_guardrails (MEDIUM). Task: determinism/MP-readiness review. Read the full WK50 plan. Review sim-time gating, deterministic moment ordering, LLM output as advisory only, bounded prompt/history data, and validation before physical effects. Run python tools/determinism_guard.py if useful. Prefer log/docs only. Update your log with required orchestrator fields, validate JSON, then complete.",
+            "05": "You are Agent 05, sprint wk50_llm_context_direct_prompts, round wk50_r1_design_guardrails (MEDIUM). Task: gameplay safety consult only. Define HP/potion/resting rules for direct prompt refusal/redirect: critical HP, low HP with low potions, unknown target, no gold/shop. No implementation unless explicitly needed later. Update your log with required orchestrator fields, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "02",
+              "04",
+              "05"
+            ],
+            "intelligence_by_agent": {
+              "02": "medium",
+              "04": "medium",
+              "05": "medium"
+            },
+            "do_not_send": [
+              "03",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallel guardrail consults before implementation."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "02",
+              "04",
+              "05"
+            ],
+            "dependencies": [
+              {
+                "id": "design_guardrails",
+                "agents": [
+                  "02",
+                  "04",
+                  "05"
+                ],
+                "parallel": true
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r2_phase2a_contracts": {
+          "round_meta": {
+            "round_id": "wk50_r2_phase2a_contracts",
+            "build_target": "DecisionMoment contracts, profile context adapter, autonomous prompt pack, validator skeleton",
+            "depends_on": "wk50_r1_design_guardrails"
+          },
+          "pm_status_summary": "Phase 2A contracts: Agent 06 creates decision moment/context/prompt/validation architecture.",
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r2_phase2a_contracts (HIGH). Task: implement Phase 2A architecture from the WK50 plan: decision moment contracts, profile-to-LLM context adapter, autonomous prompt pack, and validation skeleton. You may edit ai/ and tests. Keep LLM calls rare/event-gated; no direct prompt commands yet; no attack lair/enemy commands; no emotional/quest behavior. Add tests for moment contract/context/prompt/validator behavior. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update your log with required fields, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "06"
+            ],
+            "intelligence_by_agent": {
+              "06": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "AI Behavior owner creates Phase 2A core contracts."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06"
+            ],
+            "dependencies": [
+              {
+                "id": "phase2a_contracts",
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r3_phase2a_integration": {
+          "round_meta": {
+            "round_id": "wk50_r3_phase2a_integration",
+            "build_target": "Integrate DecisionMoment policy into LLM bridge",
+            "depends_on": "wk50_r2_phase2a_contracts"
+          },
+          "pm_status_summary": "Phase 2A integration: Agent 06 replaces broad LLM trigger logic with rare named decision moments.",
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r3_phase2a_integration (HIGH). Task: integrate Phase 2A into the LLM bridge. Replace/extend should_consult_llm with named DecisionMoment gating, use profile-derived context where available, preserve cooldown and pending request behavior, validate returned actions against allowed actions, and preserve fallback behavior for no LLM/invalid output. You may edit ai/ and tests. Do not add direct prompt commands yet. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update your log, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "06"
+            ],
+            "intelligence_by_agent": {
+              "06": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "AI Behavior owner integrates Phase 2A without engine changes unless blockers are reported."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06"
+            ],
+            "dependencies": [
+              {
+                "id": "phase2a_integration",
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r4_phase2a_qa_perf": {
+          "round_meta": {
+            "round_id": "wk50_r4_phase2a_qa_perf",
+            "build_target": "Phase 2A QA and LLM frequency/perf consult",
+            "depends_on": "wk50_r3_phase2a_integration"
+          },
+          "pm_status_summary": "Phase 2A QA: Agents 11 and 10 verify triggers/prompts/mock LLM path and LLM frequency risk.",
+          "pm_agent_prompts": {
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r4_phase2a_qa_perf (HIGH). Task: verify Phase 2A. Add/verify tests for decision moment triggers, cooldown/pending suppression, prompt content with identity/situation/allowed actions/known places, mock LLM path, and invalid output fallback. Run python -m pytest tests/, python tools/qa_smoke.py --quick, and python tools/validate_assets.py --report. Update your log with required fields, validate JSON, then complete.",
+            "10": "You are Agent 10, sprint wk50_llm_context_direct_prompts, round wk50_r4_phase2a_qa_perf (LOW). Task: perf/cost consult for Phase 2A. Confirm LLM decision moments do not spam requests, cooldowns still work, and profile/memory prompt context stays bounded. Run python tools/perf_benchmark.py if available and python tools/qa_smoke.py --quick. Do not edit game code unless PM escalates. Update your log with required fields, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "batch_1_parallel",
+            "batch_1_parallel": [
+              "11",
+              "10"
+            ],
+            "intelligence_by_agent": {
+              "11": "high",
+              "10": "low"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Parallel QA and performance/cost consult after Phase 2A integration."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "11",
+              "10"
+            ],
+            "dependencies": [
+              {
+                "id": "phase2a_qa_perf",
+                "agents": [
+                  "11",
+                  "10"
+                ],
+                "parallel": true
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r5_phase2b_direct_prompt_contracts": {
+          "round_meta": {
+            "round_id": "wk50_r5_phase2b_direct_prompt_contracts",
+            "build_target": "Direct prompt schema, safe core intents, validator, mock provider support",
+            "depends_on": "wk50_r4_phase2a_qa_perf"
+          },
+          "pm_status_summary": "Phase 2B contracts: Agent 06 adds direct prompt command interpreter for safe core commands.",
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r5_phase2b_direct_prompt_contracts (HIGH). Task: implement direct prompt command system from the WK50 plan. Add schema, safe core command intents, validator, direct prompt pack, and deterministic mock provider responses. Supported intents: status_report, return_home, seek_healing, go_to_known_place, buy_potions, explore_direction, rest_until_healed, no_action_chat_only. Attack lair/enemy must be refused/deferred in MVP. You may edit ai/ and tests. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update your log, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "06"
+            ],
+            "intelligence_by_agent": {
+              "06": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "AI Behavior owner builds Phase 2B command interpreter and prompt pack."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06"
+            ],
+            "dependencies": [
+              {
+                "id": "phase2b_contracts",
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r6_phase2b_engine_ui": {
+          "round_meta": {
+            "round_id": "wk50_r6_phase2b_engine_ui",
+            "build_target": "Safe direct prompt physical action bridge and chat feedback",
+            "depends_on": "wk50_r5_phase2b_direct_prompt_contracts"
+          },
+          "pm_status_summary": "Phase 2B integration: Agent 03 bridges validated safe direct prompt actions to physical behavior; Agent 08 improves chat feedback if needed.",
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk50_llm_context_direct_prompts, round wk50_r6_phase2b_engine_ui (HIGH). Task: support safe physical execution of validated direct prompt commands if needed by Agent 06's system. Read the WK50 plan. Resolve known-place target IDs/directions through deterministic engine-side logic, keep chat response display separate from action, and never let LLM set raw coordinates directly. Do not add attack lair/enemy commands. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update your log, validate JSON, then complete.",
+            "08": "You are Agent 08, sprint wk50_llm_context_direct_prompts, round wk50_r6_phase2b_engine_ui (MEDIUM). Task: chat UX support if needed. Read the WK50 plan and Agent 06/03 outputs. Improve feedback for accepted/refused/redirected direct prompts only if useful; preserve existing chat behavior and avoid prompt/action logic. Run python -m pytest tests/ if UI tests changed and python tools/qa_smoke.py --quick. Update your log, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "08"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "08": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Engine bridge first, then UX feedback."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "08"
+            ],
+            "dependencies": [
+              {
+                "id": "engine_bridge",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "chat_ux",
+                "after": [
+                  "engine_bridge"
+                ],
+                "agents": [
+                  "08"
+                ],
+                "parallel": false
+              }
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r7_final_qa": {
+          "round_meta": {
+            "round_id": "wk50_r7_final_qa",
+            "build_target": "Final tests, QA smoke, asset validation, and manual mock-provider instructions",
+            "depends_on": "wk50_r6_phase2b_engine_ui"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Final QA passed: Agent 11 verified Phase 2A+2B, command safety, mock provider path, and provided manual test instructions."
+          },
+          "pm_agent_prompts": {
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r7_final_qa (HIGH). Task: final QA. Verify decision moment trigger tests, prompt content tests, direct prompt safe core command tests, mock LLM conversation scenario, and unsupported/unsafe prompt behavior. Run python -m pytest tests/, python tools/qa_smoke.py --quick, and python tools/validate_assets.py --report. Provide exact manual command python main.py --provider mock with 5-10 minute steps from the WK50 plan. Update your log with required fields, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "then_in_order",
+            "then_in_order": [
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Final QA owner verifies the full sprint and human manual instructions."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "final_qa",
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          }
+        },
+        "wk50_r8_pm_orchestrator_summary": {
+          "round_meta": {
+            "round_id": "wk50_r8_pm_orchestrator_summary",
+            "created_utc": "2026-05-01T03:10:00Z",
+            "source": "pm_synthesis_after_orchestrator_chain",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_pending",
+            "summary": "WK50 orchestrated worker rounds completed successfully. Agents 02, 04, 05, 06, 11, 10, 03, 08, and 11 completed in sequence; all receipts verified and logs passed. Automated gates passed; sprint awaits Jaimie manual mock-provider playtest."
+          },
+          "pm_evidence": {
+            "orchestrator_command": ".\\tools\\ai_studio_orchestrator\\run_remaining_rounds.ps1 -Sprint \"wk50_llm_context_direct_prompts\" -Rounds @(\"wk50_r1_design_guardrails\", \"wk50_r2_phase2a_contracts\", \"wk50_r3_phase2a_integration\", \"wk50_r4_phase2a_qa_perf\", \"wk50_r5_phase2b_direct_prompt_contracts\", \"wk50_r6_phase2b_engine_ui\", \"wk50_r7_final_qa\")",
+            "receipt_verification": "All launched agents reported verification=verified and log=passed in orchestrator output.",
+            "agent_06_phase2a": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r2_phase2a_contracts + wk50_r3_phase2a_integration",
+            "agent_06_phase2b": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r5_phase2b_direct_prompt_contracts",
+            "agent_03_engine_bridge": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk50_r6_phase2b_engine_ui",
+            "agent_11_final_qa": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r7_final_qa",
+            "automated_gates": "Agent 11 final QA: python -m pytest tests/ PASS (187 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline."
+          },
+          "pm_accepted_deliverables": [
+            "Phase 2A DecisionMoment contracts and event-gated LLM consultation policy.",
+            "Profile-derived bounded LLM context adapter and autonomous prompt pack.",
+            "Autonomous decision output validation and fallback handling.",
+            "Phase 2B direct prompt schema, supported safe core intents, validator, prompt pack, and mock provider responses.",
+            "Engine-side safe direct prompt target/action resolution for known places and explore directions.",
+            "Chat UX feedback for accepted/refused/redirected direct prompts.",
+            "Regression coverage for decision moments, prompt content, direct prompt validation, mock provider path, and engine resolution."
+          ],
+          "pm_human_test_request": {
+            "run": "python main.py --provider mock",
+            "duration": "5-10 minutes",
+            "steps": [
+              "Open a hero chat.",
+              "Ask \"how are you doing?\" and verify status response only.",
+              "Ask \"go home\" and verify response plus movement toward home/safety when feasible.",
+              "Ask \"buy potions\" and verify buy/move/refusal depending situation.",
+              "Ask \"explore east\" and verify a safe movement/explore response.",
+              "Ask \"attack the lair\" and verify MVP refuses or says it cannot do that yet, not hallucinating an attack.",
+              "Try a badly wounded hero and verify unsafe requests redirect toward healing."
+            ],
+            "verify": [
+              "Direct prompt commands produce in-character responses.",
+              "Safe supported commands can trigger physical actions when feasible.",
+              "Unsafe or unsupported commands refuse/redirect cleanly.",
+              "No direct prompt causes a crash or obvious bad movement."
+            ],
+            "if_it_fails": "Copy/paste the last ~30 terminal lines and describe the exact hero prompt you typed."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "bugfix_needed",
+              "next_action": "File and run focused hotfix round for HeroState NameError in llm_bridge.py. Do not commit/push unless explicitly requested."
+            },
+            "02": { "status": "done" },
+            "03": { "status": "done" },
+            "04": { "status": "done" },
+            "05": { "status": "done" },
+            "06": { "status": "done" },
+            "08": { "status": "done" },
+            "10": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        },
+        "wk50_r9_hotfix_llm_bridge_herostate_import": {
+          "round_meta": {
+            "round_id": "wk50_r9_hotfix_llm_bridge_herostate_import",
+            "created_utc": "2026-05-01T03:12:00Z",
+            "source": "human_playtest_crash_report",
+            "build_target": "Fix HeroState NameError in LLM bridge direct/autonomous action application",
+            "depends_on": "wk50_r7_final_qa"
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Human mock-provider playtest crashed in ai/behaviors/llm_bridge.py because apply_llm_decision references HeroState.FIGHTING/IDLE without importing HeroState. Focused hotfix: Agent 06 fixes import/regression coverage, Agent 11 verifies."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-001",
+              "title": "Mock-provider playtest crashes with NameError: HeroState is not defined",
+              "severity": "blocker",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock from repo root.",
+                "Let a hero trigger/apply an LLM decision or use direct prompt flow.",
+                "Game crashes in ai/behaviors/llm_bridge.py apply_llm_decision."
+              ],
+              "expected": "LLM/direct-prompt decisions can set hero states without crashing.",
+              "actual": "NameError: name 'HeroState' is not defined at ai/behaviors/llm_bridge.py when assigning HeroState.IDLE/FIGHTING.",
+              "acceptance_test": [
+                "Focused pytest covers apply_llm_decision branches that assign HeroState.FIGHTING and HeroState.IDLE.",
+                "python tools/qa_smoke.py --quick passes.",
+                "python main.py --provider mock no longer crashes on the reported path."
+              ],
+              "status": "fixed_pending_human_retest"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "06": { "status": "done" },
+            "11": { "status": "done" },
+            "01": {
+              "status": "awaiting_human_retest",
+              "next_action": "Ask Jaimie to rerun python main.py --provider mock and confirm the crash no longer occurs."
+            }
+          },
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r9_hotfix_llm_bridge_herostate_import (HIGH). Human playtest blocker: mock-provider run crashed in ai/behaviors/llm_bridge.py because apply_llm_decision assigns HeroState.IDLE/FIGHTING but HeroState is not defined. Make the minimal AI-owned fix (likely import HeroState from game.entities.hero) and add/adjust focused tests so the fight and leave_building/move_to fallback branches no longer miss imports. Do not expand direct prompt scope. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update your log with required orchestrator fields, validate JSON, then complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r9_hotfix_llm_bridge_herostate_import (MEDIUM). Verify the HeroState NameError hotfix. Required: python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report. Confirm tests cover apply_llm_decision branches that assign HeroState and that mock-provider conversation/decision smoke remains green. Update your log with required orchestrator fields, validate JSON, then complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "06",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Focused AI hotfix by Agent 06, then QA verification by Agent 11."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_herostate_import",
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_hotfix",
+                "after": [
+                  "fix_herostate_import"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r9_hotfix_llm_bridge_herostate_import. This is a focused hotfix only: fix the HeroState NameError in ai/behaviors/llm_bridge.py and verify. Do not expand feature scope. Update your own log, run gates, validate JSON, then complete."
+        },
+        "wk50_r10_pm_hotfix_summary": {
+          "round_meta": {
+            "round_id": "wk50_r10_pm_hotfix_summary",
+            "created_utc": "2026-05-01T03:19:00Z",
+            "source": "pm_synthesis_after_herostate_hotfix",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "human_retest_pending",
+            "summary": "WK50 HeroState hotfix passed. Agent 06 imported HeroState in llm_bridge.py and added regression tests for apply_llm_decision state-setting branches. Agent 11 verified pytest, qa_smoke, validate_assets, and mock-provider conversation smoke."
+          },
+          "pm_evidence": {
+            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r9_hotfix_llm_bridge_herostate_import",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r9_hotfix_llm_bridge_herostate_import",
+            "automated_gates": "Agent 11: python -m pytest tests/ PASS (191 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
+            "regression_tests": "tests/test_llm_bridge_apply_decision.py covers HeroState.FIGHTING, HeroState.IDLE, and move_to branches."
+          },
+          "pm_human_retest_request": {
+            "run": "python main.py --provider mock",
+            "duration": "3-5 minutes",
+            "steps": [
+              "Start the game.",
+              "Open a hero chat or wait for an LLM decision moment.",
+              "Try the same flow that previously crashed.",
+              "Confirm there is no NameError: HeroState is not defined."
+            ],
+            "verify": [
+              "No crash on LLM/direct-prompt decision application.",
+              "Hero chat still responds.",
+              "Safe direct prompt actions still behave as expected."
+            ],
+            "if_it_fails": "Copy/paste the last ~30 terminal lines and the exact prompt/action that triggered the crash."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "bugfix_needed",
+              "next_action": "File direct prompt execution/feedback follow-up bug round."
+            },
+            "06": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "round_meta": {
+            "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+            "created_utc": "2026-05-01T03:35:00Z",
+            "source": "human_playtest_behavior_report",
+            "build_target": "Direct prompt accepted/refused feedback must match actual committed behavior",
+            "depends_on": "wk50_r9_hotfix_llm_bridge_herostate_import"
+          },
+          "pm_status_summary": {
+            "status": "assigned",
+            "summary": "Human playtest after HeroState hotfix: heroes often respond to direct prompts but do not actually carry out accepted commands. 'go home' often says no safe home is known; 'buy potions' claims market too far even when known/affordable; 'explore east' accepts but normal AI overrides with nearby combat/inn behavior. Need a focused execution/feedback coherence fix."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-002",
+              "title": "Accepted direct prompt commands do not reliably produce committed hero behavior",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Open hero chat.",
+                "Ask go home / buy potions / explore east.",
+                "Hero response says accepted or command will be followed, but hero does not move to home/market/east and may immediately fight/rest elsewhere."
+              ],
+              "expected": "If UI says command accepted/will be followed, the hero should receive a committed deterministic action target for a short window, or the UI must say the command was refused/redirected.",
+              "actual": "Hero speech and UI feedback often imply acceptance, but normal AI behavior overrides or no actionable target is set.",
+              "acceptance_test": [
+                "Accepted go home sets a committed movement/retreat target to known safety/home.",
+                "Accepted buy potions moves to known market or buys if already there; if impossible, response/feedback clearly refuses with reason.",
+                "Accepted explore east sets an eastward committed destination and is not immediately overwritten by routine AI unless urgent safety/combat rules explicitly redirect.",
+                "UI feedback never says accepted if no physical action was actually committed."
+              ],
+              "status": "fixed_pending_human_retest"
+            },
+            {
+              "id": "WK50-BUG-003",
+              "title": "Direct prompt target/refusal language is inconsistent with known places",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Ask buy potions when hero has gold and knows market.",
+                "Hero may claim market is too far or not safe instead of attempting movement or giving a precise refusal."
+              ],
+              "expected": "Direct prompt validator/prompt/mock provider should align response with known-place context and validated executable target.",
+              "actual": "Responses sometimes cite incorrect/weak reasons despite known places and feasible safe commands.",
+              "acceptance_test": [
+                "Mock provider direct prompt responses for go home, buy potions, and explore east include executable/validated intent when context supports it.",
+                "If context does not support execution, response uses a clear refusal/redirect reason matching validator output."
+              ],
+              "status": "fixed_pending_human_retest"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": { "status": "done" },
+            "06": { "status": "done" },
+            "08": { "status": "done" },
+            "11": { "status": "done" },
+            "01": {
+              "status": "awaiting_human_retest",
+              "next_action": "Ask Jaimie to retest go home / buy potions / explore east direct prompts."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk50_llm_context_direct_prompts, round wk50_r11_bugfix_direct_prompt_execution (HIGH). Human playtest bug: direct prompt responses often say accepted/will follow, but heroes do not actually execute go home, buy potions, or explore east. Root suspicion: direct prompt movement sets llm_move_request once but normal AI immediately overwrites it. Implement a deterministic short-lived committed direct prompt action/target so accepted safe commands visibly persist unless urgent safety/combat rules explicitly redirect. Ensure go home resolves known/home safety, buy potions resolves known marketplace or precise refusal, explore east resolves an eastward destination. Do not add attack commands. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update log, validate JSON, complete.",
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r11_bugfix_direct_prompt_execution (HIGH). After Agent 03 clarifies/implements execution contract, tighten direct prompt prompt/validator/mock responses so spoken_response, obey_defy, safety_assessment, and refusal_reason match whether an action can actually be committed. Do not let mock/provider say accepted if target resolution fails. Fix buy potions/go home/explore east language. Do not add attack commands. Run python -m pytest tests/ and python tools/qa_smoke.py --quick. Update log, validate JSON, complete.",
+            "08": "You are Agent 08, sprint wk50_llm_context_direct_prompts, round wk50_r11_bugfix_direct_prompt_execution (MEDIUM). After Agent 03/06, ensure chat UI feedback distinguishes accepted, redirected, refused, and chat-only. Do not show 'command accepted' unless a physical action was actually committed. Keep UI compact and preserve existing chat behavior. Run python -m pytest tests/ if UI tests changed and python tools/qa_smoke.py --quick. Update log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r11_bugfix_direct_prompt_execution (HIGH). Verify direct prompt execution/feedback coherence. Required: python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report. Confirm tests prove: accepted go home commits safety/home movement; accepted buy potions moves/buys or refuses accurately; accepted explore east commits eastward destination and is not immediately overwritten by routine AI; UI feedback never claims accepted if no action committed. Provide manual retest steps without referencing root entry script paths. Update log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "06",
+              "08",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "06": "high",
+              "08": "medium",
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Execution contract first (03), prompt/validator language second (06), UI feedback third (08), final QA last (11)."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "06",
+              "08",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "commit_direct_prompt_actions",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "align_prompt_validator_language",
+                "after": [
+                  "commit_direct_prompt_actions"
+                ],
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "align_chat_feedback",
+                "after": [
+                  "align_prompt_validator_language"
+                ],
+                "agents": [
+                  "08"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_execution_feedback",
+                "after": [
+                  "align_chat_feedback"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest",
+              "commit",
+              "push"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r11_bugfix_direct_prompt_execution. This is a focused bugfix: accepted direct prompt commands must match actual committed behavior and UI feedback. Do not add attack commands or expand scope. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r12_pm_direct_prompt_fix_summary": {
+          "round_meta": {
+            "round_id": "wk50_r12_pm_direct_prompt_fix_summary",
+            "created_utc": "2026-05-01T03:52:00Z",
+            "source": "pm_synthesis_after_direct_prompt_execution_fix",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "human_retest_pending",
+            "summary": "Direct prompt execution/feedback bugfix passed. Agent 03 added committed direct prompt movement/action state so accepted commands persist; Agent 06 aligned validator/mock/provider language with executable outcomes; Agent 08 aligned chat feedback; Agent 11 verified with 201 passing tests, qa_smoke, and validate_assets."
+          },
+          "pm_evidence": {
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk50_r11_bugfix_direct_prompt_execution",
+            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r11_bugfix_direct_prompt_execution",
+            "agent_08": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json → wk50_r11_bugfix_direct_prompt_execution",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r11_bugfix_direct_prompt_execution",
+            "automated_gates": "Agent 11: python -m pytest tests/ PASS (201 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
+            "behavior_coverage": "Tests cover go home/buy potions direct_prompt commit, explore east commit and one-tick preservation, buy refusal edge cases, and UI feedback avoiding false accepted state."
+          },
+          "pm_human_retest_request": {
+            "run": "python main.py --provider mock",
+            "duration": "5-10 minutes",
+            "steps": [
+              "Open a hero chat.",
+              "Ask go home and verify the hero either moves toward home/safety or clearly refuses/redirects; no false accepted copy.",
+              "Ask buy potions when the hero has gold and known commerce; verify movement/buy or precise refusal.",
+              "Ask explore east, preferably to a ranger; verify sustained eastward movement intent rather than immediate unrelated routing.",
+              "Ask attack the lair and verify MVP still refuses/deferred, not hallucinating an attack."
+            ],
+            "verify": [
+              "If feedback says accepted/applied, a physical action is visibly committed.",
+              "If no action can be committed, feedback says refused/redirected/not carried out.",
+              "No crash or obvious bad movement."
+            ],
+            "if_it_fails": "Copy/paste the last ~30 terminal lines, the exact prompt, and what the hero did after the response."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "awaiting_human_retest",
+              "next_action": "If retest passes, close WK50 or await commit/push instructions. If it fails, file a narrower follow-up bug round."
+            },
+            "03": { "status": "done" },
+            "06": { "status": "done" },
+            "08": { "status": "done" },
+            "11": { "status": "done" }
+          }
+        }
+      }
     }
   }
 }

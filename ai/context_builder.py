@@ -188,6 +188,19 @@ class ContextBuilder:
 
         # WK18: Hero stat block matching left panel UI for LLM prompt.
         context["hero_stat_block"] = ContextBuilder.build_hero_stat_block(context)
+
+        # WK50 Phase 2B: bounded known places for direct prompt validation (no raw hero objects).
+        from game.sim.hero_profile import build_hero_profile_snapshot
+
+        snap = build_hero_profile_snapshot(hero, game_state, now_ms=sim_now_ms())
+        context["known_places_llm"] = [
+            {
+                "place_id": str(getattr(p, "place_id", "")),
+                "place_type": str(getattr(p, "place_type", "")),
+                "display_name": str(getattr(p, "display_name", "")),
+            }
+            for p in snap.known_places[:8]
+        ]
         return context
     
     @staticmethod

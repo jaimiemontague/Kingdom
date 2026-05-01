@@ -20,6 +20,10 @@ from config import TILE_SIZE
 from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
 from game.sim.determinism import get_rng
+from game.sim.direct_prompt_commit import (
+    clear_direct_prompt_commit,
+    expire_direct_prompt_commit_if_timed_out,
+)
 from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 
@@ -38,6 +42,7 @@ _COMMITTED_DESTINATION_TYPES = frozenset({
     "guard_home",
     "patrol_castle",
     "defend_castle",
+    "direct_prompt",
 })
 
 # Debug logging (set to True to see AI decision logs).
@@ -186,6 +191,7 @@ class BasicAI:
         """Update AI for a single hero."""
         # Keep intent non-empty even if we make no decision this tick.
         self.refresh_intent(hero, game_state)
+        expire_direct_prompt_commit_if_timed_out(hero)
 
         # WK2 Build A: stuck detection + deterministic recovery.
         self.stuck_recovery_behavior._update_stuck_and_recover(self, hero, game_state)
@@ -193,6 +199,7 @@ class BasicAI:
         # WK15: Castle under attack — urgent priority: drop everything (including popping out) and defend.
         castle = game_state.get("castle")
         if castle and getattr(castle, "is_under_attack", False):
+            clear_direct_prompt_commit(hero)
             if getattr(hero, "is_inside_building", False):
                 hero.pop_out_of_building()
                 setattr(hero, "pending_task", None)
@@ -216,6 +223,7 @@ class BasicAI:
         # Priority: defend castle if damaged or under attack (unless already fighting).
         castle = game_state.get("castle")
         if castle and (castle.is_damaged or getattr(castle, "is_under_attack", False)) and hero.state != HeroState.FIGHTING:
+            clear_direct_prompt_commit(hero)
             self.defense_behavior.defend_castle(self, hero, game_state, castle)
             return
 

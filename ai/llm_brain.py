@@ -7,13 +7,20 @@ import threading
 import queue
 from typing import Optional
 from ai.context_builder import ContextBuilder
+from ai.decision_moments import decision_moment_from_prompt_dict
+from ai.decision_output_validator import validate_autonomous_decision
+from ai.direct_prompt_validator import validate_direct_prompt_output
+from ai.prompt_packs import (
+    AUTONOMOUS_SYSTEM_PROMPT,
+    build_autonomous_user_prompt,
+    build_direct_prompt_messages,
+)
 from ai.prompt_templates import (
     SYSTEM_PROMPT,
     VALID_ACTIONS,
     TOOL_ACTIONS,
     OBEY_DEFY_VALUES,
     build_decision_prompt,
-    build_conversation_prompt,
     get_fallback_decision,
 )
 from config import LLM_PROVIDER, LLM_TIMEOUT, CONVERSATION_TIMEOUT
@@ -104,6 +111,9 @@ class LLMBrain:
     def _worker_loop(self):
         """Background worker that processes LLM requests (decision or conversation)."""
         while self.running:
+            hero_key = None
+            mode = None
+            context = None
             try:
                 item = self.request_queue.get(timeout=0.5)
                 if len(item) == 2:
@@ -126,12 +136,28 @@ class LLMBrain:
             except Exception as e:
                 print(f"LLM worker error: {e}")
                 if hero_key and mode == "conversation":
+                    hc = {}
+                    pm = ""
+                    if isinstance(context, dict):
+                        hc = context.get("hero_context") or {}
+                        pm = str(context.get("player_message") or "")
                     with self.response_lock:
-                        self.conversation_responses[hero_key] = {"spoken_response": "I'm at a loss for words right now."}
+                        self.conversation_responses[hero_key] = validate_direct_prompt_output(
+                            {
+                                "spoken_response": "I'm at a loss for words right now.",
+                                "interpreted_intent": "no_action_chat_only",
+                                "tool_action": None,
+                            },
+                            hc,
+                            pm,
+                        )
     
     def _process_request(self, hero_key, context: dict) -> dict:
         """Process a single LLM request."""
         try:
+            aut = context.get("wk50_autonomous")
+            if isinstance(aut, dict):
+                return self._process_autonomous_decision_request(hero_key, context, aut)
             # Build the prompt
             summary = ContextBuilder.build_summary(context)
             prompt = build_decision_prompt(context, summary)
@@ -173,7 +199,50 @@ class LLMBrain:
         except Exception as e:
             print(f"LLM request failed for {hero_key}: {e}")
             return get_fallback_decision(context)
-    
+
+    def _process_autonomous_decision_request(
+        self, hero_key: str, context: dict, aut: dict
+    ) -> dict:
+        """WK50 Phase 2A: autonomous moment prompt + per-moment action validation."""
+        moment = decision_moment_from_prompt_dict(aut.get("moment") or {})
+        if moment is None:
+            return get_fallback_decision(context)
+        try:
+            user_prompt = build_autonomous_user_prompt(aut)
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit(
+                    {
+                        "type": GameEventType.LLM_PROMPT_SENT.value,
+                        "hero_key": hero_key,
+                        "system_prompt": AUTONOMOUS_SYSTEM_PROMPT,
+                        "user_prompt": user_prompt,
+                        "mode": "decision",
+                    }
+                )
+            response_text = self.provider.complete(
+                system_prompt=AUTONOMOUS_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                timeout=LLM_TIMEOUT,
+            )
+            if self._event_bus and GameEventType is not None:
+                self._event_bus.emit(
+                    {
+                        "type": GameEventType.LLM_RESPONSE_RECEIVED.value,
+                        "hero_key": hero_key,
+                        "response_text": response_text or "",
+                        "mode": "decision",
+                    }
+                )
+            parsed = self._parse_response(response_text or "")
+            if parsed:
+                validated = validate_autonomous_decision(parsed, moment)
+                if validated:
+                    return validated
+            return get_fallback_decision(context)
+        except Exception as e:
+            print(f"LLM autonomous request failed for {hero_key}: {e}")
+            return get_fallback_decision(context)
+
     def _parse_response(self, response_text: str) -> Optional[dict]:
         """Parse the LLM response into a decision dict (WK18: includes obey_defy and tool_action)."""
         try:
@@ -220,12 +289,12 @@ class LLMBrain:
             return None
     
     def _process_conversation(self, hero_key, payload: dict) -> dict:
-        """Process a conversation request; returns a dict with spoken_response and tool_action."""
+        """Process a conversation request; returns validated direct-prompt dict (WK50 Phase 2B)."""
         try:
             hero_context = payload.get("hero_context", {})
             conversation_history = payload.get("conversation_history", [])
             player_message = payload.get("player_message", "")
-            system_prompt, user_prompt = build_conversation_prompt(
+            system_prompt, user_prompt = build_direct_prompt_messages(
                 hero_context, conversation_history, player_message
             )
             if self._event_bus and GameEventType is not None:
@@ -250,19 +319,47 @@ class LLMBrain:
                 })
             text = (response_text or "").strip()
             if not text:
-                return {"spoken_response": "I am thinking, Sovereign... ask me again in a moment."}
-                
-            start = text.find('{')
-            end = text.rfind('}') + 1
+                return validate_direct_prompt_output(
+                    {
+                        "spoken_response": "I am thinking, Sovereign... ask me again in a moment.",
+                        "interpreted_intent": "no_action_chat_only",
+                        "tool_action": None,
+                    },
+                    hero_context,
+                    str(player_message or ""),
+                )
+
+            start = text.find("{")
+            end = text.rfind("}") + 1
             if start >= 0 and end > start:
                 json_str = text[start:end]
                 decision = json.loads(json_str)
-                return decision
-                
-            return {"spoken_response": text}
+                return validate_direct_prompt_output(
+                    decision, hero_context, str(player_message or "")
+                )
+
+            return validate_direct_prompt_output(
+                {
+                    "spoken_response": text,
+                    "interpreted_intent": "no_action_chat_only",
+                    "tool_action": None,
+                },
+                hero_context,
+                str(player_message or ""),
+            )
         except Exception as e:
             print(f"Conversation request failed for {hero_key}: {e}")
-            return {"spoken_response": "I'm at a loss for words right now."}
+            hc = payload.get("hero_context", {}) or {}
+            pm = str(payload.get("player_message") or "")
+            return validate_direct_prompt_output(
+                {
+                    "spoken_response": "I'm at a loss for words right now.",
+                    "interpreted_intent": "no_action_chat_only",
+                    "tool_action": None,
+                },
+                hc,
+                pm,
+            )
 
     def request_decision(self, hero_key, context: dict):
         """Queue a decision request for a hero."""

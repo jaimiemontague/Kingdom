@@ -701,6 +701,316 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "pm_hub_round": "wk50_r7_final_qa",
+        "notes": "WK50 final QA (r7): full pytest + qa_smoke --quick + validate_assets; Phase 2A/2B contract coverage verified; human mock smoke steps for Jaimie."
+      },
+      "rounds": {
+        "wk50_r4_phase2a_qa_perf": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r4_phase2a_qa_perf",
+          "status": "done",
+          "what_i_changed": [
+            "Extended tests/test_wk50_phase2a_decision_contracts.py for Phase 2A verification: system prompt asserts identity/current situation/known places/JSON; user prompt JSON embedding includes moment allowed_actions, hero_profile.identity dict, current_situation.nearby_enemies, known_places with display names; triggers for RESTED_AND_READY and SHOPPING_OPPORTUNITY; consult_suppressed_by_request_state None when cooldown clear and no pending request; _enemy fixture includes hp, max_hp, attack_power for ContextBuilder.",
+            "Ran python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report after changes (all PASS)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "170 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through mock conversation exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r4": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "170 passed; WK50 Phase 2A module tests/test_wk50_phase2a_decision_contracts.py expanded to 17 cases"
+            },
+            "qa_smoke_quick_wk50_r4": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r4": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "phase2a_regression_topics": {
+              "decision_moment_triggers": "LOW_HEALTH_COMBAT, POST_COMBAT_INJURED, RESTED_AND_READY, SHOPPING_OPPORTUNITY, priority ordering",
+              "cooldown_pending": "consult_suppressed_by_request_state; should_consult_llm respects moment cooldown and pending_llm_decision",
+              "prompt_content": "AUTONOMOUS_SYSTEM_PROMPT + build_autonomous_user_prompt serialized context",
+              "mock_llm_autonomous_decision": "test_llm_brain_autonomous_path_validates_against_moment",
+              "invalid_output_fallback": "test_llm_brain_autonomous_invalid_action_falls_back -> use_potion + Fallback reasoning"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10: parallel perf/cost consult for same round per PM hub.",
+            "Optional Human Gate A: python main.py --provider mock before Phase 2B per WK50 plan."
+          ],
+          "recommended_next_actions": [
+            "Orchestrator: advance to wk50_r5_phase2b_direct_prompt_contracts per PM send order."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_phase2a_decision_contracts.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r7_final_qa": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r7_final_qa",
+          "status": "done",
+          "pm_context": "wk50_r7_final_qa — final QA after Phase 2B engine/UI; no Agent 11 code edits this round (verification + gates + manual checklist for human).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 final QA verification only).",
+            "Verified WK50 regression coverage: Phase 2A decision moments, autonomous prompt content, invalid-output fallback; Phase 2B direct-prompt intents, validator (attack deferred, unknown place, critical HP redirect), mock provider phrases, LLMBrain conversation path; engine resolve helpers; chat panel direct-feedback strings.",
+            "Ran full gate stack: pytest tests/, qa_smoke --quick, validate_assets --report (all PASS)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "187 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation (mock LLM) exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r7": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "wk50_modules": [
+                "tests/test_wk50_phase2a_decision_contracts.py (17 tests)",
+                "tests/test_wk50_phase2b_direct_prompt_contracts.py (7 tests)",
+                "tests/test_wk50_direct_prompt_engine_resolve.py (5 tests)",
+                "tests/test_chat_direct_feedback.py (5 tests)"
+              ]
+            },
+            "qa_smoke_quick_wk50_r7": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r7": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "coverage_topics_verified": {
+              "phase2a": "Decision moment triggers, priority, cooldown/pending suppression, autonomous prompt pack strings, profile context bounds, validator, LLMBrain autonomous validate + invalid fallback",
+              "phase2b": "Supported intents MVP, attack lair deferred, unknown place stripped, critical HP explore redirect, mock provider phrases, LLMBrain conversation through mock",
+              "engine_resolve": "known place xy, explore direction clamp, place id preference",
+              "chat_ui": "accept/redirect/MVP combat-not-carried-out feedback via test_chat_direct_feedback"
+            },
+            "manual_mock_smoke_for_jaimie": {
+              "command": "python main.py --provider mock",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "duration_minutes": "5-10",
+              "steps_from_wk50_plan": [
+                "Open a hero chat.",
+                "Ask \"how are you doing?\" and verify status response only.",
+                "Ask \"go home\" and verify response plus movement toward home/safety when feasible.",
+                "Ask \"buy potions\" and verify buy/move/refusal depending situation.",
+                "Ask \"explore east\" and verify a safe movement/explore response.",
+                "Ask \"attack the lair\" and verify MVP refuses or says it cannot do that yet, not hallucinating an attack.",
+                "Try a badly wounded hero and verify unsafe requests redirect toward healing."
+              ],
+              "agent_11_execution": "not run (human gate per sprint plan Definition of Done)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: run manual mock smoke (python main.py --provider mock) per steps above and ticket any issues.",
+            "No commit, push, or version bump from Agent 11 per orchestration policy."
+          ],
+          "recommended_next_actions": [
+            "PM: close WK50 when human mock smoke PASS or issues are filed."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r9_hotfix_llm_bridge_herostate_import": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r9_hotfix_llm_bridge_herostate_import",
+          "status": "done",
+          "what_i_changed": [
+            "No Agent 11 code edits (verification only).",
+            "Confirmed ai/behaviors/llm_bridge.py imports HeroState from game.entities.hero (hotfix present).",
+            "Confirmed regression tests/tests/test_llm_bridge_apply_decision.py exercises fight (HeroState.FIGHTING), leave_building (HeroState.IDLE), and move_to paths that touch apply_llm_decision."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "191 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; conversation profile mock LLM exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r9": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "hero_state_branch_coverage": "tests/test_llm_bridge_apply_decision.py — test_apply_fight_sets_fighting_state (HeroState.FIGHTING); test_apply_leave_building_sets_idle_state (HeroState.IDLE after leave_building); move_to resolved/unresolved branches"
+            },
+            "qa_smoke_quick_wk50_r9": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "mock_provider_conversation": "observe_sync --scenario conversation (mock LLM request/response) exit_code=0"
+            },
+            "validate_assets_wk50_r9": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "pm_context": "wk50_r11_bugfix_direct_prompt_execution — verify direct prompt execution matches committed sim state and chat overlay; gates after Agent 03/06/08 bugfix integration.",
+          "what_i_changed": [
+            "Added two WK50 R11 regression tests in tests/test_wk50_direct_prompt_engine_resolve.py: explore east applies direct_prompt commit (aligned with resolve_explore_direction_target) without llm_move_request; one BasicAI.update_hero tick preserves in-flight direct_prompt explore destination (routine AI does not clobber sovereign target on that tick)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "201 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS — determinism_guard, pytest substep, observe_sync profiles through conversation mock LLM"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r11": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_execution_coverage": {
+                "go_home_and_buy_potions_commit": "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_direct_prompt_uses_commit_not_llm_move_request — buy_potions sets hero.target type direct_prompt, llm_move_request None; bounty_pursuit arrival handles buy_potions at marketplace/blacksmith",
+                "return_home_mock_path": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_llm_brain_conversation_validates_through_mock — return_home plus move_to",
+                "explore_east_commit": "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_explore_east_commits_direct_prompt_without_llm_move_request",
+                "explore_not_overwritten_next_tick": "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_tick_preserves_direct_prompt_explore_destination — complements ai/basic_ai.py committed destination types including direct_prompt and bounty_pursuit handle_moving guard list",
+                "buy_refusals": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_buy_potions_no_potion_listing_at_shop, tests/test_wk50_phase2b_direct_prompt_contracts.py::test_buy_potions_insufficient_gold_at_shop",
+                "ui_feedback_no_false_accept": "tests/test_chat_direct_feedback.py::test_tool_claimed_but_not_committed and ::test_accept_order_with_tool_action — format_direct_prompt_hint gates success copy on physical_committed; engine sets physical_committed from apply_validated_direct_prompt_physical"
+              }
+            },
+            "qa_smoke_quick_wk50_r11": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r11": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "manual_retest_steps_no_entry_path": [
+              "Launch the game with mock LLM enabled (`--provider mock` on your usual launcher or run configuration — do not rely on typing a filesystem path).",
+              "Open a hero chat; send \"go home\" — expect movement toward home or safety when resolvable; success overlay only when a move commits.",
+              "Send \"buy potions\" — expect travel to commerce or accurate refusal (no gold, no potions sold here); no false \"applied\" hint if nothing commits.",
+              "Send \"explore east\" — expect sustained eastbound movement intent across ticks, not immediate replacement by unrelated idle routing.",
+              "Optional: provoke a validated move_to response that fails engine resolution — confirm chat hint stays in the not-applied / refused family, not \"Order applied\"."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: run manual retest above on her integrated build if verifying end-to-end feel."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_direct_prompt_engine_resolve.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
     }
   }
 }

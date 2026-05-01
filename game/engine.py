@@ -836,6 +836,7 @@ class GameEngine:
         context = ContextBuilder.build_hero_context(hero, game_state)
         llm.request_conversation(hero.name, context, history, text)
         chat_panel.waiting_for_response = True
+        self._last_chat_player_message = text
 
     def _poll_conversation_response(self):
         """When chat is active, poll LLM for conversation response and push to chat panel (wk14)."""
@@ -851,21 +852,32 @@ class GameEngine:
         response_dict = llm.get_conversation_response(hero_target.name)
         if response_dict is not None:
             spoken = response_dict.get("spoken_response", response_dict.get("text", "I'm thinking..."))
-            chat_panel.receive_response(spoken)
-            
             tool_action = response_dict.get("tool_action")
+            physical_committed = False
             if tool_action:
-                from ai.behaviors.llm_bridge import apply_llm_decision
+                from game.sim.direct_prompt_exec import apply_validated_direct_prompt_physical
+
                 game_state = self.get_game_state()
-                # apply_llm_decision expects 'action', so map tool_action to it
-                response_dict["action"] = tool_action 
-                apply_llm_decision(
-                    self.ai_controller,
-                    hero_target,
-                    response_dict,
-                    game_state,
-                    source="chat"
+                response_dict["action"] = tool_action
+                physical_committed = bool(
+                    apply_validated_direct_prompt_physical(
+                        self.ai_controller,
+                        hero_target,
+                        response_dict,
+                        game_state,
+                        player_message=getattr(self, "_last_chat_player_message", "") or "",
+                        source="chat",
+                    )
                 )
+            direct_feedback = {
+                "tool_action": response_dict.get("tool_action"),
+                "obey_defy": response_dict.get("obey_defy"),
+                "interpreted_intent": response_dict.get("interpreted_intent"),
+                "refusal_reason": response_dict.get("refusal_reason"),
+                "safety_assessment": response_dict.get("safety_assessment"),
+                "physical_committed": physical_committed,
+            }
+            chat_panel.receive_response(spoken, direct_feedback=direct_feedback)
 
     def _prepare_sim_and_camera(self, dt: float) -> bool:
         """Apply deterministic timing and update camera when world input is allowed."""

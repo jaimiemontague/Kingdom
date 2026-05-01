@@ -756,6 +756,40 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 LLM rare decision moments + safe direct prompts; Agent 02 acceptance doc."
+      },
+      "rounds": {
+        "wk50_r1_design_guardrails": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r1_design_guardrails",
+          "status": "done",
+          "what_i_changed": "Added docs/sprint/wk50_llm_context_direct_prompts_acceptance.md: player-facing acceptance for Phase 2A (rare/meaningful autonomous LLM moments, graceful fallback, anti-spam) and Phase 2B (indirect-control Sovereign chat, safe-core intents only, obey/refuse/redirect in character, explicit MVP exclusions). No game code.",
+          "commands_run": [
+            {
+              "command": "python -m json.tool \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_02_GameDirector_ProductOwner.json\"",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk50_llm_context_direct_prompts\" --round \"wk50_r1_design_guardrails\" --agent \"02\" --token \"35ae22fd-5d6e-4456-8b7f-db7d07264f69\" --status done --summary \"Agent 02: WK50 Phase 2A/2B player-facing acceptance doc added at docs/sprint/wk50_llm_context_direct_prompts_acceptance.md; design guardrails round complete.\" --log-path \".cursor\\plans\\agent_logs\\agent_02_GameDirector_ProductOwner.json\" --log-round \"sprints[\\\"wk50_llm_context_direct_prompts\\\"].rounds[\\\"wk50_r1_design_guardrails\\\"]\"",
+              "exit_code": 0
+            }
+          ],
+          "evidence": [
+            "Deliverable: docs/sprint/wk50_llm_context_direct_prompts_acceptance.md",
+            "Aligned to .cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: fold checklist rows into pytest/mock scenarios and manual mock smoke steps per WK50 plan.",
+            "Agents 04/05: determinism + safety thresholds should reference same MVP boundaries as this doc.",
+            "Agent 06+: implement against plan; deviations require PM/Product ACK."
+          ]
+        }
+      }
     }
   }
 }

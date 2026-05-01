@@ -678,6 +678,68 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 R4 Phase 2A QA/perf consult: autonomous LLM moments, cooldowns, bounded prompt context."
+      },
+      "rounds": {
+        "wk50_r4_phase2a_qa_perf": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r4_phase2a_qa_perf",
+          "status": "done",
+          "what_i_changed": "No code changes (consult-only). Reviewed Phase 2A path in ai/decision_moments.py, ai/profile_context_adapter.py, and ai/behaviors/llm_bridge.py. Ran perf_benchmark.py and qa_smoke.py --quick.",
+          "commands_run": [
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/perf_benchmark.py",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "python -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
+              "exit_code": 0
+            },
+            {
+              "shell": "PowerShell",
+              "commands": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk50_llm_context_direct_prompts\" --round \"wk50_r4_phase2a_qa_perf\" --agent \"10\" --token \"e8a0b969-38da-41f9-bbab-545568de98cc\" --status done --summary \"Phase 2A consult: moments event-gated, cooldown/pending enforced, context capped; perf_benchmark ~1.298 ms/tick exit 0, qa_smoke --quick PASS exit 0. No game code edits.\" --log-path \".cursor\\plans\\agent_logs\\agent_10_PerformanceStability_Lead.json\" --log-round 'sprints[\"wk50_llm_context_direct_prompts\"].rounds[\"wk50_r4_phase2a_qa_perf\"]'",
+              "exit_code": 0,
+              "note": "Use single quotes around --log-round in PowerShell; double-quoted value was misparsed (unknown option)."
+            }
+          ],
+          "evidence": {
+            "decision_frequency": "`should_consult_llm` returns true only when `determine_decision_moment` returns a named moment (low-health combat, post-combat injured, rested-and-ready, or shopping opportunity), not every tick.",
+            "cooldown_pending": "`cooldown_ms = max(LLM_DECISION_COOLDOWN, moment.cooldown_ms)` plus `consult_suppressed_by_request_state` (sim-ms last_llm_decision_time and pending_llm_decision). Global cooldown default 2000ms; per-moment minimums 4000–15000ms.",
+            "bounded_context": "profile_context_adapter caps: 8 places, 10 memory entries (200-char summaries), 5 enemies/allies/bounties; compact profile omits full place/memory lists; `wk50_autonomous` built only inside `request_llm_decision`.",
+            "tests_reference": "tests/test_wk50_phase2a_decision_contracts.py includes cooldown and pending suppression for `should_consult_llm`.",
+            "perf_benchmark": {
+              "command": "python tools/perf_benchmark.py",
+              "exit_code": 0,
+              "ms_per_tick_total": 1.298,
+              "ticks": 720,
+              "seconds": 12.0,
+              "heroes": 20,
+              "note": "Headless sim; benchmark does not exercise live LLM I/O. ms/tick in line with recent ~1.3 band."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS (determinism_guard + pytest 166 passed + observe_sync scenarios including --llm mock decision plumbing)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "After Phase 2B direct-prompt path ships, re-assess combined prompt/token size with real providers; optional Ursina+F2 probe if conversation volume increases."
+          ]
+        }
+      }
     }
   }
 }

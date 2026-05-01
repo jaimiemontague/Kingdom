@@ -8,6 +8,7 @@ from typing import Any
 from config import BOUNTY_BLACK_FOG_DISTANCE_PENALTY, TILE_SIZE
 from game.entities.buildings.types import BuildingType
 from game.entities.hero import HeroState
+from game.sim.direct_prompt_commit import DIRECT_PROMPT_TARGET_TYPE
 from game.sim.determinism import get_rng
 from game.sim.hero_guardrails_tunables import BOUNTY_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
@@ -284,6 +285,49 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
     if hero.target_position:
         dist = hero.distance_to(hero.target_position[0], hero.target_position[1])
         if dist <= TILE_SIZE * 1.5:
+            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE:
+                sub = str(hero.target.get("sub_intent") or "")
+                if sub == "return_home":
+                    buildings = game_state.get("buildings", [])
+                    rest_b = None
+                    if hero.home_building and hero.distance_to(
+                        hero.home_building.center_x, hero.home_building.center_y
+                    ) <= TILE_SIZE * 2:
+                        rest_b = hero.home_building
+                    if rest_b is None:
+                        for building in buildings:
+                            if getattr(building, "building_type", None) in ("castle", "inn"):
+                                if hero.distance_to(building.center_x, building.center_y) <= TILE_SIZE * 2:
+                                    rest_b = building
+                                    break
+                    if rest_b is not None:
+                        hero.transfer_taxes_to_home()
+                        hero.start_resting_at_building(rest_b)
+                    hero.target = None
+                    hero.target_position = None
+                    return
+                if sub == "buy_potions":
+                    shop = None
+                    for building in game_state.get("buildings", []):
+                        if building.building_type in ("marketplace", "blacksmith"):
+                            if hero.distance_to(building.center_x, building.center_y) < TILE_SIZE * 2:
+                                shop = building
+                                break
+                    if shop:
+                        rng = get_rng("ai_basic")
+                        duration_sec = roll_duration_seconds("buy_potion", rng)
+                        setattr(hero, "pending_task", "shopping")
+                        setattr(hero, "pending_task_building", shop)
+                        hero.enter_building_briefly(shop, duration_sec=float(duration_sec))
+                        hero.target = None
+                        hero.target_position = None
+                        hero.state = HeroState.SHOPPING
+                        return
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
             # Check if we were going home.
             if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
                 hero.transfer_taxes_to_home()
@@ -356,6 +400,8 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             "guard_home",
             "patrol_castle",
             "defend_castle",
+            "direct_prompt",
+            "bounty",
         ]:
             return
 

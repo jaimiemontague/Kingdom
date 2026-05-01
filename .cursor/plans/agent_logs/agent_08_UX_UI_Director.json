@@ -356,6 +356,92 @@
           ]
         }
       }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 r6: chat UI hints for direct prompt outcomes (Agent 08)"
+      },
+      "rounds": {
+        "wk50_r6_phase2b_engine_ui": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r6_phase2b_engine_ui",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/chat_panel.py: format_direct_prompt_hint() maps validated direct-prompt fields to a short status line; optional direct_hint on hero messages; muted green/warm colors; scroll accounting for hint lines.",
+            "game/engine.py: _poll_conversation_response passes tool_action, obey_defy, interpreted_intent, refusal_reason, safety_assessment into ChatPanel.receive_response (display-only).",
+            "tests/test_chat_direct_feedback.py: unit tests for hint formatting (accepted, redirected, refused, plain chat suppressed)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "187 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "note": "187 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines — Order applied, Redirected — safer option/path, Refused — …, Not applied — no action committed; chat-only remains no hint.",
+            "game/engine.py: _poll_conversation_response runs apply_validated_direct_prompt_physical before receive_response; passes physical_committed in direct_feedback.",
+            "game/sim/direct_prompt_exec.py: apply_validated_direct_prompt_physical returns bool (sovereign attach or inferred fallback apply) for UI contract (minimal sim wiring for feedback; primary UI ask in r11).",
+            "tests/test_chat_direct_feedback.py: physical_committed cases + tool-not-committed line; tests/test_wk50_direct_prompt_engine_resolve.py: assert apply returns True."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": "199 passed",
+            "qa_smoke_quick": "exit_code=0 DONE PASS"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        }
+      }
     }
   }
 }
