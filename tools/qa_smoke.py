@@ -130,6 +130,24 @@ def main() -> int:
         profiles.append(
             ("conversation (mock request/response cycle)", [*base, "--llm", "--scenario", "conversation"])
         )
+        profiles.append(
+            (
+                "direct_prompt_integration (WK50 Phase 2B mock + validator + exec)",
+                [
+                    "--seconds",
+                    "1",
+                    "--heroes",
+                    "1",
+                    "--seed",
+                    str(ns.seed),
+                    "--log-every",
+                    "9999",
+                    "--scenario",
+                    "direct_prompt_integration",
+                    "--no-enemies",
+                ],
+            )
+        )
 
         rc = 0
         # Determinism is a release gate: fail fast if someone reintroduced wall-clock/RNG into sim logic.

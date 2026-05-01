@@ -147,6 +147,63 @@ def test_explore_direction_accepts_heading_in_player_message():
     assert out["target_description"] == "east"
 
 
+def test_validator_return_home_prefers_hero_guild_over_castle():
+    """WK50 R14: hired heroes use home_building (e.g. ranger guild), not only castle/inn."""
+    ctx = _ctx()
+    ctx["hero_home_place_id"] = "ranger_guild:10:12"
+    ctx["hero"] = {
+        **ctx["hero"],
+        "class": "ranger",
+        "home_building_type": "ranger_guild",
+    }
+    ctx["known_places_llm"] = [
+        {
+            "place_id": "castle:main",
+            "place_type": "castle",
+            "display_name": "Castle",
+        },
+        {
+            "place_id": "ranger_guild:10:12",
+            "place_type": "ranger_guild",
+            "display_name": "Ranger Guild",
+        },
+    ]
+    out = validate_direct_prompt_output(
+        {
+            "spoken_response": "Returning to my hall.",
+            "interpreted_intent": "return_home",
+            "tool_action": "move_to",
+        },
+        ctx,
+        "go home",
+    )
+    assert out["tool_action"] == "move_to"
+    assert out["target"] == "ranger_guild"
+    assert out["target_id"] == "ranger_guild:10:12"
+    assert out["obey_defy"] == "Obey"
+
+
+def test_validator_return_home_accepts_synthetic_guild_from_context():
+    """Hero may not have guild in profile memory yet; context still lists home via hire contract."""
+    ctx = _ctx()
+    ctx["hero_home_place_id"] = "ranger_guild:5:3"
+    ctx["hero"] = {**ctx["hero"], "class": "ranger", "home_building_type": "ranger_guild"}
+    ctx["known_places_llm"] = [
+        {
+            "place_id": "ranger_guild:5:3",
+            "place_type": "ranger_guild",
+            "display_name": "Ranger Guild",
+        },
+    ]
+    out = validate_direct_prompt_output(
+        {"interpreted_intent": "return_home", "tool_action": "move_to"},
+        ctx,
+        "head home sovereign",
+    )
+    assert out["tool_action"] == "move_to"
+    assert out["refusal_reason"] == ""
+
+
 def test_physical_tool_clears_refusal_and_forces_obey():
     out = validate_direct_prompt_output(
         {

@@ -40,6 +40,46 @@ def sort_memory_entries(entries: Iterable[_TMemory]) -> tuple[_TMemory, ...]:
     return tuple(sorted(entries, key=lambda e: (int(e.sim_time_ms), int(e.entry_id))))
 
 
+# Navigation / economy POIs: always prefer these in LLM-facing slices when total discoveries exceed the cap.
+LLM_PRIORITY_PLACE_TYPES = frozenset(
+    {
+        "inn",
+        "marketplace",
+        "blacksmith",
+        "warrior_guild",
+        "ranger_guild",
+        "rogue_guild",
+        "wizard_guild",
+        "trading_post",
+    }
+)
+
+
+def select_known_places_for_llm(
+    places: tuple[KnownPlaceSnapshot, ...],
+    *,
+    limit: int = 8,
+) -> tuple[KnownPlaceSnapshot, ...]:
+    """
+    Bounded list for prompts and direct-prompt validation.
+
+    Full ``known_places`` is sorted oldest-first; naïvely taking ``places[:8]`` drops **recent**
+    discoveries (e.g. inn) when the hero has many POIs. We merge: priority types first (in stable
+    discovery order), then remaining places until ``limit``.
+    """
+    if len(places) <= limit:
+        return places
+    priority: list[KnownPlaceSnapshot] = []
+    seen: set[str] = set()
+    for p in places:
+        if p.place_type in LLM_PRIORITY_PLACE_TYPES and p.place_id not in seen:
+            priority.append(p)
+            seen.add(p.place_id)
+    rest = [p for p in places if p.place_id not in seen]
+    merged = tuple(priority + rest)
+    return merged[:limit]
+
+
 PROFILE_DISCOVERY_BUILDING_TYPES = frozenset(
     {
         "marketplace",

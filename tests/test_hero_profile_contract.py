@@ -16,6 +16,7 @@ from game.sim.hero_profile import (
     KnownPlaceSnapshot,
     format_target_label,
     safe_percent,
+    select_known_places_for_llm,
     sort_known_places,
     sort_memory_entries,
 )
@@ -152,3 +153,65 @@ def test_optional_defaults_stable():
     assert snap.recent_memory == ()
     assert snap.last_decision is None
     assert snap.to_dict()["last_decision"] is None
+
+
+def test_select_known_places_for_llm_keeps_newer_inn_when_over_cap():
+    """
+    Oldest-first ``places[:limit]`` drops a recently discovered inn when the hero knows many POIs.
+    Priority merge must retain ``inn`` in the bounded LLM slice (WK50 R19).
+    """
+    others = tuple(
+        KnownPlaceSnapshot(
+            place_id=f"house:{i}:0",
+            place_type="house",
+            display_name=f"House {i}",
+            tile=(i, 0),
+            world_pos=(float(i * 10), 0.0),
+            first_seen_ms=100 + i,
+            last_seen_ms=100 + i,
+        )
+        for i in range(9)
+    )
+    inn = KnownPlaceSnapshot(
+        place_id="inn:20:5",
+        place_type="inn",
+        display_name="Inn",
+        tile=(20, 5),
+        world_pos=(200.0, 50.0),
+        first_seen_ms=999,
+        last_seen_ms=999,
+    )
+    merged_input = sort_known_places(others + (inn,))
+    assert len(merged_input) == 10
+    naive = merged_input[:8]
+    assert inn not in naive
+
+    llm_slice = select_known_places_for_llm(merged_input, limit=8)
+    assert inn in llm_slice
+    assert len(llm_slice) == 8
+    inn_rows = [p for p in llm_slice if p.place_type == "inn"]
+    assert inn_rows == [inn]
+
+
+def test_select_known_places_for_llm_short_list_unchanged():
+    places = (
+        KnownPlaceSnapshot(
+            place_id="a",
+            place_type="library",
+            display_name="Library",
+            tile=(0, 0),
+            world_pos=(0.0, 0.0),
+            first_seen_ms=1,
+            last_seen_ms=1,
+        ),
+        KnownPlaceSnapshot(
+            place_id="b",
+            place_type="inn",
+            display_name="Inn",
+            tile=(1, 1),
+            world_pos=(1.0, 1.0),
+            first_seen_ms=2,
+            last_seen_ms=2,
+        ),
+    )
+    assert select_known_places_for_llm(places, limit=8) == places

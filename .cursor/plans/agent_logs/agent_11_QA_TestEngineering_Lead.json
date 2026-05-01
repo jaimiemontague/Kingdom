@@ -1009,6 +1009,722 @@
             "tests/test_wk50_direct_prompt_engine_resolve.py",
             ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
           ]
+        },
+        "wk50_r13_peasant_void_walk_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r13_peasant_void_walk_hotfix",
+          "status": "done",
+          "pm_context": "wk50_r13_peasant_void_walk_hotfix — verify Agent 05 peasant build-target fix; base observe_sync must exercise construction without peasants marching to map origin.",
+          "what_i_changed": [
+            "No game code edits (Agent 11 verification only).",
+            "Confirmed Agent 05 peasant logic in game/entities/peasant.py: sticky _pick_build_target prioritizes in-progress scaffolds over fresh foundations (avoids void-walk to corner/origin).",
+            "Ran python tools/qa_smoke.py --quick: base profile observe_sync --qa --bounty PASS; peasant positions in run logs remained near job site (e.g. WORKING at new_building center ~2416,2416 px), not (0,0).",
+            "Ran python -m pytest tests/test_peasant_build_target.py (2 passed)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; base profile exit_code=0 (construction + bounty QA)"
+            },
+            {
+              "command": "python -m pytest tests/test_peasant_build_target.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "2 passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_wk50_r13": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS",
+              "base_observe_sync": "tools/observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --bounty — peasant reached WORKING adjacent to new_building; sample log lines show pos ~(2603,2367) moving toward site, then WORKING at ~(2416,2416) matching new_building center tile area"
+            },
+            "peasant_regression_tests": {
+              "command": "python -m pytest tests/test_peasant_build_target.py -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "test_pick_build_prefers_started_site_over_unstarted_when_no_sticky; test_pick_build_sticky_keeps_active_target_when_valid"
+            },
+            "implementer_reference": {
+              "agent": "05",
+              "path": "game/entities/peasant.py",
+              "fix_summary": "_pick_build_target prefers sticky target, then construction_started sites, then placed_time_ms"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r14_go_home_context_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r14_go_home_context_hotfix",
+          "status": "done",
+          "what_i_changed": [
+            "No Agent 11 game/AI edits (verification only after Agent 06 WK50 R14 go-home context fix).",
+            "Confirmed regression coverage for hero 'go home' / return_home resolving to hire guild (validator + engine): test_validator_return_home_prefers_hero_guild_over_castle, test_validator_return_home_accepts_synthetic_guild_from_context, test_resolve_move_destination_guild_via_label_when_id_not_memorized; mock conversation path remains green via qa_smoke."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "206 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation (mock LLM) exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r14": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "go_home_guild_coverage": {
+                "validator_guild_preferred": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_validator_return_home_prefers_hero_guild_over_castle",
+                "validator_no_memory_guild": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_validator_return_home_accepts_synthetic_guild_from_context",
+                "engine_resolve_guild_label": "tests/test_wk50_direct_prompt_engine_resolve.py::test_resolve_move_destination_guild_via_label_when_id_not_memorized"
+              }
+            },
+            "qa_smoke_quick_wk50_r14": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: Jaimie manual mock smoke 'go home' on a ranger hired from guild if playtest double-check desired."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r15_direct_prompt_commitment_duration": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r15_direct_prompt_commitment_duration",
+          "status": "done",
+          "pm_context": "wk50_r15_direct_prompt_commitment_duration — verify Agent 03 R15 direct_prompt commitment persists for whole journey (TTL skipped while MOVING); stuck abort hatch; routine AI does not clobber sovereign move.",
+          "what_i_changed": [
+            "Verified game/sim/direct_prompt_commit.py R15 behavior: expire_direct_prompt_commit_if_timed_out skips TTL while HeroState.MOVING with target_position; orphan IDLE cleanup still uses DIRECT_PROMPT_COMMIT_TTL_MS; stuck dwell clears routing via DIRECT_PROMPT_STUCK_ABORT_MS.",
+            "Added tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_many_ticks_preserve_direct_prompt_after_long_sim_time — 40 BasicAI ticks with sim time past legacy TTL window plus march progress; bounty list present; sovereign direct_prompt return_home preserved.",
+            "Existing regression retained: test_direct_prompt_commit_survives_past_ttl_while_moving_far, test_direct_prompt_commit_can_abort_when_stuck_too_long, test_basic_ai_tick_preserves_direct_prompt_explore_destination; bounty_pursuit.handle_moving returns early for target type direct_prompt."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "209 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "implementer_reference": {
+              "agent": "03",
+              "module": "game/sim/direct_prompt_commit.py",
+              "r15_summary": "TTL does not expire sovereign commit during active MOVING navigation; stuck_abort clears after prolonged stuck_active"
+            },
+            "pytest_wk50_r15": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_long_journey_coverage": [
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_direct_prompt_commit_survives_past_ttl_while_moving_far",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_many_ticks_preserve_direct_prompt_after_long_sim_time",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_tick_preserves_direct_prompt_explore_destination",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_direct_prompt_commit_can_abort_when_stuck_too_long"
+              ]
+            },
+            "qa_smoke_quick_wk50_r15": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: Jaimie playtest far 'go home' / long explore east after sovereign accept to confirm feel matches automation."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_direct_prompt_engine_resolve.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r17_direct_prompt_integration_tests": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r17_direct_prompt_integration_tests",
+          "status": "done",
+          "pm_context": "wk50_r17 — comprehensive direct prompt integration tests (mock + ContextBuilder + validator + exec); catches false refusals e.g. buy potions with gold + known market.",
+          "what_i_changed": [
+            "Added tests/test_direct_prompt_integration.py: LLMBrain mock path for status_report, return_home, buy potions (far + adjacent xfail), explore east + exec, seek healing, go to inn, rest (brain + validator-only rest_until_healed + exec), attack lair deferral; validator promotion test for buy_item when in range.",
+            "Added tools/observe_sync.py scenario direct_prompt_integration — early exit runs pytest on integration file only.",
+            "Added qa_smoke --quick profile direct_prompt_integration (WK50 Phase 2B).",
+            "Adjacent-market affordable case marked xfail(strict=False) until Agent 06 fixes mock/blob validation (WK50-BUG-008)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "10 passed, 1 xfailed (near-market buy potions until mock fix)"
+            },
+            {
+              "command": "python tools/observe_sync.py --scenario direct_prompt_integration --no-enemies",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "delegates to pytest integration module"
+            },
+            {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "221 passed, 1 xfailed, 1 warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "PASS including new direct_prompt_integration profile"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation"
+            }
+          ],
+          "evidence": {
+            "integration_module": "tests/test_direct_prompt_integration.py",
+            "wk50_bug_008_xfail": "test_integration_buy_potions_adjacent_to_market_affordable_llm_brain — succeeds when MockProvider includes shop_items (or full ctx) in pre-validation",
+            "qa_smoke_profile": "direct_prompt_integration (WK50 Phase 2B mock + validator + exec)"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06: remove xfail by fixing mock pre-validation / prompt blob shop_items for buy_potions when can_shop.",
+            "Agent 11_verify: after Agent 06, rerun qa_smoke --quick and confirm xfail becomes pass."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_direct_prompt_integration.py",
+            "tools/observe_sync.py",
+            "tools/qa_smoke.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r18_direct_prompt_arrival_handlers": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r18_direct_prompt_arrival_handlers",
+          "status": "done",
+          "pm_context": "wk50_r18 — verify Agent 06 arrival handling in ai/behaviors/bounty_pursuit.py:handle_moving after direct prompt fixes (inn entry, rest/healing arrival, explore leg extensions).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 verification only).",
+            "Reviewed WK50 R18 wiring in ai/behaviors/bounty_pursuit.py: direct_prompt arrivals call start_resting_at_building for inn (with pending_task/rest_inn), enter_building_briefly or castle rest for go_to_known_place; rest_until_healed/seek_healing/retreat use _find_safety_building_for_arrival; explore_direction chains up to two resolve_explore_direction_target extensions from seeded bearing.",
+            "Ran full pytest and qa_smoke --quick; direct_prompt_integration profile green."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "222 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; direct_prompt_integration observe_sync exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r18": {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_coverage": [
+                "tests/test_direct_prompt_integration.py::test_integration_go_to_inn_llm_brain",
+                "tests/test_direct_prompt_integration.py::test_integration_rest_until_healed_llm_brain",
+                "tests/test_direct_prompt_integration.py::test_validator_rest_until_healed_outdoors_moves_toward_home",
+                "tests/test_direct_prompt_integration.py::test_integration_explore_east_llm_brain_and_exec"
+              ]
+            },
+            "qa_smoke_quick_wk50_r18": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "implementer_reference": {
+              "agent": "06",
+              "module": "ai/behaviors/bounty_pursuit.py",
+              "notes": "handle_moving direct_prompt branch: go_to_known_place inn -> start_resting_at_building + pending_task; explore_direction -> leg extensions _DIRECT_PROMPT_EXPLORE_*"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "WK50-BUG-009 acceptance: Jaimie manual mock playtest inn enter / rest outdoors / long explore east if desired beyond automation."
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 — QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — hooked via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 — QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 — QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 — QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 — QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 -- QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r16_direct_prompt_all_commands_commitment": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r16_direct_prompt_all_commands_commitment",
+          "status": "done",
+          "pm_context": "wk50_r16 — verify Agent 03 extended sovereign attach_direct_prompt_move to buy_item and retreat (same long-journey lock as move_to/explore/go home).",
+          "what_i_changed": [
+            "No Agent 11 product code edits; verification only after Agent 03 R16 direct_prompt_exec wiring.",
+            "Confirmed game/sim/direct_prompt_exec.py applies apply_llm_decision then attach_direct_prompt_move when target_position is set for buy_item and retreat.",
+            "Regression: tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_buy_item_commits_direct_prompt and ::test_apply_validated_retreat_commits_direct_prompt assert hero.target type direct_prompt and MOVING state (sovereign commit)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "211 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "implementer_reference": {
+              "agent": "03",
+              "module": "game/sim/direct_prompt_exec.py",
+              "r16_summary": "buy_item and retreat branches call attach_direct_prompt_move after LLM path sets target_position; fallback uses _infer_physical_after_llm if tp missing"
+            },
+            "pytest_wk50_r16": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "sovereign_commit_tests": [
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_buy_item_commits_direct_prompt",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_retreat_commits_direct_prompt"
+              ]
+            },
+            "qa_smoke_quick_wk50_r16": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "PM human_gate manual_playtest: far-market 'buy potions' and retreat under mock provider if desired beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
         }
       }
     }

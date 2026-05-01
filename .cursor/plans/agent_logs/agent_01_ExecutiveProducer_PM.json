@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-01: wk50_r19 orchestrator finished — exit 0; Agents 03/06/11 receipts verified, logs passed (ledger advisory stops only). Hub round closed_success.",
+    "2026-05-01: Kickoff wk50_r19_partial_llm_places_playtest_wireup — PM documented Agent 01 partial code in pm_preexisting_code_changes; orchestrator validate PASS (no ownership stops); live SDK run started wave wire_sim_tests [03]→[06]→[11]. Ledger under tools/ai_studio_orchestrator/runs/ matching sprint__round timestamp.",
     "This file is owned by Agent 01 only.",
     "Structure nests rounds inside sprints to keep history organized.",
     "Preferred workflow: add/update only the current sprint+round; do not rewrite past rounds.",
@@ -20,14 +22,14 @@
         "closed_utc": "2026-04-29T00:00:00Z",
         "notes": "Readability-only: split ursina_renderer.py + GameEngine into modules/collaborators. No behavior change. Owner 03; QA 11; optional perf 10 parallel with 11 after each 03 round.",
         "pm_jaimie_send_order": [
-          "STEP 1 — Agent 03 (HIGH): WK41-R1 Track A1 only — extract Ursina module-level helpers to new game/graphics/*.py modules per plan; keep import path game.graphics.ursina_renderer.UrsinaRenderer stable. Run pytest + qa_smoke --quick + validate_assets; update agent_03 log.",
-          "STEP 2 — IN PARALLEL (two Cursor chats, same universal prompt): Agent 11 (LOW) — full gate stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Agent 10 (LOW, consult) — optional ~5 min Ursina FPS spot-check: python main.py --renderer ursina --no-llm. Start Step 2 only after Step 1 is merged or 03 confirms R1 complete on your branch.",
-          "STEP 3 — Agent 03 (HIGH): WK41-R2 Track A2 — UrsinaRenderer method groups / collaborators (terrain+fog vs entities per plan); gates + log.",
-          "STEP 4 — PARALLEL: Agent 11 + Agent 10 (same as Step 2).",
-          "STEP 5 — Agent 03 (HIGH): WK41-R3 Track B — GameEngine facades (e.g. camera/display + render coordinator) with delegation one-liners; do not break GameCommands or public GameEngine API; gates + log.",
-          "STEP 6 — PARALLEL: Agent 11 + Agent 10.",
-          "STEP 7 — Agent 03 (MEDIUM): WK41-R4 optional — thin UrsinaRenderer.update() loop extraction and/or docs/refactor/engine_access_inventory.md; defer risky parts per plan; gates + log.",
-          "STEP 8 — PARALLEL: Agent 11 + Agent 10; then JAIMIE manual (~10 min each): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm. Optional: python main.py --renderer ursina --provider mock. STEP 8b optional — Agent 13 (LOW): CHANGELOG draft only if Jaimie wants; no version bump without Jaimie."
+          "STEP 1 \u00e2\u20ac\u201d Agent 03 (HIGH): WK41-R1 Track A1 only \u00e2\u20ac\u201d extract Ursina module-level helpers to new game/graphics/*.py modules per plan; keep import path game.graphics.ursina_renderer.UrsinaRenderer stable. Run pytest + qa_smoke --quick + validate_assets; update agent_03 log.",
+          "STEP 2 \u00e2\u20ac\u201d IN PARALLEL (two Cursor chats, same universal prompt): Agent 11 (LOW) \u00e2\u20ac\u201d full gate stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Agent 10 (LOW, consult) \u00e2\u20ac\u201d optional ~5 min Ursina FPS spot-check: python main.py --renderer ursina --no-llm. Start Step 2 only after Step 1 is merged or 03 confirms R1 complete on your branch.",
+          "STEP 3 \u00e2\u20ac\u201d Agent 03 (HIGH): WK41-R2 Track A2 \u00e2\u20ac\u201d UrsinaRenderer method groups / collaborators (terrain+fog vs entities per plan); gates + log.",
+          "STEP 4 \u00e2\u20ac\u201d PARALLEL: Agent 11 + Agent 10 (same as Step 2).",
+          "STEP 5 \u00e2\u20ac\u201d Agent 03 (HIGH): WK41-R3 Track B \u00e2\u20ac\u201d GameEngine facades (e.g. camera/display + render coordinator) with delegation one-liners; do not break GameCommands or public GameEngine API; gates + log.",
+          "STEP 6 \u00e2\u20ac\u201d PARALLEL: Agent 11 + Agent 10.",
+          "STEP 7 \u00e2\u20ac\u201d Agent 03 (MEDIUM): WK41-R4 optional \u00e2\u20ac\u201d thin UrsinaRenderer.update() loop extraction and/or docs/refactor/engine_access_inventory.md; defer risky parts per plan; gates + log.",
+          "STEP 8 \u00e2\u20ac\u201d PARALLEL: Agent 11 + Agent 10; then JAIMIE manual (~10 min each): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm. Optional: python main.py --renderer ursina --provider mock. STEP 8b optional \u00e2\u20ac\u201d Agent 13 (LOW): CHANGELOG draft only if Jaimie wants; no version bump without Jaimie."
         ]
       },
       "rounds": {
@@ -48,11 +50,11 @@
             },
             "03": {
               "status": "assigned_active",
-              "next_action": "Execute WK41 plan rounds R1→R4 in order; see pm_agent_prompts[\"03\"] and plan file."
+              "next_action": "Execute WK41 plan rounds R1\u00e2\u2020\u2019R4 in order; see pm_agent_prompts[\"03\"] and plan file."
             },
             "10": {
               "status": "consult_optional",
-              "next_action": "After each 03 mergeable chunk, run IN PARALLEL with Agent 11: brief Ursina FPS session — see sprint_meta.pm_jaimie_send_order Step 2/4/6/8."
+              "next_action": "After each 03 mergeable chunk, run IN PARALLEL with Agent 11: brief Ursina FPS session \u00e2\u20ac\u201d see sprint_meta.pm_jaimie_send_order Step 2/4/6/8."
             },
             "11": {
               "status": "blocked_until_03_step_done",
@@ -64,13 +66,13 @@
             }
           },
           "pm_agent_prompts": {
-            "03": "WK41 Mechanical Split (Tech, HIGH/MEDIUM): Read FIRST: .cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md (full file). Then read PM hub .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → sprints[\"wk41-mechanical-module-split\"] → sprint_meta.pm_jaimie_send_order for step order. Execute in order: (R1) Track A1 leaf helpers out of ursina_renderer.py; (R2) Track A2 class/collaborators; (R3) Track B GameEngine facades; (R4) optional thin update + engine_access_inventory.md touch. Rules: no behavior change; no new features; helpers must NOT import UrsinaRenderer (avoid cycles); keep `from game.graphics.ursina_renderer import UrsinaRenderer` working; GameEngine keeps public methods as thin delegates to collaborators. Gates each round: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Update .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json with files, commands, exit codes.",
-            "10": "WK41 (Perf, LOW consult): After EACH Agent 03 mergeable step (when Jaimie activates you per PM send order), run ~5 minutes: python main.py --renderer ursina --no-llm — note FPS/feel vs baseline; report regression yes/no in agent_10 JSON. Do not edit game code unless PM escalates. Independent of Agent 11 — safe to run same universal prompt in parallel chat.",
-            "11": "WK41 (QA, LOW): After EACH Agent 03 step completes (when Jaimie activates you per PM send order), run from repo root: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report (errors=0). Log all commands + exit codes in agent_11 JSON. Parallel with Agent 10 is OK — different outputs, no file overlap.",
+            "03": "WK41 Mechanical Split (Tech, HIGH/MEDIUM): Read FIRST: .cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md (full file). Then read PM hub .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json \u00e2\u2020\u2019 sprints[\"wk41-mechanical-module-split\"] \u00e2\u2020\u2019 sprint_meta.pm_jaimie_send_order for step order. Execute in order: (R1) Track A1 leaf helpers out of ursina_renderer.py; (R2) Track A2 class/collaborators; (R3) Track B GameEngine facades; (R4) optional thin update + engine_access_inventory.md touch. Rules: no behavior change; no new features; helpers must NOT import UrsinaRenderer (avoid cycles); keep `from game.graphics.ursina_renderer import UrsinaRenderer` working; GameEngine keeps public methods as thin delegates to collaborators. Gates each round: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Update .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json with files, commands, exit codes.",
+            "10": "WK41 (Perf, LOW consult): After EACH Agent 03 mergeable step (when Jaimie activates you per PM send order), run ~5 minutes: python main.py --renderer ursina --no-llm \u00e2\u20ac\u201d note FPS/feel vs baseline; report regression yes/no in agent_10 JSON. Do not edit game code unless PM escalates. Independent of Agent 11 \u00e2\u20ac\u201d safe to run same universal prompt in parallel chat.",
+            "11": "WK41 (QA, LOW): After EACH Agent 03 step completes (when Jaimie activates you per PM send order), run from repo root: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report (errors=0). Log all commands + exit codes in agent_11 JSON. Parallel with Agent 10 is OK \u00e2\u20ac\u201d different outputs, no file overlap.",
             "13": "WK41 (optional, Marketing/Ops, LOW): Only if Jaimie asks at sprint end: draft internal or player-facing bullets for readability refactor; do NOT edit CHANGELOG.md or bump version without Jaimie."
           },
           "pm_send_list_minimal": {
-            "rationale": "Single-threaded implementation on Agent 03 (avoid merge conflicts on engine.py / ursina_renderer.py). After each 03 round: Agent 11 (gates) + Agent 10 (optional Ursina FPS consult) run in PARALLEL — two chats. Jaimie manual after final gates. Agent 13 only on request. Agents 01/02/04–09/12/14/15 silent unless escalated.",
+            "rationale": "Single-threaded implementation on Agent 03 (avoid merge conflicts on engine.py / ursina_renderer.py). After each 03 round: Agent 11 (gates) + Agent 10 (optional Ursina FPS consult) run in PARALLEL \u00e2\u20ac\u201d two chats. Jaimie manual after final gates. Agent 13 only on request. Agents 01/02/04\u00e2\u20ac\u201c09/12/14/15 silent unless escalated.",
             "intelligence_by_agent": {
               "03": "high",
               "11": "low",
@@ -213,7 +215,7 @@
               }
             ]
           },
-          "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
+          "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint \u00e2\u20ac\u201d your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   \u00e2\u2020\u2019 `sprints[\"wk41-mechanical-module-split\"]`\n   \u00e2\u2020\u2019 `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   \u00e2\u2020\u2019 `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** \u00e2\u20ac\u201d same behavior, same gates as refactor sprints."
         },
         "wk41_sprint_closeout": {
           "round_meta": {
@@ -224,7 +226,7 @@
           },
           "pm_status_summary": {
             "status": "closed_success",
-            "summary": "WK41 complete. All planned tracks shipped (R1 leaf modules, R2 Ursina collaborators, R3 GameEngine facades, R4 thin update + engine_access_inventory). Agent 11 STEP 2–8 gates PASS; Agent 10 perf consult PASS each wave; mid-sprint peasants/workers routing bug fixed by Agent 03 before final signoff; Jaimie manual playtest PASS."
+            "summary": "WK41 complete. All planned tracks shipped (R1 leaf modules, R2 Ursina collaborators, R3 GameEngine facades, R4 thin update + engine_access_inventory). Agent 11 STEP 2\u00e2\u20ac\u201c8 gates PASS; Agent 10 perf consult PASS each wave; mid-sprint peasants/workers routing bug fixed by Agent 03 before final signoff; Jaimie manual playtest PASS."
           },
           "pm_accepted_deliverables": [
             "game/graphics/ursina_coords.py, ursina_environment.py, ursina_prefabs.py, ursina_units_anim.py (Track A1)",
@@ -234,9 +236,9 @@
             "Automated QA: determinism_guard + pytest + qa_smoke --quick + validate_assets errors=0 throughout"
           ],
           "pm_evidence": {
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk41-mechanical-module-split rounds wk41_r0_kickoff_r1_complete through wk41_r4_track_a3_docs_complete",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk41_step2 through wk41_step8_post_r4_full_stack — all PASS",
-            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json → WK41 waves — no blocking perf regression",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u00e2\u2020\u2019 wk41-mechanical-module-split rounds wk41_r0_kickoff_r1_complete through wk41_r4_track_a3_docs_complete",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk41_step2 through wk41_step8_post_r4_full_stack \u00e2\u20ac\u201d all PASS",
+            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json \u00e2\u2020\u2019 WK41 waves \u00e2\u20ac\u201d no blocking perf regression",
             "human_playtest": "Jaimie: sprint wrap playtest PASS (user confirmation 2026-04)"
           },
           "pm_next_actions_by_agent": {
@@ -256,7 +258,7 @@
           }
         }
       },
-      "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint — your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   → `sprints[\"wk41-mechanical-module-split\"]`\n   → `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   → `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** — same behavior, same gates as refactor sprints."
+      "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint \u00e2\u20ac\u201d your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   \u00e2\u2020\u2019 `sprints[\"wk41-mechanical-module-split\"]`\n   \u00e2\u2020\u2019 `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   \u00e2\u2020\u2019 `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** \u00e2\u20ac\u201d same behavior, same gates as refactor sprints."
     },
     "wk46-stage3-lumberjack-builders": {
       "sprint_meta": {
@@ -405,7 +407,7 @@
             "11": "WK46 Stage 3 (QA, LOW): After 03/05/15 say Stage 3 is integrated, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and any failures in agent_11 log.",
             "09": "WK46 Stage 3 (Art consult, LOW): Optional visual check: run `python main.py --renderer ursina --no-llm` and watch a builder chop a tree. Confirm log stack scale looks correct at 0.5/0.75/1.0 and doesn't clip terrain; if off, recommend a small scale multiplier constant tweak. No code changes unless asked."
           },
-          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r0_kickoff**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the master plan context (Stage 3): `.cursor/plans/master_plan_building_nature_sprints.md`\\n3) Read the PM hub for your assignment:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   → `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r0_kickoff\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n4) Stay in scope: Stage 3 lumberjack builders only (no global player wood).\\n5) Determinism + fog rule: may chop only tiles with `Visibility != UNSEEN` (SEEN/VISIBLE).\\n6) Update your agent log with: files touched, commands run, exit codes, and any blockers.\\n\\nOne line: **Builders chop (5s) + harvest (5s) trees for local wood before building; logs are visual-only and scaled by tree growth.**"
+          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r0_kickoff**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the master plan context (Stage 3): `.cursor/plans/master_plan_building_nature_sprints.md`\\n3) Read the PM hub for your assignment:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   \u00e2\u2020\u2019 `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r0_kickoff\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n4) Stay in scope: Stage 3 lumberjack builders only (no global player wood).\\n5) Determinism + fog rule: may chop only tiles with `Visibility != UNSEEN` (SEEN/VISIBLE).\\n6) Update your agent log with: files touched, commands run, exit codes, and any blockers.\\n\\nOne line: **Builders chop (5s) + harvest (5s) trees for local wood before building; logs are visual-only and scaled by tree growth.**"
         },
         "wk46_r1_bugfix_builder_respawn_and_progress_unblock": {
           "round_meta": {
@@ -431,7 +433,7 @@
               "expected": "After some time, at least one FoodStand and one Farm should be constructed (once hero_count thresholds are met).",
               "actual": "No FoodStands/Farms are built in playtest session; progression appears stuck behind houses.",
               "acceptance_test": [
-                "Manual: python main.py --renderer ursina --no-llm (5–10 minutes) — observe at least one FoodStand and Farm get constructed in a typical run.",
+                "Manual: python main.py --renderer ursina --no-llm (5\u00e2\u20ac\u201c10 minutes) \u00e2\u20ac\u201d observe at least one FoodStand and Farm get constructed in a typical run.",
                 "Automated: python tools/qa_smoke.py --quick must PASS."
               ],
               "status": "assigned"
@@ -452,7 +454,7 @@
               "actual": "Partially built plot never completes once the builder dies.",
               "acceptance_test": [
                 "Unit: add/extend a test to simulate builder death and assert a replacement builder spawns and finishes the plot.",
-                "Manual: python main.py --renderer ursina --no-llm — kill builder mid-build and observe replacement completes it.",
+                "Manual: python main.py --renderer ursina --no-llm \u00e2\u20ac\u201d kill builder mid-build and observe replacement completes it.",
                 "Automated: python tools/qa_smoke.py --quick must PASS."
               ],
               "status": "assigned"
@@ -505,11 +507,11 @@
             "rationale": "Primary fix lives in NeutralBuildingSystem + BuilderPeasant logic (Agent 05). Agent 03 reviews/integrates only if needed. Agent 11 validates gates after fix."
           },
           "pm_agent_prompts": {
-            "05": "WK46 R1 BUGFIX (Gameplay, HIGH): Playtest reports: (1) no FoodStands/Farms built, (2) if BuilderPeasant dies mid-build the plot never completes. Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md and then open the PM hub: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → wk46-stage3-lumberjack-builders → rounds → wk46_r1_bugfix_builder_respawn_and_progress_unblock. Root cause likely in game/systems/neutral_buildings.py: it returns early if ANY requires_builder_peasant plot exists, but does not spawn replacement builders. Implement: if there is any plot with requires_builder_peasant==True and hp>0 and not is_constructed, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (pick deterministic order: e.g., lowest (grid_y,grid_x) or oldest inserted). After spawning, return early. Also: if plot is already partially built (construction_started==True or construction_progress>0), replacement builder must resume building without requiring additional wood (no double-paying). Add/extend a unit test to simulate: spawn plot, advance some work, mark builder dead/removed, tick NeutralBuildingSystem -> asserts new builder spawns and finishes. Run: python -m pytest tests/; python tools/qa_smoke.py --quick. Report files + exit codes.",
-            "03": "WK46 R1 BUGFIX (Tech consult, MEDIUM): Review Agent 05’s fix for determinism + any needed SimEngine helper. Only implement minimal integration changes if required. Gates: python tools/qa_smoke.py --quick after changes.",
+            "05": "WK46 R1 BUGFIX (Gameplay, HIGH): Playtest reports: (1) no FoodStands/Farms built, (2) if BuilderPeasant dies mid-build the plot never completes. Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md and then open the PM hub: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json \u00e2\u2020\u2019 wk46-stage3-lumberjack-builders \u00e2\u2020\u2019 rounds \u00e2\u2020\u2019 wk46_r1_bugfix_builder_respawn_and_progress_unblock. Root cause likely in game/systems/neutral_buildings.py: it returns early if ANY requires_builder_peasant plot exists, but does not spawn replacement builders. Implement: if there is any plot with requires_builder_peasant==True and hp>0 and not is_constructed, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (pick deterministic order: e.g., lowest (grid_y,grid_x) or oldest inserted). After spawning, return early. Also: if plot is already partially built (construction_started==True or construction_progress>0), replacement builder must resume building without requiring additional wood (no double-paying). Add/extend a unit test to simulate: spawn plot, advance some work, mark builder dead/removed, tick NeutralBuildingSystem -> asserts new builder spawns and finishes. Run: python -m pytest tests/; python tools/qa_smoke.py --quick. Report files + exit codes.",
+            "03": "WK46 R1 BUGFIX (Tech consult, MEDIUM): Review Agent 05\u00e2\u20ac\u2122s fix for determinism + any needed SimEngine helper. Only implement minimal integration changes if required. Gates: python tools/qa_smoke.py --quick after changes.",
             "11": "WK46 R1 BUGFIX (QA, LOW): After Agent 05 reports done, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and report PASS/failures."
           },
-          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r1_bugfix_builder_respawn_and_progress_unblock**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the PM hub for your specific prompt:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   → `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r1_bugfix_builder_respawn_and_progress_unblock\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n3) Fix: replacement builder spawning so partially built plots complete; unblock FoodStand/Farm progression.\\n4) Update your agent log with files changed + commands + exit codes.\\n\\nOne line: **If a builder dies mid-build, spawn a replacement builder to finish the plot; do not let one stuck house block all other neutral buildings forever.**"
+          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r1_bugfix_builder_respawn_and_progress_unblock**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the PM hub for your specific prompt:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   \u00e2\u2020\u2019 `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r1_bugfix_builder_respawn_and_progress_unblock\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n3) Fix: replacement builder spawning so partially built plots complete; unblock FoodStand/Farm progression.\\n4) Update your agent log with files changed + commands + exit codes.\\n\\nOne line: **If a builder dies mid-build, spawn a replacement builder to finish the plot; do not let one stuck house block all other neutral buildings forever.**"
         },
         "wk46_sprint_closeout": {
           "round_meta": {
@@ -529,10 +531,10 @@
             "Runtime model: assets/models/environment/log_stackLarge.glb."
           ],
           "pm_evidence": {
-            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk46-stage3-lumberjack-builders (wk46_r0_kickoff, wk46_r1_bugfix_builder_respawn_and_progress_unblock, wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders)",
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk46-stage3-lumberjack-builders.wk46_r0_kickoff + wk46_r0_followup_construction_stage_prefabs",
-            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json → wk46-stage3-lumberjack-builders.wk46_r0_kickoff",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk46-stage3-lumberjack-builders.wk46_r_final_gates_2026_04_29",
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json \u00e2\u2020\u2019 wk46-stage3-lumberjack-builders (wk46_r0_kickoff, wk46_r1_bugfix_builder_respawn_and_progress_unblock, wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders)",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u00e2\u2020\u2019 wk46-stage3-lumberjack-builders.wk46_r0_kickoff + wk46_r0_followup_construction_stage_prefabs",
+            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json \u00e2\u2020\u2019 wk46-stage3-lumberjack-builders.wk46_r0_kickoff",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk46-stage3-lumberjack-builders.wk46_r_final_gates_2026_04_29",
             "human_playtest": "Jaimie: confirmed builders build + farms/food stands can complete; replacement builders spawn when needed (2026-04-29)"
           }
         }
@@ -543,7 +545,7 @@
         "status": "closed_success",
         "created_utc": "2026-04-29T15:52:00Z",
         "closed_utc": "2026-04-30T23:59:00Z",
-        "notes": "Orchestrator validation experiment (warrior shirt blue→red). R0–R3 diagnosed live PNG source; the original visual objective was superseded by the ad-hoc v1.5.3 Major Unit Art update (Tiny RPG hero sprite pack + broader Agent 09/Jaimie art pass). Historical rounds remain below for audit; reopen only if a red/blue warrior regression is reported."
+        "notes": "Orchestrator validation experiment (warrior shirt blue\u00e2\u2020\u2019red). R0\u00e2\u20ac\u201cR3 diagnosed live PNG source; the original visual objective was superseded by the ad-hoc v1.5.3 Major Unit Art update (Tiny RPG hero sprite pack + broader Agent 09/Jaimie art pass). Historical rounds remain below for audit; reopen only if a red/blue warrior regression is reported."
       },
       "rounds": {
         "orch_r0_impl_then_qa": {
@@ -555,7 +557,7 @@
           },
           "pm_status_summary": {
             "status": "blocked",
-            "summary": "R0: Agent 09 wave finished (ledger log_check passed). QA wave failed in orchestrator: Agent 11 status=error, \"Matching agent log entry was not found\" — treat as automation/reporting gap; Agent 11 log on disk shows qa_smoke PASS for this round but may lack fields the matcher expects (e.g. sprint_id on the round entry). Human visual gate FAILED: Jaimie Ursina playtest (2026-04-29) — warrior shirts still read blue. Sprint remains incomplete; proceed to orch_r1_bugfix_warrior_red_visual via orchestrator."
+            "summary": "R0: Agent 09 wave finished (ledger log_check passed). QA wave failed in orchestrator: Agent 11 status=error, \"Matching agent log entry was not found\" \u00e2\u20ac\u201d treat as automation/reporting gap; Agent 11 log on disk shows qa_smoke PASS for this round but may lack fields the matcher expects (e.g. sprint_id on the round entry). Human visual gate FAILED: Jaimie Ursina playtest (2026-04-29) \u00e2\u20ac\u201d warrior shirts still read blue. Sprint remains incomplete; proceed to orch_r1_bugfix_warrior_red_visual via orchestrator."
           },
           "pm_ledger_ref": "tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r0_impl_then_qa__1777479288376.json",
           "pm_automation_outcome_r0": {
@@ -570,8 +572,8 @@
             },
             "gates": {
               "automated_qa_smoke": "PASS per Agent 09 and Agent 11 logs",
-              "human_visual_approval": "FAILED — Ursina still blue warriors",
-              "manual_playtest": "not approved — stop for Jaimie after R1 workers"
+              "human_visual_approval": "FAILED \u00e2\u20ac\u201d Ursina still blue warriors",
+              "manual_playtest": "not approved \u00e2\u20ac\u201d stop for Jaimie after R1 workers"
             }
           },
           "pm_blockers": [
@@ -682,8 +684,8 @@
             }
           },
           "pm_agent_prompts": {
-            "09": "ORCH TINY SPRINT (Implementer — MEDIUM): Goal: change the warrior shirt from blue to dark red across both renderers (pygame + Ursina).\\n\\nScope:\\n- In scope: update `game/graphics/hero_sprites.py` -> `HeroSpriteSpec.warrior` from (70,120,255) to (180,45,45). Ensure warriors read red in both render paths.\\n- Also in scope (only if required): in `game/graphics/ursina_renderer.py`, avoid forcing textured hero billboards to look blue via `COLOR_HERO = color.azure` tinting; warriors should be neutral/white tint when a texture is present so the sprite colors read correctly.\\n- Out of scope: new assets, refactors, version bump, changelog, commits/pushes.\\n\\nFiles you MAY edit:\\n- `game/graphics/hero_sprites.py`\\n- `game/graphics/ursina_renderer.py` (minimal, only if needed for tint)\\n\\nAcceptance:\\n- Warrior shirts are dark red in both pygame and Ursina.\\n\\nReport back with:\\n- Files touched\\n- Any note about tint logic decisions\\n\\nComposer policy: you are running under orchestrator automation; do not request model changes.",
-            "11": "ORCH TINY SPRINT (QA — LOW): After Agent 09 reports done, run from repo root (PowerShell):\\n\\npython tools/qa_smoke.py --quick\\n\\nRecord:\\n- Exit code\\n- If failure: paste last ~50 lines and note which profile failed\\n\\nStop condition:\\n- If PASS, report PASS. Remaining gate is human visual approval only (no version bump, no commit/push)."
+            "09": "ORCH TINY SPRINT (Implementer \u00e2\u20ac\u201d MEDIUM): Goal: change the warrior shirt from blue to dark red across both renderers (pygame + Ursina).\\n\\nScope:\\n- In scope: update `game/graphics/hero_sprites.py` -> `HeroSpriteSpec.warrior` from (70,120,255) to (180,45,45). Ensure warriors read red in both render paths.\\n- Also in scope (only if required): in `game/graphics/ursina_renderer.py`, avoid forcing textured hero billboards to look blue via `COLOR_HERO = color.azure` tinting; warriors should be neutral/white tint when a texture is present so the sprite colors read correctly.\\n- Out of scope: new assets, refactors, version bump, changelog, commits/pushes.\\n\\nFiles you MAY edit:\\n- `game/graphics/hero_sprites.py`\\n- `game/graphics/ursina_renderer.py` (minimal, only if needed for tint)\\n\\nAcceptance:\\n- Warrior shirts are dark red in both pygame and Ursina.\\n\\nReport back with:\\n- Files touched\\n- Any note about tint logic decisions\\n\\nComposer policy: you are running under orchestrator automation; do not request model changes.",
+            "11": "ORCH TINY SPRINT (QA \u00e2\u20ac\u201d LOW): After Agent 09 reports done, run from repo root (PowerShell):\\n\\npython tools/qa_smoke.py --quick\\n\\nRecord:\\n- Exit code\\n- If failure: paste last ~50 lines and note which profile failed\\n\\nStop condition:\\n- If PASS, report PASS. Remaining gate is human visual approval only (no version bump, no commit/push)."
           },
           "pm_universal_prompt": "You are being activated for sprint **orch_tiny_warrior_red**, round **orch_r0_impl_then_qa** (historical). Prefer **orch_r1_bugfix_warrior_red_visual** for new work.\\n\\nR0 is closed for assignment: human Ursina visual failed; follow PM hub orch_r1."
         },
@@ -698,15 +700,15 @@
           },
           "pm_status_summary": {
             "status": "human_gate_failed",
-            "summary": "R1 worker wave: Agent 09 logged done (cache keys + bridge + tint paths; qa_smoke PASS in agent log). Agent 11 logged qa_smoke PASS with sprint_id/round_id on the round object. Ledger tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r1_bugfix_warrior_red_visual__1777480427443.json: orchestrator selected wave reported Agent 11 error \"Matching agent log entry was not found\" — treat as automation/matcher or run-order issue to watch in R2; post-hoc agent logs satisfy contract fields. Human visual gate FAILED again: Jaimie's default Ursina check still shows blue warrior shirts. Sprint not complete; proceed via orchestrator to orch_r2_diagnose_warrior_red_ursina_path (03→09→11)."
+            "summary": "R1 worker wave: Agent 09 logged done (cache keys + bridge + tint paths; qa_smoke PASS in agent log). Agent 11 logged qa_smoke PASS with sprint_id/round_id on the round object. Ledger tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r1_bugfix_warrior_red_visual__1777480427443.json: orchestrator selected wave reported Agent 11 error \"Matching agent log entry was not found\" \u00e2\u20ac\u201d treat as automation/matcher or run-order issue to watch in R2; post-hoc agent logs satisfy contract fields. Human visual gate FAILED again: Jaimie's default Ursina check still shows blue warrior shirts. Sprint not complete; proceed via orchestrator to orch_r2_diagnose_warrior_red_ursina_path (03\u00e2\u2020\u201909\u00e2\u2020\u201911)."
           },
           "pm_ledger_ref": "tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r1_bugfix_warrior_red_visual__1777480427443.json",
           "pm_worker_evidence": {
-            "agent_09": ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json → sprints.orch_tiny_warrior_red.rounds.orch_r1_bugfix_warrior_red_visual",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → sprints.orch_tiny_warrior_red.rounds.orch_r1_bugfix_warrior_red_visual"
+            "agent_09": ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json \u00e2\u2020\u2019 sprints.orch_tiny_warrior_red.rounds.orch_r1_bugfix_warrior_red_visual",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 sprints.orch_tiny_warrior_red.rounds.orch_r1_bugfix_warrior_red_visual"
           },
           "pm_human_gates": {
-            "visual_approval": "FAILED — default Ursina run still reads warrior shirts as blue (2026-04-29, Jaimie)",
+            "visual_approval": "FAILED \u00e2\u20ac\u201d default Ursina run still reads warrior shirts as blue (2026-04-29, Jaimie)",
             "manual_playtest": "pending_r2_followup",
             "version_bump": "stop",
             "commit": "stop",
@@ -714,7 +716,7 @@
           },
           "pm_blockers": [
             "ORCH-WARRIOR-RED-001 remains open until Jaimie confirms dark red warriors on the same default Ursina entry path used for repro.",
-            "Root cause after R1 is unclear without a traced default-Ursina path — escalated to Agent 03 for renderer/texture-bridge diagnosis in R2."
+            "Root cause after R1 is unclear without a traced default-Ursina path \u00e2\u20ac\u201d escalated to Agent 03 for renderer/texture-bridge diagnosis in R2."
           ],
           "pm_next_actions_by_agent": {
             "09": {
@@ -806,8 +808,8 @@
             }
           },
           "pm_agent_prompts": {
-            "09": "ORCH TINY SPRINT — **R1 BUGFIX** (Implementer — MEDIUM): Human Ursina playtest FAILED after R0: warrior shirts still look **blue**. Pygame/spec may already be red; your job is to fix whatever Ursina path actually displays in Jaimie's run so shirts read **dark red** (target HeroSpriteSpec.warrior (180,45,45)).\\n\\nScope:\\n- Trace warrior/class-specific billboard, texture generation, tint, or fallback color in `game/graphics/ursina_renderer.py` (and `game/graphics/hero_sprites.py` if the wrong pixels feed Ursina).\\n- Minimal edits; no new assets, no broad refactors, no version bump, no git commit/push.\\n\\nAcceptance:\\n- Dark red visible on warriors in **both** pygame and **default Ursina playtest**.\\n\\nReport: files touched, root cause vs R0, any tint/texture note. Composer 2 only; no model change requests.",
-            "11": "ORCH TINY SPRINT — **R1 QA** (LOW): After Agent 09 reports done:\\n\\npython tools/qa_smoke.py --quick\\n\\nLog in `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` under `sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r1_bugfix_warrior_red_visual\"]` with **sprint_id** `orch_tiny_warrior_red` and **round_id** `orch_r1_bugfix_warrior_red_visual` at the round object (match Agent 09's log pattern), plus evidence (exit code, notes).\\n\\nIf PASS: state PASS explicitly. Remaining gate: **Jaimie** visual (Ursina + pygame). No version bump / commit / push."
+            "09": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R1 BUGFIX** (Implementer \u00e2\u20ac\u201d MEDIUM): Human Ursina playtest FAILED after R0: warrior shirts still look **blue**. Pygame/spec may already be red; your job is to fix whatever Ursina path actually displays in Jaimie's run so shirts read **dark red** (target HeroSpriteSpec.warrior (180,45,45)).\\n\\nScope:\\n- Trace warrior/class-specific billboard, texture generation, tint, or fallback color in `game/graphics/ursina_renderer.py` (and `game/graphics/hero_sprites.py` if the wrong pixels feed Ursina).\\n- Minimal edits; no new assets, no broad refactors, no version bump, no git commit/push.\\n\\nAcceptance:\\n- Dark red visible on warriors in **both** pygame and **default Ursina playtest**.\\n\\nReport: files touched, root cause vs R0, any tint/texture note. Composer 2 only; no model change requests.",
+            "11": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R1 QA** (LOW): After Agent 09 reports done:\\n\\npython tools/qa_smoke.py --quick\\n\\nLog in `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` under `sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r1_bugfix_warrior_red_visual\"]` with **sprint_id** `orch_tiny_warrior_red` and **round_id** `orch_r1_bugfix_warrior_red_visual` at the round object (match Agent 09's log pattern), plus evidence (exit code, notes).\\n\\nIf PASS: state PASS explicitly. Remaining gate: **Jaimie** visual (Ursina + pygame). No version bump / commit / push."
           },
           "pm_universal_prompt": "Historical round **orch_r1_bugfix_warrior_red_visual** (human Ursina visual failed). New work: **orch_r2_diagnose_warrior_red_ursina_path** in the same sprint."
         },
@@ -822,7 +824,7 @@
           },
           "pm_status_summary": {
             "status": "orchestrator_failed_wave_diagnose",
-            "summary": "Ledger orch_tiny_warrior_red__orch_r2_diagnose_warrior_red_ursina_path__1777481354596.json: wave_diagnose status=error. Agent 03 orchestrator log validation FAILED — verifier expected sprint orch_tiny_warrior_red on the Technical Director rolling log; run targeted agent_03_AUTO.json without sprints[\"orch_tiny_warrior_red\"]. Waves wave_art (09) and qa (11) never started (pending). Human Ursina visual gate remains FAILED (Jaimie: warriors still blue). Follow-up: orch_r3_canonical_log_then_live_blue_diagnosis — Agent 03 must write ONLY `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` at sprints.orch_tiny_warrior_red.rounds.<round_id> before completion receipt; then full live-path proof + minimal fix; 09→11; proof required before QA sign-off and before human visual gate."
+            "summary": "Ledger orch_tiny_warrior_red__orch_r2_diagnose_warrior_red_ursina_path__1777481354596.json: wave_diagnose status=error. Agent 03 orchestrator log validation FAILED \u00e2\u20ac\u201d verifier expected sprint orch_tiny_warrior_red on the Technical Director rolling log; run targeted agent_03_AUTO.json without sprints[\"orch_tiny_warrior_red\"]. Waves wave_art (09) and qa (11) never started (pending). Human Ursina visual gate remains FAILED (Jaimie: warriors still blue). Follow-up: orch_r3_canonical_log_then_live_blue_diagnosis \u00e2\u20ac\u201d Agent 03 must write ONLY `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` at sprints.orch_tiny_warrior_red.rounds.<round_id> before completion receipt; then full live-path proof + minimal fix; 09\u00e2\u2020\u201911; proof required before QA sign-off and before human visual gate."
           },
           "pm_ledger_ref": "tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r2_diagnose_warrior_red_ursina_path__1777481354596.json",
           "pm_automation_outcome_r2": {
@@ -830,7 +832,7 @@
               "status": "error",
               "log_check": "failed",
               "orchestrator_message": "agent_03_AUTO.json missing sprints[\"orch_tiny_warrior_red\"]",
-              "pm_note": "Workers launched by SDK must update canonical rolling log filename expected by orchestrator/matcher (Agent 03 → agent_03_TechnicalDirector_Architecture.json), not alternate AUTO stubs without sprint keys."
+              "pm_note": "Workers launched by SDK must update canonical rolling log filename expected by orchestrator/matcher (Agent 03 \u00e2\u2020\u2019 agent_03_TechnicalDirector_Architecture.json), not alternate AUTO stubs without sprint keys."
             },
             "wave_art_agent_09": {
               "status": "pending_not_run",
@@ -841,9 +843,9 @@
               "reason": "stopped_after_wave_diagnose"
             },
             "gates": {
-              "automated_qa_smoke": "not reached — R2 automation halted before Agent 11 wave",
-              "human_visual_approval": "FAILED — Ursina warriors still blue (human check after R1+R2-era changes)",
-              "manual_playtest": "stop — await R3 worker proof then Jaimie visual"
+              "automated_qa_smoke": "not reached \u00e2\u20ac\u201d R2 automation halted before Agent 11 wave",
+              "human_visual_approval": "FAILED \u00e2\u20ac\u201d Ursina warriors still blue (human check after R1+R2-era changes)",
+              "manual_playtest": "stop \u00e2\u20ac\u201d await R3 worker proof then Jaimie visual"
             }
           },
           "pm_bug_tickets": [
@@ -860,8 +862,8 @@
                 "Observe warrior heroes: torso/shirt still reads blue; expected dark red (HeroSpriteSpec.warrior target (180,45,45))."
               ],
               "proof_required_for_close": [
-                "Written trace: default Ursina entry → hero/warrior billboard/texture/color application (file + function names).",
-                "Specific verification: e.g. cache key(s), texture id, or logged RGB sample proving the path that drives on-screen color — not only a hypothesis.",
+                "Written trace: default Ursina entry \u00e2\u2020\u2019 hero/warrior billboard/texture/color application (file + function names).",
+                "Specific verification: e.g. cache key(s), texture id, or logged RGB sample proving the path that drives on-screen color \u00e2\u20ac\u201d not only a hypothesis.",
                 "Jaimie confirms visually on the same default Ursina repro after R3 worker wave completes."
               ],
               "acceptance_test": [
@@ -872,12 +874,12 @@
             },
             {
               "id": "ORCH-WARRIOR-RED-002",
-              "title": "R2 orchestrator wave_diagnose failed — Agent 03 sprint entry missing on matcher log path",
+              "title": "R2 orchestrator wave_diagnose failed \u00e2\u20ac\u201d Agent 03 sprint entry missing on matcher log path",
               "severity": "major",
               "status": "mitigation_in_r3_prompts",
               "owner_primary": "03_TechnicalDirector_Architecture",
               "reporter": "orchestrator_verifier",
-              "actual": "Ledger: agent_03_AUTO.json lacked sprints[\"orch_tiny_warrior_red\"] — verifier expects canonical `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json`.",
+              "actual": "Ledger: agent_03_AUTO.json lacked sprints[\"orch_tiny_warrior_red\"] \u00e2\u20ac\u201d verifier expects canonical `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json`.",
               "expected": "Orchestrator contract fields at sprints[SPRINT_ID].rounds[ROUND_ID] on the canonical Agent 03 rolling log before completion receipt (.cursor/rules/10-orchestrator-logging-contract.mdc).",
               "acceptance_test": [
                 "python -m json.tool on canonical Agent 03 log passes after round entry written",
@@ -887,12 +889,12 @@
           ],
           "pm_blockers": [
             "ORCH-WARRIOR-RED-001: visual blocker until workers prove live Ursina blue-shirt root cause and Jaimie confirms dark red.",
-            "ORCH-WARRIOR-RED-002: automation blocked R2 until canonical log + sprint key fixed — addressed in orch_r3 Agent 03 prompt."
+            "ORCH-WARRIOR-RED-002: automation blocked R2 until canonical log + sprint key fixed \u00e2\u20ac\u201d addressed in orch_r3 Agent 03 prompt."
           ],
           "pm_next_actions_by_agent": {
             "03": {
               "status": "superseded_by_round",
-              "next_action": "Active round: orch_r3_canonical_log_then_live_blue_diagnosis — use canonical agent log filename; full proof of live blue-shirt path before QA/human gate."
+              "next_action": "Active round: orch_r3_canonical_log_then_live_blue_diagnosis \u00e2\u20ac\u201d use canonical agent log filename; full proof of live blue-shirt path before QA/human gate."
             },
             "09": {
               "status": "superseded_by_round",
@@ -904,7 +906,7 @@
             },
             "01": {
               "status": "active",
-              "next_action": "Launch orchestrator for orch_r3_canonical_log_then_live_blue_diagnosis (composer-2, receipt + verifier, 03→09→11). Stop before Jaimie manual Ursina/pygame visual approval; do not version bump, commit, or push; do not mark sprint complete."
+              "next_action": "Launch orchestrator for orch_r3_canonical_log_then_live_blue_diagnosis (composer-2, receipt + verifier, 03\u00e2\u2020\u201909\u00e2\u2020\u201911). Stop before Jaimie manual Ursina/pygame visual approval; do not version bump, commit, or push; do not mark sprint complete."
             }
           },
           "pm_send_list_minimal": {
@@ -932,7 +934,7 @@
               "14",
               "15"
             ],
-            "rationale": "Historical R2 send list (orchestrator failed wave 1). Active orchestrator round: orch_r3_canonical_log_then_live_blue_diagnosis (03 high — canonical log + live-path proof; 09 medium; 11 low)."
+            "rationale": "Historical R2 send list (orchestrator failed wave 1). Active orchestrator round: orch_r3_canonical_log_then_live_blue_diagnosis (03 high \u00e2\u20ac\u201d canonical log + live-path proof; 09 medium; 11 low)."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -996,9 +998,9 @@
             }
           },
           "pm_agent_prompts": {
-            "03": "ORCH TINY SPRINT — **R2 DIAGNOSIS / PLUMBING** (Technical Director — **HIGH** intelligence): R1 cache-key fixes + qa_smoke PASS did **not** pass Jaimie's default Ursina visual gate; warriors still look **blue**.\\n\\nGoal: Diagnose the **actual live default Ursina path** (exact `python main.py` / argv Jaimie uses from repo root) and produce **proof**: named call chain and specific verification (texture cache keys, bridge upload path, fallback tint, or equivalent) in your agent log — not guesses.\\n\\nScope:\\n- Trace from Ursina entry through hero/warrior billboard setup to final color/texture.\\n- If root cause is renderer, texture bridge, or engine wiring: minimal fix in files you own / may touch per PM hub.\\n- If root cause is purely procedural sprite pixels, hand off evidence to Agent 09 and avoid parallel conflicting edits.\\n\\nOut of scope: new assets, refactors, version bump, git commit/push. **Composer 2 only**; do not request other models.\\n\\nReport: files touched, evidence block with trace + verification; recommended_next_actions for Agent 09 if handoff needed.",
-            "09": "ORCH TINY SPRINT — **R2 ART FOLLOW-UP** (Art Director — **MEDIUM** intelligence): Read Agent 03's log for `orch_r2_diagnose_warrior_red_ursina_path`.\\n\\n- If 03's proof assigns pixel/atlas/clips work to art: minimal fix in `game/graphics/hero_sprites.py` (and directly related graphics files only) so warriors read **dark red** (180,45,45) in the traced Ursina path.\\n- If 03 fixed plumbing completely: log no code changes needed and cite 03's evidence.\\n\\nConstraints: **Composer 2 only**; no version bump / commit / push; run `python tools/qa_smoke.py --quick` before reporting done.",
-            "11": "ORCH TINY SPRINT — **R2 QA** (**LOW** intelligence): After Agent 09 reports done:\\n\\n`python tools/qa_smoke.py --quick`\\n\\nUpdate `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r2_diagnose_warrior_red_ursina_path\\\"]` with round object fields: **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r2_diagnose_warrior_red_ursina_path`, **status**, **what_i_changed**, **commands_run**, **evidence**, **blockers**, and **follow_ups** or **recommended_next_actions** (orchestrator contract).\\n\\nIf PASS: state PASS. Remaining gate: **Jaimie** Ursina + pygame visual. No version bump / commit / push."
+            "03": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R2 DIAGNOSIS / PLUMBING** (Technical Director \u00e2\u20ac\u201d **HIGH** intelligence): R1 cache-key fixes + qa_smoke PASS did **not** pass Jaimie's default Ursina visual gate; warriors still look **blue**.\\n\\nGoal: Diagnose the **actual live default Ursina path** (exact `python main.py` / argv Jaimie uses from repo root) and produce **proof**: named call chain and specific verification (texture cache keys, bridge upload path, fallback tint, or equivalent) in your agent log \u00e2\u20ac\u201d not guesses.\\n\\nScope:\\n- Trace from Ursina entry through hero/warrior billboard setup to final color/texture.\\n- If root cause is renderer, texture bridge, or engine wiring: minimal fix in files you own / may touch per PM hub.\\n- If root cause is purely procedural sprite pixels, hand off evidence to Agent 09 and avoid parallel conflicting edits.\\n\\nOut of scope: new assets, refactors, version bump, git commit/push. **Composer 2 only**; do not request other models.\\n\\nReport: files touched, evidence block with trace + verification; recommended_next_actions for Agent 09 if handoff needed.",
+            "09": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R2 ART FOLLOW-UP** (Art Director \u00e2\u20ac\u201d **MEDIUM** intelligence): Read Agent 03's log for `orch_r2_diagnose_warrior_red_ursina_path`.\\n\\n- If 03's proof assigns pixel/atlas/clips work to art: minimal fix in `game/graphics/hero_sprites.py` (and directly related graphics files only) so warriors read **dark red** (180,45,45) in the traced Ursina path.\\n- If 03 fixed plumbing completely: log no code changes needed and cite 03's evidence.\\n\\nConstraints: **Composer 2 only**; no version bump / commit / push; run `python tools/qa_smoke.py --quick` before reporting done.",
+            "11": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R2 QA** (**LOW** intelligence): After Agent 09 reports done:\\n\\n`python tools/qa_smoke.py --quick`\\n\\nUpdate `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r2_diagnose_warrior_red_ursina_path\\\"]` with round object fields: **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r2_diagnose_warrior_red_ursina_path`, **status**, **what_i_changed**, **commands_run**, **evidence**, **blockers**, and **follow_ups** or **recommended_next_actions** (orchestrator contract).\\n\\nIf PASS: state PASS. Remaining gate: **Jaimie** Ursina + pygame visual. No version bump / commit / push."
           },
           "pm_universal_prompt": "Historical round **orch_r2_diagnose_warrior_red_ursina_path**: orchestrator failed wave_diagnose (Agent 03 log path). R3 completed; active round: **orch_r4_screenshot_proof_dark_red_warrior_shirt** (see PM hub)."
         },
@@ -1013,7 +1015,7 @@
           },
           "pm_status_summary": {
             "status": "orchestrator_wave_complete_human_visual_failed",
-            "summary": "R3 automation finished successfully (ledger tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r3_canonical_log_then_live_blue_diagnosis__1777483415409.json — wave_diagnose/wave_art/qa all verified). Agent 03 canonical log: live default Ursina path traced; shirt sample (70,120,255) from PNG frames under assets/sprites/heroes/warrior/. Agent 09: no game/graphics edits; cited 03 proof. Agent 11: qa_smoke PASS. **Jaimie human visual gate FAILED again:** playtest still shows blue warrior shirts. Root issue remains: pixel/asset content not corrected in-repo for human-visible dark red. Next: orch_r4_screenshot_proof_dark_red_warrior_shirt — implementer must close loop with on-disk screenshot proof before receipt; then qa_smoke."
+            "summary": "R3 automation finished successfully (ledger tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r3_canonical_log_then_live_blue_diagnosis__1777483415409.json \u00e2\u20ac\u201d wave_diagnose/wave_art/qa all verified). Agent 03 canonical log: live default Ursina path traced; shirt sample (70,120,255) from PNG frames under assets/sprites/heroes/warrior/. Agent 09: no game/graphics edits; cited 03 proof. Agent 11: qa_smoke PASS. **Jaimie human visual gate FAILED again:** playtest still shows blue warrior shirts. Root issue remains: pixel/asset content not corrected in-repo for human-visible dark red. Next: orch_r4_screenshot_proof_dark_red_warrior_shirt \u00e2\u20ac\u201d implementer must close loop with on-disk screenshot proof before receipt; then qa_smoke."
           },
           "pm_ledger_ref": "tools/ai_studio_orchestrator/runs/orch_tiny_warrior_red__orch_r3_canonical_log_then_live_blue_diagnosis__1777483415409.json",
           "pm_synthesis_agent_01": {
@@ -1026,8 +1028,8 @@
             "pm_decision": "Do not mark sprint complete. Open R4 with mandatory screenshot-driven iteration for Agent 09 before completion receipt; Agent 11 runs qa_smoke after 09. Composer 2 only."
           },
           "pm_human_gates": {
-            "visual_approval": "STOP — Jaimie Ursina + pygame check only after R3 workers complete and Agent 11 PASS",
-            "manual_playtest": "STOP — same",
+            "visual_approval": "STOP \u00e2\u20ac\u201d Jaimie Ursina + pygame check only after R3 workers complete and Agent 11 PASS",
+            "manual_playtest": "STOP \u00e2\u20ac\u201d same",
             "version_bump": "STOP",
             "commit": "STOP",
             "push": "STOP"
@@ -1044,7 +1046,7 @@
               "human_gate_owner": "Jaimie",
               "proof_required_before_human_visual": [
                 "Agent 09 implements pixel/asset (or permitted graphics) fix so shirts target dark red (~180,45,45); PNG path under assets/sprites/heroes/warrior/ per Agent 03 R3 proof.",
-                "**NEW (R4):** Before orchestrator `cli.ts complete`, Agent 09 must iterate: run default Ursina from repo root (`python main.py`), capture a PNG screenshot showing warrior heroes, inspect it — shirts must visibly read dark red, not blue. Repeat fix → run → screenshot → inspect until pass. Agent log **must** list each attempt: repo-relative screenshot path(s), brief note per attempt (what changed, red vs blue read).",
+                "**NEW (R4):** Before orchestrator `cli.ts complete`, Agent 09 must iterate: run default Ursina from repo root (`python main.py`), capture a PNG screenshot showing warrior heroes, inspect it \u00e2\u20ac\u201d shirts must visibly read dark red, not blue. Repeat fix \u00e2\u2020\u2019 run \u00e2\u2020\u2019 screenshot \u00e2\u2020\u2019 inspect until pass. Agent log **must** list each attempt: repo-relative screenshot path(s), brief note per attempt (what changed, red vs blue read).",
                 "Agent 11 qa_smoke PASS for orch_r4 after 09's screenshot-pass attempt logged.",
                 "Final human approval: Jaimie playtest/visual (not automated)."
               ],
@@ -1056,7 +1058,7 @@
             },
             {
               "id": "ORCH-WARRIOR-RED-002",
-              "title": "Orchestrator log matcher uses canonical Agent 03 rolling log — alternate filenames lack sprint keys",
+              "title": "Orchestrator log matcher uses canonical Agent 03 rolling log \u00e2\u20ac\u201d alternate filenames lack sprint keys",
               "severity": "major",
               "status": "mitigated_r3_verified",
               "owner_primary": "03_TechnicalDirector_Architecture",
@@ -1069,7 +1071,7 @@
               "intelligence": "high",
               "asks": [
                 "R3 complete: diagnosis logged on canonical agent_03 JSON; receipt verified.",
-                "R4: not in orchestrator send list — consult only if Agent 09 files a plumbing regression or cross-system question."
+                "R4: not in orchestrator send list \u00e2\u20ac\u201d consult only if Agent 09 files a plumbing regression or cross-system question."
               ]
             },
             "09": {
@@ -1077,7 +1079,7 @@
               "intelligence": "medium",
               "asks": [
                 "R3 complete: no game/graphics edits; cited Agent 03 PNG proof.",
-                "R4: primary implementer — see new round orch_r4_screenshot_proof_dark_red_warrior_shirt."
+                "R4: primary implementer \u00e2\u20ac\u201d see new round orch_r4_screenshot_proof_dark_red_warrior_shirt."
               ]
             },
             "11": {
@@ -1118,7 +1120,7 @@
               "14",
               "15"
             ],
-            "rationale": "Historical R3 send list (orchestrator run completed 2026-04-29). Active work:orch_r4_screenshot_proof_dark_red_warrior_shirt (09 high — screenshot loop + art; 11 low — qa_smoke)."
+            "rationale": "Historical R3 send list (orchestrator run completed 2026-04-29). Active work:orch_r4_screenshot_proof_dark_red_warrior_shirt (09 high \u00e2\u20ac\u201d screenshot loop + art; 11 low \u00e2\u20ac\u201d qa_smoke)."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1183,11 +1185,11 @@
             }
           },
           "pm_agent_prompts": {
-            "03": "ORCH TINY SPRINT — **R3 TECH / DIAGNOSIS** (**HIGH** intelligence): R2 orchestrator **failed** because the verifier could not find `sprints[\\\"orch_tiny_warrior_red\\\"]` on the Technical Director log path it checks — ensure your work lands on the **canonical** file: `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` only.\\n\\n**Mandatory order:**\\n1) Edit that JSON file: `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]` with **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r3_canonical_log_then_live_blue_diagnosis`, plus status, what_i_changed, commands_run, evidence (when available), blockers, follow_ups/recommended_next_actions per `.cursor/rules/10-orchestrator-logging-contract.mdc`.\\n2) Run: `python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` — must exit 0.\\n3) Diagnose why warriors still appear **blue** on Jaimie's **live default Ursina** run after prior fixes — document exact launch argv + **proof** (named functions/files + verification: cache keys, bridge upload, tint, or pixel source). Minimal code fix if root cause is in your lane; coordinate Agent 09 if pixels-only.\\n4) Run `python tools/qa_smoke.py --quick` after code edits.\\n5) Run the exact **`npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...`** command from your orchestrator prompt (tokenized receipt). **Composer 2 only** — no other model. No version bump / commit / push.",
-            "09": "ORCH TINY SPRINT — **R3 ART** (**MEDIUM** intelligence): Read Agent 03's log at `sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis` in `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json`.\\n\\nOnly if 03's proof assigns procedural/atlas/clips work: minimal edits under `game/graphics/` per AGENTS.md (typically `hero_sprites.py`). If 03 fully resolved plumbing: log **no art change** and cite 03's evidence.\\n\\nUpdate **your** rolling log at the same sprint/round with sprint_id + round_id; validate JSON; run `python tools/qa_smoke.py --quick`; then orchestrator **complete** receipt from your prompt. Composer 2 only.",
-            "11": "ORCH TINY SPRINT — **R3 QA** (**LOW** intelligence): After Agent 09 completes:\\n\\n`python tools/qa_smoke.py --quick`\\n\\nWrite `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]` with round-level **sprint_id** + **round_id** + contract fields. **Do not** mark human visual approved — Jaimie owns Ursina/pygame visual gate after automation stops. Run orchestrator **complete** receipt. Composer 2 only."
+            "03": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R3 TECH / DIAGNOSIS** (**HIGH** intelligence): R2 orchestrator **failed** because the verifier could not find `sprints[\\\"orch_tiny_warrior_red\\\"]` on the Technical Director log path it checks \u00e2\u20ac\u201d ensure your work lands on the **canonical** file: `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` only.\\n\\n**Mandatory order:**\\n1) Edit that JSON file: `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]` with **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r3_canonical_log_then_live_blue_diagnosis`, plus status, what_i_changed, commands_run, evidence (when available), blockers, follow_ups/recommended_next_actions per `.cursor/rules/10-orchestrator-logging-contract.mdc`.\\n2) Run: `python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` \u00e2\u20ac\u201d must exit 0.\\n3) Diagnose why warriors still appear **blue** on Jaimie's **live default Ursina** run after prior fixes \u00e2\u20ac\u201d document exact launch argv + **proof** (named functions/files + verification: cache keys, bridge upload, tint, or pixel source). Minimal code fix if root cause is in your lane; coordinate Agent 09 if pixels-only.\\n4) Run `python tools/qa_smoke.py --quick` after code edits.\\n5) Run the exact **`npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...`** command from your orchestrator prompt (tokenized receipt). **Composer 2 only** \u00e2\u20ac\u201d no other model. No version bump / commit / push.",
+            "09": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R3 ART** (**MEDIUM** intelligence): Read Agent 03's log at `sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis` in `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json`.\\n\\nOnly if 03's proof assigns procedural/atlas/clips work: minimal edits under `game/graphics/` per AGENTS.md (typically `hero_sprites.py`). If 03 fully resolved plumbing: log **no art change** and cite 03's evidence.\\n\\nUpdate **your** rolling log at the same sprint/round with sprint_id + round_id; validate JSON; run `python tools/qa_smoke.py --quick`; then orchestrator **complete** receipt from your prompt. Composer 2 only.",
+            "11": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R3 QA** (**LOW** intelligence): After Agent 09 completes:\\n\\n`python tools/qa_smoke.py --quick`\\n\\nWrite `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]` with round-level **sprint_id** + **round_id** + contract fields. **Do not** mark human visual approved \u00e2\u20ac\u201d Jaimie owns Ursina/pygame visual gate after automation stops. Run orchestrator **complete** receipt. Composer 2 only."
           },
-          "pm_universal_prompt": "You are activated for sprint **orch_tiny_warrior_red**, round **orch_r3_canonical_log_then_live_blue_diagnosis**.\\n\\n1) Read PM hub → `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"].pm_agent_prompts[YOUR_NUMBER]`.\\n\\n2) **Composer 2 only.** Receipt-based completion: update **canonical** agent log path for your role → validate JSON → run gates → run exact `cli.ts complete` command from your orchestrator prompt.\\n\\n3) Engineering must **prove** why the live Ursina path still shows blue shirts before we ask QA/human visual sign-off.\\n\\n4) Stop before Jaimie manual visual approval; no version bump, commit, or push."
+          "pm_universal_prompt": "You are activated for sprint **orch_tiny_warrior_red**, round **orch_r3_canonical_log_then_live_blue_diagnosis**.\\n\\n1) Read PM hub \u00e2\u2020\u2019 `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"].pm_agent_prompts[YOUR_NUMBER]`.\\n\\n2) **Composer 2 only.** Receipt-based completion: update **canonical** agent log path for your role \u00e2\u2020\u2019 validate JSON \u00e2\u2020\u2019 run gates \u00e2\u2020\u2019 run exact `cli.ts complete` command from your orchestrator prompt.\\n\\n3) Engineering must **prove** why the live Ursina path still shows blue shirts before we ask QA/human visual sign-off.\\n\\n4) Stop before Jaimie manual visual approval; no version bump, commit, or push."
         },
         "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
           "round_meta": {
@@ -1200,11 +1202,11 @@
           },
           "pm_status_summary": {
             "status": "ready_for_orchestrator",
-            "summary": "Follow-up to R3: automation and qa_smoke passed but Jaimie's Ursina playtest still shows **blue** warrior shirts. Agent 03/09 R3 conclusion: shirt RGB is driven by PNG frames under assets/sprites/heroes/warrior/ (blue sample ~70,120,255). R4 assigns Agent 09 to land a real visual fix and **prove** it with screenshot-driven iteration **before** running the orchestrator completion receipt: loop (fix → `python main.py` from repo root default Ursina → capture PNG showing warriors → open file and inspect shirt color → repeat until screenshot shows **dark red** torso). Log every attempt with repo-relative screenshot path(s) + brief note. Agent 11 runs qa_smoke after Agent 09's pass. Human visual approval remains with Jaimie. Composer 2 only; no version bump, commit, or push."
+            "summary": "Follow-up to R3: automation and qa_smoke passed but Jaimie's Ursina playtest still shows **blue** warrior shirts. Agent 03/09 R3 conclusion: shirt RGB is driven by PNG frames under assets/sprites/heroes/warrior/ (blue sample ~70,120,255). R4 assigns Agent 09 to land a real visual fix and **prove** it with screenshot-driven iteration **before** running the orchestrator completion receipt: loop (fix \u00e2\u2020\u2019 `python main.py` from repo root default Ursina \u00e2\u2020\u2019 capture PNG showing warriors \u00e2\u2020\u2019 open file and inspect shirt color \u00e2\u2020\u2019 repeat until screenshot shows **dark red** torso). Log every attempt with repo-relative screenshot path(s) + brief note. Agent 11 runs qa_smoke after Agent 09's pass. Human visual approval remains with Jaimie. Composer 2 only; no version bump, commit, or push."
           },
           "pm_human_gates": {
-            "screenshot_self_gate_agent_09": "STOP — Agent 09 must not call cli.ts complete until a saved screenshot visibly shows dark red warrior shirt(s).",
-            "visual_approval": "STOP — Jaimie final Ursina/pygame approval after automation",
+            "screenshot_self_gate_agent_09": "STOP \u00e2\u20ac\u201d Agent 09 must not call cli.ts complete until a saved screenshot visibly shows dark red warrior shirt(s).",
+            "visual_approval": "STOP \u00e2\u20ac\u201d Jaimie final Ursina/pygame approval after automation",
             "manual_playtest": "STOP",
             "version_bump": "STOP",
             "commit": "STOP",
@@ -1220,7 +1222,7 @@
               "owner_secondary": "03_TechnicalDirector_Architecture",
               "qa_verification": "11_QA_TestEngineering_Lead",
               "human_gate_owner": "Jaimie",
-              "context_r3": "R3 ledger verified; human visual still failed — need asset/pixel fix plus screenshot proof.",
+              "context_r3": "R3 ledger verified; human visual still failed \u00e2\u20ac\u201d need asset/pixel fix plus screenshot proof.",
               "acceptance_test": [
                 "Agent 09 log includes evidence.screenshot_iterations (or equivalent) with one or more passing attempt: repo-relative PNG path(s), note per attempt, self_inspection = dark red shirt.",
                 "python tools/qa_smoke.py --quick exits 0 (Agent 11).",
@@ -1234,7 +1236,7 @@
               "intelligence": "high",
               "asks": [
                 "Recolor/replace warrior PNGs (or minimal permitted graphics changes per AGENTS.md) so Ursina shows dark red ~180,45,45 on shirt.",
-                "Mandatory loop before receipt: from repo root run `python main.py` (default renderer Ursina); capture PNG clearly showing warrior hero(es); inspect file — if shirt still blue, adjust assets/code and repeat.",
+                "Mandatory loop before receipt: from repo root run `python main.py` (default renderer Ursina); capture PNG clearly showing warrior hero(es); inspect file \u00e2\u20ac\u201d if shirt still blue, adjust assets/code and repeat.",
                 "Log each iteration under this sprint/round with screenshot path(s) + short note; only then run json.tool, qa_smoke, and orchestrator complete."
               ]
             },
@@ -1255,7 +1257,7 @@
             },
             "01": {
               "status": "awaiting_r4_orchestrator",
-              "next_action": "Jaimie: orchestrator dry-run then live for sprint orch_tiny_warrior_red round orch_r4_screenshot_proof_dark_red_warrior_shirt — Composer 2 only. Stop before manual playtest / visual approval / commit / push / version bump."
+              "next_action": "Jaimie: orchestrator dry-run then live for sprint orch_tiny_warrior_red round orch_r4_screenshot_proof_dark_red_warrior_shirt \u00e2\u20ac\u201d Composer 2 only. Stop before manual playtest / visual approval / commit / push / version bump."
             }
           },
           "pm_send_list_minimal": {
@@ -1282,7 +1284,7 @@
               "14",
               "15"
             ],
-            "rationale": "R4: Agent 09 (high — screenshot-gated art/pixel fix + default Ursina verify loop). Agent 11 (low — qa_smoke + receipt). Agent 03 consult only if escalated."
+            "rationale": "R4: Agent 09 (high \u00e2\u20ac\u201d screenshot-gated art/pixel fix + default Ursina verify loop). Agent 11 (low \u00e2\u20ac\u201d qa_smoke + receipt). Agent 03 consult only if escalated."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1338,10 +1340,10 @@
             }
           },
           "pm_agent_prompts": {
-            "09": "ORCH TINY SPRINT — **R4 ART + SCREENSHOT PROOF** (**HIGH** intelligence): Jaimie's **human visual gate FAILED** after R3: warriors still **blue** in Ursina. R3 diagnosis (Agent 03 canonical log): shirt pixels come from **PNG frames** under `assets/sprites/heroes/warrior/` (~70,120,255 sample), not from cache/plumbing bugs. Your job: make shirts **dark red** (~180,45,45) on the **live default Ursina path**.\\n\\n**CRITICAL — before `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete`:**\\n1) Apply minimal fix (recolor/replace warrior PNGs for idle/walk/attack/hurt as needed, and/or minimal `game/graphics/` edits per AGENTS.md if required).\\n2) From **repo root**, run **`python main.py`** — default Ursina renderer (same path Jaimie uses).\\n3) **Capture a PNG screenshot** that clearly includes warrior hero(es) on screen. Save under e.g. `docs/screenshots/orch_tiny_warrior_red/r4/` (create dirs if needed) with attempt-specific names (`attempt01.png`, etc.).\\n4) **Open the image file** and inspect: warrior shirt/torso must read **dark red**, not blue. If still blue, return to step 1 and repeat until the screenshot passes.\\n5) In `.cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]`, log **every attempt**: repo-relative **screenshot path(s)**, brief **note** (what changed), and **self_inspection** (blue vs dark red). **Do not** run the completion receipt until at least one screenshot passes self-inspection.\\n6) After screenshot pass: `python tools/qa_smoke.py --quick` must exit 0; `python -m json.tool` your log; then run the **exact** orchestrator **complete** command from your prompt.\\n\\n**Composer 2 only.** No other model. No version bump / commit / push.",
-            "11": "ORCH TINY SPRINT — **R4 QA** (**LOW** intelligence): After Agent 09 completes (including **screenshot proof** + PASS qa_smoke in their log):\\n\\n`python tools/qa_smoke.py --quick`\\n\\nWrite `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]` with orchestrator-contract fields on the round object: **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r4_screenshot_proof_dark_red_warrior_shirt`, status, what_i_changed, commands_run, evidence (cite Agent 09 screenshot paths from their log if helpful), blockers, follow_ups **or** recommended_next_actions.\\n\\n**Do not** mark Jaimie's visual gate approved — she still owns final Ursina/pygame sign-off. Run orchestrator **complete** receipt from your prompt. **Composer 2 only.**"
+            "09": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R4 ART + SCREENSHOT PROOF** (**HIGH** intelligence): Jaimie's **human visual gate FAILED** after R3: warriors still **blue** in Ursina. R3 diagnosis (Agent 03 canonical log): shirt pixels come from **PNG frames** under `assets/sprites/heroes/warrior/` (~70,120,255 sample), not from cache/plumbing bugs. Your job: make shirts **dark red** (~180,45,45) on the **live default Ursina path**.\\n\\n**CRITICAL \u00e2\u20ac\u201d before `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete`:**\\n1) Apply minimal fix (recolor/replace warrior PNGs for idle/walk/attack/hurt as needed, and/or minimal `game/graphics/` edits per AGENTS.md if required).\\n2) From **repo root**, run **`python main.py`** \u00e2\u20ac\u201d default Ursina renderer (same path Jaimie uses).\\n3) **Capture a PNG screenshot** that clearly includes warrior hero(es) on screen. Save under e.g. `docs/screenshots/orch_tiny_warrior_red/r4/` (create dirs if needed) with attempt-specific names (`attempt01.png`, etc.).\\n4) **Open the image file** and inspect: warrior shirt/torso must read **dark red**, not blue. If still blue, return to step 1 and repeat until the screenshot passes.\\n5) In `.cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]`, log **every attempt**: repo-relative **screenshot path(s)**, brief **note** (what changed), and **self_inspection** (blue vs dark red). **Do not** run the completion receipt until at least one screenshot passes self-inspection.\\n6) After screenshot pass: `python tools/qa_smoke.py --quick` must exit 0; `python -m json.tool` your log; then run the **exact** orchestrator **complete** command from your prompt.\\n\\n**Composer 2 only.** No other model. No version bump / commit / push.",
+            "11": "ORCH TINY SPRINT \u00e2\u20ac\u201d **R4 QA** (**LOW** intelligence): After Agent 09 completes (including **screenshot proof** + PASS qa_smoke in their log):\\n\\n`python tools/qa_smoke.py --quick`\\n\\nWrite `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]` with orchestrator-contract fields on the round object: **sprint_id** `orch_tiny_warrior_red`, **round_id** `orch_r4_screenshot_proof_dark_red_warrior_shirt`, status, what_i_changed, commands_run, evidence (cite Agent 09 screenshot paths from their log if helpful), blockers, follow_ups **or** recommended_next_actions.\\n\\n**Do not** mark Jaimie's visual gate approved \u00e2\u20ac\u201d she still owns final Ursina/pygame sign-off. Run orchestrator **complete** receipt from your prompt. **Composer 2 only.**"
           },
-          "pm_universal_prompt": "You are activated for sprint **orch_tiny_warrior_red**, round **orch_r4_screenshot_proof_dark_red_warrior_shirt**.\\n\\n1) Open PM hub → `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"].pm_agent_prompts[YOUR_NUMBER]`.\\n\\n2) **Composer 2 only** — receipt flow per `.cursor/rules/10-orchestrator-logging-contract.mdc`.\\n\\n3) Agent 09: **screenshot-driven iteration is mandatory** before your completion receipt — saved PNG must visibly show **dark red** warrior shirt.\\n\\n4) Agent 11: qa_smoke after 09.\\n\\n5) Stop before Jaimie manual visual approval / playtest sign-off; no version bump, commit, or push."
+          "pm_universal_prompt": "You are activated for sprint **orch_tiny_warrior_red**, round **orch_r4_screenshot_proof_dark_red_warrior_shirt**.\\n\\n1) Open PM hub \u00e2\u2020\u2019 `sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"].pm_agent_prompts[YOUR_NUMBER]`.\\n\\n2) **Composer 2 only** \u00e2\u20ac\u201d receipt flow per `.cursor/rules/10-orchestrator-logging-contract.mdc`.\\n\\n3) Agent 09: **screenshot-driven iteration is mandatory** before your completion receipt \u00e2\u20ac\u201d saved PNG must visibly show **dark red** warrior shirt.\\n\\n4) Agent 11: qa_smoke after 09.\\n\\n5) Stop before Jaimie manual visual approval / playtest sign-off; no version bump, commit, or push."
         }
       }
     },
@@ -1369,8 +1371,8 @@
             "09": "Build game/graphics/unit_atlas.py (HIGH intelligence)"
           },
           "pm_agent_prompts": {
-            "12": "You are Agent 12 (ToolsDevEx_Lead), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild tools/perf_stress_test.py — a stress test tool that measures Ursina renderer performance at high unit counts.\n\n## What To Build\n\nA script that:\n1. Launches the game with Ursina renderer in a non-interactive mode\n2. Overrides enemy/hero counts to spawn N units (configurable: 200, 500, 1000)\n3. Runs for 300 frames measuring frame time\n4. Reports: average frame time (ms), min/max, 1% low FPS\n5. Saves results to tools/perf_stress_baseline_wk47.json (under tools/ only)\n\n## Implementation Approach\n\nUse the existing headless sim + Ursina renderer. Key steps:\n- Import SimEngine from game.sim_engine and manually add entities to create high unit counts (imports only; do not edit game package files)\n- Import UrsinaRenderer and call update(snapshot) in a timed loop\n- Before the loop, programmatically spawn extra enemies/heroes by appending to the engine live lists\n- Time each update() call with time.perf_counter()\n- Print a table of results and write JSON\n\nNote: you may need to initialize pygame display (pygame.display.set_mode((1,1))) and Ursina (from ursina import Ursina; app = Ursina(...)) before using the renderer. Use web/docs or existing tools patterns under tools/ if you need bootstrap hints — do not edit game package files.\n\n## CLI Interface\n\npython tools/perf_stress_test.py --units 200 --frames 300\npython tools/perf_stress_test.py --units 500 --frames 300\npython tools/perf_stress_test.py --units 1000 --frames 300\n\n## Files You May Edit\n- tools/perf_stress_test.py (NEW)\n- tools/perf_stress_baseline_wk47.json (NEW, output)\n\n## Scope boundary\n- Implement and edit files under tools/ only. Do not modify game/, ai/, config, or root entry scripts.\n\n## Verification\n1. python tools/perf_stress_test.py --units 200 --frames 300 runs and prints results\n2. python tools/qa_smoke.py --quick still passes\n3. Update your agent log at sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]\n4. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
-            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild `game/graphics/unit_atlas.py` — a module that packs ALL unit sprite frames (heroes, enemies, workers) into a single 2048x2048 RGBA texture atlas at game boot, with a lookup dict mapping `(unit_type, class_key, action, frame_index)` to normalized UV coordinates.\n\n## Why This Matters\n\nThe current renderer creates a separate Ursina Entity per unit with per-entity texture changes. We are moving to hardware instancing where ALL units share ONE texture (the atlas). Your atlas is the foundation the instanced shader (Agent 03, Wave 2) will sample from.\n\n## What To Build\n\nA class `UnitAtlasBuilder` with:\n- Singleton pattern (built once at first access via `UnitAtlasBuilder.get()`)\n- `atlas_surface` property returning `pygame.Surface` (2048x2048 RGBA)\n- `lookup_uv(unit_type, class_key, action, frame_idx)` returning `(u_start, v_start, u_width, v_height)` in [0,1] normalized coordinates\n- `frame_count` property returning total frames packed (for debug)\n\n## Sprites To Pack\n\n**Heroes** (5 classes x 5 actions x variable frames):\n- Classes: `warrior`, `ranger`, `rogue`, `wizard`, `cleric`\n- Actions: `idle`, `walk`, `attack`, `hurt`, `inside`\n- Use: `HeroSpriteLibrary.clips_for(class_name, size=32)` returns dict of AnimationClip, each clip has `.frames` list of pygame.Surface\n\n**Enemies** (6 types x variable actions x variable frames):\n- Types: `goblin`, `wolf`, `skeleton`, `skeleton_archer`, `spider`, `bandit`\n- Use: `EnemySpriteLibrary.clips_for(enemy_type, size=32)` returns dict of AnimationClip\n\n**Workers** (3 types x variable actions x variable frames):\n- Types: `peasant`, `guard`, `tax_collector`\n- Use: `WorkerSpriteLibrary.clips_for(worker_type, size=32)` returns dict of AnimationClip\n\n## Packing Algorithm\n\nSimple row-based shelf packing:\n- All sprites are 32x32 pixels\n- 2048 / 32 = 64 frames per row\n- 64 rows = 4096 total frame capacity (far more than needed)\n- Fill left-to-right, top-to-bottom\n- Track cursor_x, cursor_y\n\n## EXACT Code To Write\n\nFile: `game/graphics/unit_atlas.py`\n\n```python\n\"\"\"Unit sprite atlas generator for instanced rendering (wk47).\"\"\"\nfrom __future__ import annotations\n\nimport pygame\nfrom typing import Dict, Tuple\n\nfrom game.graphics.hero_sprites import HeroSpriteLibrary\nfrom game.graphics.enemy_sprites import EnemySpriteLibrary\nfrom game.graphics.worker_sprites import WorkerSpriteLibrary\n\n# Normalized UV region on the atlas: (u_start, v_start, u_width, v_height)\nUVRegion = Tuple[float, float, float, float]\n\n# Key for looking up a specific frame: (unit_type, class_key, action, frame_index)\n# Examples: (\"hero\", \"warrior\", \"idle\", 0), (\"enemy\", \"goblin\", \"walk\", 3)\nAtlasKey = Tuple[str, str, str, int]\n\nATLAS_SIZE = 2048\nFRAME_SIZE = 32\n\n\nclass UnitAtlasBuilder:\n    \"\"\"Packs all unit sprite frames into one GPU-friendly atlas.\"\"\"\n\n    _instance: \"UnitAtlasBuilder | None\" = None\n\n    def __init__(self):\n        self._atlas_surface: pygame.Surface | None = None\n        self._uv_map: Dict[AtlasKey, UVRegion] = {}\n\n    @classmethod\n    def get(cls) -> \"UnitAtlasBuilder\":\n        \"\"\"Singleton access. Builds atlas on first call.\"\"\"\n        if cls._instance is None:\n            cls._instance = cls()\n            cls._instance._build()\n        return cls._instance\n\n    @property\n    def atlas_surface(self) -> pygame.Surface:\n        assert self._atlas_surface is not None\n        return self._atlas_surface\n\n    @property\n    def frame_count(self) -> int:\n        return len(self._uv_map)\n\n    def lookup_uv(self, unit_type: str, class_key: str, action: str, frame_idx: int) -> UVRegion:\n        \"\"\"Look up the atlas UV region for a given unit frame.\"\"\"\n        key: AtlasKey = (unit_type, class_key, action, frame_idx)\n        fallback: UVRegion = (0.0, 0.0, FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)\n        return self._uv_map.get(key, fallback)\n\n    def _pack_frame(self, surf: pygame.Surface, key: AtlasKey, cursor: list[int]) -> None:\n        \"\"\"Blit one frame onto the atlas and record its UV region.\"\"\"\n        cx, cy = cursor\n        if cx + FRAME_SIZE > ATLAS_SIZE:\n            cx = 0\n            cy += FRAME_SIZE\n        self._atlas_surface.blit(surf, (cx, cy))\n        self._uv_map[key] = (\n            cx / ATLAS_SIZE,\n            cy / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n        )\n        cursor[0] = cx + FRAME_SIZE\n        cursor[1] = cy\n\n    def _build(self) -> None:\n        self._atlas_surface = pygame.Surface((ATLAS_SIZE, ATLAS_SIZE), pygame.SRCALPHA)\n        self._atlas_surface.fill((0, 0, 0, 0))\n        cursor = [0, 0]  # [x, y] mutable for _pack_frame\n\n        # Heroes\n        for hc in (\"warrior\", \"ranger\", \"rogue\", \"wizard\", \"cleric\"):\n            clips = HeroSpriteLibrary.clips_for(hc, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"hero\", hc, action, fi), cursor)\n\n        # Enemies\n        for et in (\"goblin\", \"wolf\", \"skeleton\", \"skeleton_archer\", \"spider\", \"bandit\"):\n            clips = EnemySpriteLibrary.clips_for(et, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"enemy\", et, action, fi), cursor)\n\n        # Workers\n        for wt in (\"peasant\", \"guard\", \"tax_collector\"):\n            clips = WorkerSpriteLibrary.clips_for(wt, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"worker\", wt, action, fi), cursor)\n```\n\n## CRITICAL Notes\n- The atlas surface must use `pygame.SRCALPHA` flag (RGBA)\n- All frames are 32x32 — do not resize\n- UV coordinates are NORMALIZED to [0,1] range (divide pixel coords by ATLAS_SIZE)\n- The UV origin (0,0) is TOP-LEFT of the atlas (pygame convention matches)\n\n## Files You May Edit\n- `game/graphics/unit_atlas.py` (NEW)\n\n## Files You Must NOT Edit\n- `game/graphics/hero_sprites.py`, `enemy_sprites.py`, `worker_sprites.py` (read only)\n- `game/graphics/ursina_renderer.py` (Agent 03 wires this)\n\n## Verification\n1. Run this test from repo root:\n   ```powershell\n   python -c \"import pygame; pygame.init(); pygame.display.set_mode((1,1)); from game.graphics.unit_atlas import UnitAtlasBuilder; a = UnitAtlasBuilder.get(); print(f'Atlas: {a.atlas_surface.get_size()}, Frames: {a.frame_count}'); uv = a.lookup_uv('hero', 'warrior', 'idle', 0); print(f'Warrior idle 0 UV: {uv}'); assert uv[2] > 0; print('PASS')\"\n   ```\n2. `python tools/qa_smoke.py --quick` passes\n3. Update your agent log at `sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]`\n4. Validate JSON: `python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json`"
+            "12": "You are Agent 12 (ToolsDevEx_Lead), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild tools/perf_stress_test.py \u00e2\u20ac\u201d a stress test tool that measures Ursina renderer performance at high unit counts.\n\n## What To Build\n\nA script that:\n1. Launches the game with Ursina renderer in a non-interactive mode\n2. Overrides enemy/hero counts to spawn N units (configurable: 200, 500, 1000)\n3. Runs for 300 frames measuring frame time\n4. Reports: average frame time (ms), min/max, 1% low FPS\n5. Saves results to tools/perf_stress_baseline_wk47.json (under tools/ only)\n\n## Implementation Approach\n\nUse the existing headless sim + Ursina renderer. Key steps:\n- Import SimEngine from game.sim_engine and manually add entities to create high unit counts (imports only; do not edit game package files)\n- Import UrsinaRenderer and call update(snapshot) in a timed loop\n- Before the loop, programmatically spawn extra enemies/heroes by appending to the engine live lists\n- Time each update() call with time.perf_counter()\n- Print a table of results and write JSON\n\nNote: you may need to initialize pygame display (pygame.display.set_mode((1,1))) and Ursina (from ursina import Ursina; app = Ursina(...)) before using the renderer. Use web/docs or existing tools patterns under tools/ if you need bootstrap hints \u00e2\u20ac\u201d do not edit game package files.\n\n## CLI Interface\n\npython tools/perf_stress_test.py --units 200 --frames 300\npython tools/perf_stress_test.py --units 500 --frames 300\npython tools/perf_stress_test.py --units 1000 --frames 300\n\n## Files You May Edit\n- tools/perf_stress_test.py (NEW)\n- tools/perf_stress_baseline_wk47.json (NEW, output)\n\n## Scope boundary\n- Implement and edit files under tools/ only. Do not modify game/, ai/, config, or root entry scripts.\n\n## Verification\n1. python tools/perf_stress_test.py --units 200 --frames 300 runs and prints results\n2. python tools/qa_smoke.py --quick still passes\n3. Update your agent log at sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]\n4. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), activated for sprint **wk47_unit_instancing_core**, round **wk47_r1_baseline_atlas**.\n\n## Your Assignment\n\nBuild `game/graphics/unit_atlas.py` \u00e2\u20ac\u201d a module that packs ALL unit sprite frames (heroes, enemies, workers) into a single 2048x2048 RGBA texture atlas at game boot, with a lookup dict mapping `(unit_type, class_key, action, frame_index)` to normalized UV coordinates.\n\n## Why This Matters\n\nThe current renderer creates a separate Ursina Entity per unit with per-entity texture changes. We are moving to hardware instancing where ALL units share ONE texture (the atlas). Your atlas is the foundation the instanced shader (Agent 03, Wave 2) will sample from.\n\n## What To Build\n\nA class `UnitAtlasBuilder` with:\n- Singleton pattern (built once at first access via `UnitAtlasBuilder.get()`)\n- `atlas_surface` property returning `pygame.Surface` (2048x2048 RGBA)\n- `lookup_uv(unit_type, class_key, action, frame_idx)` returning `(u_start, v_start, u_width, v_height)` in [0,1] normalized coordinates\n- `frame_count` property returning total frames packed (for debug)\n\n## Sprites To Pack\n\n**Heroes** (5 classes x 5 actions x variable frames):\n- Classes: `warrior`, `ranger`, `rogue`, `wizard`, `cleric`\n- Actions: `idle`, `walk`, `attack`, `hurt`, `inside`\n- Use: `HeroSpriteLibrary.clips_for(class_name, size=32)` returns dict of AnimationClip, each clip has `.frames` list of pygame.Surface\n\n**Enemies** (6 types x variable actions x variable frames):\n- Types: `goblin`, `wolf`, `skeleton`, `skeleton_archer`, `spider`, `bandit`\n- Use: `EnemySpriteLibrary.clips_for(enemy_type, size=32)` returns dict of AnimationClip\n\n**Workers** (3 types x variable actions x variable frames):\n- Types: `peasant`, `guard`, `tax_collector`\n- Use: `WorkerSpriteLibrary.clips_for(worker_type, size=32)` returns dict of AnimationClip\n\n## Packing Algorithm\n\nSimple row-based shelf packing:\n- All sprites are 32x32 pixels\n- 2048 / 32 = 64 frames per row\n- 64 rows = 4096 total frame capacity (far more than needed)\n- Fill left-to-right, top-to-bottom\n- Track cursor_x, cursor_y\n\n## EXACT Code To Write\n\nFile: `game/graphics/unit_atlas.py`\n\n```python\n\"\"\"Unit sprite atlas generator for instanced rendering (wk47).\"\"\"\nfrom __future__ import annotations\n\nimport pygame\nfrom typing import Dict, Tuple\n\nfrom game.graphics.hero_sprites import HeroSpriteLibrary\nfrom game.graphics.enemy_sprites import EnemySpriteLibrary\nfrom game.graphics.worker_sprites import WorkerSpriteLibrary\n\n# Normalized UV region on the atlas: (u_start, v_start, u_width, v_height)\nUVRegion = Tuple[float, float, float, float]\n\n# Key for looking up a specific frame: (unit_type, class_key, action, frame_index)\n# Examples: (\"hero\", \"warrior\", \"idle\", 0), (\"enemy\", \"goblin\", \"walk\", 3)\nAtlasKey = Tuple[str, str, str, int]\n\nATLAS_SIZE = 2048\nFRAME_SIZE = 32\n\n\nclass UnitAtlasBuilder:\n    \"\"\"Packs all unit sprite frames into one GPU-friendly atlas.\"\"\"\n\n    _instance: \"UnitAtlasBuilder | None\" = None\n\n    def __init__(self):\n        self._atlas_surface: pygame.Surface | None = None\n        self._uv_map: Dict[AtlasKey, UVRegion] = {}\n\n    @classmethod\n    def get(cls) -> \"UnitAtlasBuilder\":\n        \"\"\"Singleton access. Builds atlas on first call.\"\"\"\n        if cls._instance is None:\n            cls._instance = cls()\n            cls._instance._build()\n        return cls._instance\n\n    @property\n    def atlas_surface(self) -> pygame.Surface:\n        assert self._atlas_surface is not None\n        return self._atlas_surface\n\n    @property\n    def frame_count(self) -> int:\n        return len(self._uv_map)\n\n    def lookup_uv(self, unit_type: str, class_key: str, action: str, frame_idx: int) -> UVRegion:\n        \"\"\"Look up the atlas UV region for a given unit frame.\"\"\"\n        key: AtlasKey = (unit_type, class_key, action, frame_idx)\n        fallback: UVRegion = (0.0, 0.0, FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)\n        return self._uv_map.get(key, fallback)\n\n    def _pack_frame(self, surf: pygame.Surface, key: AtlasKey, cursor: list[int]) -> None:\n        \"\"\"Blit one frame onto the atlas and record its UV region.\"\"\"\n        cx, cy = cursor\n        if cx + FRAME_SIZE > ATLAS_SIZE:\n            cx = 0\n            cy += FRAME_SIZE\n        self._atlas_surface.blit(surf, (cx, cy))\n        self._uv_map[key] = (\n            cx / ATLAS_SIZE,\n            cy / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n            FRAME_SIZE / ATLAS_SIZE,\n        )\n        cursor[0] = cx + FRAME_SIZE\n        cursor[1] = cy\n\n    def _build(self) -> None:\n        self._atlas_surface = pygame.Surface((ATLAS_SIZE, ATLAS_SIZE), pygame.SRCALPHA)\n        self._atlas_surface.fill((0, 0, 0, 0))\n        cursor = [0, 0]  # [x, y] mutable for _pack_frame\n\n        # Heroes\n        for hc in (\"warrior\", \"ranger\", \"rogue\", \"wizard\", \"cleric\"):\n            clips = HeroSpriteLibrary.clips_for(hc, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"hero\", hc, action, fi), cursor)\n\n        # Enemies\n        for et in (\"goblin\", \"wolf\", \"skeleton\", \"skeleton_archer\", \"spider\", \"bandit\"):\n            clips = EnemySpriteLibrary.clips_for(et, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"enemy\", et, action, fi), cursor)\n\n        # Workers\n        for wt in (\"peasant\", \"guard\", \"tax_collector\"):\n            clips = WorkerSpriteLibrary.clips_for(wt, size=FRAME_SIZE)\n            for action, clip in clips.items():\n                for fi, surf in enumerate(clip.frames):\n                    self._pack_frame(surf, (\"worker\", wt, action, fi), cursor)\n```\n\n## CRITICAL Notes\n- The atlas surface must use `pygame.SRCALPHA` flag (RGBA)\n- All frames are 32x32 \u00e2\u20ac\u201d do not resize\n- UV coordinates are NORMALIZED to [0,1] range (divide pixel coords by ATLAS_SIZE)\n- The UV origin (0,0) is TOP-LEFT of the atlas (pygame convention matches)\n\n## Files You May Edit\n- `game/graphics/unit_atlas.py` (NEW)\n\n## Files You Must NOT Edit\n- `game/graphics/hero_sprites.py`, `enemy_sprites.py`, `worker_sprites.py` (read only)\n- `game/graphics/ursina_renderer.py` (Agent 03 wires this)\n\n## Verification\n1. Run this test from repo root:\n   ```powershell\n   python -c \"import pygame; pygame.init(); pygame.display.set_mode((1,1)); from game.graphics.unit_atlas import UnitAtlasBuilder; a = UnitAtlasBuilder.get(); print(f'Atlas: {a.atlas_surface.get_size()}, Frames: {a.frame_count}'); uv = a.lookup_uv('hero', 'warrior', 'idle', 0); print(f'Warrior idle 0 UV: {uv}'); assert uv[2] > 0; print('PASS')\"\n   ```\n2. `python tools/qa_smoke.py --quick` passes\n3. Update your agent log at `sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r1_baseline_atlas\"]`\n4. Validate JSON: `python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json`"
           },
           "pm_send_list_minimal": {
             "order": "batch_1_parallel",
@@ -1396,7 +1398,7 @@
               "14",
               "15"
             ],
-            "rationale": "Wave 1: Agent 12 (medium — tooling pattern) + Agent 09 (high — sprite library edge cases). Parallel, zero file overlap."
+            "rationale": "Wave 1: Agent 12 (medium \u00e2\u20ac\u201d tooling pattern) + Agent 09 (high \u00e2\u20ac\u201d sprite library edge cases). Parallel, zero file overlap."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1434,7 +1436,7 @@
             "build_target": "Custom GLSL instanced shader + bare GeomNode quad",
             "depends_on": "wk47_r1_baseline_atlas"
           },
-          "pm_status_summary": "Wave 2a: Agent 03 builds custom GLSL instanced billboard shader AND Panda3D GeomNode quad with buffer texture setup. GPU skeleton only — no game integration yet.",
+          "pm_status_summary": "Wave 2a: Agent 03 builds custom GLSL instanced billboard shader AND Panda3D GeomNode quad with buffer texture setup. GPU skeleton only \u00e2\u20ac\u201d no game integration yet.",
           "pm_next_actions_by_agent": {
             "03": "Build instanced_unit_shader.py + instanced_unit_renderer.py skeleton (HIGH intelligence)"
           },
@@ -1586,7 +1588,7 @@
           },
           "pm_accepted_deliverables": [
             "tools/perf_stress_test.py + WK47 perf JSON baselines; game/graphics/unit_atlas.py (Agent 09 R1 + Agent 12 tool).",
-            "game/graphics/instanced_unit_shader.py, instanced_unit_renderer.py, UrsinaRenderer integration + gate (Agent 03 R2a–R2b).",
+            "game/graphics/instanced_unit_shader.py, instanced_unit_renderer.py, UrsinaRenderer integration + gate (Agent 03 R2a\u00e2\u20ac\u201cR2b).",
             "R3 perf matrix + Agent 10 log; Agent 11 qa_smoke + validate_assets.",
             "game/graphics/ursina_terrain_fog_collab.py: untrack_visibility_gated_terrain on tree/log destroy.",
             "tools/ai_studio_orchestrator/run_remaining_rounds.ps1 + README note for chained rounds."
@@ -1594,7 +1596,7 @@
           "pm_evidence": {
             "gates": "python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report 0 errors (per Agent 11 / sprint practice).",
             "perf": "tools/perf_wk47_r3_inst*.json + Agent 10 log sprints.wk47_unit_instancing_core.rounds.wk47_r3_validation",
-            "human_playtest": "Jaimie: instancing on — smooth with 30+ heroes; residual jitter noted non-blocking.",
+            "human_playtest": "Jaimie: instancing on \u00e2\u20ac\u201d smooth with 30+ heroes; residual jitter noted non-blocking.",
             "git": "main: Sprint WK47 save state committed and pushed (post roll_agent_logs)."
           },
           "pm_follow_ups": [
@@ -1633,9 +1635,9 @@
         "created_utc": "2026-04-29T12:00:00Z",
         "closed_utc": "2026-04-30T12:00:00Z",
         "status": "closed_success",
-        "notes": "CLOSED human signoff (Jaimie): many units + smooth motion meets sprint intent; no visible blob shadows in playtest (acceptable). R1+R2 delivered per agent logs; R3 (KINGDOM_URSINA_INSTANCING removal + legacy _sync_snapshot_* cleanup + perf matrix) DEFERRED — schedule in a follow-up sprint if still desired. Original wave order: R1 Agent 03 → R2 Agent 09 → R3 Agent 03 + 10/11."
+        "notes": "CLOSED human signoff (Jaimie): many units + smooth motion meets sprint intent; no visible blob shadows in playtest (acceptable). R1+R2 delivered per agent logs; R3 (KINGDOM_URSINA_INSTANCING removal + legacy _sync_snapshot_* cleanup + perf matrix) DEFERRED \u00e2\u20ac\u201d schedule in a follow-up sprint if still desired. Original wave order: R1 Agent 03 \u00e2\u2020\u2019 R2 Agent 09 \u00e2\u2020\u2019 R3 Agent 03 + 10/11."
       },
-      "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**. Read `.cursor/plans/wk48_hd2d_polish.plan.md` for full technical detail. Read PM hub → `sprints[\"wk48_hd2d_polish\"].rounds[<YOUR_ROUND>].pm_agent_prompts[YOUR_NUMBER]`. Composer 2 only. Receipt flow: `.cursor/rules/10-orchestrator-logging-contract.mdc`. After work: own agent log at `sprints.wk48_hd2d_polish.rounds.<round_id>`, run required gates, `python -m json.tool` your log, then run the exact `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...` line from your SDK prompt. No version bump / commit / push unless Jaimie asks.",
+      "pm_universal_prompt": "You are activated for sprint **wk48_hd2d_polish**. Read `.cursor/plans/wk48_hd2d_polish.plan.md` for full technical detail. Read PM hub \u00e2\u2020\u2019 `sprints[\"wk48_hd2d_polish\"].rounds[<YOUR_ROUND>].pm_agent_prompts[YOUR_NUMBER]`. Composer 2 only. Receipt flow: `.cursor/rules/10-orchestrator-logging-contract.mdc`. After work: own agent log at `sprints.wk48_hd2d_polish.rounds.<round_id>`, run required gates, `python -m json.tool` your log, then run the exact `npx tsx tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts complete ...` line from your SDK prompt. No version bump / commit / push unless Jaimie asks.",
       "rounds": {
         "wk48_r1_wave1_smoothing_compositing": {
           "round_meta": {
@@ -1644,7 +1646,7 @@
             "created_utc": "2026-04-29T12:00:00Z",
             "depends_on": "wk47_unit_instancing_core"
           },
-          "pm_status_summary": "Wave 1 (Agent 03): Implement render-only movement smoothing in InstancedUnitRenderer and fix inside-building draw order per plan § Wave 1.",
+          "pm_status_summary": "Wave 1 (Agent 03): Implement render-only movement smoothing in InstancedUnitRenderer and fix inside-building draw order per plan \u00c2\u00a7 Wave 1.",
           "pm_next_actions_by_agent": {
             "01": {
               "status": "monitoring",
@@ -1661,7 +1663,7 @@
             "wk48_r3_gate_removal_qa (03 then 10+11)"
           ],
           "pm_agent_prompts": {
-            "03": "You are Agent 03 (TechnicalDirector_Architecture), sprint **wk48_hd2d_polish**, round **wk48_r1_wave1_smoothing_compositing** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` — **Wave 1: Sub-Pixel Smoothing & Compositing** (full code sketch and caveats).\n\n## Scope\n- `game/graphics/instanced_unit_renderer.py` (primary): `_visual_pos_by_id`, exponential smoothing with snap on teleport, pack smoothed positions into instance buffer; cleanup stale ids.\n- Inside-building compositing: two-pass packing — outside vs inside — per plan (prefer small `_instance_buffer_inside` if Panda offset is awkward).\n- Render-only: **no** sim/determinism changes.\n\n## Files you may touch\n- `game/graphics/instanced_unit_renderer.py`\n- Minimal glue in `game/graphics/ursina_renderer.py` only if required for ordering/bin setup.\n\n## Gates\n```powershell\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\n```\n\n## Log\nWrite `sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r1_wave1_smoothing_compositing\"]` with orchestrator-required fields + evidence.\n\nThen run the **exact** orchestrator `complete` command from your Cursor SDK prompt."
+            "03": "You are Agent 03 (TechnicalDirector_Architecture), sprint **wk48_hd2d_polish**, round **wk48_r1_wave1_smoothing_compositing** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` \u00e2\u20ac\u201d **Wave 1: Sub-Pixel Smoothing & Compositing** (full code sketch and caveats).\n\n## Scope\n- `game/graphics/instanced_unit_renderer.py` (primary): `_visual_pos_by_id`, exponential smoothing with snap on teleport, pack smoothed positions into instance buffer; cleanup stale ids.\n- Inside-building compositing: two-pass packing \u00e2\u20ac\u201d outside vs inside \u00e2\u20ac\u201d per plan (prefer small `_instance_buffer_inside` if Panda offset is awkward).\n- Render-only: **no** sim/determinism changes.\n\n## Files you may touch\n- `game/graphics/instanced_unit_renderer.py`\n- Minimal glue in `game/graphics/ursina_renderer.py` only if required for ordering/bin setup.\n\n## Gates\n```powershell\npython tools/qa_smoke.py --quick\npython -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\n```\n\n## Log\nWrite `sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r1_wave1_smoothing_compositing\"]` with orchestrator-required fields + evidence.\n\nThen run the **exact** orchestrator `complete` command from your Cursor SDK prompt."
           },
           "pm_send_list_minimal": {
             "order": "then_in_order",
@@ -1686,7 +1688,7 @@
               "14",
               "15"
             ],
-            "rationale": "Wave 1: Agent 03 only — instancing renderer integration."
+            "rationale": "Wave 1: Agent 03 only \u00e2\u20ac\u201d instancing renderer integration."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1723,7 +1725,7 @@
             "build_target": "Blob shadow GeomNode + shader; projectile rows in instancing path",
             "depends_on": "wk48_r1_wave1_smoothing_compositing"
           },
-          "pm_status_summary": "Wave 2 (Agent 09): Blob shadows sharing instance data + projectile instancing per plan § Wave 2.",
+          "pm_status_summary": "Wave 2 (Agent 09): Blob shadows sharing instance data + projectile instancing per plan \u00c2\u00a7 Wave 2.",
           "pm_next_actions_by_agent": {
             "09": {
               "status": "blocked_until_r1_done",
@@ -1731,7 +1733,7 @@
             }
           },
           "pm_agent_prompts": {
-            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), sprint **wk48_hd2d_polish**, round **wk48_r2_wave2_shadows_projectiles** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` — **Wave 2: Environmental Grounding & Projectiles**.\n\n## Scope\n- New `game/graphics/shadow_instanced_shader.py` (or name aligned with repo conventions): GLSL vertex/fragment as in plan; radial gradient alpha; render bin before units.\n- `InstancedUnitRenderer`: second GeomNode for shadows bound to outside buffer only; skip projectiles and inside-buffer units.\n- `unit_atlas.py`: pack the projectile billboard surface from `game/graphics/vfx.py` (existing helper) under a stable atlas key (plan suggests vfx/projectile/arrow row — match existing atlas conventions).\n- Extend instanced `update()` loop for `snapshot.vfx_projectiles` per plan; ensure arrows do **not** receive blob shadows (flag/w-component discard per plan).\n\n## Verification\n- PNG proof: save under `docs/art/` or skimmable path and cite in your agent log (avoid introducing new tools).\n- `python tools/qa_smoke.py --quick`\n\n## Log + receipt\n`sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r2_wave2_shadows_projectiles\"]` + orchestrator `complete`.\n\nCoordinate with Agent 03 if UrsinaRenderer touch is unavoidable — prefer minimal cross-edit."
+            "09": "You are Agent 09 (ArtDirector_Pixel_Animation_VFX), sprint **wk48_hd2d_polish**, round **wk48_r2_wave2_shadows_projectiles** (HIGH intelligence).\n\n## Source of truth\n`.cursor/plans/wk48_hd2d_polish.plan.md` \u00e2\u20ac\u201d **Wave 2: Environmental Grounding & Projectiles**.\n\n## Scope\n- New `game/graphics/shadow_instanced_shader.py` (or name aligned with repo conventions): GLSL vertex/fragment as in plan; radial gradient alpha; render bin before units.\n- `InstancedUnitRenderer`: second GeomNode for shadows bound to outside buffer only; skip projectiles and inside-buffer units.\n- `unit_atlas.py`: pack the projectile billboard surface from `game/graphics/vfx.py` (existing helper) under a stable atlas key (plan suggests vfx/projectile/arrow row \u00e2\u20ac\u201d match existing atlas conventions).\n- Extend instanced `update()` loop for `snapshot.vfx_projectiles` per plan; ensure arrows do **not** receive blob shadows (flag/w-component discard per plan).\n\n## Verification\n- PNG proof: save under `docs/art/` or skimmable path and cite in your agent log (avoid introducing new tools).\n- `python tools/qa_smoke.py --quick`\n\n## Log + receipt\n`sprints[\"wk48_hd2d_polish\"].rounds[\"wk48_r2_wave2_shadows_projectiles\"]` + orchestrator `complete`.\n\nCoordinate with Agent 03 if UrsinaRenderer touch is unavoidable \u00e2\u20ac\u201d prefer minimal cross-edit."
           },
           "pm_send_list_minimal": {
             "order": "then_in_order",
@@ -1755,7 +1757,7 @@
               "14",
               "15"
             ],
-            "rationale": "Wave 2: Agent 09 — shaders + atlas/VFX integration."
+            "rationale": "Wave 2: Agent 09 \u00e2\u20ac\u201d shaders + atlas/VFX integration."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1809,9 +1811,9 @@
             }
           },
           "pm_agent_prompts": {
-            "03": "You are Agent 03, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (HIGH intelligence).\n\n## Source of truth\nPlan § **Wave 3** — with **ownership correction**: you implement code in `game/graphics/ursina_renderer.py` (and related), **not** Agent 11.\n\n## Tasks\n1. Remove `KINGDOM_URSINA_INSTANCING` branching; InstancedUnitRenderer is always on for Ursina unit path.\n2. Delete obsolete `_sync_snapshot_heroes`, `_sync_snapshot_enemies`, etc., and `_sync_snapshot_projectiles` if superseded by instancing — only after confirming no regressions in headless/sim.\n3. Keep presentation stable; run `python tools/qa_smoke.py --quick` before receipt.\n\n## Log + receipt\nRound path `wk48_r3_gate_removal_qa` under sprint `wk48_hd2d_polish`.",
+            "03": "You are Agent 03, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (HIGH intelligence).\n\n## Source of truth\nPlan \u00c2\u00a7 **Wave 3** \u00e2\u20ac\u201d with **ownership correction**: you implement code in `game/graphics/ursina_renderer.py` (and related), **not** Agent 11.\n\n## Tasks\n1. Remove `KINGDOM_URSINA_INSTANCING` branching; InstancedUnitRenderer is always on for Ursina unit path.\n2. Delete obsolete `_sync_snapshot_heroes`, `_sync_snapshot_enemies`, etc., and `_sync_snapshot_projectiles` if superseded by instancing \u00e2\u20ac\u201d only after confirming no regressions in headless/sim.\n3. Keep presentation stable; run `python tools/qa_smoke.py --quick` before receipt.\n\n## Log + receipt\nRound path `wk48_r3_gate_removal_qa` under sprint `wk48_hd2d_polish`.",
             "10": "You are Agent 10, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (LOW intelligence).\n\nRun perf comparison (instancing default):\n```powershell\n$env:KINGDOM_URSINA_INSTANCING = \"0\"\npython tools/perf_stress_test.py --units 500 --frames 300\n$env:KINGDOM_URSINA_INSTANCING = \"1\"\npython tools/perf_stress_test.py --units 500 --frames 300\n```\nIf env var no longer applies after Agent 03, run twice documenting branch state from 03's log. Record JSON/output paths in agent log.\n\n`python tools/qa_smoke.py --quick` optional consult-only if not duplicated.\n\nOrchestrator `complete` after logging.",
-            "11": "You are Agent 11, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (LOW intelligence).\n\n```powershell\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n```\n\nRecord exit codes in your agent log. Use Agent 10 log as source for perf numbers.\n\nDo **not** edit `game/` unless PM escalates — verification only.\n\nOrchestrator `complete` after logging."
+            "11": "You are Agent 11, sprint **wk48_hd2d_polish**, round **wk48_r3_gate_removal_qa** (LOW intelligence).\n\n```powershell\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n```\n\nRecord exit codes in your agent log. Use Agent 10 log as source for perf numbers.\n\nDo **not** edit `game/` unless PM escalates \u00e2\u20ac\u201d verification only.\n\nOrchestrator `complete` after logging."
           },
           "pm_send_list_minimal": {
             "order": "automation.dependencies_only",
@@ -1838,7 +1840,7 @@
               "14",
               "15"
             ],
-            "rationale": "Wave order is defined by round.automation.dependencies (03 sequential, then 10+11 parallel). then_in_order here is documentation only — orchestrator uses dependencies array."
+            "rationale": "Wave order is defined by round.automation.dependencies (03 sequential, then 10+11 parallel). then_in_order here is documentation only \u00e2\u20ac\u201d orchestrator uses dependencies array."
           },
           "automation": {
             "mode": "auto_until_human_gate",
@@ -1886,12 +1888,12 @@
     "v1_5_3_major_unit_art_adhoc": {
       "sprint_meta": {
         "sprint_id": "v1_5_3_major_unit_art_adhoc",
-        "goal": "Retrospective PM record — CHANGELOG Prototype v1.5.3 Major Unit Art Update (no formal sprint preceded this drop).",
-        "changelog_ref": "CHANGELOG.md — section Prototype v1.5.3 — Major Unit Art Update",
+        "goal": "Retrospective PM record \u00e2\u20ac\u201d CHANGELOG Prototype v1.5.3 Major Unit Art Update (no formal sprint preceded this drop).",
+        "changelog_ref": "CHANGELOG.md \u00e2\u20ac\u201d section Prototype v1.5.3 \u00e2\u20ac\u201d Major Unit Art Update",
         "status": "closed_success",
         "created_utc": "2026-04-30T12:00:00Z",
         "closed_utc": "2026-04-30T23:59:00Z",
-        "notes": "Work executed directly by Agent 09 (Art) with Jaimie — art/assets/pipeline/renderer readability; no PM hub kickoff or worker rounds at time."
+        "notes": "Work executed directly by Agent 09 (Art) with Jaimie \u00e2\u20ac\u201d art/assets/pipeline/renderer readability; no PM hub kickoff or worker rounds at time."
       },
       "rounds": {
         "v1_5_3_pm_record_closeout": {
@@ -1913,7 +1915,7 @@
             "Worker billboard scale tuning for 3D readability."
           ],
           "pm_evidence": {
-            "changelog": "CHANGELOG.md — Prototype v1.5.3 — Major Unit Art Update",
+            "changelog": "CHANGELOG.md \u00e2\u20ac\u201d Prototype v1.5.3 \u00e2\u20ac\u201d Major Unit Art Update",
             "related_plans": [
               ".cursor/plans/tiny_rpg_soldier_guard_animations_5689d615.plan.md",
               ".cursor/plans/legacy_vania_workers_4acd1e09.plan.md"
@@ -2569,9 +2571,9 @@
             "summary": "WK49 bugfix round passed. Agent 05 routed ranger tile exploration XP through the level-up invariant; Agent 03 fixed known-place discovery when visible buildings are encountered; Agent 11 verified full tests, qa_smoke, validate_assets, and screenshot evidence. Jaimie retested and confirmed everything works."
           },
           "pm_evidence": {
-            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json → wk49_r8_bugfix_known_places_ranger_xp",
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk49_r8_bugfix_known_places_ranger_xp",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk49_r8_bugfix_known_places_ranger_xp",
+            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json \u00e2\u2020\u2019 wk49_r8_bugfix_known_places_ranger_xp",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u00e2\u2020\u2019 wk49_r8_bugfix_known_places_ranger_xp",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk49_r8_bugfix_known_places_ranger_xp",
             "automated_gates": "Agent 11: python -m pytest tests/ PASS (153 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
             "screenshot_evidence": "docs/screenshots/wk49_hero_profile/ui_panels_hero.png shows Known places: 1 and Recent Discovered Inn."
           },
@@ -2663,8 +2665,10 @@
         "goal": "Phase 2A/2B LLM layer: rare event-gated autonomous decision moments using HeroProfileSnapshot context, plus direct prompt command interpreter for safe core player-to-hero requests.",
         "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
         "created_utc": "2026-05-01T02:42:00Z",
-        "status": "human_gate_pending",
-        "notes": "All orchestrated WK50 rounds completed; HeroState hotfix and direct prompt execution/feedback fix both verified. Sprint now needs Jaimie manual mock-provider retest. MVP direct prompts execute safe core commands only; attack lair/enemy, personal quests, emotional behavior, and relationship systems remain explicitly deferred."
+        "status": "closed_success",
+        "closed_utc": "2026-05-01T19:30:00Z",
+        "version_shipped": "v1.5.4",
+        "notes": "Shipped Prototype v1.5.4 (CHANGELOG + README + config). WK50 complete: Phase 2A decision moments + Phase 2B direct prompts, validation, committed execution, chat feedback, integration tests. Human playtest: Jaimie confirmed all LLM commands followed. Git: v1.5.4 - Basic LLM commands are now followed."
       },
       "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts. Read the assigned PM hub round and the sprint plan .cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md. Scope: Phase 2A rare LLM decision moments and Phase 2B safe direct-prompt commands. Do not implement attack lair/enemy commands, emotional behavior, quests, relationship systems, or direct control. Update your own log at sprints[\"wk50_llm_context_direct_prompts\"].rounds[ROUND_ID], run required gates, validate your log JSON, then run the exact orchestrator complete receipt from your SDK prompt.",
       "rounds": {
@@ -3129,10 +3133,10 @@
           "pm_evidence": {
             "orchestrator_command": ".\\tools\\ai_studio_orchestrator\\run_remaining_rounds.ps1 -Sprint \"wk50_llm_context_direct_prompts\" -Rounds @(\"wk50_r1_design_guardrails\", \"wk50_r2_phase2a_contracts\", \"wk50_r3_phase2a_integration\", \"wk50_r4_phase2a_qa_perf\", \"wk50_r5_phase2b_direct_prompt_contracts\", \"wk50_r6_phase2b_engine_ui\", \"wk50_r7_final_qa\")",
             "receipt_verification": "All launched agents reported verification=verified and log=passed in orchestrator output.",
-            "agent_06_phase2a": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r2_phase2a_contracts + wk50_r3_phase2a_integration",
-            "agent_06_phase2b": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r5_phase2b_direct_prompt_contracts",
-            "agent_03_engine_bridge": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk50_r6_phase2b_engine_ui",
-            "agent_11_final_qa": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r7_final_qa",
+            "agent_06_phase2a": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json \u00e2\u2020\u2019 wk50_r2_phase2a_contracts + wk50_r3_phase2a_integration",
+            "agent_06_phase2b": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json \u00e2\u2020\u2019 wk50_r5_phase2b_direct_prompt_contracts",
+            "agent_03_engine_bridge": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u00e2\u2020\u2019 wk50_r6_phase2b_engine_ui",
+            "agent_11_final_qa": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk50_r7_final_qa",
             "automated_gates": "Agent 11 final QA: python -m pytest tests/ PASS (187 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline."
           },
           "pm_accepted_deliverables": [
@@ -3169,14 +3173,30 @@
               "status": "bugfix_needed",
               "next_action": "File and run focused hotfix round for HeroState NameError in llm_bridge.py. Do not commit/push unless explicitly requested."
             },
-            "02": { "status": "done" },
-            "03": { "status": "done" },
-            "04": { "status": "done" },
-            "05": { "status": "done" },
-            "06": { "status": "done" },
-            "08": { "status": "done" },
-            "10": { "status": "done" },
-            "11": { "status": "done" }
+            "02": {
+              "status": "done"
+            },
+            "03": {
+              "status": "done"
+            },
+            "04": {
+              "status": "done"
+            },
+            "05": {
+              "status": "done"
+            },
+            "06": {
+              "status": "done"
+            },
+            "08": {
+              "status": "done"
+            },
+            "10": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
           }
         },
         "wk50_r9_hotfix_llm_bridge_herostate_import": {
@@ -3214,8 +3234,12 @@
             }
           ],
           "pm_next_actions_by_agent": {
-            "06": { "status": "done" },
-            "11": { "status": "done" },
+            "06": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            },
             "01": {
               "status": "awaiting_human_retest",
               "next_action": "Ask Jaimie to rerun python main.py --provider mock and confirm the crash no longer occurs."
@@ -3301,8 +3325,8 @@
             "summary": "WK50 HeroState hotfix passed. Agent 06 imported HeroState in llm_bridge.py and added regression tests for apply_llm_decision state-setting branches. Agent 11 verified pytest, qa_smoke, validate_assets, and mock-provider conversation smoke."
           },
           "pm_evidence": {
-            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r9_hotfix_llm_bridge_herostate_import",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r9_hotfix_llm_bridge_herostate_import",
+            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json \u00e2\u2020\u2019 wk50_r9_hotfix_llm_bridge_herostate_import",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk50_r9_hotfix_llm_bridge_herostate_import",
             "automated_gates": "Agent 11: python -m pytest tests/ PASS (191 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
             "regression_tests": "tests/test_llm_bridge_apply_decision.py covers HeroState.FIGHTING, HeroState.IDLE, and move_to branches."
           },
@@ -3327,8 +3351,12 @@
               "status": "bugfix_needed",
               "next_action": "File direct prompt execution/feedback follow-up bug round."
             },
-            "06": { "status": "done" },
-            "11": { "status": "done" }
+            "06": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
           }
         },
         "wk50_r11_bugfix_direct_prompt_execution": {
@@ -3387,10 +3415,18 @@
             }
           ],
           "pm_next_actions_by_agent": {
-            "03": { "status": "done" },
-            "06": { "status": "done" },
-            "08": { "status": "done" },
-            "11": { "status": "done" },
+            "03": {
+              "status": "done"
+            },
+            "06": {
+              "status": "done"
+            },
+            "08": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            },
             "01": {
               "status": "awaiting_human_retest",
               "next_action": "Ask Jaimie to retest go home / buy potions / explore east direct prompts."
@@ -3502,10 +3538,10 @@
             "summary": "Direct prompt execution/feedback bugfix passed. Agent 03 added committed direct prompt movement/action state so accepted commands persist; Agent 06 aligned validator/mock/provider language with executable outcomes; Agent 08 aligned chat feedback; Agent 11 verified with 201 passing tests, qa_smoke, and validate_assets."
           },
           "pm_evidence": {
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → wk50_r11_bugfix_direct_prompt_execution",
-            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json → wk50_r11_bugfix_direct_prompt_execution",
-            "agent_08": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json → wk50_r11_bugfix_direct_prompt_execution",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json → wk50_r11_bugfix_direct_prompt_execution",
+            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json \u00e2\u2020\u2019 wk50_r11_bugfix_direct_prompt_execution",
+            "agent_06": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json \u00e2\u2020\u2019 wk50_r11_bugfix_direct_prompt_execution",
+            "agent_08": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json \u00e2\u2020\u2019 wk50_r11_bugfix_direct_prompt_execution",
+            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json \u00e2\u2020\u2019 wk50_r11_bugfix_direct_prompt_execution",
             "automated_gates": "Agent 11: python -m pytest tests/ PASS (201 passed); python tools/qa_smoke.py --quick PASS; python tools/validate_assets.py --report PASS errors=0 warns=46 baseline.",
             "behavior_coverage": "Tests cover go home/buy potions direct_prompt commit, explore east commit and one-tick preservation, buy refusal edge cases, and UI feedback avoiding false accepted state."
           },
@@ -3531,11 +3567,869 @@
               "status": "awaiting_human_retest",
               "next_action": "If retest passes, close WK50 or await commit/push instructions. If it fails, file a narrower follow-up bug round."
             },
-            "03": { "status": "done" },
-            "06": { "status": "done" },
-            "08": { "status": "done" },
-            "11": { "status": "done" }
+            "03": {
+              "status": "done"
+            },
+            "06": {
+              "status": "done"
+            },
+            "08": {
+              "status": "done"
+            },
+            "11": {
+              "status": "done"
+            }
           }
+        },
+        "wk50_r13_peasant_void_walk_hotfix": {
+          "round_meta": {
+            "round_id": "wk50_r13_peasant_void_walk_hotfix",
+            "created_utc": "2026-05-01T09:56:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Starting hotfix for peasant void walk bug. Assigning Agent 05 to investigate and fix peasant pathing/state logic, and Agent 11 to verify. (Fixed by Agent 05, verified by user)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-004",
+              "title": "Peasants run to top left of map after starting work on first building",
+              "severity": "blocker",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Place a building.",
+                "Observe peasant spawn and start working on it.",
+                "Observe peasant run off towards the top left of the map (likely 0,0)."
+              ],
+              "expected": "Peasants should stay at the building and finish construction, or return to the castle if done/interrupted.",
+              "actual": "Peasants path to the top left of the map.",
+              "acceptance_test": [
+                "Peasants successfully complete building construction without running away.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": {
+              "status": "assigned",
+              "next_action": "Investigate peasant pathing/state in game/entities/peasant.py and fix the void walk bug."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Verify the fix using qa_smoke and observe_sync."
+            }
+          },
+          "pm_agent_prompts": {
+            "05": "You are Agent 05, sprint wk50_llm_context_direct_prompts, round wk50_r13_peasant_void_walk_hotfix (HIGH). Human playtest bug: peasants go to start working on the first placed building, but then run off towards the top left of the map (likely 0,0). Investigate `game/entities/peasant.py` and related building/economy logic. Fix the pathing/state bug so they stay and build. Run `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r13_peasant_void_walk_hotfix (MEDIUM). After Agent 05 fixes the peasant void walk bug, verify the fix. Run `python tools/qa_smoke.py --quick` and ensure the base scenario (which includes construction) passes without peasants running to 0,0. Update your log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "05",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "05": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 05 implements the fix, Agent 11 verifies."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "05",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_peasant_bug",
+                "agents": [
+                  "05"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_fix",
+                "after": [
+                  "fix_peasant_bug"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r13_peasant_void_walk_hotfix. We are fixing a blocker bug where peasants run to the top left of the map after starting construction. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r14_go_home_context_hotfix": {
+          "round_meta": {
+            "round_id": "wk50_r14_go_home_context_hotfix",
+            "created_utc": "2026-05-01T10:22:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Starting hotfix for 'go home' direct prompt. Rangers are refusing the command claiming they don't know a safe home, despite spawning from a guild. Assigning Agent 06 to fix the LLM context/validator, and Agent 11 to verify. (Fixed by Agent 06, verified by user)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-005",
+              "title": "Heroes refuse 'go home' command claiming no safe home known",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Open chat with a Ranger (or other hero).",
+                "Command them to 'go home'.",
+                "Hero refuses, stating they do not know of a safe home."
+              ],
+              "expected": "Heroes should recognize their spawn guild (or the castle) as a valid 'home' and accept the command to return there.",
+              "actual": "Heroes fail to resolve 'home' in the direct prompt context/validator and refuse the command.",
+              "acceptance_test": [
+                "Direct prompt validator successfully resolves 'home' to the hero's guild or a safe location.",
+                "Mock provider accepts 'go home' and hero commits to moving there.",
+                "python -m pytest tests/ passes.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "06": {
+              "status": "assigned",
+              "next_action": "Investigate LLM context injection and direct prompt validator to ensure hero's guild is recognized as 'home'."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Verify the fix using tests and qa_smoke."
+            }
+          },
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r14_go_home_context_hotfix (HIGH). Human playtest bug: Rangers (and possibly other heroes) refuse the 'go home' direct prompt, claiming they don't know a safe home, even though they spawn from a guild. Investigate the LLM context injection, memory, and direct prompt validator. Ensure a hero's home guild is always recognized as a valid 'home' or 'safe' location for the 'go home' command. Fix the logic, run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r14_go_home_context_hotfix (MEDIUM). After Agent 06 fixes the 'go home' context bug, verify the fix. Ensure tests cover a hero successfully resolving 'go home' to their guild. Run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "06",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "06": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 06 fixes the context/validator logic, Agent 11 verifies."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "06",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_go_home",
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_fix",
+                "after": [
+                  "fix_go_home"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r14_go_home_context_hotfix. We are fixing a bug where heroes refuse the 'go home' command because they claim not to know a safe home. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r15_direct_prompt_commitment_duration": {
+          "round_meta": {
+            "round_id": "wk50_r15_direct_prompt_commitment_duration",
+            "created_utc": "2026-05-01T10:38:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Starting hotfix for direct prompt commitment duration. Heroes get distracted on long journeys because the commitment window is too short. Assigning Agent 03 to make the commitment persist until the destination is reached, and Agent 11 to verify. (Fixed by Agent 03, verified by user)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-006",
+              "title": "Heroes get distracted on long journeys after accepting direct prompts",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Open chat with a hero far from home.",
+                "Command them to 'go home'.",
+                "Hero accepts and starts moving, but gets distracted by normal AI (e.g., enemies, resting) before arriving."
+              ],
+              "expected": "The direct prompt commitment state should persist until the destination is reached, unless interrupted by a critical safety override.",
+              "actual": "The commitment window expires too quickly, allowing routine AI to overwrite the player's command.",
+              "acceptance_test": [
+                "Heroes complete long-distance direct prompt movements without being distracted by non-critical AI routines.",
+                "python -m pytest tests/ passes.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Modify the direct prompt commitment logic so it persists until the destination is reached or a critical override occurs."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Verify the fix using tests and qa_smoke."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk50_llm_context_direct_prompts, round wk50_r15_direct_prompt_commitment_duration (HIGH). Human playtest bug: heroes accept 'go home' and start moving, but get distracted if home is far. The direct prompt commitment window you implemented in wk50_r11 is too short for long-distance travel. Update the commitment logic so the hero persists until the destination is reached (or until a severe combat/safety override). Run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r15_direct_prompt_commitment_duration (MEDIUM). After Agent 03 fixes the direct prompt commitment duration, verify the fix. Ensure tests cover long-distance direct prompt movement without routine AI distraction. Run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 03 fixes the commitment duration logic, Agent 11 verifies."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_commitment_duration",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_fix",
+                "after": [
+                  "fix_commitment_duration"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r15_direct_prompt_commitment_duration. We are fixing a bug where heroes get distracted on long journeys after accepting direct prompts. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r16_direct_prompt_all_commands_commitment": {
+          "round_meta": {
+            "round_id": "wk50_r16_direct_prompt_all_commands_commitment",
+            "created_utc": "2026-05-01T10:51:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Applying the long-distance commitment logic to all other direct prompt commands (e.g., 'buy potions', 'retreat'). Assigning Agent 03 to wire up attach_direct_prompt_move for these actions, and Agent 11 to verify. (Fixed by Agent 03, verified by user)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-007",
+              "title": "Other direct prompt commands (like buy potions) get distracted on long journeys",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Command a hero to 'buy potions' when the market is far away.",
+                "Hero accepts but gets distracted by routine AI before arriving."
+              ],
+              "expected": "All physical direct prompt commands (buy potions, retreat, etc.) should use the same sovereign commitment logic as 'go home' so they persist until the destination is reached.",
+              "actual": "Commands like 'buy_item' fall through to the standard LLM bridge without attaching a direct prompt movement commit, making them vulnerable to routine AI overrides.",
+              "acceptance_test": [
+                "Commands like 'buy potions' successfully attach a direct prompt movement commit.",
+                "Heroes complete these journeys without being distracted by non-critical AI.",
+                "python -m pytest tests/ passes.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Update game/sim/direct_prompt_exec.py (or related) to ensure 'buy_item' and other physical commands use attach_direct_prompt_move."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Verify the fix using tests and qa_smoke."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk50_llm_context_direct_prompts, round wk50_r16_direct_prompt_all_commands_commitment (HIGH). Human playtest feedback: the long-distance commitment fix for 'go home' works perfectly! Now we need to apply that exact same logic to the other commands. Currently, in `game/sim/direct_prompt_exec.py`, actions like `buy_item` (buy potions) or `retreat` fall through to `apply_llm_decision` without calling `attach_direct_prompt_move`, meaning they still get distracted. Wire up `attach_direct_prompt_move` for these other physical commands so they get the same sovereign lock. Run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r16_direct_prompt_all_commands_commitment (MEDIUM). After Agent 03 applies the commitment logic to other commands (like buy potions), verify the fix. Ensure tests cover these commands maintaining their sovereign commit. Run `python -m pytest tests/` and `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 03 wires up the commitment logic for the remaining commands, Agent 11 verifies."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "fix_other_commands",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_fix",
+                "after": [
+                  "fix_other_commands"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r16_direct_prompt_all_commands_commitment. We are applying the long-distance commitment logic to all other direct prompt commands (like buy potions). Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r17_direct_prompt_integration_tests": {
+          "round_meta": {
+            "round_id": "wk50_r17_direct_prompt_integration_tests",
+            "created_utc": "2026-05-01T11:15:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Creating integration tests for all direct prompt commands to catch false refusals (e.g. market too far, can't afford). Agent 11 writes the tests, Agent 06 fixes the validator/context, Agent 11 verifies. (Fixed false refusals, verified by Agent 11 tests) (Fixed false refusals, verified by Agent 11 tests) (Fixed false refusals, verified by Agent 11 tests)"
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-008",
+              "title": "Heroes falsely refuse commands due to broken context evaluation",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Ensure a hero has 20+ gold and has discovered the market.",
+                "Command the hero to 'buy potions'.",
+                "Hero refuses, claiming they can't afford it, haven't discovered the market, or it's too far."
+              ],
+              "expected": "Hero should correctly evaluate their gold against potion cost (15g), recognize the market in their memory, and commit to moving there to buy.",
+              "actual": "Validator or context builder provides incorrect info or misinterprets state, causing false refusal.",
+              "acceptance_test": [
+                "Comprehensive integration tests exist for all direct commands (go home, buy potions, explore east, etc.).",
+                "All tests pass, confirming no false refusals for valid states.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "11": {
+              "status": "assigned",
+              "next_action": "Write comprehensive integration tests for every direct prompt command (e.g., tests/test_direct_prompt_integration.py) first, then later verify they pass."
+            },
+            "06": {
+              "status": "assigned",
+              "next_action": "Fix ai/direct_prompt_validator.py and ai/context_builder.py so the new tests pass."
+            }
+          },
+          "pm_agent_prompts": {
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r17_direct_prompt_integration_tests (HIGH). Human playtest feedback: heroes falsely refuse 'buy potions' (claiming they can't afford it when they have 20+ gold, or market not discovered when it is). We need comprehensive integration tests. Please modify the test files that you own (e.g., `tools/qa_smoke.py`, `tools/observe_sync.py`, or similar QA tools) to add testing for these direct prompts. Create a new scenario or add assertions in `tools/observe_sync.py` for EVERY command (buy potions, go home, explore east, status report, etc.). Set up the exact scenario (e.g., spawn a Ranger, give 20+ gold, add market to memory). Send the prompt through the mock provider/validator and assert it commits the correct action without a false refusal. The tests WILL fail initially. Run your QA tools to see them fail. Update your log, validate JSON, complete.",
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r17_direct_prompt_integration_tests (HIGH). Agent 11 just wrote failing integration tests because heroes falsely refuse commands like 'buy potions' (claiming they can't afford it or don't know the market). Fix the `ai/direct_prompt_validator.py` and `ai/context_builder.py` logic so all of Agent 11's tests pass. Make sure affordability checks and place memory lookups work even when the hero is far from the shop. Update your log, validate JSON, complete.",
+            "11_verify": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r17_direct_prompt_integration_tests (MEDIUM). Agent 06 has fixed the bugs. Run `python tools/qa_smoke.py --quick` to verify everything is green. Update your log, validate JSON, complete."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "11",
+              "06",
+              "11_verify"
+            ],
+            "intelligence_by_agent": {
+              "11": "high",
+              "06": "high",
+              "11_verify": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 11 writes failing tests -> Agent 06 fixes bugs -> Agent 11 verifies."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "11",
+              "06",
+              "11_verify"
+            ],
+            "dependencies": [
+              {
+                "id": "write_tests",
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "fix_bugs",
+                "after": [
+                  "write_tests"
+                ],
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "verify_tests",
+                "after": [
+                  "fix_bugs"
+                ],
+                "agents": [
+                  "11_verify"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r17_direct_prompt_integration_tests. We are creating integration tests for every command and fixing false refusals. Follow your agent prompt. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r18_direct_prompt_arrival_handlers": {
+          "round_meta": {
+            "round_id": "wk50_r18_direct_prompt_arrival_handlers",
+            "created_utc": "2026-05-01T11:45:00Z",
+            "source": "pm_kickoff",
+            "closed_by": null
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "Fixing arrival handlers for direct prompt commands. Currently, heroes arrive at the Inn but don't enter it, 'explore east' gets dropped too quickly, and 'rest until healed' doesn't route properly if they are outdoors. Assigning Agent 03 to fix the arrival and execution logic, and Agent 11 to verify."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-009",
+              "title": "Heroes fail to execute arrival actions for direct prompts (Inn, Rest, Explore)",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Run python main.py --provider mock.",
+                "Command hero to 'go to inn': they walk there but don't enter.",
+                "Command hero to 'rest until healed' while outdoors: they often refuse or fail to route.",
+                "Command hero to 'explore east': they take a few steps and immediately drop the sovereign commit."
+              ],
+              "expected": "Heroes should enter the inn upon arrival (`enter_building_briefly` or `start_resting_at_building`). 'rest until healed' should route to safety the same as 'go home'. 'explore east' should maintain the commit for the full journey length.",
+              "actual": "Missing arrival handlers in `ai/behaviors/bounty_pursuit.py:handle_moving` for these sub_intents, and missing mapping in `direct_prompt_validator.py`/`direct_prompt_exec.py`.",
+              "acceptance_test": [
+                "Hero enters the inn when 'go to inn' is commanded and reached.",
+                "'rest until healed' properly routes home or to the inn.",
+                "'explore east' completes the journey without dropping early.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Fix `ai/behaviors/bounty_pursuit.py:handle_moving` to properly handle arrivals for `go_to_known_place` (Inn) and `rest_until_healed`/`seek_healing`. Fix explore commitment duration."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Verify the arrival fixes using qa_smoke."
+            }
+          },
+          "pm_agent_prompts": {
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r18_direct_prompt_arrival_handlers (HIGH). Human playtest feedback: when commanded to 'go to the inn', heroes walk to the inn but don't actually enter it. 'rest until healed' is also failing to trigger proper resting, and 'explore east' drops its commit too quickly. Fix `ai/behaviors/bounty_pursuit.py:handle_moving()` (which you own) to handle these arrivals. Ensure that when `hero.target` has `sub_intent` like 'go_to_known_place' (inn) or 'rest_until_healed'/'seek_healing', they actually call `enter_building_briefly` or `start_resting_at_building` upon arrival. Also ensure the explore commit lasts longer. Run `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r18_direct_prompt_arrival_handlers (MEDIUM). After Agent 03 fixes the arrival handlers, verify the fixes. Ensure tests pass and the logic correctly handles inn entry and resting. Run `python tools/qa_smoke.py --quick`. Update your log, validate JSON, complete."
+          },
+    "pm_send_list_minimal": {
+        "order": "automation.dependencies_only",
+        "then_in_order": [
+            "06",
+            "11"
+        ],
+        "intelligence_by_agent": {
+            "06": "high",
+            "11": "medium"
+        },
+        "do_not_send": [
+            "02",
+            "03",
+            "04",
+            "05",
+            "07",
+            "08",
+            "09",
+            "10",
+            "12",
+            "13",
+            "14",
+            "15"
+        ],
+        "rationale": "Agent 06 fixes the arrival execution logic, Agent 11 verifies."
+    },
+    "automation": {
+        "mode": "auto_until_human_gate",
+        "runnable_agents": [
+            "06",
+            "11"
+        ],
+        "dependencies": [
+            {
+                "id": "fix_arrivals",
+                "agents": [
+                    "06"
+                ],
+                "parallel": false
+            },
+              {
+                "id": "verify_fixes",
+                "after": [
+                  "fix_arrivals"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "manual_playtest"
+            ],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r18_direct_prompt_arrival_handlers. We are fixing arrival handlers so heroes actually enter the inn when told to go there, properly rest when told, and don't drop explore commands early. Update your log, run gates, validate JSON, complete."
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "round_meta": {
+            "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+            "created_utc": "2026-05-01T18:30:00Z",
+            "source": "pm_kickoff_agent01_orchestrator",
+            "closed_by": "Agent_01_ExecutiveProducer_PM",
+            "orchestrator_completed_utc": "2026-05-01T18:14:01Z",
+            "orchestrator_exit_code": 0,
+            "orchestrator_evidence": "tools/ai_studio_orchestrator runs: waves wire_sim_tests [03], ai_context_mock [06], qa_verify [11] all finished; verification=verified, log=passed each; advisory ledger stops only (prompt text matched human-gate patterns)."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "Orchestrator wave completed (exit 0). Agents 03→06→11: completion receipts verified, agent logs passed. Addresses WK50-BUG-010 (priority known_places_for_llm) + WK50-FEAT-011 wiring (KINGDOM_PLAYTEST_START / GameEngine). Optional: Jaimie smoke with env preset per sprint notes.",
+            "pm_preexisting_code_changes": [
+              "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+              "ai/context_builder.py — uses select_known_places_for_llm(snap.known_places, limit=8) for known_places_llm rows",
+              "game/sim/playtest_quick_start.py — NEW apply_playtest_quick_start(engine); not hooked to GameEngine yet"
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK50-BUG-010",
+              "title": "Discovered Inn in profile/recent memory but direct prompt / mock says no inn",
+              "severity": "major",
+              "owner_agent": "06_AIBehaviorDirector_LLM",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Hero has many known places (>8); Recent lists Discovered Inn.",
+                "Ask mock/direct prompt to go to inn; reply denies knowing an inn."
+              ],
+              "expected": "known_places_llm includes inn when hero has discovered it.",
+              "actual": "Naive [:8] oldest-first could drop recently discovered inn from LLM blob.",
+              "acceptance_test": [
+                "Test proves priority slice keeps inn when >8 POIs.",
+                "python tools/qa_smoke.py --quick passes."
+              ],
+              "status": "resolved"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK50-FEAT-011",
+              "title": "Dense quick-start layout for faster LLM/manual testing",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "spec": "Wire apply_playtest_quick_start; GameEngine/Ursina env KINGDOM_PLAYTEST_START=1 (no root entry script edits this round — orchestrator ownership guard).",
+              "acceptance": [
+                "Env before launch yields guilds, market with healing potions researched, inn, 5 warriors + 5 rangers, seeded known places.",
+                "qa_smoke PASS."
+              ],
+              "status": "resolved"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "done",
+              "next_action": "Orchestrator wave complete; see agent_03 log wk50_r19"
+            },
+            "06": {
+              "status": "done",
+              "next_action": "Orchestrator wave complete; see agent_06 log wk50_r19"
+            },
+            "11": {
+              "status": "done",
+              "next_action": "Orchestrator wave complete; see agent_11 log wk50_r19"
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03, sprint wk50_llm_context_direct_prompts, round wk50_r19_partial_llm_places_playtest_wireup (HIGH). READ FIRST: PM hub pm_preexisting_code_changes — Agent 01 already landed sim + quick-start module edits (do NOT revert). Review `game/sim/hero_profile.py` for determinism; add tests in `tests/test_hero_profile_contract.py` so inn stays in the LLM-sized slice when there are >8 POIs and inn is newer. Wire quick-start: extend `game/engine.py` so after self.sim.setup_initial_state(), if playtest_start or env KINGDOM_PLAYTEST_START=1, call apply_playtest_quick_start(self). Update `game/graphics/ursina_app.py` to pass the flag from env into GameEngine. `game/sim/playtest_quick_start.py` exists but was not hooked — hook it from GameEngine as above. Do not edit the repository root Python entry module this round (orchestrator ownership). Agent 06 owns AI-side follow-up separately. Run python tools/qa_smoke.py --quick and pytest for tests you change. Update agent_03 log at this sprint/round; python -m json.tool your log; SDK completion receipt.",
+            "06": "You are Agent 06, sprint wk50_llm_context_direct_prompts, round wk50_r19_partial_llm_places_playtest_wireup (HIGH). CONTEXT: PM hub pm_preexisting_code_changes — Agent 01 pre-landed sim-side priority slice + AI context wiring (do NOT revert). Your scope is AI only: verify `ai/context_builder.py` builds consistent known_places_llm and marketplace catalog resolution after home guild insert at row 0; fix `ai/context_builder.py` and/or `ai/providers/mock_provider.py` if mock still falsely denies inn or go-to-place. Run python tools/qa_smoke.py --quick. Update agent log; validate JSON; SDK completion receipt.",
+            "11": "You are Agent 11, sprint wk50_llm_context_direct_prompts, round wk50_r19_partial_llm_places_playtest_wireup (MEDIUM). After Agents 03 and 06: run `python tools/qa_smoke.py --quick` (must exit 0). Run targeted pytest from repo root as needed for new tests. Update agent log with commands + exit codes; validate JSON; SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "order": "automation.dependencies_only",
+            "then_in_order": [
+              "03",
+              "06",
+              "11"
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "06": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "03 sim+engine wireup and contract tests; 06 AI context/mock; 11 gates."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "03",
+              "06",
+              "11"
+            ],
+            "dependencies": [
+              {
+                "id": "wire_sim_tests",
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "ai_context_mock",
+                "after": [
+                  "wire_sim_tests"
+                ],
+                "agents": [
+                  "06"
+                ],
+                "parallel": false
+              },
+              {
+                "id": "qa_verify",
+                "after": [
+                  "ai_context_mock"
+                ],
+                "agents": [
+                  "11"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "completion_flow": "worker_completion_receipt_then_verifier_then_next_wave",
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk50_llm_context_direct_prompts, round wk50_r19_partial_llm_places_playtest_wireup. Read pm_status_summary.pm_preexisting_code_changes in the PM hub for Agent 01 partial edits (do not revert). Finish wiring, tests, and gates. Update your log, validate JSON, run SDK completion receipt."
+        },
+        "wk50_r20_sprint_closeout_v154": {
+          "round_meta": {
+            "round_id": "wk50_r20_sprint_closeout_v154",
+            "created_utc": "2026-05-01T19:30:00Z",
+            "source": "human_playtest_passed_release_closeout",
+            "closed_by": "Agent_01_ExecutiveProducer_PM"
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "WK50 closed and released as Prototype v1.5.4. Jaimie playtest: all basic LLM/direct prompt commands behave correctly. PM updated CHANGELOG.md, README.md, config.py; git commit + push with message v1.5.4 - Basic LLM commands are now followed."
+          },
+          "pm_accepted_deliverables": [
+            "Phase 2A: DecisionMoment policy, HeroProfileSnapshot-aware bounded autonomous LLM context, validate-before-apply.",
+            "Phase 2B: Direct prompt intents (safe core set), DirectPromptValidator, deterministic target resolution, direct_prompt commit/exec in sim, engine wiring, chat feedback.",
+            "QA: pytest suite + qa_smoke --quick + direct prompt integration tests.",
+            "Human playtest PASS (mock LLM commands)."
+          ],
+          "pm_evidence": {
+            "human_playtest": "Jaimie (2026-05-01): whole WK50 plan implemented; all LLM commands passed playtest.",
+            "release": "config.py prototype_version 1.5.4; CHANGELOG Prototype v1.5.4; README version line updated.",
+            "automated_gates": "qa_smoke --quick and pytest recorded green at inspection prior to closeout."
+          },
+          "pm_next_actions_by_agent": {
+            "01": {
+              "status": "closed",
+              "next_action": "Optional: python tools/roll_agent_logs.py --keep 7 at next sprint boundary."
+            }
+          },
+          "pm_follow_ups": [
+            "Future slice: attack_known_lair / attack_nearest_enemy natural-language commands after risk + target resolution hardening (WK50 plan deferred intents)."
+          ]
         }
       }
     }

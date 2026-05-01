@@ -1215,6 +1215,144 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk50_r14_go_home_context_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r14_go_home_context_hotfix",
+          "status": "done",
+          "what_i_changed": [
+            "ai/context_builder.py: inject hire/spawn home into known_places_llm (stable place_id) when missing from profile discovery; add hero.home_building_type and hero_home_place_id; distance + inside labels for all guild types.",
+            "ai/direct_prompt_validator.py: _pick_home_place prefers hero_home_place_id / home_building_type (guild/temple) before castle/inn; guild/temple place types map to real move targets (drop incorrect warrior_guild→castle alias).",
+            "ai/behaviors/llm_bridge.py: _resolve_move_target supports warrior/ranger/rogue/wizard guild + temple building_type keys.",
+            "ai/providers/mock_provider.py + ai/prompt_packs.py: go-home prefers hero home_building_type; direct prompt blob includes hero_home_place_id.",
+            "tests: validator + resolve_move_destination coverage for ranger guild home when profile memory lacks the guild."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "206 passed",
+            "qa_smoke_quick": "DONE: PASS (EXIT:0)"
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk50_r17_direct_prompt_integration_tests": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r17_direct_prompt_integration_tests",
+          "status": "done",
+          "what_i_changed": [
+            "ai/context_builder.py: Added market_catalog_items (remembered marketplace by stable place_id, else nearest Marketplace building) so affordability/catalog exists while hero is out of TILE_SIZE*6 shopping range; init shop/market catalog slots on context.",
+            "ai/direct_prompt_validator.py: buy_potions when can_shop uses market_catalog_items fallback when proximity shop_items omits potions (WK50-BUG-008 mock blob gap).",
+            "ai/prompt_packs.py: Direct prompt user blob now includes shop_items and market_catalog_items for faithful MockProvider validation.",
+            "ai/providers/mock_provider.py: _hero_ctx_from_prompt_blob passes shop_items + market_catalog_items through.",
+            "tests/test_direct_prompt_integration.py: Removed xfail on adjacent-market affordable buy potions integration test."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_all": "222 passed",
+            "qa_smoke_quick": "PASS (exit 0, DONE: PASS)",
+            "integration_tests": "tests/test_direct_prompt_integration.py — buy potions far + adjacent affordable"
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk50_r18_direct_prompt_arrival_handlers": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r18_direct_prompt_arrival_handlers",
+          "status": "done",
+          "what_i_changed": [
+            "ai/behaviors/bounty_pursuit.py: WK50 R18 direct_prompt arrivals — go_to_known_place enters nearest matching building (inn via start_resting_at_building + rest_inn pending, castle taxes+rest, shops via enter_building_briefly + SHOPPING).",
+            "rest_until_healed / seek_healing / retreat sub_intents resolve to start_resting_at_building at home/castle/inn when in range (shared helper with return_home).",
+            "explore_direction chains up to 2 extra legs (12 tiles each) along seeded compass bearing so sovereign explore commits do not end at the first waypoint only.",
+            "Refactored return_home arrival to shared _find_safety_building_for_arrival; removed unused BuildingType import."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk50_direct_prompt_engine_resolve.py tests/test_direct_prompt_integration.py tests/test_wk50_phase2b_direct_prompt_contracts.py",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_direct_prompt": "40 passed (focused WK50 + integration + phase2b)",
+            "qa_smoke_quick": "DONE: PASS (exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "what_i_changed": [
+            "ai/context_builder.py: When synthetic home guild is prepended to known_places_llm, use select_known_places_for_llm(..., limit=7) first so rows[:8] still seats home + priority POIs (inn, marketplace). WK50 R17 marketplace resolution now scans the same truncated known_llm_rows sent to prompts.",
+            "ai/providers/mock_provider.py: Inn phrase uses token-boundary regex so incidental substrings do not trigger go-to-inn paths."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py tests/test_wk50_phase2b_direct_prompt_contracts.py -q --tb=no",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_targeted": "32 passed",
+            "qa_smoke_quick": "DONE: PASS (exit code 0)"
+          },
+          "blockers": [],
+          "recommended_next_actions": []
         }
       }
     }

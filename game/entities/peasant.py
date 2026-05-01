@@ -106,21 +106,33 @@ class Peasant:
         dist = self.distance_to(building.center_x, building.center_y)
         return dist <= TILE_SIZE * 1.5
 
-    def _pick_build_target(self, buildings: list):
-        # Priority 1: any unconstructed building (prefer ones not started, then oldest)
-        candidates = [
-            b
-            for b in buildings
-            if getattr(b, "is_constructed", True) is False
+    def _eligible_regular_build_candidate(self, b) -> bool:
+        """Player-placed scaffolding: unconstructed HP>0 sites regular peasants may work."""
+        return (
+            getattr(b, "is_constructed", True) is False
             and getattr(b, "hp", 0) > 0
             and not getattr(b, "requires_builder_peasant", False)  # WK43: neutral plots are builder-only
-        ]
+        )
+
+    def _pick_build_target(self, buildings: list):
+        """Pick an unconstructed site for regular peasants.
+
+        Must not abandon an in-progress scaffold as soon as `construction_started` flips True:
+        any *other* fresh foundation would previously sort ahead and pull workers toward a new
+        corner site (often read as marching to origin). Prefer the current sticky target when
+        still valid, then prioritize sites already being built, then oldest placement.
+        """
+        candidates = [b for b in buildings if self._eligible_regular_build_candidate(b)]
         if not candidates:
             return None
-        # Prefer unstarted construction, then oldest placement time
+        sticky = self.target_building
+        if sticky is not None:
+            for b in candidates:
+                if b is sticky:
+                    return sticky
         candidates.sort(
             key=lambda b: (
-                0 if getattr(b, "construction_started", False) is False else 1,
+                0 if getattr(b, "construction_started", False) else 1,
                 getattr(b, "placed_time_ms", 0),
             )
         )

@@ -15,6 +15,8 @@ import sys
 import argparse
 import math
 import random
+import subprocess
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -40,6 +42,18 @@ from game.ui.micro_view_manager import MicroViewManager  # noqa: E402 (wk13 inte
 from ai.basic_ai import BasicAI  # noqa: E402
 from ai.context_builder import ContextBuilder  # noqa: E402 (wk14 conversation scenario)
 from ai.llm_brain import LLMBrain  # noqa: E402
+
+
+def _run_direct_prompt_integration_pytest(root: Path) -> int:
+    """WK50 R17: run integration tests for direct prompts (mock + ContextBuilder + validator + exec)."""
+    test_path = root / "tests" / "test_direct_prompt_integration.py"
+    if not test_path.is_file():
+        print(f"[observe] direct_prompt_integration: missing {test_path}")
+        return 2
+    cmd = [sys.executable, "-m", "pytest", str(test_path), "-q", "--tb=short"]
+    print("[observe] direct_prompt_integration:", " ".join(cmd))
+    completed = subprocess.run(cmd, cwd=str(root))
+    return int(completed.returncode)
 
 
 def avg_pairwise_distance(objs) -> float:
@@ -267,7 +281,16 @@ def main() -> int:
         "--scenario",
         type=str,
         default="default",
-        choices=["default", "intent_bounty", "hero_stuck_repro", "inside_combat_repro", "interior_view", "quest_panel", "conversation"],
+        choices=[
+            "default",
+            "intent_bounty",
+            "hero_stuck_repro",
+            "inside_combat_repro",
+            "interior_view",
+            "quest_panel",
+            "conversation",
+            "direct_prompt_integration",
+        ],
         help="deterministic test setup presets (default: default)",
     )
     ap.add_argument("--no-enemies", action="store_true", help="disable enemies (useful to isolate shopping/potions behavior)")
@@ -282,6 +305,9 @@ def main() -> int:
         help="simulation speed multiplier (0.1–4.0); applied to dt each tick (wk12 Chronos)",
     )
     args = ap.parse_args()
+
+    if str(args.scenario) == "direct_prompt_integration":
+        return _run_direct_prompt_integration_pytest(PROJECT_ROOT)
 
     random.seed(args.seed)
 

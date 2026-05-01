@@ -30,6 +30,8 @@ def _hero_ctx_from_prompt_blob(blob: dict) -> dict:
         "distances": blob.get("distances") or {},
         "known_places_llm": list(blob.get("known_places_llm") or []),
         "shop_items": list(blob.get("shop_items") or []),
+        "market_catalog_items": list(blob.get("market_catalog_items") or []),
+        "hero_home_place_id": str(blob.get("hero_home_place_id") or ""),
     }
 
 
@@ -248,7 +250,10 @@ class MockProvider(BaseLLMProvider):
             )
 
         if "go home" in msg or "return home" in msg or "head home" in msg:
-            home = find_place("castle", "inn")
+            home_bt = _norm_msg((blob.get("hero") or {}).get("home_building_type", ""))
+            home = find_place(home_bt) if home_bt else None
+            if home is None:
+                home = find_place("castle", "inn", "warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild", "temple")
             tid = str(home.get("place_id", "")) if home else ""
             tdesc = str(home.get("display_name", "")) if home else ""
             return _emit_validated_direct(
@@ -299,7 +304,7 @@ class MockProvider(BaseLLMProvider):
                 blob,
             )
 
-        if "inn" in msg:
+        if re.search(r"(?<![a-z0-9_])inn(?![a-z0-9_])", msg):
             inn = find_place("inn")
             if inn:
                 return _emit_validated_direct(

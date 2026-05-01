@@ -6,6 +6,7 @@ role *PresentationLayer*. The public class name remains ``GameEngine`` for impor
 with existing code and tests; it composes :class:`game.sim_engine.SimEngine` (``self.sim``) for
 all simulation state and ticking.
 """
+import os
 import time
 import pygame
 from typing import TYPE_CHECKING
@@ -63,9 +64,18 @@ class GameEngine:
     main loop; sim logic lives on ``self.sim``.
     """
     
-    def __init__(self, early_nudge_mode: str | None = None, input_manager: InputManager | None = None, headless: bool = False, headless_ui: bool = False):
+    def __init__(
+        self,
+        early_nudge_mode: str | None = None,
+        input_manager: InputManager | None = None,
+        headless: bool = False,
+        headless_ui: bool = False,
+        *,
+        playtest_start: bool = False,
+    ):
         self.headless = headless
         self.headless_ui = headless_ui
+        self.playtest_start = bool(playtest_start) or os.environ.get("KINGDOM_PLAYTEST_START", "").strip() == "1"
         pygame.init()
         pygame.font.init()
         
@@ -247,6 +257,10 @@ class GameEngine:
 
         # Initialize starting buildings (pure simulation)
         self.sim.setup_initial_state()
+        if self.playtest_start:
+            from game.sim.playtest_quick_start import apply_playtest_quick_start
+
+            apply_playtest_quick_start(self)
         # Presentation-owned camera framing is handled by setup_initial_state() wrapper.
         self._camera_display = EngineCameraDisplay(self)
         self._render_coordinator = EngineRenderCoordinator(self)

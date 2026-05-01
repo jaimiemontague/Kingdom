@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.3 — Major Unit Art Update** (Tiny RPG heroes/guards + Legacy Vania workers; see `config.py` and `CHANGELOG.md`).
+This repository is currently stamped as **Prototype v1.5.4 — Basic LLM Direct Commands** (WK50: rare autonomous LLM moments + validated player-to-hero chat commands; see `config.py` and `CHANGELOG.md`).
 
 ## Overview
 
@@ -99,13 +99,15 @@ Controls evolve quickly; the fastest way to see the current bindings is the in-g
 
 ## LLM Integration
 
-The game uses LLMs for "important" hero decisions:
+The game uses LLMs for **important autonomous moments** (combat danger, recovery, shopping windows) and for **player chat**: you can speak to a selected hero in plain English; their reply is in-character, and **safe** requests (go home, buy potions, explore a direction, status, healing/rest, etc.) can drive **validated** movement and shopping — not free-form coordinates or attack orders (those stay deferred).
+
+Legacy examples of autonomous decisions:
 
 - **Retreat**: When health is low, should the hero run or fight on?
 - **Shopping**: What should the hero buy at the marketplace?
 - **Risk Assessment**: Is this bounty worth pursuing given the danger?
 
-The LLM receives context about the hero's stats, nearby enemies, inventory, and personality, then returns a JSON decision that the game executes.
+The LLM receives bounded context (stats, situation, known places, personality), then returns **strict JSON** that **deterministic game code** validates before anything affects the world.
 
 ### Context Example
 ```json
@@ -198,7 +200,7 @@ assets/
 
 ### Changing LLM Behavior
 
-Edit `ai/prompt_templates.py` to modify the system prompt and decision format.
+Edit `ai/prompt_templates.py` (generic prompts), `ai/prompt_packs.py` (WK50 autonomous + direct-prompt packs), and provider adapters under `ai/providers/` as needed.
 
 ### Adjusting Difficulty
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Prototype v1.5.4 — Basic LLM Direct Commands
+
+- **WK50 — Hero LLM context & direct prompts:** Heroes consult the LLM at **named decision moments** (low health in combat, post-combat recovery, rested-and-ready, optional shopping window) using **bounded profile + tactical context** from `HeroProfileSnapshot`; outputs are **validated** before any physical action.
+- **Player chat → direct commands:** Plain-English requests (e.g. go home, buy potions, explore a direction, status, seek healing, rest) map to **safe core intents**; the game **validates** JSON from the model, resolves targets **deterministically**, and applies movement/shopping/explore through a **short-lived committed action** so routine AI does not instantly overwrite an accepted command. **Attack lair / attack enemy** remain **out of MVP** and are refused or deferred in-character.
+- **UX:** Chat panel shows whether a command was **applied**, **refused**, **redirected**, or **chat-only** (no false “accepted” when nothing commits).
+- **Quality:** Broad **pytest** coverage including end-to-end direct-prompt integration tests; **`python tools/qa_smoke.py --quick`** gate. Playable without API keys: **`python main.py --provider mock`** or **`python main.py --no-llm`**.
+
 ## Prototype v1.5.3 — Major Unit Art Update
 
 - **Tiny RPG Character Asset Pack** (see `assets/ATTRIBUTION.md`): class hero sprites under `assets/sprites/heroes/` and **guardhouse guards** with idle / walk / attack (plus hurt/dead) wired through **pygame**, **Ursina billboards**, and the optional **instanced unit atlas** path.

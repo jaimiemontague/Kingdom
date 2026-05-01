@@ -69,6 +69,10 @@ class ContextBuilder:
     @staticmethod
     def build_hero_context(hero, game_state: dict) -> dict:
         """Build full context for a hero's decision."""
+        hb = getattr(hero, "home_building", None)
+        home_bt_raw = getattr(hb, "building_type", "") if hb is not None else ""
+        home_building_type = str(getattr(home_bt_raw, "value", home_bt_raw) or "").strip().lower()
+
         context = {
             "hero": {
                 "id": getattr(hero, "hero_id", None),
@@ -83,6 +87,7 @@ class ContextBuilder:
                 "defense": hero.defense,
                 "xp": hero.xp,
                 "xp_to_level": hero.xp_to_level,
+                "home_building_type": home_building_type,
             },
             "inventory": {
                 "weapon": hero.weapon["name"] if hero.weapon else "Fists",
@@ -99,6 +104,7 @@ class ContextBuilder:
             "available_bounties": game_state.get("bounties", []),
             "bounty_options": ContextBuilder._summarize_bounties(hero, game_state, limit=5),
             "shop_items": [],
+            "market_catalog_items": [],
             "distances": {},
         }
         
@@ -151,8 +157,13 @@ class ContextBuilder:
                         }
                         for item in building.get_available_items()
                     ]
-            elif building.building_type == "warrior_guild":
-                context["distances"]["warrior_guild"] = round(dist / TILE_SIZE, 1)
+            elif building.building_type in (
+                "warrior_guild",
+                "ranger_guild",
+                "rogue_guild",
+                "wizard_guild",
+            ):
+                context["distances"][building.building_type] = round(dist / TILE_SIZE, 1)
         
         # Add situational flags
         context["situation"] = {
@@ -171,6 +182,9 @@ class ContextBuilder:
             "inn": "resting at the bar",
             "marketplace": "browsing wares",
             "warrior_guild": "training in the guild",
+            "ranger_guild": "training in the guild",
+            "rogue_guild": "training in the guild",
+            "wizard_guild": "training in the guild",
             "blacksmith": "watching the smith work",
         }
         if getattr(hero, "is_inside_building", False) and getattr(hero, "inside_building", None) is not None:
@@ -191,16 +205,88 @@ class ContextBuilder:
 
         # WK50 Phase 2B: bounded known places for direct prompt validation (no raw hero objects).
         from game.sim.hero_profile import build_hero_profile_snapshot
+        from game.systems import hero_memory as _hm
 
         snap = build_hero_profile_snapshot(hero, game_state, now_ms=sim_now_ms())
-        context["known_places_llm"] = [
+        from game.sim.hero_profile import select_known_places_for_llm
+
+        hero_home_place_id = ""
+        if hb is not None and home_building_type:
+            gx = int(getattr(hb, "grid_x", 0))
+            gy = int(getattr(hb, "grid_y", 0))
+            hero_home_place_id = _hm.stable_place_id(home_building_type, gx, gy)
+
+        # Reserve one slot when we prepend hire/spawn guild home that is missing from the
+        # profile-derived slice — otherwise rows[:8] would drop priority POIs (inn, marketplace).
+        llm_place_limit = 8
+        if hero_home_place_id:
+            cand = select_known_places_for_llm(snap.known_places, limit=8)
+            cand_ids = {str(getattr(p, "place_id", "")).strip().lower() for p in cand}
+            if hero_home_place_id.strip().lower() not in cand_ids:
+                llm_place_limit = 7
+
+        llm_places = select_known_places_for_llm(snap.known_places, limit=llm_place_limit)
+        rows = [
             {
                 "place_id": str(getattr(p, "place_id", "")),
                 "place_type": str(getattr(p, "place_type", "")),
                 "display_name": str(getattr(p, "display_name", "")),
             }
-            for p in snap.known_places[:8]
+            for p in llm_places
         ]
+        if hb is not None and home_building_type and hero_home_place_id:
+            existing_ids = {str(r.get("place_id", "")).strip().lower() for r in rows}
+            if hero_home_place_id.lower() not in existing_ids:
+                dn = home_building_type.replace("_", " ").strip().title() or "Home"
+                rows.insert(
+                    0,
+                    {
+                        "place_id": hero_home_place_id,
+                        "place_type": home_building_type,
+                        "display_name": dn,
+                    },
+                )
+        context["hero_home_place_id"] = hero_home_place_id
+        known_llm_rows = rows[:8]
+        context["known_places_llm"] = known_llm_rows
+
+        # WK50 R17: Catalog + affordability at the remembered or nearest marketplace even when
+        # `shop_items` is empty (hero not within TILE_SIZE*6). Keeps `can_shop` = in-range only.
+        def _bt_lower(b) -> str:
+            bt = getattr(b, "building_type", "")
+            return str(getattr(bt, "value", bt) or "").strip().lower()
+
+        market_buildings = [b for b in game_state.get("buildings", []) if _bt_lower(b) == "marketplace"]
+        catalog_market = None
+        for row in known_llm_rows:
+            if str(row.get("place_type") or "").strip().lower() != "marketplace":
+                continue
+            pid = str(row.get("place_id") or "").strip()
+            for mb in market_buildings:
+                gx = int(getattr(mb, "grid_x", 0))
+                gy = int(getattr(mb, "grid_y", 0))
+                if _hm.stable_place_id("marketplace", gx, gy) == pid:
+                    catalog_market = mb
+                    break
+            if catalog_market is not None:
+                break
+        if catalog_market is None and market_buildings:
+            catalog_market = min(
+                market_buildings,
+                key=lambda b: hero.distance_to(b.center_x, b.center_y),
+            )
+        market_catalog_items: list[dict] = []
+        if catalog_market is not None and hasattr(catalog_market, "get_available_items"):
+            market_catalog_items = [
+                {
+                    "name": item["name"],
+                    "type": item["type"],
+                    "price": item["price"],
+                    "can_afford": hero.gold >= item["price"],
+                }
+                for item in catalog_market.get_available_items()
+            ]
+        context["market_catalog_items"] = market_catalog_items
         return context
     
     @staticmethod

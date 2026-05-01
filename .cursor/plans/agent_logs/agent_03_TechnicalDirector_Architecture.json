@@ -785,6 +785,143 @@
           "recommended_next_actions": [
             "Agent 06/08: align spoken obey/refusal copy with commit outcomes per same-round PM prompts (UI must not claim accepted without commit)."
           ]
+        },
+        "wk50_r15_direct_prompt_commitment_duration": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r15_direct_prompt_commitment_duration",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_commit.py: R15 — direct_prompt commitment no longer TTL-expires during active MOVING+routing; TTL only cleans orphan non-MOVING targets. Added DIRECT_PROMPT_STUCK_ABORT_MS escape when stuck_active exceeds dwell threshold (soft-lock safety).",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: regression for long sim-time en-route preservation and stuck abort."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "208 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: WK50 R15 verification round per PM hub."
+          ]
+        },
+        "wk50_r16_direct_prompt_all_commands_commitment": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r16_direct_prompt_all_commands_commitment",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_exec.py: R16 — for buy_item and retreat, call apply_llm_decision with normalized action when only tool_action is set, then attach_direct_prompt_move on the resulting target_position so long trips use the same sovereign direct_prompt lock as move_to / explore.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: test_apply_validated_buy_item_commits_direct_prompt, test_apply_validated_retreat_commits_direct_prompt."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "211 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "211 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: wk50_r16 verification per PM hub."
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "what_i_changed": [
+            "Preserved Agent 01 hero_profile known_places LLM priority slice (select_known_places_for_llm); verified deterministic ordering via tuple iteration + stable sorts only.",
+            "tests/test_hero_profile_contract.py: tests that naive [:8] drops newer inn with >8 POIs; priority slice retains inn; short lists unchanged.",
+            "game/engine.py: keyword-only playtest_start; self.playtest_start also when env KINGDOM_PLAYTEST_START=1; after sim.setup_initial_state() call apply_playtest_quick_start(self).",
+            "game/graphics/ursina_app.py: pass playtest_start from KINGDOM_PLAYTEST_START=1 into GameEngine."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py -v",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "determinism_guard PASS; pytest 224 passed inside smoke; observe scenarios PASS; DONE PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_hero_profile_contract": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py -v",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06: PM hub follow-up for known_places_llm / mock inn refusal (WK50-BUG-010).",
+            "Agent 11: sprint verification pytest spot-check after 06."
+          ]
         }
       }
     }

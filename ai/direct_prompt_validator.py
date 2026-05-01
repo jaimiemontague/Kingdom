@@ -40,8 +40,17 @@ _PLACE_TYPE_TO_MOVE_TARGET = {
     "inn": "inn",
     "marketplace": "marketplace",
     "blacksmith": "blacksmith",
-    "warrior_guild": "castle",
 }
+
+_PLAYER_HOME_TYPES = frozenset(
+    {
+        "warrior_guild",
+        "ranger_guild",
+        "rogue_guild",
+        "wizard_guild",
+        "temple",
+    }
+)
 
 
 def _norm_str(v: Any) -> str:
@@ -65,13 +74,35 @@ def _places_index(hero_context: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _target_for_place_row(row: dict[str, Any]) -> str:
     ptype = _norm_str(row.get("place_type")).lower()
+    if ptype in _PLAYER_HOME_TYPES:
+        return ptype
     if ptype in _PLACE_TYPE_TO_MOVE_TARGET:
         return _PLACE_TYPE_TO_MOVE_TARGET[ptype]
     dn = _norm_str(row.get("display_name")).lower()
     return dn.split()[0] if dn else ptype
 
 
-def _pick_home_place(places: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _pick_home_place(
+    places: list[dict[str, Any]],
+    hero_context: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Prefer authoritative hire/spawn home (guild/temple), then castle/inn fallbacks."""
+
+    canon = _norm_str(hero_context.get("hero_home_place_id")).lower()
+    if canon:
+        for p in places:
+            if _norm_str(p.get("place_id")).lower() == canon:
+                return p
+    hb_type = _norm_str((hero_context.get("hero") or {}).get("home_building_type")).lower()
+    if hb_type:
+        for p in places:
+            if _norm_str(p.get("place_type")).lower() == hb_type:
+                return p
+        for key in ("castle", "inn"):
+            for p in places:
+                if _norm_str(p.get("place_type")).lower() == key:
+                    return p
+        return None
     for key in ("castle", "inn"):
         for p in places:
             if _norm_str(p.get("place_type")).lower() == key:
@@ -183,7 +214,7 @@ def validate_direct_prompt_output(
             spoken = "Forgive me—I am too badly hurt to wander. I will drink what I have."
     elif critical and intent in ("explore_direction", "go_to_known_place"):
         intent = "seek_healing"
-        home = _pick_home_place(places)
+        home = _pick_home_place(places, hero_context)
         if home:
             tool = "retreat"
             target_id = _norm_str(home.get("place_id"))
@@ -209,7 +240,7 @@ def validate_direct_prompt_output(
     elif intent == "no_action_chat_only":
         tool = None
     elif intent == "return_home":
-        home = _pick_home_place(places)
+        home = _pick_home_place(places, hero_context)
         if home:
             target_row = home
             move_target = _target_for_place_row(home)
@@ -232,7 +263,7 @@ def validate_direct_prompt_output(
             tool = "use_potion"
             move_target = ""
         else:
-            home = _pick_home_place(places)
+            home = _pick_home_place(places, hero_context)
             if home:
                 target_row = home
                 move_target = _target_for_place_row(home)
@@ -270,6 +301,14 @@ def validate_direct_prompt_output(
                 (i for i in items if "potion" in _norm_str(i.get("name")).lower()),
                 None,
             )
+            # WK50 R17: direct prompt blob may omit proximity shop_items; use remembered/nearest
+            # marketplace catalog from ContextBuilder so MockProvider validation matches reality.
+            if potion_item is None:
+                catalog = list(hero_context.get("market_catalog_items") or [])
+                potion_item = next(
+                    (i for i in catalog if "potion" in _norm_str(i.get("name")).lower()),
+                    None,
+                )
             if potion_item and potion_item.get("can_afford"):
                 tool = "buy_item"
                 move_target = _norm_str(potion_item.get("name")) or "Health Potion"
@@ -332,7 +371,7 @@ def validate_direct_prompt_output(
             tool = "leave_building" if tool not in ("leave_building", None) else "leave_building"
             move_target = ""
         else:
-            home = _pick_home_place(places)
+            home = _pick_home_place(places, hero_context)
             if home:
                 tool = "move_to"
                 move_target = _target_for_place_row(home)

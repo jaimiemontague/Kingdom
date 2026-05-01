@@ -1,0 +1,51 @@
+{
+  "schema_version": "2.0",
+  "agent": {
+    "id": "11_verify",
+    "name": "QA_Verifier",
+    "parent_role": "QA_TestEngineering_Lead"
+  },
+  "notes": [
+    "Orchestrator verifier slice for Agent 11 post-fix gate runs; owned by Agent 11 for SDK rounds that use agent 11_verify."
+  ],
+  "sprints": {
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "notes": "WK50 Phase 2A/2B LLM context and direct prompts."
+      },
+      "rounds": {
+        "wk50_r17_direct_prompt_integration_tests": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r17_direct_prompt_integration_tests",
+          "status": "done",
+          "what_i_changed": [
+            "No repository edits; post-Agent-06 verification only.",
+            "Ran mandatory merge gate python tools/qa_smoke.py --quick after direct-prompt integration test and validator fixes."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+                        {
+                            "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_verify.json",
+                            "exit_code": 0
+                        }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "status": "PASS",
+              "exit_code": 0,
+              "pytest": "222 passed",
+              "determinism_guard": "PASS",
+              "summary": "qa_smoke DONE: PASS (all profiles)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
+    }
+  }
+}

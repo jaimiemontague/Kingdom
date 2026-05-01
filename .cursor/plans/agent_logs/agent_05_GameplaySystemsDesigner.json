@@ -499,6 +499,43 @@
             "Agent 06: implement refusal_reason and threshold checks in direct prompt validator; share constants with autonomous decision moments where sensible.",
             "Agent 11: pytest cases for critical-HP defy+redirect, unknown target no physical action, broke hero cannot buy, rest redirect when unsafe."
           ]
+        },
+        "wk50_r13_peasant_void_walk_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r13_peasant_void_walk_hotfix",
+          "status": "done",
+          "what_i_changed": "Fixed peasants abandoning active construction sites. Root cause: _pick_build_target sorted unconstructed sites with construction_started=False first, so as soon as a peasant called start_construction() on the player's building any other pending foundation sorted ahead—workers marched toward that distant site (often corner/map-origin read as 'void'). Fix in game/entities/peasant.py: _eligible_regular_build_candidate helper; _pick_build_target now (1) keeps sticky identity match to target_building when still an eligible scaffold, (2) otherwise prefers buildings where construction_already_started over fresh foundations (then placed_time_ms). Added tests/test_peasant_build_target.py regression tests.",
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_peasant_build_target.py -q",
+              "exit_code": 0,
+              "summary": "2 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS (determinism_guard, pytest suite, observe_sync profiles)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            },
+            {
+              "command": "npx tsx tools/ai_studio_orchestrator/src/cli.ts complete (with --log-round in single quotes for PowerShell)",
+              "exit_code": 0,
+              "summary": "Receipt written tools/ai_studio_orchestrator/runs/inbox/b0c768db-ca5a-4444-93f1-3cd9e95b6829.completion.json (--log-round 'sprints[\"wk50_llm_context_direct_prompts\"].rounds[\"wk50_r13_peasant_void_walk_hotfix\"]')"
+            }
+          ],
+          "evidence": {
+            "wk50_bug": "WK50-BUG-004 peasant void walk / abandon scaffold when second foundation exists",
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "new_tests": "tests/test_peasant_build_target.py::test_pick_build_prefers_started_site_over_unstarted_when_no_sticky and test_pick_build_sticky_keeps_active_target_when_valid"
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }

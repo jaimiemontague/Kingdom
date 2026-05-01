@@ -31,6 +31,11 @@ def _resolve_move_target(target: str, game_state: dict, hero: Any) -> tuple[floa
         "blacksmith": "blacksmith",
         "smith": "blacksmith",
         "safety": "castle",  # retreat-like
+        "warrior_guild": "warrior_guild",
+        "ranger_guild": "ranger_guild",
+        "rogue_guild": "rogue_guild",
+        "wizard_guild": "wizard_guild",
+        "temple": "temple",
     }
     btype = type_map.get(t)
     if not btype:

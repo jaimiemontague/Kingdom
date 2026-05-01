@@ -59,6 +59,26 @@ def test_resolve_explore_direction_target_clamped():
     assert ex == 19 * TILE_SIZE + TILE_SIZE / 2.0
 
 
+def test_resolve_move_destination_guild_via_label_when_id_not_memorized():
+    """R14: guild home move uses building_type label if place_id misses profile memory."""
+
+    hero = SimpleNamespace(
+        hero_id="h1",
+        name="Aria",
+        x=400.0,
+        y=400.0,
+        known_places={},
+    )
+    g = SimpleNamespace(building_type="ranger_guild", center_x=500.0, center_y=500.0)
+    gs = {"buildings": [g], "castle": None, "heroes": [hero]}
+    dec = {
+        "target_id": "ranger_guild:10:15",
+        "target": "ranger_guild",
+    }
+    xy = resolve_move_destination(hero, gs, dec)
+    assert xy == (500.0, 500.0)
+
+
 def test_resolve_move_destination_prefers_place_id_over_label():
     hero = SimpleNamespace(
         hero_id="h1",
@@ -148,6 +168,94 @@ def test_apply_validated_direct_prompt_uses_commit_not_llm_move_request():
     assert hero.target.get("sub_intent") == "buy_potions"
 
 
+def test_apply_validated_buy_item_commits_direct_prompt():
+    """WK50 R16: buy_item uses sovereign direct_prompt (not only type=shopping) for long trips."""
+    from types import SimpleNamespace
+
+    from ai.basic_ai import BasicAI
+    from game.entities.hero import Hero, HeroState
+    from game.sim.direct_prompt_commit import DIRECT_PROMPT_TARGET_TYPE
+    from game.sim.direct_prompt_exec import apply_validated_direct_prompt_physical
+
+    hero = Hero(0.0, 0.0, name="Shopper", hero_id="t_buy_dp")
+    hero.state = HeroState.IDLE
+    m = SimpleNamespace(
+        center_x=128.0,
+        center_y=256.0,
+        building_type="marketplace",
+        hp=100,
+        potions_researched=True,
+    )
+    gs: dict = {"buildings": [m], "world": SimpleNamespace(width=32, height=32), "heroes": [hero]}
+    ai = BasicAI(llm_brain=None)
+    assert (
+        apply_validated_direct_prompt_physical(
+            ai,
+            hero,
+            {
+                "tool_action": "buy_item",
+                "interpreted_intent": "buy_potions",
+                "target": "healing potion",
+                "reasoning": "test",
+            },
+            gs,
+            player_message="buy potions",
+            source="chat",
+        )
+        is True
+    )
+    assert isinstance(hero.target, dict)
+    assert hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE
+    assert hero.target.get("sub_intent") == "buy_potions"
+    assert hero.state == HeroState.MOVING
+    assert hero.target_position is not None
+
+
+def test_apply_validated_retreat_commits_direct_prompt():
+    """WK50 R16: retreat path applies sovereign direct_prompt toward safety."""
+    from types import SimpleNamespace
+
+    from ai.basic_ai import BasicAI
+    from game.entities.hero import Hero, HeroState
+    from game.sim.direct_prompt_commit import DIRECT_PROMPT_TARGET_TYPE
+    from game.sim.direct_prompt_exec import apply_validated_direct_prompt_physical
+
+    hero = Hero(400.0, 400.0, name="Runner", hero_id="t_ret_dp")
+    hero.state = HeroState.FIGHTING
+    castle = SimpleNamespace(
+        building_type="castle",
+        center_x=100.0,
+        center_y=100.0,
+    )
+    gs: dict = {
+        "buildings": [castle],
+        "world": SimpleNamespace(width=32, height=32),
+        "heroes": [hero],
+    }
+    ai = BasicAI(llm_brain=None)
+    assert (
+        apply_validated_direct_prompt_physical(
+            ai,
+            hero,
+            {
+                "action": "retreat",
+                "interpreted_intent": "seek_healing",
+                "target": "",
+                "reasoning": "low HP",
+            },
+            gs,
+            player_message="retreat",
+            source="chat",
+        )
+        is True
+    )
+    assert isinstance(hero.target, dict)
+    assert hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE
+    assert hero.target.get("sub_intent") == "seek_healing"
+    assert hero.state == HeroState.MOVING
+    assert hero.target_position == (100.0, 100.0)
+
+
 def test_apply_validated_explore_east_commits_direct_prompt_without_llm_move_request():
     """WK50 R11: explore east attaches sovereign direct_prompt target (engine resolution), not llm_move_request."""
     from types import SimpleNamespace
@@ -200,6 +308,112 @@ def test_apply_validated_explore_east_commits_direct_prompt_without_llm_move_req
         assert abs(hero.target_position[0] - expected_xy[0]) < 1e-3
         assert abs(hero.target_position[1] - expected_xy[1]) < 1e-3
         assert hero.target_position[0] > hx + TILE_SIZE * 2
+    finally:
+        set_sim_now_ms(None)
+
+
+def test_direct_prompt_commit_survives_past_ttl_while_moving_far():
+    """WK50 R15: sovereign direct_prompt survives long journeys (no TTL while actively MOVING)."""
+    from game.entities.hero import Hero, HeroState
+    from game.sim.direct_prompt_commit import (
+        DIRECT_PROMPT_TARGET_TYPE,
+        attach_direct_prompt_move,
+        expire_direct_prompt_commit_if_timed_out,
+    )
+    from game.sim.timebase import set_sim_now_ms
+
+    set_sim_now_ms(0)
+    try:
+        hero = Hero(0.0, 0.0, name="FarWalker", hero_id="wk50_far_dp")
+        hero.state = HeroState.IDLE
+        far_x = 200 * TILE_SIZE + TILE_SIZE / 2
+        attach_direct_prompt_move(
+            hero, sub_intent="return_home", wx=far_x, wy=TILE_SIZE / 2, now_ms=0
+        )
+        assert hero.state == HeroState.MOVING
+        set_sim_now_ms(500_000)
+        expire_direct_prompt_commit_if_timed_out(hero)
+        assert isinstance(hero.target, dict)
+        assert hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE
+        assert hero.state == HeroState.MOVING
+        assert hero.target_position is not None
+    finally:
+        set_sim_now_ms(None)
+
+
+def test_direct_prompt_commit_can_abort_when_stuck_too_long():
+    """WK50 R15: prolonged pathing stall still drops sovereign move (anti soft-lock)."""
+    from game.entities.hero import Hero, HeroState
+    from game.sim.direct_prompt_commit import (
+        attach_direct_prompt_move,
+        expire_direct_prompt_commit_if_timed_out,
+        DIRECT_PROMPT_STUCK_ABORT_MS,
+    )
+    from game.sim.timebase import set_sim_now_ms
+
+    set_sim_now_ms(0)
+    try:
+        hero = Hero(0.0, 0.0, name="Stucker", hero_id="wk50_stuck_dp")
+        far_x = 50 * TILE_SIZE + TILE_SIZE / 2
+        attach_direct_prompt_move(hero, sub_intent="go_to_known_place", wx=far_x, wy=0.0, now_ms=0)
+        hero.stuck_active = True
+        hero.stuck_since_ms = 10_000
+        now = 10_000 + DIRECT_PROMPT_STUCK_ABORT_MS + 5_000
+        set_sim_now_ms(now)
+        expire_direct_prompt_commit_if_timed_out(hero)
+        assert hero.target is None
+        assert hero.state == HeroState.IDLE
+    finally:
+        set_sim_now_ms(None)
+
+
+def test_basic_ai_many_ticks_preserve_direct_prompt_after_long_sim_time():
+    """WK50 R15: many ticks with sim time beyond legacy TTL — BasicAI must not drop sovereign routing."""
+    from ai.basic_ai import BasicAI
+    from game.entities.hero import Hero, HeroState
+    from game.sim.direct_prompt_commit import DIRECT_PROMPT_TARGET_TYPE, attach_direct_prompt_move
+    from game.sim.timebase import set_sim_now_ms
+
+    class _WorldStub:
+        """Minimal grid helpers if stuck_recovery reaches nudge/repath branches."""
+
+        def __init__(self, w: int, h: int):
+            self.width = w
+            self.height = h
+
+        def world_to_grid(self, wx: float, wy: float) -> tuple[int, int]:
+            return int(wx // TILE_SIZE), int(wy // TILE_SIZE)
+
+        def is_walkable(self, gx: int, gy: int) -> bool:
+            return 0 <= gx < self.width and 0 <= gy < self.height
+
+    set_sim_now_ms(0)
+    try:
+        ai = BasicAI(llm_brain=None)
+        hero = Hero(0.0, 0.0, name="Marathon", hero_id="dp_many_ticks")
+        hero.state = HeroState.MOVING
+        far_x = 300 * TILE_SIZE + TILE_SIZE / 2.0
+        attach_direct_prompt_move(
+            hero, sub_intent="return_home", wx=far_x, wy=TILE_SIZE / 2.0, now_ms=0
+        )
+        gs = {
+            "buildings": [],
+            "world": _WorldStub(400, 400),
+            "castle": None,
+            "enemies": [],
+            "bounties": [{"id": 1, "reward_gold": 50}],
+        }
+        dt = 0.05
+        for i in range(40):
+            set_sim_now_ms(60_000 + i * 15_000)
+            # Simulated march progress keeps stuck_recovery from clearing the sovereign target.
+            hero.x += TILE_SIZE * 0.5
+            ai.update_hero(hero, dt, gs)
+            assert isinstance(hero.target, dict), f"lost commit at tick {i}"
+            assert hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE
+            assert hero.target.get("sub_intent") == "return_home"
+            assert hero.state == HeroState.MOVING
+            assert hero.target_position is not None
     finally:
         set_sim_now_ms(None)
 

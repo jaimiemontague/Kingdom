@@ -127,6 +127,36 @@ def apply_validated_direct_prompt_physical(
         eff = str(sanitized.get("tool_action") or sanitized.get("action") or "explore").strip().lower()
         return _infer_physical_after_llm(hero, prior_rq, was_inside, eff)
 
+    tl = (tool or "").strip().lower()
+    ac = (action or "").strip().lower()
+
+    # R16: Long-journey sovereign lock for shopping / retreat (same pattern as move_to + explore).
+    if tl == "buy_item" or ac == "buy_item":
+        merged = dict(sanitized)
+        if not str(merged.get("action") or "").strip():
+            merged["action"] = "buy_item"
+        prior_rq, was_inside = _commit_snapshot(hero)
+        apply_llm_decision(ai, hero, merged, game_state, source=source)
+        tp = getattr(hero, "target_position", None)
+        if tp is None:
+            return _infer_physical_after_llm(hero, prior_rq, was_inside, "buy_item")
+        sub = str(intent or "buy_potions").strip() or "buy_potions"
+        attach_direct_prompt_move(hero, sub_intent=sub, wx=float(tp[0]), wy=float(tp[1]))
+        return True
+
+    if tl == "retreat" or ac == "retreat":
+        merged = dict(sanitized)
+        if not str(merged.get("action") or "").strip():
+            merged["action"] = "retreat"
+        prior_rq, was_inside = _commit_snapshot(hero)
+        apply_llm_decision(ai, hero, merged, game_state, source=source)
+        tp = getattr(hero, "target_position", None)
+        if tp is None:
+            return _infer_physical_after_llm(hero, prior_rq, was_inside, "retreat")
+        sub = str(intent or "seek_healing").strip() or "retreat"
+        attach_direct_prompt_move(hero, sub_intent=sub, wx=float(tp[0]), wy=float(tp[1]))
+        return True
+
     prior_rq, was_inside = _commit_snapshot(hero)
     apply_llm_decision(ai, hero, sanitized, game_state, source=source)
     eff = str(sanitized.get("tool_action") or sanitized.get("action") or "").strip().lower()

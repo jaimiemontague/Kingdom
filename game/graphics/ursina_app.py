@@ -91,7 +91,13 @@ class UrsinaApp:
         # v1.5 Sprint 1.2: Ambient + Directional lights live in UrsinaRenderer._setup_scene_lighting().
 
         self.input_manager = UrsinaInputManager()
-        self.engine = GameEngine(input_manager=self.input_manager, headless=False, headless_ui=True)
+        _playtest = os.environ.get("KINGDOM_PLAYTEST_START", "").strip() == "1"
+        self.engine = GameEngine(
+            input_manager=self.input_manager,
+            headless=False,
+            headless_ui=True,
+            playtest_start=_playtest,
+        )
         # InputHandler: 'e' selects elven bungalow — in Ursina we use E/Q as continuous zoom (held_keys).
         self.engine._ursina_viewer = True
         # Let Ursina draw the map; pygame only draws HUD onto a transparent surface (see engine.render).
