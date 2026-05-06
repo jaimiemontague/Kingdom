@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "27b88ead-5ee3-472d-8d44-dd3b7c45ecd3",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "03",
+  "status": "done",
+  "summary": "Recall pinned hero: reopen right panel via enter_hero_focus + right_panel_visible (engine.py); qa_smoke PASS.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+  "claimed_log_round": "sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]",
+  "timestamp": "2026-05-06T23:10:59.124Z"
+}
