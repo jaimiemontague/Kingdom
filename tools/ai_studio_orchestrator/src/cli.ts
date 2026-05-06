@@ -257,7 +257,24 @@ async function completeCommand(options: CliOptions): Promise<void> {
     throw new Error("complete requires --token, --sprint, --round, --agent, and --status");
   }
 
-  // Auto-push: commit+push all agent work before writing the receipt.
+  const receipt: CompletionReceipt = {
+    schema_version: "1.0",
+    token: options.token,
+    sprint_id: options.sprint,
+    round_id: options.round,
+    agent_id: options.agent,
+    status: options.statusValue,
+    summary: options.summary ?? "",
+    files_touched: options.filesTouched ?? [],
+    commands_run: options.commandsRun ?? [],
+    claimed_log_path: options.claimedLogPath,
+    claimed_log_round: options.claimedLogRound,
+    timestamp: new Date().toISOString(),
+  };
+  const receiptPath = await saveCompletionReceipt(options.cwd, options.ledgerDir, receipt);
+  console.log(`Completion receipt written: ${receiptPath}`);
+
+  // Auto-push: commit+push all agent work AND the receipt to GitHub.
   // Uses a rebase-retry loop to handle parallel wave agents pushing to the same branch concurrently.
   if (options.autoPush) {
     console.log("[auto-push] Staging and committing agent work...");
@@ -296,28 +313,12 @@ async function completeCommand(options: CliOptions): Promise<void> {
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      // Log but don't abort — still write the receipt so the orchestrator can proceed.
       console.warn(`[auto-push] Warning: git commit+push failed: ${msg}`);
       console.warn("[auto-push] Changes may not be on GitHub. The orchestrator post-flight pull will confirm.");
     }
   }
 
-  const receipt: CompletionReceipt = {
-    schema_version: "1.0",
-    token: options.token,
-    sprint_id: options.sprint,
-    round_id: options.round,
-    agent_id: options.agent,
-    status: options.statusValue,
-    summary: options.summary ?? "",
-    files_touched: options.filesTouched ?? [],
-    commands_run: options.commandsRun ?? [],
-    claimed_log_path: options.claimedLogPath,
-    claimed_log_round: options.claimedLogRound,
-    timestamp: new Date().toISOString(),
-  };
-  const receiptPath = await saveCompletionReceipt(options.cwd, options.ledgerDir, receipt);
-  console.log(`Completion receipt written: ${receiptPath}`);
+
 }
 
 async function verifyReceiptCommand(options: CliOptions): Promise<void> {
@@ -368,6 +369,44 @@ async function verifyReceiptCommand(options: CliOptions): Promise<void> {
   const verificationPath = await saveVerificationReceipt(options.cwd, options.ledgerDir, verification);
   console.log(`Verification receipt written: ${verificationPath}`);
   console.log(`${status}: ${reason}`);
+
+  if (options.autoPush) {
+    console.log("[auto-push] Staging and committing verification receipt...");
+    try {
+      const dirty = execSync("git status --short", { cwd: options.cwd, encoding: "utf8" }).trim();
+      if (!dirty) {
+        console.log("[auto-push] Nothing to commit — working tree clean.");
+      } else {
+        execSync("git add -A", { cwd: options.cwd, stdio: "inherit" });
+        execSync(
+          `git commit -m "Agent ${completion.agent_id} ${completion.sprint_id}/${completion.round_id}: automated verifier push"`,
+          { cwd: options.cwd, stdio: "inherit" },
+        );
+
+        const MAX_PUSH_ATTEMPTS = 3;
+        let pushed = false;
+        for (let attempt = 1; attempt <= MAX_PUSH_ATTEMPTS; attempt += 1) {
+          try {
+            execSync("git push", { cwd: options.cwd, stdio: "inherit" });
+            pushed = true;
+            break;
+          } catch {
+            if (attempt === MAX_PUSH_ATTEMPTS) break;
+            console.log(`[auto-push] Push rejected. Rebasing and retrying (${attempt}/${MAX_PUSH_ATTEMPTS - 1})...`);
+            execSync("git pull --rebase origin main", { cwd: options.cwd, stdio: "inherit" });
+          }
+        }
+        if (pushed) {
+          console.log("[auto-push] ✓ Verifier receipt committed and pushed to GitHub.");
+        } else {
+          throw new Error("Push failed after all retry attempts.");
+        }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[auto-push] Warning: git commit+push failed: ${msg}`);
+    }
+  }
 }
 
 async function runAgentsInBatches(
