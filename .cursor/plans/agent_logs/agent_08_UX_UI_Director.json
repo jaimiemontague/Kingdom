@@ -487,6 +487,58 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py `_render_pin_button`: cache `pygame.font.SysFont` for U+1F4CC 📌; render emoji centered in pin rect with full alpha when pinned, 128 alpha when unpinned; fall back to original circle + \"P\" if font/render fails or glyph width <= 4."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "after apt install nodejs npm (cloud env had no npm initially)"
+            },
+            {
+              "command": "python3 -m pip install -q -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pygame needed for capture + qa_smoke in cloud"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — circle + P beside close X (headless ui_panels selects hero)",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — 📌 emoji beside close X (red pin glyph visible in capture)",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: optional manual `python main.py --renderer pygame --no-llm` or Ursina default to confirm emoji color fonts on Windows match expectation."
+          ]
         }
       }
     }
