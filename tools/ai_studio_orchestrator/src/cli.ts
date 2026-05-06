@@ -296,7 +296,7 @@ async function completeCommand(options: CliOptions): Promise<void> {
         let pushed = false;
         for (let attempt = 1; attempt <= MAX_PUSH_ATTEMPTS; attempt += 1) {
           try {
-            execSync("git push", { cwd: options.cwd, stdio: "inherit" });
+            execSync("git push origin HEAD:main", { cwd: options.cwd, stdio: "inherit" });
             pushed = true;
             break;
           } catch {
@@ -387,7 +387,7 @@ async function verifyReceiptCommand(options: CliOptions): Promise<void> {
         let pushed = false;
         for (let attempt = 1; attempt <= MAX_PUSH_ATTEMPTS; attempt += 1) {
           try {
-            execSync("git push", { cwd: options.cwd, stdio: "inherit" });
+            execSync("git push origin HEAD:main", { cwd: options.cwd, stdio: "inherit" });
             pushed = true;
             break;
           } catch {
