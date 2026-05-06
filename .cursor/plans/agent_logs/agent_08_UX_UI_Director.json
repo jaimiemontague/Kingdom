@@ -487,6 +487,51 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: `_render_pin_button` renders pin as 📌 (U+1F4CC) using a cached `pygame.font.SysFont` (segoeuiemoji / Noto Color Emoji / arial fallback list). Pinned state uses full-opacity blit; unpinned uses a copied surface at alpha 128. If the glyph fails or renders at width <= 4 px, falls back to the previous circle + \"P\" drawing."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png (and sibling scenario PNGs)",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png",
+            "screenshot_note": "ui_panels shows TEST HERO left panel; pin sits in the header strip next to close — confirm 📌 at native resolution; headless Linux may hit emoji font fallback.",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Optional perf: cache dimmed emoji surface for unpinned state to avoid per-frame copy() when the emoji path is active."
+          ]
         }
       }
     }
