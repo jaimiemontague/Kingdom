@@ -980,6 +980,43 @@
           "follow_ups": [
             "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
           ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: In apply_hud_pin_action recall_pinned_hero branch, after center_camera_on_world_pos, mirror try_select_hero — set hud.right_panel_visible = True and call _micro_view.enter_hero_focus(target) so Recall restores HERO_FOCUS right column (minimap + chat).",
+            "Confirmed: center_camera_on_world_pos already sets _ursina_hud_force_upload; no extra Ursina wiring."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Orchestrator CLI deps (cloud: Node installed via apt first)"
+            },
+            {
+              "command": "python3 -m pip install -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Environment lacked pytest initially"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }
