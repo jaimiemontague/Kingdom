@@ -487,6 +487,45 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: _render_pin_button uses cached emoji font + cached 📌 (U+1F4CC) glyphs; pinned = full opacity, unpinned = cached dim surface (alpha 128); fallback keeps circle+P when emoji font fails or glyph width ≤ 4. Avoid per-frame emoji render/copy by caching surfaces keyed to pin button size."
+          ],
+          "commands_run": [
+            {
+              "command": ".venv/bin/python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": ".venv/bin/python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": ".venv/bin/python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": ".venv/bin/python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — hero selected; Pin shows circle + “P” glyph.",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — 📌 visible in header (no circle); celery capture path resolves color emoji.",
+            "qa_smoke_quick": ".venv/bin/python tools/qa_smoke.py --quick exit_code=0 PASS",
+            "manual_follow_up": "python main.py --renderer pygame --provider mock — select hero and toggle pin to confirm 📌 pinned vs dim unpinned on local Windows fonts."
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
         }
       }
     }

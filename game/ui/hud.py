@@ -558,15 +558,63 @@ class HUD:
         sel_id = str(getattr(sel, "hero_id", "") or "")
         pinned = bool(sel_id and self._pin_slot.hero_id == sel_id)
         cx, cy = pr.centerx, pr.centery
-        if pinned:
-            pygame.draw.circle(surface, COLOR_PIN_GOLD, (cx, cy), pin_size // 2 - 1)
-            pygame.draw.circle(surface, self._frame_outer, (cx, cy), pin_size // 2 - 1, 2)
-            col = (255, 255, 255)
+
+        if not hasattr(self, "_pin_emoji_font") or getattr(self, "_pin_emoji_font_size", 0) != pin_size:
+            try:
+                self._pin_emoji_font = pygame.font.SysFont(
+                    "segoeuiemoji,segoeui,noto color emoji,arial", pin_size
+                )
+            except Exception:
+                self._pin_emoji_font = None
+            self._pin_emoji_font_size = pin_size
+
+        emoji_surf = None
+        rk = getattr(self, "_pin_emoji_render_key", None)
+        if rk != pin_size:
+            self._pin_emoji_render_key = pin_size
+            self._pin_emoji_cached_surf = None
+            self._pin_emoji_cached_dim_surf = None
+            if self._pin_emoji_font is not None:
+                try:
+                    g = self._pin_emoji_font.render("\U0001f4cc", True, (255, 255, 255))
+                    self._pin_emoji_cached_surf = g if g.get_width() > 4 else None
+                    if self._pin_emoji_cached_surf is not None:
+                        dim = self._pin_emoji_cached_surf.copy()
+                        dim.set_alpha(128)
+                        self._pin_emoji_cached_dim_surf = dim
+                except Exception:
+                    self._pin_emoji_cached_surf = None
+                    self._pin_emoji_cached_dim_surf = None
+            else:
+                self._pin_emoji_cached_surf = None
+                self._pin_emoji_cached_dim_surf = None
+        emoji_surf = getattr(self, "_pin_emoji_cached_surf", None)
+
+        if emoji_surf is None or emoji_surf.get_width() <= 4:
+            if pinned:
+                pygame.draw.circle(surface, COLOR_PIN_GOLD, (cx, cy), pin_size // 2 - 1)
+                pygame.draw.circle(surface, self._frame_outer, (cx, cy), pin_size // 2 - 1, 2)
+                col = (255, 255, 255)
+            else:
+                pygame.draw.circle(surface, self._frame_inner, (cx, cy), pin_size // 2 - 1, 2)
+                col = (150, 150, 160)
+            p_surf = TextLabel.get_surface(self.theme.font_small, "P", col)
+            surface.blit(p_surf, (cx - p_surf.get_width() // 2, cy - p_surf.get_height() // 2))
         else:
-            pygame.draw.circle(surface, self._frame_inner, (cx, cy), pin_size // 2 - 1, 2)
-            col = (150, 150, 160)
-        p_surf = TextLabel.get_surface(self.theme.font_small, "P", col)
-        surface.blit(p_surf, (cx - p_surf.get_width() // 2, cy - p_surf.get_height() // 2))
+            dest_pos = (
+                cx - emoji_surf.get_width() // 2,
+                cy - emoji_surf.get_height() // 2,
+            )
+            if pinned:
+                surface.blit(emoji_surf, dest_pos)
+            else:
+                dim = getattr(self, "_pin_emoji_cached_dim_surf", None)
+                if dim is not None:
+                    surface.blit(dim, dest_pos)
+                else:
+                    s = emoji_surf.copy()
+                    s.set_alpha(128)
+                    surface.blit(s, dest_pos)
 
     def _render_recall_button(self, surface: pygame.Surface, recall_rect: pygame.Rect, game_state: dict) -> None:
         """WK51: bottom-bar recall when a hero is pinned."""
