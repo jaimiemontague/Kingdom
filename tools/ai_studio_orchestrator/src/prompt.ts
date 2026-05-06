@@ -59,8 +59,8 @@ export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, co
     "- Your run is not complete until your log exists at `sprints[SPRINT_ID].rounds[ROUND_ID]` and validates with `python -m json.tool`.",
     "- Do not bump versions or ask Jaimie for manual playtest unless your PM prompt requires a human gate.",
     isCloud
-      ? "- You MUST run the completion command shown above. The orchestrator will automatically commit and push your work as part of that command."
-      : "- Before your final response, run the exact completion command shown above. This receipt is the orchestrator trigger for the verifier and next wave.",
+      ? "- You MUST run the completion command shown below. The orchestrator will automatically commit and push your work as part of that command."
+      : "- Before your final response, run the exact completion command shown below. This receipt is the orchestrator trigger for the verifier and next wave.",
     "",
     "SPRINT:",
     context.sprintId,
