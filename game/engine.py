@@ -1400,6 +1400,13 @@ class GameEngine:
                 return
             self.selected_hero = target
             self.center_camera_on_world_pos(float(target.x), float(target.y))
+            if hasattr(self, "hud"):
+                try:
+                    self.hud.right_panel_visible = True
+                    if hasattr(self.hud, "_micro_view"):
+                        self.hud._micro_view.enter_hero_focus(target)
+                except Exception:
+                    pass
             return
 
     def capture_screenshot(self):
