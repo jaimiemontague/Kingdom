@@ -980,6 +980,45 @@
           "follow_ups": [
             "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
           ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: apply_hud_pin_action(recall_pinned_hero) after center_camera_on_world_pos now mirrors try_select_hero — sets hud.right_panel_visible True and hud._micro_view.enter_hero_focus(target). Recall recenters camera (still sets _ursina_hud_force_upload via center_camera_on_world_pos); no extra Ursina plumbing needed."
+          ],
+          "commands_run": [
+            {
+              "command": ". .venv/bin/activate ; python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Cloud bootstrap; npm unavailable initially — apt install nodejs/npm then PASS."
+            },
+            {
+              "command": ". .venv/bin/activate ; python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "Ran via activated .venv (Python 3.13)."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 08 / Agent 11: manual sanity — Recall opens same right hero focus panel as clicking the hero when HUD supports micro-view."
+          ]
         }
       }
     }
