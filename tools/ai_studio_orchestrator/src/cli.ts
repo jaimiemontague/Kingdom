@@ -194,6 +194,11 @@ async function runCommand(options: CliOptions): Promise<void> {
 
   console.log("\nRun complete.");
   console.log(summarizeLedger(ledger));
+
+  // Cloud post-flight: pull agent commits so the local workspace reflects what they pushed.
+  if (options.runtime === "cloud") {
+    cloudPostflightPull(options.cwd);
+  }
 }
 
 async function synthesizeCommand(options: CliOptions): Promise<void> {
@@ -523,6 +528,44 @@ function cloudPreflightCommit(cwd: string, sprintId: string, roundId: string): v
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     throw new Error(`[cloud pre-flight] Failed to commit+push .cursor/ files: ${msg}`);
+  }
+}
+
+/**
+ * Cloud post-flight: pull agent commits back to the local workspace.
+ *
+ * Strategy: fetch first (safe, no local changes), then attempt a fast-forward
+ * merge. If the tree diverged (agent pushed to a branch, or local work
+ * conflicts), warn rather than creating an unexpected merge commit.
+ * Never clobber uncommitted local work.
+ */
+function cloudPostflightPull(cwd: string): void {
+  console.log("\n[cloud post-flight] Fetching agent changes from GitHub...");
+  try {
+    execSync("git fetch origin", { cwd, stdio: "inherit" });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn(`[cloud post-flight] Warning: git fetch failed: ${msg}`);
+    console.warn("[cloud post-flight] Run 'git fetch && git merge --ff-only origin/main' manually.");
+    return;
+  }
+
+  try {
+    const result = execSync("git merge --ff-only origin/main", { cwd, encoding: "utf8" });
+    const summary = result.trim();
+    if (summary === "Already up to date.") {
+      console.log("[cloud post-flight] Already up to date — agents may not have pushed yet.");
+      console.log("[cloud post-flight] If agents reported success, check: git log --oneline origin/main");
+    } else {
+      console.log("[cloud post-flight] ✓ Local workspace updated with agent changes:");
+      console.log(summary);
+    }
+  } catch {
+    // Fast-forward failed — local branch has diverged or has uncommitted changes blocking merge.
+    console.warn("[cloud post-flight] Could not fast-forward merge. Your local branch may have diverged.");
+    console.warn("[cloud post-flight] Agent changes are on origin/main. Resolve manually:");
+    console.warn("  git status");
+    console.warn("  git merge --ff-only origin/main   # or: git rebase origin/main");
   }
 }
 
