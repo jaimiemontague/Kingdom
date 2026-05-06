@@ -980,6 +980,53 @@
           "follow_ups": [
             "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
           ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: In apply_hud_pin_action recall_pinned_hero branch, after center_camera_on_world_pos, mirror try_select_hero — set hud.right_panel_visible True and call _micro_view.enter_hero_focus(target) so Recall restores HERO_FOCUS right panel (mini-map + chat). Ursina HUD re-upload already occurs via center_camera_on_world_pos → _ursina_hud_force_upload."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Cloud bootstrap: apt node/npm on fresh VM; then orchestrator deps."
+            },
+            {
+              "command": "python3 -m pip install -q -r requirements.txt pytest",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "VM lacked pytest; installed for qa_smoke."
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "ursina_hud_upload": {
+              "note": "recall_pinned_hero calls center_camera_on_world_pos, which sets _ursina_hud_force_upload True (engine.py); no extra Ursina change."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: wave gates if scheduled after Agent 08 pin emoji round."
+          ]
         }
       }
     }
