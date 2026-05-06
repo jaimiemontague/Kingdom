@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-06T21:17:07.944Z",
+  "updated_at": "2026-05-06T21:22:01.844Z",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "runtime": "cloud",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk51_r7_impl",
+      "parallel": true,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "error",
+          "model": "composer-2",
+          "completion_token": "116a33ad-8d9c-42c9-9642-b719b4983ebc",
+          "started_at": "2026-05-06T21:17:07.954Z",
+          "error": "Completion receipt was not written for token 116a33ad-8d9c-42c9-9642-b719b4983ebc.",
+          "sdk_agent_id": "bc-32aa7ac0-3074-4fa1-8684-82bd4f964189",
+          "run_id": "run-3e832453-f56b-4808-8b37-9aad84ee94b9",
+          "duration_ms": 189220,
+          "result_excerpt": "## Status **Done.** Recall now matches direct hero selection: after `recall_pinned_hero` sets `selected_hero` and recenters the camera, the HUD shows the right panel and enters hero focus on the same target. ### Code change ```1395:1411:game/engine.py if action == \"recall_pinned_hero\": if pin_slot.is_fallen() or pin_slot.hero_id is None: return target = self._find_hero_by_id(pin_slot.hero_id) if target is None: return self.selected_hero = target self.center_camera_on_world_pos(float(target.x)...",
+          "finished_at": "2026-05-06T21:21:01.404Z"
+        },
+        {
+          "agent_id": "08",
+          "status": "error",
+          "model": "composer-2",
+          "completion_token": "8ef5dd83-f6a1-4a72-9e50-299dffabb16a",
+          "started_at": "2026-05-06T21:17:07.954Z",
+          "error": "Completion receipt was not written for token 8ef5dd83-f6a1-4a72-9e50-299dffabb16a.",
+          "sdk_agent_id": "bc-eed69c87-c772-423f-9e40-e05d167dd621",
+          "run_id": "run-a7aaf36a-9d27-4fad-9f4c-8ce22b91aeb8",
+          "duration_ms": 172067,
+          "result_excerpt": "## Status Completed Agent 08 work for **`wk51_attachment_ux_phase3` / `wk51_r7_recall_right_panel_pin_emoji`**. ### What changed - **`game/ui/hud.py`**: `_render_pin_button` now uses a cached emoji font, renders `\\U0001f4cc` (📌), centers it in `pin_button_rect`, uses **full alpha when pinned** and **128 alpha when unpinned**, and **falls back** to the previous circle + `P` path if rendering fails or the glyph is too narrow (`width <= 4`). - **`SysFont`**: Implemented as a **font name list** ...",
+          "finished_at": "2026-05-06T21:20:40.237Z"
+        }
+      ]
+    },
+    {
+      "id": "wk51_r7_verify",
+      "parallel": false,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "pending",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: optional_playtest_recall_right_panel_and_pin_emoji",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate",
+    "Stopped after wk51_r7_impl: Agent 03 status=error"
+  ]
+}

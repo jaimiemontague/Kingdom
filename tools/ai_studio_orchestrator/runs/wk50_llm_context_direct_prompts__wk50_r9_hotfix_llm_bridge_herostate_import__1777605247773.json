@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-01T03:14:07.766Z",
+  "updated_at": "2026-05-01T03:18:54.166Z",
+  "sprint_id": "wk50_llm_context_direct_prompts",
+  "round_id": "wk50_r9_hotfix_llm_bridge_herostate_import",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "fix_herostate_import",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "06",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "c04a2999-8e1b-4bac-bc87-8fd37f19a660",
+          "started_at": "2026-05-01T03:14:07.799Z",
+          "sdk_agent_id": "agent-52419322e2d19cf6250d0174751cf7503ccf4a01",
+          "run_id": "run-03eab633-2bc2-42ab-9e9e-60dc167cc5d9",
+          "finished_at": "2026-05-01T03:16:36.817Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\c04a2999-8e1b-4bac-bc87-8fd37f19a660.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9f51d2ea-1dc1-4c93-8760-7c78630fe070.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "verify_hotfix",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "9b722817-3141-4a7a-9ded-55be60970a67",
+          "started_at": "2026-05-01T03:17:09.046Z",
+          "sdk_agent_id": "agent-14e0ca27ca11dd2043f4f2ce418697986d6736fc",
+          "run_id": "run-bf44eb90-9d26-4c88-bd01-b0f4764d4600",
+          "finished_at": "2026-05-01T03:18:38.232Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9b722817-3141-4a7a-9ded-55be60970a67.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\5f7e423c-619c-4cbd-a579-a85520b385ac.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 06 prompt mentions a human gate"
+  ]
+}

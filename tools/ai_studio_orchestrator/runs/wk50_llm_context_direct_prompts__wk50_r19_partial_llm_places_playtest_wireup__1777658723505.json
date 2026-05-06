@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-01T18:05:23.498Z",
+  "updated_at": "2026-05-01T18:13:59.745Z",
+  "sprint_id": "wk50_llm_context_direct_prompts",
+  "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wire_sim_tests",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "372ec71e-21e8-40b0-b169-e0b26d4c3f0e",
+          "started_at": "2026-05-01T18:05:23.530Z",
+          "sdk_agent_id": "agent-b56a331a4a226b12a07e94fadd1795c4d65bb1d4",
+          "run_id": "run-fd6092fb-8554-4b97-8da1-29508d0c9508",
+          "finished_at": "2026-05-01T18:07:39.862Z",
+          "completion_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\372ec71e-21e8-40b0-b169-e0b26d4c3f0e.completion.json",
+          "verification_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\58122b4b-4371-4b3e-8dd6-d925224d0655.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "ai_context_mock",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "06",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "c02dc943-9ae8-4348-9278-fee1d2a7ef59",
+          "started_at": "2026-05-01T18:07:54.856Z",
+          "sdk_agent_id": "agent-440edcdee9cf85364887fc1b84950a06c190133a",
+          "run_id": "run-3529498a-ab65-45e2-9d38-497d624a5e93",
+          "finished_at": "2026-05-01T18:10:28.399Z",
+          "completion_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\c02dc943-9ae8-4348-9278-fee1d2a7ef59.completion.json",
+          "verification_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f8eef04b-a483-443f-ab63-b91eca76cda8.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "qa_verify",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "09cc4806-024b-4ce3-b8e6-0827f0c25647",
+          "started_at": "2026-05-01T18:10:43.994Z",
+          "sdk_agent_id": "agent-4507d875da3ebb53f018df2dcde5db7978296a3a",
+          "run_id": "run-b6eab6d6-7c28-4b3b-92a4-363c388faae9",
+          "finished_at": "2026-05-01T18:13:39.482Z",
+          "completion_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\09cc4806-024b-4ce3-b8e6-0827f0c25647.completion.json",
+          "verification_receipt_path": "c:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\e18c43a6-4d5e-419d-b577-33c66d2b2573.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 03 prompt mentions a human gate",
+    "Agent 06 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

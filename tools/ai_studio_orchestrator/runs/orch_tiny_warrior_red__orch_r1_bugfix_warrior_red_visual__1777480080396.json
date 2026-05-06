@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T16:28:00.394Z",
+  "updated_at": "2026-04-29T16:30:32.188Z",
+  "sprint_id": "orch_tiny_warrior_red",
+  "round_id": "orch_r1_bugfix_warrior_red_visual",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wave1",
+      "parallel": false,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "09",
+          "status": "error",
+          "model": "composer-2",
+          "started_at": "2026-04-29T16:28:00.420Z",
+          "error": "Matching agent log entry was not found.",
+          "sdk_agent_id": "agent-cc05af5a3a57cf614580b29dd52ae85aff6f3097",
+          "run_id": "run-5351122c-0a18-4df4-8a41-f7436dd50db4",
+          "finished_at": "2026-04-29T16:30:17.042Z",
+          "log_check": "failed"
+        }
+      ]
+    },
+    {
+      "id": "qa",
+      "parallel": false,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "pending",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: visual_approval",
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 09 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate",
+    "Stopped after wave1: Agent 09 status=error"
+  ]
+}

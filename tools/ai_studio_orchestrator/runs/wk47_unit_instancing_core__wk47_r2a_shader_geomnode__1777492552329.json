@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T19:55:52.327Z",
+  "updated_at": "2026-04-29T19:59:10.958Z",
+  "sprint_id": "wk47_unit_instancing_core",
+  "round_id": "wk47_r2a_shader_geomnode",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wave_r2a",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "c936a1ad-8023-4b01-b68e-df5878962c2d",
+          "started_at": "2026-04-29T19:55:52.352Z",
+          "sdk_agent_id": "agent-f9311c8986818e3528080b695dee231183dd33c8",
+          "run_id": "run-137e80bb-b721-4cfb-842b-2422f1da4d1a",
+          "finished_at": "2026-04-29T19:58:53.208Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\c936a1ad-8023-4b01-b68e-df5878962c2d.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\8804fc15-2d8f-498f-849b-0e8857521c60.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push"
+  ]
+}

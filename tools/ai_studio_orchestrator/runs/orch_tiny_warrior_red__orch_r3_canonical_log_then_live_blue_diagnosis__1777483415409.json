@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T17:23:35.406Z",
+  "updated_at": "2026-04-29T17:29:29.900Z",
+  "sprint_id": "orch_tiny_warrior_red",
+  "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wave_diagnose",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "20bb24ec-0529-44e4-be72-a2c9818ea091",
+          "started_at": "2026-04-29T17:23:35.434Z",
+          "sdk_agent_id": "agent-9e08c11480cb0e679de8b7207b5d4820ddb0aee1",
+          "run_id": "run-722c21f7-0cfc-4f4a-b581-f4e432bd6a34",
+          "finished_at": "2026-04-29T17:25:17.997Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\20bb24ec-0529-44e4-be72-a2c9818ea091.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\32037bc5-db86-4df6-a5b3-24433d033d8a.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "wave_art",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "09",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "e2b73169-159b-4017-bc6d-5a646f5a2dc4",
+          "started_at": "2026-04-29T17:25:36.614Z",
+          "sdk_agent_id": "agent-28b4a060f107d30fd7e984bdabdc9679494728c2",
+          "run_id": "run-45ced313-a8c2-46a9-8452-0d40ba0d3a19",
+          "finished_at": "2026-04-29T17:27:02.545Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\e2b73169-159b-4017-bc6d-5a646f5a2dc4.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\73dd1f46-7fcb-449f-9546-b14b7ace1ebe.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "qa",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "410f593d-025b-457f-a8ba-1683a5120896",
+          "started_at": "2026-04-29T17:27:41.240Z",
+          "sdk_agent_id": "agent-e9731c3e58dd215c3c8b89235c43ffa5872f0ed6",
+          "run_id": "run-36e979d2-3534-4958-8f48-8df8036e9458",
+          "finished_at": "2026-04-29T17:29:14.671Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\410f593d-025b-457f-a8ba-1683a5120896.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\2ef24cea-c1d2-48ad-ab3e-cd3fa1cb4eef.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: visual_approval",
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 03 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

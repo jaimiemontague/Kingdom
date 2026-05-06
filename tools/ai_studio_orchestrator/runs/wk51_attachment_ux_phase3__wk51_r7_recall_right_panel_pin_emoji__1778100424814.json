@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-06T20:47:04.811Z",
+  "updated_at": "2026-05-06T20:52:01.022Z",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "runtime": "cloud",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk51_r7_impl",
+      "parallel": true,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "error",
+          "model": "composer-2",
+          "completion_token": "a8aff6d7-d0ed-4761-9919-ff1b1ddc9080",
+          "started_at": "2026-05-06T20:47:04.824Z",
+          "error": "Completion receipt was not written for token a8aff6d7-d0ed-4761-9919-ff1b1ddc9080.",
+          "sdk_agent_id": "bc-2682edfd-2709-4356-8583-a3c479f50d9d",
+          "run_id": "run-fa466789-019b-4753-84bb-4621d57abd15",
+          "finished_at": "2026-05-06T20:50:27.320Z"
+        },
+        {
+          "agent_id": "08",
+          "status": "error",
+          "model": "composer-2",
+          "completion_token": "0628aae5-7bdc-4582-8ca1-0d4fcc47cd95",
+          "started_at": "2026-05-06T20:47:04.824Z",
+          "error": "Completion receipt was not written for token 0628aae5-7bdc-4582-8ca1-0d4fcc47cd95.",
+          "sdk_agent_id": "bc-ced5db59-1bb3-4a19-b55e-a926cdbcd270",
+          "run_id": "run-537b978f-b641-4c9d-9812-39404da89177",
+          "finished_at": "2026-05-06T20:51:00.669Z"
+        }
+      ]
+    },
+    {
+      "id": "wk51_r7_verify",
+      "parallel": false,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "pending",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: optional_playtest_recall_right_panel_and_pin_emoji",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate",
+    "Stopped after wk51_r7_impl: Agent 03 status=error"
+  ]
+}

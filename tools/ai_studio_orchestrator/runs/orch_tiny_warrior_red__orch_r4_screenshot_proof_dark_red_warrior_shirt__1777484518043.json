@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T17:41:58.034Z",
+  "updated_at": "2026-04-29T17:41:58.055Z",
+  "sprint_id": "orch_tiny_warrior_red",
+  "round_id": "orch_r4_screenshot_proof_dark_red_warrior_shirt",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": true,
+  "waves": [
+    {
+      "id": "wave_art",
+      "parallel": false,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "09",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    },
+    {
+      "id": "qa",
+      "parallel": false,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: screenshot_proof_before_agent_09_receipt",
+    "human gate declared in PM hub: visual_approval",
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 09 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

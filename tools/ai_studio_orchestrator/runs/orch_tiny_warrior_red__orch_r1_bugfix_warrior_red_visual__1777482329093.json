@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T17:05:29.086Z",
+  "updated_at": "2026-04-29T17:06:59.648Z",
+  "sprint_id": "orch_tiny_warrior_red",
+  "round_id": "orch_r1_bugfix_warrior_red_visual",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "selected",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "cf2a1602-97f4-4f69-b8f8-ca27acc97dd8",
+          "started_at": "2026-04-29T17:05:29.118Z",
+          "sdk_agent_id": "agent-5fb34bcb404120db1989760185a632d9a5b1fd64",
+          "run_id": "run-67b09dc4-e70d-4f24-b710-a639c31f23b6",
+          "finished_at": "2026-04-29T17:06:39.932Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\cf2a1602-97f4-4f69-b8f8-ca27acc97dd8.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\2036b68b-bf25-4ea8-b557-55f5fcaabeda.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: visual_approval",
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

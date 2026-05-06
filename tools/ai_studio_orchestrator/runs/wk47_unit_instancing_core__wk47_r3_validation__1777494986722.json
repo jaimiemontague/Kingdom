@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T20:36:26.719Z",
+  "updated_at": "2026-04-29T20:38:43.981Z",
+  "sprint_id": "wk47_unit_instancing_core",
+  "round_id": "wk47_r3_validation",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "batch_1_parallel",
+      "parallel": true,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "10",
+          "status": "needs_pm_decision",
+          "model": "composer-2",
+          "completion_token": "5bfca280-3733-49f0-a246-5199a657bbba",
+          "started_at": "2026-04-29T20:36:26.749Z",
+          "error": "Verifier requested PM decision: Worker reported blocked: Perf stress PASS inst-off (200/500 units). Inst-on crashes: Geom missing set_instance_count (Agent 09/Panda fix needed).",
+          "sdk_agent_id": "agent-0c5723989ceed5e7931cfd2920f1e21531b55196",
+          "run_id": "run-7ad7ea77-b815-4e36-b340-c6175ca3f66a",
+          "finished_at": "2026-04-29T20:38:14.002Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\5bfca280-3733-49f0-a246-5199a657bbba.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9f75a9bb-33e0-4ebf-80f4-478ba59b4096.verification.json",
+          "verification_status": "needs_pm",
+          "verification_reason": "Worker reported blocked: Perf stress PASS inst-off (200/500 units). Inst-on crashes: Geom missing set_instance_count (Agent 09/Panda fix needed).",
+          "log_check": "skipped"
+        },
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "d176d56e-7fee-47a9-ae32-00355c3aace0",
+          "started_at": "2026-04-29T20:36:26.749Z",
+          "sdk_agent_id": "agent-49a8942e4d9e40f48843a0ff03e91a8726855b9d",
+          "run_id": "run-b63fcad1-f1a7-47c7-9a5d-c1a6e32d66e2",
+          "finished_at": "2026-04-29T20:38:24.674Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\d176d56e-7fee-47a9-ae32-00355c3aace0.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9122a885-3950-4ae0-ab94-383d1471b4d8.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Stopped after batch_1_parallel: Agent 10 status=needs_pm_decision"
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-01T17:17:13.839Z",
+  "updated_at": "2026-05-01T17:28:30.263Z",
+  "sprint_id": "wk50_llm_context_direct_prompts",
+  "round_id": "wk50_r17_direct_prompt_integration_tests",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "write_tests",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "4d2897ac-3530-4fce-9e7c-2b3429f73db7",
+          "started_at": "2026-05-01T17:17:13.864Z",
+          "sdk_agent_id": "agent-3e7c923b3d408b7135cddbea42326f307eb2c44d",
+          "run_id": "run-4bda6fe0-01bc-497c-ab4d-da83ab6bceac",
+          "finished_at": "2026-05-01T17:22:25.023Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\4d2897ac-3530-4fce-9e7c-2b3429f73db7.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9c391f20-3f5f-4191-8d80-1935effa7186.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "fix_bugs",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "06",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "8c88c614-e9f3-4d03-bf1e-c70a495d457a",
+          "started_at": "2026-05-01T17:22:43.849Z",
+          "sdk_agent_id": "agent-1d696d846133c449e146f986095f5db2628d4cd0",
+          "run_id": "run-439784df-09a6-4e3d-9b06-6906233b5c1c",
+          "finished_at": "2026-05-01T17:25:35.314Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\8c88c614-e9f3-4d03-bf1e-c70a495d457a.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\4857f9c9-0800-46ea-beee-4b43ced029b5.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "verify_tests",
+      "parallel": false,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "11_verify",
+          "status": "needs_log_repair",
+          "model": "composer-2",
+          "completion_token": "a86aeb48-c4ca-4de6-8513-6f304be90553",
+          "started_at": "2026-05-01T17:25:50.900Z",
+          "error": "Verifier requested log repair: agent_11_verify log file not found in C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs",
+          "sdk_agent_id": "agent-c83b4c972a8a54015c10e66cbded06d6b130e2d3",
+          "run_id": "run-ec005e80-68fd-4d22-bc4c-3e05857488aa",
+          "finished_at": "2026-05-01T17:28:06.601Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a86aeb48-c4ca-4de6-8513-6f304be90553.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\51ed4f06-2018-45f6-96ee-0b0da57467c5.verification.json",
+          "verification_status": "needs_log_repair",
+          "verification_reason": "agent_11_verify log file not found in C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs",
+          "log_check": "failed",
+          "log_check_reason": "agent_11_verify log file not found in C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "Agent 11 prompt mentions a human gate",
+    "Stopped after verify_tests: Agent 11_verify status=needs_log_repair"
+  ]
+}

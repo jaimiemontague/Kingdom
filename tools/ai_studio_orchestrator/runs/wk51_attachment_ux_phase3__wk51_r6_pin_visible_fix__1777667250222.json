@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-01T20:27:30.220Z",
+  "updated_at": "2026-05-01T20:34:01.507Z",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r6_pin_visible_fix",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk51_r6_hud_fix",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "54bd1ddd-8aa3-4945-bbff-e4f559b87712",
+          "started_at": "2026-05-01T20:27:30.246Z",
+          "sdk_agent_id": "agent-323bda05499a77f0f6da5b2db1fed9a5c045413e",
+          "run_id": "run-699b897c-85eb-4e55-ad74-78bb0b7ee6c5",
+          "finished_at": "2026-05-01T20:29:58.178Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\54bd1ddd-8aa3-4945-bbff-e4f559b87712.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\65b74bb9-b6af-4db3-b7e5-a85d8c2223c3.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "wk51_r6_verify_parallel",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "ceac7997-df3f-4401-88c0-7f97556583bd",
+          "started_at": "2026-05-01T20:30:13.707Z",
+          "sdk_agent_id": "agent-f021b3a7e615f4d8e3190a7fdab43919f6f2f58f",
+          "run_id": "run-859e0ef2-0641-4829-af65-47d362deb0f4",
+          "finished_at": "2026-05-01T20:32:29.812Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\ceac7997-df3f-4401-88c0-7f97556583bd.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\04ccd2bc-bb88-4856-aa28-ee0e5f2e1692.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "807298ef-72f4-4bbf-ab57-32211bbf4eb8",
+          "started_at": "2026-05-01T20:30:13.707Z",
+          "sdk_agent_id": "agent-d7f6eedf4248772fdbefa8f896774d19e333f1dd",
+          "run_id": "run-a688cd4f-c3c0-4de8-948e-18b82ef6f47f",
+          "finished_at": "2026-05-01T20:33:44.898Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\807298ef-72f4-4bbf-ab57-32211bbf4eb8.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\8ec9337d-a8c5-416d-ac18-85e2d60ceb45.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: optional_playtest_pin_visible_ursina",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

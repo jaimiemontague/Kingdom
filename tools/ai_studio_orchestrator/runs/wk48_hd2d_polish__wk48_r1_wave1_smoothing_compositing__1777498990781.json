@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T21:43:10.774Z",
+  "updated_at": "2026-04-29T21:45:51.451Z",
+  "sprint_id": "wk48_hd2d_polish",
+  "round_id": "wk48_r1_wave1_smoothing_compositing",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "selected",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "b22512a6-e4a0-4514-9b70-1c8d04df83e9",
+          "started_at": "2026-04-29T21:43:10.807Z",
+          "sdk_agent_id": "agent-1e4584302fa5bf3809a98bc49a1de96940134064",
+          "run_id": "run-09507886-6e2a-4baf-b074-405d1432a076",
+          "finished_at": "2026-04-29T21:45:34.358Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\b22512a6-e4a0-4514-9b70-1c8d04df83e9.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\36824570-469f-4ef2-9171-0acc3b691f35.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: visual_approval",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 03 prompt mentions a human gate"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T19:22:30.156Z",
+  "updated_at": "2026-04-29T19:22:30.171Z",
+  "sprint_id": "wk47_unit_instancing_core",
+  "round_id": "wk47_r1_baseline_atlas",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": true,
+  "waves": [
+    {
+      "id": "wave_1",
+      "parallel": true,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "12",
+          "status": "dry_run",
+          "model": "composer-2"
+        },
+        {
+          "agent_id": "09",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 12 prompt mentions a human gate"
+  ]
+}

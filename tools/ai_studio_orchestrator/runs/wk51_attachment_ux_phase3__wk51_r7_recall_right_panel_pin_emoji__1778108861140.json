@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-06T23:07:41.138Z",
+  "updated_at": "2026-05-06T23:18:59.659Z",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "runtime": "cloud",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk51_r7_impl",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "27b88ead-5ee3-472d-8d44-dd3b7c45ecd3",
+          "started_at": "2026-05-06T23:07:41.148Z",
+          "sdk_agent_id": "bc-922a4fa7-fa77-401b-8859-ca5070c1a26d",
+          "run_id": "run-151c4f27-6e61-4f8c-806e-fc29f599883f",
+          "duration_ms": 178945,
+          "result_excerpt": "## Status (Agent 03)\n\n**Onboarding:** Read `AGENTS.md`, `01-studio-onboarding.mdc`, `10-orchestrator-logging-contract.mdc`, `agent-03-techdir-onboarding.mdc`, PM hub `wk51_attachment_ux_phase3` / `wk51_r7_recall_right_panel_pin_emoji`, and your existing `wk51_r6` log entry.\n\n**Implementation:** In `apply_hud_pin_action` → `recall_pinned_hero`, after `center_camera_on_world_pos`, the same HUD path as `try_select_hero` runs: `right_panel_visible = True` and `_micro_view.enter_hero_focus(target)`. `center_camera_on_world_pos` already ends with `setattr(self, \"_ursina_hud_force_upload\", True)`, so no extra Ursina change.\n\n```1401:1410:game/engine.py\n            self.selected_hero = target\n            self.center_camera_on_world_pos(float(target.x), float(target.y))\n            if hasattr(self, \"hud\"):\n                try:\n                    self.hud.right_panel_visible = True\n                    if hasattr(self.hud, \"_micro_view\"):\n                        self.hud._micro_view.enter_hero_focus(target)\n                except Exception:\n                    pass\n            return\n```\n\n**Agent log:** `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` → `sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]` (orchestrator fields filled; `status: \"done\"`).\n\n**Commands & exit codes:**\n\n| Command | Exit |\n|--------|------|\n| `npm --prefix tools/ai_studio_orchestrator install --silent` (after `apt-get install nodejs npm`; image had no `npm` at first) | 0 |\n| `python3 -m pip install -q -r requirements.txt` (image had no `pytest` until this) | 0 |\n| `python3 tools/qa_smoke.py --quick` | 0 (`DONE: PASS`) |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` | 0 |\n| `npx -y tsx \"tools/ai_studio_orchestrator/src/cli.ts\" complete ... --auto-push` | 0 (receipt: `tools/ai_studio_orchestrator/runs/inbox/27b88ead-5ee3-472d-8d44-dd3b7c45ecd3.completion.json`) |\n\n**Git:** Commits `ba12825` (fix + log) and `66cd8b8` (orchestrator receipt) are on **remote `main`** (`origin/main` at `66cd8b8`). A draft PR from `cursor/wk51-r7-recall-right-panel-a26d` was not created because it matches `main` after the orchestrator push.\n\n**Blockers:** None.",
+          "finished_at": "2026-05-06T23:11:23.474Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\27b88ead-5ee3-472d-8d44-dd3b7c45ecd3.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\9665af17-cd2e-4bba-883d-21f2ffe4a520.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "f21e4946-95ce-43f6-970b-0429629ffbe9",
+          "started_at": "2026-05-06T23:07:41.149Z",
+          "sdk_agent_id": "bc-6323ce61-a419-4cdc-b567-437790813c60",
+          "run_id": "run-fda6be16-be13-47d8-ab98-3745ebf8fdaa",
+          "finished_at": "2026-05-06T23:11:57.152Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f21e4946-95ce-43f6-970b-0429629ffbe9.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\7c9a7648-4b27-42a9-adcc-0dcbde03859c.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "wk51_r7_verify",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "03f5f30f-56b4-48cf-84b1-8c082f81d7b1",
+          "started_at": "2026-05-06T23:13:49.238Z",
+          "sdk_agent_id": "bc-1f8818b6-c37c-44f6-a14d-79bd4d8fa2b3",
+          "run_id": "run-dfade6f3-914f-4a87-aa73-c016c3dc6baa",
+          "finished_at": "2026-05-06T23:17:17.145Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\03f5f30f-56b4-48cf-84b1-8c082f81d7b1.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\ede3255b-0005-4e3e-b3a3-abae7cd7799a.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: optional_playtest_recall_right_panel_and_pin_emoji",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

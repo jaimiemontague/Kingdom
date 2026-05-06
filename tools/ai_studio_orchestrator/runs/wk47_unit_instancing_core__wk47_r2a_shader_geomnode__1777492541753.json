@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T19:55:41.745Z",
+  "updated_at": "2026-04-29T19:55:41.766Z",
+  "sprint_id": "wk47_unit_instancing_core",
+  "round_id": "wk47_r2a_shader_geomnode",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": true,
+  "waves": [
+    {
+      "id": "wave_r2a",
+      "parallel": false,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push"
+  ]
+}

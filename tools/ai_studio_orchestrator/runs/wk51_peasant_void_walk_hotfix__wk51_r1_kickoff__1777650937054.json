@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-01T15:55:37.047Z",
+  "updated_at": "2026-05-01T15:55:37.064Z",
+  "sprint_id": "wk51_peasant_void_walk_hotfix",
+  "round_id": "wk51_r1_kickoff",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": true,
+  "waves": [
+    {
+      "id": "fix_peasant_bug",
+      "parallel": false,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "05",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    },
+    {
+      "id": "verify_fix",
+      "parallel": false,
+      "status": "dry_run",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "dry_run",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "Agent 05 prompt mentions a human gate"
+  ]
+}

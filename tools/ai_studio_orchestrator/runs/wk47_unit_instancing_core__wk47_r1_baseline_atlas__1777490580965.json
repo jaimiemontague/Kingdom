@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-04-29T19:23:00.963Z",
+  "updated_at": "2026-04-29T19:33:42.577Z",
+  "sprint_id": "wk47_unit_instancing_core",
+  "round_id": "wk47_r1_baseline_atlas",
+  "runtime": "local",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wave_1",
+      "parallel": true,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "12",
+          "status": "needs_log_repair",
+          "model": "composer-2",
+          "completion_token": "f5e62319-8ed4-46a0-9c6f-8a886a76da29",
+          "started_at": "2026-04-29T19:23:00.988Z",
+          "error": "Verifier requested log repair: agent_12_ToolsDevEx_Lead.json missing sprints[\"wk47_unit_instancing_core\"]",
+          "sdk_agent_id": "agent-0ec21bcdad2231f9faba9938fa1e55f471228609",
+          "run_id": "run-f29b3352-3297-4d8c-879c-83048e34cc92",
+          "finished_at": "2026-04-29T19:32:34.517Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f5e62319-8ed4-46a0-9c6f-8a886a76da29.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\279135d0-36f8-4fd7-a359-2e3adbc523d7.verification.json",
+          "verification_status": "needs_log_repair",
+          "verification_reason": "agent_12_ToolsDevEx_Lead.json missing sprints[\"wk47_unit_instancing_core\"]",
+          "log_check": "failed",
+          "log_check_reason": "agent_12_ToolsDevEx_Lead.json missing sprints[\"wk47_unit_instancing_core\"]"
+        },
+        {
+          "agent_id": "09",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "a1985554-ca1e-4f80-b9da-01666a033506",
+          "started_at": "2026-04-29T19:23:00.988Z",
+          "sdk_agent_id": "agent-afd31ec638bd213dee96a70c1e329052117ce806",
+          "run_id": "run-69f78a2f-0c6e-4cf5-904e-cdfae7854ad3",
+          "finished_at": "2026-04-29T19:24:28.517Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a1985554-ca1e-4f80-b9da-01666a033506.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f5833c04-7fb7-4f2e-be04-0741830f0155.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 12 prompt mentions a human gate",
+    "Stopped after wave_1: Agent 12 status=needs_log_repair"
+  ]
+}
