@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "03f5f30f-56b4-48cf-84b1-8c082f81d7b1",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "11",
+  "status": "done",
+  "summary": "WK51 R7: qa_smoke PASS, validate_assets 0 errors, ui_panels capture shows pin emoji and right HERO_FOCUS column; Recall reopen flow left for Jaimie manual.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+  "claimed_log_round": "sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]",
+  "timestamp": "2026-05-06T23:16:49.335Z"
+}
