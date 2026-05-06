@@ -102,3 +102,44 @@ Report back with:
 - If you need another agent’s change first: mark yourself **blocked** and state exactly what you’re waiting on.
 - If you discover extra work: file it as a **new ticket**; do not “just do it” unless you are the owner and it is required to keep gates green.
 
+
+---
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- **Python 3.13** is installed via deadsnakes PPA; the venv lives at `/workspace/.venv`.
+- Activate with: `source /workspace/.venv/bin/activate`
+- **Ursina** (Panda3D-based 3D engine) is installed but **not** in `requirements.txt`. The update script installs it separately.
+- **No audio hardware** — ALSA/PulseAudio warnings are expected and harmless. The game falls back to `NullAudioManager`.
+
+### Display
+
+- A virtual framebuffer (`Xvfb :99`) must be running for any pygame or Ursina rendering.
+- Start it: `Xvfb :99 -screen 0 1920x1080x24 &`
+- Set: `export DISPLAY=:99`
+- The headless QA tools (`observe_sync.py`, `qa_smoke.py`) use `SDL_VIDEODRIVER=dummy` internally so they work even without Xvfb, but interactive/capture runs and `capture_screenshots.py` need the display.
+
+### Running the game
+
+- **2D pygame** (used for screenshots/captures/headless testing): `python main.py --renderer pygame --no-llm`
+- **3D Ursina** (default renderer): `python main.py --no-llm`
+- Both work on DISPLAY=:99. Use `--no-llm` or `--provider mock` to avoid needing API keys.
+
+### Key commands (from repo root)
+
+| Task | Command |
+|------|---------|
+| QA smoke (mandatory gate) | `python tools/qa_smoke.py --quick` |
+| Determinism guard | `python tools/determinism_guard.py` |
+| Asset validation | `python tools/validate_assets.py --report` |
+| Unit tests | `python -m pytest tests/ -q` |
+| Capture screenshots | `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/verify --size 1920x1080 --ticks 120` |
+| Headless observer | `python tools/observe_sync.py --seconds 10 --heroes 5 --seed 3 --log-every 120 --realtime --bounty` |
+
+### Gotchas
+
+- An archived test file at `tools/archive/root_wk40_stage5/test_llm.py` requires `OPENAI_API_KEY` at import time. Run `pytest tests/` (not `pytest` from root) to avoid collection errors.
+- The game window is 1920x1080 borderless by default. Ensure Xvfb screen is at least that size.
+- LLM API keys are **optional** — the game is fully functional with `--no-llm` or `--provider mock`.
