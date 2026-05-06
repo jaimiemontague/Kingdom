@@ -709,12 +709,18 @@ function buildCompletionCommand(
 ): string {
   const logPath = agentLogPath(agent.id);
   const logRound = `sprints["${context.sprintId}"].rounds["${context.roundId}"]`;
+  const isCloud = options.runtime === "cloud";
+  // Cloud agents need forward slashes and relative paths, not local Windows absolute paths.
+  const scriptPath = isCloud ? "tools/ai_studio_orchestrator/src/cli.ts" : "tools\\ai_studio_orchestrator\\src\\cli.ts";
+  const cwdArg = isCloud ? "." : options.cwd;
+  const logPathArg = isCloud ? logPath.replace(/\\/g, "/") : logPath;
+
   const parts = [
     "npx tsx",
-    quotePs("tools\\ai_studio_orchestrator\\src\\cli.ts"),
+    quotePs(scriptPath),
     "complete",
     "--cwd",
-    quotePs(options.cwd),
+    quotePs(cwdArg),
     "--sprint",
     quotePs(context.sprintId),
     "--round",
@@ -728,7 +734,7 @@ function buildCompletionCommand(
     "--summary",
     quotePs(`Agent ${agent.id} completed assigned work. Update this summary if blocked or failed.`),
     "--log-path",
-    quotePs(logPath),
+    quotePs(logPathArg),
     "--log-round",
     quotePs(logRound),
   ];
@@ -741,14 +747,19 @@ function buildCompletionCommand(
 }
 
 function buildVerificationCommand(options: CliOptions, receiptPath: string, token: string): string {
+  const isCloud = options.runtime === "cloud";
+  const scriptPath = isCloud ? "tools/ai_studio_orchestrator/src/cli.ts" : "tools\\ai_studio_orchestrator\\src\\cli.ts";
+  const cwdArg = isCloud ? "." : options.cwd;
+  const receiptPathArg = isCloud ? receiptPath.replace(/\\/g, "/") : receiptPath;
+
   const parts = [
     "npx tsx",
-    quotePs("tools\\ai_studio_orchestrator\\src\\cli.ts"),
+    quotePs(scriptPath),
     "verify-receipt",
     "--cwd",
-    quotePs(options.cwd),
+    quotePs(cwdArg),
     "--receipt",
-    quotePs(receiptPath),
+    quotePs(receiptPathArg),
     "--token",
     quotePs(token),
   ];
