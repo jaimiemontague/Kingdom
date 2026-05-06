@@ -138,6 +138,13 @@ Report back with:
 | Capture screenshots | `python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/verify --size 1920x1080 --ticks 120` |
 | Headless observer | `python tools/observe_sync.py --seconds 10 --heroes 5 --seed 3 --log-every 120 --realtime --bounty` |
 
+### AI Studio Orchestrator
+
+- Located at `tools/ai_studio_orchestrator/` (Node.js / TypeScript).
+- Requires Node.js >= 22 (installed via NodeSource).
+- Dependencies installed via `npm --prefix tools/ai_studio_orchestrator install`.
+- Run with: `npx tsx tools/ai_studio_orchestrator/src/cli.ts <command>`.
+
 ### Gotchas
 
 - An archived test file at `tools/archive/root_wk40_stage5/test_llm.py` requires `OPENAI_API_KEY` at import time. Run `pytest tests/` (not `pytest` from root) to avoid collection errors.
