@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "f949c6bc-6144-4c2a-aab3-e3d3509119ba",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "Pin HUD control: 📌 via cached emoji font, unpinned 50% alpha, fallback to circle+P; qa_smoke PASS; ui_panels capture shows pin in hero header.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]",
+  "timestamp": "2026-05-06T22:11:34.184Z"
+}
