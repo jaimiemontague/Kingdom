@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { execSync } from "node:child_process";
 import { buildWorkerPrompt, buildPmSynthesisPrompt, buildVerifierPrompt } from "./prompt.js";
 import {
   buildWaves,
@@ -115,8 +116,13 @@ async function runCommand(options: CliOptions): Promise<void> {
   });
   validateDoNotSend(context.sendList, waves, options.agents);
 
+  // Cloud pre-flight: commit+push planning files so cloud agents read the latest PM hub.
+  if (options.runtime === "cloud" && !options.dryRun) {
+    cloudPreflightCommit(options.cwd, options.sprint, options.round);
+  }
+
   const dirty = warnIfDirtyTree(options.cwd);
-  if (dirty) {
+  if (dirty && options.runtime !== "cloud") {
     console.error("[guard] Working tree has existing changes. The orchestrator will not commit or push.");
     console.error(dirty);
   }
@@ -351,7 +357,7 @@ async function runOneAgent(
         cwd: options.cwd,
         runtime: options.runtime,
         name: `Kingdom Agent ${agent.id} - ${context.sprintId}/${context.roundId}`,
-        prompt: buildWorkerPrompt(context, agent, buildCompletionCommand(options, context, agent, completionToken)),
+        prompt: buildWorkerPrompt(context, agent, buildCompletionCommand(options, context, agent, completionToken), options.runtime),
         cloudRepoUrl: options.cloudRepoUrl,
         cloudBranch: options.cloudBranch,
       });
@@ -488,6 +494,33 @@ function validateDoNotSend(
         throw new Error(`Agent ${agent.id} is listed in do_not_send but was selected by the wave plan.`);
       }
     }
+  }
+}
+
+/**
+ * Cloud pre-flight: commit+push all dirty .cursor/plans/** files (including PM hub)
+ * so cloud agents clone a repo that has the latest round instructions.
+ */
+function cloudPreflightCommit(cwd: string, sprintId: string, roundId: string): void {
+  try {
+    const dirty = execSync("git status --short .cursor/plans/", { cwd, encoding: "utf8" }).trim();
+    if (!dirty) {
+      console.log("[cloud pre-flight] .cursor/plans/ is clean — no commit needed.");
+      return;
+    }
+    console.log("[cloud pre-flight] Dirty planning files detected:");
+    console.log(dirty);
+    console.log("[cloud pre-flight] Committing+pushing so cloud agents see the latest PM hub...");
+    execSync("git add .cursor/plans/", { cwd, stdio: "inherit" });
+    execSync(
+      `git commit -m "PM hub pre-flight: ${sprintId}/${roundId}"`,
+      { cwd, stdio: "inherit" },
+    );
+    execSync("git push", { cwd, stdio: "inherit" });
+    console.log("[cloud pre-flight] ✓ PM hub committed and pushed to GitHub.");
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(`[cloud pre-flight] Failed to commit+push planning files: ${msg}`);
   }
 }
 

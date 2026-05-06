@@ -1,8 +1,58 @@
-import { REQUIRED_MODEL_ID, type AgentRunSpec, type CompletionReceipt, type RoundContext } from "./types.js";
+import { REQUIRED_MODEL_ID, type AgentRunSpec, type CompletionReceipt, type RoundContext, type RuntimeMode } from "./types.js";
 
-export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, completionCommand: string): string {
+export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, completionCommand: string, runtime: RuntimeMode = "local"): string {
+  const isCloud = runtime === "cloud";
+
+  // Cloud-only bootstrap block — must run FIRST before any other step.
+  const cloudBootstrap = isCloud ? [
+    "══════════════════════════════════════════════════════",
+    "CLOUD BOOTSTRAP — RUN THESE COMMANDS BEFORE ANYTHING ELSE",
+    "══════════════════════════════════════════════════════",
+    "You are running in a cloud environment. The orchestrator CLI must be installed before you can signal completion.",
+    "```powershell",
+    "npm --prefix tools/ai_studio_orchestrator install --silent",
+    "```",
+    "Do not proceed with your assignment until npm install completes successfully.",
+    "",
+  ] : [];
+
+  // Receipt command block — shown prominently at the top AND repeated at the end.
+  const receiptBlock = [
+    "══════════════════════════════════════════════════════",
+    "⚠️  REQUIRED COMPLETION COMMAND — DO NOT SKIP",
+    "══════════════════════════════════════════════════════",
+    "This is the LAST thing you do before ending your session.",
+    "Run from the repo root AFTER updating your agent log AND" + (isCloud ? " committing+pushing your work (see CLOUD COMMIT CONTRACT below)." : " running all required gates."),
+    "Do not change --token, --sprint, --round, or --agent. You may update --summary.",
+    "```powershell",
+    completionCommand,
+    "```",
+    "If you do not run this command, the orchestrator cannot proceed to the next wave.",
+  ];
+
+  // Cloud commit contract — agents must push their edits back to GitHub.
+  const cloudCommitContract = isCloud ? [
+    "",
+    "══════════════════════════════════════════════════════",
+    "CLOUD COMMIT CONTRACT (cloud runtime only)",
+    "══════════════════════════════════════════════════════",
+    "After completing your work and BEFORE running the completion command:",
+    "1. Stage all your changes:",
+    "   git add -A",
+    "2. Commit with a descriptive message:",
+    `   git commit -m "Agent ${agent.id} ${context.sprintId}/${context.roundId}: <one-line summary>"`,
+    "3. Push to origin:",
+    "   git push",
+    "If push is rejected (branch protection), push to a feature branch:",
+    `   git push origin HEAD:agents/${agent.id}-${context.sprintId}-${context.roundId}`,
+    "If nothing changed (consult-only), skip the commit but still run the completion command.",
+  ] : [];
+
   return [
     `You are Agent ${agent.id}. Please onboard first, then follow these instructions.`,
+    "",
+    ...cloudBootstrap,
+    ...receiptBlock,
     "",
     "MANDATORY ONBOARDING ORDER:",
     "1. Read `AGENTS.md`.",
@@ -21,8 +71,10 @@ export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, co
     "- Write only to files you own unless your assignment explicitly allows a cross-domain change.",
     "- Update your own agent log exactly as required by `.cursor/rules/10-orchestrator-logging-contract.mdc`.",
     "- Your run is not complete until your log exists at `sprints[SPRINT_ID].rounds[ROUND_ID]` and validates with `python -m json.tool`.",
-    "- Do not commit, push, bump versions, or ask Jaimie for manual playtest unless your PM prompt requires a human gate.",
-    "- Before your final response, run the exact completion command below. This receipt is the orchestrator trigger for the verifier and next wave.",
+    "- Do not bump versions or ask Jaimie for manual playtest unless your PM prompt requires a human gate.",
+    isCloud
+      ? "- You MUST commit+push your work AND run the completion command. See CLOUD COMMIT CONTRACT below."
+      : "- Before your final response, run the exact completion command shown above. This receipt is the orchestrator trigger for the verifier and next wave.",
     "",
     "SPRINT:",
     context.sprintId,
@@ -41,9 +93,11 @@ export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, co
     "- Include exact commands and exit codes.",
     "- Include the agent log path and exact sprint/round entry you wrote.",
     "- If blocked, state the owner agent or human gate needed.",
+    ...cloudCommitContract,
     "",
-    "REQUIRED COMPLETION COMMAND:",
-    "Run this from the repo root after updating your log. Replace only the summary text if needed; do not change token/sprint/round/agent.",
+    "══════════════════════════════════════════════════════",
+    "⚠️  REMINDER — REQUIRED COMPLETION COMMAND (run this last):",
+    "══════════════════════════════════════════════════════",
     "```powershell",
     completionCommand,
     "```",
