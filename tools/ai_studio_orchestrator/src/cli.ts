@@ -258,21 +258,41 @@ async function completeCommand(options: CliOptions): Promise<void> {
   }
 
   // Auto-push: commit+push all agent work before writing the receipt.
-  // This ensures the orchestrator receives the receipt only after the code is on GitHub.
+  // Uses a rebase-retry loop to handle parallel wave agents pushing to the same branch concurrently.
   if (options.autoPush) {
     console.log("[auto-push] Staging and committing agent work...");
     try {
       const dirty = execSync("git status --short", { cwd: options.cwd, encoding: "utf8" }).trim();
-      if (dirty) {
+      if (!dirty) {
+        console.log("[auto-push] Nothing to commit — working tree clean.");
+      } else {
         execSync("git add -A", { cwd: options.cwd, stdio: "inherit" });
         execSync(
           `git commit -m "Agent ${options.agent} ${options.sprint}/${options.round}: automated commit by orchestrator complete command"`,
           { cwd: options.cwd, stdio: "inherit" },
         );
-        execSync("git push", { cwd: options.cwd, stdio: "inherit" });
-        console.log("[auto-push] ✓ Agent work committed and pushed to GitHub.");
-      } else {
-        console.log("[auto-push] Nothing to commit — working tree clean.");
+
+        // Push with rebase-retry: parallel agents in the same wave may race to push
+        // to origin/main. If rejected, rebase on top of whatever the other agent pushed
+        // (they touch different files so rebase should always be conflict-free) and retry.
+        const MAX_PUSH_ATTEMPTS = 3;
+        let pushed = false;
+        for (let attempt = 1; attempt <= MAX_PUSH_ATTEMPTS; attempt += 1) {
+          try {
+            execSync("git push", { cwd: options.cwd, stdio: "inherit" });
+            pushed = true;
+            break;
+          } catch {
+            if (attempt === MAX_PUSH_ATTEMPTS) break;
+            console.log(`[auto-push] Push rejected (concurrent agent push). Rebasing and retrying (${attempt}/${MAX_PUSH_ATTEMPTS - 1})...`);
+            execSync("git pull --rebase origin main", { cwd: options.cwd, stdio: "inherit" });
+          }
+        }
+        if (pushed) {
+          console.log("[auto-push] ✓ Agent work committed and pushed to GitHub.");
+        } else {
+          throw new Error("Push failed after all retry attempts.");
+        }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
