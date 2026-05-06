@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "3cad882d-1752-408b-b0d7-4400859d1af2",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "03",
+  "status": "done",
+  "summary": "Recall reopens right panel (right_panel_visible + enter_hero_focus); qa_smoke PASS.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+  "claimed_log_round": "sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]",
+  "timestamp": "2026-05-06T22:33:12.112Z"
+}
