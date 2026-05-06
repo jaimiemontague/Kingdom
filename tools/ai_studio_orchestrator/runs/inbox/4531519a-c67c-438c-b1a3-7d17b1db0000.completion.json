@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "4531519a-c67c-438c-b1a3-7d17b1db0000",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "Agent 08: pin button renders 📌 emoji with SysFont cache and circle+P fallback; qa_smoke PASS; screenshots captured locally (gitignored).",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]",
+  "timestamp": "2026-05-06T22:33:16.798Z"
+}
