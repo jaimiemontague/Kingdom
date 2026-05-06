@@ -503,24 +503,26 @@ function validateDoNotSend(
  */
 function cloudPreflightCommit(cwd: string, sprintId: string, roundId: string): void {
   try {
-    const dirty = execSync("git status --short .cursor/plans/", { cwd, encoding: "utf8" }).trim();
+    // Scope is the full .cursor/ directory — covers PM hub, sprint plans, rules,
+    // and any other PM-owned planning files agents may need to read.
+    const dirty = execSync("git status --short .cursor/", { cwd, encoding: "utf8" }).trim();
     if (!dirty) {
-      console.log("[cloud pre-flight] .cursor/plans/ is clean — no commit needed.");
+      console.log("[cloud pre-flight] .cursor/ is clean — no commit needed.");
       return;
     }
-    console.log("[cloud pre-flight] Dirty planning files detected:");
+    console.log("[cloud pre-flight] Dirty .cursor/ files detected:");
     console.log(dirty);
-    console.log("[cloud pre-flight] Committing+pushing so cloud agents see the latest PM hub...");
-    execSync("git add .cursor/plans/", { cwd, stdio: "inherit" });
+    console.log("[cloud pre-flight] Committing+pushing so cloud agents see the latest PM work...");
+    execSync("git add .cursor/", { cwd, stdio: "inherit" });
     execSync(
-      `git commit -m "PM hub pre-flight: ${sprintId}/${roundId}"`,
+      `git commit -m "PM pre-flight: ${sprintId}/${roundId}"`,
       { cwd, stdio: "inherit" },
     );
     execSync("git push", { cwd, stdio: "inherit" });
-    console.log("[cloud pre-flight] ✓ PM hub committed and pushed to GitHub.");
+    console.log("[cloud pre-flight] ✓ .cursor/ committed and pushed to GitHub.");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    throw new Error(`[cloud pre-flight] Failed to commit+push planning files: ${msg}`);
+    throw new Error(`[cloud pre-flight] Failed to commit+push .cursor/ files: ${msg}`);
   }
 }
 
