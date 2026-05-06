@@ -1010,6 +1010,12 @@
               "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
               "exit_code": 0,
               "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools/ai_studio_orchestrator/src/cli.ts\" complete --cwd \"/workspace\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r7_recall_right_panel_pin_emoji\" --agent \"03\" --token \"116a33ad-8d9c-42c9-9642-b719b4983ebc\" --status done --summary \"Recall (WK51) now restores right panel: right_panel_visible + enter_hero_focus like direct hero click; qa_smoke PASS.\" --log-path \".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk51_attachment_ux_phase3\\\"].rounds[\\\"wk51_r7_recall_right_panel_pin_emoji\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Receipt: tools/ai_studio_orchestrator/runs/inbox/116a33ad-8d9c-42c9-9642-b719b4983ebc.completion.json"
             }
           ],
           "evidence": {
