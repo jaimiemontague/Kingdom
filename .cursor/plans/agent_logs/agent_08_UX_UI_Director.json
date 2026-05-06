@@ -487,6 +487,50 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: `_render_pin_button` draws 📌 (U+1F4CC) using a cached `pygame.font.SysFont` (segoeuiemoji / Noto Color Emoji / Arial fallback); pinned = full-opacity blit, unpinned = 128 alpha copy; falls back to existing circle + \"P\" when render fails or glyph width ≤ 4."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480 (hud.py temporarily checked out from main for P baseline)",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — hero panel header shows circle + \"P\" pin control.",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — same layout; 📌 emoji visible next to close X (Linux/SDL: colored pin glyph).",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "cloud_env_note": "Orchestrator npm deps installed after apt install nodejs/npm (npm missing from PATH initially).",
+            "screenshot_git_note": "PNG outputs under docs/screenshots/wk51_r7_pin_{before,after}/ are gitignored; rerun the two capture_screenshots.py commands from repo root to reproduce."
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }
