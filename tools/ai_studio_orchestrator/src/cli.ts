@@ -256,6 +256,32 @@ async function completeCommand(options: CliOptions): Promise<void> {
   if (!options.token || !options.sprint || !options.round || !options.agent || !options.statusValue) {
     throw new Error("complete requires --token, --sprint, --round, --agent, and --status");
   }
+
+  // Auto-push: commit+push all agent work before writing the receipt.
+  // This ensures the orchestrator receives the receipt only after the code is on GitHub.
+  if (options.autoPush) {
+    console.log("[auto-push] Staging and committing agent work...");
+    try {
+      const dirty = execSync("git status --short", { cwd: options.cwd, encoding: "utf8" }).trim();
+      if (dirty) {
+        execSync("git add -A", { cwd: options.cwd, stdio: "inherit" });
+        execSync(
+          `git commit -m "Agent ${options.agent} ${options.sprint}/${options.round}: automated commit by orchestrator complete command"`,
+          { cwd: options.cwd, stdio: "inherit" },
+        );
+        execSync("git push", { cwd: options.cwd, stdio: "inherit" });
+        console.log("[auto-push] ✓ Agent work committed and pushed to GitHub.");
+      } else {
+        console.log("[auto-push] Nothing to commit — working tree clean.");
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // Log but don't abort — still write the receipt so the orchestrator can proceed.
+      console.warn(`[auto-push] Warning: git commit+push failed: ${msg}`);
+      console.warn("[auto-push] Changes may not be on GitHub. The orchestrator post-flight pull will confirm.");
+    }
+  }
+
   const receipt: CompletionReceipt = {
     schema_version: "1.0",
     token: options.token,
@@ -577,7 +603,7 @@ function buildCompletionCommand(
 ): string {
   const logPath = agentLogPath(agent.id);
   const logRound = `sprints["${context.sprintId}"].rounds["${context.roundId}"]`;
-  return [
+  const parts = [
     "npx tsx",
     quotePs("tools\\ai_studio_orchestrator\\src\\cli.ts"),
     "complete",
@@ -599,7 +625,13 @@ function buildCompletionCommand(
     quotePs(logPath),
     "--log-round",
     quotePs(logRound),
-  ].join(" ");
+  ];
+  // Cloud runs: auto-push baked into the completion handshake.
+  // Agents do not need to manually commit/push — the orchestrator handles it.
+  if (options.runtime === "cloud") {
+    parts.push("--auto-push");
+  }
+  return parts.join(" ");
 }
 
 function buildVerificationCommand(options: CliOptions, receiptPath: string, token: string): string {
@@ -656,6 +688,7 @@ function parseArgs(argv: string[]): CliOptions {
     maxActive: 3,
     ledgerDir: path.join("tools", "ai_studio_orchestrator", "runs"),
     writeDashboard: false,
+    autoPush: false,
   };
 
   for (let i = 1; i < argv.length; i += 1) {
@@ -750,6 +783,9 @@ function parseArgs(argv: string[]): CliOptions {
         break;
       case "--receipt":
         options.receipt = next();
+        break;
+      case "--auto-push":
+        options.autoPush = true;
         break;
       case "--write-dashboard":
         options.writeDashboard = true;

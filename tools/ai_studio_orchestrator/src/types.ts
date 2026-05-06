@@ -191,4 +191,6 @@ export interface CliOptions {
   claimedLogPath?: string;
   claimedLogRound?: string;
   receipt?: string;
+  /** When true, the complete command auto-commits+pushes all changes before writing the receipt. Used for cloud agents. */
+  autoPush: boolean;
 }
