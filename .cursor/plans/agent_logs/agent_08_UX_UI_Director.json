@@ -487,6 +487,58 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: `_render_pin_button` now renders U+1F4CC 📌 via cached `pygame.font.SysFont` (emoji-capable faces tried in order). Pinned = full alpha; unpinned = blit copy at alpha 128. Falls back to original circle + \"P\" when emoji surface missing or width <= 4.",
+            "Note: pygame treats a single comma-separated SysFont string as one font name; implementation uses a name list for the intended fallback chain."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "pip3 install -q -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — pin showed letter P in circle",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — red pushpin 📌 visible left of close X in hero panel header",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "cloud_setup": "apt install nodejs npm for orchestrator CLI; python3 + pip requirements for gates/capture"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: optional manual confirm on Windows with Segoe UI Emoji: python main.py --provider mock — select hero and verify 📌 reads correctly vs fallback."
+          ]
         }
       }
     }
