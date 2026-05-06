@@ -487,6 +487,54 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: _render_pin_button now renders U+1F4CC 📌 via cached pygame.font.SysFont (segoeuiemoji / noto color emoji fallback list); pinned = full alpha, unpinned = 128 alpha; falls back to prior circle + \"P\" when font/render fails or glyph width <= 4."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png",
+            "screenshot_note": "ui_panels scenario selects a hero; 📌 visible in left hero panel header after change (red pin vs prior P-in-circle).",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "npm_orchestrator": "npm --prefix tools/ai_studio_orchestrator install --silent exit_code=0",
+            "environment_note": "Cloud: installed apt nodejs/npm and pip install -r requirements.txt for pygame; commands logged below use python3."
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: optional manual confirm on Windows with `python main.py --renderer pygame --provider mock` — pin should show 📌 with Segoe UI Emoji if available."
+          ]
         }
       }
     }
