@@ -487,6 +487,55 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: `_render_pin_button` — cached SysFont for 📌 (U+1F4CC); full-alpha when pinned, 128-alpha copy when unpinned; fallback preserves prior circle + \"P\" when emoji missing or render too narrow (≤4px)."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Cloud bootstrap: apt-installed nodejs/npm first — npm was missing initially."
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "phase_4b_screenshots": "Compared docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png vs wk51_r7_pin_after/ui_panels_hero.png — left hero panel header shows circle+P before and 📌 after (scenario selects hero). docs/screenshots/ is gitignored; regenerate via capture commands.",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick — DONE PASS (exit_code=0)"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie manual: python main.py --renderer pygame --no-llm (or default Ursina) — select hero, confirm 📌 scales/readability on Windows font stack (Segoe UI Emoji)."
+          ],
+          "how_to_test": [
+            "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_verify --size 1920x1080 --ticks 480",
+            "python tools/qa_smoke.py --quick"
+          ]
         }
       }
     }
