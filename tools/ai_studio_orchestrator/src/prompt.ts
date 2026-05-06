@@ -83,7 +83,7 @@ export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, co
     "══════════════════════════════════════════════════════",
     "⚠️  REMINDER — REQUIRED COMPLETION COMMAND (run this last):",
     "══════════════════════════════════════════════════════",
-    "```powershell",
+    isCloud ? "```bash" : "```powershell",
     completionCommand,
     "```",
   ].join("\n");
@@ -113,7 +113,7 @@ export function buildVerifierPrompt(receipt: CompletionReceipt, receiptPath: str
     "",
     "REQUIRED VERIFICATION COMMAND:",
     "Run this from the repo root. It writes the verification receipt the orchestrator waits for.",
-    "```powershell",
+    "```bash",
     verificationCommand,
     "```",
     "",
