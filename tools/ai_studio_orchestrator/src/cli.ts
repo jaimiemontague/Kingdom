@@ -716,7 +716,9 @@ function buildCompletionCommand(
   const logPathArg = isCloud ? logPath.replace(/\\/g, "/") : logPath;
 
   const parts = [
-    "npx tsx",
+    "npx",
+    "-y",
+    "tsx",
     quotePs(scriptPath),
     "complete",
     "--cwd",
@@ -753,7 +755,9 @@ function buildVerificationCommand(options: CliOptions, receiptPath: string, toke
   const receiptPathArg = isCloud ? receiptPath.replace(/\\/g, "/") : receiptPath;
 
   const parts = [
-    "npx tsx",
+    "npx",
+    "-y",
+    "tsx",
     quotePs(scriptPath),
     "verify-receipt",
     "--cwd",
