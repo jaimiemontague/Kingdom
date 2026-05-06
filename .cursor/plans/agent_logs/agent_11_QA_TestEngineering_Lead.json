@@ -1731,8 +1731,8 @@
     "wk51_attachment_ux_phase3": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
-        "pm_hub_round": "wk51_r6_pin_visible_fix",
-        "notes": "WK51 R6 wave 2: Phase 4b png proof for Pin visibility + qa_smoke quick gate."
+        "pm_hub_round": "wk51_r7_recall_right_panel_pin_emoji",
+        "notes": "WK51 R7 wave 2: gates + Phase 4b capture for Recall/right panel + pin emoji (📌)."
       },
       "rounds": {
         "wk51_r6_pin_visible_fix": {
@@ -1784,6 +1784,84 @@
             ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
             "docs/screenshots/wk51_r6_qa_verify/ui_panels_hero.png",
             "docs/screenshots/wk51_r6_qa_verify/manifest.json"
+          ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Installed cloud VM deps: apt nodejs/npm; pip install -r requirements.txt (pygame, pytest, etc.) so gates could run under python3.",
+            "Ran python3 tools/qa_smoke.py --quick — PASS.",
+            "Ran python3 tools/validate_assets.py --report — exit 0 (errors=0, warns=46 baseline missing 3D models).",
+            "Ran python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify — exit 0.",
+            "Inspected ui_panels_hero.png: hero Gareth selected; 📌 (red pushpin) visible in left panel header left of X; right-hand HERO_FOCUS column (mini-map strip + detail) visible."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m pip install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "Cloud agent: python symlink absent; used python3 for parity with qa_smoke internal shebang"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "errors=0 warns=46"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "post-edit JSON validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_wk51_r7": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk51_r7": {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "screenshot_ui_panels_wk51_r7": {
+              "paths": [
+                "docs/screenshots/wk51_r7_qa_verify/ui_panels_hero.png",
+                "docs/screenshots/wk51_r7_qa_verify/manifest.json"
+              ],
+              "visual_verdict": "ui_panels scenario selects hero Gareth: left hero panel open; 📌 emoji/pushpin visible in header (left of close X); right column shows HERO_FOCUS strip (mini-map + chat area). Recall-specific reopen flow not exercised by headless ticks — see follow_ups.",
+              "capture_command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify --size 1920x1080 --ticks 480"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie manual: pin hero, dismiss panels, click Recall — confirm right HERO_FOCUS panel opens (WK51-R7-BUG-001). Command from repo root: python main.py --renderer pygame --provider mock"
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
           ]
         }
       }
