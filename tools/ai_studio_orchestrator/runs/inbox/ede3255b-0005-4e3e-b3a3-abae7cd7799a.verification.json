@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "token": "ede3255b-0005-4e3e-b3a3-abae7cd7799a",
+  "completion_token": "03f5f30f-56b4-48cf-84b1-8c082f81d7b1",
+  "sprint_id": "wk51_attachment_ux_phase3",
+  "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+  "agent_id": "11",
+  "status": "verified",
+  "reason": "Completion receipt and claimed agent log verified.",
+  "log_check": "passed",
+  "timestamp": "2026-05-06T23:18:49.112Z"
+}
