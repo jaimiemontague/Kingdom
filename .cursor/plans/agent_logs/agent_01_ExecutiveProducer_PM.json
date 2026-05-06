@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-06 (Agent 01 R7): Added wk51_r7_recall_right_panel_pin_emoji — two targeted fixes: (1) Recall button must open right hero panel (enter_hero_focus) — fix in game/engine.py owned by Agent 03; (2) Pin button icon changed from circle+P to 📌 emoji — fix in game/ui/hud.py owned by Agent 08. Waves: 03+08 parallel, then 11 gates. Orchestrated via cloud agents.",
     "2026-05-02 (GIT midsprint save — Agent 01): Committed+pushed workspace state mid WK51. Sprint wk51_attachment_ux_phase3 still IN PROGRESS. Completed: live orchestrator run wk51_r6_pin_visible_fix exit 0 — Agents 08/11/03 receipts verified; Pin chrome HUD layering addressed per Phase 4b screenshot workflow; studio rules updated (06-workflow Phase 4b, AGENTS.md, 08/09/11 onboarding) for mandatory capture→inspect UI loop. Outstanding player-facing: Recall button on bottom bar must reopen the correct hero info panel Jaimie calls the \"right menu\" (today the HUD uses left hero panel + conditional right panel / micro-view — behavior must match acceptance: recall recenters AND restores hero selection UI including whichever column shows intent/detail per layout mode). File ticket WK51-NEXT-Recall-Reopen-Panel for Agents 08 primary + 03 input/engine routing consult; verify Ursina + pygame. Orchestrator chain: .cursor/plans/run_wk51_attachment_rounds.ps1 (R1–R6). Hub sprint_meta.pm_orchestrator still documents validate/run commands.",
     "2026-05-02: WK51 round wk51_r6_pin_visible_fix — Pin control not visible on left hero panel; Agent 08 fixes HUD + Phase 4b screenshot loop; Agents 11 + 03 wave 2 verify (capture + Ursina compositing consult). Orchestrator: validate/run --round wk51_r6_pin_visible_fix.",
     "2026-05-02: WK51 PM handoff round wk51_r5_verify_qa_after_pm_impl — Agent 01 acknowledged unauthorized edits under game/** (Pin+Recall); allowed artifacts under .cursor/plans + docs/sprint/wk51_attachment_ux_acceptance.md; Agent 11 owns gates + missing WK51 tests + screenshots; 03/08 consult review; Jaimie decision keep-vs-revert documented in round.",
@@ -4972,6 +4973,122 @@
             "playtest_command": "python main.py --provider mock",
             "duration_minutes": "3-5",
             "reference": "docs/sprint/wk51_attachment_ux_acceptance.md — confirm Pin visible on left panel in 3D"
+          }
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "round_meta": {
+            "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+            "created_utc": "2026-05-06T20:45:00Z",
+            "wave": 7,
+            "bugs": [
+              "WK51-R7-BUG-001: Recall button does not reopen right hero panel (HERO_FOCUS micro-view). apply_hud_pin_action sets selected_hero + centers camera but never calls enter_hero_focus.",
+              "WK51-R7-BUG-002: Pin button shows circle+P glyph; Jaimie requests 📌 emoji instead."
+            ]
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "R7 — Two targeted fixes: (1) Agent 03 adds enter_hero_focus call inside apply_hud_pin_action in game/engine.py so Recall reopens the right panel; (2) Agent 08 replaces circle+P in _render_pin_button with 📌 emoji in game/ui/hud.py. Agents 03+08 run in parallel; Agent 11 verifies gates afterward."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK51-R7-BUG-001",
+              "title": "Recall does not reopen the right hero panel (mini-map + chat)",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Pin a hero.",
+                "Close the hero panel by clicking away.",
+                "Click the Recall button on the bottom bar.",
+                "Observe: camera centers on hero and left panel reopens, but the right panel (HERO_FOCUS with mini-map + chat) does NOT open."
+              ],
+              "expected": "Recall mirrors clicking a hero directly: left panel + right panel (HERO_FOCUS) both open, camera centers.",
+              "actual": "Right panel stays closed after recall.",
+              "root_cause": "apply_hud_pin_action('recall_pinned_hero') in game/engine.py (~line 1395) sets selected_hero and centers camera but never calls hud.right_panel_visible = True or hud._micro_view.enter_hero_focus(hero). try_select_hero() at line ~527 does both.",
+              "acceptance_test": [
+                "Pin a hero, close panel, click Recall — right panel (HERO_FOCUS with mini-map) opens.",
+                "python tools/qa_smoke.py --quick must PASS."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK51-R7-BUG-002",
+              "title": "Pin button shows circle+P; should show 📌 emoji",
+              "severity": "polish",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Select a hero.",
+                "Observe the small button in the top-right of the left hero panel."
+              ],
+              "expected": "Button shows 📌 emoji. Pinned = full alpha. Unpinned = ~50% alpha.",
+              "actual": "Button shows a drawn circle with 'P' text glyph.",
+              "acceptance_test": [
+                "Pin button shows 📌 emoji when a hero is selected.",
+                "Pinned state visually distinct from unpinned.",
+                "python tools/qa_smoke.py --quick must PASS."
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "next_action": "Add enter_hero_focus call inside apply_hud_pin_action recall branch in game/engine.py; run qa_smoke."
+            },
+            "08": {
+              "status": "assigned_active",
+              "next_action": "Replace circle+P with 📌 emoji in _render_pin_button in game/ui/hud.py; Phase 4b screenshot loop; run qa_smoke."
+            },
+            "11": {
+              "status": "blocked_until_wave1_done",
+              "next_action": "After 03+08 report done: run qa_smoke + validate_assets + capture_screenshots."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are activated for sprint `wk51_attachment_ux_phase3`, round `wk51_r7_recall_right_panel_pin_emoji` (wave 1, parallel with Agent 08).\n\n**One surgical fix in your owned file `game/engine.py`.**\n\n## Fix: Recall reopens the right hero panel\n\nSearch for `def apply_hud_pin_action` in `game/engine.py`. Find the `recall_pinned_hero` branch (around line 1395). It currently reads:\n\n```python\nself.selected_hero = target\nself.center_camera_on_world_pos(float(target.x), float(target.y))\nreturn\n```\n\nCompare with `try_select_hero` (around line 527) which also calls:\n```python\nif hasattr(self, 'hud'):\n    try:\n        self.hud.right_panel_visible = True\n        if hasattr(self.hud, '_micro_view'):\n            self.hud._micro_view.enter_hero_focus(hero)\n    except Exception:\n        pass\n```\n\n**Add those same lines** immediately after `self.center_camera_on_world_pos(...)` and before `return`, so Recall reopens the right panel (HERO_FOCUS mode with mini-map + chat) exactly as clicking the hero directly does.\n\nAlso confirm: `_ursina_hud_force_upload = True` is already set in this method, so Ursina will re-upload the HUD surface on the next frame — no additional Ursina change needed unless you find otherwise.\n\n**Gates (must PASS):**\n```powershell\npython tools/qa_smoke.py --quick\n```\n\nUpdate `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` at `sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]` with required orchestrator fields (`sprint_id`, `round_id`, `status`, `what_i_changed`, `commands_run`, `evidence`, `blockers`, `follow_ups`). Validate JSON. Run SDK completion receipt.",
+            "08": "You are activated for sprint `wk51_attachment_ux_phase3`, round `wk51_r7_recall_right_panel_pin_emoji` (wave 1, parallel with Agent 03).\n\n**One targeted fix in your owned file `game/ui/hud.py`.**\n\n## Fix: Pin button → 📌 emoji\n\nSearch for `def _render_pin_button` in `game/ui/hud.py` (around line 543). Currently it draws a `pygame.draw.circle` with a 'P' text glyph. Replace this with a 📌 emoji (U+1F4CC).\n\n**Implementation steps:**\n1. At the start of the method, resolve an emoji font (cache on `self` to avoid per-frame allocation):\n```python\nif not hasattr(self, '_pin_emoji_font') or getattr(self, '_pin_emoji_font_size', 0) != pin_size:\n    try:\n        self._pin_emoji_font = pygame.font.SysFont('segoeuiemoji,segoeui,noto color emoji,arial', pin_size)\n    except Exception:\n        self._pin_emoji_font = None\n    self._pin_emoji_font_size = pin_size\n```\n2. Render the emoji:\n```python\nemoji_surf = None\nif self._pin_emoji_font is not None:\n    try:\n        emoji_surf = self._pin_emoji_font.render('\\U0001f4cc', True, (255, 255, 255))\n    except Exception:\n        emoji_surf = None\n```\n3. If `emoji_surf` is None or `emoji_surf.get_width() <= 4`, fall back to the existing circle+P code unchanged.\n4. Otherwise blit the emoji centered in `self.pin_button_rect`:\n   - **Pinned** (selected hero matches pin slot): blit at full alpha.\n   - **Unpinned**: `s = emoji_surf.copy(); s.set_alpha(128); surface.blit(s, dest_pos)`.\n5. Remove the `pygame.draw.circle` and `TextLabel.get_surface(..., 'P', ...)` calls from the non-fallback path.\n\n**Mandatory Phase 4b screenshot loop:**\n1. Baseline capture:\n```powershell\npython tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480\n```\n2. Implement the fix.\n3. Post-fix capture:\n```powershell\npython tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480\n```\n4. Read both PNGs. Note whether 📌 is visible in the left panel header. (The automated scenario may not select a hero — document this if so; the emoji will be confirmed by Jaimie's manual playtest.)\n5. Gates:\n```powershell\npython tools/qa_smoke.py --quick\n```\nMust PASS.\n\nUpdate `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json` at `sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]` with required orchestrator fields. Validate JSON. Run SDK completion receipt.",
+            "11": "You are activated for sprint `wk51_attachment_ux_phase3`, round `wk51_r7_recall_right_panel_pin_emoji` (wave 2 — runs after Agents 03 and 08 complete).\n\nRun gates:\n```powershell\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\n```\nBoth must exit 0.\n\nCapture screenshots:\n```powershell\npython tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify --size 1920x1080 --ticks 480\n```\nRead the output PNGs and note in your log whether the 📌 emoji or the right panel are visible. If the scenario does not select a hero, document that as expected — visual proof will come from Jaimie's manual playtest.\n\nUpdate `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json` at `sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"]` with required orchestrator fields. Validate JSON. Run SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 1 parallel: 03 (medium — surgical engine fix following existing pattern) + 08 (medium — emoji rendering in owned hud.py). Wave 2: 11 (low — gate runs + screenshots).",
+            "intelligence_by_agent": {
+              "03": "medium",
+              "08": "medium",
+              "11": "low"
+            },
+            "do_not_send": ["01","02","04","05","06","07","09","10","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["03","08","11"],
+            "dependencies": [
+              {
+                "id": "wk51_r7_impl",
+                "agents": ["03","08"],
+                "parallel": true
+              },
+              {
+                "id": "wk51_r7_verify",
+                "agents": ["11"],
+                "parallel": false,
+                "after": ["wk51_r7_impl"]
+              }
+            ],
+            "human_gates": ["optional_playtest_recall_right_panel_and_pin_emoji"],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk51_attachment_ux_phase3, round wk51_r7_recall_right_panel_pin_emoji. Read your assignment in the PM hub: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk51_attachment_ux_phase3\"].rounds[\"wk51_r7_recall_right_panel_pin_emoji\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update your agent log with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate: python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json Then run your exact SDK completion receipt command.",
+          "pm_human_gate_after_round": {
+            "playtest_command": "python main.py --provider mock",
+            "duration_minutes": "3-5",
+            "steps": [
+              "Select a hero — verify 📌 emoji appears in the top-right of the left panel (instead of circle+P).",
+              "Pin the hero, close the panel, click Recall — verify both left panel AND right panel (mini-map + chat) open."
+            ]
           }
         }
       }
