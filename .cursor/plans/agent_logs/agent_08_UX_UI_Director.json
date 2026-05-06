@@ -487,6 +487,52 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: _render_pin_button now uses cached pygame.font.SysFont chain (segoeuiemoji / Segoe UI / Noto Color Emoji / arial) to render U+1F4CC pushpin emoji; pinned = full-alpha blit centered in pin_button_rect, unpinned = copy with alpha 128; fallback to existing circle+P if font missing or glyph width<=4.",
+            "Phase 4b screenshots: docs/screenshots/wk51_r7_pin_before (baseline from main hud) and docs/screenshots/wk51_r7_pin_after."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_before --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "baseline while game/ui/hud.py matched main (_render_pin_button circle+P)"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_pin_after --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "emoji_render_probe": "SysFont(...) render('\\U0001f4cc', size=20) -> width=12,height=24 (emoji path active; not P fallback)",
+            "screenshots_before": "docs/screenshots/wk51_r7_pin_before/ui_panels_hero.png — left hero header pin slot shows prior circle+P treatment when scenario selects hero",
+            "screenshots_after": "docs/screenshots/wk51_r7_pin_after/ui_panels_hero.png — pin shows pushpin emoji (small header chrome; verify in-image zoom if needed)",
+            "scenario_note": "ui_panels may not exercise every pin state; Jaimie manual: python main.py --renderer pygame --no-llm — select hero, confirm 📌 beside X, pinned brighter than unpinned",
+            "qa_smoke_quick": "python3 tools/qa_smoke.py --quick exit_code=0 PASS"
+          },
+          "blockers": [],
+          "recommended_next_actions": []
         }
       }
     }
