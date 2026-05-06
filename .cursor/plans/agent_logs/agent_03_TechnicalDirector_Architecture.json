@@ -980,6 +980,47 @@
           "follow_ups": [
             "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
           ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: In apply_hud_pin_action recall_pinned_hero branch, after center_camera_on_world_pos, mirror try_select_hero — set hud.right_panel_visible = True and hud._micro_view.enter_hero_focus(target) inside the same hasattr/try/except pattern so Recall restores HERO_FOCUS right column (mini-map + chat) like direct hero click.",
+            "Confirmed: center_camera_on_world_pos already sets _ursina_hud_force_upload (via setattr on GameEngine); no extra Ursina wiring needed for this round."
+          ],
+          "commands_run": [
+            {
+              "command": ".venv/bin/python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root (/workspace)"
+            },
+            {
+              "command": ".venv/bin/python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root (/workspace)"
+            },
+            {
+              "command": "npx tsx \"tools/ai_studio_orchestrator/src/cli.ts\" complete --cwd \"/workspace\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r7_recall_right_panel_pin_emoji\" --agent \"03\" --token \"a8aff6d7-d0ed-4761-9919-ff1b1ddc9080\" --status done --summary \"Recall reopen right hero panel + micro-view focus aligned with try_select_hero; qa_smoke PASS.\" --log-path \".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk51_attachment_ux_phase3\\\"].rounds[\\\"wk51_r7_recall_right_panel_pin_emoji\\\"]\"",
+              "exit_code": 1,
+              "cwd": "repo root (/workspace)",
+              "note": "After apt install nodejs/npm: tsx fails — ERR_MODULE_NOT_FOUND @cursor/sdk from sdkRunner.ts (Cursor SDK not present on generic Linux runner). Run exact receipt from Cursor SDK automation host per PM prompt (Windows cwd if applicable)."
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": ".venv/bin/python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "ursina_hud_upload": {
+              "note": "center_camera_on_world_pos sets _ursina_hud_force_upload; recall path calls it before HUD panel visibility — sufficient for next-frame GPU HUD refresh."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Orchestrator: run the PM-required `npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete ...` from the Cursor SDK environment (needs @cursor/sdk). Use `--cwd` as in the sprint prompt if not matching /workspace."
+          ]
         }
       }
     }
