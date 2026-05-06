@@ -471,13 +471,15 @@ async function runOneAgent(
 }
 
 async function waitForCompletionReceipt(options: CliOptions, token: string): Promise<CompletionReceipt | undefined> {
+  if (options.runtime === "cloud") {
+    return waitForReceiptViaGit(options.cwd, options.ledgerDir, token, "completion") as Promise<CompletionReceipt | undefined>;
+  }
+  // Local: poll the filesystem directly.
   const receiptPath = completionReceiptPath(options.cwd, options.ledgerDir, token);
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const receipt = await loadCompletionReceipt(receiptPath);
-      if (receipt.token === token) {
-        return receipt;
-      }
+      if (receipt.token === token) return receipt;
     } catch {
       // keep waiting
     }
@@ -487,17 +489,62 @@ async function waitForCompletionReceipt(options: CliOptions, token: string): Pro
 }
 
 async function waitForVerificationReceipt(options: CliOptions, token: string): Promise<VerificationReceipt | undefined> {
+  if (options.runtime === "cloud") {
+    return waitForReceiptViaGit(options.cwd, options.ledgerDir, token, "verification") as Promise<VerificationReceipt | undefined>;
+  }
+  // Local: poll the filesystem directly.
   const receiptPath = verificationReceiptPath(options.cwd, options.ledgerDir, token);
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const receipt = await loadVerificationReceipt(receiptPath);
-      if (receipt.token === token) {
-        return receipt;
-      }
+      if (receipt.token === token) return receipt;
     } catch {
       // keep waiting
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return undefined;
+}
+
+/**
+ * Cloud receipt polling: periodically git-fetches origin and reads the receipt
+ * file from origin/main. Does NOT require the file to exist locally first.
+ * Poll interval is 10 s (git fetch is a network call; 1 s would be excessive).
+ * Times out after ~10 minutes (60 attempts).
+ */
+async function waitForReceiptViaGit(
+  cwd: string,
+  ledgerDir: string,
+  token: string,
+  kind: "completion" | "verification",
+): Promise<CompletionReceipt | VerificationReceipt | undefined> {
+  const absPath = kind === "completion"
+    ? completionReceiptPath(cwd, ledgerDir, token)
+    : verificationReceiptPath(cwd, ledgerDir, token);
+  const relPath = path.relative(cwd, absPath).replace(/\\/g, "/");
+  const POLL_MS = 10_000;
+  const MAX_ATTEMPTS = 60; // 10 minutes
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    try {
+      execSync("git fetch origin", { cwd, stdio: "ignore" });
+      const raw = execSync(`git show origin/main:${relPath}`, { cwd, encoding: "utf8" });
+      const receipt = JSON.parse(raw) as CompletionReceipt | VerificationReceipt;
+      if (receipt.token === token) {
+        console.log(`[cloud receipt] ${kind} receipt found for token ${token.slice(0, 8)}...`);
+        // Write it locally so the rest of the orchestrator can reference it on disk.
+        await import("node:fs/promises").then(({ mkdir, writeFile }) =>
+          mkdir(path.dirname(absPath), { recursive: true })
+            .then(() => writeFile(absPath, raw, "utf8")),
+        );
+        return receipt;
+      }
+    } catch {
+      // Receipt not on origin/main yet; keep waiting.
+    }
+    const elapsed = ((attempt + 1) * POLL_MS / 1000).toFixed(0);
+    console.log(`[cloud receipt] Waiting for ${kind} receipt... ${elapsed}s elapsed (${attempt + 1}/${MAX_ATTEMPTS})`);
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
   }
   return undefined;
 }
@@ -655,7 +702,7 @@ function buildCompletionCommand(
 }
 
 function buildVerificationCommand(options: CliOptions, receiptPath: string, token: string): string {
-  return [
+  const parts = [
     "npx tsx",
     quotePs("tools\\ai_studio_orchestrator\\src\\cli.ts"),
     "verify-receipt",
@@ -665,7 +712,12 @@ function buildVerificationCommand(options: CliOptions, receiptPath: string, toke
     quotePs(receiptPath),
     "--token",
     quotePs(token),
-  ].join(" ");
+  ];
+  // Cloud: verifier also auto-pushes its verification receipt so the orchestrator can poll it via git.
+  if (options.runtime === "cloud") {
+    parts.push("--auto-push");
+  }
+  return parts.join(" ");
 }
 
 function quotePs(value: string): string {
@@ -701,7 +753,7 @@ function parseArgs(argv: string[]): CliOptions {
     cwd,
     pmHub: path.join(cwd, ".cursor", "plans", "agent_logs", "agent_01_ExecutiveProducer_PM.json"),
     mode: "assist",
-    runtime: "local",
+    runtime: "cloud",
     dryRun: false,
     skipLogCheck: false,
     includeOptional: false,

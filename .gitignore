@@ -65,10 +65,9 @@ saves/
 .cursor/plans/agent_logs/*.bak_*
 .cursor/plans/agent_logs/archive/*.bak_*
 
-# AI Studio SDK orchestrator runtime artifacts
+# AI Studio SDK orchestrator runtime artifacts (build artifacts only — runs/ is tracked so cloud agents can push receipts)
 tools/ai_studio_orchestrator/node_modules/
 tools/ai_studio_orchestrator/dist/
-tools/ai_studio_orchestrator/runs/
 
 # Local-only scratch (never commit)
 local/
