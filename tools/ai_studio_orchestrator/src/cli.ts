@@ -285,7 +285,7 @@ async function completeCommand(options: CliOptions): Promise<void> {
       } else {
         execSync("git add -A", { cwd: options.cwd, stdio: "inherit" });
         execSync(
-          `git commit -m "Agent ${options.agent} ${options.sprint}/${options.round}: automated commit by orchestrator complete command"`,
+          `git -c user.name="Kingdom AI" -c user.email="ai@kingdom.sim" commit -m "Agent ${options.agent} ${options.sprint}/${options.round}: automated commit by orchestrator complete command"`,
           { cwd: options.cwd, stdio: "inherit" },
         );
 
@@ -379,7 +379,7 @@ async function verifyReceiptCommand(options: CliOptions): Promise<void> {
       } else {
         execSync("git add -A", { cwd: options.cwd, stdio: "inherit" });
         execSync(
-          `git commit -m "Agent ${completion.agent_id} ${completion.sprint_id}/${completion.round_id}: automated verifier push"`,
+          `git -c user.name="Kingdom AI" -c user.email="ai@kingdom.sim" commit -m "Agent ${completion.agent_id} ${completion.sprint_id}/${completion.round_id}: automated verifier push"`,
           { cwd: options.cwd, stdio: "inherit" },
         );
 
