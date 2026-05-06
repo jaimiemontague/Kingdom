@@ -456,7 +456,7 @@ async function runOneAgent(
       ledgerAgent.status = result.status === "finished" ? "finished" : "error";
       ledgerAgent.model = result.model;
       ledgerAgent.duration_ms = result.durationMs;
-      ledgerAgent.result_excerpt = excerpt(result.result);
+      ledgerAgent.result_excerpt = result.result;
       ledgerAgent.finished_at = new Date().toISOString();
       ledgerAgent.status = "awaiting_completion_receipt";
       await saveLedger(ledgerPath, ledger);
