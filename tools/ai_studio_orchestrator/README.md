@@ -45,6 +45,12 @@ Launch a specific agent locally:
 npm run studio -- run --sprint wk46-stage3-lumberjack-builders --round wk46_r0_kickoff --agents 11 --mode assist
 ```
 
+Launch cloud agents autonomously (default recommended workflow):
+
+```powershell
+npm run studio -- run --sprint wk46-stage3-lumberjack-builders --round wk46_r0_kickoff --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --auto-push --mode auto_until_human_gate
+```
+
 Show the latest ledger and write a dashboard:
 
 ```powershell
