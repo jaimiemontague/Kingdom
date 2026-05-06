@@ -980,6 +980,56 @@
           "follow_ups": [
             "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
           ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: In apply_hud_pin_action recall_pinned_hero branch, mirror try_select_hero — after center_camera_on_world_pos, set hud.right_panel_visible True and _micro_view.enter_hero_focus(target) so Recall restores HERO_FOCUS (minimap/chat column) same as clicking the hero.",
+            "Confirmed: recall path already triggers _ursina_hud_force_upload via center_camera_on_world_pos(); no Ursina-side change.",
+            "Environment: npm missing on vanilla image → apt-installed nodejs; npm --prefix tools/ai_studio_orchestrator install for orchestrator CLI."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "after apt-get install nodejs npm on cloud Linux"
+            },
+            {
+              "command": "pip3 install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "cloud VM lacked pytest/pygame deps for qa_smoke"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pre-receipt validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "ursina_hud_upload": {
+              "note": "recall_pinned_hero calls center_camera_on_world_pos which sets _ursina_hud_force_upload True (engine.py); pin/unpin also set explicitly"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: wave-2 gates for R7 parallel wave (pytest + qa_smoke + validate_assets per PM hub)."
+          ]
         }
       }
     }
