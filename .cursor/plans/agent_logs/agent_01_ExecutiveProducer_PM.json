@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-06 (Agent 01 WK52 Kickoff): Sprint wk52_attachment_phase3_radar_alerts_memorial — Phase 3 deferred features: (1) Radar minimap with colored entity dots; (2) Pin alerts via EventBus — HUD toast + Recall button 3x red flash + low-health 25% threshold/30s cooldown; (3) Watch card above minimap — live map view, HP/XP/Level, expand/minimize toggle, dynamic left-panel height; (4) Memorial card — full-screen pause overlay with epitaph. Plan: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. R1 parallel: Agent 03 (event plumbing) + Agent 08 (UX/watch card/memorial). R2: Agent 10 perf consult + Agent 11 QA gates. First Cowork-originated orchestrator run.",
     "2026-05-06 (Agent 01 R7): Added wk51_r7_recall_right_panel_pin_emoji — two targeted fixes: (1) Recall button must open right hero panel (enter_hero_focus) — fix in game/engine.py owned by Agent 03; (2) Pin button icon changed from circle+P to 📌 emoji — fix in game/ui/hud.py owned by Agent 08. Waves: 03+08 parallel, then 11 gates. Orchestrated via cloud agents.",
     "2026-05-02 (GIT midsprint save — Agent 01): Committed+pushed workspace state mid WK51. Sprint wk51_attachment_ux_phase3 still IN PROGRESS. Completed: live orchestrator run wk51_r6_pin_visible_fix exit 0 — Agents 08/11/03 receipts verified; Pin chrome HUD layering addressed per Phase 4b screenshot workflow; studio rules updated (06-workflow Phase 4b, AGENTS.md, 08/09/11 onboarding) for mandatory capture→inspect UI loop. Outstanding player-facing: Recall button on bottom bar must reopen the correct hero info panel Jaimie calls the \"right menu\" (today the HUD uses left hero panel + conditional right panel / micro-view — behavior must match acceptance: recall recenters AND restores hero selection UI including whichever column shows intent/detail per layout mode). File ticket WK51-NEXT-Recall-Reopen-Panel for Agents 08 primary + 03 input/engine routing consult; verify Ursina + pygame. Orchestrator chain: .cursor/plans/run_wk51_attachment_rounds.ps1 (R1–R6). Hub sprint_meta.pm_orchestrator still documents validate/run commands.",
     "2026-05-02: WK51 round wk51_r6_pin_visible_fix — Pin control not visible on left hero panel; Agent 08 fixes HUD + Phase 4b screenshot loop; Agents 11 + 03 wave 2 verify (capture + Ursina compositing consult). Orchestrator: validate/run --round wk51_r6_pin_visible_fix.",
@@ -18,533 +19,6 @@
     "v1.5.3 (Major Unit Art) shipped without a formal pre-sprint; see sprints[\"v1_5_3_major_unit_art_adhoc\"] for PM retrospective record (Agent 09 + Jaimie)."
   ],
   "sprints": {
-    "wk41-mechanical-module-split": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_architecture_refactor.md",
-        "status": "closed_success",
-        "created_utc": "2026-04-28T18:30:00Z",
-        "closed_utc": "2026-04-29T00:00:00Z",
-        "notes": "Readability-only: split ursina_renderer.py + GameEngine into modules/collaborators. No behavior change. Owner 03; QA 11; optional perf 10 parallel with 11 after each 03 round.",
-        "pm_jaimie_send_order": [
-          "STEP 1 â€” Agent 03 (HIGH): WK41-R1 Track A1 only â€” extract Ursina module-level helpers to new game/graphics/*.py modules per plan; keep import path game.graphics.ursina_renderer.UrsinaRenderer stable. Run pytest + qa_smoke --quick + validate_assets; update agent_03 log.",
-          "STEP 2 â€” IN PARALLEL (two Cursor chats, same universal prompt): Agent 11 (LOW) â€” full gate stack (determinism_guard, pytest, qa_smoke --quick, validate_assets); Agent 10 (LOW, consult) â€” optional ~5 min Ursina FPS spot-check: python main.py --renderer ursina --no-llm. Start Step 2 only after Step 1 is merged or 03 confirms R1 complete on your branch.",
-          "STEP 3 â€” Agent 03 (HIGH): WK41-R2 Track A2 â€” UrsinaRenderer method groups / collaborators (terrain+fog vs entities per plan); gates + log.",
-          "STEP 4 â€” PARALLEL: Agent 11 + Agent 10 (same as Step 2).",
-          "STEP 5 â€” Agent 03 (HIGH): WK41-R3 Track B â€” GameEngine facades (e.g. camera/display + render coordinator) with delegation one-liners; do not break GameCommands or public GameEngine API; gates + log.",
-          "STEP 6 â€” PARALLEL: Agent 11 + Agent 10.",
-          "STEP 7 â€” Agent 03 (MEDIUM): WK41-R4 optional â€” thin UrsinaRenderer.update() loop extraction and/or docs/refactor/engine_access_inventory.md; defer risky parts per plan; gates + log.",
-          "STEP 8 â€” PARALLEL: Agent 11 + Agent 10; then JAIMIE manual (~10 min each): python main.py --renderer ursina --no-llm ; python main.py --renderer pygame --no-llm. Optional: python main.py --renderer ursina --provider mock. STEP 8b optional â€” Agent 13 (LOW): CHANGELOG draft only if Jaimie wants; no version bump without Jaimie."
-        ]
-      },
-      "rounds": {
-        "wk41_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk41_r0_kickoff",
-            "created_utc": "2026-04-28T18:30:00Z",
-            "build_target": "Mechanical_split_Ursina_Engine_readability"
-          },
-          "pm_status_summary": {
-            "status": "in_progress",
-            "summary": "WK41 kickoff: mechanical module split (no gameplay/sim behavior change). Single implementer Agent 03 in sequence; Agent 11 (+ optional Agent 10) validate in parallel after each 03 round. Plan file + PM hub are authoritative."
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "monitoring",
-              "next_action": "PM hub updated 2026-04-28; advance rounds when 03/11 report; escalate scope creep to defer."
-            },
-            "03": {
-              "status": "assigned_active",
-              "next_action": "Execute WK41 plan rounds R1â†’R4 in order; see pm_agent_prompts[\"03\"] and plan file."
-            },
-            "10": {
-              "status": "consult_optional",
-              "next_action": "After each 03 mergeable chunk, run IN PARALLEL with Agent 11: brief Ursina FPS session â€” see sprint_meta.pm_jaimie_send_order Step 2/4/6/8."
-            },
-            "11": {
-              "status": "blocked_until_03_step_done",
-              "next_action": "After each 03 step completes: full automated gate stack; log commands + exit codes in agent_11 JSON."
-            },
-            "13": {
-              "status": "optional",
-              "next_action": "Only if Jaimie requests at sprint end: draft CHANGELOG bullets; do not edit CHANGELOG.md without approval."
-            }
-          },
-          "pm_agent_prompts": {
-            "03": "WK41 Mechanical Split (Tech, HIGH/MEDIUM): Read FIRST: .cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md (full file). Then read PM hub .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json â†’ sprints[\"wk41-mechanical-module-split\"] â†’ sprint_meta.pm_jaimie_send_order for step order. Execute in order: (R1) Track A1 leaf helpers out of ursina_renderer.py; (R2) Track A2 class/collaborators; (R3) Track B GameEngine facades; (R4) optional thin update + engine_access_inventory.md touch. Rules: no behavior change; no new features; helpers must NOT import UrsinaRenderer (avoid cycles); keep `from game.graphics.ursina_renderer import UrsinaRenderer` working; GameEngine keeps public methods as thin delegates to collaborators. Gates each round: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report. Update .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json with files, commands, exit codes.",
-            "10": "WK41 (Perf, LOW consult): After EACH Agent 03 mergeable step (when Jaimie activates you per PM send order), run ~5 minutes: python main.py --renderer ursina --no-llm â€” note FPS/feel vs baseline; report regression yes/no in agent_10 JSON. Do not edit game code unless PM escalates. Independent of Agent 11 â€” safe to run same universal prompt in parallel chat.",
-            "11": "WK41 (QA, LOW): After EACH Agent 03 step completes (when Jaimie activates you per PM send order), run from repo root: python tools/determinism_guard.py ; python -m pytest tests/ ; python tools/qa_smoke.py --quick ; python tools/validate_assets.py --report (errors=0). Log all commands + exit codes in agent_11 JSON. Parallel with Agent 10 is OK â€” different outputs, no file overlap.",
-            "13": "WK41 (optional, Marketing/Ops, LOW): Only if Jaimie asks at sprint end: draft internal or player-facing bullets for readability refactor; do NOT edit CHANGELOG.md or bump version without Jaimie."
-          },
-          "pm_send_list_minimal": {
-            "rationale": "Single-threaded implementation on Agent 03 (avoid merge conflicts on engine.py / ursina_renderer.py). After each 03 round: Agent 11 (gates) + Agent 10 (optional Ursina FPS consult) run in PARALLEL â€” two chats. Jaimie manual after final gates. Agent 13 only on request. Agents 01/02/04â€“09/12/14/15 silent unless escalated.",
-            "intelligence_by_agent": {
-              "03": "high",
-              "11": "low",
-              "10": "low",
-              "13": "low"
-            },
-            "do_not_send": [
-              "01",
-              "02",
-              "04",
-              "05",
-              "06",
-              "07",
-              "08",
-              "09",
-              "12",
-              "14",
-              "15"
-            ],
-            "waves": [
-              {
-                "wave": 1,
-                "parallel": false,
-                "agents": [
-                  {
-                    "id": "03",
-                    "intel": "high",
-                    "step": "STEP_1_R1"
-                  }
-                ]
-              },
-              {
-                "wave": 2,
-                "parallel": true,
-                "depends_on": "wave1_03_r1_done",
-                "agents": [
-                  {
-                    "id": "11",
-                    "intel": "low"
-                  },
-                  {
-                    "id": "10",
-                    "intel": "low",
-                    "note": "optional consult"
-                  }
-                ]
-              },
-              {
-                "wave": 3,
-                "parallel": false,
-                "depends_on": "wave2_pass",
-                "agents": [
-                  {
-                    "id": "03",
-                    "intel": "high",
-                    "step": "STEP_3_R2"
-                  }
-                ]
-              },
-              {
-                "wave": 4,
-                "parallel": true,
-                "depends_on": "wave3_03_r2_done",
-                "agents": [
-                  {
-                    "id": "11",
-                    "intel": "low"
-                  },
-                  {
-                    "id": "10",
-                    "intel": "low"
-                  }
-                ]
-              },
-              {
-                "wave": 5,
-                "parallel": false,
-                "depends_on": "wave4_pass",
-                "agents": [
-                  {
-                    "id": "03",
-                    "intel": "high",
-                    "step": "STEP_5_R3"
-                  }
-                ]
-              },
-              {
-                "wave": 6,
-                "parallel": true,
-                "depends_on": "wave5_03_r3_done",
-                "agents": [
-                  {
-                    "id": "11",
-                    "intel": "low"
-                  },
-                  {
-                    "id": "10",
-                    "intel": "low"
-                  }
-                ]
-              },
-              {
-                "wave": 7,
-                "parallel": false,
-                "depends_on": "wave6_pass",
-                "agents": [
-                  {
-                    "id": "03",
-                    "intel": "medium",
-                    "step": "STEP_7_R4_optional"
-                  }
-                ]
-              },
-              {
-                "wave": 8,
-                "parallel": true,
-                "depends_on": "wave7_03_r4_done",
-                "agents": [
-                  {
-                    "id": "11",
-                    "intel": "low"
-                  },
-                  {
-                    "id": "10",
-                    "intel": "low"
-                  }
-                ]
-              },
-              {
-                "wave": 9,
-                "parallel": false,
-                "depends_on": "wave8_pass",
-                "human": "Jaimie_manual_smokes",
-                "optional": [
-                  {
-                    "id": "13",
-                    "intel": "low"
-                  }
-                ]
-              }
-            ]
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint â€” your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   â†’ `sprints[\"wk41-mechanical-module-split\"]`\n   â†’ `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   â†’ `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** â€” same behavior, same gates as refactor sprints."
-        },
-        "wk41_sprint_closeout": {
-          "round_meta": {
-            "round_id": "wk41_sprint_closeout",
-            "created_utc": "2026-04-29T00:00:00Z",
-            "source": "pm_closeout_after_jaimie_playtest_pass_and_agent_logs",
-            "closed_by": "Agent_01_ExecutiveProducer_PM"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK41 complete. All planned tracks shipped (R1 leaf modules, R2 Ursina collaborators, R3 GameEngine facades, R4 thin update + engine_access_inventory). Agent 11 STEP 2â€“8 gates PASS; Agent 10 perf consult PASS each wave; mid-sprint peasants/workers routing bug fixed by Agent 03 before final signoff; Jaimie manual playtest PASS."
-          },
-          "pm_accepted_deliverables": [
-            "game/graphics/ursina_coords.py, ursina_environment.py, ursina_prefabs.py, ursina_units_anim.py (Track A1)",
-            "game/graphics/ursina_terrain_fog_collab.py, ursina_entity_render_collab.py (Track A2)",
-            "game/engine_facades/camera_display.py, render_coordinator.py (Track B)",
-            "UrsinaRenderer.update() orchestration helpers + docs/refactor/engine_access_inventory.md WK41 subsection (R4)",
-            "Automated QA: determinism_guard + pytest + qa_smoke --quick + validate_assets errors=0 throughout"
-          ],
-          "pm_evidence": {
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json â†’ wk41-mechanical-module-split rounds wk41_r0_kickoff_r1_complete through wk41_r4_track_a3_docs_complete",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json â†’ wk41_step2 through wk41_step8_post_r4_full_stack â€” all PASS",
-            "agent_10": ".cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json â†’ WK41 waves â€” no blocking perf regression",
-            "human_playtest": "Jaimie: sprint wrap playtest PASS (user confirmation 2026-04)"
-          },
-          "pm_next_actions_by_agent": {
-            "01": {
-              "status": "closed",
-              "next_action": "Offer next sprint options; optional git save-state / CHANGELOG if Jaimie wants release notes (Agent 13)."
-            },
-            "03": {
-              "status": "done"
-            },
-            "10": {
-              "status": "done"
-            },
-            "11": {
-              "status": "done"
-            }
-          }
-        }
-      },
-      "pm_universal_prompt": "You are being activated for sprint **wk41-mechanical-module-split**, round **wk41_r0_kickoff**.\n\n1) Read the sprint plan FIRST (full file): `.cursor/plans/wk41_mechanical_module_split_a9c6adf1.plan.md`\n2) Read the PM Executive Producer hub for this sprint â€” your assignment and step order:\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\n   â†’ `sprints[\"wk41-mechanical-module-split\"]`\n   â†’ `sprint_meta.pm_jaimie_send_order` (which step you are on)\n   â†’ `rounds[\"wk41_r0_kickoff\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]`\n3) Follow **only** your numbered prompt; do not expand scope into features or sim logic changes.\n4) When done: update **your** agent log JSON under `.cursor/plans/agent_logs/`; report files touched, exact commands, exit codes, and blockers to Jaimie.\n\nOne line: **mechanical file split for readability** â€” same behavior, same gates as refactor sprints."
-    },
-    "wk46-stage3-lumberjack-builders": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
-        "master_plan_section": "Stage 3: Lumberjack Economy",
-        "status": "closed_success",
-        "created_utc": "2026-04-29T12:00:00Z",
-        "notes": "Stage 3: BuilderPeasant gathers local wood by chopping trees (5s) then harvesting log pile (5s) until they have enough wood for their assigned plot (house/food_stand=10, farm=20). Chopping allowed only on tiles with Visibility != UNSEEN (SEEN or VISIBLE). Tree yields by growth: >=1.0 -> 10, >=0.75 -> 7, >=0.50 -> 5; cannot chop below 0.50. Logs are visual-only: render `log_stackLarge` model at the chopped tile with scale matching tree growth; disappear after harvest."
-      },
-      "rounds": {
-        "wk46_r0_kickoff": {
-          "round_meta": {
-            "round_id": "wk46_r0_kickoff",
-            "prompt_set_id": "wk46_r0",
-            "build_target": "Stage3_lumberjack_builders",
-            "visibility": "Implementers: 05 (BuilderPeasant wood logic), 03 (SimEngine helpers + snapshot + Ursina log render), 15 (move/copy log_stackLarge.glb into runtime env path). QA: 11 after integration. Art consult: 09 optional scale sanity."
-          },
-          "pm_status_summary": {
-            "overall_status": "assigned",
-            "focus": "Implement Stage 3 lumberjack builders per plan; ensure deterministic tree targeting; fog rule: may chop SEEN or VISIBLE tiles, never UNSEEN. Ensure runtime model paths do not point into raw Kenney download folders."
-          },
-          "pm_bug_tickets": [],
-          "pm_feature_requests": [
-            {
-              "id": "WK46-FEAT-Stage3-LumberjackBuilders",
-              "title": "Builder peasants chop trees for local wood before building",
-              "owner_agents": [
-                "05_GameplaySystemsDesigner",
-                "03_TechnicalDirector_Architecture"
-              ],
-              "acceptance": [
-                "When a neutral plot spawns, BuilderPeasant gathers wood locally and only then builds.",
-                "Wood inventory is per-peasant (not player).",
-                "Chopping only allowed on SEEN or VISIBLE tiles; UNSEEN trees are ignored.",
-                "Yields/costs match spec: 10/10/20 cost; yields 10/7/5 by growth; no chopping < 0.5.",
-                "Log stack appears during harvest window and is scaled by growth; disappears when harvested.",
-                "Gates PASS: qa_smoke --quick; validate_assets --report; and pytest baseline."
-              ]
-            }
-          ],
-          "pm_next_actions_by_agent": {
-            "15": {
-              "status": "assigned_active",
-              "asks": [
-                "Move/copy the user-provided Kenney model from `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit/Models/GLTF format/log_stackLarge.glb` into the runtime-resolved folder: `assets/models/environment/log_stackLarge.glb`.",
-                "Do not rename the stem (must be `log_stackLarge` so `_environment_model_path('log_stackLarge')` can resolve it).",
-                "Confirm `python tools/validate_assets.py --report` still exits 0 (errors=0).",
-                "If attribution needs an update, add the minimal entry (but prefer not to change licensing text unless the repo requires it)."
-              ],
-              "acceptance_criteria": [
-                "Runtime path exists: `assets/models/environment/log_stackLarge.glb`.",
-                "Asset gate still passes: validate_assets exit 0."
-              ]
-            },
-            "05": {
-              "status": "assigned_active",
-              "asks": [
-                "Implement BuilderPeasant Stage 3 wood-gathering state machine per the sprint plan.",
-                "Wood is per-builder only: track `wood_inventory` on the BuilderPeasant; do not add player/global wood.",
-                "Tree yields by growth: >=1.0 => 10, >=0.75 => 7, >=0.50 => 5; cannot chop below 0.50.",
-                "Durations: 5s chop + 5s harvest per tree.",
-                "If no eligible trees (SEEN/VISIBLE only), builder should go stand on assigned plot (no crash / no infinite loop).",
-                "Add focused unit tests for yield/cost gating (farm requires 2 full trees or equivalent).",
-                "Do NOT edit engine/renderer files owned by Agent 03."
-              ],
-              "acceptance_criteria": [
-                "Builder does not build until wood >= required_wood for that building type.",
-                "Farm requires 20 wood (multiple chops if needed).",
-                "Tests added and PASS."
-              ]
-            },
-            "03": {
-              "status": "assigned_active",
-              "asks": [
-                "Add SimEngine helpers for Stage 3 so BuilderPeasant can find/chop/harvest trees deterministically and safely.",
-                "Fog rule: eligible tree tiles must have `world.visibility[ty][tx] != Visibility.UNSEEN` (SEEN or VISIBLE).",
-                "Chop must remove the Tree entity, clear world TileType.TREE to GRASS, and update `_tree_growth_by_tile` immediately.",
-                "Add a render-facing `log_stacks` list to SimEngine + snapshot so Ursina can render log piles keyed by tile; destroy them on harvest.",
-                "Ursina: render `log_stackLarge` at the chopped tile with scale matching growth (0.5/0.75/1.0). Use runtime path under `assets/models/environment/` (do not reference raw Kenney folders).",
-                "Add minimal HUD support so selecting a peasant can show wood inventory if present (optional but recommended).",
-                "Run full gates after integration."
-              ],
-              "acceptance_criteria": [
-                "Snapshot includes log stacks and Ursina renders them when present.",
-                "Building placement + sapling removal rules remain correct (no invisible blockers).",
-                "Gates PASS."
-              ]
-            },
-            "09": {
-              "status": "consult_optional",
-              "asks": [
-                "Visual sanity check only: confirm log stack scale reads well at 0.5 / 0.75 / 1.0 and does not Z-fight terrain.",
-                "If it looks off, recommend a small scale multiplier constant tweak instead of re-exporting assets."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_integrated",
-              "asks": [
-                "After Agents 03/05/15 report integration complete: run gates from repo root: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report.",
-                "If failures: capture last ~50 lines and report which gate failed."
-              ]
-            },
-            "01": {
-              "status": "active",
-              "next_action": "Kickoff: send universal prompt to 15 + 05 + 03 in parallel; when implementers report done, send to 11 for gates; optionally ask 09 for a quick visual consult if log scale looks wrong."
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "batch_1_parallel_then_11_then_optional_consult",
-            "batch_1_parallel": [
-              "15",
-              "05",
-              "03"
-            ],
-            "then_in_order": [
-              "11"
-            ],
-            "optional_consult_after": [
-              "09"
-            ],
-            "intelligence_by_agent": {
-              "15": "medium",
-              "05": "high",
-              "03": "high",
-              "11": "low",
-              "09": "low"
-            },
-            "do_not_send": [
-              "02",
-              "04",
-              "06",
-              "07",
-              "08",
-              "10",
-              "12",
-              "13",
-              "14"
-            ],
-            "rationale": "Parallelize asset placement (15), BuilderPeasant logic/tests (05), and SimEngine+Ursina integration (03). QA (11) runs gates only after integration to avoid churn. Art consult (09) only if visuals need tuning."
-          },
-          "pm_agent_prompts": {
-            "15": "WK46 Stage 3 (Model/Assets, MEDIUM): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Task: copy `assets/models/Models/Kenny raw downloads (for exact paths)/kenney_nature-kit/Models/GLTF format/log_stackLarge.glb` into `assets/models/environment/log_stackLarge.glb` so Ursina can load it via `_environment_model_path('log_stackLarge')`. Do not reference raw download paths at runtime. Run: python tools/validate_assets.py --report. Report back with files touched + command + exit code.",
-            "05": "WK46 Stage 3 (Gameplay, HIGH): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Implement BuilderPeasant lumberjack behavior: per-peasant wood inventory; chop 5s + harvest 5s; yields 10/7/5 for growth >=1.0/0.75/0.50; costs house=10, food_stand=10, farm=20; cannot chop <0.50. Fog rule: trees in UNSEEN fog cannot be chopped (SEEN/VISIBLE allowed). If no eligible trees, builder stands on assigned plot. Add focused tests proving builder does not build until wood threshold met. Do NOT edit engine/renderer files. Run: python tools/determinism_guard.py; python -m pytest tests/ (at minimum include your new tests). Report files touched + exit codes.",
-            "03": "WK46 Stage 3 (Tech, HIGH): Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md. Integrate Stage 3 into SimEngine + snapshot + Ursina: add sim helpers to find/chop/harvest trees deterministically, respecting fog rule (visibility != UNSEEN). Maintain world TileType + tree_growth_lookup consistency when chopping. Add sim `log_stacks` list and include it in SimStateSnapshot so Ursina can render `log_stackLarge` (runtime path `assets/models/environment/log_stackLarge.glb`) scaled by growth (0.5/0.75/1.0). Destroy log entities when harvested. Run full gates: python -m pytest tests/; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Report files touched + exit codes.",
-            "11": "WK46 Stage 3 (QA, LOW): After 03/05/15 say Stage 3 is integrated, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and any failures in agent_11 log.",
-            "09": "WK46 Stage 3 (Art consult, LOW): Optional visual check: run `python main.py --renderer ursina --no-llm` and watch a builder chop a tree. Confirm log stack scale looks correct at 0.5/0.75/1.0 and doesn't clip terrain; if off, recommend a small scale multiplier constant tweak. No code changes unless asked."
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r0_kickoff**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the master plan context (Stage 3): `.cursor/plans/master_plan_building_nature_sprints.md`\\n3) Read the PM hub for your assignment:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   â†’ `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r0_kickoff\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n4) Stay in scope: Stage 3 lumberjack builders only (no global player wood).\\n5) Determinism + fog rule: may chop only tiles with `Visibility != UNSEEN` (SEEN/VISIBLE).\\n6) Update your agent log with: files touched, commands run, exit codes, and any blockers.\\n\\nOne line: **Builders chop (5s) + harvest (5s) trees for local wood before building; logs are visual-only and scaled by tree growth.**"
-        },
-        "wk46_r1_bugfix_builder_respawn_and_progress_unblock": {
-          "round_meta": {
-            "round_id": "wk46_r1_bugfix_builder_respawn_and_progress_unblock",
-            "prompt_set_id": "wk46_r1",
-            "build_target": "Bugfix_builder_respawn + unblock_food_farm_spawn",
-            "created_utc": "2026-04-29T12:30:00Z",
-            "reported_by": "human_playtest",
-            "notes": "Playtest: no FoodStands/Farms ever built; Houses partially built then builder dies -> plot never completes. Root cause likely: NeutralBuildingSystem returns early whenever ANY requires_builder_peasant plot exists, but does not spawn a replacement builder for that plot if the original builder dies; this blocks all further plot spawning including food/farm."
-          },
-          "pm_bug_tickets": [
-            {
-              "id": "WK46-BUG-001",
-              "title": "Food stands and farms never build (blocked by builder-only plot gate)",
-              "severity": "major",
-              "owner_agent": "05_GameplaySystemsDesigner",
-              "reporter": "human_playtest",
-              "repro_steps": [
-                "Run: python main.py --renderer ursina --no-llm",
-                "Play until multiple plots spawn (houses should appear).",
-                "Observe that FoodStand and Farm plots are never completed (and may never spawn if houses are stuck)."
-              ],
-              "expected": "After some time, at least one FoodStand and one Farm should be constructed (once hero_count thresholds are met).",
-              "actual": "No FoodStands/Farms are built in playtest session; progression appears stuck behind houses.",
-              "acceptance_test": [
-                "Manual: python main.py --renderer ursina --no-llm (5â€“10 minutes) â€” observe at least one FoodStand and Farm get constructed in a typical run.",
-                "Automated: python tools/qa_smoke.py --quick must PASS."
-              ],
-              "status": "assigned"
-            },
-            {
-              "id": "WK46-BUG-002",
-              "title": "If builder peasant dies mid-construction, plot never completes (no replacement builder)",
-              "severity": "major",
-              "owner_agent": "05_GameplaySystemsDesigner",
-              "reporter": "human_playtest",
-              "repro_steps": [
-                "Run: python main.py --renderer ursina --no-llm",
-                "Wait for a House plot to start construction (partially built).",
-                "Allow the BuilderPeasant to die (enemy attack) before completion.",
-                "Observe that the plot stays partially built forever; no new builder arrives."
-              ],
-              "expected": "If a BuilderPeasant dies, another BuilderPeasant should spawn from the castle and resume/finish the partially built plot (no additional wood/resources needed).",
-              "actual": "Partially built plot never completes once the builder dies.",
-              "acceptance_test": [
-                "Unit: add/extend a test to simulate builder death and assert a replacement builder spawns and finishes the plot.",
-                "Manual: python main.py --renderer ursina --no-llm â€” kill builder mid-build and observe replacement completes it.",
-                "Automated: python tools/qa_smoke.py --quick must PASS."
-              ],
-              "status": "assigned"
-            }
-          ],
-          "pm_next_actions_by_agent": {
-            "05": {
-              "status": "assigned_active",
-              "asks": [
-                "Fix NeutralBuildingSystem gating so builder-only plots do NOT permanently block progression when no BuilderPeasant is alive.",
-                "Implement replacement builder spawning: if there exists any plot/building with requires_builder_peasant==True and hp>0 and is_constructed==False, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (prefer the oldest/nearest).",
-                "After spawning a replacement builder, return early (do not spawn new plots in the same tick).",
-                "Ensure this unblocks FoodStand/Farm spawning once houses are caught up (do not require all houses to be built forever due to a stuck plot).",
-                "Stage 3 rule: If a plot is already partially built (construction_started==True or construction_progress>0), the replacement builder should resume BUILDING without requiring additional wood (no double-paying).",
-                "Add/extend tests: a test that simulates a partially built plot + dead builder and asserts a new builder is spawned and finishes the building.",
-                "Run: python -m pytest tests/ and python tools/qa_smoke.py --quick."
-              ],
-              "acceptance_criteria": [
-                "FoodStand/Farm progression resumes in a typical run (not blocked forever by one stuck house plot).",
-                "Replacement builder spawns and completes partially built plot after builder death (no extra wood required).",
-                "Gates PASS."
-              ]
-            },
-            "03": {
-              "status": "consult_needed",
-              "asks": [
-                "Review the fix for any cross-system issues: BuilderPeasant state machine should be able to resume partial construction without wood and without breaking determinism.",
-                "If the solution requires a small SimEngine helper (e.g., selecting the oldest builder-only plot), implement minimally and coordinate with Agent 05."
-              ]
-            },
-            "11": {
-              "status": "blocked_until_05_done",
-              "asks": [
-                "After Agent 05 reports fix landed, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes."
-              ]
-            }
-          },
-          "pm_send_list_minimal": {
-            "order": "05_then_03_consult_then_11",
-            "then_in_order": [
-              "05",
-              "03",
-              "11"
-            ],
-            "intelligence_by_agent": {
-              "05": "high",
-              "03": "medium",
-              "11": "low"
-            },
-            "rationale": "Primary fix lives in NeutralBuildingSystem + BuilderPeasant logic (Agent 05). Agent 03 reviews/integrates only if needed. Agent 11 validates gates after fix."
-          },
-          "pm_agent_prompts": {
-            "05": "WK46 R1 BUGFIX (Gameplay, HIGH): Playtest reports: (1) no FoodStands/Farms built, (2) if BuilderPeasant dies mid-build the plot never completes. Read the sprint plan: .cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md and then open the PM hub: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json â†’ wk46-stage3-lumberjack-builders â†’ rounds â†’ wk46_r1_bugfix_builder_respawn_and_progress_unblock. Root cause likely in game/systems/neutral_buildings.py: it returns early if ANY requires_builder_peasant plot exists, but does not spawn replacement builders. Implement: if there is any plot with requires_builder_peasant==True and hp>0 and not is_constructed, and there is NO active BuilderPeasant, spawn a new BuilderPeasant targeting that plot (pick deterministic order: e.g., lowest (grid_y,grid_x) or oldest inserted). After spawning, return early. Also: if plot is already partially built (construction_started==True or construction_progress>0), replacement builder must resume building without requiring additional wood (no double-paying). Add/extend a unit test to simulate: spawn plot, advance some work, mark builder dead/removed, tick NeutralBuildingSystem -> asserts new builder spawns and finishes. Run: python -m pytest tests/; python tools/qa_smoke.py --quick. Report files + exit codes.",
-            "03": "WK46 R1 BUGFIX (Tech consult, MEDIUM): Review Agent 05â€™s fix for determinism + any needed SimEngine helper. Only implement minimal integration changes if required. Gates: python tools/qa_smoke.py --quick after changes.",
-            "11": "WK46 R1 BUGFIX (QA, LOW): After Agent 05 reports done, run: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Log exit codes and report PASS/failures."
-          },
-          "pm_universal_prompt": "You are being activated for sprint **wk46-stage3-lumberjack-builders**, round **wk46_r1_bugfix_builder_respawn_and_progress_unblock**.\\n\\n1) Read the sprint plan FIRST: `.cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md`\\n2) Read the PM hub for your specific prompt:\\n   `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json`\\n   â†’ `sprints[\\\"wk46-stage3-lumberjack-builders\\\"].rounds[\\\"wk46_r1_bugfix_builder_respawn_and_progress_unblock\\\"].pm_agent_prompts[\\\"YOUR_AGENT_NUMBER\\\"]`\\n3) Fix: replacement builder spawning so partially built plots complete; unblock FoodStand/Farm progression.\\n4) Update your agent log with files changed + commands + exit codes.\\n\\nOne line: **If a builder dies mid-build, spawn a replacement builder to finish the plot; do not let one stuck house block all other neutral buildings forever.**"
-        },
-        "wk46_sprint_closeout": {
-          "round_meta": {
-            "round_id": "wk46_sprint_closeout",
-            "created_utc": "2026-04-29T13:15:00Z",
-            "closed_by": "Agent_01_ExecutiveProducer_PM",
-            "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md"
-          },
-          "pm_status_summary": {
-            "status": "closed_success",
-            "summary": "WK46 closed. Builder peasants chop + harvest trees for local wood before building; log piles render in 3D; replacement builder spawns if one dies mid-build; neutral plots/builders can run concurrently so food stands/farms build in practice. Gates PASS (Agent 11) and playtesting confirmed behavior."
-          },
-          "pm_accepted_deliverables": [
-            "Stage 3 BuilderPeasant wood-gathering state machine (local wood inventory; yields by growth; costs for house/food stand/farm).",
-            "SimEngine helpers + snapshot.log_stacks + Ursina log stack rendering + HUD wood display.",
-            "Bugfix: replacement builder spawns for pending plots; partial-build resumes without double-paying; allow limited concurrency and mixed-type progression.",
-            "Runtime model: assets/models/environment/log_stackLarge.glb."
-          ],
-          "pm_evidence": {
-            "agent_05": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json â†’ wk46-stage3-lumberjack-builders (wk46_r0_kickoff, wk46_r1_bugfix_builder_respawn_and_progress_unblock, wk46_r2_bugfix_regular_peasant_respawn_not_suppressed_by_builders)",
-            "agent_03": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json â†’ wk46-stage3-lumberjack-builders.wk46_r0_kickoff + wk46_r0_followup_construction_stage_prefabs",
-            "agent_15": ".cursor/plans/agent_logs/agent_15_ModelAssembler_KitbashLead.json â†’ wk46-stage3-lumberjack-builders.wk46_r0_kickoff",
-            "agent_11": ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json â†’ wk46-stage3-lumberjack-builders.wk46_r_final_gates_2026_04_29",
-            "human_playtest": "Jaimie: confirmed builders build + farms/food stands can complete; replacement builders spawn when needed (2026-04-29)"
-          }
-        }
-      }
-    },
     "orch_tiny_warrior_red": {
       "sprint_meta": {
         "status": "closed_success",
@@ -4442,7 +3916,7 @@
       "sprint_meta": {
         "sprint_id": "wk51_attachment_ux_phase3",
         "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
-        "status": "in_progress",
+        "status": "closed_success",
         "created_utc": "2026-05-01T23:00:00Z",
         "notes": "WK51 Pin + Recall MVP — midsprint save 2026-05-02: R6 orchestrator COMPLETE (SDK Agents 08→11+03 passed). Next coding slice: Recall click must reopen hero panel / \"right menu\" UX per user report (see pm_mid_sprint_followups). Earlier rounds R1–R5 may be partially obsolete vs landed code — verify ledger before re-running full chain.",
         "pm_mid_sprint_followups": {
@@ -5057,25 +4531,51 @@
               "08": "medium",
               "11": "low"
             },
-            "do_not_send": ["01","02","04","05","06","07","09","10","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["03","08","11"],
+            "runnable_agents": [
+              "03",
+              "08",
+              "11"
+            ],
             "dependencies": [
               {
                 "id": "wk51_r7_impl",
-                "agents": ["03","08"],
+                "agents": [
+                  "03",
+                  "08"
+                ],
                 "parallel": true
               },
               {
                 "id": "wk51_r7_verify",
-                "agents": ["11"],
+                "agents": [
+                  "11"
+                ],
                 "parallel": false,
-                "after": ["wk51_r7_impl"]
+                "after": [
+                  "wk51_r7_impl"
+                ]
               }
             ],
-            "human_gates": ["optional_playtest_recall_right_panel_and_pin_emoji"],
+            "human_gates": [
+              "optional_playtest_recall_right_panel_and_pin_emoji"
+            ],
             "model_policy": {
               "required_model": "composer-2",
               "allow_overrides": false
@@ -5104,6 +4604,135 @@
             "03": "Stand by.",
             "08": "Stand by.",
             "11": "Stand by."
+          }
+        }
+      }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "status": "in_progress",
+        "created_utc": "2026-05-06T22:00:00Z",
+        "notes": "WK52 Phase 3 deferred features: radar minimap, pin alerts (EventBus + toast + recall flash), watch card (live map above minimap, expand/minimize, dynamic left-panel height), memorial card (full-screen pause overlay). Two rounds: R1 parallel impl (03+08), R2 QA+perf (11+10).",
+        "pm_orchestrator": {
+          "validate_r1": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r1_plumbing_and_ux",
+          "run_r1": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r1_plumbing_and_ux",
+          "validate_r2": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r2_perf_qa",
+          "run_r2": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r2_perf_qa"
+        }
+      },
+      "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial. Read `.cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md` in full -- it contains all code examples, test specs, and acceptance criteria for your agent section. Implement exactly what the plan specifies for your wave; run every verification command listed; iterate until all gates pass. Update your agent log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"ROUND_ID\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json  Then run the exact SDK completion receipt command from your orchestrator prompt.",
+      "rounds": {
+        "wk52_r1_plumbing_and_ux": {
+          "round_meta": {
+            "round_id": "wk52_r1_plumbing_and_ux",
+            "created_utc": "2026-05-06T22:00:00Z",
+            "wave": 1,
+            "note": "Agents 03 and 08 run in parallel. 03 owns all EventBus plumbing; 08 owns all HUD/renderer UX. No cross-dependency within this round."
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "R1 parallel: Agent 03 adds HERO_LEVEL_UP event, hero_id to existing event payloads, event_bus wiring into Hero, PinSlot new fields, and PinAlertWatcher skeleton. Agent 08 builds watch card chrome + dynamic left-panel height, radar minimap, alert HUD wiring, memorial card, and screenshot scenarios."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned_active",
+              "next_action": "Implement Wave 1 event plumbing per plan Agent 03 section. Run pytest tests/test_wk52_event_plumbing.py + qa_smoke + determinism_guard."
+            },
+            "08": {
+              "status": "assigned_active",
+              "next_action": "Implement Wave 1 UX per plan Agent 08 section. Run pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py + qa_smoke + capture_screenshots wk52_pin_alerts."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r1_plumbing_and_ux (wave 1, parallel with Agent 08).\n\nRead .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md -- your full spec with all code examples is in the Agent 03 section. Deliverables:\n\n1. game/events.py: add HERO_LEVEL_UP = \"hero_level_up\" to GameEventType enum.\n\n2. game/entities/hero.py: add _event_bus = None in __init__; add set_event_bus(self, bus); in level_up() (~line 619) after mutating level/max_hp emit: if self._event_bus is not None: self._event_bus.emit({\"type\": GameEventType.HERO_LEVEL_UP.value, \"hero_id\": str(self.hero_id), \"hero_name\": str(self.name), \"new_level\": int(self.level)})\n\n3. game/engine.py: in spawn_hero() (~line 659) after appending hero add: hero.set_event_bus(self.event_bus)\n\n4. game/sim_engine.py: both BOUNTY_CLAIMED emit sites (~lines 591 and 745) -- add \"hero_id\": str(getattr(hero, \"hero_id\", \"\") or \"\") to both payloads.\n\n5. game/entities/buildings/base.py: on_hero_enter() (~line 255) HERO_ENTERED_BUILDING emit -- add \"hero_id\": str(getattr(hero, \"hero_id\", \"\") or \"\").\n\n6. game/ui/pin_slot.py: add to PinSlot dataclass: low_health_alerted_ms: int = 0 and pinned_name: str = \"\"\n\n7. game/ui/pin_alert_watcher.py: NEW FILE. PinAlertWatcher(__init__(pin_slot, hud_add_message_fn), subscribe(event_bus), check_low_health(profiles, now_ms) [25% threshold 30s cooldown via pin_slot.low_health_alerted_ms], _on_level_up(payload), _on_entered_building(payload) [inn/tavern only], _on_bounty_claimed(payload), _matches(payload) [payload hero_id vs pin_slot.hero_id], _fire(text, color) [calls hud_add_message_fn + sets self.recall_flash_needed=True]).\n\n8. tests/test_wk52_event_plumbing.py: HERO_LEVEL_UP emitted, hero_id in payloads, _matches correct, 30s cooldown respected, PinSlot has low_health_alerted_ms.\n\nGates: python -m pytest tests/test_wk52_event_plumbing.py -v && python tools/qa_smoke.py --quick && python tools/determinism_guard.py\n\nUpdate log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r1_plumbing_and_ux\"]. Validate JSON. Run SDK completion receipt.",
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r1_plumbing_and_ux (wave 1, parallel with Agent 03).\n\nRead .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md -- your full spec with all code examples is in the Agent 08 section. Deliverables:\n\n1. game/ui/hud.py -- Watch Card: WATCH_CARD_HEADER_H=14, WATCH_CARD_MAP_H=56, WATCH_CARD_STATS_H=68, WATCH_CARD_FULL_H=138, MEMORIAL_BTN_W=90. self._watch_card_expanded=False. _layout_rects_for_screen(): when pin slot has hero, card_top=minimap.y-(WATCH_CARD_FULL_H if expanded else WATCH_CARD_HEADER_H); left_h=max(0, card_top-top_h). _render_watch_card_chrome(): header above minimap.y, hero name+HPBar+XP+Level+'MANA -' placeholder, expand/minimize chevron. Store self.watch_card_map_rect. Recall click sets self._watch_card_expanded=True.\n\n2. game/ui/hud.py -- Radar minimap: _render_radar_minimap(surface, minimap, game_state): fill dark, draw dots: heroes=gold(220,180,50), enemies=red(200,50,50), buildings=blue-grey(80,100,160), lairs=dark-red(140,30,30), guild=cyan(50,180,180). _world_to_radar(wx,wy,rect) helper. Pinned hero: 4px white outline+3px gold. Render order: (1)_render_watch_card_chrome, (2)minimap panel bg, (3)_render_radar_minimap, (4)recall+memorial.\n\n3. game/ui/hud.py -- Alerts: trigger_recall_flash() sets self._recall_flash_end_ms=int(sim_now_ms())+750. _render_recall_button(): if now<_recall_flash_end_ms, pulse=elapsed//250; if pulse%2==0 blit red overlay(220,30,30,140). Each render(): check self._alert_watcher for recall_flash_needed; call check_low_health(profiles, now_ms).\n\n4. game/ui/hud.py -- Memorial btn: _render_memorial_button(): 90px button, chr(9904)+' Memorial', stores self.memorial_btn_rect. handle_click returns 'open_memorial' when hit.\n\n5. game/ui/memorial_card.py -- NEW FILE. MemorialRecord dataclass. _generate_epitaph(). MemorialCard: show(record), hide(), render(surface)->bool (full-screen overlay + centered panel + stats + epitaph + '[Click to close]'), handle_click(pos)->bool.\n\n6. game/engine_facades/render_coordinator.py -- after e.hud.render(): if watch_card_map_rect and pin slot has hero, call self._render_hero_minimap(e.screen, watch_map_rect, pinned_hero, snapshot).\n\n7. game/engine.py handle_hud_action() -- 'open_memorial': self.paused=True, build MemorialRecord from fallen heroes, self.hud.memorial_card.show(record). 'close_memorial_unpause': self.paused=False, hide(). 'expand_watch_card': self.hud._watch_card_expanded=True.\n\n8. tools/screenshot_scenarios.py -- add wk52_pin_alerts scenario: 4 shots: watch_card_expanded, watch_card_minimized, pin_radar_minimap, memorial_card.\n\n9. tests/test_wk52_watch_card.py and tests/test_wk52_memorial_card.py per plan.\n\nPhase 4b loop: capture before, implement, capture after, read PNGs.\nGates: python -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py -v && python tools/qa_smoke.py --quick && python tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nUpdate log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r1_plumbing_and_ux\"]. Validate JSON. Run SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 1 parallel: 03 (high) event plumbing + 08 (high) full UX implementation.",
+            "intelligence_by_agent": {
+              "03": "high",
+              "08": "high"
+            },
+            "do_not_send": ["01","02","04","05","06","07","09","10","11","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["03","08"],
+            "dependencies": [
+              {
+                "id": "wk52_r1_impl",
+                "agents": ["03","08"],
+                "parallel": true
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r1_plumbing_and_ux. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r1_plumbing_and_ux\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Also read: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. Update log with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r2_perf_qa": {
+          "round_meta": {
+            "round_id": "wk52_r2_perf_qa",
+            "created_utc": "2026-05-06T22:00:00Z",
+            "wave": 2,
+            "depends_on": "wk52_r1_plumbing_and_ux"
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R2 parallel: Agent 10 perf consult on watch card + radar; Agent 11 full gate stack + screenshots + human playtest instructions."
+          },
+          "pm_next_actions_by_agent": {
+            "10": {
+              "status": "assigned_pending_r1",
+              "next_action": "Read _render_radar_minimap and _render_watch_card_chrome. Check for per-frame Surface allocs. Run perf_benchmark. Log only, no code edits."
+            },
+            "11": {
+              "status": "assigned_pending_r1",
+              "next_action": "pytest full suite + qa_smoke + determinism_guard + validate_assets + capture_screenshots wk52_pin_alerts + human playtest checklist."
+            }
+          },
+          "pm_agent_prompts": {
+            "10": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r2_perf_qa (LOW intelligence -- read-only consult, no code edits).\n\nRun: python tools/perf_benchmark.py && python tools/qa_smoke.py --quick\n\nRead game/ui/hud.py: _render_radar_minimap and _render_watch_card_chrome. Check: (1) pygame.Surface() called every frame? Flag -- should be cached. (2) _world_to_radar O(n) no quadratic loops? (3) HP/XP text surfaces re-rendered every tick? Flag. (4) sim ms/tick within +/-5% of baseline?\n\nLog PASS or flag issues. File follow-up tickets for Agent 08 if needed. No code edits.\n\nUpdate .cursor/plans/agent_logs/agent_10_Performance_SRE_DevOps.json at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r2_perf_qa\"]. Validate JSON. Run SDK receipt.",
+            "11": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r2_perf_qa.\n\nGates (all must PASS):\npython -m pytest tests/ -v\npython tools/qa_smoke.py --quick\npython tools/validate_assets.py --report\npython tools/determinism_guard.py\n\nIf WK52 test files missing (test_wk52_event_plumbing.py, test_wk52_watch_card.py, test_wk52_memorial_card.py), file a blocker with owner (03 or 08) and stop.\n\nScreenshots: python tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nInclude this checklist verbatim under pm_human_retest_request:\n1. Pin a hero. Confirm watch card appears above minimap.\n2. Deselect. Confirm left menu height adjusts.\n3. Watch card minimized = 14px header peeks above minimap. Click to expand.\n4. Radar shows colored dots: gold=heroes, red=enemies, blue-grey=buildings, dark-red=lairs, cyan=guild.\n5. Pinned hero dot has white outline on radar.\n6. HP drops below 25%: HUD toast + Recall button flashes red 3x.\n7. Wait 30s -- low-health alert must NOT re-fire until HP drops again.\n8. Hero levels up: toast '{name} reached level {N}!'.\n9. Hero enters inn: toast '{name} is resting at the inn.'.\n10. Bounty claimed: toast '{name} collected a bounty!'.\n11. Click Memorial button. Full-screen pause overlay opens.\n12. Heroes stop moving while memorial open.\n13. Overlay shows name, class, level, stats, epitaph.\n14. Click to close. Game resumes.\n15. Recall click auto-expands watch card.\n16. No crashes or console errors.\n\nUpdate .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r2_perf_qa\"]. Validate JSON. Run SDK receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 2 parallel: 11 (high) full QA signoff; 10 (low) perf consult.",
+            "intelligence_by_agent": {
+              "11": "high",
+              "10": "low"
+            },
+            "do_not_send": ["01","02","03","04","05","06","07","08","09","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["10","11"],
+            "dependencies": [
+              {
+                "id": "wk52_r2_parallel",
+                "agents": ["10","11"],
+                "parallel": true
+              }
+            ],
+            "human_gates": ["manual_playtest_wk52_full_checklist"],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r2_perf_qa. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r2_perf_qa\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON. Run SDK receipt.",
+          "pm_human_gate_after_round": {
+            "playtest_command": "python main.py --provider mock",
+            "duration_minutes": "10-15",
+            "reference": "Agent 11 log field pm_human_retest_request and .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md Definition of Done"
           }
         }
       }

@@ -5514,6 +5514,164 @@
           "bugs_found": []
         }
       }
+    },
+    "wk43-building-nature-stage1": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk43_building_nature_stage1_b427a7a5.plan.md",
+        "pm_round": "wk43_r0_kickoff",
+        "notes": "Agent 11 scope: run full gate stack after Agent 03 integration. This entry records a baseline pre-integration gate run on current workspace state."
+      },
+      "rounds": {
+        "wk43_r0_onboard_baseline_gates_2026_04_28": {
+          "round_id": "wk43_r0_onboard_baseline_gates_2026_04_28",
+          "status": "complete",
+          "what_i_changed": [
+            "Onboarding session: no repository code changes; ran baseline automated gate stack prior to WK43 integration."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard_2026_04_28": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest_2026_04_28": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_2026_04_28": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets_report_2026_04_28": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "After Agent 03 completes WK43 integration: re-run the full gate stack and log a new round entry with exit codes."
+          ]
+        },
+        "wk43_r0_kickoff_gates_2026_04_28": {
+          "round_id": "wk43_r0_kickoff_gates_2026_04_28",
+          "status": "complete",
+          "pm_context": "wk43_r0_kickoff — user reports manual playtesting PASS.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran WK43 required full gate stack; recorded exit codes."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard_2026_04_28_kickoff": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest_2026_04_28_kickoff": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_2026_04_28_kickoff": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets_report_2026_04_28_kickoff": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            },
+            "manual_playtest": {
+              "status": "PASS",
+              "reported_by": "Jaimie",
+              "notes": "User stated: Playtesting is a pass."
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "If new WK43 integration commits land after this run: re-run the same full gate stack and log a follow-up round with exit codes."
+          ]
+        }
+      }
+    },
+    "wk44-stage2-dynamic-trees": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
+        "pm_round": "wk44_r0_kickoff",
+        "notes": "Agent 11 scope: run required gates (qa_smoke --quick + validate_assets --report) after integration; this entry records a baseline full-stack run and notes human playtest PASS as reported."
+      },
+      "rounds": {
+        "wk44_r0_kickoff_gates_2026_04_28": {
+          "round_id": "wk44_r0_kickoff_gates_2026_04_28",
+          "status": "complete",
+          "pm_context": "wk44_r0_kickoff — user reports manual playtesting PASS.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran full gate stack on current workspace state."
+          ],
+          "how_to_test": [
+            "python tools/determinism_guard.py",
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "determinism_guard_2026_04_28_wk44": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "pytest_2026_04_28_wk44": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_2026_04_28_wk44": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS (full profile set)"
+            },
+            "validate_assets_report_2026_04_28_wk44": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            },
+            "manual_playtest": {
+              "status": "PASS",
+              "reported_by": "Jaimie",
+              "notes": "User stated: My playtest is passing."
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "After Agent 03 completes WK44 integration: re-run gates (at minimum qa_smoke --quick and validate_assets --report; optionally full stack) and log a follow-up round entry with exit codes."
+          ]
+        }
+      }
     }
   }
 }
