@@ -252,24 +252,6 @@ class ChatPanel:
             1,
         )
 
-        close_s = 12
-        self._watch_band_close_rect = pygame.Rect(rx + w - close_s - 2, ry + 1, close_s, close_s)
-        cr = self._watch_band_close_rect
-        pygame.draw.line(
-            surface,
-            (190, 185, 210),
-            (cr.left + 2, cr.top + 2),
-            (cr.right - 3, cr.bottom - 3),
-            1,
-        )
-        pygame.draw.line(
-            surface,
-            (190, 185, 210),
-            (cr.right - 3, cr.top + 2),
-            (cr.left + 2, cr.bottom - 3),
-            1,
-        )
-
         pad_lr = 6
         divider_h = 1
         gap_after_divider = 1
@@ -414,6 +396,16 @@ class ChatPanel:
         )
         surface.set_clip(clip_prev2)
         self._message_area_rect = msg_rect
+
+        inset = 3
+        close_s = 14
+        self._watch_band_close_rect = pygame.Rect(rx + w - close_s - inset, ry + inset, close_s, close_s)
+        cr = self._watch_band_close_rect
+        pygame.draw.rect(surface, (20, 20, 28), cr, border_radius=2)
+        pygame.draw.rect(surface, (60, 60, 80), cr, width=1, border_radius=2)
+        glyph = (190, 185, 210)
+        pygame.draw.line(surface, glyph, (cr.left + 3, cr.top + 3), (cr.right - 4, cr.bottom - 4), 1)
+        pygame.draw.line(surface, glyph, (cr.right - 4, cr.top + 3), (cr.left + 3, cr.bottom - 4), 1)
 
     def render(
         self,

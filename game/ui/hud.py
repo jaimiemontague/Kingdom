@@ -52,6 +52,28 @@ def world_to_radar(
     return (mx, my)
 
 
+def building_display_name(building) -> str:
+    """Human-readable building title for HUD chrome (WK52; avoids ``str(Enum)`` 'BuildingType.X' glitches)."""
+    gd = getattr(building, "get_display_name", None)
+    if callable(gd):
+        try:
+            name = gd()
+            if name:
+                return str(name)
+        except Exception:
+            pass
+    dn = getattr(building, "display_name", None)
+    if dn:
+        return str(dn)
+    bt = getattr(building, "building_type", None)
+    if bt is None:
+        cn = type(building).__name__.replace("Building", "").strip()
+        return cn.title() if cn else "Building"
+    key = getattr(bt, "value", bt)
+    s = str(key)
+    return s.replace("_", " ").title()
+
+
 class HUD:
     """Displays game information to the player."""
 
@@ -268,11 +290,7 @@ class HUD:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
 
     def _building_display_name(self, building) -> str:
-        dn = getattr(building, "display_name", None)
-        if dn:
-            return str(dn)
-        btype = str(getattr(building, "building_type", type(building).__name__) or "")
-        return btype.replace("_", " ").title()
+        return building_display_name(building)
 
     def _effective_building_card_h(self, screen_h: int) -> int:
         top_h = int(getattr(self.theme, "top_bar_h", 48))
@@ -870,7 +888,8 @@ class HUD:
         self._card_slot_kind = "building"
         sh = int(surface.get_height())
         ch = self._effective_building_card_h(sh)
-        cx, cw = minimap_rect.x, minimap_rect.width
+        cx = int(minimap_rect.x)
+        cw = int(LEFT_COL_W)
         cy = minimap_rect.y - ch
 
         chevron = "▲" if self._building_card_expanded else "▼"
@@ -1551,6 +1570,9 @@ class HUD:
 
         selected_hero = game_state.get("selected_hero")
         selected_peasant = game_state.get("selected_peasant")
+        if game_state.get("selected_building") is not None:
+            selected_hero = None
+            selected_peasant = None
         self.left_close_rect = None
         if selected_hero is not None:
             self._panel_left.render(surface)

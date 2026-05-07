@@ -5,6 +5,7 @@ import pygame
 from game.ui.hud import (
     BUILDING_CARD_FULL_H,
     HERO_LEFT_MIN_H,
+    LEFT_COL_W,
     RADAR_MINIMAP_H,
     WATCH_CARD_CHAT_H,
     WATCH_CARD_FULL_H,
@@ -93,6 +94,39 @@ def test_toggle_right_panel_is_noop_for_compatibility():
     h.right_panel_visible = True
     h.toggle_right_panel()
     assert h.right_panel_visible is True
+
+
+def test_building_display_name_resolves_enum_value():
+    from game.entities.buildings.castle import Castle
+    from game.ui.hud import building_display_name
+
+    c = Castle(3, 3)
+    assert building_display_name(c) == "Castle"
+    low = building_display_name(c).lower()
+    assert "buildingtype" not in low
+
+
+def test_chat_close_x_renders_on_top_of_band():
+    """R9: close glyph center reads as chrome/glyph, not brown message-region fill."""
+    from game.ui.chat_panel import ChatPanel
+    from game.ui.theme import UITheme
+
+    pygame.init()
+    panel = ChatPanel(UITheme())
+    panel.end_conversation()
+    surf = pygame.Surface((220, 150))
+    surf.fill((255, 0, 255))
+    panel.render_watch_band(surf, pygame.Rect(10, 50, 200, 148), {"heroes": [], "llm_available": True}, "x")
+    cr = panel._watch_band_close_rect
+    assert cr is not None
+    glyph = (190, 185, 210)
+    brown = (60, 55, 45)
+    px = surf.get_at((cr.centerx, cr.centery))[:3]
+
+    def _d2(a: tuple[int, int, int], b: tuple[int, int, int]) -> int:
+        return sum((int(a[i]) - int(b[i])) ** 2 for i in range(3))
+
+    assert _d2(px, glyph) < _d2(px, brown)
 
 
 def test_watch_card_chevron_returns_consume_action():
@@ -379,6 +413,7 @@ def test_building_card_renders_with_infocard():
     assert hud.watch_card_map_rect is None
     assert hud._watch_card_chat_rect is None
     assert hud._watch_card_rect is not None
+    assert hud._watch_card_rect.width == LEFT_COL_W
 
 
 def test_card_slot_precedence_building_over_hero():

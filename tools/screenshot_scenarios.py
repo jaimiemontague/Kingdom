@@ -1202,8 +1202,19 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
         eng.paused = True
 
     def _apply_building_card(eng: Any) -> None:
-        _prep(eng)
-        eng.selected_building = castle
+        eng.screenshot_hide_ui = False
+        z = float(getattr(eng, "zoom", 1.0) or 1.0)
+        cam_x = float(getattr(eng, "camera_x", 0.0))
+        cam_y = float(getattr(eng, "camera_y", 0.0))
+        sx = int((float(castle.center_x) - cam_x) * z)
+        sy = int((float(castle.center_y) - cam_y) * z)
+        if not eng.try_select_building((sx, sy)):
+            eng.selected_building = castle
+            if hasattr(eng, "building_panel"):
+                try:
+                    eng.building_panel.select_building(castle, getattr(eng, "heroes", []) or [])
+                except Exception:
+                    pass
 
     return [
         Shot(
