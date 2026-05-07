@@ -5,10 +5,10 @@
   "round_id": "wk52_r1_plumbing_and_ux",
   "agent_id": "08",
   "status": "done",
-  "summary": "WK52 UI complete: watch card, radar minimap, memorial overlay, pin alerts; pytest+qa_smoke+capture PASS.",
+  "summary": "WK52 UI: watch card, radar, memorial, pin alerts; all tests+qa_smoke PASS; PinAlertWatcher supports HUD or callback.",
   "files_touched": [],
   "commands_run": [],
   "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
   "claimed_log_round": "sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r1_plumbing_and_ux\"]",
-  "timestamp": "2026-05-07T02:45:25.331Z"
+  "timestamp": "2026-05-07T02:47:50.692Z"
 }
