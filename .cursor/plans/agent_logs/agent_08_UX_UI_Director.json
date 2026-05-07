@@ -970,6 +970,115 @@
             "python3 tools/qa_smoke.py --quick",
             "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r9_visual_iterate": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r9_visual_iterate",
+          "status": "done",
+          "building_display_name_path": "game.ui.hud.building_display_name(building): optional callable get_display_name(); else display_name; else building_type resolved with getattr(bt, 'value', bt) so Python 3.12 str(Enum) never yields 'BuildingType.CASTLE' in the label; then replace('_',' ').title(). HUD._building_display_name delegates to this helper.",
+          "real_click_screenshot_method": "scenario_wk52_pin_alerts._apply_building_card: eng.screenshot_hide_ui=False; sx,sy = int((castle.center_x - camera_x)*zoom), int((castle.center_y - camera_y)*zoom); eng.try_select_building((sx, sy)); on False fallback eng.selected_building=castle and building_panel.select_building(castle, heroes). Matches input_handler world path that clears hero via _clear_hero_selection inside try_select_building.",
+          "what_i_changed": [
+            "D-A game/ui/chat_panel.py render_watch_band (~398–408): X close drawn last after message chrome and input row; 14×14 inset 3px dark (20,20,28) rounded rect + (60,60,80) border; glyph stays ~ same size; _watch_band_close_rect matches button for hit tests.",
+            "D-B game/ui/hud.py: module-level building_display_name(); _building_display_name delegates; _render_building_card_infocard uses cx=minimap_rect.x and cw=LEFT_COL_W (224); render() masks selected_hero/selected_peasant to None when selected_building present so left column matches real click (no hybrid hero panel + building card).",
+            "D-B tools/screenshot_scenarios.py: _apply_building_card uses try_select_building synthetic screen coords (above).",
+            "Tests tests/test_wk52_watch_card.py: test_building_display_name_resolves_enum_value, test_chat_close_x_renders_on_top_of_band; building card width assert LEFT_COL_W."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "git commit -m \"R9 iter 1: chat close z-order + building card name/width + real select path\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "audit trail iter 1"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_1 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "iteration_log": [
+            {
+              "iteration": 1,
+              "bugs": [
+                "A",
+                "B"
+              ],
+              "capture_out": "docs/screenshots/wk52_phase3/iter_1",
+              "git_commit": "c482181",
+              "observations": {
+                "wk52_watch_card_expanded.png": "Chat band shows brown message region with horizontal stripes and 'No messages yet'. Top-right of that band has a small dark rounded square with a light X fully on top; adjacent pixel left (213,807) reads brown (60,55,45) while button interior (218,808) reads card-dark (18,18,28) — X/chrome is not occluded by message fill.",
+                "wk52_building_card.png": "Header text reads 'Castle' in the purple header strip (not truncated Buildingtype). Card body shows only building stats (Type castle, HP bar) — no hero minimap, no two-column HP/XP grid, no chat band. Card right edge aligns with minimap; sampling y≈800 shows InfoCard edge (70,65,90) at x≈223 and map green at x≥224 — width 224px. Left column above card is empty panel (no hero detail) matching cleared hero selection path.",
+                "other_shots_r8": "Minimized/radar/memorial/unpinned PNGs in iter_1 match R8 layouts; no regressions spotted in quick visual pass."
+              },
+              "verdict": "PASS",
+              "code_notes": "Single iter: root cause for title was str(BuildingType) -> 'BuildingType.*'; hybrid was simultaneous selected_hero + selected_building in scenario + HUD always drawing hero left panel."
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (256 passed)",
+            "screenshots_iter": "docs/screenshots/wk52_phase3/iter_1/ (audit)",
+            "screenshots_final": "docs/screenshots/wk52_phase3/ (6 PNGs overwritten canonical)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Chat band X fully visible on dark 14×14 button; draw order fixed; not covered by brown message chrome."
+              },
+              "wk52_building_card.png": {
+                "verdict": "PASS",
+                "note": "Title 'Castle'; card width 224px ±1 vs LEFT_COL_W; building-only body; try_select_building scenario path; no hero map/stats/chat inside card."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "Slim header; unchanged from R8 expectation."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Radar + expanded card; dots readable."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Heroes list + minimap gap; unpinned."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Memorial overlay + epitaph."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }
