@@ -21,6 +21,22 @@ from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
 
 COLOR_PIN_GOLD = (220, 180, 50)
 RECALL_BTN_W = 180
+MEMORIAL_BTN_W = 90
+WATCH_CARD_HEADER_H = 14
+WATCH_CARD_MAP_H = 56
+WATCH_CARD_STATS_H = 68
+WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
+
+
+def world_to_radar(
+    wx: float, wy: float, inner: pygame.Rect, world_w: int, world_h: int
+) -> tuple[int, int]:
+    """Map a world-pixel coordinate to a radar minimap pixel coordinate (WK52)."""
+    mx = inner.x + int(wx / world_w * inner.width)
+    my = inner.y + int(wy / world_h * inner.height)
+    mx = max(inner.left, min(inner.right - 1, mx))
+    my = max(inner.top, min(inner.bottom - 1, my))
+    return (mx, my)
 
 
 class HUD:
@@ -194,9 +210,26 @@ class HUD:
         self._recall_label_sig: tuple[str, bool] | None = None
         self._recall_label_surf: pygame.Surface | None = None
 
+        self._watch_card_expanded: bool = False
+        self.watch_card_map_rect: pygame.Rect | None = None
+        self._watch_card_rect: pygame.Rect | None = None
+        self._recall_flash_end_ms: int = 0
+        self.memorial_btn_rect: pygame.Rect | None = None
+
+        from game.ui.memorial_card import MemorialCard
+
+        self.memorial_card = MemorialCard()
+        self._pending_memorial = None
+        self._memorial_shown_for: str = ""
+
+        from game.ui.pin_alert_watcher import PinAlertWatcher
+
+        self._alert_watcher = PinAlertWatcher(self._pin_slot, self)
+
     def _layout_rects_for_screen(
         self, w: int, h: int, *, show_right_panel: bool
     ) -> tuple[
+        pygame.Rect,
         pygame.Rect,
         pygame.Rect,
         pygame.Rect,
@@ -227,8 +260,17 @@ class HUD:
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
-        left_w = 224  # 30% slimmer than previous 320 (hero/building detail panel)
-        left = pygame.Rect(0, top_h, left_w, max(0, h - top_h - bottom_h))
+        left_w = 224
+        minimap_size = max(64, bottom_h - 2 * margin)
+        minimap = pygame.Rect(margin, bottom.y + margin, minimap_size, minimap_size)
+
+        left_h = max(0, h - top_h - bottom_h)
+        if self._pin_slot.hero_id is not None:
+            card_top = minimap.y - (
+                WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H
+            )
+            left_h = max(0, card_top - top_h)
+        left = pygame.Rect(0, top_h, left_w, left_h)
 
         speed_bar_w = 200
         speed_bar_h = 50
@@ -240,17 +282,17 @@ class HUD:
             speed_bar_h,
         )
 
-        minimap_size = max(64, bottom_h - 2 * margin)
-        minimap = pygame.Rect(margin, bottom.y + margin, minimap_size, minimap_size)
         recall = pygame.Rect(minimap.right + gutter, minimap.y, RECALL_BTN_W, minimap_size)
-        cmd_x = recall.right + gutter
+        memorial = pygame.Rect(recall.right + gutter, minimap.y, MEMORIAL_BTN_W, minimap_size)
+        cmd_x = memorial.right + gutter
         cmd_w = max(0, speed_rect.left - cmd_x - gutter)
         command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
-        return top, bottom, left, right, minimap, command, speed_rect, recall
+        return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
 
     def _compute_layout(
         self, surface: pygame.Surface
     ) -> tuple[
+        pygame.Rect,
         pygame.Rect,
         pygame.Rect,
         pygame.Rect,
@@ -265,11 +307,11 @@ class HUD:
         self.screen_width = int(w)
         self.screen_height = int(h)
         show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
-        top, bottom, left, right, minimap, command, speed_rect, recall = self._layout_rects_for_screen(
+        top, bottom, left, right, minimap, command, speed_rect, recall, memorial = self._layout_rects_for_screen(
             w, h, show_right_panel=show_right
         )
         self.side_panel_width = right.width
-        return top, bottom, left, right, minimap, command, speed_rect, recall
+        return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
 
     def virtual_pointer_in_hud_chrome(
         self, pos: tuple[int, int], surface: pygame.Surface, game_state: dict
@@ -284,7 +326,7 @@ class HUD:
             return False
         has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
         show_right = self.right_panel_visible and has_right_content
-        top, bottom, left, right, minimap, command, speed_rect, recall = self._layout_rects_for_screen(
+        top, bottom, left, right, minimap, command, speed_rect, recall, memorial = self._layout_rects_for_screen(
             w, h, show_right_panel=show_right
         )
         profiles = game_state.get("hero_profiles_by_id") or {}
@@ -295,6 +337,9 @@ class HUD:
         regions = [top, bottom, minimap, command, speed_rect]
         if pin.hero_id is not None:
             regions.append(recall)
+            regions.append(memorial)
+            ct = minimap.y - (WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H)
+            regions.append(pygame.Rect(minimap.x, ct, minimap.width, WATCH_CARD_HEADER_H))
         if show_right and right.width > 0:
             regions.append(right)
         if game_state.get("selected_hero") is not None or game_state.get("selected_peasant") is not None:
@@ -598,6 +643,223 @@ class HUD:
             s.set_alpha(128)
             surface.blit(s, dest_pos)
 
+    def trigger_recall_flash(self) -> None:
+        """Flash the Recall button red (WK52). Called by PinAlertWatcher."""
+        self._recall_flash_end_ms = int(sim_now_ms()) + 750
+
+    def _render_watch_card_chrome(
+        self,
+        surface: pygame.Surface,
+        minimap_rect: pygame.Rect,
+        game_state: dict,
+    ) -> None:
+        """Watch card above minimap: header, optional map slot + stats (WK52)."""
+        self.watch_card_map_rect = None
+        self._watch_card_rect = None
+        pin = self._pin_slot
+        if pin.hero_id is None:
+            return
+
+        profiles = game_state.get("hero_profiles_by_id") or {}
+        prof = profiles.get(pin.hero_id)
+
+        cw = minimap_rect.width
+        ch = WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H
+        cx = minimap_rect.x
+        cy = minimap_rect.y - ch
+        card_rect = pygame.Rect(cx, cy, cw, ch)
+        self._watch_card_rect = card_rect
+
+        pygame.draw.rect(surface, (18, 18, 28), card_rect, border_radius=4)
+        pygame.draw.rect(surface, (70, 65, 90), card_rect, width=1, border_radius=4)
+
+        header_rect = pygame.Rect(cx, cy, cw, WATCH_CARD_HEADER_H)
+        pygame.draw.rect(surface, (35, 30, 50), header_rect, border_radius=4)
+        pygame.draw.line(
+            surface,
+            (70, 65, 90),
+            (cx, cy + WATCH_CARD_HEADER_H - 1),
+            (cx + cw, cy + WATCH_CARD_HEADER_H - 1),
+        )
+
+        name = pin.pinned_name or "Hero"
+        chevron = "▲" if self._watch_card_expanded else "▼"
+        chevron_surf = self.font_tiny.render(chevron, True, (160, 155, 180))
+        name_max_w = cw - chevron_surf.get_width() - 6
+        name_surf = self.font_tiny.render(name, True, (200, 195, 220))
+        while name_surf.get_width() > name_max_w and len(name) > 2:
+            name = name[:-1]
+            name_surf = self.font_tiny.render(name + "…", True, (200, 195, 220))
+        surface.blit(name_surf, (cx + 3, cy + (WATCH_CARD_HEADER_H - name_surf.get_height()) // 2))
+        surface.blit(
+            chevron_surf,
+            (cx + cw - chevron_surf.get_width() - 2, cy + (WATCH_CARD_HEADER_H - chevron_surf.get_height()) // 2),
+        )
+
+        if not self._watch_card_expanded:
+            return
+
+        map_rect = pygame.Rect(cx + 2, cy + WATCH_CARD_HEADER_H, cw - 4, WATCH_CARD_MAP_H)
+        pygame.draw.rect(surface, (8, 10, 16), map_rect)
+        self.watch_card_map_rect = map_rect
+
+        sy = cy + WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + 4
+        bar_w = cw - 10
+        bar_h = 6
+
+        if prof is not None:
+            vitals = getattr(prof, "vitals", None)
+            prog = getattr(prof, "progression", None)
+            idn = getattr(prof, "identity", None)
+
+            hp = int(getattr(vitals, "hp", 0) if vitals else 0)
+            max_hp = int(getattr(vitals, "max_hp", 1) if vitals else 1)
+            hp_lbl = self.font_tiny.render(f"HP {hp}/{max_hp}", True, (190, 190, 190))
+            surface.blit(hp_lbl, (cx + 4, sy))
+            sy += hp_lbl.get_height() + 1
+            HPBar.render(surface, pygame.Rect(cx + 4, sy, bar_w, bar_h), hp, max_hp)
+            sy += bar_h + 4
+
+            xp = int(getattr(prog, "xp", 0) if prog else 0)
+            xp_to_lv = int(getattr(prog, "xp_to_level", 100) if prog else 100)
+            xp_lbl = self.font_tiny.render(f"XP {xp}/{xp_to_lv}", True, (190, 190, 190))
+            surface.blit(xp_lbl, (cx + 4, sy))
+            sy += xp_lbl.get_height() + 1
+            xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
+            pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(cx + 4, sy, bar_w, bar_h))
+            if xp_ratio > 0:
+                pygame.draw.rect(
+                    surface, (70, 130, 210), pygame.Rect(cx + 4, sy, int(bar_w * xp_ratio), bar_h)
+                )
+            pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(cx + 4, sy, bar_w, bar_h), 1)
+            sy += bar_h + 4
+
+            level = int(getattr(idn, "level", 1) if idn else 1)
+            lv_lbl = self.font_tiny.render(f"Lv {level}", True, (220, 200, 120))
+            surface.blit(lv_lbl, (cx + 4, sy))
+            sy += lv_lbl.get_height() + 3
+
+        mana_lbl = self.font_tiny.render("Mana: —", True, (80, 78, 95))
+        surface.blit(mana_lbl, (cx + 4, sy))
+
+    def _render_radar_minimap(
+        self,
+        surface: pygame.Surface,
+        minimap_rect: pygame.Rect,
+        game_state: dict,
+    ) -> None:
+        """Colored entity dots in bottom-bar minimap (WK52)."""
+        from config import MAP_HEIGHT, MAP_WIDTH, TILE_SIZE
+
+        world_w = MAP_WIDTH * TILE_SIZE
+        world_h = MAP_HEIGHT * TILE_SIZE
+        inner = minimap_rect.inflate(-6, -6)
+        if inner.width <= 0 or inner.height <= 0:
+            return
+
+        pygame.draw.rect(surface, (12, 14, 22), inner)
+
+        world = game_state.get("world")
+        heroes = game_state.get("heroes") or []
+        enemies = game_state.get("enemies") or []
+        buildings = game_state.get("buildings") or []
+        pin = self._pin_slot
+
+        def to_radar(wx: float, wy: float) -> tuple[int, int]:
+            return world_to_radar(wx, wy, inner, world_w, world_h)
+
+        def is_revealed(x: float, y: float) -> bool:
+            if world is None:
+                return True
+            try:
+                from game.world import Visibility
+
+                gx, gy = world.world_to_grid(float(x), float(y))
+                if 0 <= gx < world.width and 0 <= gy < world.height:
+                    return world.visibility[gy][gx] != Visibility.HIDDEN
+            except Exception:
+                pass
+            return True
+
+        for b in buildings:
+            bx, by = getattr(b, "x", None), getattr(b, "y", None)
+            if bx is None:
+                sz = getattr(b, "size", (1, 1))
+                bx = (getattr(b, "grid_x", 0) + sz[0] / 2) * TILE_SIZE
+            if by is None:
+                sz = getattr(b, "size", (1, 1))
+                by = (getattr(b, "grid_y", 0) + sz[1] / 2) * TILE_SIZE
+            if not is_revealed(float(bx), float(by)):
+                continue
+            btype = str(getattr(b, "building_type", "") or "").lower()
+            is_lair = bool(getattr(b, "is_lair", False)) or "lair" in btype or "crypt" in btype
+            rx, ry = to_radar(float(bx), float(by))
+            if btype == "castle":
+                pygame.draw.rect(surface, (220, 220, 220), pygame.Rect(rx - 3, ry - 3, 6, 6), 1)
+            elif is_lair:
+                pygame.draw.circle(surface, (140, 30, 30), (rx, ry), 2)
+            elif "guild" in btype or btype in (
+                "warrior_guild",
+                "ranger_guild",
+                "rogue_guild",
+                "wizard_guild",
+            ):
+                pygame.draw.circle(surface, (50, 180, 180), (rx, ry), 2)
+            else:
+                pygame.draw.circle(surface, (80, 100, 160), (rx, ry), 2)
+
+        for en in enemies:
+            ex, ey = float(getattr(en, "x", 0.0)), float(getattr(en, "y", 0.0))
+            if int(getattr(en, "hp", 1)) <= 0:
+                continue
+            if not is_revealed(ex, ey):
+                continue
+            rx, ry = to_radar(ex, ey)
+            pygame.draw.circle(surface, (200, 50, 50), (rx, ry), 2)
+
+        pinned_pos = None
+        for h in heroes:
+            hx, hy = float(getattr(h, "x", 0.0)), float(getattr(h, "y", 0.0))
+            if int(getattr(h, "hp", 1)) <= 0:
+                continue
+            if not is_revealed(hx, hy):
+                continue
+            rx, ry = to_radar(hx, hy)
+            hid = str(getattr(h, "hero_id", "") or "")
+            if pin.hero_id and hid == pin.hero_id:
+                pinned_pos = (rx, ry)
+            else:
+                pygame.draw.circle(surface, (220, 180, 50), (rx, ry), 2)
+
+        if pinned_pos is not None:
+            px, py = pinned_pos
+            pygame.draw.circle(surface, (255, 255, 255), (px, py), 4, 1)
+            pygame.draw.circle(surface, (220, 180, 50), (px, py), 3)
+
+        pygame.draw.rect(surface, (60, 65, 80), inner, 1)
+
+    def _render_memorial_button(
+        self, surface: pygame.Surface, memorial_rect: pygame.Rect, game_state: dict
+    ) -> None:
+        """Memorial opener when a fallen pin has a pending record."""
+        self.memorial_btn_rect = None
+        if self._pending_memorial is None:
+            return
+        if self.memorial_card.visible:
+            return
+        self.memorial_btn_rect = pygame.Rect(memorial_rect)
+        NineSlice.render(
+            surface, memorial_rect, self._button_tex_normal, border=self._button_slice_border
+        )
+        lbl = self.theme.font_small.render(f"{chr(9904)} Memorial", True, (200, 180, 130))
+        surface.blit(
+            lbl,
+            (
+                memorial_rect.x + (memorial_rect.width - lbl.get_width()) // 2,
+                memorial_rect.y + (memorial_rect.height - lbl.get_height()) // 2,
+            ),
+        )
+
     def _render_recall_button(self, surface: pygame.Surface, recall_rect: pygame.Rect, game_state: dict) -> None:
         """WK51: bottom-bar recall when a hero is pinned."""
         profiles = game_state.get("hero_profiles_by_id") or {}
@@ -639,6 +901,14 @@ class HUD:
                     recall_rect.y + (recall_rect.height - lh) // 2,
                 ),
             )
+        now = int(sim_now_ms())
+        if now < self._recall_flash_end_ms:
+            elapsed = max(0, now - (self._recall_flash_end_ms - 750))
+            pulse = elapsed // 250
+            if pulse % 2 == 0:
+                flash_surf = pygame.Surface((recall_rect.width, recall_rect.height), pygame.SRCALPHA)
+                flash_surf.fill((220, 30, 30, 140))
+                surface.blit(flash_surf, recall_rect.topleft)
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
         x = rect.x + int(self.theme.margin)
@@ -799,12 +1069,44 @@ class HUD:
     def render(self, surface: pygame.Surface, game_state: dict) -> None:
         # Right panel vanishes when nothing is selected (maximize map view)
         # Fix: right menu shouldn't come up for building descriptions since left menu already shows it
-        has_right_content = (
-            self._micro_view.mode != ViewMode.OVERVIEW
-        )
+        has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
         self._show_right_panel = self.right_panel_visible and has_right_content
 
-        top, bottom, left, right, minimap, cmd, speed_rect, recall = self._compute_layout(surface)
+        top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(surface)
+
+        _profiles = game_state.get("hero_profiles_by_id") or {}
+        if self._pin_slot.hero_id:
+            _pprof = _profiles.get(self._pin_slot.hero_id)
+            if _pprof is not None:
+                _idn = getattr(_pprof, "identity", None)
+                if _idn is not None:
+                    self._pin_slot.pinned_name = str(getattr(_idn, "name", "") or "")
+        pin = self._pin_slot
+        if pin.hero_id is not None:
+            hero_alive = pin.hero_id in _profiles
+            pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+        if (
+            pin.is_fallen()
+            and pin.hero_id is not None
+            and pin.hero_id != self._memorial_shown_for
+        ):
+            _pprof = _profiles.get(pin.hero_id)
+            if _pprof is not None:
+                from game.ui.memorial_card import MemorialRecord
+
+                _career = getattr(_pprof, "career", None)
+                _idn = getattr(_pprof, "identity", None)
+                self._pending_memorial = MemorialRecord(
+                    hero_id=str(pin.hero_id),
+                    name=str(getattr(_idn, "name", pin.pinned_name) if _idn else pin.pinned_name),
+                    hero_class=str(getattr(_idn, "hero_class", "hero") if _idn else "hero"),
+                    level=int(getattr(_idn, "level", 1) if _idn else 1),
+                    enemies_defeated=int(getattr(_career, "enemies_defeated", 0) if _career else 0),
+                    bounties_claimed=int(getattr(_career, "bounties_claimed", 0) if _career else 0),
+                    gold_earned=int(getattr(_career, "gold_earned", 0) if _career else 0),
+                )
+                self._memorial_shown_for = str(pin.hero_id)
+        self._alert_watcher.check_low_health(_profiles, int(sim_now_ms()))
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
@@ -813,7 +1115,7 @@ class HUD:
         self._panel_minimap.set_rect(minimap)
         self._panel_top.render(surface)
         self._panel_bottom.render(surface)
-        
+
         selected_hero = game_state.get("selected_hero")
         selected_peasant = game_state.get("selected_peasant")
         self.left_close_rect = None
@@ -837,30 +1139,17 @@ class HUD:
 
         if self._show_right_panel:
             self._panel_right.render(surface)
+
+        self._render_watch_card_chrome(surface, minimap, game_state)
         self._panel_minimap.render(surface)
+        self._render_radar_minimap(surface, minimap, game_state)
 
         if minimap.width > 0 and minimap.height > 0:
-            inner = minimap.inflate(-6, -6)
-            if inner.width > 0 and inner.height > 0:
-                pygame.draw.rect(surface, self._frame_inner, inner, 1)
-                pygame.draw.line(
-                    surface,
-                    self._frame_highlight,
-                    (inner.left + 1, inner.top + 1),
-                    (inner.right - 2, inner.top + 1),
-                    1,
-                )
-                pygame.draw.line(
-                    surface,
-                    self._frame_highlight,
-                    (inner.left + 1, inner.top + 1),
-                    (inner.left + 1, inner.bottom - 2),
-                    1,
-                )
             sep_x = minimap.right + int(self.theme.gutter // 2)
             pygame.draw.line(surface, self._frame_outer, (sep_x, bottom.y + 8), (sep_x, bottom.bottom - 8), 2)
 
         self._render_recall_button(surface, recall, game_state)
+        self._render_memorial_button(surface, memorial, game_state)
 
         self.quit_rect = self._top_bar.render(surface, top, game_state)
 
@@ -926,7 +1215,8 @@ class HUD:
         else:
             self._right_rect = None
 
-        TextLabel.render(surface, self.theme.font_small, "Minimap", (minimap.x + 6, minimap.y + 6), (200, 200, 200))
+        if self.memorial_card.visible:
+            self.memorial_card.render(surface)
 
     def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:
         x = int(mouse_pos[0])
@@ -936,6 +1226,11 @@ class HUD:
         if pin.hero_id is not None:
             hero_alive = pin.hero_id in profiles
             pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+
+        if self.memorial_card.visible:
+            if self.memorial_card.handle_click((x, y)):
+                return "close_memorial_unpause"
+            return None
 
         if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
             return "quit"
@@ -949,6 +1244,26 @@ class HUD:
             if pin.hero_id == sel_id:
                 return "unpin_hero"
             return "pin_hero"
+        if (
+            getattr(self, "_watch_card_rect", None) is not None
+            and self._pin_slot.hero_id is not None
+        ):
+            header_rect = pygame.Rect(
+                self._watch_card_rect.x,
+                self._watch_card_rect.y,
+                self._watch_card_rect.width,
+                WATCH_CARD_HEADER_H,
+            )
+            if header_rect.collidepoint((x, y)):
+                self._watch_card_expanded = not self._watch_card_expanded
+                return None
+        if (
+            getattr(self, "memorial_btn_rect", None) is not None
+            and self.memorial_btn_rect.collidepoint((x, y))
+            and self._pending_memorial is not None
+        ):
+            self.memorial_card.show(self._pending_memorial)
+            return "open_memorial"
         if self.left_close_rect is not None and self.left_close_rect.collidepoint((x, y)):
             return "close_selection"
         if self._right_rect is not None and self._right_rect.collidepoint((x, y)):

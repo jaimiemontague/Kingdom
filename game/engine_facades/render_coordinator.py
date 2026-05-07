@@ -48,6 +48,24 @@ class EngineRenderCoordinator:
 
         if not bool(getattr(e, "screenshot_hide_ui", False)):
             e.hud.render(e.screen, e.get_game_state())
+
+            watch_map_rect = getattr(e.hud, "watch_card_map_rect", None)
+            if watch_map_rect is not None:
+                pin_slot = getattr(e.hud, "_pin_slot", None)
+                pinned_id = getattr(pin_slot, "hero_id", None) if pin_slot else None
+                if pinned_id:
+                    pinned_hero = next(
+                        (
+                            h
+                            for h in snapshot.heroes
+                            if str(getattr(h, "hero_id", "")) == pinned_id
+                            and int(getattr(h, "hp", 0)) > 0
+                        ),
+                        None,
+                    )
+                    if pinned_hero is not None:
+                        self._render_hero_minimap(e.screen, watch_map_rect, pinned_hero, snapshot)
+
             from game.ui.micro_view_manager import ViewMode
 
             prev = getattr(e, "_previous_micro_view_mode", None)
@@ -104,14 +122,16 @@ class EngineRenderCoordinator:
                 self.render_perf_overlay(e.screen)
 
             if e.paused and not e.pause_menu.visible:
-                e.screen.blit(e._pause_overlay, (0, 0))
-                if e._pause_font is None:
-                    e._pause_font = pygame.font.Font(None, 72)
-                text = e._pause_font.render("PAUSED", True, (255, 255, 255))
-                win_w = int(e.window_width)
-                win_h = int(e.window_height)
-                text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
-                e.screen.blit(text, text_rect)
+                mc = getattr(e.hud, "memorial_card", None)
+                if not (mc is not None and getattr(mc, "visible", False)):
+                    e.screen.blit(e._pause_overlay, (0, 0))
+                    if e._pause_font is None:
+                        e._pause_font = pygame.font.Font(None, 72)
+                    text = e._pause_font.render("PAUSED", True, (255, 255, 255))
+                    win_w = int(e.window_width)
+                    win_h = int(e.window_height)
+                    text_rect = text.get_rect(center=(win_w // 2, win_h // 2))
+                    e.screen.blit(text, text_rect)
 
         if not getattr(e, "headless_ui", False):
             try:

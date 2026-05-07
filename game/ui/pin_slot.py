@@ -22,11 +22,14 @@ class PinSlot:
         self.hero_id = str(hero_id)
         self.pinned_at_ms = int(now_ms)
         self.fallen_since_ms = None
+        self.low_health_alerted_ms = 0
 
     def unpin(self) -> None:
         self.hero_id = None
         self.pinned_at_ms = 0
         self.fallen_since_ms = None
+        self.low_health_alerted_ms = 0
+        self.pinned_name = ""
 
     def update_liveness(self, hero_alive: bool, now_ms: int) -> None:
         if self.hero_id is None:

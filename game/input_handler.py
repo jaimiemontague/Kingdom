@@ -338,9 +338,11 @@ class InputHandler:
                     pass
             return  # Consume all input when menu is open
 
-        # While paused (without menu), do not allow world camera/zoom inputs.
-        if c.paused:
-            return
+        # While paused (without menu), allow only memorial overlay LMB; block everything else.
+        if c.paused and not c.pause_menu.visible:
+            mc = getattr(c.hud, "memorial_card", None)
+            if mc is None or not getattr(mc, "visible", False) or event.button != 1:
+                return
 
         _cp = getattr(c.hud, "_chat_panel", None)
         _chat_on = _cp is not None and getattr(_cp, "is_active", lambda: False)()
@@ -372,6 +374,10 @@ class InputHandler:
                         c.selected_peasant = None
                         return
                     if action in ("pin_hero", "unpin_hero", "recall_pinned_hero"):
+                        if hasattr(c, "apply_hud_pin_action"):
+                            c.apply_hud_pin_action(action)
+                        return
+                    if action in ("open_memorial", "close_memorial_unpause", "expand_watch_card"):
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action(action)
                         return
@@ -420,6 +426,13 @@ class InputHandler:
                     if action == "place_bounty":
                         c.place_bounty()
                         return
+            except Exception:
+                pass
+
+            try:
+                mc = getattr(c.hud, "memorial_card", None)
+                if mc is not None and getattr(mc, "visible", False):
+                    return
             except Exception:
                 pass
 

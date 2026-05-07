@@ -468,6 +468,69 @@
           "recommended_next_actions": []
         }
       }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "notes": "WK52 R1 plumbing + UX: radar minimap, watch card, memorial, pin alerts (parallel Agent 03 event plumbing)"
+      },
+      "rounds": {
+        "wk52_r1_plumbing_and_ux": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r1_plumbing_and_ux",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: WK52 watch card (WATCH_CARD_* constants, _watch_card_expanded default False), dynamic left panel height, _render_watch_card_chrome, world_to_radar + _render_radar_minimap (gold heroes, red enemies, blue-grey buildings, dark-red lairs, cyan guilds, pinned white ring + gold core), recall red flash, memorial button, PinAlertWatcher wiring + pinned_name/low-health poll, memorial capture from profiles",
+            "game/ui/memorial_card.py: MemorialRecord, MemorialCard overlay with Farewell + epitaph",
+            "game/ui/pin_alert_watcher.py: event subscriptions + check_low_health",
+            "game/ui/pin_slot.py: low_health_alerted_ms, pinned_name; reset on pin/unpin",
+            "game/engine_facades/render_coordinator.py: _render_hero_minimap into watch_card_map_rect; skip generic PAUSED dim when memorial visible",
+            "game/input_handler.py: memorial pause routing, open/close_memorial_unpause/expand_watch_card actions, block world clicks when memorial overlay visible",
+            "game/engine.py + game/entities/hero.py + game/sim_engine.py + game/entities/buildings/base.py + game/events.py: HERO_LEVEL_UP, hero_id payloads, set_event_bus on hire (cross-domain minimal plumbing for alerts)",
+            "tools/screenshot_scenarios.py: scenario wk52_pin_alerts (4 PNGs)",
+            "tests/test_wk52_watch_card.py, tests/test_wk52_memorial_card.py"
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_wk52": "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py -v exit_code=0 (10 passed)",
+            "screenshots_wk52": "docs/screenshots/wk52_phase3/ — wk52_watch_card_expanded.png (card+map+bars), wk52_watch_card_minimized.png (14px tab), wk52_pin_radar_minimap.png (dots), wk52_memorial_card.png (Farewell overlay)"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "how_to_test": [
+            "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
+        }
+      }
     }
   }
 }

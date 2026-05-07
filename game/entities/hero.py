@@ -126,6 +126,8 @@ class Hero:
             self.attack_range = TILE_SIZE * 6  # 6 tiles = 192 pixels at 32px/tile
         else:
             self.attack_range = TILE_SIZE * 1.5  # Melee range for other classes
+
+        self._event_bus: object | None = None
         
         # LLM decision tracking
         self.last_llm_decision_time = 0
@@ -621,6 +623,10 @@ class Hero:
         if n <= 0:
             return
         self.add_xp(n)
+
+    def set_event_bus(self, event_bus) -> None:
+        """Wire the sim event bus so level-up can emit HERO_LEVEL_UP (WK52)."""
+        self._event_bus = event_bus
 
     def level_up(self):
         """Level up the hero."""

@@ -1,11 +1,10 @@
 """WK52: Watches the event bus for pinned-hero events and fires HUD alerts."""
-
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from game.ui.hud import HUD
     from game.ui.pin_slot import PinSlot
 
 LOW_HEALTH_THRESHOLD = 0.25
@@ -13,18 +12,21 @@ LOW_HEALTH_COOLDOWN_MS = 30_000
 
 
 class PinAlertWatcher:
-    """Subscribes to EventBus for pin-relevant events; dispatches toast + recall flash signal."""
+    """
+    Subscribes to EventBus and dispatches toast + recall-flash for pinned-hero events.
 
-    def __init__(
-        self,
-        pin_slot: "PinSlot",
-        hud_add_message_fn: Callable[[str, tuple[int, int, int]], None],
-    ) -> None:
+    Lifecycle:
+      1. Instantiated inside HUD.__init__ with PinSlot + HUD.
+      2. engine subscribes via event_bus after HUD_MESSAGE wiring.
+      3. HUD.render() calls check_low_health() each frame.
+    """
+
+    def __init__(self, pin_slot: "PinSlot", hud: "HUD") -> None:
         self._pin = pin_slot
-        self._hud_add_message = hud_add_message_fn
-        self.recall_flash_needed = False
+        self._hud = hud
 
     def subscribe(self, event_bus) -> None:
+        """Attach to EventBus. Safe to call before or after heroes spawn."""
         from game.events import GameEventType
 
         event_bus.subscribe(GameEventType.HERO_LEVEL_UP, self._on_level_up)
@@ -32,6 +34,7 @@ class PinAlertWatcher:
         event_bus.subscribe(GameEventType.BOUNTY_CLAIMED, self._on_bounty_claimed)
 
     def check_low_health(self, profiles: dict, now_ms: int) -> None:
+        """Called every HUD render frame. Fires at most once per LOW_HEALTH_COOLDOWN_MS."""
         if self._pin.hero_id is None or self._pin.is_fallen():
             return
         prof = profiles.get(self._pin.hero_id)
@@ -47,10 +50,7 @@ class PinAlertWatcher:
             return
         self._pin.low_health_alerted_ms = now_ms
         name = self._pin.pinned_name or "Hero"
-        self._fire(
-            f"⚠ {name} is low health! ({int(health_pct * 100)}%)",
-            (255, 80, 80),
-        )
+        self._fire(f"⚠ {name} is low health! ({int(health_pct * 100)}%)", (255, 80, 80))
 
     def _on_level_up(self, event: dict) -> None:
         if not self._matches(event):
@@ -77,6 +77,7 @@ class PinAlertWatcher:
         self._fire(f"✓ {name} claimed a bounty! (+{reward}g)", (100, 255, 150))
 
     def _matches(self, event: dict) -> bool:
+        """True if the event concerns the currently pinned hero."""
         if self._pin.hero_id is None or self._pin.is_fallen():
             return False
         eid = str(event.get("hero_id", "") or "")
@@ -92,5 +93,5 @@ class PinAlertWatcher:
         return bool(hname and hname == self._pin.pinned_name)
 
     def _fire(self, text: str, color: tuple[int, int, int]) -> None:
-        self._hud_add_message(text, color)
-        self.recall_flash_needed = True
+        self._hud.add_message(text, color)
+        self._hud.trigger_recall_flash()

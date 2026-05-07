@@ -1137,6 +1137,110 @@ def scenario_building_menu_open(engine, *, seed: int) -> list[Shot]:
     return shots
 
 
+def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
+    """WK52: Pinned hero watch card, radar minimap, memorial overlay."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    _place_building(engine, "inn", cgx + 6, cgy + 2)
+    hx, hy = _tile_center_px(cgx + 3, cgy + 1)
+    hero = _place_hero(engine, "warrior", hx, hy)
+    _place_enemy(engine, "wolf", hx + 180.0, hy + 120.0)
+
+    from game.sim.timebase import now_ms as sim_now_ms
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+
+    def _prep(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = hero
+        if hasattr(eng, "hud"):
+            eng.hud.right_panel_visible = True
+            eng.hud._micro_view.enter_hero_focus(hero)
+            eng.hud._pin_slot.pin(str(hero.hero_id), int(sim_now_ms()))
+            eng.hud._pin_slot.pinned_name = str(hero.name)
+
+    def _apply_expanded(eng: Any) -> None:
+        _prep(eng)
+        eng.hud._watch_card_expanded = True
+
+    def _apply_minimized(eng: Any) -> None:
+        _prep(eng)
+        eng.hud._watch_card_expanded = False
+
+    def _apply_radar(eng: Any) -> None:
+        _apply_expanded(eng)
+
+    def _apply_memorial(eng: Any) -> None:
+        _prep(eng)
+        from game.ui.memorial_card import MemorialRecord
+
+        eng.hud._pending_memorial = MemorialRecord(
+            hero_id=str(hero.hero_id),
+            name=str(hero.name),
+            hero_class="warrior",
+            level=5,
+            enemies_defeated=12,
+            bounties_claimed=3,
+            gold_earned=400,
+        )
+        eng.hud.memorial_card.show(eng.hud._pending_memorial)
+        eng.paused = True
+
+    return [
+        Shot(
+            filename="wk52_watch_card_expanded.png",
+            label="WK52 watch card expanded",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_expanded,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_watch_card_minimized.png",
+            label="WK52 watch card minimized",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_minimized,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_pin_radar_minimap.png",
+            label="WK52 radar minimap",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_radar,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_memorial_card.png",
+            label="WK52 memorial card",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_memorial,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -1167,6 +1271,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_bounty_in_black_fog(engine, seed=int(seed))
     if scenario_name == "building_menu_open":
         return scenario_building_menu_open(engine, seed=int(seed))
+    if scenario_name == "wk52_pin_alerts":
+        return scenario_wk52_pin_alerts(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

@@ -221,6 +221,11 @@ class GameEngine:
             )
             # WK37 Stage2: bridge sim HUD_MESSAGE events into UI toasts.
             self.event_bus.subscribe(GameEventType.HUD_MESSAGE, self._on_hud_message_event)
+            if hasattr(getattr(self, "hud", None), "_alert_watcher"):
+                try:
+                    self.hud._alert_watcher.subscribe(self.event_bus)
+                except Exception:
+                    pass
             # Start ambient loop on game start (audio only if present)
             if self.audio_system is not None:
                 self.audio_system.set_ambient("ambient_loop", volume=0.4)
@@ -1380,6 +1385,24 @@ class GameEngine:
         if pin_slot is None:
             return
         now_ms = int(sim_now_ms())
+        if action == "open_memorial":
+            self.paused = True
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
+        if action == "close_memorial_unpause":
+            self.paused = False
+            mc = getattr(hud, "memorial_card", None)
+            if mc is not None:
+                mc.hide()
+            if hasattr(hud, "_pending_memorial"):
+                hud._pending_memorial = None
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
+        if action == "expand_watch_card":
+            if hasattr(hud, "_watch_card_expanded"):
+                hud._watch_card_expanded = True
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
         if action == "pin_hero":
             sel = getattr(self, "selected_hero", None)
             if sel is None:
@@ -1407,6 +1430,8 @@ class GameEngine:
                     self.hud.right_panel_visible = True
                     if hasattr(self.hud, "_micro_view"):
                         self.hud._micro_view.enter_hero_focus(target)
+                    if pin_slot.hero_id is not None and not getattr(self.hud, "_watch_card_expanded", True):
+                        self.hud._watch_card_expanded = True
                 except Exception:
                     pass
             return
