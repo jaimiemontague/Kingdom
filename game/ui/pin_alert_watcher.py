@@ -1,7 +1,7 @@
 """WK52: Watches the event bus for pinned-hero events and fires HUD alerts."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from game.ui.hud import HUD
@@ -15,15 +15,19 @@ class PinAlertWatcher:
     """
     Subscribes to EventBus and dispatches toast + recall-flash for pinned-hero events.
 
-    Lifecycle:
-      1. Instantiated inside HUD.__init__ with PinSlot + HUD.
-      2. engine subscribes via event_bus after HUD_MESSAGE wiring.
-      3. HUD.render() calls check_low_health() each frame.
+    ``hud_or_add_message`` is either a :class:`HUD` instance (production) or a callable
+    ``(text, color) -> None`` (tests / lightweight wiring).
     """
 
-    def __init__(self, pin_slot: "PinSlot", hud: "HUD") -> None:
+    def __init__(self, pin_slot: "PinSlot", hud_or_add_message: Any) -> None:
         self._pin = pin_slot
-        self._hud = hud
+        add_m = getattr(hud_or_add_message, "add_message", None)
+        if callable(add_m):
+            self._hud: HUD | None = hud_or_add_message
+            self._add_message_fn = None
+        else:
+            self._hud = None
+            self._add_message_fn = hud_or_add_message
 
     def subscribe(self, event_bus) -> None:
         """Attach to EventBus. Safe to call before or after heroes spawn."""
@@ -93,5 +97,9 @@ class PinAlertWatcher:
         return bool(hname and hname == self._pin.pinned_name)
 
     def _fire(self, text: str, color: tuple[int, int, int]) -> None:
-        self._hud.add_message(text, color)
-        self._hud.trigger_recall_flash()
+        if self._hud is not None:
+            self._hud.add_message(text, color)
+            self._hud.trigger_recall_flash()
+        else:
+            assert self._add_message_fn is not None
+            self._add_message_fn(text, color)
