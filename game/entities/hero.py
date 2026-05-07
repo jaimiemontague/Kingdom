@@ -70,7 +70,9 @@ class Hero:
             self.name = str(name)
         else:
             self.name = get_rng().choice(HERO_NAMES)
-        
+
+        self._event_bus: object | None = None  # WK52: set by engine after spawn
+
         # Stats
         self.level = 1
         self.xp = 0
@@ -202,6 +204,10 @@ class Hero:
             "gold_earned": 0,
             "purchases_made": 0,
         }
+
+    def set_event_bus(self, event_bus) -> None:
+        """Wire the sim event bus so level-up can emit HERO_LEVEL_UP (WK52)."""
+        self._event_bus = event_bus
 
     @property
     def attack(self) -> int:
@@ -622,6 +628,20 @@ class Hero:
         self.max_hp += 20
         self.hp = self.max_hp  # Full heal on level up
         self.xp_to_level = int(self.xp_to_level * 1.5)
+        if self._event_bus is not None:
+            try:
+                from game.events import GameEventType
+
+                self._event_bus.emit(
+                    {
+                        "type": GameEventType.HERO_LEVEL_UP.value,
+                        "hero_id": str(self.hero_id),
+                        "hero_name": str(self.name),
+                        "new_level": int(self.level),
+                    }
+                )
+            except Exception:
+                pass
     
     def buy_item(self, item: dict) -> bool:
         """Attempt to buy an item using spendable (non-taxed) gold. Returns True if successful."""

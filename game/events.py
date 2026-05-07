@@ -19,6 +19,7 @@ class GameEventType(str, Enum):
     BUILDING_DESTROYED = "building_destroyed"
     BOUNTY_PLACED = "bounty_placed"
     BOUNTY_CLAIMED = "bounty_claimed"
+    HERO_LEVEL_UP = "hero_level_up"
     HERO_ENTERED_BUILDING = "hero_entered_building"
     HERO_EXITED_BUILDING = "hero_exited_building"
     # wk14: interior view feedback (audio; non-authoritative)

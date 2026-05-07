@@ -15,6 +15,8 @@ class PinSlot:
     hero_id: Optional[str] = None
     pinned_at_ms: int = 0
     fallen_since_ms: Optional[int] = None
+    low_health_alerted_ms: int = 0
+    pinned_name: str = ""
 
     def pin(self, hero_id: str, now_ms: int) -> None:
         self.hero_id = str(hero_id)

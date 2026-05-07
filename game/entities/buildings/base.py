@@ -255,6 +255,7 @@ class Building:
             self._event_bus.emit({
                 "type": GameEventType.HERO_ENTERED_BUILDING.value,
                 "hero": hero,
+                "hero_id": str(getattr(hero, "hero_id", "") or ""),
                 "building": self,
             })
 

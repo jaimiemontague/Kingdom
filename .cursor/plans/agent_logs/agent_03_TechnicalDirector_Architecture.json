@@ -874,6 +874,83 @@
           ]
         }
       }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "notes": "WK52 R1: event plumbing + PinAlertWatcher skeleton for pin alerts / radar / memorial UI wave"
+      },
+      "rounds": {
+        "wk52_r1_plumbing_and_ux": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r1_plumbing_and_ux",
+          "status": "done",
+          "what_i_changed": [
+            "game/events.py: GameEventType.HERO_LEVEL_UP.",
+            "game/entities/hero.py: _event_bus, set_event_bus(), level_up() emits HERO_LEVEL_UP after stat updates.",
+            "game/engine.py: try_hire_hero calls hero.set_event_bus(self.event_bus) after heroes.append.",
+            "game/sim_engine.py: BOUNTY_CLAIMED payloads include hero_id at both emit sites.",
+            "game/entities/buildings/base.py: HERO_ENTERED_BUILDING includes hero_id string.",
+            "game/ui/pin_slot.py: low_health_alerted_ms, pinned_name.",
+            "game/ui/pin_alert_watcher.py: NEW — subscribe(), check_low_health (25% threshold, 30s cooldown; cooldown skipped when low_health_alerted_ms==0 for first alert), _matches, recall_flash_needed on _fire.",
+            "tests/test_wk52_event_plumbing.py: HERO_LEVEL_UP, building enter hero_id, watcher _matches, cooldown, PinSlot fields."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pip install -q -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/test_wk52_event_plumbing.py -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_wk52": {
+              "command": "python3 -m pytest tests/test_wk52_event_plumbing.py -v",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "determinism_guard": {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08: wire PinAlertWatcher in HUD (add_message + subscribe(event_bus)), consume recall_flash_needed for Recall flash; radar/watch card/memorial per WK52 plan."
+          ],
+          "recommended_next_actions": []
+        }
+      }
     }
   }
 }

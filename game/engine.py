@@ -665,6 +665,8 @@ class GameEngine:
         hero.home_building = guild
         
         self.heroes.append(hero)
+        if hasattr(hero, "set_event_bus"):
+            hero.set_event_bus(self.event_bus)
         self.hud.add_message(f"{hero.name} the {hero_class.title()} joins your kingdom!", (100, 255, 100))
     
     def place_building(self, grid_x: int, grid_y: int):

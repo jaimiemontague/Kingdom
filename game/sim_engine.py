@@ -593,6 +593,7 @@ class SimEngine:
                     "y": float(bounty.y),
                     "reward": bounty.reward,
                     "hero": hero.name,
+                    "hero_id": str(getattr(hero, "hero_id", "") or ""),
                 }
             )
         if bounty_claimed_events:
@@ -747,6 +748,7 @@ class SimEngine:
                                             "y": float(b.y),
                                             "reward": b.reward,
                                             "hero": hero_name,
+                                            "hero_id": str(getattr(hero_obj, "hero_id", "") or ""),
                                         }
                                     )
                 except Exception:
