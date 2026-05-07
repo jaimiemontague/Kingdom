@@ -4627,7 +4627,9 @@
           "validate_r5": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r5_corner_layout",
           "run_r5": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r5_corner_layout --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main",
           "validate_r6": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r6_chat_polish",
-          "run_r6": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r6_chat_polish --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
+          "run_r6": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r6_chat_polish --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main",
+          "validate_r7": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r7_chat_grow",
+          "run_r7": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r7_chat_grow --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
         }
       },
       "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial. Read `.cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md` in full -- it contains all code examples, test specs, and acceptance criteria for your agent section. Implement exactly what the plan specifies for your wave; run every verification command listed; iterate until all gates pass. Update your agent log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"ROUND_ID\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json  Then run the exact SDK completion receipt command from your orchestrator prompt.",
@@ -4942,6 +4944,56 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r6_chat_polish. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r6_chat_polish\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log with sprint_id, round_id, status, what_i_changed (D1 and D2 bullets), commands_run, evidence (must include screenshot_verdict map), blockers, follow_ups, and a chat_render_root_cause field. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r7_chat_grow": {
+          "round_meta": {
+            "round_id": "wk52_r7_chat_grow",
+            "created_utc": "2026-05-07T02:00:00Z",
+            "wave": 7,
+            "depends_on": "wk52_r6_chat_polish",
+            "note": "User feedback after R6 playtest (see .cursor/human_provided/wk52 screenshot 6.PNG): in the watch card's expanded state there is visible empty/black space between the stats grid and the chat input row at the bottom. The chat band should EXPAND to take up that space, giving the chat history area a meaningfully larger, persistent footprint inside the card."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R7: Single-deliverable polish — grow WATCH_CARD_CHAT_H so the chat band fills the available space below HP/XP rows. Per-shot screenshot_verdict gate enforced."
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_pending_r6",
+              "next_action": "Increase WATCH_CARD_CHAT_H (and grow WATCH_CARD_FULL_H accordingly) so the chat band visually fills the space below the stats grid; ensure render_watch_band's history area expands to fill that band even when empty (placeholder/divider chrome visible). Capture+verify all 5 acceptance shots before status=done."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r7_chat_grow (single-agent, single-deliverable polish from R6 playtest).\n\nREAD FIRST:\n  - `.cursor/human_provided/wk52 screenshot 6.PNG` — note the visible empty/black band BELOW the HP/XP stats grid and ABOVE the '> Type to chat…' input row inside the watch card. The user wants that empty space absorbed by the chat: the chat history region should fill it (with visible chrome / placeholder when empty), not stay collapsed.\n  - The R6 receipt at `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json` -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r6_chat_polish\"] for context — render_watch_band() was added with divider, message region, input row.\n  - `game/ui/hud.py` constants block — current values: WATCH_CARD_HEADER_H=18, WATCH_CARD_MAP_H=160, WATCH_CARD_STATS_H=78, WATCH_CARD_CHAT_H=96, WATCH_CARD_FULL_H=352. The Heroes column above the card has plenty of vertical room on a 1080-tall screen, so growing the card by 40-80px is safe.\n  - `game/ui/chat_panel.py` `render_watch_band()` — confirm it lays out (top divider) + (history region) + (input row) and that the history region's height is computed from `rect.height - divider_h - input_h`. If that subtraction is being clamped or the history region is being skipped when empty, fix that too.\n\nGEOMETRY CHECK (do this before changing constants):\n  - Card top y when expanded: minimap.y - WATCH_CARD_FULL_H. With minimap at h-180 and FULL_H=352, card top is h-532. On a 1080 screen that's y=548. Heroes column above runs from top_bar (h=48) to card.top (548), so Heroes column height ≈ 500px. Plenty of room — growing the card by up to ~200 is safe before the Heroes column gets cramped.\n\nDELIVERABLE (single):\n\nD1. GROW THE CHAT BAND TO FILL THE SPACE BELOW HP/XP.\n\n  Implementation:\n    - Change WATCH_CARD_CHAT_H from 96 to a value that fills the visible empty space in screenshot 6. Recommended: 150 (grows the card by 54px → WATCH_CARD_FULL_H=406). If that still leaves visible empty space inside the band when running locally, iterate up to 180 max.\n    - Update WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H so the card auto-grows.\n    - In `render_watch_band()`: confirm the message-region rect's height is `band.height - divider_h - input_row_h - inner_padding` and that this region renders visible chrome even when empty — e.g., a faint horizontal rule every N px, or a single centered greyed-out hint like 'No messages yet' when there are zero history entries. The band should NEVER show a flat black void between the divider and the input row.\n    - Ensure `_effective_watch_card_h` clamp from R5 still leaves the Heroes column with at least HERO_LEFT_MIN_H. If the new card height pushes Heroes below the min, the clamp will do its job — verify with the unpinned/pinned shots.\n    - Stats grid (HP|Mana row, XP|Lvl X row) layout is unchanged — we are NOT shrinking stats, just absorbing the empty space below them.\n\n  Acceptance:\n    - In an expanded-card screenshot, the entire vertical span between the bottom of the XP/Lvl row and the top of the input row is occupied by visible chat-region chrome (divider + history area showing either placeholder text or visible row separators), with no flat black gap.\n    - When card is collapsed, layout is unchanged (only the 18px header peeks above minimap; chat is hidden as before).\n    - Heroes column above the card still renders its hero list without overflow (use the auto-clamp behavior from R5).\n    - All R6 behavior preserved (auto-expand on first pin, chat input click-to-focus, terrain colors on radar, corner-anchored minimap).\n\n  Add a regression test in tests/test_wk52_watch_card.py: assert WATCH_CARD_CHAT_H >= 130 (or whatever value you settled on) and WATCH_CARD_FULL_H == sum of parts. Optionally pixel-sample inside the chat band's history sub-rect (between divider and input row) and assert at least one non-background pixel — this would have caught the empty-band bug from R6 directly.\n\nGATES (all exit 0):\n  - python -m pytest tests/ -v\n  - python tools/qa_smoke.py --quick\n  - python tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nMANDATORY SCREENSHOT VERIFICATION (status=blocked if any FAIL):\nAfter capture, OPEN each PNG and write a {verdict, note} entry under `evidence.screenshot_verdict`. Required keys + acceptance:\n\n  - `wk52_watch_card_expanded.png`: PASS iff the chat band inside the card visibly fills the space between HP/XP stats and the input row — NO flat-black gap between stats and chat input. Placeholder text or row chrome covers the history area.\n  - `wk52_watch_card_minimized.png`: PASS iff layout collapses correctly (~18px header above corner minimap, no chat body, Heroes column visible).\n  - `wk52_pin_radar_minimap.png`: PASS iff terrain visible, corner minimap, expanded card with the new larger chat band visible.\n  - `wk52_memorial_card.png`: PASS iff full-screen overlay covers the layout cleanly.\n  - `wk52_left_menu_unpinned.png`: PASS iff Heroes column ends above minimap with gap; no card visible (unpinned).\n\nIf ANY shot FAILs: status='blocked', list shot filenames in `blockers`, do NOT push the SDK completion-success receipt.\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r7_chat_grow\"] with sprint_id, round_id, status, what_i_changed (single D1 bullet with the exact new constant values + file paths + line ranges), commands_run, evidence (including screenshot_verdict map), blockers, follow_ups.\n\nValidate JSON: python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nThen run the SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 7 single-agent single-deliverable polish from R6 playtest.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08"],
+            "dependencies": [
+              {
+                "id": "wk52_r7_impl",
+                "agents": ["08"],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r7_chat_grow. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r7_chat_grow\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log with sprint_id, round_id, status, what_i_changed (D1 bullet), commands_run, evidence (must include screenshot_verdict map), blockers, follow_ups. Validate JSON. Run SDK receipt."
         }
       }
     }
