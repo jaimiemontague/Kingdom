@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "59726570-a063-46a7-8b65-d27f5cee8739",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r4_remove_right_menu",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "HUD R4: right column removed, chat docked under minimap, radar terrain cache, watch chevron consumes click, minimap hero pick via try_select_hero_at_world.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r4_remove_right_menu\"]",
+  "timestamp": "2026-05-07T11:21:27.124Z"
+}
