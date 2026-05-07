@@ -1161,14 +1161,21 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
     cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
     cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
 
-    def _prep(eng: Any) -> None:
+    def _prep_base(eng: Any) -> None:
         eng.screenshot_hide_ui = False
         eng.selected_hero = hero
         if hasattr(eng, "hud"):
             eng.hud.right_panel_visible = True
             eng.hud._micro_view.enter_hero_focus(hero)
-            eng.hud._pin_slot.pin(str(hero.hero_id), int(sim_now_ms()))
-            eng.hud._pin_slot.pinned_name = str(hero.name)
+
+    def _prep(eng: Any) -> None:
+        _prep_base(eng)
+        eng.hud._pin_slot.pin(str(hero.hero_id), int(sim_now_ms()))
+        eng.hud._pin_slot.pinned_name = str(hero.name)
+
+    def _apply_left_unpinned(eng: Any) -> None:
+        _prep_base(eng)
+        eng.hud._pin_slot.unpin()
 
     def _apply_expanded(eng: Any) -> None:
         _prep(eng)
@@ -1226,6 +1233,16 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
             zoom=1.0,
             ticks=0,
             apply=_apply_radar,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_left_menu_unpinned.png",
+            label="WK52 Heroes column unpinned vs minimap",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_left_unpinned,
             meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
         ),
         Shot(

@@ -273,14 +273,15 @@ class HUD:
 
         left_w = LEFT_COL_W
         minimap_size = WATCH_MINIMAP_SIZE
-        minimap = pygame.Rect(margin, h - margin - minimap_size, minimap_size, minimap_size)
+        minimap = pygame.Rect(0, h - minimap_size, minimap_size, minimap_size)
 
-        left_h = max(0, h - top_h - bottom_h)
+        cap_y = minimap.y
         if self._pin_slot.hero_id is not None:
             card_top = minimap.y - (
                 WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H
             )
-            left_h = max(0, card_top - top_h)
+            cap_y = min(cap_y, card_top)
+        left_h = max(0, cap_y - top_h)
         left = pygame.Rect(0, top_h, left_w, left_h)
 
         speed_bar_w = 200
@@ -1185,9 +1186,9 @@ class HUD:
         if self._show_right_panel:
             self._panel_right.render(surface)
 
-        self._render_watch_card_chrome(surface, minimap, game_state)
         self._panel_minimap.render(surface)
         self._render_radar_minimap(surface, minimap, game_state)
+        self._render_watch_card_chrome(surface, minimap, game_state)
 
         if minimap.width > 0 and minimap.height > 0:
             sep_x = minimap.right + int(self.theme.gutter // 2)

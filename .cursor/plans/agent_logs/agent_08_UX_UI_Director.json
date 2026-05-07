@@ -529,6 +529,76 @@
             "python3 tools/qa_smoke.py --quick",
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r3_layout_fixes": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r3_layout_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "game/ui/hud.py: _layout_rects_for_screen — minimap Rect(0, h-size, size, size) flush left+bottom; left_h always capped with cap_y=minimap.y then min(card_top) when pinned so Heroes column never dips into minimap when unpinned",
+            "game/ui/hud.py: render() draws _panel_minimap + _render_radar_minimap before _render_watch_card_chrome so watch chrome is not occluded by minimap panel/radar",
+            "game/engine_facades/render_coordinator.py: _render_hero_minimap blit uses temporary surface clip to dest rect (cross-domain minimal; Agent 03 may review)",
+            "tools/screenshot_scenarios.py: wk52_pin_alerts adds Shot wk52_left_menu_unpinned.png via _prep_base + unpin (no pin)",
+            "tests/test_wk52_watch_card.py: left column expectation + minimap_y uses WATCH_MINIMAP_SIZE per new layout"
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py tests/test_wk52_event_plumbing.py -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_wk52": "python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py tests/test_wk52_event_plumbing.py -v exit_code=0 (17 passed)",
+            "screenshots_dir": "docs/screenshots/wk52_phase3/",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded": {
+                "verdict": "PASS",
+                "note": "Nova card fully above framed minimap with live map; chrome flush to left; minimap flush left and screen bottom."
+              },
+              "wk52_watch_card_minimized": {
+                "verdict": "PASS",
+                "note": "Slim header strip above minimap with same left/bottom edge flush as expanded."
+              },
+              "wk52_pin_radar_minimap": {
+                "verdict": "PASS",
+                "note": "Radar shows gold hero cluster with visible light ring; dots and edges match spec."
+              },
+              "wk52_memorial_card": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial dims world; epitaph centered; chrome layout preserved underneath."
+              },
+              "wk52_left_menu_unpinned": {
+                "verdict": "PASS",
+                "note": "Heroes list ends with clear gap above minimap; Recall/Memorial/command bar unobstructed."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03: optional review of clipped _render_hero_minimap blit in render_coordinator.py"
+          ]
         }
       }
     }

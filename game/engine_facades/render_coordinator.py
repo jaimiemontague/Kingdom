@@ -192,7 +192,13 @@ class EngineRenderCoordinator:
         pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)
         pygame.draw.rect(mini_surf, (40, 40, 40), mini_surf.get_rect().inflate(-4, -4), 1)
 
-        surface.blit(mini_surf, (rect.x, rect.y))
+        dest = pygame.Rect(rect.x, rect.y, mini_surf.get_width(), mini_surf.get_height())
+        prev_clip = surface.get_clip()
+        try:
+            surface.set_clip(dest.clip(surface.get_clip()))
+            surface.blit(mini_surf, dest.topleft)
+        finally:
+            surface.set_clip(prev_clip)
 
         try:
             set_render_zoom(old_zoom)

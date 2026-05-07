@@ -7,18 +7,20 @@ from game.ui.hud import (
     WATCH_CARD_HEADER_H,
     WATCH_CARD_MAP_H,
     WATCH_CARD_STATS_H,
+    WATCH_MINIMAP_SIZE,
     world_to_radar,
 )
 
 
-def test_watch_card_layout_full_height_when_no_pin():
-    h, top_h, bottom_h = 1080, 48, 96
-    expected_left_h = h - top_h - bottom_h
-    assert expected_left_h == 936
+def test_left_column_caps_below_minimap_when_unpinned():
+    h, top_h = 1080, 48
+    minimap_y = h - int(WATCH_MINIMAP_SIZE)
+    expected_left_h = minimap_y - top_h
+    assert expected_left_h == 808
 
 
 def test_watch_card_layout_shrinks_when_expanded():
-    minimap_y = 1080 - 96 + 8
+    minimap_y = 1080 - int(WATCH_MINIMAP_SIZE)
     card_top_expanded = minimap_y - WATCH_CARD_FULL_H
     card_top_minimized = minimap_y - WATCH_CARD_HEADER_H
     assert card_top_expanded < card_top_minimized
