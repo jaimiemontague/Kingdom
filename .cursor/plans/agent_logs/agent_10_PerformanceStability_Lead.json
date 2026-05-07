@@ -724,6 +724,80 @@
           ]
         }
       }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "notes": "WK52 Phase 3: radar minimap, watch card, memorial; R2 perf consult (Agent 10) + QA (Agent 11)."
+      },
+      "rounds": {
+        "wk52_r2_perf_qa": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r2_perf_qa",
+          "status": "done",
+          "what_i_changed": "No game code edits (read-only perf consult). Reviewed game/ui/hud.py _render_radar_minimap, _render_watch_card_chrome, and world_to_radar. Cloud VM: ran pip install -r requirements.txt so perf_benchmark and qa_smoke could execute (pygame/pytest were missing).",
+          "commands_run": [
+            {
+              "shell": "bash",
+              "commands": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0
+            },
+            {
+              "shell": "bash",
+              "commands": "python3 -m pip install -r requirements.txt -q",
+              "exit_code": 0
+            },
+            {
+              "shell": "bash",
+              "commands": "python3 tools/perf_benchmark.py",
+              "exit_code": 0
+            },
+            {
+              "shell": "bash",
+              "commands": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "shell": "bash",
+              "commands": "python3 -m json.tool .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "hud_perf_review": {
+              "pygame_Surface_in_radar_watch_card": "_render_radar_minimap and _render_watch_card_chrome do not call pygame.Surface(); they use pygame.draw and blit onto the passed surface.",
+              "world_to_radar_and_radar_loops": "world_to_radar (hud.py ~31-39) is O(1) per call. Entity loops are O(buildings+enemies+heroes) with O(1) is_revealed grid index each; no quadratic nested entity loops.",
+              "hp_xp_text_surfaces": "When watch card expanded, self.font_tiny.render runs every frame for HP, XP, Lv, and Mana lines, plus header name and chevron (hud.py ~687-743). FLAG for Agent 08: cache surfaces keyed on changing stats/name like _recall_label_sig (~884-888).",
+              "name_truncate_while_loop": "Header may call font_tiny.render multiple times per frame while shortening name — amplifies allocation churn for long names."
+            },
+            "perf_benchmark": {
+              "command": "python3 tools/perf_benchmark.py",
+              "exit_code": 0,
+              "platform_note": "linux cloud, Python 3.12.3",
+              "seconds": 12.0,
+              "ticks": 720,
+              "heroes": 20,
+              "ms_per_tick_total": 0.65,
+              "ms_per_tick_pathfinding": 0.462,
+              "baseline_plus_minus_5pct": "Not comparable to prior Agent 10 JSON baselines (e.g. wk50 ~1.298 ms/tick on Windows): this run 0.65 differs by >5%. Headless benchmark does not render pygame HUD. Conclusion: no sim-path red flag from benchmark; re-establish ms/tick baseline on one fixed host post-WK52 for strict ±5% tracking."
+            },
+            "qa_smoke": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "WK52-08-PERF-001 (owner Agent 08): Cache watch-card stat labels (HP/XP/Lv/Mana) and optionally header text when expanded; avoid per-frame font.render for stable strings.",
+            "WK52-08-PERF-002 (owner Agent 08, optional): _render_recall_button uses new pygame.Surface SRCALPHA for fallen dim and each flash pulse frame — pool or narrow blit if profiling shows churn (hud.py ~892-911)."
+          ],
+          "recommended_next_actions": [
+            "Record a fresh perf_benchmark number on the standard dev/CI machine after WK52 merges; use that as the ±5% baseline.",
+            "For HUD cost: F2 overlay or pygame HUD timing probe during pinned+expanded watch card if frame-time issues appear in manual play."
+          ]
+        }
+      }
     }
   }
 }
