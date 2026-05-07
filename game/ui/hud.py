@@ -834,11 +834,9 @@ class HUD:
                 cx + 2, cy + WATCH_CARD_HEADER_H + map_h + stats_h, cw - 4, chat_h
             )
             self._watch_card_chat_rect = chat_rect_inside_card
-            cp = self._chat_panel
-            if cp.is_active():
-                cp.render(surface, chat_rect_inside_card, game_state)
-            else:
-                cp.render_idle_dock(surface, chat_rect_inside_card)
+            self._chat_panel.render_watch_band(
+                surface, chat_rect_inside_card, game_state, str(pin.hero_id)
+            )
 
     def _ensure_radar_terrain_surface(self, inner: pygame.Rect, world) -> pygame.Surface | None:
         """Sampled terrain under radar dots; cached by inner size + world dimensions (WK52 R4)."""
@@ -1238,8 +1236,6 @@ class HUD:
         _ = has_right_content  # interior/quest/chat no longer use right column
         self._show_right_panel = False
 
-        top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(surface)
-
         _profiles = game_state.get("hero_profiles_by_id") or {}
         if self._pin_slot.hero_id:
             _pprof = _profiles.get(self._pin_slot.hero_id)
@@ -1273,6 +1269,12 @@ class HUD:
                 )
                 self._memorial_shown_for = str(pin.hero_id)
         self._alert_watcher.check_low_health(_profiles, int(sim_now_ms()))
+
+        if getattr(pin, "_just_pinned", False):
+            self._watch_card_expanded = True
+            pin._just_pinned = False
+
+        top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(surface)
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
@@ -1423,12 +1425,29 @@ class HUD:
         if (
             getattr(self, "_watch_card_chat_rect", None) is not None
             and cp is not None
-            and cp.is_active()
             and self._watch_card_chat_rect.collidepoint((x, y))
+            and self._watch_card_expanded
+            and pin.hero_id is not None
         ):
-            chat_click = cp.handle_click((x, y), self._watch_card_chat_rect)
-            if chat_click is not None:
-                return chat_click
+            pinned_hero = next(
+                (
+                    h
+                    for h in (game_state.get("heroes") or [])
+                    if str(getattr(h, "hero_id", "") or "") == str(pin.hero_id)
+                ),
+                None,
+            )
+            chat_active = (
+                cp.is_active()
+                and pinned_hero is not None
+                and getattr(cp, "hero_target", None) is pinned_hero
+            )
+            if chat_active:
+                chat_click = cp.handle_click((x, y), self._watch_card_chat_rect)
+                if chat_click is not None:
+                    return chat_click
+            elif pinned_hero is not None:
+                return {"type": "start_conversation", "hero": pinned_hero}
         if (
             getattr(self, "memorial_btn_rect", None) is not None
             and self.memorial_btn_rect.collidepoint((x, y))

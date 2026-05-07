@@ -745,6 +745,78 @@
             "python3 tools/qa_smoke.py --quick",
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r6_chat_polish": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r6_chat_polish",
+          "status": "done",
+          "chat_render_root_cause": "(a) In-card path called ChatPanel.render only when is_active(); otherwise render_idle_dock painted a flat dark fill with no placeholder or history/input chrome. Full ChatPanel.render was also unsuitable for the ~96px band (48px header + end button). Fix: dedicated render_watch_band() with divider, message area, and \"> Type to chat…\" placeholder when idle; compact history+input when conversation matches pinned hero.",
+          "what_i_changed": [
+            "D1 game/ui/chat_panel.py ~229–367: added render_watch_band() — top divider, scrollable message region (when convo active for pinned hero), input row with placeholder or cursor; clears header/end hit rects for watch-band layout. game/ui/hud.py ~832–841 _render_watch_card_chrome: always render_watch_band into _watch_card_chat_rect (replaces render_idle_dock / conditional full render). game/ui/hud.py handle_click ~1422–1448: chat rect starts conversation with pinned hero when idle; delegates handle_click when chat active for pinned hero. tests/test_wk52_watch_card.py: test_watch_card_chat_band_draws_non_background_pixels.",
+            "D2 game/ui/pin_slot.py: PinSlot._just_pinned flag set in pin(), cleared in unpin(). game/ui/hud.py render(): moved pin/memorial/alert block before _compute_layout; consume _just_pinned → _watch_card_expanded=True so first-frame layout matches expanded card. tests/test_wk52_watch_card.py: test_watch_card_auto_expand_on_pin_edge."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "pip install -r requirements.txt -q && python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (248 passed)",
+            "screenshots": "docs/screenshots/wk52_phase3/ (5 PNGs)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Chat band shows visible \"> Type to chat…\" placeholder; minimap bottom-left; HP|Mana and XP|Lvl two-column rows intact."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "Collapsed ~18px header only; no chat body visible."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Terrain colors visible; corner minimap; watch card expanded with chat placeholder in band."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial overlay with epitaph and Done button."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Heroes column ends above minimap with gap; corner minimap; bottom bar unobstructed; no watch card."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }

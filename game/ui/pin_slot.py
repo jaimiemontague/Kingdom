@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 PIN_FALLEN_DISPLAY_MS = 10_000
@@ -17,12 +17,14 @@ class PinSlot:
     fallen_since_ms: Optional[int] = None
     low_health_alerted_ms: int = 0
     pinned_name: str = ""
+    _just_pinned: bool = field(default=False, repr=False)
 
     def pin(self, hero_id: str, now_ms: int) -> None:
         self.hero_id = str(hero_id)
         self.pinned_at_ms = int(now_ms)
         self.fallen_since_ms = None
         self.low_health_alerted_ms = 0
+        self._just_pinned = True
 
     def unpin(self) -> None:
         self.hero_id = None
@@ -30,6 +32,7 @@ class PinSlot:
         self.fallen_since_ms = None
         self.low_health_alerted_ms = 0
         self.pinned_name = ""
+        self._just_pinned = False
 
     def update_liveness(self, hero_alive: bool, now_ms: int) -> None:
         if self.hero_id is None:

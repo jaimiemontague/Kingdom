@@ -157,3 +157,80 @@ def test_chevron_toggle_keeps_left_panel_and_selection():
     assert hud.right_panel_visible is True
     assert hud._pin_slot.hero_id == pin_before
     assert left_rect_h() > 0
+
+
+def test_watch_card_chat_band_draws_non_background_pixels():
+    """WK52 R6: in-card chat shows placeholder text (not flat idle dock fill)."""
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_chat_px", name="ChatPx")
+    hud._pin_slot.pin(hero.hero_id, 0)
+    gs = {
+        "selected_hero": hero,
+        "hero_profiles_by_id": {"wk52_chat_px": object()},
+        "selected_hero_profile": None,
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+        "llm_available": True,
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    r = hud._watch_card_chat_rect
+    assert r is not None and r.width > 20 and r.height > 20
+    bright = False
+    for py in range(r.top, r.bottom):
+        for px in range(r.left, r.right):
+            cr, cg, cb = surf.get_at((px, py))[:3]
+            if cr >= 170 and cg >= 170 and cb >= 170:
+                bright = True
+                break
+        if bright:
+            break
+    assert bright
+
+
+def test_watch_card_auto_expand_on_pin_edge():
+    """WK52 R6: first pin expands watch card; manual collapse sticks; re-pin expands again."""
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    assert hud._watch_card_expanded is False
+
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_autox", name="AutoX")
+    hud._pin_slot.pin(hero.hero_id, 0)
+    gs = {
+        "selected_hero": hero,
+        "hero_profiles_by_id": {"wk52_autox": object()},
+        "selected_hero_profile": None,
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    assert hud._watch_card_expanded is True
+
+    chev = hud._watch_card_chevron_rect
+    assert chev is not None
+    assert hud.handle_click((chev.centerx, chev.centery), gs) == "watch_card_chevron_toggle"
+    assert hud._watch_card_expanded is False
+
+    hud.render(surf, gs)
+    assert hud._watch_card_expanded is False
+
+    hero2 = Hero(200.0, 200.0, hero_class="ranger", hero_id="wk52_autox2", name="AutoX2")
+    hud._pin_slot.unpin()
+    hud._pin_slot.pin(hero2.hero_id, 0)
+    gs["heroes"] = [hero2]
+    gs["hero_profiles_by_id"] = {"wk52_autox2": object()}
+    gs["selected_hero"] = hero2
+    hud.render(surf, gs)
+    assert hud._watch_card_expanded is True

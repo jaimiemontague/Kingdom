@@ -226,6 +226,146 @@ class ChatPanel:
         pygame.draw.rect(surface, (12, 12, 18), dock_rect)
         pygame.draw.rect(surface, self._frame_outer, dock_rect, 1)
 
+    def render_watch_band(
+        self,
+        surface: pygame.Surface,
+        band_rect: pygame.Rect,
+        game_state: dict[str, Any],
+        pinned_hero_id: str,
+    ) -> None:
+        """
+        Compact chat strip inside WK52 watch card: divider, history, input/placeholder.
+        Used when the full ``render()`` chrome (header + End button) does not fit.
+        """
+        self._header_rect = None
+        self._end_button_rect = None
+        if band_rect.width <= 0 or band_rect.height <= 0:
+            return
+
+        rx, ry, w, h = band_rect.x, band_rect.y, band_rect.width, band_rect.height
+        pygame.draw.line(
+            surface,
+            self._frame_inner,
+            (rx, ry),
+            (rx + w - 1, ry),
+            1,
+        )
+
+        pad = 6
+        inner_top = ry + 2
+        input_h = max(18, min(28, h // 3))
+        msg_h = max(14, h - 2 - input_h - pad - 2)
+        msg_rect = pygame.Rect(rx + pad, inner_top, w - 2 * pad, msg_h)
+
+        pinned = None
+        for hro in game_state.get("heroes") or []:
+            if str(getattr(hro, "hero_id", "") or "") == str(pinned_hero_id):
+                pinned = hro
+                break
+
+        convo_here = bool(
+            pinned is not None and self.is_active() and self.hero_target is pinned
+        )
+
+        pygame.draw.rect(surface, _COLOR_MSG_BG, msg_rect)
+        pygame.draw.rect(surface, self._frame_inner, msg_rect, 1)
+
+        font = self.theme.font_small
+        line_h = font.get_height() + 3
+        max_text_w = max(8, msg_rect.width - 2 * pad)
+
+        if convo_here:
+            total_lines = 0
+            for entry in self.conversation_history:
+                wrapped = _wrap_text(font, entry.get("text", ""), max_text_w)
+                block_lines = max(1, len(wrapped))
+                dh = entry.get("direct_hint")
+                if dh:
+                    block_lines += len(_wrap_text(font, dh, max_text_w))
+                total_lines += block_lines
+            if self.waiting_for_response:
+                total_lines += 1
+            total_content_h = total_lines * line_h
+            max_scroll = max(0, total_content_h - msg_rect.height + 2 * pad)
+            if self._auto_scroll:
+                self._scroll_offset = max_scroll
+                self._auto_scroll = False
+            self._scroll_offset = max(0, min(self._scroll_offset, max_scroll))
+
+            clip_prev = surface.get_clip()
+            surface.set_clip(msg_rect)
+            content_y = msg_rect.y + pad - self._scroll_offset
+            for entry in self.conversation_history:
+                role = entry.get("role", "hero")
+                text = entry.get("text", "")
+                color = self._accent if role == "player" else _COLOR_TEXT
+                wrapped = _wrap_text(font, text, max_text_w)
+                if not wrapped:
+                    wrapped = [" "]
+                for line_text in wrapped:
+                    if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
+                        surf = font.render(line_text, True, color)
+                        x_msg = (
+                            msg_rect.right - pad - surf.get_width()
+                            if role == "player"
+                            else msg_rect.x + pad
+                        )
+                        surface.blit(surf, (x_msg, content_y))
+                    content_y += line_h
+                if role != "player":
+                    dh = entry.get("direct_hint")
+                    if dh:
+                        hint_color = (
+                            _COLOR_DIRECT_WARN
+                            if (
+                                dh.startswith("Refused")
+                                or dh.startswith("Not applied")
+                                or dh.startswith("Not carried")
+                            )
+                            else _COLOR_DIRECT_HINT
+                        )
+                        for hint_line in _wrap_text(font, dh, max_text_w):
+                            if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
+                                hs = font.render(hint_line, True, hint_color)
+                                surface.blit(hs, (msg_rect.x + pad, content_y))
+                            content_y += line_h
+            if self.waiting_for_response:
+                dots = "." * ((pygame.time.get_ticks() // 400) % 4)
+                thinking = font.render(f"Thinking{dots}", True, _COLOR_THINKING)
+                if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
+                    surface.blit(thinking, (msg_rect.x + pad, content_y))
+            surface.set_clip(clip_prev)
+
+        input_y = msg_rect.bottom + 4
+        self._input_rect = pygame.Rect(rx + pad, input_y, w - 2 * pad, input_h)
+        pygame.draw.rect(surface, _COLOR_INPUT_BG, self._input_rect)
+        pygame.draw.rect(surface, self._frame_outer, self._input_rect, 1)
+
+        llm_available = game_state.get("llm_available", True)
+        if not llm_available:
+            inp_text = "LLM not available"
+            inp_color = _COLOR_THINKING
+        elif convo_here:
+            cursor = "|" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
+            inp_text = self._input_text + cursor
+            inp_color = _COLOR_TEXT
+        else:
+            inp_text = "> Type to chat…"
+            inp_color = _COLOR_MUTED
+
+        inp_surf = font.render(inp_text or " ", True, inp_color)
+        clip_prev2 = surface.get_clip()
+        surface.set_clip(self._input_rect.inflate(-4, 0))
+        surface.blit(
+            inp_surf,
+            (
+                self._input_rect.x + 6,
+                self._input_rect.y + (input_h - inp_surf.get_height()) // 2,
+            ),
+        )
+        surface.set_clip(clip_prev2)
+        self._message_area_rect = msg_rect
+
     def render(
         self,
         surface: pygame.Surface,
