@@ -3,7 +3,6 @@
 import pygame
 
 from game.ui.hud import (
-    BUILDING_CARD_FULL_H,
     HERO_LEFT_MIN_H,
     LEFT_COL_W,
     RADAR_MINIMAP_H,
@@ -31,7 +30,6 @@ def test_watch_card_full_h_includes_chat():
     assert WATCH_CARD_FULL_H == WATCH_CARD_FULL_H_WITH_CHAT
     assert WATCH_CARD_FULL_H_NO_CHAT == WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
     assert WATCH_CARD_CHAT_H >= 130
-    assert BUILDING_CARD_FULL_H == WATCH_CARD_HEADER_H + 112
 
 
 def test_watch_card_layout_expanded_taller_than_collapsed():
@@ -391,7 +389,34 @@ def test_chevron_toggle_independent_of_chat_visible():
     assert hud._chat_visible is False
 
 
-def test_building_card_renders_with_infocard():
+def test_building_selection_does_not_replace_watch_card_slot():
+    """R10: bottom card slot is pinned hero only; building uses BuildingPanel, not card slot."""
+    from game.entities.buildings.castle import Castle
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_r10", name="R10Hero")
+    castle = Castle(3, 3)
+    hud._pin_slot.pin(hero.hero_id, 0)
+    gs = {
+        "selected_hero": hero,
+        "selected_building": castle,
+        "hero_profiles_by_id": {"wk52_r10": object()},
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    assert hud._card_slot_kind == "hero"
+    assert hud._watch_card_rect is not None
+    assert hud._watch_card_rect.width == LEFT_COL_W
+
+
+def test_pinned_watch_card_unaffected_when_only_building_selected():
     from game.entities.buildings.castle import Castle
     from game.ui.hud import HUD
 
@@ -409,36 +434,5 @@ def test_building_card_renders_with_infocard():
     }
     surf = pygame.Surface((1920, 1080))
     hud.render(surf, gs)
-    assert hud._card_slot_kind == "building"
-    assert hud.watch_card_map_rect is None
-    assert hud._watch_card_chat_rect is None
-    assert hud._watch_card_rect is not None
-    assert hud._watch_card_rect.width == LEFT_COL_W
-
-
-def test_card_slot_precedence_building_over_hero():
-    from game.entities.buildings.castle import Castle
-    from game.entities.hero import Hero
-    from game.ui.hud import HUD
-
-    pygame.init()
-    hud = HUD(1920, 1080)
-    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_prec", name="Prec")
-    castle = Castle(3, 3)
-    hud._pin_slot.pin(hero.hero_id, 0)
-    gs = {
-        "selected_hero": hero,
-        "selected_building": castle,
-        "hero_profiles_by_id": {"wk52_prec": object()},
-        "heroes": [hero],
-        "world": None,
-        "debug_ui": False,
-        "bounties": [],
-    }
-    surf = pygame.Surface((1920, 1080))
-    hud.render(surf, gs)
-    assert hud._card_slot_kind == "building"
-
-    gs2 = {**gs, "selected_building": None}
-    hud.render(surf, gs2)
-    assert hud._card_slot_kind == "hero"
+    assert hud._card_slot_kind is None
+    assert hud._watch_card_rect is None

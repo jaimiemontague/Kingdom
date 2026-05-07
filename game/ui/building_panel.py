@@ -8,6 +8,7 @@ import pygame
 
 from config import COLOR_GREEN, COLOR_RED, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.ui.building_renderers import get_panel_renderer, normalize_building_type_key
+from game.ui.hud import LEFT_COL_W
 from game.ui.widgets import Button, NineSlice
 
 
@@ -29,9 +30,12 @@ class BuildingPanel:
         self._panel_tex_modal = "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png"
         self._panel_slice_border = 8
 
-        self.panel_width = 300
+        self.panel_width = LEFT_COL_W
         self.panel_height = 400
         self._panel_height_max = 700  # scratch height for dynamic sizing
+        self.menu_scroll_px = 0
+        self._menu_max_scroll = 0
+        self._scroll_anchor_id: int | None = None
         self.panel_x = 10
         self.panel_y = 50
 
@@ -72,6 +76,10 @@ class BuildingPanel:
 
     def select_building(self, building, heroes: list) -> None:
         """Select a building to show details for."""
+        new_id = id(building) if building is not None else None
+        if new_id != self._scroll_anchor_id:
+            self.menu_scroll_px = 0
+            self._scroll_anchor_id = new_id
         self.selected_building = building
         self.visible = True
 
@@ -79,6 +87,15 @@ class BuildingPanel:
         """Deselect the current building."""
         self.selected_building = None
         self.visible = False
+        self.menu_scroll_px = 0
+        self._scroll_anchor_id = None
+
+    def apply_menu_scroll(self, wheel_y: int) -> bool:
+        if wheel_y == 0 or self._menu_max_scroll <= 0:
+            return False
+        self.menu_scroll_px -= wheel_y * 24
+        self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
+        return True
 
     def get_heroes_for_building(self, building, all_heroes: list) -> dict:
         """Get heroes associated with this building."""
@@ -238,8 +255,9 @@ class BuildingPanel:
         self.demolish_button_rect = None
         self.enter_building_button_rect = None
 
-        # Render to oversized scratch so content height can exceed 400 (wk13 hotfix: Enter Building not clipped)
-        scratch_h = min(self._panel_height_max, max(400, self.screen_height - self.panel_y - 20))
+        viewport_h = min(self._panel_height_max, max(220, self.screen_height - self.panel_y - 20))
+        scratch_h = max(900, viewport_h + 400)
+        scratch_h = min(2400, scratch_h)
         panel_surf = pygame.Surface((self.panel_width, scratch_h), pygame.SRCALPHA)
         if not NineSlice.render(
             panel_surf,
@@ -265,7 +283,7 @@ class BuildingPanel:
         y = self._render_enter_building_button(panel_surf, building, y)
 
         bottom_padding = 20
-        self.panel_height = min(scratch_h, max(400, y + bottom_padding))
+        content_h = min(scratch_h, y + bottom_padding)
 
         # Add close button
         close_size = 24
@@ -290,8 +308,19 @@ class BuildingPanel:
         )
         self.close_button_rect = pygame.Rect(self.panel_x + cb_rect.x, self.panel_y + cb_rect.y, cb_rect.width, cb_rect.height)
 
-        visible = panel_surf.subsurface((0, 0, self.panel_width, self.panel_height))
-        surface.blit(visible, (self.panel_x, self.panel_y))
+        self._menu_max_scroll = max(0, content_h - viewport_h)
+        self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
+        src_y = self.menu_scroll_px
+        dest_clip = pygame.Rect(self.panel_x, self.panel_y, self.panel_width, viewport_h)
+        prev_clip = surface.get_clip()
+        surface.set_clip(dest_clip)
+        surface.blit(
+            panel_surf,
+            (self.panel_x, self.panel_y),
+            area=pygame.Rect(0, src_y, self.panel_width, min(viewport_h, content_h - src_y)),
+        )
+        surface.set_clip(prev_clip)
+        self.panel_height = viewport_h
 
     def render_hero_row(self, surface: pygame.Surface, hero, y: int, index: int) -> int:
         """Render one hero row (portrait + status + vitals)."""
@@ -305,11 +334,15 @@ class BuildingPanel:
         name_text = self.font_small.render(f"{hero.name}", True, COLOR_WHITE)
         surface.blit(name_text, (40, y))
         status_text = self.font_small.render(f"[{hero.state.name}]", True, status_color)
-        surface.blit(status_text, (40 + name_text.get_width() + 5, y))
+        nx = 40 + name_text.get_width() + 5
+        if nx + status_text.get_width() < self.panel_width - 8:
+            surface.blit(status_text, (nx, y))
+        else:
+            surface.blit(status_text, (40, y + name_text.get_height() + 1))
 
         hp_bar_x = 40
         hp_bar_y = y + 14
-        hp_bar_width = 80
+        hp_bar_width = max(36, min(100, self.panel_width - 55))
         hp_bar_height = 6
         pygame.draw.rect(surface, (60, 60, 60), (hp_bar_x, hp_bar_y, hp_bar_width, hp_bar_height))
         hp_pct = hero.hp / max(1, hero.max_hp)
@@ -317,11 +350,12 @@ class BuildingPanel:
         pygame.draw.rect(surface, hp_color, (hp_bar_x, hp_bar_y, hp_bar_width * hp_pct, hp_bar_height))
 
         hp_text = self.font_small.render(f"{hero.hp}/{hero.max_hp}", True, (150, 150, 150))
-        surface.blit(hp_text, (hp_bar_x + hp_bar_width + 5, y + 7))
+        surface.blit(hp_text, (hp_bar_x + hp_bar_width + 4, hp_bar_y - 2))
         pot_color = (100, 200, 100) if hero.potions > 0 else (130, 130, 130)
         pot_text = self.font_small.render(f"Potions: {hero.potions}", True, pot_color)
-        surface.blit(pot_text, (180, y + 7))
-        return y + 28
+        pot_y = hp_bar_y + hp_bar_height + 2
+        surface.blit(pot_text, (hp_bar_x, pot_y))
+        return y + max(38, pot_y + pot_text.get_height() - y)
 
     def get_status_color(self, status: str) -> tuple[int, int, int]:
         """Get display color for hero status."""
@@ -381,7 +415,8 @@ class BuildingPanel:
         y += 10
 
         is_under_construction = hasattr(building, "is_constructed") and not building.is_constructed
-        local_rect = pygame.Rect(10, y, 200, 30)
+        bw = max(60, self.panel_width - 20)
+        local_rect = pygame.Rect(10, y, bw, 30)
         text = "Demolish (Under Construction)" if is_under_construction else "Demolish"
         button = Button(
             rect=local_rect,
@@ -424,7 +459,8 @@ class BuildingPanel:
         pygame.draw.line(surface, COLOR_UI_BORDER, (10, y), (self.panel_width - 10, y))
         y += 10
 
-        local_rect = pygame.Rect(10, y, 200, 30)
+        bw = max(60, self.panel_width - 20)
+        local_rect = pygame.Rect(10, y, bw, 30)
         button = Button(
             rect=local_rect,
             text="Enter Building",

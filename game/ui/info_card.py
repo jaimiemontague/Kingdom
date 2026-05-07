@@ -66,12 +66,14 @@ class InfoCard:
         expanded: bool,
         header_h: int,
         name_surf: pygame.Surface,
-        chevron_surf: pygame.Surface,
+        chevron_surf: pygame.Surface | None,
+        header_close_x: bool = False,
     ) -> tuple[pygame.Rect, pygame.Rect, int | None]:
         """
-        Paint card frame + header. Returns (card_rect, chevron_hit_rect, body_start_y).
+        Paint card frame + header. Returns (card_rect, header_control_hit_rect, body_start_y).
 
         When ``expanded`` is False, ``body_start_y`` is ``None`` (header-only peek).
+        If ``header_close_x``, draw the compact X control (WK52) instead of ``chevron_surf``.
         """
         card_rect = pygame.Rect(cx, cy, cw, ch)
         pygame.draw.rect(surface, self.CARD_BG, card_rect, border_radius=4)
@@ -87,19 +89,33 @@ class InfoCard:
         )
 
         surface.blit(name_surf, (cx + 3, cy + (header_h - name_surf.get_height()) // 2))
-        cbx = cx + cw - chevron_surf.get_width() - 2
-        cby = cy + (header_h - chevron_surf.get_height()) // 2
-        surface.blit(chevron_surf, (cbx, cby))
-        chevron_hit = pygame.Rect(
-            int(cbx - 2),
-            int(cby - 2),
-            int(chevron_surf.get_width() + 5),
-            int(chevron_surf.get_height() + 4),
-        )
+
+        inset = 2
+        close_s = 14
+        if header_close_x:
+            cr = pygame.Rect(cx + cw - close_s - inset, cy + (header_h - close_s) // 2, close_s, close_s)
+            pygame.draw.rect(surface, (20, 20, 28), cr, border_radius=2)
+            pygame.draw.rect(surface, (60, 60, 80), cr, width=1, border_radius=2)
+            glyph = (190, 185, 210)
+            pygame.draw.line(surface, glyph, (cr.left + 3, cr.top + 3), (cr.right - 4, cr.bottom - 4), 1)
+            pygame.draw.line(surface, glyph, (cr.right - 4, cr.top + 3), (cr.left + 3, cr.bottom - 4), 1)
+            control_hit = cr
+        else:
+            if chevron_surf is None:
+                raise ValueError("chevron_surf required when header_close_x is False")
+            cbx = cx + cw - chevron_surf.get_width() - 2
+            cby = cy + (header_h - chevron_surf.get_height()) // 2
+            surface.blit(chevron_surf, (cbx, cby))
+            control_hit = pygame.Rect(
+                int(cbx - 2),
+                int(cby - 2),
+                int(chevron_surf.get_width() + 5),
+                int(chevron_surf.get_height() + 4),
+            )
 
         if not expanded:
-            return card_rect, chevron_hit, None
-        return card_rect, chevron_hit, cy + header_h
+            return card_rect, control_hit, None
+        return card_rect, control_hit, cy + header_h
 
     def layout_body(
         self,

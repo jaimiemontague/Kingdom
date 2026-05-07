@@ -1079,6 +1079,112 @@
             "python3 tools/qa_smoke.py --quick",
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r10_hero_card_priority": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r10_hero_card_priority",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A game/ui/hud.py: Removed building InfoCard path (_render_building_card_infocard, building stats body, layout/pointer building branch); card slot is pinned hero only; no masking of selected_hero when selected_building; chat/watch hits no longer gated on selected_building.",
+            "BUG B game/ui/building_panel.py: panel_width=LEFT_COL_W (import from hud); demolish/enter button width fits column; render_hero_row wraps potions/stack for narrow width; vertical scroll via menu_scroll_px + clipped blit to viewport_h.",
+            "BUG C game/ui/info_card.py + hud.py: draw_shell(..., header_close_x=True) draws 14×14 dark X like chat band; watch card name_max_w accounts for close button.",
+            "BUG D game/ui/hero_panel.py: viewport clip + y-scroll_off for body; menu_scroll_px clamp; apply_menu_scroll. game/input_handler.py: WHEEL routes to hud.handle_menu_scroll before zoom when over hero left or building panel.",
+            "tools/screenshot_scenarios.py: removed wk52_building_card.png shot and _apply_building_card.",
+            "tests: test_wk52_watch_card.py updated (building card tests removed); tests/test_wk52_r10_menu_scroll.py added."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "261 passed"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_1 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "iteration_log": [
+            {
+              "iteration": 1,
+              "bugs": [
+                "A",
+                "B",
+                "C",
+                "D"
+              ],
+              "capture_out": "docs/screenshots/wk52_phase3/iter_1",
+              "observations": {
+                "wk52_watch_card_expanded.png": "Purple header shows hero name Reed and a small dark square X top-right; body has minimap, HP/XP, chat band with inner X — no Castle/building card.",
+                "wk52_watch_card_minimized.png": "Thin header strip only with X; no building card.",
+                "wk52_pin_radar_minimap.png": "Radar minimap + expanded watch card; no building card overlay.",
+                "wk52_left_menu_unpinned.png": "Heroes list text sits inside brown left panel; no lines leaking below panel bottom in this frame.",
+                "wk52_memorial_card.png": "Full memorial overlay with epitaph and Done.",
+                "wk52_building_card.png": "REMOVED from scenario (not generated)."
+              },
+              "verdict": "PASS",
+              "code_notes": "Single integration iter after implementation; scroll/clamp covered by new unit tests; static shots confirm clipping and watch chrome."
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (261 passed)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Pinned watch card; header X control (not chevron); no building card."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "Slim header with X."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Radar + watch card present."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Hero list within panel; no overflow in capture."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Memorial overlay OK."
+              },
+              "wk52_building_card.png": {
+                "verdict": "REMOVED",
+                "note": "Scenario no longer emits this file."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }

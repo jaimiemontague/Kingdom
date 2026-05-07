@@ -56,6 +56,16 @@ class HeroPanel:
         self._frame_inner = frame_inner
         self._frame_highlight = frame_highlight
         self.font_tiny = pygame.font.Font(None, 16)
+        self.menu_scroll_px = 0
+        self._menu_scroll_hero_key: str | None = None
+        self._menu_max_scroll = 0
+
+    def apply_menu_scroll(self, wheel_y: int) -> bool:
+        if wheel_y == 0 or self._menu_max_scroll <= 0:
+            return False
+        self.menu_scroll_px -= wheel_y * 24
+        self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
+        return True
 
     def _draw_section_divider(self, surface: pygame.Surface, x: int, y: int, width: int) -> None:
         if width <= 0:
@@ -528,11 +538,24 @@ class HeroPanel:
         )
         y = header_rect.bottom + 4
 
+        sk = str(getattr(hero, "hero_id", "") or "") or str(id(hero))
+        if self._menu_scroll_hero_key != sk:
+            self._menu_scroll_hero_key = sk
+            self.menu_scroll_px = 0
+        body_start = int(y)
+        viewport_top = body_start
+        viewport_h = max(0, int(rect.bottom) - viewport_top)
+        viewport = pygame.Rect(int(panel_x), int(viewport_top), int(panel_width), int(viewport_h))
+        scroll_off = int(self.menu_scroll_px)
+        prev_clip = surface.get_clip()
+        if viewport_h > 0 and viewport.width > 0:
+            surface.set_clip(viewport)
+
         TextLabel.render(
             surface,
             self.theme.font_small,
             truncate_panel_line(class_line),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
@@ -543,7 +566,7 @@ class HeroPanel:
                 surface,
                 self.font_tiny,
                 truncate_panel_line(f"id:{hid}", 44),
-                (panel_x + pad, y),
+                (panel_x + pad, y - scroll_off),
                 muted,
                 shadow_color=(20, 20, 30),
             )
@@ -554,7 +577,7 @@ class HeroPanel:
                 surface,
                 self.font_tiny,
                 truncate_panel_line(f"Pers: {personality}"),
-                (panel_x + pad, y),
+                (panel_x + pad, y - scroll_off),
                 (210, 210, 235),
                 shadow_color=(20, 20, 30),
             )
@@ -564,12 +587,12 @@ class HeroPanel:
             surface,
             self.font_tiny,
             f"XP {xp_val}/{xp_need}",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (180, 200, 255),
             shadow_color=(20, 20, 30),
         )
         y += line_skip_tiny + 4
-        xp_bar = pygame.Rect(panel_x + pad, y, bar_width, 7)
+        xp_bar = pygame.Rect(panel_x + pad, y - scroll_off, bar_width, 7)
         HPBar.render(
             surface,
             xp_bar,
@@ -589,13 +612,13 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             f"HP: {hp_v}/{max_hp_v}",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
         y += line_skip_sm + 4
 
-        hp_bar_rect = pygame.Rect(panel_x + pad, y, bar_width, 8)
+        hp_bar_rect = pygame.Rect(panel_x + pad, y - scroll_off, bar_width, 8)
         HPBar.render(
             surface,
             hp_bar_rect,
@@ -611,13 +634,13 @@ class HeroPanel:
         )
         y += hp_bar_rect.height + 6
 
-        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        self._draw_section_divider(surface, panel_x + pad, y - scroll_off, bar_width)
         y += 6
         TextLabel.render(
             surface,
             self.theme.font_small,
             "Vitals",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
@@ -626,19 +649,19 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             truncate_panel_line(f"ATK: {atk_v}  DEF: {def_v}"),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
         y += 14
 
-        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        self._draw_section_divider(surface, panel_x + pad, y - scroll_off, bar_width)
         y += 6
         TextLabel.render(
             surface,
             self.theme.font_small,
             "Economy",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
@@ -648,7 +671,7 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             f"Gold: {gold_v}",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_GOLD,
             shadow_color=(25, 25, 35),
         )
@@ -658,19 +681,19 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             f"Taxed: {tax_v}",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (220, 180, 90),
             shadow_color=(25, 25, 35),
         )
         y += 14
 
-        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        self._draw_section_divider(surface, panel_x + pad, y - scroll_off, bar_width)
         y += 6
         TextLabel.render(
             surface,
             self.theme.font_small,
             "Gear",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (180, 180, 200),
             shadow_color=(20, 20, 30),
         )
@@ -680,7 +703,7 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             f"Potions: {potion_count}",
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_GREEN,
             shadow_color=(25, 25, 35),
         )
@@ -690,7 +713,7 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             truncate_panel_line(f"W: {weapon_name}"),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
@@ -699,20 +722,20 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             truncate_panel_line(f"A: {armor_name}"),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             COLOR_WHITE,
             shadow_color=(25, 25, 35),
         )
         y += 14
 
-        self._draw_section_divider(surface, panel_x + pad, y, bar_width)
+        self._draw_section_divider(surface, panel_x + pad, y - scroll_off, bar_width)
         y += 6
         if locations_line:
             TextLabel.render(
                 surface,
                 self.font_tiny,
                 truncate_panel_line(locations_line),
-                (panel_x + pad, y),
+                (panel_x + pad, y - scroll_off),
                 (210, 220, 245),
                 shadow_color=(18, 18, 26),
             )
@@ -722,7 +745,7 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             truncate_panel_line(f"Intent: {intent_display}"),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (220, 220, 220),
             shadow_color=(25, 25, 35),
         )
@@ -732,7 +755,7 @@ class HeroPanel:
             surface,
             self.theme.font_small,
             truncate_panel_line(f"State: {state_display}"),
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             (200, 200, 200),
             shadow_color=(25, 25, 35),
         )
@@ -746,7 +769,7 @@ class HeroPanel:
             surface,
             self.font_tiny,
             decision_line,
-            (panel_x + pad, y),
+            (panel_x + pad, y - scroll_off),
             decision_color,
             shadow_color=(20, 20, 30),
         )
@@ -761,7 +784,7 @@ class HeroPanel:
                 surface,
                 self.font_tiny,
                 car,
-                (panel_x + pad, y),
+                (panel_x + pad, y - scroll_off),
                 muted,
                 shadow_color=(18, 18, 26),
             )
@@ -773,7 +796,7 @@ class HeroPanel:
                     surface,
                     self.font_tiny,
                     truncate_panel_line("Memory: none yet"),
-                    (panel_x + pad, y),
+                    (panel_x + pad, y - scroll_off),
                     muted,
                     shadow_color=(18, 18, 26),
                 )
@@ -783,7 +806,7 @@ class HeroPanel:
                     surface,
                     self.font_tiny,
                     "Recent:",
-                    (panel_x + pad, y),
+                    (panel_x + pad, y - scroll_off),
                     (165, 180, 205),
                     shadow_color=(18, 18, 26),
                 )
@@ -796,7 +819,7 @@ class HeroPanel:
                                 surface,
                                 self.font_tiny,
                                 f" -{sm}",
-                                (panel_x + pad, y),
+                                (panel_x + pad, y - scroll_off),
                                 (200, 200, 210),
                                 shadow_color=(18, 18, 26),
                             )
@@ -808,7 +831,7 @@ class HeroPanel:
                 surface,
                 self.font_tiny,
                 truncate_panel_line(f"Known places: {known_places_live}"),
-                (panel_x + pad, y),
+                (panel_x + pad, y - scroll_off),
                 (175, 200, 180),
                 shadow_color=(18, 18, 26),
             )
@@ -821,12 +844,20 @@ class HeroPanel:
                     if inside_building is not None:
                         building_name = getattr(inside_building, "building_type", None) or inside_building.__class__.__name__
                     inside_line = f"Inside: {str(building_name).replace('_', ' ').title()}" if building_name else "Inside: yes"
-                    TextLabel.render(surface, self.font_tiny, truncate_panel_line(inside_line), (panel_x + pad, y), (220, 220, 255))
+                    TextLabel.render(surface, self.font_tiny, truncate_panel_line(inside_line), (panel_x + pad, y - scroll_off), (220, 220, 255))
                     y += 14
             except Exception:
                 pass
 
+        def _finish_body_scroll() -> None:
+            content_h = int(y) - body_start
+            vh = max(0, viewport_h)
+            self._menu_max_scroll = max(0, content_h - vh) if vh > 0 else 0
+            self.menu_scroll_px = max(0, min(self.menu_scroll_px, self._menu_max_scroll))
+            surface.set_clip(prev_clip)
+
         if not debug_ui:
+            _finish_body_scroll()
             return
 
         now_ms = int(sim_now_ms())
@@ -844,7 +875,7 @@ class HeroPanel:
                         stuck_line = f"STUCK: {reason} (attempts {attempts})"
                 else:
                     stuck_line = f"STUCK: {reason} (attempts {attempts})"
-                TextLabel.render(surface, self.font_tiny, truncate_panel_line(stuck_line), (panel_x + pad, y), (255, 180, 100))
+                TextLabel.render(surface, self.font_tiny, truncate_panel_line(stuck_line), (panel_x + pad, y - scroll_off), (255, 180, 100))
                 y += 14
         except Exception:
             pass
@@ -854,9 +885,11 @@ class HeroPanel:
             if isinstance(can_attack, bool) and not can_attack:
                 reason = str(getattr(hero, "attack_blocked_reason", "") or "").strip()
                 line = f"ATK BLOCKED: {reason}" if reason else "ATK BLOCKED"
-                TextLabel.render(surface, self.font_tiny, truncate_panel_line(line), (panel_x + pad, y), (255, 160, 160))
+                TextLabel.render(surface, self.font_tiny, truncate_panel_line(line), (panel_x + pad, y - scroll_off), (255, 160, 160))
         except Exception:
             pass
+
+        _finish_body_scroll()
 
     def render_focus_top(
         self,
