@@ -103,7 +103,7 @@ Agent 01 must:
 - If the sprint can run through the SDK, add an `automation` block following `.cursor/plans/ai_studio_automation_contract.md`.
 - Use as much safe parallelism as possible, but never run agents in parallel when their work depends on prior output or would collide on the same files.
 - Provide Jaimie a send list with agent numbers, order/waves, and intelligence tags.
-- For orchestrated sprints, also provide the exact validate/dry-run/live orchestrator commands. The live command must include `--auto-push` and `--mode auto_until_human_gate`.
+- For orchestrated sprints, also provide the exact validate/dry-run/live orchestrator commands. For standard "Local-to-Cloud" execution, the live command must include `--cloud-repo-url https://github.com/jaimiemontague/Kingdom.git`, `--auto-push`, and `--mode auto_until_human_gate`.
 - Ensure every `pm_agent_prompts` entry tells the worker to update its own log and run/record required gates.
 
 ### Mode 3 — All Agents Are Done / Review And Close
