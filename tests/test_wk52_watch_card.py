@@ -24,6 +24,7 @@ def test_watch_card_full_h_includes_chat():
     assert WATCH_CARD_FULL_H == (
         WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
     )
+    assert WATCH_CARD_CHAT_H >= 130
 
 
 def test_watch_card_layout_expanded_taller_than_collapsed():
@@ -234,3 +235,26 @@ def test_watch_card_auto_expand_on_pin_edge():
     gs["selected_hero"] = hero2
     hud.render(surf, gs)
     assert hud._watch_card_expanded is True
+
+
+def test_render_watch_band_empty_history_has_visual_chrome_r7():
+    """R7: empty history draws stripes/hint — catches flat-black void regressions."""
+    from game.ui.chat_panel import ChatPanel
+    from game.ui.theme import UITheme
+
+    pygame.init()
+    panel = ChatPanel(UITheme())
+    panel.end_conversation()
+    surf = pygame.Surface((220, 150))
+    surf.fill((255, 0, 255))
+    panel.render_watch_band(surf, pygame.Rect(10, 50, 200, 148), {"heroes": [], "llm_available": True}, "x")
+    mr = panel._message_area_rect
+    assert mr is not None and mr.height >= 24
+    base = surf.get_at((mr.left + 10, mr.top + 6))[:3]
+    differs = False
+    for dy in range(8, min(90, mr.height - 12), 6):
+        c = surf.get_at((mr.left + 14, mr.top + dy))[:3]
+        if sum(abs(base[i] - c[i]) for i in range(3)) > 15:
+            differs = True
+            break
+    assert differs

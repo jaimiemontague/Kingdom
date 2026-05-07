@@ -251,11 +251,20 @@ class ChatPanel:
             1,
         )
 
-        pad = 6
-        inner_top = ry + 2
-        input_h = max(18, min(28, h // 3))
-        msg_h = max(14, h - 2 - input_h - pad - 2)
-        msg_rect = pygame.Rect(rx + pad, inner_top, w - 2 * pad, msg_h)
+        pad_lr = 6
+        divider_h = 1
+        gap_after_divider = 1
+        gap_before_input = 4
+        overhead_top = divider_h + gap_after_divider
+        inner_top = ry + overhead_top
+        slack = max(28, h - overhead_top - gap_before_input)
+        input_h = max(22, min(28, slack // 6))
+        if overhead_top + gap_before_input + input_h > h - 16:
+            input_h = max(18, h - overhead_top - gap_before_input - 14)
+            input_h = min(input_h, 28)
+
+        msg_h = max(16, h - overhead_top - gap_before_input - input_h)
+        msg_rect = pygame.Rect(rx + pad_lr, inner_top, w - 2 * pad_lr, msg_h)
 
         pinned = None
         for hro in game_state.get("heroes") or []:
@@ -272,7 +281,28 @@ class ChatPanel:
 
         font = self.theme.font_small
         line_h = font.get_height() + 3
-        max_text_w = max(8, msg_rect.width - 2 * pad)
+        max_text_w = max(8, msg_rect.width - 2 * pad_lr)
+
+        def _stripe_empty_history() -> None:
+            stripe = (
+                min(110, int(_COLOR_MSG_BG[0]) + 14),
+                min(110, int(_COLOR_MSG_BG[1]) + 14),
+                min(100, int(_COLOR_MSG_BG[2]) + 12),
+            )
+            step = max(16, msg_rect.height // 7)
+            for yy in range(msg_rect.top + step, msg_rect.bottom - 2, step):
+                pygame.draw.line(surface, stripe, (msg_rect.left + 4, yy), (msg_rect.right - 5, yy), 1)
+
+        if not convo_here:
+            _stripe_empty_history()
+            hint = font.render("No messages yet", True, _COLOR_MUTED)
+            surface.blit(
+                hint,
+                (
+                    msg_rect.centerx - hint.get_width() // 2,
+                    msg_rect.centery - hint.get_height() // 2,
+                ),
+            )
 
         if convo_here:
             total_lines = 0
@@ -286,7 +316,7 @@ class ChatPanel:
             if self.waiting_for_response:
                 total_lines += 1
             total_content_h = total_lines * line_h
-            max_scroll = max(0, total_content_h - msg_rect.height + 2 * pad)
+            max_scroll = max(0, total_content_h - msg_rect.height + 2 * pad_lr)
             if self._auto_scroll:
                 self._scroll_offset = max_scroll
                 self._auto_scroll = False
@@ -294,7 +324,7 @@ class ChatPanel:
 
             clip_prev = surface.get_clip()
             surface.set_clip(msg_rect)
-            content_y = msg_rect.y + pad - self._scroll_offset
+            content_y = msg_rect.y + pad_lr - self._scroll_offset
             for entry in self.conversation_history:
                 role = entry.get("role", "hero")
                 text = entry.get("text", "")
@@ -306,9 +336,9 @@ class ChatPanel:
                     if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
                         surf = font.render(line_text, True, color)
                         x_msg = (
-                            msg_rect.right - pad - surf.get_width()
+                            msg_rect.right - pad_lr - surf.get_width()
                             if role == "player"
-                            else msg_rect.x + pad
+                            else msg_rect.x + pad_lr
                         )
                         surface.blit(surf, (x_msg, content_y))
                     content_y += line_h
@@ -327,17 +357,17 @@ class ChatPanel:
                         for hint_line in _wrap_text(font, dh, max_text_w):
                             if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
                                 hs = font.render(hint_line, True, hint_color)
-                                surface.blit(hs, (msg_rect.x + pad, content_y))
+                                surface.blit(hs, (msg_rect.x + pad_lr, content_y))
                             content_y += line_h
             if self.waiting_for_response:
                 dots = "." * ((pygame.time.get_ticks() // 400) % 4)
                 thinking = font.render(f"Thinking{dots}", True, _COLOR_THINKING)
                 if content_y + line_h > msg_rect.y and content_y < msg_rect.bottom:
-                    surface.blit(thinking, (msg_rect.x + pad, content_y))
+                    surface.blit(thinking, (msg_rect.x + pad_lr, content_y))
             surface.set_clip(clip_prev)
 
-        input_y = msg_rect.bottom + 4
-        self._input_rect = pygame.Rect(rx + pad, input_y, w - 2 * pad, input_h)
+        input_y = msg_rect.bottom + gap_before_input
+        self._input_rect = pygame.Rect(rx + pad_lr, input_y, w - 2 * pad_lr, input_h)
         pygame.draw.rect(surface, _COLOR_INPUT_BG, self._input_rect)
         pygame.draw.rect(surface, self._frame_outer, self._input_rect, 1)
 

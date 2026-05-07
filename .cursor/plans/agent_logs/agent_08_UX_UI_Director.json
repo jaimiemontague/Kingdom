@@ -817,6 +817,79 @@
             "python3 tools/qa_smoke.py --quick",
             "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r7_chat_grow": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r7_chat_grow",
+          "status": "done",
+          "what_i_changed": [
+            "D1 game/ui/hud.py lines ~25–29: WATCH_CARD_CHAT_H=150 (was 96), WATCH_CARD_FULL_H=406 (derived sum HEADER 18 + MAP 160 + STATS 78 + CHAT 150).",
+            "D1 game/ui/hud.py: _watch_chat_band_rect(...) + HUD virtual_pointer chrome use same geom; painted_stats_bottom_override pulls chat divider up below stats ink (removes pre-chat slack gap). _render_watch_card_chrome delegates rect to helper.",
+            "D1 game/ui/chat_panel.py render_watch_band: msg vs input sizing from divider/input gaps; idle path draws horizontal stripe chrome + centered \"No messages yet\" muted hint.",
+            "D1 tests/test_wk52_watch_card.py: WATCH_CARD_CHAT_H>=130; test_render_watch_band_empty_history_has_visual_chrome_r7; repaired auto-expand test closure."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "pip install -r requirements.txt -q && python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (249 passed)",
+            "screenshots": "docs/screenshots/wk52_phase3/ (5 PNGs, manifest.json)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Tan message region fills space between XP/Lvl bars and input; \"No messages yet\" + faint stripes; no black void strip."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "~18px header strip above terrain minimap; chat hidden."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Corner minimap terrain colors; taller expanded chat band readable."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial overlay with Done; layout clean behind."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Heroes column + gap above corner minimap; no watch card when unpinned."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }

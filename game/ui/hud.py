@@ -25,7 +25,7 @@ MEMORIAL_BTN_W = 90
 WATCH_CARD_HEADER_H = 18
 WATCH_CARD_MAP_H = 160
 WATCH_CARD_STATS_H = 78
-WATCH_CARD_CHAT_H = 96
+WATCH_CARD_CHAT_H = 150
 WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
 LEFT_COL_W = 224
 HERO_LEFT_MIN_H = 80
@@ -271,6 +271,42 @@ class HUD:
         chat_h = max(0, inner)
         return (map_h, stats_h, chat_h)
 
+    def _watch_chat_band_rect(
+        self,
+        cx: int,
+        cy: int,
+        cw: int,
+        ch: int,
+        map_h: int,
+        stats_h: int,
+        chat_h: int,
+        profiles: dict,
+        hero_id: str,
+        painted_stats_bottom_override: int | None = None,
+    ) -> pygame.Rect | None:
+        """Screen-space rect for WK52 chat band; matches slack absorption in _render_watch_card_chrome."""
+        if not hero_id or not self._watch_card_expanded or chat_h <= 0 or map_h <= 0:
+            return None
+        sy = cy + WATCH_CARD_HEADER_H + map_h + 4
+        allotted_stats_bottom = cy + WATCH_CARD_HEADER_H + map_h + stats_h
+        default_top = allotted_stats_bottom
+        prof = profiles.get(hero_id)
+        painted_bottom: int | None = painted_stats_bottom_override
+        if painted_bottom is None and stats_h > 0 and prof is not None:
+            lab_h = self.font_tiny.get_height()
+            bar_h = 6
+            row1_y = sy
+            bar_y1 = row1_y + lab_h + 1
+            row2_y = bar_y1 + bar_h + 5
+            bar_y2 = row2_y + lab_h + 1
+            painted_bottom = bar_y2 + bar_h
+        chat_y = max(sy, painted_bottom + 2) if painted_bottom is not None else default_top
+        chat_h_draw = max(0, cy + ch - chat_y)
+        if chat_h_draw <= 0:
+            return None
+        return pygame.Rect(cx + 2, chat_y, cw - 4, chat_h_draw)
+
+
     def _layout_rects_for_screen(
         self, w: int, h: int, *, show_right_panel: bool
     ) -> tuple[
@@ -384,14 +420,19 @@ class HUD:
             map_h, stats_h, chat_h = self._watch_card_body_split(ch)
             if chat_h > 0:
                 cx, cy = minimap.x, minimap.y - ch
-                regions.append(
-                    pygame.Rect(
-                        cx + 2,
-                        cy + WATCH_CARD_HEADER_H + map_h + stats_h,
-                        minimap.width - 4,
-                        chat_h,
-                    )
+                cbr = self._watch_chat_band_rect(
+                    cx,
+                    cy,
+                    minimap.width,
+                    ch,
+                    map_h,
+                    stats_h,
+                    chat_h,
+                    profiles,
+                    str(pin.hero_id),
                 )
+                if cbr is not None:
+                    regions.append(cbr)
         if game_state.get("selected_hero") is not None or game_state.get("selected_peasant") is not None:
             regions.append(left)
         for r in regions:
@@ -782,6 +823,7 @@ class HUD:
         left_x = cx + 4
         right_x = left_x + half + gutter // 2
         bar_left_w = max(36, half - 4)
+        painted_stats_bottom_for_chat: int | None = None
 
         if stats_h > 0 and prof is not None:
             vitals = getattr(prof, "vitals", None)
@@ -825,18 +867,29 @@ class HUD:
                     surface, (70, 130, 210), pygame.Rect(left_x, bar_y2, int(bar_left_w * xp_ratio), bar_h)
                 )
             pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h), 1)
+            painted_stats_bottom_for_chat = bar_y2 + bar_h
         elif stats_h > 0:
             if self._watch_mana_label_surf is None:
                 self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
 
         if chat_h > 0:
-            chat_rect_inside_card = pygame.Rect(
-                cx + 2, cy + WATCH_CARD_HEADER_H + map_h + stats_h, cw - 4, chat_h
+            chat_rect_inside_card = self._watch_chat_band_rect(
+                cx,
+                cy,
+                cw,
+                ch,
+                map_h,
+                stats_h,
+                chat_h,
+                profiles,
+                str(pin.hero_id),
+                painted_stats_bottom_override=painted_stats_bottom_for_chat,
             )
-            self._watch_card_chat_rect = chat_rect_inside_card
-            self._chat_panel.render_watch_band(
-                surface, chat_rect_inside_card, game_state, str(pin.hero_id)
-            )
+            if chat_rect_inside_card is not None:
+                self._watch_card_chat_rect = chat_rect_inside_card
+                self._chat_panel.render_watch_band(
+                    surface, chat_rect_inside_card, game_state, str(pin.hero_id)
+                )
 
     def _ensure_radar_terrain_surface(self, inner: pygame.Rect, world) -> pygame.Surface | None:
         """Sampled terrain under radar dots; cached by inner size + world dimensions (WK52 R4)."""
