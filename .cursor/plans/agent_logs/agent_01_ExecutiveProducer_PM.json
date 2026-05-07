@@ -4625,7 +4625,9 @@
           "validate_r4": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r4_remove_right_menu",
           "run_r4": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r4_remove_right_menu --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git",
           "validate_r5": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r5_corner_layout",
-          "run_r5": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r5_corner_layout --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
+          "run_r5": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r5_corner_layout --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main",
+          "validate_r6": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r6_chat_polish",
+          "run_r6": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r6_chat_polish --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
         }
       },
       "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial. Read `.cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md` in full -- it contains all code examples, test specs, and acceptance criteria for your agent section. Implement exactly what the plan specifies for your wave; run every verification command listed; iterate until all gates pass. Update your agent log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"ROUND_ID\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json  Then run the exact SDK completion receipt command from your orchestrator prompt.",
@@ -4890,6 +4892,56 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r5_corner_layout. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r5_corner_layout\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log with sprint_id, round_id, status, what_i_changed (D1 and D2 bullets), commands_run, evidence (must include screenshot_verdict map), blockers, follow_ups, and a chevron_root_cause field. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r6_chat_polish": {
+          "round_meta": {
+            "round_id": "wk52_r6_chat_polish",
+            "created_utc": "2026-05-07T01:30:00Z",
+            "wave": 6,
+            "depends_on": "wk52_r5_corner_layout",
+            "note": "User feedback after R5 playtest (see .cursor/human_provided/wk52 screenshot 5.PNG): the in-card chat band exists at the right location but the chat panel itself isn't drawing any content — the band is just an empty black rectangle labeled 'Chat goes here' in the user's annotation. Also: when a hero is pinned, the watch card should default to EXPANDED, not minimized."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R6: Two-deliverable polish from R5 playtest. Single-agent (Agent 08). Per-shot screenshot_verdict gate enforced and now must explicitly assert chat content is visible."
+          },
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_pending_r5",
+              "next_action": "Implement D1 (chat band actually renders content — input prompt, message history, placeholder when empty) and D2 (watch card auto-expands on first pin). Capture+verify all 5 acceptance shots before status=done."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r6_chat_polish (single-agent polish from R5 playtest).\n\nREAD FIRST:\n  - `.cursor/human_provided/wk52 screenshot 5.PNG` — note the empty black rectangle inside the lower portion of the hero card with the user's red 'Chat goes here' annotation. The rect is correct size and position; the content is missing.\n  - The R5 receipt at `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json` -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r5_corner_layout\"] for context — D1 wired ChatPanel.render / render_idle_dock into _render_watch_card_chrome and stored _watch_card_chat_rect.\n  - `game/ui/chat_panel.py` — confirm what ChatPanel.render and render_idle_dock actually draw. The rendering path likely needs an LLM provider, message history, or input-state plumbing that the in-card call is not providing.\n  - `game/ui/hud.py` `_render_watch_card_chrome` chat call site (~lines 700-838 area) — the existing call shape may be wrong (wrong rect, missing game_state args, missing input_active flag, etc.).\n  - `game/ui/pin_slot.py` `pin()` method — add the auto-expand effect here, OR in the HUD's pin handler.\n  - the call site that invokes pin_slot.pin() — grep for it; HUD-side detection of the pin transition is preferred so 08 stays within owned paths.\n\nDELIVERABLES (both required for status=done):\n\nD1. CHAT BAND ACTUALLY RENDERS CONTENT.\n\n  Repro: in screenshot 5 the chat rect inside the hero card is the right size and position (lower ~96px of the watch card, hugging x=0 and the card's bottom edge), but there is NO visible chat UI inside it — no input prompt, no placeholder text, no message history scroll area, just a flat black fill. The chat panel render call exists but produces no visible content.\n\n  Investigate AND fix the actual cause. Likely candidates:\n\n    (a) `ChatPanel.render_idle_dock` only paints a background and is not the right method for an active chat affordance — the in-card call should use `ChatPanel.render` (the full render path used when chat was in the right panel) with the in-card rect.\n    (b) The full `ChatPanel.render` requires args (game_state, input_text, history list, font, theme, hud, etc.) that the in-card call site is not passing.\n    (c) The chat panel internally short-circuits when `rect.height < N` or when `provider is None` or when there is no game_state['chat_messages']. Inspect for early returns.\n    (d) The chat panel renders to an internal cached surface that was sized for the old right-panel rect; the cache is never invalidated to the new in-card rect.\n\n  Required behavior after the fix (acceptance):\n    - Chat band in the expanded card shows: a thin separator divider at the top, then a scrollable message-history area (empty in screenshots), then an input affordance at the bottom (visible cursor / placeholder text like 'Type to chat…' or '> _' is fine). The placeholder text MUST be visible in screenshots even when no messages have been exchanged.\n    - Chat does NOT render when card is minimized (already correct from R5).\n    - Clicking inside the chat rect should focus the input (existing logic — preserve it). Just make sure the click region matches `_watch_card_chat_rect` and the keyboard focus path still works.\n    - Add a regression test in tests/test_wk52_watch_card.py that constructs a HUD with a pinned hero and an expanded card, calls render() once, and asserts the in-card chat region has at least one non-background pixel (i.e., something was drawn beyond the band's background fill). Use surface.get_at() inside the chat rect on a row offset where placeholder text would appear.\n\nD2. WATCH CARD AUTO-EXPANDS ON FIRST PIN.\n\n  Today `_watch_card_expanded` is False at HUD construction and stays False until the user clicks the chevron. The user wants: as soon as a hero gets pinned (pin_slot transitions from no hero to a hero_id), the watch card should default to EXPANDED so the player sees the full info immediately. The chevron remains interactive — the user can manually collapse afterwards.\n\n  Implementation:\n    - In `game/ui/pin_slot.py` `pin()` method: after setting `self.hero_id`, raise a small flag like `self._just_pinned = True` (or expose a callback / event). Do NOT directly couple pin_slot to HUD.\n    - In `game/ui/hud.py`: in `render()` or in the watch card layout step, detect the pin transition (e.g., compare current pin_slot.hero_id to a HUD-side `_last_pinned_hero_id`); when it transitions from None to a hero_id (or from one hero to a different hero_id), set `self._watch_card_expanded = True`. Persist `_last_pinned_hero_id` on HUD for the next-frame compare.\n    - When the user manually toggles the chevron AFTER auto-expand, that takes precedence — don't snap back to expanded on subsequent frames just because the pin is still active. The auto-expand fires only on the pin transition edge, not every frame.\n    - Unpinning (transition to no hero_id) should NOT force-collapse — let the existing 'card disappears when no pin' logic handle it (or if you prefer, reset `_last_pinned_hero_id` so the next pin re-fires the auto-expand).\n    - Add a regression test: simulate pin on a fresh HUD with `_watch_card_expanded=False`; render once; assert `_watch_card_expanded == True`. Then simulate a chevron click to collapse; render again; assert `_watch_card_expanded == False` (auto-expand does not snap back). Then unpin and re-pin a different hero; assert auto-expand fires again.\n\nGATES (all exit 0):\n  - python -m pytest tests/ -v\n  - python tools/qa_smoke.py --quick\n  - python tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nMANDATORY SCREENSHOT VERIFICATION (status=blocked if any FAIL):\nAfter capture, OPEN each PNG and write a {verdict, note} entry under `evidence.screenshot_verdict`. Required keys + acceptance:\n\n  - `wk52_watch_card_expanded.png`: PASS iff the chat band INSIDE the card shows visible chat UI (placeholder text or input prompt, not a flat black rect); minimap stays in bottom-left corner; HP|Mana and XP|Lvl two-column rows still correct.\n  - `wk52_watch_card_minimized.png`: PASS iff card is collapsed to ~18px header and chat is hidden (chat lives inside expanded card body only).\n  - `wk52_pin_radar_minimap.png`: PASS iff terrain colors visible; corner-anchored minimap; the watch card here MUST be expanded by default (since this scenario pins a hero), and the chat band inside the card MUST show content.\n  - `wk52_memorial_card.png`: PASS iff full-screen overlay covers the layout cleanly.\n  - `wk52_left_menu_unpinned.png`: PASS iff Heroes column ends above minimap with gap; minimap corner-anchored; bottom-bar buttons unobstructed; no in-card chat (no card visible since unpinned).\n\nIf ANY shot FAILs: status='blocked', list shot filenames in `blockers`, do NOT push the SDK completion-success receipt.\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r6_chat_polish\"] with sprint_id, round_id, status, what_i_changed (separate bullets for D1 and D2 with file paths + line ranges), commands_run, evidence (including screenshot_verdict map), blockers, follow_ups, and a `chat_render_root_cause` field naming which of (a)/(b)/(c)/(d) above was the actual cause.\n\nValidate JSON: python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nThen run the SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 6 single-agent polish from R5 playtest. Agent 08 (high) owns all touched paths.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08"],
+            "dependencies": [
+              {
+                "id": "wk52_r6_impl",
+                "agents": ["08"],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r6_chat_polish. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r6_chat_polish\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log with sprint_id, round_id, status, what_i_changed (D1 and D2 bullets), commands_run, evidence (must include screenshot_verdict map), blockers, follow_ups, and a chat_render_root_cause field. Validate JSON. Run SDK receipt."
         }
       }
     }
