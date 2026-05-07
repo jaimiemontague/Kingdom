@@ -674,6 +674,77 @@
             "python3 tools/qa_smoke.py --quick",
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r5_corner_layout": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r5_corner_layout",
+          "status": "done",
+          "chevron_root_cause": "(a) Layout recompute: WATCH_CARD_FULL_H grew to 352 and bottom-anchored minimap; _effective_watch_card_h caps watch-card height with min_top = top_bar + HERO_LEFT_MIN_H so left_h = card_top - top_h never collapses to 0 when toggling expanded — Heroes panel keeps a minimum readable column. Not (b) input pass-through (already consumed), not (c) expand flag listeners, not (d) render order.",
+          "what_i_changed": [
+            "D1 game/ui/hud.py ~25–34, ~251–275, ~279–295, ~360–380, ~700–838, ~1295–1300: corner stack — minimap Rect(0, h-RADAR_MINIMAP_H, LEFT_COL_W, RADAR_MINIMAP_H); removed standalone CHAT_DOCK/_chat_dock_rect; WATCH_CARD_CHAT_H=96, WATCH_CARD_FULL_H includes chat; _watch_card_body_split + chat inside _render_watch_card_chrome via ChatPanel.render / render_idle_dock; _watch_card_chat_rect; virtual_pointer regions; render() no separate chat strip",
+            "D2 game/ui/hud.py _effective_watch_card_h, layout cap_y uses effective ch; game/ui/hud.py handle_click chat hits _watch_card_chat_rect; tests/test_wk52_watch_card.py — geometry updates + test_chevron_toggle_keeps_left_panel_and_selection (two toggles, re-render for chevron center)"
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (246 passed)",
+            "screenshots": "docs/screenshots/wk52_phase3/ (5 PNGs)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Minimap flush bottom-left; Quartz card directly above with live map; dark chat band inside card bottom; left hero panel intact; HP|Mana and XP|Lvl two-column rows."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "Thin header only above minimap; no in-card chat; taller left hero sheet; corner minimap unchanged."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Terrain greens/water under dots; corner-anchored minimap."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial overlay with centered epitaph."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Heroes column ends above minimap with gap; Recall/Memorial visible right of minimap; no separate chat dock."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }
