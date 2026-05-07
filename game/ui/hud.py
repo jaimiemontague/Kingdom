@@ -22,10 +22,12 @@ from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
 COLOR_PIN_GOLD = (220, 180, 50)
 RECALL_BTN_W = 180
 MEMORIAL_BTN_W = 90
-WATCH_CARD_HEADER_H = 14
-WATCH_CARD_MAP_H = 56
-WATCH_CARD_STATS_H = 68
+WATCH_CARD_HEADER_H = 18
+WATCH_CARD_MAP_H = 160
+WATCH_CARD_STATS_H = 110
 WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
+LEFT_COL_W = 224
+WATCH_MINIMAP_SIZE = LEFT_COL_W
 
 
 def world_to_radar(
@@ -216,6 +218,18 @@ class HUD:
         self._recall_flash_end_ms: int = 0
         self.memorial_btn_rect: pygame.Rect | None = None
 
+        self._watch_name_sig: tuple[str, int] | None = None
+        self._watch_name_surf: pygame.Surface | None = None
+        self._watch_chevron_surf: dict[str, pygame.Surface] = {}
+        self._watch_stats_sig: tuple | None = None
+        self._watch_hp_label_surf: pygame.Surface | None = None
+        self._watch_xp_label_surf: pygame.Surface | None = None
+        self._watch_lv_label_surf: pygame.Surface | None = None
+        self._watch_mana_label_surf: pygame.Surface | None = None
+        self._recall_fallen_overlay: pygame.Surface | None = None
+        self._recall_flash_overlay: pygame.Surface | None = None
+        self._recall_overlay_size: tuple[int, int] | None = None
+
         from game.ui.memorial_card import MemorialCard
 
         self.memorial_card = MemorialCard()
@@ -248,21 +262,18 @@ class HUD:
         if not show_right_panel:
             right_w = 0
         else:
-            right_w = int(
-                max(
-                    getattr(self.theme, "right_panel_min_w", 320),
-                    min(getattr(self.theme, "right_panel_max_w", 420), int(w * 0.24)),
-                )
-            )
-            right_w = int(max(280, min(right_w, w - 2 * margin)))
+            min_w = getattr(self.theme, "right_panel_min_w", LEFT_COL_W)
+            max_w = getattr(self.theme, "right_panel_max_w", LEFT_COL_W + 16)
+            right_w = int(max(min_w, min(max_w, int(w * 0.24))))
+            right_w = int(max(min_w, min(right_w, w - 2 * margin)))
 
         top = pygame.Rect(0, 0, w, top_h)
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
-        left_w = 224
-        minimap_size = max(64, bottom_h - 2 * margin)
-        minimap = pygame.Rect(margin, bottom.y + margin, minimap_size, minimap_size)
+        left_w = LEFT_COL_W
+        minimap_size = WATCH_MINIMAP_SIZE
+        minimap = pygame.Rect(margin, h - margin - minimap_size, minimap_size, minimap_size)
 
         left_h = max(0, h - top_h - bottom_h)
         if self._pin_slot.hero_id is not None:
@@ -282,11 +293,13 @@ class HUD:
             speed_bar_h,
         )
 
-        recall = pygame.Rect(minimap.right + gutter, minimap.y, RECALL_BTN_W, minimap_size)
-        memorial = pygame.Rect(recall.right + gutter, minimap.y, MEMORIAL_BTN_W, minimap_size)
+        btn_h = max(32, bottom_h - 2 * margin)
+        btn_y = bottom.y + margin
+        recall = pygame.Rect(minimap.right + gutter, btn_y, RECALL_BTN_W, btn_h)
+        memorial = pygame.Rect(recall.right + gutter, btn_y, MEMORIAL_BTN_W, btn_h)
         cmd_x = memorial.right + gutter
         cmd_w = max(0, speed_rect.left - cmd_x - gutter)
-        command = pygame.Rect(cmd_x, bottom.y + margin, cmd_w, minimap_size)
+        command = pygame.Rect(cmd_x, btn_y, cmd_w, btn_h)
         return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
 
     def _compute_layout(
@@ -682,14 +695,24 @@ class HUD:
             (cx + cw, cy + WATCH_CARD_HEADER_H - 1),
         )
 
-        name = pin.pinned_name or "Hero"
         chevron = "▲" if self._watch_card_expanded else "▼"
-        chevron_surf = self.font_tiny.render(chevron, True, (160, 155, 180))
+        chevron_surf = self._watch_chevron_surf.get(chevron)
+        if chevron_surf is None:
+            chevron_surf = self.font_tiny.render(chevron, True, (160, 155, 180))
+            self._watch_chevron_surf[chevron] = chevron_surf
+
+        raw_name = pin.pinned_name or "Hero"
         name_max_w = cw - chevron_surf.get_width() - 6
-        name_surf = self.font_tiny.render(name, True, (200, 195, 220))
-        while name_surf.get_width() > name_max_w and len(name) > 2:
-            name = name[:-1]
-            name_surf = self.font_tiny.render(name + "…", True, (200, 195, 220))
+        name_sig = (raw_name, name_max_w)
+        if self._watch_name_sig != name_sig or self._watch_name_surf is None:
+            name = raw_name
+            name_surf = self.font_tiny.render(name, True, (200, 195, 220))
+            while name_surf.get_width() > name_max_w and len(name) > 2:
+                name = name[:-1]
+                name_surf = self.font_tiny.render(name + "…", True, (200, 195, 220))
+            self._watch_name_sig = name_sig
+            self._watch_name_surf = name_surf
+        name_surf = self._watch_name_surf
         surface.blit(name_surf, (cx + 3, cy + (WATCH_CARD_HEADER_H - name_surf.get_height()) // 2))
         surface.blit(
             chevron_surf,
@@ -714,15 +737,30 @@ class HUD:
 
             hp = int(getattr(vitals, "hp", 0) if vitals else 0)
             max_hp = int(getattr(vitals, "max_hp", 1) if vitals else 1)
-            hp_lbl = self.font_tiny.render(f"HP {hp}/{max_hp}", True, (190, 190, 190))
+            xp = int(getattr(prog, "xp", 0) if prog else 0)
+            xp_to_lv = int(getattr(prog, "xp_to_level", 100) if prog else 100)
+            level = int(getattr(idn, "level", 1) if idn else 1)
+
+            stats_sig = (hp, max_hp, xp, xp_to_lv, level)
+            if self._watch_stats_sig != stats_sig or self._watch_hp_label_surf is None:
+                self._watch_stats_sig = stats_sig
+                self._watch_hp_label_surf = self.font_tiny.render(
+                    f"HP {hp}/{max_hp}", True, (190, 190, 190)
+                )
+                self._watch_xp_label_surf = self.font_tiny.render(
+                    f"XP {xp}/{xp_to_lv}", True, (190, 190, 190)
+                )
+                self._watch_lv_label_surf = self.font_tiny.render(
+                    f"Lv {level}", True, (220, 200, 120)
+                )
+
+            hp_lbl = self._watch_hp_label_surf
             surface.blit(hp_lbl, (cx + 4, sy))
             sy += hp_lbl.get_height() + 1
             HPBar.render(surface, pygame.Rect(cx + 4, sy, bar_w, bar_h), hp, max_hp)
             sy += bar_h + 4
 
-            xp = int(getattr(prog, "xp", 0) if prog else 0)
-            xp_to_lv = int(getattr(prog, "xp_to_level", 100) if prog else 100)
-            xp_lbl = self.font_tiny.render(f"XP {xp}/{xp_to_lv}", True, (190, 190, 190))
+            xp_lbl = self._watch_xp_label_surf
             surface.blit(xp_lbl, (cx + 4, sy))
             sy += xp_lbl.get_height() + 1
             xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
@@ -734,13 +772,15 @@ class HUD:
             pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(cx + 4, sy, bar_w, bar_h), 1)
             sy += bar_h + 4
 
-            level = int(getattr(idn, "level", 1) if idn else 1)
-            lv_lbl = self.font_tiny.render(f"Lv {level}", True, (220, 200, 120))
+            lv_lbl = self._watch_lv_label_surf
             surface.blit(lv_lbl, (cx + 4, sy))
             sy += lv_lbl.get_height() + 3
 
-        mana_lbl = self.font_tiny.render("Mana: —", True, (80, 78, 95))
-        surface.blit(mana_lbl, (cx + 4, sy))
+        if self._watch_mana_label_surf is None:
+            self._watch_mana_label_surf = self.font_tiny.render(
+                "Mana: —", True, (80, 78, 95)
+            )
+        surface.blit(self._watch_mana_label_surf, (cx + 4, sy))
 
     def _render_radar_minimap(
         self,
@@ -888,10 +928,17 @@ class HUD:
             self._recall_label_surf = self.theme.font_small.render(label, True, col)
         tex = self._button_tex_pressed if fallen else self._button_tex_normal
         NineSlice.render(surface, recall_rect, tex, border=self._button_slice_border)
-        if fallen:
-            overlay = pygame.Surface((recall_rect.width, recall_rect.height), pygame.SRCALPHA)
-            overlay.fill((40, 40, 50, 150))
-            surface.blit(overlay, recall_rect.topleft)
+
+        size = (recall_rect.width, recall_rect.height)
+        if self._recall_overlay_size != size:
+            self._recall_overlay_size = size
+            self._recall_fallen_overlay = pygame.Surface(size, pygame.SRCALPHA)
+            self._recall_fallen_overlay.fill((40, 40, 50, 150))
+            self._recall_flash_overlay = pygame.Surface(size, pygame.SRCALPHA)
+            self._recall_flash_overlay.fill((220, 30, 30, 140))
+
+        if fallen and self._recall_fallen_overlay is not None:
+            surface.blit(self._recall_fallen_overlay, recall_rect.topleft)
         if self._recall_label_surf is not None:
             lw, lh = self._recall_label_surf.get_size()
             surface.blit(
@@ -905,10 +952,8 @@ class HUD:
         if now < self._recall_flash_end_ms:
             elapsed = max(0, now - (self._recall_flash_end_ms - 750))
             pulse = elapsed // 250
-            if pulse % 2 == 0:
-                flash_surf = pygame.Surface((recall_rect.width, recall_rect.height), pygame.SRCALPHA)
-                flash_surf.fill((220, 30, 30, 140))
-                surface.blit(flash_surf, recall_rect.topleft)
+            if pulse % 2 == 0 and self._recall_flash_overlay is not None:
+                surface.blit(self._recall_flash_overlay, recall_rect.topleft)
 
     def _render_building_summary(self, surface: pygame.Surface, building, rect: pygame.Rect) -> None:
         x = rect.x + int(self.theme.margin)

@@ -18,8 +18,8 @@ class UITheme:
     # Layout constants (computed in HUD, but these are defaults)
     top_bar_h: int = 48
     bottom_bar_h: int = 80
-    right_panel_min_w: int = 300
-    right_panel_max_w: int = 380
+    right_panel_min_w: int = 224
+    right_panel_max_w: int = 240
 
     # Spacing (WK7: Increased for better readability vs Majesty)
     margin: int = 10
