@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-07 (Agent 01 R10): Added wk52_r10_hero_card_priority — four playtest bugs: (A) remove building card entirely (hero card must persist when building clicked); (B) building menu width must match hero menu; (C) hero card minimize button replaced with X-button style; (D) menu text overflow fix + mouse wheel scroll support. Single agent: 08 (HIGH). Orchestrator cloud run.",
     "2026-05-06 (Agent 01 WK52 Kickoff): Sprint wk52_attachment_phase3_radar_alerts_memorial — Phase 3 deferred features: (1) Radar minimap with colored entity dots; (2) Pin alerts via EventBus — HUD toast + Recall button 3x red flash + low-health 25% threshold/30s cooldown; (3) Watch card above minimap — live map view, HP/XP/Level, expand/minimize toggle, dynamic left-panel height; (4) Memorial card — full-screen pause overlay with epitaph. Plan: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. R1 parallel: Agent 03 (event plumbing) + Agent 08 (UX/watch card/memorial). R2: Agent 10 perf consult + Agent 11 QA gates. First Cowork-originated orchestrator run.",
     "2026-05-06 (Agent 01 R7): Added wk51_r7_recall_right_panel_pin_emoji — two targeted fixes: (1) Recall button must open right hero panel (enter_hero_focus) — fix in game/engine.py owned by Agent 03; (2) Pin button icon changed from circle+P to 📌 emoji — fix in game/ui/hud.py owned by Agent 08. Waves: 03+08 parallel, then 11 gates. Orchestrated via cloud agents.",
     "2026-05-02 (GIT midsprint save — Agent 01): Committed+pushed workspace state mid WK51. Sprint wk51_attachment_ux_phase3 still IN PROGRESS. Completed: live orchestrator run wk51_r6_pin_visible_fix exit 0 — Agents 08/11/03 receipts verified; Pin chrome HUD layering addressed per Phase 4b screenshot workflow; studio rules updated (06-workflow Phase 4b, AGENTS.md, 08/09/11 onboarding) for mandatory capture→inspect UI loop. Outstanding player-facing: Recall button on bottom bar must reopen the correct hero info panel Jaimie calls the \"right menu\" (today the HUD uses left hero panel + conditional right panel / micro-view — behavior must match acceptance: recall recenters AND restores hero selection UI including whichever column shows intent/detail per layout mode). File ticket WK51-NEXT-Recall-Reopen-Panel for Agents 08 primary + 03 input/engine routing consult; verify Ursina + pygame. Orchestrator chain: .cursor/plans/run_wk51_attachment_rounds.ps1 (R1–R6). Hub sprint_meta.pm_orchestrator still documents validate/run commands.",
@@ -4633,7 +4634,9 @@
           "validate_r8": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r8_card_unify",
           "run_r8": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r8_card_unify --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main",
           "validate_r9": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r9_visual_iterate",
-          "run_r9": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r9_visual_iterate --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
+          "run_r9": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r9_visual_iterate --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main",
+          "validate_r10": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r10_hero_card_priority",
+          "run_r10": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r10_hero_card_priority --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --cloud-branch main"
         }
       },
       "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial. Read `.cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md` in full -- it contains all code examples, test specs, and acceptance criteria for your agent section. Implement exactly what the plan specifies for your wave; run every verification command listed; iterate until all gates pass. Update your agent log at sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"ROUND_ID\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups. Validate JSON: python -m json.tool .cursor/plans/agent_logs/agent_NN_YourRole.json  Then run the exact SDK completion receipt command from your orchestrator prompt.",
@@ -4669,15 +4672,35 @@
               "03": "high",
               "08": "high"
             },
-            "do_not_send": ["01","02","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["03","08"],
+            "runnable_agents": [
+              "03",
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r1_impl",
-                "agents": ["03","08"],
+                "agents": [
+                  "03",
+                  "08"
+                ],
                 "parallel": true
               }
             ],
@@ -4724,19 +4747,41 @@
               "11": "high",
               "10": "low"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","08","09","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["10","11"],
+            "runnable_agents": [
+              "10",
+              "11"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r2_parallel",
-                "agents": ["10","11"],
+                "agents": [
+                  "10",
+                  "11"
+                ],
                 "parallel": true
               }
             ],
-            "human_gates": ["manual_playtest_wk52_full_checklist"],
+            "human_gates": [
+              "manual_playtest_wk52_full_checklist"
+            ],
             "model_policy": {
               "required_model": "composer-2",
               "allow_overrides": false
@@ -4775,15 +4820,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r3_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -4825,15 +4889,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r4_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -4875,15 +4958,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r5_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -4925,15 +5027,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r6_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -4975,15 +5096,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r7_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -5025,15 +5165,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r8_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -5075,15 +5234,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r9_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -5098,6 +5276,151 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r9_visual_iterate. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r9_visual_iterate\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. THIS ROUND ENFORCES AN ITERATE-LOOP — receipt must include iteration_log array, building_display_name_path string, and real_click_screenshot_method string. Update log per the prompt. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r10_hero_card_priority": {
+          "round_meta": {
+            "round_id": "wk52_r10_hero_card_priority",
+            "created_utc": "2026-05-07T14:00:00Z",
+            "wave": 10,
+            "depends_on": "wk52_r9_visual_iterate",
+            "note": "Four bugs from Jaimie playtest after R9: (A) building card replaces hero card — remove building card entirely; (B) building menu too wide; (C) hero card minimize button looks weird — use X style; (D) menu text overflow + add scroll support."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R10: Single-agent (08) round fixing four playtest bugs — building card removal, building menu width, hero card minimize button style, and menu text clipping + scroll."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK52-R10-BUG-A",
+              "title": "Building card replaces pinned hero card — remove building card entirely",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Pin a hero via the watch card",
+                "Click on a building in the game world",
+                "Observe: hero card disappears and is replaced by a building card"
+              ],
+              "expected": "Hero card stays visible; building menu opens in top-left panel; no building card in the card slot",
+              "actual": "Building card with type/HP replaces the hero card",
+              "acceptance_test": [
+                "Pin hero, click building — hero card unchanged, building menu opens"
+              ],
+              "status": "assigned",
+              "ref_screenshot": ".cursor/human_provided/wk52 screenshot 7.PNG"
+            },
+            {
+              "id": "WK52-R10-BUG-B",
+              "title": "Building menu panel is too wide — should match hero menu width",
+              "severity": "minor",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Click a building",
+                "Observe building menu panel width vs hero menu width"
+              ],
+              "expected": "Both panels same width (LEFT_COL_W / 224px)",
+              "actual": "Building menu is noticeably wider than hero menu",
+              "acceptance_test": [
+                "Building menu width == hero menu width in pixels"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK52-R10-BUG-C",
+              "title": "Hero card minimize button looks weird — replace with X-button style",
+              "severity": "polish",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Pin a hero",
+                "Look at the minimize button on the hero card top-right"
+              ],
+              "expected": "Clean dark X button matching the chat band X style",
+              "actual": "Odd-looking minimize glyph",
+              "acceptance_test": [
+                "Hero card top-right shows dark rounded-rect X button"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK52-R10-BUG-D",
+              "title": "Menu text overflows panel bounds + no scroll support",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Open hero menu with a hero that has lots of text",
+                "Observe text extends below brown panel area",
+                "Try to scroll — nothing happens"
+              ],
+              "expected": "Text clipped to panel bounds; mouse wheel scrolls panel content",
+              "actual": "Text renders outside panel; no scroll",
+              "acceptance_test": [
+                "No text outside panel rect",
+                "Mouse wheel scrolls when hovering over menu",
+                "Scroll stops at content boundaries"
+              ],
+              "status": "assigned",
+              "ref_screenshot": ".cursor/human_provided/wk52 screenshot 8.PNG"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned_pending_user",
+              "next_action": "Fix all four bugs (A: remove building card, B: building menu width, C: hero card X button, D: text clip + scroll). Use iterate-loop process. See pm_agent_prompts for full details."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r10_hero_card_priority (single-agent bug-fix round with mandatory iterate-loop).\n\nCONTEXT: Jaimie playtested after R9 and found four issues. Screenshots are at:\n  - .cursor/human_provided/wk52 screenshot 7.PNG  (building card replacing hero card)\n  - .cursor/human_provided/wk52 screenshot 8.PNG  (text overflow in hero menu)\n\nRead those screenshots before starting.\n\n═══════════════════════════════════════════════\nBUG A — REMOVE THE BUILDING CARD ENTIRELY\n═══════════════════════════════════════════════\n\nWhen a building is clicked, the hero card (the pinned watch card in the bottom-left) gets REPLACED by a \"building card\" showing building type, status, HP. This is wrong. The building card was built from a misunderstanding of the design.\n\nThe CORRECT behavior: clicking a building opens the BUILDING MENU (the top-left panel that lists heroes in the guild, has Demolish/Enter Building buttons, etc.) but NEVER touches the hero card slot. The pinned hero card must remain visible at all times once pinned — only the user clicking the minimize/close chevron on the hero card itself should hide it.\n\nRequired changes:\n  1. Remove or disable the building card rendering entirely. Find where selected_building triggers a card render in the hero card slot area (likely in game/ui/hud.py — look for _render_building_card_infocard or similar). Delete or gate it so it never draws.\n  2. Remove the R9 code that masks selected_hero/selected_peasant to None when selected_building is present. The hero card must persist regardless of building selection.\n  3. Clicking a building should ONLY affect the building menu panel (the taller left-column panel that shows building details, hero roster, Demolish/Enter buttons). It should NOT affect the hero card, the watch card, or any state in the card slot.\n  4. Clean up any building_display_name helper if it's now unused. Remove dead code, don't leave stubs.\n  5. If the screenshot scenario wk52_building_card was added in R8/R9 specifically for the building card, remove it — there is no building card to screenshot anymore.\n\nAcceptance:\n  - Pin a hero, then click a building. Hero card stays visible and unchanged.\n  - Building menu opens in the top-left panel area showing building details.\n  - No \"building card\" rendered anywhere in the card slot.\n\n═══════════════════════════════════════════════\nBUG B — BUILDING MENU WIDTH MUST MATCH HERO MENU\n═══════════════════════════════════════════════\n\nThe building menu (the panel that opens when you click a building — showing guild heroes, Demolish, Enter Building, etc.) is too wide. It should be EXACTLY the same width as the hero menu panel.\n\nRequired changes:\n  1. Find where the building menu panel width is set. It should use the same width constant as the hero menu (likely LEFT_COL_W = 224, or whatever the hero menu uses).\n  2. Ensure content inside the building menu (text, buttons, hero list) wraps or clips to fit within that width — no overflow.\n\nAcceptance:\n  - Building menu panel width == hero menu panel width (measure from screenshot — both should be identical pixel width).\n\n═══════════════════════════════════════════════\nBUG C — HERO CARD MINIMIZE BUTTON LOOKS WEIRD\n═══════════════════════════════════════════════\n\nThe minimize/collapse button on the hero card (top-right area) looks odd. Replace it with the same style of X close button that appears on the hero menu panel's top-right corner (or the chat band X button from R9).\n\nRequired changes:\n  1. Find the minimize/chevron button on the hero card (the watch card). Replace the glyph and background with a small dark rounded-rect button (same style as the chat band X from R9: ~14x14, dark background (20,20,28), 1px border (60,60,80), light X glyph).\n  2. Clicking it should still minimize/close the hero card (same behavior, just new visual).\n  3. Make sure the hit-rect matches the new visual.\n\nAcceptance:\n  - Hero card top-right shows a clean dark X button, not the old minimize glyph.\n  - Click still minimizes the card.\n\n═══════════════════════════════════════════════\nBUG D — MENU TEXT OVERFLOW + SCROLL SUPPORT\n═══════════════════════════════════════════════\n\nThe hero menu (and building menu) cuts off text at the bottom with no way to read it. Additionally, text renders OUTSIDE the brown panel area (visible in screenshot 8 — text lines extend below the panel's visual boundary).\n\nRequired changes:\n  1. CLIP all text rendering in both the hero menu and building menu to the panel's brown background rect. No text should be visible outside the panel boundary. Use pygame's set_clip() on the surface or blit with an area parameter.\n  2. Add MOUSE WHEEL SCROLL support: when the mouse cursor is over the hero menu (or building menu), scrolling the mouse wheel should scroll the panel content up/down. Track a scroll_offset per panel. Clamp so you can't scroll past the content top/bottom.\n  3. The scroll should be smooth (per-pixel, not per-item). Scroll speed ~20-30px per wheel tick is fine.\n  4. If the content fits within the panel, scroll should be a no-op (no jitter).\n  5. Reset scroll_offset to 0 when the panel content changes (e.g., different hero selected, different building selected).\n\nAcceptance:\n  - No text visible outside the brown panel area in either menu.\n  - Mouse wheel scrolls the panel content when hovering over it.\n  - Scrolling stops at content boundaries (no overscroll).\n\n═══════════════════════════════════════════════\nMANDATORY ITERATE-LOOP PROCESS\n═══════════════════════════════════════════════\n\nSame process as R9. For each fix attempt:\n  1. mkdir docs/screenshots/wk52_phase3/iter_N/\n  2. Capture: python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_N --size 1920x1080 --ticks 480\n  3. Open the relevant PNGs and write structured observations BEFORE a verdict.\n  4. If observations don't match expected, fix code, commit, re-capture into iter_N+1.\n  5. Each iteration is a separate commit: \"R10 iter N: <what changed>\"\n  6. Continue until ALL relevant shots are PASS. Max 5 iterations per bug.\n  7. status=blocked if still FAIL after 5 iterations.\n\nFor Bug D (scroll), you cannot fully verify scroll behavior from a static screenshot. Instead:\n  - Verify text clipping from the screenshot (no text outside panel bounds).\n  - Write a unit test that creates a mock panel with more content than fits, sets scroll_offset, and asserts rendered text y-coords are within clip bounds.\n  - Verify mouse wheel event handler exists and modifies scroll_offset.\n\nGATES (run after final iteration; all exit 0):\n  - python -m pytest tests/ -v\n  - python tools/qa_smoke.py --quick\n  - python tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nFINAL SCREENSHOT VERDICT:\n  - wk52_watch_card_expanded.png: PASS iff pinned hero card visible with clean X close button, NO building card anywhere.\n  - wk52_watch_card_minimized.png: PASS iff minimized state shows slim header only.\n  - wk52_pin_radar_minimap.png: PASS iff radar + hero card visible, no building card overlay.\n  - wk52_left_menu_unpinned.png: PASS iff heroes list and minimap visible, no text overflow.\n  - wk52_memorial_card.png: PASS iff memorial overlay still works.\n  - If a building scenario screenshot existed, confirm it is REMOVED.\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r10_hero_card_priority\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence (screenshot_verdict), iteration_log, blockers, follow_ups.\n\nValidate JSON: python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nThen run the SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 10 single-agent round. Agent 08 (HIGH intelligence) — four bugs spanning card rendering, panel layout, button styling, and scroll implementation. All are UX-owned.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "08"
+            ],
+            "dependencies": [
+              {
+                "id": "wk52_r10_impl",
+                "agents": [
+                  "08"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r10_hero_card_priority. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r10_hero_card_priority\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. THIS ROUND ENFORCES AN ITERATE-LOOP — receipt must include iteration_log array. Update log per the prompt. Validate JSON. Run SDK receipt."
         }
       }
     }
