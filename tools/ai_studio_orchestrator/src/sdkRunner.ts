@@ -55,14 +55,24 @@ export async function launchAgent(options: LaunchOptions): Promise<LaunchResult>
   }
 }
 
+const CLOUD_NAME_MAX = 100;
+
+function clampName(name: string): string {
+  if (name.length <= CLOUD_NAME_MAX) {
+    return name;
+  }
+  return name.slice(0, CLOUD_NAME_MAX - 1) + "…";
+}
+
 export async function createAgent(options: LaunchOptions): Promise<SDKAgent> {
+  const safeName = clampName(options.name);
   if (options.runtime === "cloud") {
     if (!options.cloudRepoUrl) {
       throw new Error("--cloud-repo-url is required for cloud runtime");
     }
     return Agent.create({
       apiKey: options.apiKey,
-      name: options.name,
+      name: safeName,
       model: COMPOSER_MODEL,
       cloud: {
         repos: [
@@ -81,7 +91,7 @@ export async function createAgent(options: LaunchOptions): Promise<SDKAgent> {
   return Agent.create({
     apiKey: options.apiKey,
     agentId,
-    name: options.name,
+    name: safeName,
     model: COMPOSER_MODEL,
     local: { cwd: options.cwd },
   });
