@@ -1407,6 +1407,147 @@
           ]
         }
       }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "pm_hub_round": "wk52_r2_perf_qa",
+        "notes": "WK52 R2 perf/QA wave: full gate stack + wk52_pin_alerts deterministic capture; Jaimie human retest via pm_human_retest_request."
+      },
+      "rounds": {
+        "wk52_r2_perf_qa": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r2_perf_qa",
+          "status": "done",
+          "what_i_changed": [
+            "Confirmed WK52 regression tests present: tests/test_wk52_event_plumbing.py, test_wk52_watch_card.py, test_wk52_memorial_card.py (no blocker).",
+            "Cloud env: pip install -r requirements.txt (pytest/pygame); used python3 (python symlink absent).",
+            "Ran gates: pytest tests/, qa_smoke --quick, validate_assets --report, determinism_guard.py — all exit 0.",
+            "Ran tools/capture_screenshots.py --scenario wk52_pin_alerts → docs/screenshots/wk52_phase3/ (4 PNGs + manifest).",
+            "Inspected captures: watch card above minimap (expanded/minimized); radar shows multi-color dots; memorial full-screen overlay with epitaph visible.",
+            "Generated screenshot artifacts under docs/screenshots/wk52_phase3/ (repo gitignores docs/screenshots — not committed; re-run capture command to reproduce)."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m pip install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "pytest and missing deps for cloud VM"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "summary": "241 passed"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "errors=0 warns=46"
+            },
+            {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "PASS: no violations found"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "post-edit JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk52_r2": {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "count": 241
+            },
+            "qa_smoke_quick_wk52_r2": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk52_r2": {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "determinism_guard_wk52_r2": {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "screenshots_wk52_pin_alerts": {
+              "paths": [
+                "docs/screenshots/wk52_phase3/wk52_watch_card_expanded.png",
+                "docs/screenshots/wk52_phase3/wk52_watch_card_minimized.png",
+                "docs/screenshots/wk52_phase3/wk52_pin_radar_minimap.png",
+                "docs/screenshots/wk52_phase3/wk52_memorial_card.png",
+                "docs/screenshots/wk52_phase3/manifest.json"
+              ],
+              "capture_command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "visual_verdict": "Headless scenario frames watch card (expanded shows HP/level/name Gareth + live radar), minimized variant, radar with colored entity dots and pinned hero emphasis, and memorial overlay (In Memoriam + class/stats/epitaph). Interactive items in pm_human_retest_request (toast timing, Recall flash, 30s cooldown) require Jaimie live play."
+            }
+          },
+          "pm_human_retest_request": [
+            "1. Pin a hero. Confirm watch card appears above minimap.",
+            "2. Deselect. Confirm left menu height adjusts.",
+            "3. Watch card minimized = 14px header peeks above minimap. Click to expand.",
+            "4. Radar shows colored dots: gold=heroes, red=enemies, blue-grey=buildings, dark-red=lairs, cyan=guild.",
+            "5. Pinned hero dot has white outline on radar.",
+            "6. HP drops below 25%: HUD toast + Recall button flashes red 3x.",
+            "7. Wait 30s -- low-health alert must NOT re-fire until HP drops again.",
+            "8. Hero levels up: toast '{name} reached level {N}!'.",
+            "9. Hero enters inn: toast '{name} is resting at the inn.'.",
+            "10. Bounty claimed: toast '{name} collected a bounty!'.",
+            "11. Click Memorial button. Full-screen pause overlay opens.",
+            "12. Heroes stop moving while memorial open.",
+            "13. Overlay shows name, class, level, stats, epitaph.",
+            "14. Click to close. Game resumes.",
+            "15. Recall click auto-expands watch card.",
+            "16. No crashes or console errors."
+          ],
+          "how_to_test": [
+            "python3 -m pip install -r requirements.txt -q",
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/validate_assets.py --report",
+            "python3 tools/determinism_guard.py",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: run pm_human_retest_request checklist live (pygame recommended: python main.py --renderer pygame --provider mock)."
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "(local only, gitignored) docs/screenshots/wk52_phase3/*.png + manifest.json"
+          ]
+        }
+      }
     }
   }
 }
