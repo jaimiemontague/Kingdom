@@ -3,10 +3,13 @@
 import pygame
 
 from game.ui.hud import (
+    BUILDING_CARD_FULL_H,
     HERO_LEFT_MIN_H,
     RADAR_MINIMAP_H,
     WATCH_CARD_CHAT_H,
     WATCH_CARD_FULL_H,
+    WATCH_CARD_FULL_H_NO_CHAT,
+    WATCH_CARD_FULL_H_WITH_CHAT,
     WATCH_CARD_HEADER_H,
     WATCH_CARD_MAP_H,
     WATCH_CARD_STATS_H,
@@ -21,15 +24,18 @@ def test_minimap_flush_bottom_left():
 
 
 def test_watch_card_full_h_includes_chat():
-    assert WATCH_CARD_FULL_H == (
+    assert WATCH_CARD_FULL_H_WITH_CHAT == (
         WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
     )
+    assert WATCH_CARD_FULL_H == WATCH_CARD_FULL_H_WITH_CHAT
+    assert WATCH_CARD_FULL_H_NO_CHAT == WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
     assert WATCH_CARD_CHAT_H >= 130
+    assert BUILDING_CARD_FULL_H == WATCH_CARD_HEADER_H + 112
 
 
 def test_watch_card_layout_expanded_taller_than_collapsed():
     minimap_y = 1080 - RADAR_MINIMAP_H
-    card_top_expanded = minimap_y - WATCH_CARD_FULL_H
+    card_top_expanded = minimap_y - WATCH_CARD_FULL_H_WITH_CHAT
     card_top_minimized = minimap_y - WATCH_CARD_HEADER_H
     assert card_top_expanded < card_top_minimized
 
@@ -95,7 +101,7 @@ def test_watch_card_chevron_returns_consume_action():
 
     hud = HUD(800, 600)
     hud._pin_slot.hero_id = "h1"
-    hud._watch_card_rect = pygame.Rect(0, 100, 200, WATCH_CARD_FULL_H)
+    hud._watch_card_rect = pygame.Rect(0, 100, 200, WATCH_CARD_FULL_H_WITH_CHAT)
     hud._watch_card_chevron_rect = pygame.Rect(160, 102, 36, 20)
     before_exp = hud._watch_card_expanded
     act = hud.handle_click((170, 110), {"hero_profiles_by_id": {"h1": object()}})
@@ -258,3 +264,146 @@ def test_render_watch_band_empty_history_has_visual_chrome_r7():
             differs = True
             break
     assert differs
+
+
+def test_chat_close_button_shrinks_card():
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_xclose", name="XClose")
+    hud._pin_slot.pin(hero.hero_id, 0)
+    hud._pin_slot.pinned_name = hero.name
+    hud._watch_card_expanded = True
+    hud._chat_visible = True
+    gs = {
+        "selected_hero": hero,
+        "hero_profiles_by_id": {"wk52_xclose": object()},
+        "selected_hero_profile": None,
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+        "llm_available": True,
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    cr = hud._chat_close_rect
+    assert cr is not None
+    assert hud.effective_card_full_h() == WATCH_CARD_FULL_H_WITH_CHAT
+    assert hud.handle_click((cr.centerx, cr.centery), gs) == "chat_band_close"
+    assert hud._chat_visible is False
+    assert hud.effective_card_full_h() == WATCH_CARD_FULL_H_NO_CHAT
+
+
+def test_chat_open_button_restores_chat():
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_xopen", name="XOpen")
+    hud._pin_slot.pin(hero.hero_id, 0)
+    hud._watch_card_expanded = True
+    hud._chat_visible = False
+    gs = {
+        "selected_hero": hero,
+        "hero_profiles_by_id": {"wk52_xopen": object()},
+        "selected_hero_profile": None,
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+        "llm_available": True,
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    op = hud._chat_open_rect
+    assert op is not None
+    assert hud.handle_click((op.centerx, op.centery), gs) == "chat_band_open"
+    assert hud._chat_visible is True
+    hud.render(surf, gs)
+    assert hud._watch_card_chat_rect is not None
+
+
+def test_chevron_toggle_independent_of_chat_visible():
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_chevx", name="ChevX")
+    hud._pin_slot.pin(hero.hero_id, 0)
+    hud._watch_card_expanded = True
+    hud._chat_visible = False
+    gs = {
+        "selected_hero": hero,
+        "hero_profiles_by_id": {"wk52_chevx": object()},
+        "selected_hero_profile": None,
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+        "llm_available": True,
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    chev = hud._watch_card_chevron_rect
+    assert chev is not None
+    before = hud._watch_card_expanded
+    assert hud.handle_click((chev.centerx, chev.centery), gs) == "watch_card_chevron_toggle"
+    assert hud._watch_card_expanded is (not before)
+    assert hud._chat_visible is False
+
+
+def test_building_card_renders_with_infocard():
+    from game.entities.buildings.castle import Castle
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    castle = Castle(3, 3)
+    gs = {
+        "selected_building": castle,
+        "selected_hero": None,
+        "hero_profiles_by_id": {},
+        "heroes": [],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    assert hud._card_slot_kind == "building"
+    assert hud.watch_card_map_rect is None
+    assert hud._watch_card_chat_rect is None
+    assert hud._watch_card_rect is not None
+
+
+def test_card_slot_precedence_building_over_hero():
+    from game.entities.buildings.castle import Castle
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_prec", name="Prec")
+    castle = Castle(3, 3)
+    hud._pin_slot.pin(hero.hero_id, 0)
+    gs = {
+        "selected_hero": hero,
+        "selected_building": castle,
+        "hero_profiles_by_id": {"wk52_prec": object()},
+        "heroes": [hero],
+        "world": None,
+        "debug_ui": False,
+        "bounties": [],
+    }
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    assert hud._card_slot_kind == "building"
+
+    gs2 = {**gs, "selected_building": None}
+    hud.render(surf, gs2)
+    assert hud._card_slot_kind == "hero"

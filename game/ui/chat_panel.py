@@ -239,6 +239,7 @@ class ChatPanel:
         """
         self._header_rect = None
         self._end_button_rect = None
+        self._watch_band_close_rect = None
         if band_rect.width <= 0 or band_rect.height <= 0:
             return
 
@@ -248,6 +249,24 @@ class ChatPanel:
             self._frame_inner,
             (rx, ry),
             (rx + w - 1, ry),
+            1,
+        )
+
+        close_s = 12
+        self._watch_band_close_rect = pygame.Rect(rx + w - close_s - 2, ry + 1, close_s, close_s)
+        cr = self._watch_band_close_rect
+        pygame.draw.line(
+            surface,
+            (190, 185, 210),
+            (cr.left + 2, cr.top + 2),
+            (cr.right - 3, cr.bottom - 3),
+            1,
+        )
+        pygame.draw.line(
+            surface,
+            (190, 185, 210),
+            (cr.right - 3, cr.top + 2),
+            (cr.left + 2, cr.bottom - 3),
             1,
         )
 

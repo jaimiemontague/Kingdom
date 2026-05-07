@@ -17,6 +17,7 @@ from game.ui.theme import UITheme
 from game.ui.top_bar import TopBar
 from game.ui.hero_panel import truncate_panel_line
 from game.ui.pin_slot import PinSlot
+from game.ui.info_card import InfoCard
 from game.ui.widgets import Button, HPBar, NineSlice, Panel, TextLabel
 
 COLOR_PIN_GOLD = (220, 180, 50)
@@ -26,7 +27,13 @@ WATCH_CARD_HEADER_H = 18
 WATCH_CARD_MAP_H = 160
 WATCH_CARD_STATS_H = 78
 WATCH_CARD_CHAT_H = 150
-WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
+WATCH_CARD_FULL_H_WITH_CHAT = (
+    WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
+)
+WATCH_CARD_FULL_H_NO_CHAT = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
+WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT
+BUILDING_CARD_BODY_H = 112
+BUILDING_CARD_FULL_H = WATCH_CARD_HEADER_H + BUILDING_CARD_BODY_H
 LEFT_COL_W = 224
 HERO_LEFT_MIN_H = 80
 RADAR_MINIMAP_H = 180
@@ -249,13 +256,39 @@ class HUD:
 
         self._alert_watcher = PinAlertWatcher(self._pin_slot, self)
 
+        self._chat_visible: bool = True
+        self._chat_close_rect: pygame.Rect | None = None
+        self._chat_open_rect: pygame.Rect | None = None
+        self._building_card_expanded: bool = True
+        self._info_card = InfoCard()
+        self._card_slot_kind: str | None = None
+        self._building_chevron_surf: dict[str, pygame.Surface] = {}
+
+    def effective_card_full_h(self) -> int:
+        return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
+
+    def _building_display_name(self, building) -> str:
+        dn = getattr(building, "display_name", None)
+        if dn:
+            return str(dn)
+        btype = str(getattr(building, "building_type", type(building).__name__) or "")
+        return btype.replace("_", " ").title()
+
+    def _effective_building_card_h(self, screen_h: int) -> int:
+        top_h = int(getattr(self.theme, "top_bar_h", 48))
+        minimap_y = screen_h - int(RADAR_MINIMAP_H)
+        want = BUILDING_CARD_FULL_H if self._building_card_expanded else WATCH_CARD_HEADER_H
+        min_top = top_h + HERO_LEFT_MIN_H
+        max_ch = minimap_y - min_top
+        return min(want, max(WATCH_CARD_HEADER_H, max_ch))
+
     def _effective_watch_card_h(self, screen_h: int) -> int:
         """Pinned watch-card height: card.bottom == minimap.top; caps height so hero column keeps min readable rows."""
         if self._pin_slot.hero_id is None:
             return 0
         top_h = int(getattr(self.theme, "top_bar_h", 48))
         minimap_y = screen_h - int(RADAR_MINIMAP_H)
-        want = WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H
+        want = self.effective_card_full_h() if self._watch_card_expanded else WATCH_CARD_HEADER_H
         min_top = top_h + HERO_LEFT_MIN_H
         max_ch = minimap_y - min_top
         return min(want, max(WATCH_CARD_HEADER_H, max_ch))
@@ -308,7 +341,7 @@ class HUD:
 
 
     def _layout_rects_for_screen(
-        self, w: int, h: int, *, show_right_panel: bool
+        self, w: int, h: int, *, show_right_panel: bool, game_state: dict | None = None
     ) -> tuple[
         pygame.Rect,
         pygame.Rect,
@@ -338,7 +371,12 @@ class HUD:
         self._watch_card_chat_rect = None
 
         cap_y = minimap.y
-        if self._pin_slot.hero_id is not None:
+        sel_b = (game_state or {}).get("selected_building")
+        if sel_b is not None:
+            ch = self._effective_building_card_h(h)
+            card_top = minimap.y - ch
+            cap_y = min(cap_y, card_top)
+        elif self._pin_slot.hero_id is not None:
             ch = self._effective_watch_card_h(h)
             card_top = minimap.y - ch
             cap_y = min(cap_y, card_top)
@@ -365,7 +403,7 @@ class HUD:
         return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
 
     def _compute_layout(
-        self, surface: pygame.Surface
+        self, surface: pygame.Surface, game_state: dict | None = None
     ) -> tuple[
         pygame.Rect,
         pygame.Rect,
@@ -383,7 +421,7 @@ class HUD:
         self.screen_height = int(h)
         show_right = getattr(self, "_show_right_panel", self.right_panel_visible)
         top, bottom, left, right, minimap, command, speed_rect, recall, memorial = self._layout_rects_for_screen(
-            w, h, show_right_panel=show_right
+            w, h, show_right_panel=show_right, game_state=game_state
         )
         self.side_panel_width = right.width
         return top, bottom, left, right, minimap, command, speed_rect, recall, memorial
@@ -403,7 +441,7 @@ class HUD:
         show_right = self.right_panel_visible and has_right_content
         _ = show_right  # Tab/no-op; no right chrome hit region (WK52 R4)
         top, bottom, left, right, minimap, command, speed_rect, recall, memorial = self._layout_rects_for_screen(
-            w, h, show_right_panel=bool(self.right_panel_visible)
+            w, h, show_right_panel=bool(self.right_panel_visible), game_state=game_state
         )
         profiles = game_state.get("hero_profiles_by_id") or {}
         pin = self._pin_slot
@@ -414,11 +452,17 @@ class HUD:
         if pin.hero_id is not None:
             regions.append(recall)
             regions.append(memorial)
+        sel_b = game_state.get("selected_building")
+        if sel_b is not None:
+            ch_b = self._effective_building_card_h(h)
+            if ch_b > 0:
+                regions.append(pygame.Rect(minimap.x, minimap.y - ch_b, minimap.width, ch_b))
+        elif pin.hero_id is not None:
             ch = self._effective_watch_card_h(h)
             if ch > 0:
                 regions.append(pygame.Rect(minimap.x, minimap.y - ch, minimap.width, ch))
             map_h, stats_h, chat_h = self._watch_card_body_split(ch)
-            if chat_h > 0:
+            if chat_h > 0 and self._chat_visible:
                 cx, cy = minimap.x, minimap.y - ch
                 cbr = self._watch_chat_band_rect(
                     cx,
@@ -738,21 +782,145 @@ class HUD:
         """Flash the Recall button red (WK52). Called by PinAlertWatcher."""
         self._recall_flash_end_ms = int(sim_now_ms()) + 750
 
-    def _render_watch_card_chrome(
+    def _render_building_stats_in_body(
+        self, surface: pygame.Surface, building, body_rect: pygame.Rect
+    ) -> None:
+        x = body_rect.x + 4
+        y = body_rect.y + 6
+        self._draw_section_divider(surface, x, y, max(0, body_rect.width - 8))
+        y += 8
+        TextLabel.render(
+            surface,
+            self.theme.font_small,
+            "Status",
+            (x, y),
+            (180, 180, 200),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_small.get_height() + 4
+        constructed = bool(getattr(building, "is_constructed", True))
+        st = "Operational" if constructed else "Under construction"
+        TextLabel.render(
+            surface,
+            self.theme.font_body,
+            st,
+            (x, y),
+            (220, 220, 220),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_body.get_height() + 6
+        hp = int(getattr(building, "hp", 0) or 0)
+        max_hp = int(getattr(building, "max_hp", 0) or 0)
+        max_hp = max(1, max_hp)
+        TextLabel.render(
+            surface,
+            self.theme.font_body,
+            f"HP: {hp}/{max_hp}",
+            (x, y),
+            (220, 220, 220),
+            shadow_color=(20, 20, 30),
+        )
+        y += self.theme.font_body.get_height() + 6
+        HPBar.render(
+            surface,
+            pygame.Rect(x, y, max(0, body_rect.width - 8), 8),
+            hp,
+            max_hp,
+            color_scheme={
+                "bg": (60, 60, 60),
+                "good": (80, 200, 100),
+                "warn": (220, 180, 90),
+                "bad": (220, 80, 80),
+                "border": (20, 20, 25),
+            },
+        )
+        y += 16
+        key = getattr(building, "research_in_progress", None)
+        if key:
+            try:
+                prog = building.research_progress_0_to_1
+            except Exception:
+                prog = None
+            if prog is not None:
+                TextLabel.render(
+                    surface,
+                    self.theme.font_small,
+                    "Research",
+                    (x, y),
+                    (180, 180, 200),
+                    shadow_color=(20, 20, 30),
+                )
+                y += self.theme.font_small.get_height() + 4
+                pw = max(0, body_rect.width - 8)
+                pv = max(0.0, min(1.0, float(prog)))
+                pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(x, y, pw, 6))
+                filled = int(pw * pv)
+                if filled > 0:
+                    pygame.draw.rect(surface, (120, 140, 210), pygame.Rect(x, y, filled, 6))
+                pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(x, y, pw, 6), 1)
+
+    def _render_building_card_infocard(
+        self,
+        surface: pygame.Surface,
+        minimap_rect: pygame.Rect,
+        game_state: dict,
+        building,
+    ) -> None:
+        _ = game_state
+        self._card_slot_kind = "building"
+        sh = int(surface.get_height())
+        ch = self._effective_building_card_h(sh)
+        cx, cw = minimap_rect.x, minimap_rect.width
+        cy = minimap_rect.y - ch
+
+        chevron = "▲" if self._building_card_expanded else "▼"
+        chevron_surf = self._building_chevron_surf.get(chevron)
+        if chevron_surf is None:
+            chevron_surf = self.font_tiny.render(chevron, True, (160, 155, 180))
+            self._building_chevron_surf[chevron] = chevron_surf
+
+        raw_title = self._building_display_name(building)
+        name_max_w = cw - chevron_surf.get_width() - 6
+        title_sig = (raw_title, name_max_w)
+        if getattr(self, "_building_card_title_sig", None) != title_sig or getattr(
+            self, "_building_card_title_surf", None
+        ) is None:
+            name = raw_title
+            name_surf = self.font_tiny.render(name, True, (200, 195, 220))
+            while name_surf.get_width() > name_max_w and len(name) > 2:
+                name = name[:-1]
+                name_surf = self.font_tiny.render(name + "…", True, (200, 195, 220))
+            self._building_card_title_sig = title_sig
+            self._building_card_title_surf = name_surf
+        name_surf = self._building_card_title_surf
+
+        card_rect, self._watch_card_chevron_rect, body_top = self._info_card.draw_shell(
+            surface,
+            cx=cx,
+            cy=cy,
+            cw=cw,
+            ch=ch,
+            expanded=self._building_card_expanded,
+            header_h=WATCH_CARD_HEADER_H,
+            name_surf=name_surf,
+            chevron_surf=chevron_surf,
+        )
+        self._watch_card_rect = card_rect
+        if body_top is None:
+            return
+        body_h = cy + ch - body_top
+        body_rect = pygame.Rect(cx + 2, body_top, cw - 4, body_h)
+        self._render_building_stats_in_body(surface, building, body_rect)
+
+    def _render_hero_watch_card_infocard(
         self,
         surface: pygame.Surface,
         minimap_rect: pygame.Rect,
         game_state: dict,
     ) -> None:
         """Watch card above minimap: header, optional map slot + stats + chat (WK52)."""
-        self.watch_card_map_rect = None
-        self._watch_card_rect = None
-        self._watch_card_chevron_rect = None
-        self._watch_card_chat_rect = None
+        self._card_slot_kind = "hero"
         pin = self._pin_slot
-        if pin.hero_id is None:
-            return
-
         profiles = game_state.get("hero_profiles_by_id") or {}
         prof = profiles.get(pin.hero_id)
 
@@ -761,20 +929,6 @@ class HUD:
         ch = self._effective_watch_card_h(sh)
         cx = minimap_rect.x
         cy = minimap_rect.y - ch
-        card_rect = pygame.Rect(cx, cy, cw, ch)
-        self._watch_card_rect = card_rect
-
-        pygame.draw.rect(surface, (18, 18, 28), card_rect, border_radius=4)
-        pygame.draw.rect(surface, (70, 65, 90), card_rect, width=1, border_radius=4)
-
-        header_rect = pygame.Rect(cx, cy, cw, WATCH_CARD_HEADER_H)
-        pygame.draw.rect(surface, (35, 30, 50), header_rect, border_radius=4)
-        pygame.draw.line(
-            surface,
-            (70, 65, 90),
-            (cx, cy + WATCH_CARD_HEADER_H - 1),
-            (cx + cw, cy + WATCH_CARD_HEADER_H - 1),
-        )
 
         chevron = "▲" if self._watch_card_expanded else "▼"
         chevron_surf = self._watch_chevron_surf.get(chevron)
@@ -794,16 +948,19 @@ class HUD:
             self._watch_name_sig = name_sig
             self._watch_name_surf = name_surf
         name_surf = self._watch_name_surf
-        surface.blit(name_surf, (cx + 3, cy + (WATCH_CARD_HEADER_H - name_surf.get_height()) // 2))
-        cbx = cx + cw - chevron_surf.get_width() - 2
-        cby = cy + (WATCH_CARD_HEADER_H - chevron_surf.get_height()) // 2
-        surface.blit(chevron_surf, (cbx, cby))
-        self._watch_card_chevron_rect = pygame.Rect(
-            int(cbx - 2),
-            int(cby - 2),
-            int(chevron_surf.get_width() + 5),
-            int(chevron_surf.get_height() + 4),
+
+        card_rect, self._watch_card_chevron_rect, body_top = self._info_card.draw_shell(
+            surface,
+            cx=cx,
+            cy=cy,
+            cw=cw,
+            ch=ch,
+            expanded=self._watch_card_expanded,
+            header_h=WATCH_CARD_HEADER_H,
+            name_surf=name_surf,
+            chevron_surf=chevron_surf,
         )
+        self._watch_card_rect = card_rect
 
         if not self._watch_card_expanded:
             return
@@ -824,6 +981,7 @@ class HUD:
         right_x = left_x + half + gutter // 2
         bar_left_w = max(36, half - 4)
         painted_stats_bottom_for_chat: int | None = None
+        self._chat_open_rect = None
 
         if stats_h > 0 and prof is not None:
             vitals = getattr(prof, "vitals", None)
@@ -859,6 +1017,26 @@ class HUD:
             row2_y = bar_y1 + bar_h + 5
             surface.blit(self._watch_xp_label_surf, (left_x, row2_y))
             surface.blit(self._watch_lv_label_surf, (right_x, row2_y))
+
+            if not self._chat_visible:
+                lv_surf = self._watch_lv_label_surf
+                bx = right_x + lv_surf.get_width() + 4
+                bh = max(16, lv_surf.get_height() + 2)
+                bw = max(40, self.font_tiny.size("Chat")[0] + 10)
+                bw = min(bw, cx + cw - bx - 6)
+                btn_r = pygame.Rect(bx, row2_y + max(0, (lv_surf.get_height() - bh) // 2), bw, bh)
+                if btn_r.width > 8 and btn_r.height > 8:
+                    NineSlice.render(surface, btn_r, self._button_tex_normal, border=self._button_slice_border)
+                    chat_lbl = self.font_tiny.render("Chat", True, (210, 205, 230))
+                    surface.blit(
+                        chat_lbl,
+                        (
+                            btn_r.centerx - chat_lbl.get_width() // 2,
+                            btn_r.centery - chat_lbl.get_height() // 2,
+                        ),
+                    )
+                    self._chat_open_rect = btn_r
+
             bar_y2 = row2_y + self._watch_xp_label_surf.get_height() + 1
             xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
             pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h))
@@ -872,7 +1050,7 @@ class HUD:
             if self._watch_mana_label_surf is None:
                 self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
 
-        if chat_h > 0:
+        if chat_h > 0 and self._chat_visible:
             chat_rect_inside_card = self._watch_chat_band_rect(
                 cx,
                 cy,
@@ -890,6 +1068,38 @@ class HUD:
                 self._chat_panel.render_watch_band(
                     surface, chat_rect_inside_card, game_state, str(pin.hero_id)
                 )
+                self._chat_close_rect = getattr(self._chat_panel, "_watch_band_close_rect", None)
+
+    def _render_card_slot(
+        self,
+        surface: pygame.Surface,
+        minimap_rect: pygame.Rect,
+        game_state: dict,
+    ) -> None:
+        self.watch_card_map_rect = None
+        self._watch_card_rect = None
+        self._watch_card_chevron_rect = None
+        self._watch_card_chat_rect = None
+        self._chat_close_rect = None
+        self._chat_open_rect = None
+        self._card_slot_kind = None
+
+        sel_b = game_state.get("selected_building")
+        if sel_b is not None:
+            self._render_building_card_infocard(surface, minimap_rect, game_state, sel_b)
+            return
+        if self._pin_slot.hero_id is None:
+            return
+        self._render_hero_watch_card_infocard(surface, minimap_rect, game_state)
+
+    def _render_watch_card_chrome(
+        self,
+        surface: pygame.Surface,
+        minimap_rect: pygame.Rect,
+        game_state: dict,
+    ) -> None:
+        """WK52: building card takes precedence over pinned hero watch card."""
+        self._render_card_slot(surface, minimap_rect, game_state)
 
     def _ensure_radar_terrain_surface(self, inner: pygame.Rect, world) -> pygame.Surface | None:
         """Sampled terrain under radar dots; cached by inner size + world dimensions (WK52 R4)."""
@@ -1327,7 +1537,9 @@ class HUD:
             self._watch_card_expanded = True
             pin._just_pinned = False
 
-        top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(surface)
+        top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(
+            surface, game_state
+        )
 
         self._panel_top.set_rect(top)
         self._panel_bottom.set_rect(bottom)
@@ -1437,6 +1649,23 @@ class HUD:
                 return "close_memorial_unpause"
             return None
 
+        if (
+            getattr(self, "_chat_close_rect", None) is not None
+            and self._chat_close_rect.collidepoint((x, y))
+            and game_state.get("selected_building") is None
+            and pin.hero_id is not None
+        ):
+            self._chat_visible = False
+            return "chat_band_close"
+        if (
+            getattr(self, "_chat_open_rect", None) is not None
+            and self._chat_open_rect.collidepoint((x, y))
+            and game_state.get("selected_building") is None
+            and pin.hero_id is not None
+        ):
+            self._chat_visible = True
+            return "chat_band_open"
+
         if self.quit_rect is not None and self.quit_rect.collidepoint((x, y)):
             return "quit"
         if self.right_close_rect is not None and self.right_close_rect.collidepoint((x, y)):
@@ -1454,6 +1683,7 @@ class HUD:
             and getattr(self, "watch_card_map_rect", None) is not None
             and self.watch_card_map_rect.collidepoint((x, y))
             and self._pin_slot.hero_id is not None
+            and game_state.get("selected_building") is None
         ):
             wc = self.watch_card_map_world_center
             wh = self.watch_card_map_world_wh
@@ -1471,16 +1701,22 @@ class HUD:
                 wy = wc[1] + (rel_y - 0.5) * wh[1]
                 return {"type": "select_hero_at_world", "wx": wx, "wy": wy}
         chev = getattr(self, "_watch_card_chevron_rect", None)
-        if chev is not None and chev.collidepoint((x, y)) and self._pin_slot.hero_id is not None:
-            self._watch_card_expanded = not self._watch_card_expanded
-            return "watch_card_chevron_toggle"
+        if chev is not None and chev.collidepoint((x, y)):
+            if game_state.get("selected_building") is not None:
+                self._building_card_expanded = not self._building_card_expanded
+                return "watch_card_chevron_toggle"
+            if self._pin_slot.hero_id is not None:
+                self._watch_card_expanded = not self._watch_card_expanded
+                return "watch_card_chevron_toggle"
         cp = getattr(self, "_chat_panel", None)
         if (
-            getattr(self, "_watch_card_chat_rect", None) is not None
+            self._chat_visible
+            and getattr(self, "_watch_card_chat_rect", None) is not None
             and cp is not None
             and self._watch_card_chat_rect.collidepoint((x, y))
             and self._watch_card_expanded
             and pin.hero_id is not None
+            and game_state.get("selected_building") is None
         ):
             pinned_hero = next(
                 (

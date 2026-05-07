@@ -890,6 +890,86 @@
             "python3 tools/qa_smoke.py --quick",
             "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r8_card_unify": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r8_card_unify",
+          "status": "done",
+          "what_i_changed": [
+            "D1 game/ui/hud.py: _chat_visible default True; WATCH_CARD_FULL_H_WITH_CHAT / _NO_CHAT; effective_card_full_h(); _effective_watch_card_h + layout use chat-aware height; _chat_close_rect/_chat_open_rect; handle_click chat close/open; hero map click + chat gated on selected_building None; virtual_pointer chat only when _chat_visible.",
+            "D1 game/ui/chat_panel.py render_watch_band: 12x12 X close glyph top-right; _watch_band_close_rect for HUD hit test.",
+            "D2 game/ui/info_card.py: InfoCard.draw_shell (shared rounded card + header + chevron); refact hero + building chrome through InfoCard; hud._render_card_slot dispatcher.",
+            "D3 game/ui/hud.py: BUILDING_CARD_* ; _building_card_expanded; _render_building_card_infocard + _render_building_stats_in_body; building overrides hero in card slot; watch_card_map_rect cleared for building path.",
+            "D3 tools/screenshot_scenarios.py: wk52_building_card.png shot (_apply_building_card).",
+            "Tests tests/test_wk52_watch_card.py: chat close/open/chevron independence; building infocard + precedence; constants assertions."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "pip install -r requirements.txt -q && python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (254 passed)",
+            "screenshots": "docs/screenshots/wk52_phase3/ (6 PNGs + manifest.json)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "R7-equivalent chrome; chat band with placeholder; X close visible top-right of band; no Chat text button (chat open)."
+              },
+              "wk52_watch_card_minimized.png": {
+                "verdict": "PASS",
+                "note": "~18px header; no chat body; minimap + Heroes column unchanged."
+              },
+              "wk52_pin_radar_minimap.png": {
+                "verdict": "PASS",
+                "note": "Terrain + corner minimap; expanded card with chat band."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial overlay clean."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Heroes column above minimap; no card when unpinned."
+              },
+              "wk52_building_card.png": {
+                "verdict": "PASS",
+                "note": "Castle InfoCard in left slot above minimap; Status/HP body; no chat; Heroes left column pixel-matches panel bg vs expanded at y≈120; corner minimap."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "info_card_design": "InfoCard (game/ui/info_card.py): constructor stores header_bg; draw_shell(surface, cx,cy,cw,ch, expanded, header_h, name_surf, chevron_surf) draws rounded card + header strip + blits title + chevron, returns (card_rect, chevron_hit_rect, body_start_y|None). layout_body() stacks FixedSection/FlexSection rows (used in module for future extension; hero/building paths call draw_shell then existing body painters). Section dataclasses FixedSection/FlexSection reserved for stacked layouts.",
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }
