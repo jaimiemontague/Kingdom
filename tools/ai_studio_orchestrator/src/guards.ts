@@ -176,7 +176,8 @@ function isReadOnlyReferencePath(filePath: string): boolean {
     filePath.startsWith(".cursor/plans/wk") ||
     filePath.startsWith(".cursor/plans/master_plan") ||
     filePath.startsWith(".cursor/plans/unit_instancing_master_plan") ||
-    filePath.startsWith(".cursor/plans/ai_studio_automation_contract");
+    filePath.startsWith(".cursor/plans/ai_studio_automation_contract") ||
+    filePath.startsWith(".cursor/human_provided/");
 }
 
 function isSharedGateCommandPath(filePath: string): boolean {
