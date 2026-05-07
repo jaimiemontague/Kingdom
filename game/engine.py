@@ -537,17 +537,35 @@ class GameEngine:
             if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
                 self.selected_hero = hero
                 self.selected_peasant = None
-                # Ensure the right panel becomes visible on selection (Tab panel UX).
-                if hasattr(self, "hud"):
-                    try:
-                        self.hud.right_panel_visible = True
-                        if hasattr(self.hud, "_micro_view"):
-                            self.hud._micro_view.enter_hero_focus(hero)
-                    except Exception:
-                        pass
                 return True
-        
+
         return False
+
+    def try_select_hero_at_world(self, wx: float, wy: float, radius: float = 24.0) -> bool:
+        """Pick the closest live hero within ``radius`` px of world position (watch-card map — WK52)."""
+        best = None
+        lim = float(radius) * float(radius)
+        best_d2 = lim + 1.0
+        for hero in self.heroes:
+            if not getattr(hero, "is_alive", True) or int(getattr(hero, "hp", 0)) <= 0:
+                continue
+            dx = float(getattr(hero, "x", 0.0)) - float(wx)
+            dy = float(getattr(hero, "y", 0.0)) - float(wy)
+            d2 = dx * dx + dy * dy
+            if d2 < best_d2:
+                best_d2 = d2
+                best = hero
+        if best is None:
+            return False
+        self.selected_hero = best
+        self.selected_peasant = None
+        self.selected_building = None
+        if hasattr(self, "building_panel"):
+            try:
+                self.building_panel.deselect()
+            except Exception:
+                pass
+        return True
 
     def try_select_tax_collector(self, screen_pos: tuple) -> bool:
         """Try to select the tax collector at the given screen position. Returns True if selected. (wk16)"""
@@ -559,11 +577,6 @@ class GameEngine:
             self.selected_hero = tc  # unified selection state for left panel
             self.selected_building = None
             self.selected_peasant = None
-            if hasattr(self, "hud"):
-                try:
-                    self.hud.right_panel_visible = True
-                except Exception:
-                    pass
             return True
         return False
 
@@ -575,11 +588,6 @@ class GameEngine:
                 self.selected_hero = guard
                 self.selected_building = None
                 self.selected_peasant = None
-                if hasattr(self, "hud"):
-                    try:
-                        self.hud.right_panel_visible = True
-                    except Exception:
-                        pass
                 return True
         return False
 
@@ -594,11 +602,6 @@ class GameEngine:
                 if hasattr(self, "building_panel"):
                     try:
                         self.building_panel.deselect()
-                    except Exception:
-                        pass
-                if hasattr(self, "hud"):
-                    try:
-                        self.hud.right_panel_visible = True
                     except Exception:
                         pass
                 return True
@@ -1427,9 +1430,6 @@ class GameEngine:
             self.center_camera_on_world_pos(float(target.x), float(target.y))
             if hasattr(self, "hud"):
                 try:
-                    self.hud.right_panel_visible = True
-                    if hasattr(self.hud, "_micro_view"):
-                        self.hud._micro_view.enter_hero_focus(target)
                     if pin_slot.hero_id is not None and not getattr(self.hud, "_watch_card_expanded", True):
                         self.hud._watch_card_expanded = True
                 except Exception:

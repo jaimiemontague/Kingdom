@@ -146,3 +146,22 @@ def test_engine_spawns_peasant_and_builds_new_structure(monkeypatch) -> None:
         assert building.hp == building.max_hp
     finally:
         pygame.quit()
+
+
+def test_try_select_hero_at_world_picks_closest_within_radius():
+    from game.entities.hero import Hero
+
+    engine = GameEngine(headless=True)
+    try:
+        a = Hero(100.0, 200.0, hero_class="warrior", hero_id="wk52_pick_a", name="A")
+        b = Hero(130.0, 200.0, hero_class="ranger", hero_id="wk52_pick_b", name="B")
+        engine.heroes.extend([a, b])
+        assert engine.try_select_hero_at_world(102.0, 200.0, radius=24.0) is True
+        assert engine.selected_hero is a
+        engine.selected_hero = None
+        assert engine.try_select_hero_at_world(1000.0, 1000.0, radius=5.0) is False
+        assert engine.selected_hero is None
+        assert engine.try_select_hero_at_world(125.0, 200.0, radius=8.0) is True
+        assert engine.selected_hero is b
+    finally:
+        pygame.quit()

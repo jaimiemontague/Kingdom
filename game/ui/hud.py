@@ -24,9 +24,12 @@ RECALL_BTN_W = 180
 MEMORIAL_BTN_W = 90
 WATCH_CARD_HEADER_H = 18
 WATCH_CARD_MAP_H = 160
-WATCH_CARD_STATS_H = 110
+WATCH_CARD_STATS_H = 78
 WATCH_CARD_FULL_H = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
 LEFT_COL_W = 224
+CHAT_DOCK_H = 140
+RADAR_MINIMAP_H = 180
+RADAR_MINIMAP_W = LEFT_COL_W
 WATCH_MINIMAP_SIZE = LEFT_COL_W
 
 
@@ -66,7 +69,6 @@ class HUD:
         self._help_panel_cache: pygame.Surface | None = None
         self._help_hint_cache = self.font_small.render("F3: Help", True, (180, 180, 180))
         self.right_panel_visible = False
-        self._panel_hint_cache = self.font_small.render("Tab: Panel", True, (180, 180, 180))
 
         self._session_start_ms = int(sim_now_ms())
         self._bounty_hint_cache: pygame.Surface | None = None
@@ -215,6 +217,12 @@ class HUD:
         self._watch_card_expanded: bool = False
         self.watch_card_map_rect: pygame.Rect | None = None
         self._watch_card_rect: pygame.Rect | None = None
+        self._watch_card_chevron_rect: pygame.Rect | None = None
+        self.watch_card_map_world_center: tuple[float, float] | None = None
+        self.watch_card_map_world_wh: tuple[float, float] | None = None
+        self._chat_dock_rect: pygame.Rect | None = None
+        self._radar_terrain_cache_key: tuple[int, int, int, int] | None = None
+        self._radar_terrain_surface: pygame.Surface | None = None
         self._recall_flash_end_ms: int = 0
         self.memorial_btn_rect: pygame.Rect | None = None
 
@@ -259,21 +267,22 @@ class HUD:
         margin = int(getattr(self.theme, "margin", 8))
         gutter = int(getattr(self.theme, "gutter", 8))
 
-        if not show_right_panel:
-            right_w = 0
-        else:
-            min_w = getattr(self.theme, "right_panel_min_w", LEFT_COL_W)
-            max_w = getattr(self.theme, "right_panel_max_w", LEFT_COL_W + 16)
-            right_w = int(max(min_w, min(max_w, int(w * 0.24))))
-            right_w = int(max(min_w, min(right_w, w - 2 * margin)))
+        _ = show_right_panel  # right chrome retired (WK52 R4)
+        right_w = 0
 
         top = pygame.Rect(0, 0, w, top_h)
         bottom = pygame.Rect(0, h - bottom_h, w, bottom_h)
         right = pygame.Rect(w - right_w, top_h, right_w, max(0, h - top_h - bottom_h))
 
         left_w = LEFT_COL_W
-        minimap_size = WATCH_MINIMAP_SIZE
-        minimap = pygame.Rect(0, h - minimap_size, minimap_size, minimap_size)
+        stack_h = int(RADAR_MINIMAP_H) + int(CHAT_DOCK_H)
+        minimap = pygame.Rect(0, max(top_h, bottom.y - stack_h), int(RADAR_MINIMAP_W), int(RADAR_MINIMAP_H))
+        self._chat_dock_rect = pygame.Rect(
+            0,
+            minimap.bottom,
+            int(LEFT_COL_W),
+            max(0, int(bottom.y - minimap.bottom)),
+        )
 
         cap_y = minimap.y
         if self._pin_slot.hero_id is not None:
@@ -288,7 +297,7 @@ class HUD:
         speed_bar_h = 50
         speed_gap_above_bar = 4
         speed_rect = pygame.Rect(
-            (w - right_w) - speed_bar_w - margin - 100,
+            w - speed_bar_w - margin - 100,
             bottom.y - speed_bar_h - speed_gap_above_bar,
             speed_bar_w,
             speed_bar_h,
@@ -340,8 +349,9 @@ class HUD:
             return False
         has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
         show_right = self.right_panel_visible and has_right_content
+        _ = show_right  # Tab/no-op; no right chrome hit region (WK52 R4)
         top, bottom, left, right, minimap, command, speed_rect, recall, memorial = self._layout_rects_for_screen(
-            w, h, show_right_panel=show_right
+            w, h, show_right_panel=bool(self.right_panel_visible)
         )
         profiles = game_state.get("hero_profiles_by_id") or {}
         pin = self._pin_slot
@@ -352,10 +362,11 @@ class HUD:
         if pin.hero_id is not None:
             regions.append(recall)
             regions.append(memorial)
-            ct = minimap.y - (WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H)
-            regions.append(pygame.Rect(minimap.x, ct, minimap.width, WATCH_CARD_HEADER_H))
-        if show_right and right.width > 0:
-            regions.append(right)
+            ch = WATCH_CARD_FULL_H if self._watch_card_expanded else WATCH_CARD_HEADER_H
+            regions.append(pygame.Rect(minimap.x, minimap.y - ch, minimap.width, ch))
+        dock = getattr(self, "_chat_dock_rect", None)
+        if dock is not None and dock.height > 0 and dock.width > 0:
+            regions.append(dock)
         if game_state.get("selected_hero") is not None or game_state.get("selected_peasant") is not None:
             regions.append(left)
         for r in regions:
@@ -670,6 +681,7 @@ class HUD:
         """Watch card above minimap: header, optional map slot + stats (WK52)."""
         self.watch_card_map_rect = None
         self._watch_card_rect = None
+        self._watch_card_chevron_rect = None
         pin = self._pin_slot
         if pin.hero_id is None:
             return
@@ -715,9 +727,14 @@ class HUD:
             self._watch_name_surf = name_surf
         name_surf = self._watch_name_surf
         surface.blit(name_surf, (cx + 3, cy + (WATCH_CARD_HEADER_H - name_surf.get_height()) // 2))
-        surface.blit(
-            chevron_surf,
-            (cx + cw - chevron_surf.get_width() - 2, cy + (WATCH_CARD_HEADER_H - chevron_surf.get_height()) // 2),
+        cbx = cx + cw - chevron_surf.get_width() - 2
+        cby = cy + (WATCH_CARD_HEADER_H - chevron_surf.get_height()) // 2
+        surface.blit(chevron_surf, (cbx, cby))
+        self._watch_card_chevron_rect = pygame.Rect(
+            int(cbx - 2),
+            int(cby - 2),
+            int(chevron_surf.get_width() + 5),
+            int(chevron_surf.get_height() + 4),
         )
 
         if not self._watch_card_expanded:
@@ -728,8 +745,12 @@ class HUD:
         self.watch_card_map_rect = map_rect
 
         sy = cy + WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + 4
-        bar_w = cw - 10
         bar_h = 6
+        gutter = 6
+        half = max(52, (cw - gutter * 3) // 2)
+        left_x = cx + 4
+        right_x = left_x + half + gutter // 2
+        bar_left_w = max(36, half - 4)
 
         if prof is not None:
             vitals = getattr(prof, "vitals", None)
@@ -752,36 +773,87 @@ class HUD:
                     f"XP {xp}/{xp_to_lv}", True, (190, 190, 190)
                 )
                 self._watch_lv_label_surf = self.font_tiny.render(
-                    f"Lv {level}", True, (220, 200, 120)
+                    f"Lvl {level}", True, (220, 200, 120)
                 )
+                self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
 
-            hp_lbl = self._watch_hp_label_surf
-            surface.blit(hp_lbl, (cx + 4, sy))
-            sy += hp_lbl.get_height() + 1
-            HPBar.render(surface, pygame.Rect(cx + 4, sy, bar_w, bar_h), hp, max_hp)
-            sy += bar_h + 4
+            row1_y = sy
+            surface.blit(self._watch_hp_label_surf, (left_x, row1_y))
+            surface.blit(self._watch_mana_label_surf, (right_x, row1_y))
+            bar_y1 = row1_y + self._watch_hp_label_surf.get_height() + 1
+            HPBar.render(surface, pygame.Rect(left_x, bar_y1, bar_left_w, bar_h), hp, max_hp)
 
-            xp_lbl = self._watch_xp_label_surf
-            surface.blit(xp_lbl, (cx + 4, sy))
-            sy += xp_lbl.get_height() + 1
+            row2_y = bar_y1 + bar_h + 5
+            surface.blit(self._watch_xp_label_surf, (left_x, row2_y))
+            surface.blit(self._watch_lv_label_surf, (right_x, row2_y))
+            bar_y2 = row2_y + self._watch_xp_label_surf.get_height() + 1
             xp_ratio = max(0.0, min(1.0, xp / max(1, xp_to_lv)))
-            pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(cx + 4, sy, bar_w, bar_h))
+            pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h))
             if xp_ratio > 0:
                 pygame.draw.rect(
-                    surface, (70, 130, 210), pygame.Rect(cx + 4, sy, int(bar_w * xp_ratio), bar_h)
+                    surface, (70, 130, 210), pygame.Rect(left_x, bar_y2, int(bar_left_w * xp_ratio), bar_h)
                 )
-            pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(cx + 4, sy, bar_w, bar_h), 1)
-            sy += bar_h + 4
+            pygame.draw.rect(surface, (20, 20, 30), pygame.Rect(left_x, bar_y2, bar_left_w, bar_h), 1)
+        else:
+            if self._watch_mana_label_surf is None:
+                self._watch_mana_label_surf = self.font_tiny.render("Mana —", True, (80, 78, 95))
 
-            lv_lbl = self._watch_lv_label_surf
-            surface.blit(lv_lbl, (cx + 4, sy))
-            sy += lv_lbl.get_height() + 3
+    def _ensure_radar_terrain_surface(self, inner: pygame.Rect, world) -> pygame.Surface | None:
+        """Sampled terrain under radar dots; cached by inner size + world dimensions (WK52 R4)."""
+        if world is None:
+            return None
+        from config import MAP_HEIGHT, MAP_WIDTH, TILE_SIZE
+        from game.world import TileType, Visibility
 
-        if self._watch_mana_label_surf is None:
-            self._watch_mana_label_surf = self.font_tiny.render(
-                "Mana: —", True, (80, 78, 95)
-            )
-        surface.blit(self._watch_mana_label_surf, (cx + 4, sy))
+        key = (inner.width, inner.height, int(world.width), int(world.height))
+        if self._radar_terrain_cache_key == key and self._radar_terrain_surface is not None:
+            return self._radar_terrain_surface
+
+        surf = pygame.Surface((inner.width, inner.height))
+        grass = (25, 50, 25)
+        water = (25, 50, 100)
+        unseen = (12, 14, 22)
+        mountain_rgb = (80, 80, 90)
+        ww = float(MAP_WIDTH * TILE_SIZE)
+        wh = float(MAP_HEIGHT * TILE_SIZE)
+        tree_dot = (40, 75, 40)
+        mountain_type = getattr(TileType, "MOUNTAIN", None)
+        for my in range(inner.height):
+            for mx in range(inner.width):
+                wx = (mx + 0.5) / inner.width * ww
+                wy = (my + 0.5) / inner.height * wh
+                gx, gy = world.world_to_grid(wx, wy)
+                if not (0 <= gx < world.width and 0 <= gy < world.height):
+                    surf.set_at((mx, my), unseen)
+                    continue
+                vis = world.visibility[gy][gx]
+                if vis == Visibility.UNSEEN:
+                    surf.set_at((mx, my), unseen)
+                    continue
+                tt = world.tiles[gy][gx]
+                if tt == TileType.WATER:
+                    surf.set_at((mx, my), water)
+                elif mountain_type is not None and tt == mountain_type:
+                    surf.set_at((mx, my), mountain_rgb)
+                else:
+                    # PATH / GRASS share macro fill; TREE second pass draws lighter dot.
+                    # TODO: render mountain tiles when world.TileType.MOUNTAIN exists
+                    surf.set_at((mx, my), grass)
+        for my in range(inner.height):
+            for mx in range(inner.width):
+                wx = (mx + 0.5) / inner.width * ww
+                wy = (my + 0.5) / inner.height * wh
+                gx, gy = world.world_to_grid(wx, wy)
+                if not (0 <= gx < world.width and 0 <= gy < world.height):
+                    continue
+                if world.visibility[gy][gx] == Visibility.UNSEEN:
+                    continue
+                if world.tiles[gy][gx] == TileType.TREE:
+                    surf.set_at((mx, my), tree_dot)
+
+        self._radar_terrain_surface = surf
+        self._radar_terrain_cache_key = key
+        return surf
 
     def _render_radar_minimap(
         self,
@@ -798,9 +870,13 @@ class HUD:
         if inner.width <= 0 or inner.height <= 0:
             return
 
-        pygame.draw.rect(surface, (12, 14, 22), inner)
-
         world = game_state.get("world")
+        terr = self._ensure_radar_terrain_surface(inner, world)
+        if terr is not None:
+            surface.blit(terr, inner.topleft)
+        else:
+            pygame.draw.rect(surface, (12, 14, 22), inner)
+
         heroes = game_state.get("heroes") or []
         enemies = game_state.get("enemies") or []
         buildings = game_state.get("buildings") or []
@@ -817,7 +893,7 @@ class HUD:
 
                 gx, gy = world.world_to_grid(float(x), float(y))
                 if 0 <= gx < world.width and 0 <= gy < world.height:
-                    return world.visibility[gy][gx] != Visibility.HIDDEN
+                    return world.visibility[gy][gx] != Visibility.UNSEEN
             except Exception:
                 pass
             return True
@@ -1080,7 +1156,8 @@ class HUD:
         self.show_help = not self.show_help
 
     def toggle_right_panel(self) -> None:
-        self.right_panel_visible = not self.right_panel_visible
+        """Legacy Tab hook — right HUD column removed (WK52 R4)."""
+        pass
 
     def _render_hero_focus_profile(self, surface: pygame.Surface, rect: pygame.Rect, game_state: dict) -> None:
         """Top half of HERO_FOCUS mode: condensed profile/memory (WK49)."""
@@ -1116,7 +1193,8 @@ class HUD:
         # Right panel vanishes when nothing is selected (maximize map view)
         # Fix: right menu shouldn't come up for building descriptions since left menu already shows it
         has_right_content = self._micro_view.mode != ViewMode.OVERVIEW
-        self._show_right_panel = self.right_panel_visible and has_right_content
+        _ = has_right_content  # interior/quest/chat no longer use right column
+        self._show_right_panel = False
 
         top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(surface)
 
@@ -1183,12 +1261,17 @@ class HUD:
             self._render_left_close_button(surface, left)
             self._render_peasant_summary(surface, selected_peasant, left)
 
-        if self._show_right_panel:
-            self._panel_right.render(surface)
-
         self._panel_minimap.render(surface)
         self._render_radar_minimap(surface, minimap, game_state)
         self._render_watch_card_chrome(surface, minimap, game_state)
+        dock = getattr(self, "_chat_dock_rect", None)
+        if dock is not None and dock.width > 0 and dock.height > 0:
+            cp = getattr(self, "_chat_panel", None)
+            if cp is not None:
+                if cp.is_active():
+                    cp.render(surface, dock, game_state)
+                else:
+                    cp.render_idle_dock(surface, dock)
 
         if minimap.width > 0 and minimap.height > 0:
             sep_x = minimap.right + int(self.theme.gutter // 2)
@@ -1246,20 +1329,7 @@ class HUD:
 
         selected_hero = game_state.get("selected_hero")
         selected_building = game_state.get("selected_building")
-        self.right_close_rect = None
-        if self._show_right_panel:
-            self._right_rect = right
-            interior_panel = getattr(self, "_interior_panel", None)
-            quest_panel = getattr(self, "_quest_panel", None)
-            chat_panel = getattr(self, "_chat_panel", None)
-            exit_msg = self._micro_view.render(
-                surface, right, game_state, self, interior_panel, quest_panel, chat_panel
-            )
-            self._render_right_close_button(surface, right)
-            if exit_msg:
-                self.add_message(exit_msg, (255, 180, 100))
-        else:
-            self._right_rect = None
+        self._right_rect = None
 
         if self.memorial_card.visible:
             self.memorial_card.render(surface)
@@ -1291,18 +1361,36 @@ class HUD:
                 return "unpin_hero"
             return "pin_hero"
         if (
-            getattr(self, "_watch_card_rect", None) is not None
+            self._watch_card_expanded
+            and getattr(self, "watch_card_map_rect", None) is not None
+            and self.watch_card_map_rect.collidepoint((x, y))
             and self._pin_slot.hero_id is not None
         ):
-            header_rect = pygame.Rect(
-                self._watch_card_rect.x,
-                self._watch_card_rect.y,
-                self._watch_card_rect.width,
-                WATCH_CARD_HEADER_H,
-            )
-            if header_rect.collidepoint((x, y)):
-                self._watch_card_expanded = not self._watch_card_expanded
-                return None
+            wc = self.watch_card_map_world_center
+            wh = self.watch_card_map_world_wh
+            mr = self.watch_card_map_rect
+            if (
+                wc is not None
+                and wh is not None
+                and mr is not None
+                and mr.width > 0
+                and mr.height > 0
+            ):
+                rel_x = (x - mr.x) / float(mr.width)
+                rel_y = (y - mr.y) / float(mr.height)
+                wx = wc[0] + (rel_x - 0.5) * wh[0]
+                wy = wc[1] + (rel_y - 0.5) * wh[1]
+                return {"type": "select_hero_at_world", "wx": wx, "wy": wy}
+        chev = getattr(self, "_watch_card_chevron_rect", None)
+        if chev is not None and chev.collidepoint((x, y)) and self._pin_slot.hero_id is not None:
+            self._watch_card_expanded = not self._watch_card_expanded
+            return "watch_card_chevron_toggle"
+        dock = getattr(self, "_chat_dock_rect", None)
+        cp = getattr(self, "_chat_panel", None)
+        if dock is not None and cp is not None and cp.is_active() and dock.collidepoint((x, y)):
+            chat_click = cp.handle_click((x, y), dock)
+            if chat_click is not None:
+                return chat_click
         if (
             getattr(self, "memorial_btn_rect", None) is not None
             and self.memorial_btn_rect.collidepoint((x, y))
@@ -1312,35 +1400,6 @@ class HUD:
             return "open_memorial"
         if self.left_close_rect is not None and self.left_close_rect.collidepoint((x, y)):
             return "close_selection"
-        if self._right_rect is not None and self._right_rect.collidepoint((x, y)):
-            interior_panel = getattr(self, "_interior_panel", None)
-            quest_panel = getattr(self, "_quest_panel", None)
-            chat_panel = getattr(self, "_chat_panel", None)
-            if chat_panel is not None and chat_panel.is_active():
-                # HERO_FOCUS renders chat in the bottom half only; hit-test must use the same rect.
-                if self._micro_view.mode == ViewMode.HERO_FOCUS:
-                    chat_hit_rect = pygame.Rect(
-                        self._right_rect.x,
-                        self._right_rect.y + self._right_rect.height // 2,
-                        self._right_rect.width,
-                        self._right_rect.height // 2,
-                    )
-                    click_result = chat_panel.handle_click((x, y), chat_hit_rect)
-                else:
-                    click_result = chat_panel.handle_click((x, y), self._right_rect)
-                if click_result is not None:
-                    return click_result
-            action = self._micro_view.handle_click(
-                (x, y), self._right_rect, interior_panel, quest_panel, chat_panel
-            )
-            if isinstance(action, dict) and action.get("type") == "start_conversation":
-                return action
-            if action == "exit_interior":
-                return "exit_interior"
-            if action == "exit_quest":
-                return "exit_quest"
-            if action == "exit_hero_focus":
-                return "end_conversation"
         if getattr(self, "recall_rect", None) is not None and self.recall_rect.collidepoint((x, y)):
             if not pin.is_fallen():
                 return "recall_pinned_hero"

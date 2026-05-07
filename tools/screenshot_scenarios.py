@@ -1164,9 +1164,6 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
     def _prep_base(eng: Any) -> None:
         eng.screenshot_hide_ui = False
         eng.selected_hero = hero
-        if hasattr(eng, "hud"):
-            eng.hud.right_panel_visible = True
-            eng.hud._micro_view.enter_hero_focus(hero)
 
     def _prep(eng: Any) -> None:
         _prep_base(eng)

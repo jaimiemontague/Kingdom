@@ -219,15 +219,22 @@ class ChatPanel:
             self._dim_cache[key] = s
         return self._dim_cache[key]
 
+    def render_idle_dock(self, surface: pygame.Surface, dock_rect: pygame.Rect) -> None:
+        """Empty chat footprint (dock under minimap — WK52 R4)."""
+        if dock_rect.width <= 0 or dock_rect.height <= 0:
+            return
+        pygame.draw.rect(surface, (12, 12, 18), dock_rect)
+        pygame.draw.rect(surface, self._frame_outer, dock_rect, 1)
+
     def render(
         self,
         surface: pygame.Surface,
-        right_rect: pygame.Rect,
+        target_rect: pygame.Rect,
         game_state: dict[str, Any],
     ) -> None:
-        if not self.is_active() or right_rect.width <= 0 or right_rect.height <= 0:
+        if not self.is_active() or target_rect.width <= 0 or target_rect.height <= 0:
             return
-        rx, ry, w, h = right_rect.x, right_rect.y, right_rect.width, right_rect.height
+        rx, ry, w, h = target_rect.x, target_rect.y, target_rect.width, target_rect.height
         pad = 10
         header_h = 48
         input_h = 32
@@ -359,8 +366,8 @@ class ChatPanel:
             text_color=_COLOR_TEXT,
         )
 
-    def handle_click(self, mouse_pos: tuple[int, int], right_rect: pygame.Rect) -> str | dict | None:
-        if not self.is_active() or not right_rect.collidepoint(mouse_pos):
+    def handle_click(self, mouse_pos: tuple[int, int], chat_rect: pygame.Rect) -> str | dict | None:
+        if not self.is_active() or not chat_rect.collidepoint(mouse_pos):
             return None
         if getattr(self, "_header_rect", None) and self._header_rect.collidepoint(mouse_pos):
             return {"type": "select_hero", "hero": self.hero_target}

@@ -381,6 +381,11 @@ class InputHandler:
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action(action)
                         return
+                    if action == "watch_card_chevron_toggle":
+                        return
+                    if isinstance(action, dict) and action.get("type") == "select_hero_at_world":
+                        c.try_select_hero_at_world(float(action.get("wx", 0.0)), float(action.get("wy", 0.0)))
+                        return
                     if action == "exit_interior":
                         if getattr(c, "micro_view", None) is not None:
                             if getattr(c, "audio_system", None) is not None:
@@ -396,8 +401,6 @@ class InputHandler:
                         if hero is not None:
                             c.selected_hero = hero
                             c.selected_building = None
-                            if hasattr(c.hud, "_micro_view"):
-                                c.hud._micro_view.enter_hero_focus(hero)
                         chat_panel = getattr(c.hud, "_chat_panel", None)
                         if chat_panel is not None:
                             chat_panel.start_conversation(action["hero"])
@@ -407,8 +410,6 @@ class InputHandler:
                         if hero is not None:
                             c.selected_hero = hero
                             c.selected_building = None
-                            if hasattr(c.hud, "_micro_view"):
-                                c.hud._micro_view.enter_hero_focus(hero)
                         return
                     if action == "end_conversation":
                         self._clear_hero_selection()
@@ -538,7 +539,6 @@ class InputHandler:
                             c.audio_system.start_interior_ambient(
                                 getattr(building, "building_type", "") or ""
                             )
-                        c.hud.right_panel_visible = True
                         c.building_panel.deselect()
                         c.selected_building = None
                     return

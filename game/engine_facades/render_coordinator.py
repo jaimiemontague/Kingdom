@@ -76,7 +76,7 @@ class EngineRenderCoordinator:
 
             if now_mode == ViewMode.HERO_FOCUS and getattr(e.micro_view, "quest_hero", None):
                 right_rect = getattr(e.hud, "_right_rect", None)
-                if right_rect:
+                if right_rect is not None and right_rect.width > 0:
                     minimap_rect = pygame.Rect(
                         right_rect.x, right_rect.y, right_rect.width, right_rect.height // 2
                     )
@@ -199,6 +199,11 @@ class EngineRenderCoordinator:
             surface.blit(mini_surf, dest.topleft)
         finally:
             surface.set_clip(prev_clip)
+
+        hud = getattr(e, "hud", None)
+        if hud is not None:
+            hud.watch_card_map_world_center = (float(hero.x), float(hero.y))
+            hud.watch_card_map_world_wh = (float(rect.width), float(rect.height))
 
         try:
             set_render_zoom(old_zoom)

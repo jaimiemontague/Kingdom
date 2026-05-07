@@ -599,6 +599,81 @@
           "follow_ups": [
             "Agent 03: optional review of clipped _render_hero_minimap blit in render_coordinator.py"
           ]
+        },
+        "wk52_r4_remove_right_menu": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r4_remove_right_menu",
+          "status": "done",
+          "what_i_changed": [
+            "D1 game/ui/hud.py handle_click ~1288–1320: watch-card chevron-only hit + return watch_card_chevron_toggle; game/input_handler.py ~380–384 consumes so LMB does not fall through; tests/test_wk52_watch_card.py test_watch_card_chevron_returns_consume_action + test_toggle_right_panel_is_noop_for_compatibility.",
+            "D2 game/engine_facades/render_coordinator.py _render_hero_minimap ~195–201: cache watch_card_map_world_center / watch_card_map_world_wh on HUD after blit; game/ui/hud.py handle_click returns select_hero_at_world dict; game/engine.py try_select_hero_at_world (~537–568); game/game_commands.py protocol + EngineBacked delegate; game/input_handler.py resolver ~385–387.",
+            "D3 game/ui/hud.py _ensure_radar_terrain_surface (~801–855) + _render_radar_minimap (~856+): cached per (inner size, world dims) terrain sampling (grass/water/TREE dot pass, UNSEEN dim, MOUNTAIN placeholder branch + TODO); blit before entity dots; is_revealed uses Visibility.UNSEEN.",
+            "D4 game/ui/hud.py constants _layout_rects_for_screen ~267–304: right_w=0 always; speed_rect re-anchored; render() drops _panel_right + micro_view right path; toggle_right_panel pass; virtual_pointer_in_hud_chrome: full watch card rect + chat dock, no right panel; game/input_handler.py dropped right_panel_visible on enter_building; engine try_select_* recall no right_panel/hero_focus.",
+            "D5 CHAT_DOCK_H/RADAR_MINIMAP_H/_chat_dock_rect; game/ui/hud.py render ~1200–1210 chat dock + game/ui/chat_panel.py render_idle_dock + target_rect param rename; tools/screenshot_scenarios.py _prep_base no hero_focus/right_panel."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 (245 passed)",
+            "screenshots": "docs/screenshots/wk52_phase3/ (5 PNGs, manifest.json)",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded": {
+                "verdict": "PASS",
+                "note": "HP/Mana and XP/Lvl 1 two-column stats; terrain tint in radar stack; chat dock below minimap; no right column chrome."
+              },
+              "wk52_watch_card_minimized": {
+                "verdict": "PASS",
+                "note": "18px-ish header peek; chat dock visible; radar shortened; zero-width right side."
+              },
+              "wk52_pin_radar_minimap": {
+                "verdict": "PASS",
+                "note": "Green macro terrain + tree speckle + blue water under dots; pinned hero white ring."
+              },
+              "wk52_memorial_card": {
+                "verdict": "PASS",
+                "note": "Full-screen memorial obscures HUD; Farewell/epitaph centered."
+              },
+              "wk52_left_menu_unpinned": {
+                "verdict": "PASS",
+                "note": "Heroes column stops above stacked minimap+chat; bottom Recall/Memorial/command row clear."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 07/Agent 03: INTERIOR/QUEST micro_view had relied on wide right chrome — pygame path no longer renders that column; revisit fullscreen interior if still a product requirement."
+          ],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }
