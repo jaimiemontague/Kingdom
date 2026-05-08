@@ -71,6 +71,107 @@ def test_hud_handle_menu_scroll_requires_hit_inside_rect():
     assert hud.handle_menu_scroll((lr.right + 50, lr.centery), 1, gs, None) is False
 
 
+def test_virtual_pointer_includes_left_when_building_selected():
+    """Ursina: left column must count as HUD chrome when a building sheet is open (WK52 R12)."""
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    surf = pygame.Surface((1920, 1080))
+    hud = HUD(1920, 1080)
+    hero = Hero(1.0, 1.0, hero_class="warrior", hero_id="s1", name="Brick")
+    gs = {
+        "selected_hero": None,
+        "selected_peasant": None,
+        "selected_building": object(),
+        "hero_profiles_by_id": {},
+    }
+    hud.render(surf, gs)
+    top, bottom, left, *_ = hud._compute_layout(surf, gs)
+    assert left.collidepoint(left.x + 4, left.y + 4)
+    inside = hud.virtual_pointer_in_hud_chrome((left.x + 4, left.y + 4), surf, gs)
+    assert inside is True
+    gs_out = dict(gs)
+    gs_out["selected_building"] = None
+    assert hud.virtual_pointer_in_hud_chrome((left.x + 4, left.y + 4), surf, gs_out) is False
+
+
+def test_hud_is_mouse_over_menu_matches_rects():
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(1.0, 1.0, hero_class="warrior", hero_id="s1", name="Gate")
+    gs = {"selected_hero": hero, "selected_peasant": None, "selected_building": None, "hero_profiles_by_id": {"s1": object()}}
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    lr = hud._last_left_rect
+    assert lr is not None
+    assert hud.is_mouse_over_menu((lr.centerx, lr.centery), gs, None) is True
+    assert hud.is_mouse_over_menu((lr.right + 80, lr.centery), gs, None) is False
+
+
+def test_hud_scroll_active_menu_maps_direction_and_clamps():
+    from game.entities.hero import Hero
+    from game.ui.hud import HUD
+
+    pygame.init()
+    hud = HUD(1920, 1080)
+    hero = Hero(1.0, 1.0, hero_class="warrior", hero_id="s1", name="Ramp")
+    gs = {"selected_hero": hero, "selected_peasant": None, "selected_building": None, "hero_profiles_by_id": {"s1": object()}}
+    surf = pygame.Surface((1920, 1080))
+    hud.render(surf, gs)
+    lr = hud._last_left_rect
+    hud._hero_panel._menu_max_scroll = 48
+    hud._hero_panel.menu_scroll_px = 0
+    assert hud.scroll_active_menu(1, (lr.centerx, lr.centery), gs, None) is True
+    assert hud._hero_panel.menu_scroll_px > 0
+    for _ in range(20):
+        hud.scroll_active_menu(-1, (lr.centerx, lr.centery), gs, None)
+    assert hud._hero_panel.menu_scroll_px == 0
+
+
+def test_wheel_zoom_skipped_when_mock_hud_reports_menu_hover():
+    """Guards regressions: consume menu scroll before zoom_by (InputHandler wheel path)."""
+    from unittest.mock import MagicMock
+
+    from game.input_handler import InputHandler
+    from game.input_manager import InputEvent
+
+    cmds = MagicMock()
+    cmds._skip_event_processing_frames = 0
+    cmds.dev_tools_panel = None
+    cmds.pause_menu.visible = False
+    cmds.paused = False
+    cmds.input_manager.get_mouse_pos = MagicMock(return_value=(123, 456))
+    cmds.get_game_state.return_value = {}
+    cmds.building_panel = None
+    cmds.hud = MagicMock()
+    cmds.hud.handle_menu_scroll = MagicMock(return_value=True)
+    cp = MagicMock()
+    cp.is_active = MagicMock(return_value=False)
+    cmds.hud._chat_panel = cp
+    cmds.input_manager.get_events = MagicMock(
+        return_value=[InputEvent(type="WHEEL", wheel_y=1)]
+    )
+    cmds.zoom_by = MagicMock()
+
+    ih = InputHandler(cmds)
+    ih.process_events()
+    cmds.hud.handle_menu_scroll.assert_called()
+    assert cmds.hud.handle_menu_scroll.call_args[0][0] == (123, 456)
+    cmds.zoom_by.assert_not_called()
+
+    cmds.hud.handle_menu_scroll.reset_mock()
+    cmds.hud.handle_menu_scroll.return_value = False
+    cmds.input_manager.get_events = MagicMock(
+        return_value=[InputEvent(type="WHEEL", wheel_y=-1)]
+    )
+    ih.process_events()
+    cmds.zoom_by.assert_called()
+
+
 def test_hud_handle_menu_scroll_building_panel_consume_without_content_scroll():
     """R11: Wheel over building menu must not fall through to zoom when there is no overflow."""
     from game.ui.hud import HUD

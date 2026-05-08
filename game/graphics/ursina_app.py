@@ -549,6 +549,20 @@ class UrsinaApp:
             pos = self._last_engine_screen_pos
             self.input_manager.queue_event(InputEvent(type="MOUSEUP", button=1, pos=pos, key=None))
             return
+        # WK52 R12: Route wheel to left menus before queuing — MOUSEMOTION may map pointer to
+        # world-relative coords while building/hero menus use virtual framebuffer pixels only.
+        _ks = str(key).strip().lower()
+        if _ks in ("scroll up", "scroll down"):
+            _wy = 1 if _ks == "scroll up" else -1
+            _eng = self.engine
+            _hud = getattr(_eng, "hud", None)
+            if _hud is not None:
+                try:
+                    _mx = self.input_manager.get_mouse_pos()
+                except Exception:
+                    _mx = (0, 0)
+                if _hud.handle_menu_scroll(tuple(_mx), int(_wy), _eng.get_game_state(), getattr(_eng, "building_panel", None)):
+                    return
         # WK22 SPRINT-BUG-004: forward keyboard / wheel to engine (was dropped by early return).
         evt = ursina_key_to_input_event(key)
         if evt is not None:

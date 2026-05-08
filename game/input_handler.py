@@ -74,9 +74,22 @@ class InputHandler:
                         if wy != 0:
                             c.pause_menu.handle_wheel(wy)
                     continue
-                pos = getattr(c, "ui_cursor_pos", None)
+                pos = None
+                im = getattr(c, "input_manager", None)
+                if im is not None:
+                    gm = getattr(im, "get_mouse_pos", None)
+                    if callable(gm):
+                        try:
+                            pos = gm()
+                        except Exception:
+                            pos = None
                 if pos is None or len(pos) < 2:
-                    pos = pygame.mouse.get_pos()
+                    pos = getattr(c, "_last_ui_cursor_pos", None)
+                if pos is None or len(pos) < 2:
+                    try:
+                        pos = pygame.mouse.get_pos()
+                    except Exception:
+                        pos = (0, 0)
                 if c.hud.handle_menu_scroll(tuple(pos), int(event.wheel_y or 0), c.get_game_state(), c.building_panel):
                     continue
                 # Chat typing: do not zoom the world (same as blocking hotkeys in handle_keydown).

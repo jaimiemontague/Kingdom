@@ -1186,6 +1186,59 @@
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
         },
+        "wk52_r12_menu_scroll_wheel": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r12_menu_scroll_wheel",
+          "status": "done",
+          "what_i_changed": [
+            "Root cause: Ursina `UrsinaApp._engine_screen_pos_for_pointer` maps motion to world-relative screen coords unless HUD chrome or opaque UI; WHEEL used `_last_ui_cursor_pos` from that motion (wrong coords) or `pygame.mouse.get_pos()` (invalid in Ursina). `virtual_pointer_in_hud_chrome` already treats `selected_building` as left-column chrome in this tree — R12 fixes wheel coordinate source + Ursina pre-queue consume.",
+            "game/input_handler.py: WHEEL routing uses `input_manager.get_mouse_pos()` first (virtual framebuffer pixels) — ~77-92.",
+            "game/graphics/ursina_app.py: `_handle_ursina_input` (~552-565) consumes scroll up/down via `handle_menu_scroll(get_mouse_pos(), …)` and returns early so WHEEL is not queued.",
+            "game/ui/hud.py: added `is_mouse_over_menu`, `scroll_active_menu`; `handle_menu_scroll` uses `is_mouse_over_menu` before applying scroll.",
+            "tests/test_wk52_r10_menu_scroll.py: virtual_pointer + building selection, is_mouse_over_menu, scroll_active_menu clamp, mock zoom skip test."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "pip install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/ -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "266 passed"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_full": "python3 -m pytest tests/ -q exit_code=0 (266 passed)",
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "ursina_wheel_zoom_path": "Wheel zoom invokes `GameEngine.zoom_by` from `InputHandler.process_events()` WHEEL branch (game/input_handler.py ~69-93). FOV sync follows in `UrsinaApp.update` via `_sync_ursina_camera_fov_from_zoom` (game/graphics/ursina_app.py ~1031-1044). R12 intercept: `UrsinaApp._handle_ursina_input` (game/graphics/ursina_app.py ~552-565) calls `hud.handle_menu_scroll(self.input_manager.get_mouse_pos(), …)` on scroll up/down and returns before `ursina_key_to_input_event` queues WHEEL."
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 main.py --provider mock"
+          ]
+        },
         "wk52_r11_building_menu_alignment_scroll": {
           "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
           "round_id": "wk52_r11_building_menu_alignment_scroll",
