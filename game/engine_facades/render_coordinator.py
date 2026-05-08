@@ -89,7 +89,11 @@ class EngineRenderCoordinator:
 
             e.debug_panel.render(e.screen, e.get_game_state())
             e.dev_tools_panel.render(e.screen)
-            e.building_panel.render(e.screen, e.heroes, e.economy)
+            lr_bp = getattr(e.hud, "_last_left_rect", None)
+            if lr_bp is not None:
+                e.building_panel.render(e.screen, e.heroes, e.economy, left_rect=pygame.Rect(lr_bp))
+            else:
+                e.building_panel.render(e.screen, e.heroes, e.economy)
 
             if e.build_catalog_panel.visible:
                 e.build_catalog_panel.render(e.screen, e.economy, e.buildings)

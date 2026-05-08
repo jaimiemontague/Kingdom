@@ -1408,7 +1408,8 @@ class HUD:
         selected_peasant = game_state.get("selected_peasant")
         self.left_close_rect = None
         self._last_left_rect = pygame.Rect(left)
-        if selected_hero is not None:
+        sel_building = game_state.get("selected_building")
+        if selected_hero is not None and sel_building is None:
             self._panel_left.render(surface)
             self._hero_panel.render(
                 surface,
@@ -1503,14 +1504,6 @@ class HUD:
         x, y = int(pos[0]), int(pos[1])
         lr = self._last_left_rect
         if (
-            lr is not None
-            and lr.collidepoint(x, y)
-            and game_state.get("selected_hero") is not None
-            and game_state.get("selected_peasant") is None
-        ):
-            if self._hero_panel.apply_menu_scroll(int(wheel_y)):
-                return True
-        if (
             building_panel is not None
             and getattr(building_panel, "visible", False)
             and getattr(building_panel, "selected_building", None) is not None
@@ -1519,9 +1512,20 @@ class HUD:
             by = int(getattr(building_panel, "panel_y", 0))
             bw = int(getattr(building_panel, "panel_width", 0))
             bh = int(getattr(building_panel, "panel_height", 0))
-            if pygame.Rect(bx, by, bw, bh).collidepoint(x, y):
+            if bw > 0 and bh >= 0 and pygame.Rect(bx, by, bw, bh).collidepoint(x, y):
                 if building_panel.apply_menu_scroll(int(wheel_y)):
                     return True
+                return True
+        if (
+            lr is not None
+            and lr.collidepoint(x, y)
+            and game_state.get("selected_hero") is not None
+            and game_state.get("selected_peasant") is None
+            and game_state.get("selected_building") is None
+        ):
+            if self._hero_panel.apply_menu_scroll(int(wheel_y)):
+                return True
+            return True
         return False
 
     def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:

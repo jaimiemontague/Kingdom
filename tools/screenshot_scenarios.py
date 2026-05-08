@@ -1198,8 +1198,15 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
             bounties_claimed=3,
             gold_earned=400,
         )
-        eng.hud.memorial_card.show(eng.hud._pending_memorial)
-        eng.paused = True
+    def _apply_building_menu(eng: Any) -> None:
+        _prep(eng)
+        eng.hud._watch_card_expanded = True
+        wg = next((b for b in eng.buildings if getattr(b, "building_type", "") == "warrior_guild"), None)
+        if wg is None:
+            wg = _place_building(eng, "warrior_guild", cgx + 5, cgy + 2)
+        eng.selected_building = wg
+        eng.selected_peasant = None
+        eng.building_panel.select_building(wg, eng.heroes)
 
     return [
         Shot(
@@ -1240,6 +1247,16 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
             zoom=1.0,
             ticks=0,
             apply=_apply_left_unpinned,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_building_menu.png",
+            label="WK52 building menu left column with pin",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_building_menu,
             meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
         ),
         Shot(

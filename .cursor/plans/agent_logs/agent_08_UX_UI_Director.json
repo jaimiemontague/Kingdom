@@ -1185,6 +1185,106 @@
             "python3 tools/qa_smoke.py --quick",
             "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
           ]
+        },
+        "wk52_r11_building_menu_alignment_scroll": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r11_building_menu_alignment_scroll",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A+B game/ui/building_panel.py: render() accepts left_rect matching HUD `_layout_rects_for_screen`; panel_x/y/width/layout height from rect (no floating over map); `_fallback_left_rect` for callers without HUD.",
+            "game/engine_facades/render_coordinator.py: pass hud._last_left_rect into BuildingPanel.render.",
+            "game/ui/hud.py: skip HeroPanel when selected_building — left column mutually exclusive display; watch card unchanged.",
+            "BUG C game/ui/hud.py: handle_menu_scroll tests building-panel hit BEFORE hero; consumes wheel inside building viewport even when content has no overflow; hero left column consumes wheel when selected (scroll or flat chrome).",
+            "tools/screenshot_scenarios.py: wk52_pin_alerts adds wk52_building_menu.png shot (pinned + warrior guild).",
+            "tests/test_wk52_r10_menu_scroll.py: test_hud_handle_menu_scroll_building_panel_consume_without_content_scroll.",
+            "(Cross-domain mechanical handoff documented for Agent 03 on render_coordinator.)"
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "during implementation"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "262 passed post-change"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_1 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "iteration capture"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "canonical wk52_phase3"
+            }
+          ],
+          "iteration_log": [
+            {
+              "iteration": 1,
+              "bugs": [
+                "A",
+                "B",
+                "C"
+              ],
+              "capture_out": "docs/screenshots/wk52_phase3/iter_1",
+              "git_commit": "COMMIT_AFTER_PUSH",
+              "observations": {
+                "wk52_building_menu.png": "Warriors Guild fills upper LEFT_COL only; pinned Gareth/watch card sits below unchanged; left edge aligns with Heroes column baseline (compare wk52_left_menu_unpinned). No panel drawn over radar/minimap/right map.",
+                "wk52_watch_card_expanded.png": "Pinned hero + chat band; unchanged layout.",
+                "wk52_left_menu_unpinned.png": "Hero list in left gutter; unchanged.",
+                "wk52_memorial_card.png": "Memorial full-screen epitaph overlay; regression OK.",
+                "bug_c_verify": "Unit test asserts handle_menu_scroll returns True over building viewport with _menu_max_scroll=0 — wheel suppressed path without needing Ursina replay."
+              },
+              "verdict": "PASS",
+              "code_notes": "Overlap was oversized viewport + overlay draw order vs watch card; Ursina zoom path used same InputHandler but wrong hit rect + zoom was not suppressed when overflow=0."
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest_full": "python3 -m pytest tests/ -v exit_code=0 PASS (262 passed)",
+            "screenshots_iter": "docs/screenshots/wk52_phase3/iter_1",
+            "screenshots_final": "docs/screenshots/wk52_phase3",
+            "screenshot_verdict": {
+              "wk52_watch_card_expanded.png": {
+                "verdict": "PASS",
+                "note": "Pinned hero card visible; watch+column placement unchanged; building menu absent in this shot (no overlap regress)."
+              },
+              "wk52_building_menu.png": {
+                "verdict": "PASS",
+                "note": "Building menu clipped to HUD left_rect; aligns with Heroes column gutter; warrior guild chrome does not obscure pinned bottom card/minimap strip."
+              },
+              "wk52_left_menu_unpinned.png": {
+                "verdict": "PASS",
+                "note": "Hero list clipped in panel bounds."
+              },
+              "wk52_memorial_card.png": {
+                "verdict": "PASS",
+                "note": "Memorial overlay still appears on PAUSED epitaph scenario."
+              }
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: python3 main.py (Ursina) — hover Warrior Guild/building sheet and scroll wheel; confirm no map zoom unless pointer leaves menu."
+          ],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
         }
       }
     }

@@ -8,7 +8,7 @@ import pygame
 
 from config import COLOR_GREEN, COLOR_RED, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.ui.building_renderers import get_panel_renderer, normalize_building_type_key
-from game.ui.hud import LEFT_COL_W
+from game.ui.hud import LEFT_COL_W, RADAR_MINIMAP_H
 from game.ui.widgets import Button, NineSlice
 
 
@@ -36,8 +36,8 @@ class BuildingPanel:
         self.menu_scroll_px = 0
         self._menu_max_scroll = 0
         self._scroll_anchor_id: int | None = None
-        self.panel_x = 10
-        self.panel_y = 50
+        self.panel_x = 0
+        self.panel_y = 48
 
         self.font_title = pygame.font.Font(None, 28)
         self.font_normal = pygame.font.Font(None, 20)
@@ -241,10 +241,30 @@ class BuildingPanel:
                     self.blacksmith_research_hovered = research_key
                     break
 
-    def render(self, surface: pygame.Surface, heroes: list, economy) -> None:
+    def _fallback_left_rect(self, surface: pygame.Surface) -> pygame.Rect:
+        """Match HUD `_layout_rects_for_screen` when no hero is pinned (tests / legacy callers)."""
+        _, h = surface.get_size()
+        top_h = 48
+        minimap_y = max(0, h - int(RADAR_MINIMAP_H))
+        left_h = max(0, minimap_y - top_h)
+        return pygame.Rect(0, top_h, int(LEFT_COL_W), left_h)
+
+    def render(
+        self,
+        surface: pygame.Surface,
+        heroes: list,
+        economy,
+        *,
+        left_rect: pygame.Rect | None = None,
+    ) -> None:
         """Render selected building panel."""
         if not self.visible or not self.selected_building:
             return
+
+        lr = left_rect if left_rect is not None else self._fallback_left_rect(surface)
+        self.panel_width = max(120, int(lr.width))
+        self.panel_x = int(lr.x)
+        self.panel_y = int(lr.y)
 
         building = self.selected_building
         self.library_research_rects = {}
@@ -255,7 +275,7 @@ class BuildingPanel:
         self.demolish_button_rect = None
         self.enter_building_button_rect = None
 
-        viewport_h = min(self._panel_height_max, max(220, self.screen_height - self.panel_y - 20))
+        viewport_h = min(self._panel_height_max, max(120, int(lr.height)))
         scratch_h = max(900, viewport_h + 400)
         scratch_h = min(2400, scratch_h)
         panel_surf = pygame.Surface((self.panel_width, scratch_h), pygame.SRCALPHA)
