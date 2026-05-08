@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "de66c09f-405e-4e3c-86fa-0cc971eb585d",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r12_menu_scroll_wheel",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "WK52 R12: Ursina/menu wheel uses virtual framebuffer coords (input_manager.get_mouse_pos), Ursina scroll intercepted in _handle_ursina_input before WHEEL queues; HUD is_mouse_over_menu + scroll_active_menu + tests.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r12_menu_scroll_wheel\"]",
+  "timestamp": "2026-05-08T17:35:31.630Z"
+}
