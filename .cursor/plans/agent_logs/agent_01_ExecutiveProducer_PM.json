@@ -5,7 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
-    "2026-05-08 (Agent 01 R12): Added wk52_r12_menu_scroll_wheel — scroll wheel still zooms map when hovering over menus. R11 fixed alignment but scroll routing didn't work in Ursina mode. Focused single-bug round: Agent 08 must trace the FULL Ursina scroll input path and intercept before zoom. HIGH intelligence.",
+    "2026-05-08 (Agent 01 R13): Added wk52_r13_card_chat_enter_building — four items from Jaimie playtest: (A) chat closed by default on pin/select; (B) hero card close actions must not close building/hero menus; (C) remove blank space under card when chat closed; (D) Enter Building opens centered modal overlay showing interior heroes + pauses game.",
+    "2026-05-08 (Agent 01 R12): R12 finished+verified. Scroll wheel now correctly routes to menus in Ursina mode via _handle_ursina_input intercept. Jaimie confirmed working.",
     "2026-05-08 (Agent 01 R11): R11 finished+verified. Bugs A+B (building menu alignment/overlap) fixed. Bug C (scroll wheel) NOT fixed in Ursina mode — carried forward to R12.",
     "2026-05-07 (Agent 01 R10): R10 finished+verified via cloud orchestrator. Four bugs fixed by Agent 08: building card removed, menu width 224+scroll, watch X chrome, text clip+scroll.",
     "2026-05-06 (Agent 01 WK52 Kickoff): Sprint wk52_attachment_phase3_radar_alerts_memorial — Phase 3 deferred features: (1) Radar minimap with colored entity dots; (2) Pin alerts via EventBus — HUD toast + Recall button 3x red flash + low-health 25% threshold/30s cooldown; (3) Watch card above minimap — live map view, HP/XP/Level, expand/minimize toggle, dynamic left-panel height; (4) Memorial card — full-screen pause overlay with epitaph. Plan: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. R1 parallel: Agent 03 (event plumbing) + Agent 08 (UX/watch card/memorial). R2: Agent 10 perf consult + Agent 11 QA gates. First Cowork-originated orchestrator run.",
@@ -5634,6 +5635,118 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r12_menu_scroll_wheel. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r12_menu_scroll_wheel\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r13_card_chat_enter_building": {
+          "round_meta": {
+            "round_id": "wk52_r13_card_chat_enter_building",
+            "created_utc": "2026-05-08T15:00:00Z",
+            "wave": 13,
+            "depends_on": "wk52_r12_menu_scroll_wheel",
+            "note": "Four items from Jaimie playtest: chat default state, card/menu independence, card height, Enter Building modal."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R13: Agent 08 (HIGH) — four UX items: chat closed by default, card actions independent of menus, tighter card height, Enter Building centered modal overlay."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK52-R13-A",
+              "title": "Chat should be closed by default when selecting or pinning a hero",
+              "severity": "polish",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "expected": "When a hero is pinned or selected, the watch card appears with chat collapsed/closed. Player can open it manually if they want.",
+              "actual": "Chat band is open by default, taking up space in the card.",
+              "acceptance_test": ["Pin a hero — chat band starts collapsed. Click to expand it manually."]
+            },
+            {
+              "id": "WK52-R13-B",
+              "title": "Closing chat or card elements should NOT close the building/hero menu",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Open a building menu (click a building) or hero menu (click a hero in the list)",
+                "The hero card is visible in the bottom-left",
+                "Click the X to close chat on the hero card, or close/minimize the hero card itself"
+              ],
+              "expected": "Only the chat/card element closes. The building menu or hero menu in the left column stays open and unaffected.",
+              "actual": "Closing chat or the hero card also closes the building or hero menu that was open in the left column.",
+              "acceptance_test": [
+                "Open building menu + hero card visible. Close chat on card. Building menu stays open.",
+                "Open hero menu + hero card visible. Minimize card. Hero menu stays open.",
+                "Hero card actions are fully independent of left-column menu state."
+              ]
+            },
+            {
+              "id": "WK52-R13-C",
+              "title": "Remove blank space under hero card when chat is closed",
+              "severity": "polish",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "expected": "When chat is collapsed, the hero card shrinks so there is no gap between the last visible row (XP/Level) and the card bottom edge. Card height is dynamic based on whether chat is open or closed.",
+              "actual": "When chat is closed, there is a ~25-50px blank area below the XP/Level/Mana row before the card bottom edge. Wasted space.",
+              "acceptance_test": ["Close chat on hero card — card bottom edge is snug against the last content row, no blank gap."]
+            },
+            {
+              "id": "WK52-R13-D",
+              "title": "Enter Building should open a centered modal overlay showing interior heroes",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Click a building to open the building menu",
+                "Click 'Enter Building' button"
+              ],
+              "expected": "A centered, larger modal overlay appears in the middle of the screen showing the building interior view (heroes inside, their stats, etc.). The game pauses while the overlay is open. A close/back button dismisses the overlay and unpauses.",
+              "actual": "Nothing happens — the old right-panel interior view was removed and Enter Building was never rewired.",
+              "acceptance_test": [
+                "Click Enter Building — centered overlay appears showing heroes inside the building",
+                "Game is paused while overlay is open",
+                "Close button dismisses overlay and unpauses",
+                "Overlay is larger than the old right panel — roughly 400-500px wide, centered on screen",
+                "Similar pattern to the Memorial Card overlay (dark background, centered card, dismiss button)"
+              ],
+              "note": "Reuse the Memorial Card overlay pattern: dark semi-transparent fullscreen background, centered card, dismiss button at the bottom. Show: building name/type header, list of heroes inside with their HP/class/level, and a 'Close' or 'Back' button. Use the existing building.heroes_inside or similar data source."
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned",
+              "next_action": "Fix all four items: chat default closed, card/menu independence, card height, Enter Building modal. Use iterate-loop for visual items."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r13_card_chat_enter_building (single-agent round with mandatory iterate-loop for visual changes).\n\nCONTEXT: Jaimie playtested after R12 (scroll wheel works). Four items to fix.\n\n═══════════════════════════════════════════════\nITEM A — CHAT CLOSED BY DEFAULT\n═══════════════════════════════════════════════\n\nWhen a hero is pinned or selected and the watch card appears, the chat band should start COLLAPSED (closed). The player can open it manually by clicking the chat expand button.\n\nRequired changes:\n  1. Find where the chat band expanded state is initialized or set on pin/select. Set it to collapsed by default.\n  2. The chat band should only open when the user explicitly clicks to expand it.\n\nAcceptance: Pin a hero — chat band is collapsed. Card is more compact.\n\n═══════════════════════════════════════════════\nITEM B — HERO CARD ACTIONS MUST NOT CLOSE OTHER MENUS\n═══════════════════════════════════════════════\n\nCurrently, closing chat on the hero card, or minimizing/closing the hero card itself, also closes whatever building menu or hero menu is open in the left column. These should be completely independent.\n\nThe hero card (bottom-left watch card) and the left-column menus (building panel, hero panel) are separate UI elements. Actions on one should NEVER affect the other.\n\nRequired investigation:\n  1. Find where the hero card close/minimize action handler fires. It likely calls something that clears `selected_building` or `selected_hero` or triggers a deselection.\n  2. The card X button / minimize should ONLY affect the card state (`_watch_card_expanded`, `_chat_expanded`, etc.). It must NOT call any method that deselects buildings, heroes, or closes left-column panels.\n  3. Check `handle_click()` in hud.py — the click handler may be returning an action like `deselect` or `None` that the engine interprets as \"close everything\".\n\nAcceptance:\n  - Open building menu + hero card. Close chat on card. Building menu stays.\n  - Open hero menu + hero card. Minimize card. Hero menu stays.\n  - Close card entirely. Left-column menu stays.\n\n═══════════════════════════════════════════════\nITEM C — REMOVE BLANK SPACE WHEN CHAT IS CLOSED\n═══════════════════════════════════════════════\n\nWhen the chat band is collapsed, there is a ~25-50px blank area below the last content row (XP/Level/Mana) before the card's bottom edge. The card height should be DYNAMIC — shrink when chat is closed so it's snug.\n\nRequired changes:\n  1. The card height constants (WATCH_CARD_FULL_H, WATCH_CARD_STATS_H, etc.) should adjust based on whether chat is expanded or collapsed.\n  2. When chat is closed: card_height = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H (no chat band height).\n  3. When chat is open: card_height = above + WATCH_CARD_CHAT_H.\n  4. The blank padding at the bottom should be eliminated — no empty space between last content row and card border.\n\nAcceptance: With chat closed, the card bottom edge is flush against the last content. No visible gap.\n\n═══════════════════════════════════════════════\nITEM D — ENTER BUILDING CENTERED MODAL OVERLAY\n═══════════════════════════════════════════════\n\nThe 'Enter Building' button on the building menu currently does nothing (the old right-panel interior view was removed). Replace it with a centered modal overlay.\n\nDesign (follow the Memorial Card pattern):\n  1. Dark semi-transparent fullscreen background (same as MemorialCard.OVERLAY_ALPHA).\n  2. Centered card: ~480px wide, ~400px tall (adjust to content).\n  3. Header: building name + type (e.g. 'Warrior Guild — Interior').\n  4. Body: list of heroes currently inside the building. For each hero show: name, class, level, HP. If no heroes inside, show 'No heroes inside.' placeholder text.\n  5. Footer: 'Close' button that dismisses the overlay and unpauses.\n  6. Opening the overlay pauses the game. Closing unpauses.\n\nImplementation approach:\n  1. Create a new class `BuildingInteriorOverlay` in `game/ui/building_interior_overlay.py` (or add to an existing overlay file). Follow the MemorialCard pattern closely.\n  2. The overlay has `show(building)`, `hide()`, `render(surface)`, `handle_click(pos)` methods.\n  3. Wire it into HUD: `self.building_interior_overlay = BuildingInteriorOverlay()`\n  4. In the building menu click handler, when 'Enter Building' is clicked: `self.building_interior_overlay.show(selected_building)` and return an action that pauses the game.\n  5. In HUD.render(), if the overlay is visible, render it on top of everything (same z-order as memorial card).\n  6. In the click handler, check `building_interior_overlay.handle_click(pos)` — if Close is clicked, hide and return unpause action.\n  7. In engine.py handle_hud_action(), add handlers for the open/close overlay actions (pause/unpause).\n\nData source for heroes inside:\n  - Buildings have a `heroes_inside` list or similar attribute. Check `game/entities/buildings/base.py` for the attribute name.\n  - If the building has no such attribute, check `occupants`, `guests`, or search for how the old interior view got its data.\n\nAcceptance:\n  - Click Enter Building → centered overlay appears, game pauses.\n  - Overlay shows building name and heroes inside (or 'No heroes' placeholder).\n  - Click Close → overlay dismissed, game unpauses.\n\n═══════════════════════════════════════════════\nITERATE-LOOP (visual items A, C, D)\n═══════════════════════════════════════════════\n\nFor visual changes, use the standard iterate-loop:\n  1. Capture: python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_N --size 1920x1080 --ticks 480\n  2. Inspect PNGs. Verify card height (no gap), chat collapsed, overlay visible if scenario triggers it.\n  3. Fix if needed, re-capture into iter_N+1.\n\nFor Item D (overlay), add a screenshot scenario step that programmatically opens the overlay:\n  - After pinning a hero and capturing standard shots, select a building, call `engine.hud.building_interior_overlay.show(building)`, capture `wk52_building_interior.png`.\n\nGATES:\n  - python3 -m pytest tests/ -v\n  - python3 tools/qa_smoke.py --quick\n  - python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"]. Validate JSON. Run SDK receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R13 single-agent round. Agent 08 (HIGH intelligence) — four items including a new overlay feature (Enter Building modal) and non-trivial click-handler independence fix. HIGH because Item D is a new feature and Item B requires careful click-routing investigation.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08"],
+            "dependencies": [
+              {
+                "id": "wk52_r13_impl",
+                "agents": ["08"],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r13_card_chat_enter_building. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON. Run SDK receipt."
         }
       }
     }
