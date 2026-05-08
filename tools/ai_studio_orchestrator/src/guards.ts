@@ -30,7 +30,7 @@ const OWNERSHIP: Record<string, RegExp[]> = {
   "03": [/^game\/sim\//, /^game\/sim_engine\.py$/, /^game\/engine\.py$/, /^game\/game_commands\.py$/, /^game\/input_handler\.py$/, /^game\/graphics\/ursina_/, /^game\/graphics\/instanced_/, /^game\/graphics\/pygame_renderer\.py$/, /^game\/events\.py$/, /^game\/entities\/hero\.py$/, /^game\/entities\/buildings\/base\.py$/, /^game\/ui\/pin_slot\.py$/, /^game\/ui\/pin_alert_watcher\.py$/, /^assets\/models\//, /^docs\/refactor\//, /^tests\//],
   "05": [/^game\/entities\//, /^game\/systems\//, /^config\.py$/, /^tests\//],
   "06": [/^ai\//, /^tests\//],
-  "08": [/^game\/ui\//, /^game\/engine_facades\/render_coordinator\.py$/, /^game\/engine_facades\//, /^game\/engine\.py$/, /^game\/input_handler\.py$/, /^game\/world\.py$/, /^tools\/screenshot_scenarios\.py$/, /^tools\/capture_screenshots\.py$/, /^assets\/ui\//, /^tests\//],
+  "08": [/^game\/ui\//, /^game\/engine_facades\/render_coordinator\.py$/, /^game\/engine_facades\//, /^game\/engine\.py$/, /^game\/input_handler\.py$/, /^game\/graphics\/ursina_renderer\.py$/, /^game\/world\.py$/, /^tools\/screenshot_scenarios\.py$/, /^tools\/capture_screenshots\.py$/, /^assets\/ui\//, /^tests\//],
   "09": [/^game\/graphics\//, /^assets\/sprites\//, /^assets\/ui\//, /^docs\/art\//],
   "10": [/^tools\/perf_benchmark\.py$/, /^game\/ui\/hud\.py$/, /^docs\//],
   "11": [/^tools\/qa_smoke\.py$/, /^tools\/observe_sync\.py$/, /^tools\/determinism_guard\.py$/, /^tools\/capture_screenshots\.py$/, /^tests\//, /^QA_TEST_PLAN\.md$/, /^RELEASE_QA_CHECKLIST\.md$/],
@@ -178,7 +178,8 @@ function isReadOnlyReferencePath(filePath: string): boolean {
     filePath.startsWith(".cursor/plans/unit_instancing_master_plan") ||
     filePath.startsWith(".cursor/plans/ai_studio_automation_contract") ||
     filePath.startsWith(".cursor/human_provided/") ||
-    filePath === "main.py";
+    filePath === "main.py" ||
+    filePath === "game/entities/buildings/base.py";
 }
 
 function isSharedGateCommandPath(filePath: string): boolean {

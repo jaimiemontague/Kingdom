@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-08T19:14:47.562Z",
+  "updated_at": "2026-05-08T19:24:42.451Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r13_card_chat_enter_building",
+  "runtime": "cloud",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r13_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "3d50b768-2e49-4089-aec1-085d203a5bbc",
+          "started_at": "2026-05-08T19:14:47.571Z",
+          "sdk_agent_id": "bc-de3d7f50-fcef-4104-ba06-8deac00f07f6",
+          "run_id": "run-0588bc0f-cc0b-4dca-b9fc-7bb88e2846a7",
+          "duration_ms": 505737,
+          "result_excerpt": "## Status\n\nCompleted **WK52 R13** as Agent 08: watch card chat defaults, compact layout when chat is off, LMB routing fix for chat toggles, **Enter Building → `BuildingInteriorOverlay`** (pause/unpause, occupants list), screenshot scenario hook, tests, agent log, branch push, orchestrator receipt, and **PR #26**.\n\n### What changed (high level)\n\n- **`game/ui/hud.py`**: `_chat_visible` defaults **False**; `_just_pinned` forces collapsed chat; **`_desired_watch_card_expanded_h`** + **`WATCH_CARD_STATS_COMPACT_H`** so the card shell matches vitals when chat is closed; **`building_interior_overlay`** init/render/click routing; memorial-style fullscreen handling in **`virtual_pointer_in_hud_chrome`** (memorial visible + interior overlay).\n- **`game/input_handler.py`**: **`chat_band_close` / `chat_band_open`** return early so clicks do not hit **`building_panel`**; **`enter_building`** shows overlay + **`apply_hud_pin_action(\"open_building_interior\")`** (no deselect, no micro interior); paused LMB allowed for memorial **or** interior overlay; block world routing when interior overlay is visible.\n- **`game/engine.py`**: **`open_building_interior`** / **`close_building_interior_unpause`** in **`apply_hud_pin_action`** (pause + hide overlay).\n- **`game/engine_facades/render_coordinator.py`**: Skip generic “PAUSED” scrim when interior overlay is visible (same pattern as memorial).\n- **`game/ui/building_interior_overlay.py`**: New modal ( **`OVERLAY_ALPHA` = 180** like memorial), occupants from **`building.occupants`**, **Close** dismiss.\n- **`tools/screenshot_scenarios.py`**: **`wk52_building_interior.png`** via **`_apply_building_interior`**; memorial shot kept.\n- **`tests/`**: **`test_building_interior_overlay.py`**; **`test_wk52_watch_card`** adjusted for **`_just_pinned`** and **`WATCH_CARD_STATS_COMPACT_H`**.\n\n### Commands & exit codes\n\n| Command | Exit |\n|--------|------|\n| `npm --prefix tools/ai_studio_orchestrator install --silent` | 0 |\n| `python3 -m pytest tests/ -q` | 0 (**268 passed**) |\n| `python3 tools/qa_smoke.py --quick` | 0 |\n| `SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` | 0 |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json` | 0 |\n| `npx -y tsx tools/ai_studio_orchestrator/src/cli.ts complete ... --auto-push` | 0 |\n\n### Agent log\n\n- **Path**: `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json`\n- **Entry**: `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"]`\n\n### PR\n\n- **https://github.com/jaimiemontague/Kingdom/pull/26** — branch `cursor/wk52-r13-watch-card-overlay-07f6`.\n\n**Cross-domain**: Edits in **`game/engine.py`**, **`game/input_handler.py`**, **`game/engine_facades/render_coordinator.py`**, and **`tools/screenshot_scenarios.py`** are documented in the log for Agents **03** / **12** consult as needed.",
+          "finished_at": "2026-05-08T19:23:43.195Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\3d50b768-2e49-4089-aec1-085d203a5bbc.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a4a9fda0-ba25-4d5b-97d7-585883a5e77c.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}
