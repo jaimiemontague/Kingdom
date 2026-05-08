@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T15:02:54.350Z",
+  "updated_at": "2026-05-07T15:14:29.338Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r10_hero_card_priority",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r10_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "b1c83c6f-05ce-4564-afdf-aa237d87a294",
+          "started_at": "2026-05-07T15:02:54.359Z",
+          "sdk_agent_id": "bc-55e1a4ab-f34f-4f2a-beb3-2bb4f98e7bc7",
+          "run_id": "run-80543640-ddc1-4ed3-931d-e35c408ab707",
+          "duration_ms": 605760,
+          "result_excerpt": "## Status: done\n\nImplemented WK52 **R10** (Agent 08): building card removed from the watch slot, building panel width aligned to **224px** with scroll + clipping, watch card header uses the **dark X** style, hero left sheet **clipped + wheel-scroll**, and input routing sends wheel to menus before zoom.\n\n### Commands and exit codes (Linux `python3` from repo root)\n\n| Command | Exit |\n|--------|------|\n| `python3 -m pytest tests/ -v` | **0** (261 passed) |\n| `python3 tools/qa_smoke.py --quick` | **0** |\n| `python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_1 --size 1920x1080 --ticks 480` | **0** (5 PNGs; **no** `wk52_building_card.png`) |\n| `python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` | **0** |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json` | **0** |\n| `npx -y tsx tools/ai_studio_orchestrator/src/cli.ts` complete … | **0** |\n\n### Screenshot verdict (iter_1 observations → **PASS**)\n\n- **`wk52_watch_card_expanded.png`**: Pinned **Reed** card, **X** on purple header, map/stats/chat — **no** building card.  \n- **`wk52_watch_card_minimized.png`**: Slim header + **X**.  \n- **`wk52_pin_radar_minimap.png`**: Radar + watch card.  \n- **`wk52_left_menu_unpinned.png`**: Hero list inside brown panel; no spill in this frame.  \n- **`wk52_memorial_card.png`**: Memorial overlay OK.  \n- **`wk52_building_card.png`**: **Removed** from the scenario (no longer produced).\n\n### Agent log (orchestrator fields + `iteration_log`)\n\n**Path:** `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json`  \n**Entry:** `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r10_hero_card_priority\"]`\n\n### Git / PR\n\n- Commits on **`cursor/wk52-r10-hero-card-priority-7bc7`**: feature work + receipt JSON.  \n- **Draft PR** could not be opened from the tool: report was *no diff vs `main`* (orchestrator receipt path suggested a push toward **`main`** as well). If you still want an explicit PR, compare `main` to this branch on GitHub or reset `main` to the pre-merge tip and reopen.\n\n### Files touched (high level)\n\n- `game/ui/hud.py`, `game/ui/info_card.py`, `game/ui/hero_panel.py`, `game/ui/building_panel.py`, `game/input_handler.py`, `tools/screenshot_scenarios.py`, `tests/test_wk52_watch_card.py`, `tests/test_wk52_r10_menu_scroll.py`, agent log JSON.",
+          "finished_at": "2026-05-07T15:13:28.646Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\b1c83c6f-05ce-4564-afdf-aa237d87a294.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\d95a5291-7452-4da3-b369-4e5fe5722a72.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T02:57:21.249Z",
+  "updated_at": "2026-05-07T03:01:44.809Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r2_perf_qa",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r2_parallel",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "10",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "3636b661-1f21-4008-846b-2c2688a35272",
+          "started_at": "2026-05-07T02:57:21.260Z",
+          "sdk_agent_id": "bc-0d81aa7d-c7e7-456c-bf8f-3258fb6756d8",
+          "run_id": "run-027fc77f-7d1a-4ba4-971f-d40b05eb3b33",
+          "finished_at": "2026-05-07T03:00:29.334Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\3636b661-1f21-4008-846b-2c2688a35272.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\c4b8d1e6-1119-4b4e-99d5-be0331a66ea1.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "860b0f66-51e8-437b-ab57-6142272e25c2",
+          "started_at": "2026-05-07T02:57:21.260Z",
+          "sdk_agent_id": "bc-3769cf6c-e9c8-4fad-9674-61f84e152471",
+          "run_id": "run-93275d17-b2b4-443c-a804-71a30dcb59f4",
+          "result_excerpt": "## Status: **done** (Agent 11, `wk52_attachment_phase3_radar_alerts_memorial` / `wk52_r2_perf_qa`)\n\n### Onboarding\nRead **AGENTS.md**, **01-studio-onboarding**, **10-orchestrator-logging-contract**, **agent-11-qa-onboarding**, PM hub round **wk52_r2_perf_qa**, and skimmed prior log state. Ran `npm --prefix tools/ai_studio_orchestrator install --silent` (exit **0**).\n\n### WK52 tests\n`tests/test_wk52_event_plumbing.py`, `tests/test_wk52_watch_card.py`, and `tests/test_wk52_memorial_card.py` are all present — **no blocker**.\n\n### Gates (exact commands, exit codes)\n| Command | Exit |\n|---------|------|\n| `python3 -m pip install -r requirements.txt -q` | **255** would be failure — **0** |\n| `python3 -m pytest tests/ -v` | **0** (241 passed, 2 deprecation warnings) |\n| `python3 tools/qa_smoke.py --quick` | **0** (`[qa_smoke] DONE: PASS`) |\n| `python3 tools/validate_assets.py --report` | **0** (errors=0, warns=46 baseline) |\n| `python3 tools/determinism_guard.py` | **0** (`PASS: no violations found`) |\n\n*(Cloud VM has no `python` on PATH; used `python3`.)*\n\n### Screenshots\n`python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` → **0** (4 PNGs + `manifest.json`). **`docs/screenshots/` is gitignored**, so PNGs are local evidence only; the log tells PM to re-run that command to reproduce. Visually reviewed: watch card over minimap (expanded/minimized), radar dots, memorial overlay with epitaph.\n\n### Agent log\n**Path:** `.cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json`  \n**Entry:** `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r2_perf_qa\"]`  \n\nIncludes orchestrator fields (`sprint_id`, `round_id`, `status`, `what_i_changed`, `commands_run`, `evidence`, `blockers`, `follow_ups`) and **`pm_human_retest_request`** with the **16-item checklist verbatim**, as requested. JSON validated with `python3 -m json.tool` (**0**).\n\n### SDK receipt\nRan the given `npx -y tsx tools/ai_studio_orchestrator/src/cli.ts complete ...` with an updated `--summary`; it wrote `tools/ai_studio_orchestrator/runs/inbox/860b0f66-51e8-437b-ab57-6142272e25c2.completion.json` and performed **`--auto-push`**.\n\n### PR\n`ManagePullRequest` reported **no diff vs `main`** (remote `main` already contained this line of work after orchestrator pushes). No separate PR was opened.\n\n### Blockers\n**None.**\n\n**Follow-up:** Jaimie should run the **`pm_human_retest_request`** list interactively; from repo root (PowerShell-friendly): `python main.py --renderer pygame --provider mock` (or your usual entry), and work through items 1–16 in the log (toasts, Recall flashes, 30s cooldown, memorial pause, etc.).",
+          "finished_at": "2026-05-07T03:00:38.215Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\860b0f66-51e8-437b-ab57-6142272e25c2.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\8175e2d9-cd3c-45e5-8d4e-87fb713b82c8.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest_wk52_full_checklist",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

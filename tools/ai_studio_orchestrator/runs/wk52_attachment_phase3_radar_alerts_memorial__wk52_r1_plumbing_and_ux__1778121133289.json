@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T02:32:13.288Z",
+  "updated_at": "2026-05-07T02:32:13.293Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r1_plumbing_and_ux",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r1_impl",
+      "parallel": true,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "pending",
+          "model": "composer-2"
+        },
+        {
+          "agent_id": "08",
+          "status": "pending",
+          "model": "composer-2"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate",
+    "Agent 03 prompt references non-owned path: game/events.py",
+    "Agent 03 prompt references non-owned path: game/entities/hero.py",
+    "Agent 03 prompt references non-owned path: game/entities/buildings/base.py",
+    "Agent 03 prompt references non-owned path: game/ui/pin_slot.py",
+    "Agent 03 prompt references non-owned path: game/ui/pin_alert_watcher.py",
+    "Agent 08 prompt references non-owned path: game/engine_facades/render_coordinator.py",
+    "Agent 08 prompt references non-owned path: game/engine.py",
+    "Agent 08 prompt references non-owned path: tools/screenshot_scenarios.py",
+    "Agent 08 prompt references non-owned path: tools/capture_screenshots.py"
+  ]
+}

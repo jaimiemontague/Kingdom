@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T12:04:07.604Z",
+  "updated_at": "2026-05-07T12:11:13.236Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r6_chat_polish",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r6_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "56f46016-a433-43d3-9671-e3171e46a631",
+          "started_at": "2026-05-07T12:04:07.614Z",
+          "sdk_agent_id": "bc-2e8bb15f-ee1c-44a1-80d9-cf6acb1bf118",
+          "run_id": "run-3fd8e899-75ca-47ae-bce2-147c270814d3",
+          "duration_ms": 279794,
+          "result_excerpt": "## Status: done\n\n### What changed\n\n**D1 — Chat band (`chat_render_root_cause`): (a)**  \nIdle watch-card chat called `render_idle_dock`, which only fills a dark rectangle; full `ChatPanel.render()` only ran when `is_active()` and needs header/end chrome that does not fit the ~96px band.\n\n**Fix:** Added `ChatPanel.render_watch_band()` in ```229:367:game/ui/chat_panel.py``` — divider, message area (when the active conversation matches the pinned hero), input row with **`> Type to chat…`** when idle. `_render_watch_card_chrome` always uses `render_watch_band` for `_watch_card_chat_rect`. ```1422:1448:game/ui/hud.py``` — clicks on that rect start `start_conversation` for the pinned hero when chat is idle; otherwise delegate to `ChatPanel.handle_click`.\n\n**D2 — Auto-expand:** ```21:35:game/ui/pin_slot.py``` sets `_just_pinned` in `pin()`. ```1234:1279:game/ui/hud.py``` runs pin/memorial/alert setup **before** `_compute_layout()`, clears `_just_pinned`, and sets `_watch_card_expanded = True` so layout matches an expanded card on the first frame after pin.\n\n**Tests:** ```161:236:tests/test_wk52_watch_card.py``` — chat-band bright-pixel check + auto-expand / collapse / re-pin flow.\n\n### Commands (exit code **0**)\n\n| Command | Exit |\n|--------|------|\n| `npm --prefix tools/ai_studio_orchestrator install --silent` | 0 |\n| `pip install -r requirements.txt -q && python3 -m pytest tests/ -v` | 0 (248 passed) |\n| `python3 tools/qa_smoke.py --quick` | 0 |\n| `SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` | 0 |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json` | 0 |\n| SDK `complete` (with `--auto-push`) | 0 |\n\n### Screenshots\n\nAll five required PNGs under `docs/screenshots/wk52_phase3/` are **PASS** in `evidence.screenshot_verdict` (expanded + radar show visible chat placeholder; minimized hides chat; memorial overlay; unpinned layout).\n\n### Agent log\n\n`.cursor/plans/agent_logs/agent_08_UX_UI_Director.json` → `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r6_chat_polish\"]`\n\n### Git / PR\n\n- Branch: `cursor/wk52-chat-polish-f118`\n- PR: https://github.com/jaimiemontague/Kingdom/pull/22  \n- Orchestrator completion receipt recorded under `tools/ai_studio_orchestrator/runs/inbox/` (committed on the feature branch).",
+          "finished_at": "2026-05-07T12:09:21.798Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\56f46016-a433-43d3-9671-e3171e46a631.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\4890769c-df9a-4cef-b63f-17d626afa443.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

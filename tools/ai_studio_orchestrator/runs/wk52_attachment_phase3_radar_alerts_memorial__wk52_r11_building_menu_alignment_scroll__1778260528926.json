@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-08T17:15:28.924Z",
+  "updated_at": "2026-05-08T17:23:01.671Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r11_building_menu_alignment_scroll",
+  "runtime": "cloud",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r11_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "0d0adb2a-1425-41b5-a41c-03a05ea68aef",
+          "started_at": "2026-05-08T17:15:28.934Z",
+          "sdk_agent_id": "bc-d533c098-8496-4910-a1c6-04dc0af579b6",
+          "run_id": "run-719a06e0-ee9f-4368-9303-22468696a224",
+          "duration_ms": 335200,
+          "result_excerpt": "## Summary\n\nDelivered WK52 **R11** fixes for misaligned/overlapping **BuildingPanel**, gutter **x-offset**, and **wheel → zoom while menus are hovered** (pygame HUD path Ursina shares via `InputHandler`).\n\n### What changed\n- **`game/ui/building_panel.py`** — `render(..., *, left_rect=...)` clamps **x / y / width / viewport height** to the HUD **left column** (`_fallback_left_rect` when no HUD pass-through). Drops the old full-height/floating viewport and the hardcoded **`panel_x = 10`** layout.\n- **`game/engine_facades/render_coordinator.py`** — forwards **`hud._last_left_rect`** into **`BuildingPanel.render`** (minimal **Agent 03** touch; noted in Agent 08 log).\n- **`game/ui/hud.py`** — skips **`HeroPanel`** when **`game_state[\"selected_building\"]`** is set (**mutual-exclusive** column). **`handle_menu_scroll`** checks **building panel first**, returns **`True`** on an in-rect wheel even when **`_menu_max_scroll == 0`**, then same “consume chrome” behavior for **hero** left sheet.\n- **`tools/screenshot_scenarios.py`** — new **`wk52_building_menu.png`** in **`wk52_pin_alerts`** (pinned + warrior guild selection).\n- **`tests/test_wk52_r10_menu_scroll.py`** — **`test_hud_handle_menu_scroll_building_panel_consume_without_content_scroll`**.\n\n### Verification (actual runs; exit codes)\n| Command | Exit |\n|---------|-----|\n| `python3 tools/qa_smoke.py --quick` | **0** |\n| `python3 -m pytest tests/ -v` | **0** (**262 passed**) |\n| `python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_1 --size 1920x1080 --ticks 480` | **0** |\n| `python3 tools/capture_screenshots.py — … —out docs/screenshots/wk52_phase3` | **0** |\n\n### Screenshots / iteration\n- **`docs/screenshots/wk52_phase3/iter_1`** — iterate-loop capture; **iteration 1 verdict PASS** (`wk52_building_menu`: column-aligned Warriors Guild panel, pinned watch/minimap unaffected).\n- Canonical **`docs/screenshots/wk52_phase3`** updated (same 6-shot set including **`wk52_building_menu.png`**).\n\n### Agent log & git\n- **Log path:** `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json`  \n  **Round:** `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r11_building_menu_alignment_scroll\"]`  \n  (includes **`iteration_log`**, **`screenshot_verdict`**, **`follow_ups`**, JSON validated.)\n\n- **Branches / commits:** work on **`cursor/wk52-r11-building-menu-align-scroll-79b6`** (**`a825215`**, **`5c6e66d`**); orchestrator **`complete`** added **`f5c2e6f`** (receipt inbox). **`git push`** to origin for that branch completed.\n\nPR creation failed (**“no differences vs `main`**”**)** — orchestrator **`--auto-push`** reported **`main`**; remotely your **`main`** may already include equivalent commits. Retry a PR locally if **`main`** and the feature branch diverge on your checkout.\n\n### Human follow-up (Ursina)\n```powershell\npython main.py\n```\nOpen a guild/building sheet, hover inside it, and scroll — **map zoom should stay off** until the pointer leaves that panel (**`recommended_next_actions`** in the agent log echoes this).\n\n**Orchestrator:** `npm --prefix tools/ai_studio_orchestrator install --silent` and the required **`tsx … complete`** command were **run successfully** (receipt **`0d0adb2a-1425-41b5-a41c-03a05ea68aef`**).",
+          "finished_at": "2026-05-08T17:21:40.814Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\0d0adb2a-1425-41b5-a41c-03a05ea68aef.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\aedff92d-afbf-41da-9375-77f470c9d6b6.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T12:44:46.395Z",
+  "updated_at": "2026-05-07T12:54:33.648Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r8_card_unify",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r8_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "37250f30-f3eb-4604-a81f-72d7cc0b22e9",
+          "started_at": "2026-05-07T12:44:46.407Z",
+          "sdk_agent_id": "bc-ad73ff54-7f8c-4960-8e3b-da788376c687",
+          "run_id": "run-fcd62889-ef54-4d1a-b34b-13a56bf08e50",
+          "duration_ms": 512880,
+          "result_excerpt": "## Status\n\n**Done.** WK52 `wk52_r8_card_unify` is implemented: collapsible chat (X + **Chat** reopen), shared `InfoCard` chrome, building **InfoCard** in the same left-column slot as the watch card (building wins over pinned hero), new `wk52_building_card.png` scenario shot, tests, gates, screenshot verdicts, agent log, push, orchestrator receipt, and draft PR.\n\n### Commands (exit **0**)\n\n- `npm --prefix tools/ai_studio_orchestrator install --silent`\n- `pip install -r requirements.txt -q && python3 -m pytest tests/ -v` → **254 passed**\n- `python3 tools/qa_smoke.py --quick`\n- `SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` → **6 PNGs**\n- `python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json`\n- `npx -y tsx \"tools/ai_studio_orchestrator/src/cli.ts\" complete ...` → completion JSON written + auto-push\n\n### Key files\n\n- `game/ui/info_card.py` — `InfoCard.draw_shell`, `layout_body`, `FixedSection` / `FlexSection`\n- `game/ui/hud.py` — `effective_card_full_h`, `_render_card_slot`, building + hero paths, click routing\n- `game/ui/chat_panel.py` — watch-band **X** + `_watch_band_close_rect`\n- `tools screenshot_scenarios.py` — `wk52_building_card.png`\n- `tests/test_wk52_watch_card.py` — new regression tests\n\n### Agent log\n\n- Path: `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json`\n- Entry: `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r8_card_unify\"]` (includes `screenshot_verdict` with **`wk52_building_card`** and `info_card_design`)\n\n### PR\n\n- https://github.com/jaimiemontague/Kingdom/pull/24 (branch `cursor/wk52-r8-card-unify-c687`)\n\n**Screenshot verdict:** all six shots **PASS** (expanded shows X on chat band, no Chat button while open; building shot shows Castle card, no chat, Heroes column present—verified via panel background pixel match to R7 at ~y=120).",
+          "finished_at": "2026-05-07T12:53:39.893Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\37250f30-f3eb-4604-a81f-72d7cc0b22e9.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f11849dd-e838-4b53-8f07-a652f7737668.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

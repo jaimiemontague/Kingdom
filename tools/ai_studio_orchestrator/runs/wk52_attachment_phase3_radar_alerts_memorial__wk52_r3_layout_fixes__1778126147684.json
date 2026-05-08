@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T03:55:47.682Z",
+  "updated_at": "2026-05-07T04:03:44.342Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r3_layout_fixes",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r3_impl",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "59f37eb1-caf7-4a0e-a80b-2c5af1e82490",
+          "started_at": "2026-05-07T03:55:47.692Z",
+          "sdk_agent_id": "bc-38d75ded-a24b-44e6-accc-700d4e35a04e",
+          "run_id": "run-74092d3c-ff06-4bd8-a9e1-b4837c6a9467",
+          "duration_ms": 332164,
+          "result_excerpt": "## Status: **done**\n\nOnboarding (AGENTS.md, studio + orchestrator rules, Agent 08 role, PM hub `wk52_r3_layout_fixes`, prior log) was followed. `npm --prefix tools/ai_studio_orchestrator install --silent` completed (exit 0).\n\n### What changed\n- **`game/ui/hud.py`**: Minimap uses `pygame.Rect(0, h - minimap_size, minimap_size, minimap_size)`. `left_h` always uses `cap_y = minimap.y`, and when pinned `cap_y = min(cap_y, card_top)`. In `render()`, **`_panel_minimap` + `_render_radar_minimap` run before `_render_watch_card_chrome`** so the watch card isn’t covered.\n- **`tools/screenshot_scenarios.py`**: `wk52_pin_alerts` gains `_prep_base` / `_prep` / `_apply_left_unpinned` and shot **`wk52_left_menu_unpinned.png`**.\n- **`tests/test_wk52_watch_card.py`**: Layout test updated for pinned-size minimap Y and unpinned left-column cap; imports `WATCH_MINIMAP_SIZE`.\n- **`game/engine_facades/render_coordinator.py`** (minimal, per spec): Hero watch minimap blit is **clipped** to the destination rect (flagged in your log for Agent 03).\n\n### Commands (exit codes)\n| Command | Exit |\n|--------|------|\n| `npm --prefix tools/ai_studio_orchestrator install --silent` | 0 |\n| `python3 -m pytest tests/test_wk52_watch_card.py tests/test_wk52_memorial_card.py tests/test_wk52_event_plumbing.py -v` | 0 (17 passed) |\n| `python3 tools/qa_smoke.py --quick` | 0 |\n| `python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480` | 0 (5 PNGs) |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json` | 0 |\n\n### Screenshot verdicts\nAll **PASS** (`verdict` + `note` for each shot) recorded under  \n`evidence.screenshot_verdict` in:\n\n**Log path:** `.cursor/plans/agent_logs/agent_08_UX_UI_Director.json`  \n**Entry:** `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r3_layout_fixes\"]`\n\n### Orchestrator / git\nSDK **complete** was run successfully (receipt written under `tools/ai_studio_orchestrator/runs/inbox/`). **`docs/screenshots/` is gitignored** locally, so captures stay on disk only; verdicts live in the agent log.\n\nA draft PR for `cursor/wk52-hud-layout-r3-a04e` was not created because **remote `main` already matches that branch** (no diff vs `main` after orchestrator `--auto-push`).\n\n---\n\n**Concise takeaway:** WK52 layout bugs A–C are addressed: minimap/card flush to the left and bottom, Heroes column clears the minimap when unpinned, and the watch card draws after radar/minimap chrome so it stays visible. Hero minimap composite is clipped to its rect.",
+          "finished_at": "2026-05-07T04:01:43.227Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\59f37eb1-caf7-4a0e-a80b-2c5af1e82490.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\078fb533-bddc-4c2f-828b-9eecf6719102.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

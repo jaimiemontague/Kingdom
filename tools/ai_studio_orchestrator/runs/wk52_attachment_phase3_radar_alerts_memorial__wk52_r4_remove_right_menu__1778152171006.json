@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T11:09:31.004Z",
+  "updated_at": "2026-05-07T11:09:32.403Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r4_remove_right_menu",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r4_impl",
+      "parallel": false,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "error",
+          "model": "composer-2",
+          "completion_token": "ed707fc6-c2f7-41e4-b4ab-1fb06910a73d",
+          "started_at": "2026-05-07T11:09:31.014Z",
+          "error": "[validation_error] Failed to determine repository default branch",
+          "finished_at": "2026-05-07T11:09:32.400Z"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate",
+    "Stopped after wk52_r4_impl: Agent 08 status=error"
+  ]
+}

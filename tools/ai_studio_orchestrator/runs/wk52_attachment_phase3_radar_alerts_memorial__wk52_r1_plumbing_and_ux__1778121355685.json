@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-07T02:35:55.683Z",
+  "updated_at": "2026-05-07T02:49:30.139Z",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r1_plumbing_and_ux",
+  "runtime": "cloud",
+  "mode": "assist",
+  "required_model": "composer-2",
+  "pm_hub_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "wk52_r1_impl",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "60ac9616-3a90-4cd2-8442-84553a956d72",
+          "started_at": "2026-05-07T02:35:55.693Z",
+          "sdk_agent_id": "bc-c956fa24-2f36-42c9-8ebe-aed0b970bebe",
+          "run_id": "run-be27b8df-ba05-422b-8e2d-9d2d6480da14",
+          "duration_ms": 240808,
+          "result_excerpt": "## Status (Agent 03, WK52 R1)\n\nOnboarding was done first (`AGENTS.md`, studio + orchestrator rules, Agent 03 tech onboarding, PM hub `wk52_attachment_phase3_radar_alerts_memorial` / `wk52_r1_plumbing_and_ux`, sprint plan). Implementation matches your numbered deliverables.\n\n### What shipped\n\n- **`game/events.py`:** `HERO_LEVEL_UP = \"hero_level_up\"` immediately after `BOUNTY_CLAIMED`.\n- **`game/entities/hero.py`:** `_event_bus`, `set_event_bus()`, and guarded `HERO_LEVEL_UP` emit at the end of `level_up()` after stats update.\n- **`game/engine.py`:** After `self.heroes.append(hero)` in **`try_hire_hero`** (this repo does not have a `spawn_hero`; that path is the hire path you referenced): `hero.set_event_bus(self.event_bus)` when available.\n- **`game/sim_engine.py`:** Both `BOUNTY_CLAIMED` batch payloads include `\"hero_id\": str(getattr(hero, \"hero_id\", \"\") or \"\")` (lair path uses `hero_obj`).\n- **`game/entities/buildings/base.py`:** `HERO_ENTERED_BUILDING` adds `hero_id`.\n- **`game/ui/pin_slot.py`:** `low_health_alerted_ms` and `pinned_name`.\n- **`game/ui/pin_alert_watcher.py`:** New module with `subscribe`, `check_low_health` (25% threshold, 30s cooldown **with an extra guard so the first alert works when `low_health_alerted_ms == 0`**), `_matches`, `_fire` → toast via `hud_add_message_fn` and `recall_flash_needed = True`.\n- **`tests/test_wk52_event_plumbing.py`:** Covers emit payload, building `hero_id`, watcher matching, cooldown, `PinSlot` fields.\n\n### Commands (exit codes)\n\n| Command | Exit |\n|---------|------|\n| `npm --prefix tools/ai_studio_orchestrator install --silent` | 0 |\n| `python3 -m pytest tests/test_wk52_event_plumbing.py -v` | 0 |\n| `python3 tools/qa_smoke.py --quick` | 0 (`DONE: PASS`) |\n| `python3 tools/determinism_guard.py` | 0 |\n| `python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` | 0 |\n| SDK `complete` (receipt + auto-push) | 0 |\n\n### Agent log\n\n- **Path:** `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json`\n- **Entry:** `sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r1_plumbing_and_ux\"]`\n\n### Git / PR\n\n- **Branch:** `cursor/wk52-event-plumbing-bebe` (includes orchestrator completion receipt commit).\n- **Draft PR:** [#17](https://github.com/jaimiemontague/Kingdom/pull/17)\n\n### Follow-up for Agent 08\n\n`PinAlertWatcher` is **not** wired in `HUD` yet (your scope was plumbing only): instantiate with `hud.add_message`, call `subscribe(self.event_bus)`, and each frame clear or use `recall_flash_needed` to drive the Recall flash (your plan used `trigger_recall_flash`; this implementation uses the flag you specified so the HUD owns timing).\n\n**Blockers:** none.",
+          "finished_at": "2026-05-07T02:40:50.705Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\60ac9616-3a90-4cd2-8442-84553a956d72.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\c3eb7ba3-e440-41d0-98d9-bda281192f97.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2",
+          "completion_token": "2fb6f141-defd-457d-8e52-623894770f3f",
+          "started_at": "2026-05-07T02:35:55.694Z",
+          "sdk_agent_id": "bc-f49d8133-3b45-49a0-bc77-e9cea2bbdbea",
+          "run_id": "run-911738fe-b632-47a4-9efe-a9319bfd1efe",
+          "finished_at": "2026-05-07T02:48:13.219Z",
+          "completion_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\2fb6f141-defd-457d-8e52-623894770f3f.completion.json",
+          "verification_receipt_path": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\38d65e0e-fc3b-4d6c-8de6-e109ba1b126b.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "Agent 08 prompt mentions a human gate"
+  ]
+}

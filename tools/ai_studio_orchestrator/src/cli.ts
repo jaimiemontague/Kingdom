@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execSync } from "node:child_process";
-import { buildWorkerPrompt, buildPmSynthesisPrompt, buildVerifierPrompt } from "./prompt.js";
+import { buildWorkerPrompt, buildPmSynthesisPrompt, buildVerifierPrompt, buildRoundReviewInstructions } from "./prompt.js";
 import {
   buildWaves,
   formatWavePlan,
@@ -198,6 +198,25 @@ async function runCommand(options: CliOptions): Promise<void> {
   // Cloud post-flight: pull agent commits so the local workspace reflects what they pushed.
   if (options.runtime === "cloud") {
     cloudPostflightPull(options.cwd);
+  }
+
+  // Round Review: when all waves finished cleanly, print the mandatory Agent 01 review
+  // instructions. Agent 01 reads these from the terminal and acts on them in-session --
+  // no separate synthesize command needed. Silences on dry runs, human-gate stops,
+  // and wave failures (those produce non-"finished" wave statuses).
+  const allWavesFinished =
+    !options.dryRun &&
+    ledger.waves.length > 0 &&
+    ledger.waves.every((w) => w.status === "finished");
+  if (allWavesFinished) {
+    console.log(
+      buildRoundReviewInstructions(
+        options.sprint ?? ledger.sprint_id,
+        options.round ?? ledger.round_id,
+        options.runtime,
+        options.cloudRepoUrl,
+      ),
+    );
   }
 }
 
