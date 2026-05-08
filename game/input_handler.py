@@ -356,10 +356,13 @@ class InputHandler:
                     pass
             return  # Consume all input when menu is open
 
-        # While paused (without menu), allow only memorial overlay LMB; block everything else.
+        # While paused (without menu), allow only modal overlays (memorial / building interior) LMB.
         if c.paused and not c.pause_menu.visible:
             mc = getattr(c.hud, "memorial_card", None)
-            if mc is None or not getattr(mc, "visible", False) or event.button != 1:
+            bio = getattr(c.hud, "building_interior_overlay", None)
+            mem_vis = mc is not None and getattr(mc, "visible", False)
+            bio_vis = bio is not None and getattr(bio, "visible", False)
+            if event.button != 1 or not (mem_vis or bio_vis):
                 return
 
         _cp = getattr(c.hud, "_chat_panel", None)
@@ -395,11 +398,19 @@ class InputHandler:
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action(action)
                         return
-                    if action in ("open_memorial", "close_memorial_unpause", "expand_watch_card"):
+                    if action in (
+                        "open_memorial",
+                        "close_memorial_unpause",
+                        "expand_watch_card",
+                        "open_building_interior",
+                        "close_building_interior_unpause",
+                    ):
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action(action)
                         return
                     if action == "watch_card_chevron_toggle":
+                        return
+                    if action in ("chat_band_close", "chat_band_open"):
                         return
                     if isinstance(action, dict) and action.get("type") == "select_hero_at_world":
                         c.try_select_hero_at_world(float(action.get("wx", 0.0)), float(action.get("wy", 0.0)))
@@ -450,7 +461,10 @@ class InputHandler:
 
             try:
                 mc = getattr(c.hud, "memorial_card", None)
+                bio = getattr(c.hud, "building_interior_overlay", None)
                 if mc is not None and getattr(mc, "visible", False):
+                    return
+                if bio is not None and getattr(bio, "visible", False):
                     return
             except Exception:
                 pass
@@ -549,16 +563,12 @@ class InputHandler:
                         c.selected_building = None
                     return
                 elif isinstance(result, dict) and result.get("type") == "enter_building":
-                    # wk13 Living Interiors: transition right panel to interior view
                     building = result.get("building")
-                    if building and getattr(c, "micro_view", None) is not None:
-                        c.micro_view.enter_interior(building)
-                        if getattr(c, "audio_system", None) is not None:
-                            c.audio_system.start_interior_ambient(
-                                getattr(building, "building_type", "") or ""
-                            )
-                        c.building_panel.deselect()
-                        c.selected_building = None
+                    bio = getattr(c.hud, "building_interior_overlay", None)
+                    if bio is not None and building is not None:
+                        bio.show(building)
+                        if hasattr(c, "apply_hud_pin_action"):
+                            c.apply_hud_pin_action("open_building_interior")
                     return
                 elif result:  # Other panel clicks (True)
                     return

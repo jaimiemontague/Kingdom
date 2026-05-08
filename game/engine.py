@@ -1401,6 +1401,17 @@ class GameEngine:
                 hud._pending_memorial = None
             setattr(self, "_ursina_hud_force_upload", True)
             return
+        if action == "open_building_interior":
+            self.paused = True
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
+        if action == "close_building_interior_unpause":
+            self.paused = False
+            bio = getattr(hud, "building_interior_overlay", None)
+            if bio is not None:
+                bio.hide()
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
         if action == "expand_watch_card":
             if hasattr(hud, "_watch_card_expanded"):
                 hud._watch_card_expanded = True

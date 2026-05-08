@@ -1208,6 +1208,13 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
         eng.selected_peasant = None
         eng.building_panel.select_building(wg, eng.heroes)
 
+    def _apply_building_interior(eng: Any) -> None:
+        _apply_building_menu(eng)
+        wg = eng.selected_building
+        if wg is not None and hasattr(eng.hud, "building_interior_overlay"):
+            eng.hud.building_interior_overlay.show(wg)
+            eng.paused = True
+
     return [
         Shot(
             filename="wk52_watch_card_expanded.png",
@@ -1257,6 +1264,16 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
             zoom=1.0,
             ticks=0,
             apply=_apply_building_menu,
+            meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
+        ),
+        Shot(
+            filename="wk52_building_interior.png",
+            label="WK52 building interior overlay",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.0,
+            ticks=0,
+            apply=_apply_building_interior,
             meta={"scenario": "wk52_pin_alerts", "seed": int(seed)},
         ),
         Shot(

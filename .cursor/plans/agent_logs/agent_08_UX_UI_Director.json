@@ -1239,6 +1239,60 @@
             "python3 main.py --provider mock"
           ]
         },
+        "wk52_r13_card_chat_enter_building": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r13_card_chat_enter_building",
+          "status": "done",
+          "what_i_changed": [
+            "Item A: Default `_chat_visible` False; on `_just_pinned` force collapsed chat (`render` clears `_chat_visible`); expanded watch card still auto-opens on pin.",
+            "Item B: `chat_band_close` / `chat_band_open` returned from HUD but did not consume LMB — input fell through to `building_panel.handle_click` and cleared menus; fixed early `return` in `game/input_handler.py`. Memorial-card-hit ordering unchanged.",
+            "Item C: `_desired_watch_card_expanded_h` + `_watch_card_body_split` use compact stats band (`WATCH_CARD_STATS_COMPACT_H`) when chat collapsed so shell height matches painted vitals (no dead slack); dynamic split skips chat slack when `_chat_visible` False.",
+            "Item D: `game/ui/building_interior_overlay.py` — Memorial-style fullscreen scrim + centered card, occupants from `building.occupants`, Close unpause; `HUD.building_interior_overlay`; Enter Building keeps selection/panel (`input_handler` no longer deselects or opens micro interior); pause via `apply_hud_pin_action(open_building_interior|close_building_interior_unpause)` in `game/engine.py`; paused LMB gate + generic pause tint skip in `render_coordinator`; HUD render/hit-test/virtual chrome + memorialfullscreen routing.",
+            "tools/screenshot_scenarios.py: `wk52_pin_alerts` adds `wk52_building_interior.png` (`_apply_building_interior`).",
+            "tests: `test_building_interior_overlay.py`; `test_wk52_watch_card` updates (`_just_pinned` harness, `WATCH_CARD_STATS_COMPACT_H`, chat-visible tests)."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/ -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": "python3 tools/qa_smoke.py --quick exit_code=0 PASS",
+            "pytest": "python3 -m pytest tests/ -q exit_code=0 PASS",
+            "capture_wk52": "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480 exit_code=0; see docs/screenshots/wk52_phase3/wk52_building_interior.png (overlay + warrior guild interior heading)",
+            "cross_domain": "game/engine.py, game/input_handler.py, game/engine_facades/render_coordinator.py (Agents 03 consult); tools/screenshot_scenarios.py (Agent 12 owns tools — sprint-required scenario hook)."
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "SDL_VIDEODRIVER=dummy python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ]
+        },
         "wk52_r11_building_menu_alignment_scroll": {
           "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
           "round_id": "wk52_r11_building_menu_alignment_scroll",

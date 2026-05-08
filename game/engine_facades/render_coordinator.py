@@ -127,7 +127,11 @@ class EngineRenderCoordinator:
 
             if e.paused and not e.pause_menu.visible:
                 mc = getattr(e.hud, "memorial_card", None)
-                if not (mc is not None and getattr(mc, "visible", False)):
+                bio = getattr(e.hud, "building_interior_overlay", None)
+                modal = (mc is not None and getattr(mc, "visible", False)) or (
+                    bio is not None and getattr(bio, "visible", False)
+                )
+                if not modal:
                     e.screen.blit(e._pause_overlay, (0, 0))
                     if e._pause_font is None:
                         e._pause_font = pygame.font.Font(None, 72)

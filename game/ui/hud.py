@@ -26,11 +26,13 @@ MEMORIAL_BTN_W = 90
 WATCH_CARD_HEADER_H = 18
 WATCH_CARD_MAP_H = 160
 WATCH_CARD_STATS_H = 78
+# Snug vitals block when chat band is collapsed (no dead padding under stats rows).
+WATCH_CARD_STATS_COMPACT_H = 58
 WATCH_CARD_CHAT_H = 150
 WATCH_CARD_FULL_H_WITH_CHAT = (
     WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
 )
-WATCH_CARD_FULL_H_NO_CHAT = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
+WATCH_CARD_FULL_H_NO_CHAT = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_COMPACT_H
 WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT
 LEFT_COL_W = 224
 HERO_LEFT_MIN_H = 80
@@ -272,11 +274,15 @@ class HUD:
         self._pending_memorial = None
         self._memorial_shown_for: str = ""
 
+        from game.ui.building_interior_overlay import BuildingInteriorOverlay
+
+        self.building_interior_overlay = BuildingInteriorOverlay()
+
         from game.ui.pin_alert_watcher import PinAlertWatcher
 
         self._alert_watcher = PinAlertWatcher(self._pin_slot, self)
 
-        self._chat_visible: bool = True
+        self._chat_visible: bool = False
         self._chat_close_rect: pygame.Rect | None = None
         self._chat_open_rect: pygame.Rect | None = None
         self._info_card = InfoCard()
@@ -286,13 +292,24 @@ class HUD:
     def effective_card_full_h(self) -> int:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
 
+    def _desired_watch_card_expanded_h(self) -> int:
+        """Natural expanded height: no slack band under stats when chat is collapsed (WK52 R13)."""
+        stats_blk = WATCH_CARD_STATS_H if self._chat_visible else WATCH_CARD_STATS_COMPACT_H
+        h = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + stats_blk
+        if self._chat_visible:
+            h += WATCH_CARD_CHAT_H
+        return h
+
     def _effective_watch_card_h(self, screen_h: int) -> int:
         """Pinned watch-card height: card.bottom == minimap.top; caps height so hero column keeps min readable rows."""
         if self._pin_slot.hero_id is None:
             return 0
         top_h = int(getattr(self.theme, "top_bar_h", 48))
         minimap_y = screen_h - int(RADAR_MINIMAP_H)
-        want = self.effective_card_full_h() if self._watch_card_expanded else WATCH_CARD_HEADER_H
+        if self._watch_card_expanded:
+            want = self._desired_watch_card_expanded_h()
+        else:
+            want = WATCH_CARD_HEADER_H
         min_top = top_h + HERO_LEFT_MIN_H
         max_ch = minimap_y - min_top
         return min(want, max(WATCH_CARD_HEADER_H, max_ch))
@@ -303,9 +320,13 @@ class HUD:
         inner = ch - WATCH_CARD_HEADER_H
         map_h = min(WATCH_CARD_MAP_H, inner)
         inner -= map_h
-        stats_h = min(WATCH_CARD_STATS_H, inner)
+        stats_cap = WATCH_CARD_STATS_H if self._chat_visible else WATCH_CARD_STATS_COMPACT_H
+        stats_h = min(stats_cap, inner)
         inner -= stats_h
-        chat_h = max(0, inner)
+        if self._chat_visible:
+            chat_h = max(0, inner)
+        else:
+            chat_h = 0
         return (map_h, stats_h, chat_h)
 
     def _watch_chat_band_rect(
@@ -447,10 +468,16 @@ class HUD:
         if pin.hero_id is not None:
             hero_alive = pin.hero_id in profiles
             pin.update_liveness(hero_alive=hero_alive, now_ms=int(sim_now_ms()))
+        mem_ov = getattr(self, "memorial_card", None)
+        if mem_ov is not None and getattr(mem_ov, "visible", False):
+            return True
         regions = [top, bottom, minimap, command, speed_rect]
         if pin.hero_id is not None:
             regions.append(recall)
             regions.append(memorial)
+        bio = getattr(self, "building_interior_overlay", None)
+        if bio is not None and getattr(bio, "visible", False):
+            return True
         if pin.hero_id is not None:
             ch = self._effective_watch_card_h(h)
             if ch > 0:
@@ -1394,6 +1421,7 @@ class HUD:
 
         if getattr(pin, "_just_pinned", False):
             self._watch_card_expanded = True
+            self._chat_visible = False
             pin._just_pinned = False
 
         top, bottom, left, right, minimap, cmd, speed_rect, recall, memorial = self._compute_layout(
@@ -1495,6 +1523,8 @@ class HUD:
 
         if self.memorial_card.visible:
             self.memorial_card.render(surface)
+        if getattr(self, "building_interior_overlay", None) is not None and self.building_interior_overlay.visible:
+            self.building_interior_overlay.render(surface)
 
     def is_mouse_over_menu(
         self,
@@ -1592,6 +1622,12 @@ class HUD:
         if self.memorial_card.visible:
             if self.memorial_card.handle_click((x, y)):
                 return "close_memorial_unpause"
+            return None
+
+        bio = getattr(self, "building_interior_overlay", None)
+        if bio is not None and getattr(bio, "visible", False):
+            if bio.handle_click((x, y)):
+                return "close_building_interior_unpause"
             return None
 
         if (

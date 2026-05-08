@@ -12,6 +12,7 @@ from game.ui.hud import (
     WATCH_CARD_FULL_H_WITH_CHAT,
     WATCH_CARD_HEADER_H,
     WATCH_CARD_MAP_H,
+    WATCH_CARD_STATS_COMPACT_H,
     WATCH_CARD_STATS_H,
     world_to_radar,
 )
@@ -28,7 +29,7 @@ def test_watch_card_full_h_includes_chat():
         WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H + WATCH_CARD_CHAT_H
     )
     assert WATCH_CARD_FULL_H == WATCH_CARD_FULL_H_WITH_CHAT
-    assert WATCH_CARD_FULL_H_NO_CHAT == WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_H
+    assert WATCH_CARD_FULL_H_NO_CHAT == WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_STATS_COMPACT_H
     assert WATCH_CARD_CHAT_H >= 130
 
 
@@ -207,6 +208,9 @@ def test_watch_card_chat_band_draws_non_background_pixels():
     hud = HUD(1920, 1080)
     hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_chat_px", name="ChatPx")
     hud._pin_slot.pin(hero.hero_id, 0)
+    hud._pin_slot._just_pinned = False
+    hud._watch_card_expanded = True
+    hud._chat_visible = True
     gs = {
         "selected_hero": hero,
         "hero_profiles_by_id": {"wk52_chat_px": object()},
@@ -307,6 +311,7 @@ def test_chat_close_button_shrinks_card():
     hero = Hero(100.0, 100.0, hero_class="warrior", hero_id="wk52_xclose", name="XClose")
     hud._pin_slot.pin(hero.hero_id, 0)
     hud._pin_slot.pinned_name = hero.name
+    hud._pin_slot._just_pinned = False
     hud._watch_card_expanded = True
     hud._chat_visible = True
     gs = {
