@@ -5,7 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
-    "2026-05-08 (Agent 01 R11): Added wk52_r11_building_menu_alignment_scroll — three playtest bugs from screenshot 9: (A) building menu overlaps/hovers over hero card and right panels instead of being inline; (B) building menu x-offset ~10-20px too far right; (C) scroll wheel inside menus still zooms map instead of scrolling. Single agent: 08 (HIGH). Orchestrator cloud run.",
+    "2026-05-08 (Agent 01 R12): Added wk52_r12_menu_scroll_wheel — scroll wheel still zooms map when hovering over menus. R11 fixed alignment but scroll routing didn't work in Ursina mode. Focused single-bug round: Agent 08 must trace the FULL Ursina scroll input path and intercept before zoom. HIGH intelligence.",
+    "2026-05-08 (Agent 01 R11): R11 finished+verified. Bugs A+B (building menu alignment/overlap) fixed. Bug C (scroll wheel) NOT fixed in Ursina mode — carried forward to R12.",
     "2026-05-07 (Agent 01 R10): R10 finished+verified via cloud orchestrator. Four bugs fixed by Agent 08: building card removed, menu width 224+scroll, watch X chrome, text clip+scroll.",
     "2026-05-06 (Agent 01 WK52 Kickoff): Sprint wk52_attachment_phase3_radar_alerts_memorial — Phase 3 deferred features: (1) Radar minimap with colored entity dots; (2) Pin alerts via EventBus — HUD toast + Recall button 3x red flash + low-health 25% threshold/30s cooldown; (3) Watch card above minimap — live map view, HP/XP/Level, expand/minimize toggle, dynamic left-panel height; (4) Memorial card — full-screen pause overlay with epitaph. Plan: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. R1 parallel: Agent 03 (event plumbing) + Agent 08 (UX/watch card/memorial). R2: Agent 10 perf consult + Agent 11 QA gates. First Cowork-originated orchestrator run.",
     "2026-05-06 (Agent 01 R7): Added wk51_r7_recall_right_panel_pin_emoji — two targeted fixes: (1) Recall button must open right hero panel (enter_hero_focus) — fix in game/engine.py owned by Agent 03; (2) Pin button icon changed from circle+P to 📌 emoji — fix in game/ui/hud.py owned by Agent 08. Waves: 03+08 parallel, then 11 gates. Orchestrated via cloud agents.",
@@ -5557,6 +5558,82 @@
             "run_r11_cloud": "npm run studio --prefix tools/ai_studio_orchestrator -- run --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r11_building_menu_alignment_scroll --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --auto-push --mode auto_until_human_gate"
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r11_building_menu_alignment_scroll. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r11_building_menu_alignment_scroll\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. THIS ROUND ENFORCES AN ITERATE-LOOP — receipt must include iteration_log array. Update log per the prompt. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r12_menu_scroll_wheel": {
+          "round_meta": {
+            "round_id": "wk52_r12_menu_scroll_wheel",
+            "created_utc": "2026-05-08T14:00:00Z",
+            "wave": 12,
+            "depends_on": "wk52_r11_building_menu_alignment_scroll",
+            "note": "Scroll wheel still zooms the map when cursor is over a menu panel. R10 and R11 both attempted to fix this but the fix does not work in Ursina mode. This round is dedicated entirely to this single bug with detailed investigation requirements."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R12: Single-agent (08) focused round — scroll wheel must scroll menu content when mouse hovers over any open menu panel, NOT zoom the map. Two prior rounds failed to fix this in Ursina mode."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK52-R12-BUG-A",
+              "title": "Scroll wheel inside menus still zooms map — Ursina input path bypasses menu scroll",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Launch: python main.py --provider mock",
+                "Click a building or hero to open a menu panel in the left column",
+                "Hover mouse cursor inside the menu panel area",
+                "Use the scroll wheel"
+              ],
+              "expected": "Menu content scrolls up/down. Map does NOT zoom.",
+              "actual": "Map zooms in/out. Menu does not scroll. The scroll wheel event never reaches the menu.",
+              "acceptance_test": [
+                "Hover over open menu panel, scroll wheel — menu content scrolls, map does NOT zoom",
+                "Move cursor off menu panel, scroll wheel — map zooms normally",
+                "Must work when launched with: python main.py --provider mock (Ursina mode)"
+              ],
+              "status": "assigned",
+              "history": "R10 added handle_menu_scroll() to input_handler.py. R11 attempted further fixes. Neither works in Ursina mode — the Ursina engine processes scroll events independently of the pygame event queue."
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned",
+              "next_action": "Fix scroll wheel routing so menus capture scroll when mouse hovers over them, suppressing map zoom. Must work in Ursina mode."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r12_menu_scroll_wheel (single-bug round — SCROLL WHEEL ROUTING).\n\n## THE PROBLEM\n\nWhen the mouse cursor is hovering over an open menu panel (hero menu or building menu in the left column), the scroll wheel STILL zooms the game map instead of scrolling the menu content. This has been attempted in R10 and R11 and NEITHER fix works in Ursina mode.\n\nThe player launches with `python main.py --provider mock` (Ursina renderer). Your fix MUST work in this mode.\n\n## WHY PRIOR FIXES FAILED\n\nR10/R11 added `handle_menu_scroll()` to `game/input_handler.py` and tried to consume pygame scroll events. But **Ursina has its own input system** that processes scroll events independently. The Ursina camera/zoom controller reads scroll input through Ursina's `input()` function or `mouse.scroll` attribute — it does NOT go through the pygame event queue. So even though `handle_menu_scroll()` might consume the pygame event, Ursina's zoom handler never sees that consumption and zooms anyway.\n\n## YOUR INVESTIGATION PLAN (do this BEFORE writing any code)\n\n1. **Find where Ursina zoom happens.** Search for scroll/zoom handling in:\n   - `game/engine.py` — look for scroll, zoom, mouse_scroll, input() method\n   - `game/engine_facades/` — camera/display facades\n   - `game/graphics/ursina_renderer.py` — Ursina-specific input\n   - Any Ursina `input()` function override or `Entity.input()` method\n   - Search for: `mouse.scroll`, `scroll_y`, `held_keys`, `zoom`, `camera.fov`, `camera.y` or similar\n\n2. **Find where menu panels track their screen rects.** The HUD renders hero_panel and building_panel into the `left` rect from `_layout_rects_for_screen()`. You need to know the exact pixel rect of whatever panel is currently visible so you can do a point-in-rect hover check.\n\n3. **Find where HUD exposes hover state.** Check if `hud.py` has an `is_mouse_over_menu()` or `is_mouse_over_panel()` method. If not, you'll create one.\n\n## THE FIX PATTERN\n\nThe fix must intercept scroll at the Ursina zoom level, NOT the pygame event level. The pattern is:\n\n```\n# In whatever function/method handles Ursina zoom:\ndef handle_scroll_zoom(scroll_amount):\n    # CHECK: is mouse over any open menu panel?\n    if hud.is_mouse_over_menu(mouse_position):\n        # Route scroll to the menu instead\n        hud.scroll_active_menu(scroll_amount)\n        return  # DO NOT ZOOM\n    # Normal zoom behavior\n    apply_zoom(scroll_amount)\n```\n\nConcretely:\n\n1. **Add `is_mouse_over_menu(pos) -> bool` to HUD** (if not already present). This checks whether `pos` is inside the rect of any currently-visible, scrollable menu panel (hero_panel, building_panel). Use the actual rendered rect, not a hardcoded one.\n\n2. **Add `scroll_active_menu(direction: int)` to HUD.** This adjusts the scroll_offset of whichever menu panel is currently visible. `direction` is +1 (scroll down) or -1 (scroll up). Scroll by ~20-30px per tick. Clamp to [0, max_scroll] where max_scroll = max(0, content_height - visible_height).\n\n3. **Gate the zoom handler.** In the Ursina zoom code path (wherever you found it in step 1), add the `is_mouse_over_menu()` check BEFORE applying zoom. If the mouse is over a menu, call `scroll_active_menu()` instead and return early.\n\n4. **Handle mouse position correctly.** In Ursina mode, the mouse position may be in Ursina screen coordinates, not pygame coordinates. Make sure you convert correctly. `pygame.mouse.get_pos()` returns pygame window coords. Ursina's `mouse.position` returns normalized [-0.5, 0.5] coords. Use whichever coordinate system matches your panel rects.\n\n## WHAT FILES YOU MAY EDIT\n\n- `game/ui/hud.py` — add is_mouse_over_menu(), scroll_active_menu()\n- `game/ui/building_panel.py` — add/fix scroll_offset support\n- `game/ui/hero_panel.py` — add/fix scroll_offset support\n- `game/engine.py` — gate the zoom handler\n- `game/engine_facades/render_coordinator.py` or camera/display facade — gate zoom if that's where it lives\n- `game/input_handler.py` — update if needed\n- `game/graphics/ursina_renderer.py` — only if zoom lives here\n- `tests/test_wk52_r10_menu_scroll.py` — update/add tests\n\n## VERIFICATION\n\nYou CANNOT verify scroll behavior from a static screenshot. Instead:\n\n1. **Write a test** that:\n   - Creates a mock HUD with a visible panel rect\n   - Calls `is_mouse_over_menu(point_inside)` and asserts True\n   - Calls `is_mouse_over_menu(point_outside)` and asserts False\n   - Calls `scroll_active_menu(1)` and asserts scroll_offset increased\n   - Calls `scroll_active_menu(-1)` enough times and asserts scroll_offset is clamped to 0\n\n2. **Write a test** that verifies the zoom handler checks `is_mouse_over_menu()` before zooming. This can be a unit test that mocks the HUD and verifies the zoom function returns early when the method returns True.\n\n3. Run all gates:\n   ```\n   python3 -m pytest tests/ -v\n   python3 tools/qa_smoke.py --quick\n   ```\n\n4. In your agent log, describe EXACTLY which function/method you found handles Ursina zoom, what file and line number, and how you gated it. This is critical for PM review.\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r12_menu_scroll_wheel\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence, blockers, follow_ups.\n\nValidate JSON: python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nThen run the SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R12 single-agent round. Agent 08 (HIGH intelligence) — tracing Ursina input path for scroll events requires reading unfamiliar engine code and making a judgment call about where to intercept. HIGH because two prior attempts failed.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": [
+              "01", "02", "03", "04", "05", "06", "07", "09", "10", "11", "12", "13", "14", "15"
+            ]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08"],
+            "dependencies": [
+              {
+                "id": "wk52_r12_impl",
+                "agents": ["08"],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r12_menu_scroll_wheel. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r12_menu_scroll_wheel\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON. Run SDK receipt."
         }
       }
     }
