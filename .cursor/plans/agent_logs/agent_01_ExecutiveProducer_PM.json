@@ -5,7 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
-    "2026-05-07 (Agent 01 R10): Added wk52_r10_hero_card_priority — four playtest bugs: (A) remove building card entirely (hero card must persist when building clicked); (B) building menu width must match hero menu; (C) hero card minimize button replaced with X-button style; (D) menu text overflow fix + mouse wheel scroll support. Single agent: 08 (HIGH). Orchestrator cloud run.",
+    "2026-05-08 (Agent 01 R11): Added wk52_r11_building_menu_alignment_scroll — three playtest bugs from screenshot 9: (A) building menu overlaps/hovers over hero card and right panels instead of being inline; (B) building menu x-offset ~10-20px too far right; (C) scroll wheel inside menus still zooms map instead of scrolling. Single agent: 08 (HIGH). Orchestrator cloud run.",
+    "2026-05-07 (Agent 01 R10): R10 finished+verified via cloud orchestrator. Four bugs fixed by Agent 08: building card removed, menu width 224+scroll, watch X chrome, text clip+scroll.",
     "2026-05-06 (Agent 01 WK52 Kickoff): Sprint wk52_attachment_phase3_radar_alerts_memorial — Phase 3 deferred features: (1) Radar minimap with colored entity dots; (2) Pin alerts via EventBus — HUD toast + Recall button 3x red flash + low-health 25% threshold/30s cooldown; (3) Watch card above minimap — live map view, HP/XP/Level, expand/minimize toggle, dynamic left-panel height; (4) Memorial card — full-screen pause overlay with epitaph. Plan: .cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md. R1 parallel: Agent 03 (event plumbing) + Agent 08 (UX/watch card/memorial). R2: Agent 10 perf consult + Agent 11 QA gates. First Cowork-originated orchestrator run.",
     "2026-05-06 (Agent 01 R7): Added wk51_r7_recall_right_panel_pin_emoji — two targeted fixes: (1) Recall button must open right hero panel (enter_hero_focus) — fix in game/engine.py owned by Agent 03; (2) Pin button icon changed from circle+P to 📌 emoji — fix in game/ui/hud.py owned by Agent 08. Waves: 03+08 parallel, then 11 gates. Orchestrated via cloud agents.",
     "2026-05-02 (GIT midsprint save — Agent 01): Committed+pushed workspace state mid WK51. Sprint wk51_attachment_ux_phase3 still IN PROGRESS. Completed: live orchestrator run wk51_r6_pin_visible_fix exit 0 — Agents 08/11/03 receipts verified; Pin chrome HUD layering addressed per Phase 4b screenshot workflow; studio rules updated (06-workflow Phase 4b, AGENTS.md, 08/09/11 onboarding) for mandatory capture→inspect UI loop. Outstanding player-facing: Recall button on bottom bar must reopen the correct hero info panel Jaimie calls the \"right menu\" (today the HUD uses left hero panel + conditional right panel / micro-view — behavior must match acceptance: recall recenters AND restores hero selection UI including whichever column shows intent/detail per layout mode). File ticket WK51-NEXT-Recall-Reopen-Panel for Agents 08 primary + 03 input/engine routing consult; verify Ursina + pygame. Orchestrator chain: .cursor/plans/run_wk51_attachment_rounds.ps1 (R1–R6). Hub sprint_meta.pm_orchestrator still documents validate/run commands.",
@@ -5421,6 +5422,141 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r10_hero_card_priority. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r10_hero_card_priority\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. THIS ROUND ENFORCES AN ITERATE-LOOP — receipt must include iteration_log array. Update log per the prompt. Validate JSON. Run SDK receipt."
+        },
+        "wk52_r11_building_menu_alignment_scroll": {
+          "round_meta": {
+            "round_id": "wk52_r11_building_menu_alignment_scroll",
+            "created_utc": "2026-05-08T12:00:00Z",
+            "wave": 11,
+            "depends_on": "wk52_r10_hero_card_priority",
+            "note": "Three bugs from Jaimie playtest after R10. Screenshot evidence: .cursor/human_provided/wk52 screenshot 9.PNG"
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R11: Single-agent (08) round fixing three playtest bugs — building menu overlapping hero card/right panels, building menu x-offset misalignment, scroll wheel still zooming map when cursor is inside menus."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK52-R11-BUG-A",
+              "title": "Building menu overlaps hero card and right panels — should be inline",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Pin a hero so the hero card is visible in the bottom-left",
+                "Click on a building (e.g. Warrior Guild) to open the building menu",
+                "Observe: the building menu panel hovers OVER the hero card and other right-side elements"
+              ],
+              "expected": "Building menu renders inline with other left-column panels — same layer, same alignment, no overlap with the hero card or bottom-left watch card area",
+              "actual": "Building menu panel visually covers/overlaps the hero card and right-side panels, rendering on top of them",
+              "acceptance_test": [
+                "Open building menu while hero card is visible — building menu does NOT overlap or cover the hero card",
+                "Building menu uses the same left-column rect and z-layer as the hero menu panel"
+              ],
+              "status": "assigned",
+              "ref_screenshot": ".cursor/human_provided/wk52 screenshot 9.PNG"
+            },
+            {
+              "id": "WK52-R11-BUG-B",
+              "title": "Building menu x-position shifted ~10-20px too far right",
+              "severity": "minor",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Click on a building to open the building menu",
+                "Compare the building menu left edge to the hero menu left edge"
+              ],
+              "expected": "Building menu left edge aligns exactly with the hero menu left edge (both at x=0 or both using the left rect from _layout_rects_for_screen)",
+              "actual": "Building menu is offset ~10-20px to the right compared to the hero menu. Likely caused by building_panel.py hardcoding panel_x = 10 while the hero panel uses the layout rect starting at x=0",
+              "acceptance_test": [
+                "Building menu left edge == hero menu left edge (pixel-identical x-position)"
+              ],
+              "status": "assigned",
+              "ref_screenshot": ".cursor/human_provided/wk52 screenshot 9.PNG"
+            },
+            {
+              "id": "WK52-R11-BUG-C",
+              "title": "Scroll wheel inside menus still zooms map instead of scrolling content",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "Open a hero menu or building menu with scrollable content",
+                "Hover mouse inside the menu panel area",
+                "Use the scroll wheel"
+              ],
+              "expected": "Scroll wheel scrolls the menu content up/down when cursor is hovering over the menu. Map zoom is suppressed while hovering over any open menu panel.",
+              "actual": "Scroll wheel zooms the game map in/out regardless of whether the cursor is inside a menu panel. R10 was supposed to fix this but the fix is not working in Ursina mode.",
+              "acceptance_test": [
+                "Hover over open menu panel, scroll wheel — menu content scrolls, map does NOT zoom",
+                "Move cursor outside menu panel, scroll wheel — map zooms normally",
+                "Works in both Ursina (default) and pygame renderer paths"
+              ],
+              "status": "assigned",
+              "ref_screenshot": ".cursor/human_provided/wk52 screenshot 9.PNG",
+              "note": "R10 added scroll support in input_handler.py but the Ursina input path may bypass it. Check whether Ursina's own input handling (ursina.input) intercepts scroll events before they reach the pygame event queue / InputHandler.handle_menu_scroll(). The fix must ensure menu scroll takes priority in BOTH renderer paths."
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": {
+              "status": "assigned",
+              "next_action": "Fix all three bugs (A: building menu overlap/z-order, B: x-offset alignment, C: scroll wheel input routing). Use iterate-loop process with screenshot verification."
+            }
+          },
+          "pm_agent_prompts": {
+            "08": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r11_building_menu_alignment_scroll (single-agent bug-fix round with mandatory iterate-loop).\n\nCONTEXT: Jaimie playtested after R10 and found three issues. Screenshot at:\n  - .cursor/human_provided/wk52 screenshot 9.PNG\n\nRead that screenshot before starting. It shows the Warrior Guild building menu overlapping the hero card and other panels, shifted too far right, and scroll wheel not working inside menus.\n\n═══════════════════════════════════════════════\nBUG A — BUILDING MENU OVERLAPS HERO CARD / RIGHT PANELS\n═══════════════════════════════════════════════\n\nThe building menu panel (showing Warrior Guild info, hero list, Demolish/Enter Building buttons) renders ON TOP of the hero card and other right-side panels. It should be in the same left-column space, same z-layer, aligned inline — NOT hovering over other elements.\n\nRoot cause investigation:\n  - The building panel likely uses its own absolute positioning (building_panel.py hardcodes panel_x, panel_y) instead of using the HUD's layout rects from _layout_rects_for_screen().\n  - The hero panel uses the `left` rect from HUD layout (starts at x=0, y=top_h, width=left_w, height=left_h). The building panel should use the SAME rect.\n  - Check whether building_panel.render() is called with a different rect or uses internal absolute positioning that doesn't match the hero panel's rect.\n\nRequired changes:\n  1. Make the building panel use the SAME left-column rect that the hero panel uses. Both panels should receive their position from _layout_rects_for_screen() `left` rect.\n  2. The building panel must NOT render outside or overlapping the left-column area. No covering the hero card, watch card, or bottom bar.\n  3. If building_panel.py has its own panel_x/panel_y hardcoded values, replace them with the rect passed from HUD.\n  4. The building panel and hero panel are mutually exclusive (only one shows at a time in the left column) — so they should share the same space, not stack.\n\nAcceptance:\n  - Open building menu while hero card is pinned — building menu is contained within the left column, does NOT overlap the hero card or any bottom-left elements.\n  - Building menu left/top edge matches exactly where the hero menu would appear.\n\n═══════════════════════════════════════════════\nBUG B — BUILDING MENU X-OFFSET 10-20px TOO FAR RIGHT\n═══════════════════════════════════════════════\n\nThe building menu's left edge is shifted ~10-20px to the right compared to the hero menu. They should have identical x-positions.\n\nRoot cause: building_panel.py likely hardcodes `panel_x = 10` (or similar margin) while the hero panel renders at x=0 (the left edge of the `left` rect). This creates a visible offset.\n\nRequired changes:\n  1. Remove the hardcoded x-offset in building_panel.py. The panel_x should come from the layout rect, same as the hero panel.\n  2. Both panels must start at the same x-coordinate.\n\nAcceptance:\n  - Building menu left edge is pixel-identical to hero menu left edge.\n\n═══════════════════════════════════════════════\nBUG C — SCROLL WHEEL INSIDE MENUS STILL ZOOMS MAP\n═══════════════════════════════════════════════\n\nWhen the mouse cursor is inside an open menu panel (hero menu or building menu), using the scroll wheel should scroll the panel content — but it still zooms the game map instead.\n\nR10 added scroll support in input_handler.py, but it is not working in the live game (Ursina mode). The issue is likely one of:\n  1. Ursina's own input system intercepts scroll events before they reach InputHandler/pygame events.\n  2. The handle_menu_scroll() check in input_handler.py returns False (does not consume the event) so zoom proceeds.\n  3. The rect check inside handle_menu_scroll() doesn't match the actual visible panel rect because of the building panel positioning bug.\n\nRequired investigation + fix:\n  1. Trace the scroll event path in Ursina mode. Check if ursina.input() or the Ursina camera controller eats scroll events. If so, intercept scroll in the HUD layer BEFORE Ursina processes it.\n  2. In game/input_handler.py, verify handle_menu_scroll() correctly checks whether the mouse is over an ACTIVE menu panel. The rect must match the actual rendered panel rect (not a stale/wrong rect from before Bug A/B are fixed).\n  3. When handle_menu_scroll() returns True (scroll consumed by a menu), the event MUST be suppressed — no zoom should happen.\n  4. If Ursina has its own scroll→zoom binding, you may need to gate it: check `hud.is_mouse_over_menu(pos)` before allowing zoom.\n  5. Check game/engine_facades/ or game/engine.py for the camera zoom handler and add the menu-hover guard there.\n\nAcceptance:\n  - Hover over open menu, scroll wheel → menu scrolls, map does NOT zoom.\n  - Move cursor off menu, scroll wheel → map zooms normally.\n  - Must work in Ursina mode (python main.py) — this is the mode Jaimie uses.\n\n═══════════════════════════════════════════════\nMANDATORY ITERATE-LOOP PROCESS\n═══════════════════════════════════════════════\n\nSame process as R9/R10. For each fix attempt:\n  1. mkdir docs/screenshots/wk52_phase3/iter_N/\n  2. Capture: python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3/iter_N --size 1920x1080 --ticks 480\n  3. Open the relevant PNGs and write structured observations BEFORE a verdict.\n  4. If observations don't match expected, fix code, commit, re-capture into iter_N+1.\n  5. Each iteration is a separate commit: \"R11 iter N: <what changed>\"\n  6. Continue until ALL relevant shots are PASS. Max 5 iterations.\n  7. status=blocked if still FAIL after 5 iterations.\n\nFor Bug C (scroll input), you cannot fully verify scroll behavior from a static screenshot. Instead:\n  - Write or update a unit test: simulate a scroll event with mouse inside the panel rect, assert the scroll_offset changed and zoom was NOT triggered.\n  - If possible, add a test that InputHandler.handle_menu_scroll() returns True when mouse is over an active panel.\n\nFor Bugs A and B (alignment), the screenshot MUST show:\n  - Building menu left edge flush with the hero menu left edge (compare wk52_left_menu_unpinned.png to a building-menu shot).\n  - No overlap between building menu and the hero card area.\n\nIf the current wk52_pin_alerts scenario does not produce a building-menu screenshot, ADD one to the scenario:\n  - After capturing the standard shots, programmatically select a building (e.g. set engine.selected_building to the castle or first building), then capture wk52_building_menu.png.\n\nGATES (run after final iteration; all must exit 0):\n  - python3 -m pytest tests/ -v\n  - python3 tools/qa_smoke.py --quick\n  - python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480\n\nFINAL SCREENSHOT VERDICT:\n  - wk52_watch_card_expanded.png: PASS iff hero card visible, no building menu overlap.\n  - wk52_building_menu.png (new): PASS iff building menu left edge aligned with hero menu, no overlap with hero card, content within panel bounds.\n  - wk52_left_menu_unpinned.png: PASS iff hero list visible, no text overflow.\n  - wk52_memorial_card.png: PASS iff memorial overlay still works (regression check).\n\nUpdate log at .cursor/plans/agent_logs/agent_08_UX_UI_Director.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r11_building_menu_alignment_scroll\"] with sprint_id, round_id, status, what_i_changed, commands_run, evidence (screenshot_verdict), iteration_log, blockers, follow_ups.\n\nValidate JSON: python3 -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json\n\nThen run the SDK completion receipt."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "Wave 11 single-agent round. Agent 08 (HIGH intelligence) — three bugs spanning panel positioning, layout alignment, and input routing. All are UX-owned. HIGH because Bug C requires tracing Ursina input path + non-trivial event interception logic.",
+            "intelligence_by_agent": {
+              "08": "high"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": [
+              "08"
+            ],
+            "dependencies": [
+              {
+                "id": "wk52_r11_impl",
+                "agents": [
+                  "08"
+                ],
+                "parallel": false
+              }
+            ],
+            "human_gates": [],
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            }
+          },
+          "pm_orchestrator_commands": {
+            "validate_r11": "npm run studio --prefix tools/ai_studio_orchestrator -- validate --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r11_building_menu_alignment_scroll",
+            "run_r11_cloud": "npm run studio --prefix tools/ai_studio_orchestrator -- run --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r11_building_menu_alignment_scroll --cloud-repo-url https://github.com/jaimiemontague/Kingdom.git --auto-push --mode auto_until_human_gate"
+          },
+          "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r11_building_menu_alignment_scroll. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r11_building_menu_alignment_scroll\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. THIS ROUND ENFORCES AN ITERATE-LOOP — receipt must include iteration_log array. Update log per the prompt. Validate JSON. Run SDK receipt."
         }
       }
     }
