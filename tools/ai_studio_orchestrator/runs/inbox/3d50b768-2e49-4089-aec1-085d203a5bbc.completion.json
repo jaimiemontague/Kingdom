@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "3d50b768-2e49-4089-aec1-085d203a5bbc",
+  "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+  "round_id": "wk52_r13_card_chat_enter_building",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "WK52 R13: collapsed chat by default, compact watch card without chat, chat HUD clicks consumed, Enter Building modal overlay + pause; pytest 268 PASS, qa_smoke PASS, capture wk52_pin_alerts.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"]",
+  "timestamp": "2026-05-08T19:23:23.202Z"
+}
