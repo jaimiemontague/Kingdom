@@ -1224,10 +1224,10 @@
               "note": "iteration capture"
             },
             {
-              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "command": "git commit -m \"R11 iter 1: building menu uses HUD left_rect; mutual exclusivity; wheel consume tests\"",
               "exit_code": 0,
               "cwd": "repo root",
-              "note": "canonical wk52_phase3"
+              "note": "a825215"
             }
           ],
           "iteration_log": [
@@ -1239,7 +1239,7 @@
                 "C"
               ],
               "capture_out": "docs/screenshots/wk52_phase3/iter_1",
-              "git_commit": "COMMIT_AFTER_PUSH",
+              "git_commit": "a825215",
               "observations": {
                 "wk52_building_menu.png": "Warriors Guild fills upper LEFT_COL only; pinned Gareth/watch card sits below unchanged; left edge aligns with Heroes column baseline (compare wk52_left_menu_unpinned). No panel drawn over radar/minimap/right map.",
                 "wk52_watch_card_expanded.png": "Pinned hero + chat band; unchanged layout.",
