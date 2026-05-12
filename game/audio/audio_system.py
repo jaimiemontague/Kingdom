@@ -4,7 +4,7 @@ Event-driven audio system (non-authoritative, pure consumer).
 WK6: AudioSystem consumes events from simulation and plays sounds.
 Never affects simulation state; safe to disable or fail.
 
-WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen and Visibility.VISIBLE.
+WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen and in explored area.
 """
 from __future__ import annotations
 
@@ -172,72 +172,46 @@ class AudioSystem:
     
     def _is_audible_world_event(self, event: dict) -> bool:
         """
-        Check if a world event should be audible (on-screen + Visibility.VISIBLE).
-        
-        UI events (ui_click, etc.) are always audible (not gated by visibility).
-        
-        Args:
-            event: Event dictionary
-            
-        Returns:
-            True if event should produce sound, False otherwise
+        Check if a world event should be audible based on fog-of-war exploration state.
+
+        Only mutes events on truly unexplored (UNSEEN) tiles. Explored or visible
+        tiles always play. UI events are always audible.
+
+        The viewport check was removed because in Ursina (3D) mode the engine's 2D
+        camera_x/y diverges from the actual 3D camera, causing false rejections.
         """
         event_type = event.get("type", "")
-        
-        # UI events are always audible (not gated by world visibility)
+
         if event_type.startswith("ui_"):
             return True
-        
-        # Extract world position from event
-        # Try x,y first, then from_x/from_y, then to_x/to_y
+
+        if self._world is None:
+            return True
+
         world_x = event.get("x")
         world_y = event.get("y")
-        
+
         if world_x is None or world_y is None:
-            # Try from_x/from_y (for projectiles, use source position)
             world_x = event.get("from_x")
             world_y = event.get("from_y")
-        
+
         if world_x is None or world_y is None:
-            # Try to_x/to_y (for projectiles, use target position)
             world_x = event.get("to_x")
             world_y = event.get("to_y")
-        
+
         if world_x is None or world_y is None:
-            # No position found - default to audible (better to play than miss)
             return True
-        
-        world_x = float(world_x)
-        world_y = float(world_y)
-        
-        # Check viewport: is position within camera view?
-        view_w = max(1, int(self._window_width / self._zoom))
-        view_h = max(1, int(self._window_height / self._zoom))
-        
-        # World position relative to camera
-        rel_x = world_x - self._camera_x
-        rel_y = world_y - self._camera_y
-        
-        # Check if within viewport bounds (with small margin for edge cases)
-        margin = 50  # pixels margin for sounds near edge
-        if rel_x < -margin or rel_x > view_w + margin:
-            return False
-        if rel_y < -margin or rel_y > view_h + margin:
-            return False
-        
-        # Check fog-of-war visibility (if world is available)
-        if self._world is not None:
-            try:
-                from game.world import Visibility
-                if hasattr(self._world, "world_to_grid") and hasattr(self._world, "visibility"):
-                    grid_x, grid_y = self._world.world_to_grid(world_x, world_y)
-                    if 0 <= grid_x < self._world.width and 0 <= grid_y < self._world.height:
-                        if self._world.visibility[grid_y][grid_x] != Visibility.VISIBLE:
-                            return False
-            except Exception:
-                # If visibility check fails, default to audible (better to play than miss)
-                pass
-        
+
+        try:
+            from game.world import Visibility
+            if hasattr(self._world, "world_to_grid") and hasattr(self._world, "visibility"):
+                grid_x, grid_y = self._world.world_to_grid(float(world_x), float(world_y))
+                if 0 <= grid_x < self._world.width and 0 <= grid_y < self._world.height:
+                    if self._world.visibility[grid_y][grid_x] == Visibility.UNSEEN:
+                        return False
+        except Exception:
+            pass
+
         return True
     
     def emit_from_events(self, events: list[dict]):
@@ -246,7 +220,7 @@ class AudioSystem:
         
         Non-blocking: never crashes simulation.
         Respects cooldowns to prevent spam.
-        WK6 Mid-Sprint: Only plays world SFX if event is on-screen and Visibility.VISIBLE.
+        WK6 Mid-Sprint: Only plays world SFX if event is on-screen and in explored area.
         """
         if not self.enabled:
             return

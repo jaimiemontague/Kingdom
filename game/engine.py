@@ -645,10 +645,14 @@ class GameEngine:
 
         if guild is None:
             self.hud.add_message("Requires a constructed guild (Warrior/Ranger/Rogue/Wizard) or Temple!", (255, 100, 100))
+            if self.audio_system is not None:
+                self.audio_system.play_sfx("ui_error")
             return
 
         if not self.economy.can_afford_hero():
             self.hud.add_message("Not enough gold to hire!", (255, 100, 100))
+            if self.audio_system is not None:
+                self.audio_system.play_sfx("ui_error")
             return
         
         # Hire the hero
@@ -676,6 +680,11 @@ class GameEngine:
         if hasattr(hero, "set_event_bus"):
             hero.set_event_bus(self.event_bus)
         self.hud.add_message(f"{hero.name} the {hero_class.title()} joins your kingdom!", (100, 255, 100))
+        self.event_bus.emit({
+            "type": "hero_hired",
+            "x": float(hero.x),
+            "y": float(hero.y),
+        })
     
     def place_building(self, grid_x: int, grid_y: int):
         """Place the selected building."""
@@ -683,6 +692,8 @@ class GameEngine:
         
         if not self.economy.buy_building(building_type):
             self.hud.add_message("Not enough gold!", (255, 100, 100))
+            if self.audio_system is not None:
+                self.audio_system.play_sfx("ui_error")
             return
         
         # Create the building
@@ -736,6 +747,8 @@ class GameEngine:
         
         if not self.economy.add_bounty(reward):
             self.hud.add_message("Not enough gold for bounty!", (255, 100, 100))
+            if self.audio_system is not None:
+                self.audio_system.play_sfx("ui_error")
             return
         
         self.bounty_system.place_bounty(world_x, world_y, reward, BountyType.EXPLORE.value)
