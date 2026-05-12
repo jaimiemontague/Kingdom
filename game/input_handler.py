@@ -430,6 +430,7 @@ class InputHandler:
                         hero = action.get("hero")
                         if hero is not None:
                             c.selected_hero = hero
+                            c.building_panel.deselect()
                             c.selected_building = None
                         chat_panel = getattr(c.hud, "_chat_panel", None)
                         if chat_panel is not None:
