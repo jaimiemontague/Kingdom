@@ -5,6 +5,7 @@ import pygame
 from game.entities.buildings.castle import Castle
 from game.entities.hero import Hero
 from game.ui.building_interior_overlay import BuildingInteriorOverlay, _building_interior_heading
+from game.ui.theme import UITheme
 
 
 def test_heading_formats_type():
@@ -16,7 +17,8 @@ def test_heading_formats_type():
 
 def test_overlay_show_hide_and_close_click():
     pygame.init()
-    ov = BuildingInteriorOverlay()
+    theme = UITheme()
+    ov = BuildingInteriorOverlay(theme)
     b = Castle(1, 1)
     h = Hero(10.0, 10.0, hero_class="warrior", hero_id="in1", name="Innie")
     b.occupants = [h]

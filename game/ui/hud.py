@@ -276,7 +276,15 @@ class HUD:
 
         from game.ui.building_interior_overlay import BuildingInteriorOverlay
 
-        self.building_interior_overlay = BuildingInteriorOverlay()
+        self.building_interior_overlay = BuildingInteriorOverlay(
+            self.theme,
+            frame_outer=self._frame_outer,
+            frame_highlight=self._frame_highlight,
+            button_tex_normal=self._button_tex_normal,
+            button_tex_hover=self._button_tex_hover,
+            button_tex_pressed=self._button_tex_pressed,
+            slice_border=self._button_slice_border,
+        )
 
         from game.ui.pin_alert_watcher import PinAlertWatcher
 
