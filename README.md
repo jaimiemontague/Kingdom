@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.4 — Basic LLM Direct Commands** (WK50: rare autonomous LLM moments + validated player-to-hero chat commands; see `config.py` and `CHANGELOG.md`).
+This repository is currently stamped as **Prototype v1.5.5 — Hero UI Basics** (WK51–WK52: pin/recall, watch card, radar minimap, pin alerts, memorial card, building interior overlay, chat polish; see `config.py` and `CHANGELOG.md`).
 
 ## Overview
 

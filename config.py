@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.4"
-    game_title: str = "Kingdom Sim (Prototype v1.5.4) — Basic LLM Direct Commands"
+    prototype_version: str = "1.5.5"
+    game_title: str = "Kingdom Sim (Prototype v1.5.5) — Hero UI Basics"
     default_borderless: bool = True
 
 

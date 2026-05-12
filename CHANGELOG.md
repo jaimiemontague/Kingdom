@@ -1,5 +1,16 @@
 # Changelog
 
+## Prototype v1.5.5 — Hero UI Basics
+
+- **Pin & Recall (WK51):** Pin a hero to track them — Recall button pans to their location and restores hero selection UI; works in both pygame and Ursina renderers.
+- **Watch card:** Compact bottom-left card floats above the minimap showing a zoomed hero map view, HP/XP bars, level, and a placeholder mana row. Expand/minimize toggle with dynamic left-panel height so panels never overlap.
+- **Radar minimap:** Live overhead radar in the bottom bar — proportional colored dots for heroes (gold glow for pinned), enemies, lairs, buildings, and castle (white hollow square). Only fog-revealed entities shown.
+- **Pin alerts:** HUD toasts + Recall button 3× red flash on pinned-hero events: low HP (≤25%, 30s cooldown), level up, entering an inn, claiming a bounty.
+- **Memorial card:** When the pinned hero falls, a Memorial button appears; clicking it pauses the game and shows a full-screen overlay with name, class, level, career stats, and a generated epitaph.
+- **Building interior overlay:** "Enter Building" opens a centered modal overlay showing heroes inside (name, class, level, HP) with game pause/unpause — replaces the removed right-panel interior view.
+- **Hero card chat:** Chat band starts collapsed by default on pin/select; card height is dynamic (no blank gap when chat is closed); chat/card close actions are independent of building and hero menus.
+- **Polish (R11–R13):** Building menu alignment and overlap fixes, scroll wheel routing in Ursina mode, input handler LMB fall-through fix for card/menu independence.
+
 ## Prototype v1.5.4 — Basic LLM Direct Commands
 
 - **WK50 — Hero LLM context & direct prompts:** Heroes consult the LLM at **named decision moments** (low health in combat, post-combat recovery, rested-and-ready, optional shopping window) using **bounded profile + tactical context** from `HeroProfileSnapshot`; outputs are **validated** before any physical action.

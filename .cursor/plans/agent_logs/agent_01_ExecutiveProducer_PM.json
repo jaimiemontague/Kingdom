@@ -4616,9 +4616,10 @@
       "sprint_meta": {
         "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
         "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
-        "status": "in_progress",
+        "status": "closed_success",
         "created_utc": "2026-05-06T22:00:00Z",
-        "notes": "WK52 Phase 3 deferred features: radar minimap, pin alerts (EventBus + toast + recall flash), watch card (live map above minimap, expand/minimize, dynamic left-panel height), memorial card (full-screen pause overlay). Two rounds: R1 parallel impl (03+08), R2 QA+perf (11+10).",
+        "closed_utc": "2026-05-11T00:00:00Z",
+        "notes": "WK52 Phase 3 deferred features: radar minimap, pin alerts (EventBus + toast + recall flash), watch card (live map above minimap, expand/minimize, dynamic left-panel height), memorial card (full-screen pause overlay). 13 rounds total (R1–R13): R1–R10 delivered core features, R11–R13 playtest-driven polish (building menu alignment, scroll wheel, chat defaults, card/menu independence, Enter Building overlay). Shipped as v1.5.5 — Hero UI Basics.",
         "pm_orchestrator": {
           "validate_r1": "npx tsx tools/ai_studio_orchestrator/src/cli.ts validate --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r1_plumbing_and_ux",
           "run_r1": "npx tsx tools/ai_studio_orchestrator/src/cli.ts run --cwd . --sprint wk52_attachment_phase3_radar_alerts_memorial --round wk52_r1_plumbing_and_ux",
@@ -5645,8 +5646,8 @@
             "note": "Four items from Jaimie playtest: chat default state, card/menu independence, card height, Enter Building modal."
           },
           "pm_status_summary": {
-            "status": "pending",
-            "summary": "R13: Agent 08 (HIGH) — four UX items: chat closed by default, card actions independent of menus, tighter card height, Enter Building centered modal overlay."
+            "status": "closed_success",
+            "summary": "R13 finished+verified. Agent 08 delivered all four items: chat collapsed by default on pin/select, card close actions independent of building/hero menus (LMB fall-through fix), dynamic card height (no blank gap), Enter Building centered modal overlay with pause/unpause. Committed b0f301f. Sprint closed — shipped as v1.5.5 Hero UI Basics."
           },
           "pm_bug_tickets": [
             {
