@@ -155,6 +155,7 @@ from game.graphics.ursina_units_anim import (
     _tax_collector_base_clip,
 )
 
+from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
 from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab
 from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab
 
@@ -171,6 +172,8 @@ class UrsinaRenderer:
 
         # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
+        # WK53 R3: the heightmap-displaced ground mesh — fog shader updates target this.
+        self._terrain_ground_entity: Entity | None = None
 
         # WK30 debug: tile-gridline overlay entity (populated once when env flag is set).
         self._grid_debug_entity: Entity | None = None
@@ -413,6 +416,8 @@ class UrsinaRenderer:
                 state = "damaged"
 
             wx, wz = sim_px_to_world_xz(b.x, b.y)
+            # WK53 Wave 2: sample terrain height at building footprint center
+            bld_terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
 
             # WK30: prefab path wins over static mesh / billboard for any building_type with
             # a resolvable prefab JSON. Lairs and env opt-out are handled inside the resolver.
@@ -433,6 +438,7 @@ class UrsinaRenderer:
                     hy=hy,
                     tint_col=col,
                     state=state,
+                    terrain_y=bld_terrain_y,
                 )
                 active_ids.add(obj_id)
                 continue
@@ -452,6 +458,7 @@ class UrsinaRenderer:
                     hy=hy,
                     tint_col=col,
                     state=state,
+                    terrain_y=bld_terrain_y,
                 )
                 active_ids.add(obj_id)
                 continue
@@ -488,7 +495,7 @@ class UrsinaRenderer:
                 tex=b_tex if b_tex is not None else None,
                 tint_col=col,
                 scale_xyz=(face_w, hy, 1),
-                pos_xyz=(wx, hy * 0.5, wz),
+                pos_xyz=(wx, bld_terrain_y + hy * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)
@@ -529,7 +536,8 @@ class UrsinaRenderer:
             )
             htex = TerrainTextureBridge.surface_to_texture(hsurf, cache_key=h_cache_key)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
-            y_center = sy * 0.5
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
+            y_center = terrain_y + sy * 0.5
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=htex,
@@ -572,17 +580,18 @@ class UrsinaRenderer:
             )
             etex = TerrainTextureBridge.surface_to_texture(esurf, cache_key=e_cache_key)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=etex,
                 tint_col=col,
                 scale_xyz=(s, s, 1),
-                pos_xyz=(wx, s * 0.5, wz),
+                pos_xyz=(wx, terrain_y + s * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Peasants — billboards (Legacy Vania / procedural; time-based clips like guards).
         for p in getattr(snapshot, "peasants", ()):
@@ -608,18 +617,19 @@ class UrsinaRenderer:
             )
             ptex = TerrainTextureBridge.surface_to_texture(psurf, cache_key=p_cache_key)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=ptex,
                 tint_col=col,
                 scale_xyz=(sx, sy, 1),
-                pos_xyz=(wx, sy * 0.5, wz),
+                pos_xyz=(wx, terrain_y + sy * 0.5, wz),
                 shader=sprite_unlit_shader,
                 tint_textured=False,
             )
             active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Guards — pixel billboards (same clip/frame contract as heroes; Tiny RPG Soldier PNGs).
         for g in getattr(snapshot, "guards", ()):
@@ -640,17 +650,18 @@ class UrsinaRenderer:
             )
             gtex = TerrainTextureBridge.surface_to_texture(gsurf, cache_key=g_cache_key)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=gtex,
                 tint_col=col,
                 scale_xyz=(GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
-                pos_xyz=(wx, GUARD_SCALE_Y * 0.5, wz),
+                pos_xyz=(wx, terrain_y + GUARD_SCALE_Y * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Tax Collector — billboards (Legacy Vania believer; time-based clips).
         tc = getattr(snapshot, "tax_collector", None)
@@ -675,17 +686,18 @@ class UrsinaRenderer:
                 )
                 tctex = TerrainTextureBridge.surface_to_texture(tcsurf, cache_key=tc_cache_key)
                 wx, wz = sim_px_to_world_xz(tc.x, tc.y)
+                terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
                 self._entity_render.sync_billboard_entity(
                     ent,
                     tex=tctex,
                     tint_col=col,
                     scale_xyz=(sx, sy, 1),
-                    pos_xyz=(wx, sy * 0.5, wz),
+                    pos_xyz=(wx, terrain_y + sy * 0.5, wz),
                     shader=sprite_unlit_shader,
                 )
                 active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_projectiles(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Projectiles — VFX arrows as textured billboards (WK5 colors via get_projectile_billboard_surface)
         if self._projectile_tex is None:
@@ -715,12 +727,13 @@ class UrsinaRenderer:
                 ent.render_queue = 2
                 ent._ks_projectile_depth = True
             wx, wz = sim_px_to_world_xz(proj.x, proj.y)
+            proj_terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=ptex,
                 tint_col=color.white,
                 scale_xyz=(s, s, 1),
-                pos_xyz=(wx, PROJECTILE_BILLBOARD_Y, wz),
+                pos_xyz=(wx, proj_terrain_y + PROJECTILE_BILLBOARD_Y, wz),
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)

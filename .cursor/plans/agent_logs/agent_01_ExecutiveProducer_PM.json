@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-12 (Agent 01 WK53 Close): Sprint wk53_world_beauty_terrain closed_success. Shipped as v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors. 4 rounds (R1-R4), all PASS. Agents: 03 (primary implementer), 05 (gameplay consult).",
     "2026-05-12 (Agent 01 WK53 Kickoff): Sprint wk53_world_beauty_terrain — World beauty + terrain elevation. Blue sky, misty fog of war, heightmap terrain with hills/mountains/cliffs. Plan: .cursor/plans/wk53_world_beauty_terrain.plan.md. R1: Agent 03 (architecture + sky/fog impl) + Agent 05 (gameplay consult) parallel.",
     "2026-05-08 (Agent 01 R13): Added wk52_r13_card_chat_enter_building — four items from Jaimie playtest: (A) chat closed by default on pin/select; (B) hero card close actions must not close building/hero menus; (C) remove blank space under card when chat closed; (D) Enter Building opens centered modal overlay showing interior heroes + pauses game.",
     "2026-05-08 (Agent 01 R12): R12 finished+verified. Scroll wheel now correctly routes to menus in Ursina mode via _handle_ursina_input intercept. Jaimie confirmed working.",
@@ -5794,10 +5795,12 @@
     },
     "wk53_world_beauty_terrain": {
       "sprint_meta": {
-        "status": "in_progress",
+        "status": "closed_success",
         "created_utc": "2026-05-12T12:00:00Z",
         "plan_doc": ".cursor/plans/wk53_world_beauty_terrain.plan.md",
-        "notes": "World beauty sprint: blue sky, misty fog of war, terrain elevation (hills, mountains, cliffs)."
+        "notes": "World beauty sprint complete. Shipped as v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors. Four rounds: R1 sky/fog/architecture, R2 terrain elevation core, R3 playtest fixes (fog conformance, flatness bias, camera clamp), R4 click selection fixes.",
+        "closed_utc": "2026-05-12T20:00:00Z",
+        "shipped_version": "v1.5.6"
       },
       "rounds": {
         "wk53_r1_sky_fog_architecture": {
@@ -5808,7 +5811,7 @@
             "note": "Combined Wave 0 (architecture contract) + Wave 1 (sky/fog impl). Agent 03 designs terrain architecture AND implements sky/fog visuals. Agent 05 provides gameplay advisory. Parallel."
           },
           "pm_status_summary": {
-            "status": "in_progress",
+            "status": "closed_success",
             "summary": "R1: Agent 03 designs terrain elevation architecture contract and implements sky color + atmospheric fog + fog-of-war mist rework. Agent 05 provides gameplay implications advisory. Parallel."
           },
           "pm_next_actions_by_agent": {
@@ -5848,6 +5851,202 @@
             ]
           },
           "pm_universal_prompt": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r1_sky_fog_architecture. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk53_world_beauty_terrain\"].rounds[\"wk53_r1_sky_fog_architecture\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON."
+        },
+        "wk53_r2_terrain_elevation": {
+          "round_meta": {
+            "round_id": "wk53_r2_terrain_elevation",
+            "created_utc": "2026-05-12T14:00:00Z",
+            "wave": 2,
+            "depends_on": "wk53_r1_sky_fog_architecture",
+            "note": "Wave 2: Terrain elevation core. Agent 03 implements heightmap generation, terrain mesh, entity Y-placement per architecture contract."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "R2: Agent 03 implements heightmap generation (Perlin noise), terrain mesh (custom Ursina Mesh), entity Y-placement, and fog-of-war on terrain per wk53_terrain_architecture_contract.md."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Implement terrain elevation per architecture contract: heightmap, mesh, entity Y-placement, fog-on-terrain."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r2_terrain_elevation (Wave 2 — Terrain Elevation Core). Implement the full terrain elevation system per your own architecture contract at .cursor/plans/wk53_terrain_architecture_contract.md. See PM hub for round details. DO NOT run git commit. STOP after reporting results."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R2 single-agent: Agent 03 (HIGH — large implementation across 9 files, novel terrain mesh + shader work).",
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "pm_universal_prompt": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r2_terrain_elevation. Read your assignment in the PM hub and the architecture contract at .cursor/plans/wk53_terrain_architecture_contract.md. DO NOT run git commit. STOP after reporting results."
+        },
+        "wk53_r3_terrain_playtest_fixes": {
+          "round_meta": {
+            "round_id": "wk53_r3_terrain_playtest_fixes",
+            "created_utc": "2026-05-12T16:00:00Z",
+            "wave": 3,
+            "depends_on": "wk53_r2_terrain_elevation",
+            "note": "Three issues from Jaimie playtest: (A) fog-of-war hovers above terrain, (B) terrain too hilly everywhere, (C) camera goes underground."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "R3: Agent 03 fixes three playtest issues — fog must hug terrain, terrain mostly flat with some hills, camera clamped above ground."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK53-R3-BUG-A",
+              "title": "Fog of war hovers above terrain causing visual artifacts at camera angles",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "expected": "Fog of war hugs the terrain surface at all elevations",
+              "actual": "Fog quad is a flat plane above the highest peak — creates visible gap above lower terrain areas",
+              "acceptance_test": [
+                "Fog of war follows terrain contour from all camera angles — no visible hovering gap"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK53-R3-BUG-B",
+              "title": "Terrain is entirely hilly — should be mostly flat with occasional hills",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "expected": "Mostly flat terrain with some hills and elevated areas. Large flat areas between hills.",
+              "actual": "Every tile has significant elevation variation — the whole map is covered in hills.",
+              "acceptance_test": [
+                "Most of the map is relatively flat. Hills are features, not the default."
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK53-R3-BUG-C",
+              "title": "Camera can pan under the ground",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "expected": "Camera stops at the terrain surface and cannot go below ground level",
+              "actual": "Camera freely clips through terrain when orbiting/panning downward",
+              "acceptance_test": [
+                "Orbit/pan camera toward ground — camera stops at terrain surface, never goes below"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Fix three playtest issues: fog hugs terrain, mostly flat terrain, camera ground clamp."
+            }
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R3 single-agent: Agent 03 (HIGH — fog-on-terrain is the deferred shader work from the architecture contract, terrain noise tuning requires judgment, camera clamp requires Ursina/Panda3D camera system understanding).",
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          }
+        },
+        "wk53_r4_click_selection_fixes": {
+          "round_meta": {
+            "round_id": "wk53_r4_click_selection_fixes",
+            "created_utc": "2026-05-12T18:00:00Z",
+            "wave": 4,
+            "depends_on": "wk53_r3_terrain_playtest_fixes",
+            "note": "Hero click selection broken after terrain mesh introduced — terrain likely intercepts raycasts. Buildings also hard to click (pre-existing)."
+          },
+          "pm_status_summary": {
+            "status": "closed_success",
+            "summary": "R4: Agent 03 fixes hero/building click selection. Terrain mesh likely intercepts raycasts before reaching entities."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK53-R4-BUG-A",
+              "title": "Heroes on terrain are very hard or impossible to click/select",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "expected": "Clicking on a hero selects them, same as before terrain was added",
+              "actual": "Heroes on terrain are extremely hard or impossible to click. Selection inside buildings still works.",
+              "acceptance_test": [
+                "Click on heroes walking on terrain — selection works reliably"
+              ],
+              "status": "assigned"
+            },
+            {
+              "id": "WK53-R4-BUG-B",
+              "title": "Buildings are hard to click on (pre-existing, fix while here)",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "expected": "Clicking on a building selects it reliably",
+              "actual": "Buildings require precise clicking to select",
+              "acceptance_test": [
+                "Click on buildings — selection works reliably with reasonable click area"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Fix hero and building click selection — terrain mesh likely intercepts raycasts."
+            }
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R4 single-agent: Agent 03 (HIGH — requires understanding Ursina raycast/collision system and how terrain mesh interacts with entity selection).",
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          }
         }
       }
     }

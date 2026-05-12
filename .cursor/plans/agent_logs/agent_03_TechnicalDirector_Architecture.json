@@ -1003,6 +1003,195 @@
             "If exponential fog banding is reported during visual review, switch to fragment-shader distance fade per contract fallback.",
             "Dependency: noise PyPI package needed for Wave 2 Perlin noise generation (add to requirements.txt)."
           ]
+        },
+        "wk53_r2_terrain_elevation": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r2_terrain_elevation",
+          "status": "done",
+          "what_i_changed": [
+            "requirements.txt: Added noise>=1.2.2 for Perlin noise generation.",
+            "config.py: Added terrain elevation config constants — TERRAIN_HEIGHT_SCALE (8.0), TERRAIN_HILL_FREQUENCY (0.04), TERRAIN_MOUNTAIN_FREQUENCY (0.10), TERRAIN_DETAIL_FREQUENCY (0.25), TERRAIN_CLIFF_THRESHOLD (45.0), TERRAIN_WATER_LEVEL (1.0), TERRAIN_CASTLE_FLAT_RADIUS (5).",
+            "game/graphics/terrain_height.py: NEW — module-level heightmap reference + init_heightmap(), get_terrain_height() with bilinear interpolation, clear_heightmap(), is_initialized(). Single source of truth for terrain elevation queries.",
+            "game/world.py: Added generate_heightmap() — 3-octave Perlin noise at 2x sub-tile resolution (301x301 grid for 150x150 map), castle flattening with cosine falloff (5-tile radius), water tile clamping to TERRAIN_WATER_LEVEL. Called from __init__ after generate_terrain().",
+            "game/graphics/ursina_terrain_fog_collab.py: Replaced flat ground quad with heightmap-displaced indexed triangle mesh (per architecture contract). Per-vertex normals computed from adjacent height samples. Grass texture UV tiling preserved. All prop placement (trees, grass, doodads, rocks, paths, water) uses get_terrain_height() for Y. Fog quad raised above terrain peak when heightmap present. Dynamic tree saplings and log stacks also wired to terrain height.",
+            "game/graphics/ursina_renderer.py: All unit billboard Y-placement (heroes, enemies, peasants, guards, tax collector, projectiles) now adds get_terrain_height() to base Y. Building Y-placement passes terrain_y to entity render collab methods.",
+            "game/graphics/ursina_entity_render_collab.py: sync_3d_building_entity and sync_prefab_building_entity accept terrain_y parameter (default 0.0) and add it to building Y position."
+          ],
+          "implementation_decisions": [
+            "Heightmap grid: 301x301 (2x sub-tile + fence-post) for 150x150 tile map. ~90K vertices in terrain mesh — well within GPU budget.",
+            "Perlin noise octaves: hills (freq 0.04, amp 1.0), ridges (freq 0.10, amp 0.4), detail (freq 0.25, amp 0.15). Height range [0.72, 7.25] with TERRAIN_HEIGHT_SCALE=8.0.",
+            "Castle plateau: cosine falloff within 5-tile radius. Castle area height delta ~1.1 units vs ~6.5 overall — effectively flat for building placement.",
+            "Water tiles: clamped to TERRAIN_WATER_LEVEL (1.0) in heightmap generation.",
+            "Fog quad: raised to TERRAIN_HEIGHT_SCALE + 0.15 as stepping stone. Full shader-based fog integration deferred to follow-up round per architecture contract.",
+            "Terrain mesh uses unlit_shader matching existing ground plane style. Per-vertex normals computed but shader is unlit — normals will matter when lit shader is applied in polish pass.",
+            "Building Y: sampled at footprint center via get_terrain_height(). No footprint flattening this round — castle area is already flat, and most buildings are placed near castle."
+          ],
+          "commands_run": [
+            {
+              "command": "pip install noise",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "noise-1.2.2 installed successfully"
+            },
+            {
+              "command": "python -c \"from noise import pnoise2; print('OK')\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "noise package imports correctly"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — all pytest + observe_sync scenarios passed"
+            },
+            {
+              "command": "python -c \"<terrain_height verification script>\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Heightmap 301x301, castle height 3.50, castle area delta 1.12, overall range [0.72, 7.25]"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "noise_import": {
+              "command": "python -c \"from noise import pnoise2; print('OK')\"",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "terrain_height_verification": {
+              "heightmap_grid": "301x301",
+              "castle_center_height": 3.501,
+              "castle_area_height_delta": 1.119,
+              "overall_height_range": [0.72, 7.249],
+              "height_scale_config": 8.0,
+              "status": "sensible values — castle flat, hills visible, range within budget"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review — launch python main.py --provider mock, orbit camera to verify hills, entity placement, fog coverage.",
+            "Wave 3 (Agent 09): Art direction review of terrain elevation visuals — color/density tweaks.",
+            "Wave 4 (Agent 10): FPS benchmark with terrain mesh to verify perf budget.",
+            "Follow-up: Replace fog quad with shader-based fog on terrain mesh (architecture contract section 4) to eliminate fog/terrain z-fighting on steep slopes.",
+            "Follow-up: Building footprint flattening for buildings placed on slopes outside castle area."
+          ]
+        },
+        "wk53_r3_terrain_playtest_fixes": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r3_terrain_playtest_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A — Fog of war hovers above terrain: Implemented shader-based fog on the terrain mesh per architecture contract section 4. Created game/graphics/terrain_fog_shader.py — custom GLSL shader that samples both grass albedo and fog-of-war texture in a single draw call. Fog UV coordinates are derived from grass UVs via a scale/offset uniform transform. ensure_fog_overlay() now uploads the fog texture as a shader uniform on the terrain entity (setShaderInput) instead of maintaining a separate floating fog quad. The old raised fog quad is destroyed when shader fog is active. Flat terrain fallback (no heightmap) retains the old fog quad approach.",
+            "BUG B — Terrain too hilly everywhere: Applied a flatness bias to heightmap generation. Raw Perlin noise (remapped to [0,1]) is passed through pow(raw, 2.5) before scaling to height — this compresses low-to-mid values toward zero (flat ground) while preserving peaks. Reduced TERRAIN_HEIGHT_SCALE from 8.0 to 5.0 for less extreme peaks. Added TERRAIN_FLATNESS_EXPONENT config constant (default 2.5). Result: ~58% of terrain is below 1.0 world units (relatively flat), max height ~3.9 vs previous ~7.2, castle area at 0.64.",
+            "BUG C — Camera goes underground: Added camera Y terrain clamp in ursina_app.py update(). After all pan/orbit operations, samples get_terrain_height at camera world XZ and enforces camera.world_position.y >= ground_y + 1.0. Prevents camera from clipping below terrain at any angle.",
+            "game/graphics/ursina_renderer.py: Added _terrain_ground_entity initialization attribute for shader fog texture uploads."
+          ],
+          "files_changed": [
+            "game/graphics/terrain_fog_shader.py (NEW)",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/world.py",
+            "config.py",
+            "game/graphics/ursina_app.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe_sync scenarios passed"
+            },
+            {
+              "command": "python -c \"<heightmap verification>\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Grid 301x301, height range [0.012, 3.907], P50=0.885, 57.6% below 1.0 world units, castle center 0.637"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "heightmap_stats": {
+              "grid": "301x301",
+              "height_range": [0.012, 3.907],
+              "p10": 0.312,
+              "p25": 0.536,
+              "p50": 0.885,
+              "p75": 1.312,
+              "p90": 1.832,
+              "flat_below_1unit_pct": 57.6,
+              "castle_center_height": 0.637,
+              "height_scale_config": 5.0,
+              "flatness_exponent": 2.5,
+              "note": "Mostly flat terrain with distinct hill features rising where noise is strongest"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review — orbit camera to verify fog hugs terrain at all angles, terrain is mostly flat with hills as features, camera does not clip below ground.",
+            "Follow-up: Building footprint flattening for buildings placed on slopes outside castle area."
+          ]
+        },
+        "wk53_r4_click_selection_fixes": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r4_click_selection_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A (BLOCKER) — Heroes on terrain cannot be clicked: Root cause was pick_world_xz_on_floor_y0() intersecting the ray with the y=0 plane while heroes sit at terrain height (y>0). The y=0 hit projects to a different XZ than where the hero visually appears on screen, making clicks miss. Fix: modified ursina_pick.py to iteratively refine the ray-plane intersection using terrain height lookup (3 iterations). First intersects at y=0, looks up terrain height at that XZ, re-intersects at that height, repeats. Converges on the correct terrain surface position. Also increased hero click radius from 1.0x to 1.5x hero.size (20 -> 30 sim-pixels effective) and pick the closest hero when multiple overlap.",
+            "BUG B — Buildings hard to click: Inflated building hit-test rect by half a tile (16 sim-pixels) on each side so clicks near building edges register. Added closest-center disambiguation when overlapping inflated rects. Kenney kitbash models have geometry gaps between pieces that caused misses with the exact footprint rect.",
+            "Terrain mesh entity confirmed to have collision=False (no Ursina raycast collider) — terrain geometry is not intercepting mouse picking. The bug was purely the y=0 plane intersection vs terrain height offset."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_pick.py",
+            "game/engine.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe_sync scenarios passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "root_cause_analysis": {
+              "bug_a": "pick_world_xz_on_floor_y0() ray-plane intersection at y=0 misses heroes at terrain height. Camera angle creates parallax offset between where hero visually appears and where y=0 intersection projects. Fix: iterative height refinement (3 iterations, convergent).",
+              "bug_b": "BuildingRect.collidepoint exact footprint (grid_x*32, grid_y*32, size*32, size*32) leaves no margin. Kenney kitbash models have visual gaps. Fix: 0.5-tile margin inflation + closest-center disambiguation.",
+              "terrain_collider": "terrain_ground_entity uses collision=False — NOT blocking Ursina raycasts. Root entity has no collider either."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie playtest — verify hero clicks work on hills and buildings are easier to select. Command: python main.py --provider mock"
+          ]
         }
       }
     }

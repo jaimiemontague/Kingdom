@@ -1,0 +1,64 @@
+"""Terrain fragment shader with fog-of-war overlay (WK53 R3).
+
+Samples the grass albedo texture (tiled) and a fog-of-war texture (1px-per-tile,
+bilinear filtered) in the same draw call. The fog texture is alpha-blended over
+the terrain color, giving pixel-perfect fog conformance to the terrain surface
+with zero additional geometry or z-fighting.
+
+The fog texture UV (``v_fog_uv``) maps [0,1] across the entire map extent, while
+the grass UV (``uvs``) tiles at the configured tiles_per_repeat rate.
+"""
+from __future__ import annotations
+
+from ursina.shader import Shader
+from ursina.vec2 import Vec2
+
+terrain_fog_shader = Shader(
+    name="terrain_fog_shader",
+    language=Shader.GLSL,
+    vertex="""#version 130
+uniform mat4 p3d_ModelViewProjectionMatrix;
+in vec4 p3d_Vertex;
+in vec2 p3d_MultiTexCoord0;
+out vec2 uvs;
+out vec2 v_fog_uv;
+uniform vec2 texture_scale;
+uniform vec2 texture_offset;
+uniform vec2 fog_uv_scale;
+uniform vec2 fog_uv_offset;
+in vec4 p3d_Color;
+out vec4 vertex_color;
+
+void main() {
+    gl_Position = p3d_ModelViewProjectionMatrix * p3d_Vertex;
+    uvs = (p3d_MultiTexCoord0 * texture_scale) + texture_offset;
+    // Fog UV: remap grass-tiled UV back to [0,1] map extent.
+    // fog_uv_scale and fog_uv_offset convert from tiled UVs to map-wide [0,1].
+    v_fog_uv = p3d_MultiTexCoord0 * fog_uv_scale + fog_uv_offset;
+    vertex_color = p3d_Color;
+}
+""",
+    fragment="""#version 140
+uniform sampler2D p3d_Texture0;   // grass albedo (tiled)
+uniform sampler2D fog_texture;    // fog-of-war (1px per tile, bilinear)
+uniform vec4 p3d_ColorScale;
+in vec2 uvs;
+in vec2 v_fog_uv;
+out vec4 fragColor;
+in vec4 vertex_color;
+
+void main() {
+    vec4 terrain = texture(p3d_Texture0, uvs) * p3d_ColorScale * vertex_color;
+    vec4 fog = texture(fog_texture, v_fog_uv);
+    // Alpha-blend fog over terrain: fog.a controls coverage.
+    vec3 final_rgb = mix(terrain.rgb, fog.rgb, fog.a);
+    fragColor = vec4(final_rgb, 1.0);
+}
+""",
+    default_input={
+        "texture_scale": Vec2(1, 1),
+        "texture_offset": Vec2(0.0, 0.0),
+        "fog_uv_scale": Vec2(1, 1),
+        "fog_uv_offset": Vec2(0.0, 0.0),
+    },
+)

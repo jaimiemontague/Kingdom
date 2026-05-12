@@ -1,5 +1,24 @@
 # Changelog
 
+## Prototype v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors
+
+### WK53 — World Beauty & Terrain Elevation
+- **Blue sky:** Background changed from near-black void to sky blue (`0.53, 0.72, 0.88`). Off-map areas and the horizon now show sky instead of darkness.
+- **Atmospheric distance fog:** Exponential Panda3D fog (density 0.008) fades distant objects into the sky color, creating natural atmospheric perspective. Avoids the horizontal banding that forced `scene.clearFog()` in prior sprints.
+- **Misty fog of war:** Unexplored areas render as dark charcoal mist instead of pure black. Explored-but-not-visible areas show a lighter tint. Bilinear texture filtering smooths tile edges into soft gradients — no more hard pixelated fog boundaries.
+- **Terrain elevation:** Perlin noise heightmap (3 octaves: hills, ridges, detail) with `pow(noise, 2.5)` flatness bias generates mostly flat terrain with distinct hill and mountain features. Castle area is flattened with cosine falloff. Custom Ursina Mesh with per-vertex normals replaces the old flat ground plane.
+- **Shader-based fog on terrain:** Custom GLSL fragment shader renders the fog-of-war texture directly on the terrain mesh surface — fog conforms perfectly to hills and valleys at all camera angles.
+- **Entity Y-placement:** All buildings, trees, heroes, enemies, peasants, props, and projectiles use `get_terrain_height(world_x, world_z)` for correct elevation. New `game/graphics/terrain_height.py` module provides bilinear-interpolated height queries as the single source of truth.
+- **Camera ground clamp:** Camera cannot clip below the terrain surface — clamped to `terrain_height + 1.0` every frame.
+- **Click selection fix:** Iterative terrain height refinement in `ursina_pick.py` fixes hero click-to-select broken by non-flat terrain (old y=0 plane intersection produced parallax offset). Hero click radius increased to 1.5×. Building hit-test rects inflated by 0.5 tiles for easier selection.
+- **Config:** New terrain constants — `TERRAIN_HEIGHT_SCALE` (5.0), `TERRAIN_FLATNESS_EXPONENT` (2.5), `TERRAIN_HILL_FREQUENCY`, `TERRAIN_MOUNTAIN_FREQUENCY`, `TERRAIN_DETAIL_FREQUENCY`, `TERRAIN_CLIFF_THRESHOLD`, `TERRAIN_WATER_LEVEL`, `TERRAIN_CASTLE_FLAT_RADIUS`.
+- **Dependency:** `noise>=1.2.2` added to `requirements.txt` for Perlin noise generation.
+- **Docs:** Sprint plan at `.cursor/plans/wk53_world_beauty_terrain.plan.md`; architecture contract at `.cursor/plans/wk53_terrain_architecture_contract.md`; gameplay elevation advisory at `.cursor/plans/wk53_gameplay_elevation_advisory.md`.
+
+### Post-v1.5.5 Fixes
+- **Building interior overlay polish:** Hero panel renders on top of interior overlay scrim; deselect building panel when clicking hero in interior overlay; fix hero clicks in building interior overlay.
+- **Sound effects:** Fixed sound effects playback.
+
 ### WK25 — Packaging Spike (PyInstaller Proof of Concept)
 
 - **Standalone .exe:** Kingdom Sim can now be frozen into a distributable `KingdomSim.exe` (449 MB, 14k files) via PyInstaller `--onedir`. The game boots, renders the full 3D Ursina viewport, and runs the simulation on a machine without Python installed.

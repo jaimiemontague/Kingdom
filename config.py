@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.5"
-    game_title: str = "Kingdom Sim (Prototype v1.5.5) — Hero UI Basics"
+    prototype_version: str = "1.5.6"
+    game_title: str = "Kingdom Sim (Prototype v1.5.6) — Elevation, Sky, New Fog of War, and Centered Interiors"
     default_borderless: bool = True
 
 
@@ -546,6 +546,26 @@ CONVERSATION_TIMEOUT = 8.0
 RANGER_EXPLORE_BLACK_FOG_BIAS = RANGER.explore_black_fog_bias  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
 RANGER_FRONTIER_SCAN_RADIUS_TILES = RANGER.frontier_scan_radius_tiles  # Maximum radius (in tiles) to scan for black fog frontier tiles
 RANGER_FRONTIER_COMMIT_MS = RANGER.frontier_commit_ms  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
+
+# --- WK53 Terrain Elevation (Agent 03: terrain_height.py + heightmap generation) ---
+# Maximum terrain elevation in world units (Ursina Y).
+# WK53 R3: reduced from 8.0 to 5.0 for less extreme peaks after flatness bias.
+TERRAIN_HEIGHT_SCALE = 5.0
+# Perlin noise frequency for large rolling hills.
+TERRAIN_HILL_FREQUENCY = 0.04
+# Perlin noise frequency for medium mountain ridges.
+TERRAIN_MOUNTAIN_FREQUENCY = 0.10
+# Perlin noise frequency for fine rocky detail.
+TERRAIN_DETAIL_FREQUENCY = 0.25
+# Slope angle (degrees) that counts as a cliff (future: pathfinding impassable).
+TERRAIN_CLIFF_THRESHOLD = 45.0
+# Fixed Y for water tile surfaces (world units). Water tiles clamp to this height.
+TERRAIN_WATER_LEVEL = 1.0
+# Radius (in tiles) around castle center that is flattened to a plateau.
+TERRAIN_CASTLE_FLAT_RADIUS = 5
+# WK53 R3: Flatness exponent — power curve applied to raw [0,1] noise before scaling.
+# Values > 1.0 push low noise toward zero (flat). 2.5 gives ~60-70% flat terrain.
+TERRAIN_FLATNESS_EXPONENT = 2.5
 
 # WK6: Bounty targeting in black fog
 BOUNTY_BLACK_FOG_DISTANCE_PENALTY = BOUNTY.black_fog_distance_penalty  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)

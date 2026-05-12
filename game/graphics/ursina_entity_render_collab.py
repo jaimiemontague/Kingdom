@@ -198,6 +198,7 @@ class UrsinaEntityRenderCollab:
         hy: float,
         tint_col,
         state: str,
+        terrain_y: float = 0.0,
     ) -> None:
         UrsinaEntityRenderCollab.set_texture_if_changed(ent, None)
         scale_xyz = _footprint_scale_3d(mesh_kind, fx, fz, hy)
@@ -206,7 +207,7 @@ class UrsinaEntityRenderCollab:
             ent._ks_last_scale = scale_xyz
         _sx, sy, _sz = scale_xyz
         oy = _building_3d_origin_y(model_path, sy)
-        ent.position = (wx, oy, wz)
+        ent.position = (wx, terrain_y + oy, wz)
         _shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
         want_shader = lit_with_shadows_shader if _shadows else unlit_shader
         UrsinaEntityRenderCollab.set_shader_if_changed(ent, want_shader)
@@ -229,6 +230,7 @@ class UrsinaEntityRenderCollab:
         hy: float,
         tint_col,
         state: str,
+        terrain_y: float = 0.0,
     ) -> None:
         UrsinaEntityRenderCollab.set_texture_if_changed(ent, None)
         authored_w, authored_d = getattr(ent, "_ks_prefab_authored_ft", (1.0, 1.0))
@@ -242,7 +244,7 @@ class UrsinaEntityRenderCollab:
             ent.scale = scale_xyz
             ent._ks_last_scale = scale_xyz
         ga = float(getattr(ent, "_ks_ground_anchor_y", 0.0))
-        ent.position = (wx, ga, wz)
+        ent.position = (wx, terrain_y + ga, wz)
         if state == "damaged":
             ent.color = color.rgb(0.78, 0.42, 0.42)
         elif state == "construction":

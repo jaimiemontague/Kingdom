@@ -1,4 +1,4 @@
-"""Terrain, fog overlay, grid debug (WK41 R2 collaborator)."""
+﻿"""Terrain, fog overlay, grid debug (WK41 R2 collaborator)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from ursina import Entity, Vec2, Vec3, color
 
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.ursina_coords import SCALE, px_to_world, sim_px_to_world_xz
+from game.graphics.terrain_fog_shader import terrain_fog_shader
 from game.graphics.ursina_environment import (
     GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE,
     GRASS_SCATTER_SCALE_MULTIPLIER,
@@ -123,7 +124,7 @@ class UrsinaTerrainFogCollab:
 
         ts = int(config.TILE_SIZE)
         # WK23 R1: Quad size + center MUST match _build_3d_terrain() map extent — any drift
-        # misaligns fog vs terrain and makes FOW “slide” relative to heroes/units.
+        # misaligns fog vs terrain and makes FOW "slide" relative to heroes/units.
         w_world = (tw * ts) / SCALE
         d_world = (th * ts) / SCALE
         cx_px = tw * ts * 0.5
@@ -132,7 +133,75 @@ class UrsinaTerrainFogCollab:
 
         from panda3d.core import TransparencyAttrib
 
-        # SPRINT-BUG-008: keep fog well above the terrain quad.
+        # WK53 R3: Shader-based fog — when the terrain mesh exists with a heightmap,
+        # apply the fog texture as a shader uniform on the terrain entity instead of
+        # using a separate floating fog quad. This eliminates the gap between fog and
+        # terrain that was visible from angled camera views.
+        hmap = getattr(world, "heightmap", None)
+        terrain_ground_ent = getattr(self._r, "_terrain_ground_entity", None)
+
+        if hmap is not None and terrain_ground_ent is not None:
+            # Shader-based fog path: upload fog texture to the terrain mesh's shader.
+            # Enable bilinear filtering for smooth mist transitions.
+            if ftex is not None:
+                try:
+                    ftex.filtering = True
+                except Exception:
+                    pass
+            # Set the fog_texture uniform on the terrain entity's Panda3D node.
+            try:
+                from panda3d.core import SamplerState
+                np = terrain_ground_ent
+                if hasattr(np, 'nodePath'):
+                    np = np.nodePath
+                # Panda3D texture stage for the fog uniform
+                _fog_ts = getattr(self._r, "_fog_texture_stage", None)
+                if _fog_ts is None:
+                    from panda3d.core import TextureStage
+                    _fog_ts = TextureStage("fog_texture")
+                    _fog_ts.setSort(1)
+                    self._r._fog_texture_stage = _fog_ts
+                # Get the Panda3D texture from Ursina texture
+                p3d_tex = None
+                if ftex is not None:
+                    if hasattr(ftex, '_texture'):
+                        p3d_tex = ftex._texture
+                    elif hasattr(ftex, 'path'):
+                        # Ursina Texture may store the Panda3D texture differently
+                        try:
+                            p3d_tex = terrain_ground_ent.getTexture()
+                        except Exception:
+                            pass
+                if p3d_tex is None and ftex is not None:
+                    # Try the Ursina Entity setTexture approach
+                    try:
+                        terrain_ground_ent.setShaderInput("fog_texture", ftex)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        terrain_ground_ent.setShaderInput("fog_texture", p3d_tex)
+                    except Exception:
+                        try:
+                            terrain_ground_ent.setShaderInput("fog_texture", ftex)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # Destroy the old fog quad if it exists — no longer needed.
+            if self._r._fog_entity is not None:
+                try:
+                    import ursina as u
+                    u.destroy(self._r._fog_entity)
+                except Exception:
+                    pass
+                self._r._fog_entity = None
+
+            self._r._fog_revision_seen = int(fog_revision)
+            return
+
+        # Fallback: flat terrain (no heightmap) — use the old fog quad approach.
         fog_y = float(getattr(config, "URSINA_FOG_QUAD_Y", 0.12))
 
         if self._r._fog_entity is None:
@@ -333,16 +402,22 @@ class UrsinaTerrainFogCollab:
         self._r._grid_debug_entity.render_queue = 3
 
     def build_3d_terrain(self, world, buildings) -> None:
-        """Per-tile path/water meshes + scatter grass doodads on a full-map base plane (v1.5 Sprint 1.2)."""
+        """WK53 Wave 2: heightmap-displaced mesh + per-tile path/water + scatter props with terrain Y.
+
+        Replaces the flat ground plane with a vertex-displaced mesh whose Y values come from
+        the world's heightmap (Perlin noise, generated in World.generate_heightmap).
+        Props (trees, grass, rocks, paths) are placed at the correct terrain height.
+        """
         if self._r._terrain_entity is not None:
             return
+
+        from game.graphics.terrain_height import get_terrain_height, init_heightmap, is_initialized
 
         tw, th = int(world.width), int(world.height)
         ts = int(config.TILE_SIZE)
         m = float(TERRAIN_SCALE_MULTIPLIER)
         grass_models, doodad_models = _environment_grass_and_doodad_model_lists()
         tree_models = _environment_tree_model_list()
-        # Gray stone path (Nature Kit path_stone) — reads as pavement vs warm Retro Fantasy roofs.
         path_model = _environment_model_path("path_stone")
         rock_model = _environment_model_path("rock")
         occupied_tiles = _building_occupied_tiles(buildings)
@@ -355,70 +430,46 @@ class UrsinaTerrainFogCollab:
         root = Entity(name="terrain_3d_root")
         water_tint = color.rgb(0.24, 0.48, 0.82)
 
-        # Cohesive green ground plane under the grid (organic scatter sits on y≈0 above this).
         w_world = (tw * ts) / SCALE
         d_world = (th * ts) / SCALE
-        cx_px = tw * ts * 0.5
-        cy_px = th * ts * 0.5
-        base_wx, base_wz = sim_px_to_world_xz(cx_px, cy_px)
-        ground_ent = Entity(
-            parent=root,
-            model="quad",
-            color=color.white,
-            scale=(w_world, d_world, 1),
-            rotation=(90, 0, 0),
-            position=(base_wx, -0.05, base_wz),
-            collision=False,
-            double_sided=True,
-            shader=unlit_shader,
-            add_to_scene_entities=False,
-        )
-        # WK33: tile the user-provided grass albedo across the entire ground plane.
-        try:
-            from ursina import Texture
-            from PIL import Image
 
-            if getattr(self, "_ks_ground_tex", None) is None:
-                p = (
-                    PROJECT_ROOT
-                    / "assets"
-                    / "models"
-                    / "Models"
-                    / "Textures"
-                    / "floor_ground_grass.png"
-                )
-                if p.is_file():
-                    img = Image.open(p).convert("RGBA")
-                    self._r._ks_ground_tex = Texture(img, filtering=None)
-                else:
-                    self._r._ks_ground_tex = None
+        # --- Initialize the terrain_height module with world heightmap ---
+        hmap = getattr(world, "heightmap", None)
+        gw = getattr(world, "heightmap_grid_w", 0)
+        gh = getattr(world, "heightmap_grid_h", 0)
+        has_heightmap = hmap is not None and gw >= 2 and gh >= 2
 
-            if self._r._ks_ground_tex is not None:
-                ground_ent.texture = self._r._ks_ground_tex
-                # Default: 1 repeat per ~2 tiles (override for quick tuning).
-                tiles_per_repeat = 2.0
-                try:
-                    raw = os.environ.get("KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT", "").strip()
-                    if raw:
-                        tiles_per_repeat = max(0.25, float(raw))
-                except Exception:
-                    tiles_per_repeat = 2.0
-                ground_ent.texture_scale = Vec2(float(tw) / tiles_per_repeat, float(th) / tiles_per_repeat)
-        except Exception:
-            pass
+        if has_heightmap and not is_initialized():
+            # World origin: X starts at 0, Z is negative (sim_px_to_world_xz negates Y).
+            # Grid row 0 -> most-negative Z (bottom of map in world space).
+            # The map spans X=[0, w_world], Z=[-d_world, 0].
+            init_heightmap(
+                heightmap=hmap,
+                grid_w=gw,
+                grid_h=gh,
+                world_w=w_world,
+                world_h=d_world,
+                world_origin_x=0.0,
+                world_origin_z=-d_world,
+            )
 
+        # --- Build heightmap-displaced terrain mesh (or flat fallback) ---
+        self._build_terrain_ground_mesh(root, world, tw, th, ts, w_world, d_world, has_heightmap)
+
+        # --- Per-tile props with terrain Y ---
         for ty in range(th):
             for tx in range(tw):
                 tile = int(world.tiles[ty][tx])
                 cx_px = tx * ts + ts * 0.5
                 cy_px = ty * ts + ts * 0.5
                 wx, wz = px_to_world(cx_px, cy_px)
+                prop_y = get_terrain_height(wx, wz) if has_heightmap else 0.0
 
                 if tile == TileType.PATH:
                     path_ent = Entity(
                         parent=root,
                         model=path_model,
-                        position=(wx, 0.0, wz),
+                        position=(wx, prop_y, wz),
                         scale=(m, m, m),
                         color=color.white,
                         collision=False,
@@ -427,13 +478,13 @@ class UrsinaTerrainFogCollab:
                     )
                     _finalize_kenney_scatter_entity(path_ent, path_model)
                 elif tile == TileType.WATER:
-                    # WK32-BUG-007: flat water plane — not a tinted grass cross-mesh.
+                    water_y = float(getattr(config, "TERRAIN_WATER_LEVEL", 1.0)) if has_heightmap else 0.005
                     tile_w = (float(ts) / SCALE) * m
                     Entity(
                         parent=root,
                         model="quad",
                         rotation=(90, 0, 0),
-                        position=(wx, 0.005, wz),
+                        position=(wx, water_y + 0.005, wz),
                         scale=(tile_w, tile_w, 1),
                         color=water_tint,
                         collision=False,
@@ -442,8 +493,6 @@ class UrsinaTerrainFogCollab:
                         add_to_scene_entities=False,
                     )
 
-                # WK31: optional stride thins non-grass props (doodads/rocks).
-                # WK32 r3: grass keeps r2 sub-tile jitter but now has a startup budget.
                 on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
                 in_occ = (tx, ty) in occupied_tiles
                 grass_here = (
@@ -468,10 +517,11 @@ class UrsinaTerrainFogCollab:
                             else 1.0
                         )
                         g_scale = g_sc * g_mul
+                        g_y = get_terrain_height(wx + jx, wz + jz) if has_heightmap else 0.0
                         g_ent = Entity(
                             parent=root,
                             model=gm,
-                            position=(wx + jx, 0.0, wz + jz),
+                            position=(wx + jx, g_y, wz + jz),
                             scale=(g_scale, g_scale, g_scale),
                             rotation=(0, yaw, 0),
                             color=color.white,
@@ -488,7 +538,7 @@ class UrsinaTerrainFogCollab:
                     tree_ent = Entity(
                         parent=root,
                         model=tree_model,
-                        position=(wx, 0.0, wz),
+                        position=(wx, prop_y, wz),
                         scale=(tm, tm, tm),
                         color=color.white,
                         collision=False,
@@ -497,7 +547,6 @@ class UrsinaTerrainFogCollab:
                     )
                     _finalize_kenney_scatter_entity(tree_ent, tree_model)
                     self.track_visibility_gated_terrain(tree_ent, tx, ty)
-                    # WK44: keep a stable handle for per-tile growth scaling.
                     self._r._tree_entities[(int(tx), int(ty))] = tree_ent
                     tree_ent._ks_tree_base_scale = float(tm)
                 elif (
@@ -513,10 +562,11 @@ class UrsinaTerrainFogCollab:
                     dm_scale = rm * (0.85 if "bush" in dstem.lower() else 1.0)
                     if _stem_is_log_or_mushroom_ground_scatter(dstem):
                         dm_scale *= float(GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE)
+                    d_y = get_terrain_height(wx + jx * 0.55, wz + jz * 0.55) if has_heightmap else 0.0
                     doodad_ent = Entity(
                         parent=root,
                         model=dm,
-                        position=(wx + jx * 0.55, 0.0, wz + jz * 0.55),
+                        position=(wx + jx * 0.55, d_y, wz + jz * 0.55),
                         scale=(dm_scale, dm_scale, dm_scale),
                         rotation=(0, yaw, 0),
                         color=color.white,
@@ -532,7 +582,7 @@ class UrsinaTerrainFogCollab:
                         rock_ent = Entity(
                             parent=root,
                             model=rock_model,
-                            position=(wx, 0.0, wz),
+                            position=(wx, prop_y, wz),
                             scale=(rm, rm, rm),
                             color=color.white,
                             collision=False,
@@ -542,11 +592,199 @@ class UrsinaTerrainFogCollab:
                         _finalize_kenney_scatter_entity(rock_ent, rock_model)
                         self.track_visibility_gated_terrain(rock_ent, tx, ty)
 
-        # Do not flattenStrong() the terrain root: Panda3D merge can strip per-tile glTF
-        # material state and turn Kenney path_stone (and similar) into uniform white strips.
-        # WK22 perf note: revisit batching once path meshes use a single atlas or baked strip.
-        # root.flattenStrong()
         self._r._terrain_entity = root
+
+    def _build_terrain_ground_mesh(
+        self, root, world, tw: int, th: int, ts: int,
+        w_world: float, d_world: float, has_heightmap: bool,
+    ) -> None:
+        """Build the ground: heightmap-displaced indexed triangle mesh, or flat quad fallback.
+
+        The mesh uses the world heightmap at 2x sub-tile resolution. Each vertex's Y is
+        sampled from the heightmap. UVs tile the grass texture matching the existing
+        texture_scale. Per-vertex normals are computed from adjacent height samples.
+
+        WK53 R3: The terrain mesh uses terrain_fog_shader which samples both the grass
+        albedo and a fog-of-war texture in a single draw call. The fog texture is uploaded
+        as a shader uniform by ensure_fog_overlay() each time visibility changes.
+        """
+        import math as _math
+
+        from game.graphics.terrain_height import get_terrain_height
+
+        cx_px = tw * ts * 0.5
+        cy_px = th * ts * 0.5
+
+        hmap = getattr(world, "heightmap", None)
+        gw = getattr(world, "heightmap_grid_w", 0)
+        gh = getattr(world, "heightmap_grid_h", 0)
+
+        if not has_heightmap or hmap is None or gw < 2 or gh < 2:
+            # Flat fallback — identical to old ground plane
+            base_wx, base_wz = sim_px_to_world_xz(cx_px, cy_px)
+            ground_ent = Entity(
+                parent=root,
+                model="quad",
+                color=color.white,
+                scale=(w_world, d_world, 1),
+                rotation=(90, 0, 0),
+                position=(base_wx, -0.05, base_wz),
+                collision=False,
+                double_sided=True,
+                shader=unlit_shader,
+                add_to_scene_entities=False,
+            )
+            self._apply_grass_texture(ground_ent, tw, th)
+            return
+
+        # --- Heightmap-displaced mesh ---
+        try:
+            from ursina import Mesh
+        except ImportError:
+            return
+
+        # Step sizes in world units per grid cell
+        dx_world = w_world / (gw - 1)
+        dz_world = d_world / (gh - 1)
+
+        # Build vertex list and UV list
+        verts: list[tuple[float, float, float]] = []
+        uvs: list[tuple[float, float]] = []
+        norms: list[tuple[float, float, float]] = []
+
+        # Texture tiling: match existing tiles_per_repeat=2.0
+        tiles_per_repeat = 2.0
+        try:
+            raw = os.environ.get("KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT", "").strip()
+            if raw:
+                tiles_per_repeat = max(0.25, float(raw))
+        except Exception:
+            tiles_per_repeat = 2.0
+
+        for gz in range(gh):
+            for gx in range(gw):
+                # World position: X = gx * dx_world, Z = -(gh-1-gz) * dz_world
+                # Grid row 0 is sim-row 0 (top of map) which is the most-negative Z
+                wx = gx * dx_world
+                wz = -(gh - 1 - gz) * dz_world
+                wy = hmap[gz][gx]
+                verts.append((wx, wy, wz))
+
+                # UV: tile the texture
+                tile_x = gx / 2.0  # grid cell -> tile coord
+                tile_z = gz / 2.0
+                u = tile_x / tiles_per_repeat
+                v = tile_z / tiles_per_repeat
+                uvs.append((u, v))
+
+        # Per-vertex normals from adjacent height samples
+        for gz in range(gh):
+            for gx in range(gw):
+                # Sample neighbors (clamped)
+                gx0 = max(0, gx - 1)
+                gx1 = min(gw - 1, gx + 1)
+                gz0 = max(0, gz - 1)
+                gz1 = min(gh - 1, gz + 1)
+
+                hL = hmap[gz][gx0]
+                hR = hmap[gz][gx1]
+                hD = hmap[gz0][gx]
+                hU = hmap[gz1][gx]
+
+                # Tangent vectors (unnormalized)
+                sx = (gx1 - gx0) * dx_world
+                sz = (gz1 - gz0) * dz_world
+                # Normal = cross(tangent_x, tangent_z)
+                # tangent_x = (sx, hR-hL, 0), tangent_z = (0, hU-hD, sz)
+                nx = -(hR - hL) * sz
+                ny = sx * sz
+                nz = -(hU - hD) * sx
+                ln = _math.sqrt(nx * nx + ny * ny + nz * nz)
+                if ln > 1e-8:
+                    nx /= ln
+                    ny /= ln
+                    nz /= ln
+                else:
+                    nx, ny, nz = 0.0, 1.0, 0.0
+                norms.append((nx, ny, nz))
+
+        # Build triangle indices (two triangles per quad cell)
+        triangles: list[int] = []
+        for gz in range(gh - 1):
+            for gx in range(gw - 1):
+                i00 = gz * gw + gx
+                i10 = gz * gw + gx + 1
+                i01 = (gz + 1) * gw + gx
+                i11 = (gz + 1) * gw + gx + 1
+                # Triangle 1
+                triangles.extend([i00, i01, i10])
+                # Triangle 2
+                triangles.extend([i10, i01, i11])
+
+        terrain_mesh = Mesh(
+            vertices=verts,
+            triangles=triangles,
+            uvs=uvs,
+            normals=norms,
+            mode="triangle",
+        )
+
+        ground_ent = Entity(
+            parent=root,
+            model=terrain_mesh,
+            color=color.white,
+            collision=False,
+            double_sided=True,
+            shader=terrain_fog_shader,
+            add_to_scene_entities=False,
+        )
+        self._apply_grass_texture(ground_ent, tw, th, use_texture_scale=False)
+
+        # WK53 R3: Set fog UV transform so the shader can derive fog-of-war UVs from
+        # the tiled grass UVs. fog_uv = grass_uv * fog_uv_scale + fog_uv_offset maps
+        # tiled UVs back to [0,1] across the full map extent, with N/S flip.
+        fog_uv_sx = tiles_per_repeat / float(tw) if tw > 0 else 1.0
+        fog_uv_sy = -tiles_per_repeat / float(th) if th > 0 else -1.0
+        ground_ent.set_shader_input("fog_uv_scale", Vec2(fog_uv_sx, fog_uv_sy))
+        ground_ent.set_shader_input("fog_uv_offset", Vec2(0.0, 1.0))
+
+        # Store reference so ensure_fog_overlay can upload the fog texture to this entity.
+        self._r._terrain_ground_entity = ground_ent
+
+    def _apply_grass_texture(self, ground_ent, tw: int, th: int, use_texture_scale: bool = True) -> None:
+        """Load and apply the grass albedo texture to a ground entity."""
+        try:
+            from ursina import Texture
+            from PIL import Image
+
+            if getattr(self._r, "_ks_ground_tex", None) is None:
+                p = (
+                    PROJECT_ROOT
+                    / "assets"
+                    / "models"
+                    / "Models"
+                    / "Textures"
+                    / "floor_ground_grass.png"
+                )
+                if p.is_file():
+                    img = Image.open(p).convert("RGBA")
+                    self._r._ks_ground_tex = Texture(img, filtering=None)
+                else:
+                    self._r._ks_ground_tex = None
+
+            if self._r._ks_ground_tex is not None:
+                ground_ent.texture = self._r._ks_ground_tex
+                if use_texture_scale:
+                    tiles_per_repeat = 2.0
+                    try:
+                        raw = os.environ.get("KINGDOM_URSINA_GROUND_TEX_TILES_PER_REPEAT", "").strip()
+                        if raw:
+                            tiles_per_repeat = max(0.25, float(raw))
+                    except Exception:
+                        tiles_per_repeat = 2.0
+                    ground_ent.texture_scale = Vec2(float(tw) / tiles_per_repeat, float(th) / tiles_per_repeat)
+        except Exception:
+            pass
 
     def sync_dynamic_trees(self, world, snapshot_trees) -> None:
         """WK44/WK45: scale existing 3D tree entities using sim Tree.growth_percentage.
@@ -595,13 +833,15 @@ class UrsinaTerrainFogCollab:
                 if not tree_models:
                     continue
                 try:
+                    from game.graphics.terrain_height import get_terrain_height, is_initialized as _hm_ok
                     wx, wz = sim_px_to_world_xz(tx * int(config.TILE_SIZE), ty * int(config.TILE_SIZE))
+                    tree_y = get_terrain_height(wx, wz) if _hm_ok() else 0.0
                     ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
                     tree_model = tree_models[ti]
                     tree_ent = Entity(
                         parent=root,
                         model=tree_model,
-                        position=(wx, 0.0, wz),
+                        position=(wx, tree_y, wz),
                         scale=(tm, tm, tm),
                         color=color.white,
                         collision=False,
@@ -689,11 +929,13 @@ class UrsinaTerrainFogCollab:
                 continue
             if key not in ents:
                 try:
+                    from game.graphics.terrain_height import get_terrain_height, is_initialized as _hm_ok
                     wx, wz = sim_px_to_world_xz(tx * int(config.TILE_SIZE), ty * int(config.TILE_SIZE))
+                    log_y = get_terrain_height(wx, wz) if _hm_ok() else 0.0
                     ent = Entity(
                         parent=root,
                         model=model_path,
-                        position=(wx, 0.0, wz),
+                        position=(wx, log_y, wz),
                         scale=(base_scale, base_scale, base_scale),
                         color=color.white,
                         collision=False,

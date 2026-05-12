@@ -1114,6 +1114,21 @@ class UrsinaApp:
                     if hk["s"]:
                         camera.z -= pan_speed * dt
 
+            # WK53 R3: Camera terrain clamp — prevent camera from clipping below the
+            # terrain surface when orbiting/panning. Sample terrain height at the
+            # camera's world XZ position and enforce a minimum Y offset above ground.
+            try:
+                from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_ok
+                if _terrain_ok():
+                    cam_wx = float(camera.world_position.x)
+                    cam_wz = float(camera.world_position.z)
+                    ground_y = get_terrain_height(cam_wx, cam_wz)
+                    min_cam_y = ground_y + 1.0  # offset above ground for comfortable feel
+                    if float(camera.world_position.y) < min_cam_y:
+                        camera.world_position = Vec3(cam_wx, min_cam_y, cam_wz)
+            except Exception:
+                pass
+
         import __main__
 
         __main__.update = update

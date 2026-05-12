@@ -5,10 +5,15 @@ import pygame
 import math
 from config import (
     TILE_SIZE, MAP_WIDTH, MAP_HEIGHT,
-    COLOR_GRASS, COLOR_WATER, COLOR_PATH, COLOR_TREE
+    COLOR_GRASS, COLOR_WATER, COLOR_PATH, COLOR_TREE,
 )
 from game.graphics.tile_sprites import TileSpriteLibrary
 from game.sim.determinism import get_rng
+
+try:
+    from noise import pnoise2 as _pnoise2
+except ImportError:
+    _pnoise2 = None
 
 
 class TileType:
@@ -47,6 +52,12 @@ class World:
         # WK44 Stage 2: injected by SimEngine; called as tree_growth_lookup(tx,ty)->0..1
         self.tree_growth_lookup = None
         self.generate_terrain()
+
+        # WK53 Wave 2: heightmap for terrain elevation (generated after flat tiles).
+        self.heightmap: list[list[float]] | None = None
+        self.heightmap_grid_w: int = 0
+        self.heightmap_grid_h: int = 0
+        self.generate_heightmap()
 
         # Fog-of-war visibility grid (tile-based).
         # UNSEEN: never revealed; SEEN: explored but not currently visible; VISIBLE: in vision now.
@@ -141,6 +152,103 @@ class World:
                 if self.tiles[ty][tx] == TileType.TREE:
                     self.tiles[ty][tx] = TileType.GRASS
     
+    def generate_heightmap(self) -> None:
+        """WK53 Wave 2: Generate a Perlin-noise heightmap at 2x sub-tile resolution.
+
+        Fence-post pattern: for an NxM tile map the grid is (2*N+1) x (2*M+1).
+        The castle starting area is flattened to a gentle plateau with cosine falloff.
+        Water tiles are clamped to TERRAIN_WATER_LEVEL.
+        """
+        if _pnoise2 is None:
+            # noise package unavailable — leave heightmap as None (flat terrain).
+            return
+
+        import config as cfg
+
+        tw, th = int(self.width), int(self.height)
+        gw = tw * 2 + 1
+        gh = th * 2 + 1
+        self.heightmap_grid_w = gw
+        self.heightmap_grid_h = gh
+
+        height_scale = float(getattr(cfg, "TERRAIN_HEIGHT_SCALE", 8.0))
+        hill_freq = float(getattr(cfg, "TERRAIN_HILL_FREQUENCY", 0.04))
+        mtn_freq = float(getattr(cfg, "TERRAIN_MOUNTAIN_FREQUENCY", 0.10))
+        detail_freq = float(getattr(cfg, "TERRAIN_DETAIL_FREQUENCY", 0.25))
+        water_level = float(getattr(cfg, "TERRAIN_WATER_LEVEL", 1.0))
+        flat_radius = float(getattr(cfg, "TERRAIN_CASTLE_FLAT_RADIUS", 5))
+
+        seed = int(getattr(cfg, "SIM_SEED", 1))
+
+        # Castle center in grid coords (castle is placed at MAP_WIDTH//2-1, MAP_HEIGHT//2-1).
+        castle_gx = tw // 2 - 1
+        castle_gy = th // 2 - 1
+        # In heightmap grid space (2x resolution):
+        castle_hx = castle_gx * 2 + 1  # center of castle footprint (3x3) offset
+        castle_hz = castle_gy * 2 + 1
+        flat_radius_grid = flat_radius * 2.0  # convert tile-radius to grid-radius
+
+        # WK53 R3: flatness exponent — pushes low-to-mid noise toward zero (flat ground)
+        # while preserving peaks. Values > 1.0 create more flat terrain; 2.5 gives ~60-70%
+        # flat map with distinct hill features rising where noise is strongest.
+        flatness_exp = float(getattr(cfg, "TERRAIN_FLATNESS_EXPONENT", 2.5))
+
+        # Generate raw Perlin noise heightmap
+        hmap: list[list[float]] = []
+        for gz in range(gh):
+            row: list[float] = []
+            for gx in range(gw):
+                # Sample Perlin noise at three octaves
+                x_sample = float(gx) / 2.0  # convert back to tile-space for frequency
+                z_sample = float(gz) / 2.0
+                n = 0.0
+                n += 1.0 * _pnoise2(
+                    x_sample * hill_freq, z_sample * hill_freq,
+                    base=seed,
+                )
+                n += 0.4 * _pnoise2(
+                    x_sample * mtn_freq, z_sample * mtn_freq,
+                    base=seed + 1,
+                )
+                n += 0.15 * _pnoise2(
+                    x_sample * detail_freq, z_sample * detail_freq,
+                    base=seed + 2,
+                )
+                # pnoise2 returns roughly [-1, 1]; remap to [0, 1]
+                raw_01 = (n + 1.0) * 0.5
+                raw_01 = max(0.0, min(1.0, raw_01))
+                # WK53 R3: Apply flatness bias — power curve compresses low values
+                # toward zero (flat) while preserving peaks. This makes ~60-70% of
+                # the map relatively flat with hills as distinct features.
+                biased = pow(raw_01, flatness_exp)
+                h = biased * height_scale
+                h = max(0.0, min(height_scale, h))
+                row.append(h)
+            hmap.append(row)
+
+        # Castle flattening: cosine falloff toward a flat plateau at castle center height
+        castle_h = hmap[castle_hz][castle_hx]
+        for gz in range(gh):
+            for gx in range(gw):
+                dx = gx - castle_hx
+                dz = gz - castle_hz
+                dist = math.sqrt(dx * dx + dz * dz)
+                if dist < flat_radius_grid:
+                    # Cosine falloff: 1.0 at center -> 0.0 at edge
+                    t = dist / flat_radius_grid
+                    blend = 0.5 * (1.0 + math.cos(t * math.pi))  # 1.0 at center, 0.0 at edge
+                    hmap[gz][gx] = hmap[gz][gx] * (1.0 - blend) + castle_h * blend
+
+        # Water tile clamping: clamp heightmap samples that fall on water tiles
+        for gz in range(gh):
+            tile_z = min(th - 1, gz // 2)
+            for gx in range(gw):
+                tile_x = min(tw - 1, gx // 2)
+                if self.tiles[tile_z][tile_x] == TileType.WATER:
+                    hmap[gz][gx] = water_level
+
+        self.heightmap = hmap
+
     def get_tile(self, x: int, y: int) -> int:
         """Get tile type at grid position."""
         if 0 <= x < self.width and 0 <= y < self.height:

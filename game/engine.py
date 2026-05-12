@@ -530,14 +530,28 @@ class GameEngine:
         return self.screen_to_world(screen_pos[0], screen_pos[1])
 
     def try_select_hero(self, screen_pos: tuple) -> bool:
-        """Try to select a hero at the given screen position. Returns True if selected."""
+        """Try to select a hero at the given screen position. Returns True if selected.
+
+        WK53 R4: uses 1.5x hero.size as click radius for more forgiving selection on
+        heightmap terrain, and picks the closest hero when multiple overlap.
+        """
         world_x, world_y = self.pointer_world_xy(screen_pos)
-        
+
+        best = None
+        best_d = float("inf")
         for hero in self.heroes:
-            if hero.is_alive and hero.distance_to(world_x, world_y) < hero.size:
-                self.selected_hero = hero
-                self.selected_peasant = None
-                return True
+            if not hero.is_alive:
+                continue
+            d = hero.distance_to(world_x, world_y)
+            # WK53 R4: 1.5x hero.size for forgiving click targets on terrain
+            if d < hero.size * 1.5 and d < best_d:
+                best_d = d
+                best = hero
+
+        if best is not None:
+            self.selected_hero = best
+            self.selected_peasant = None
+            return True
 
         return False
 
@@ -608,17 +622,41 @@ class GameEngine:
         return False
 
     def try_select_building(self, screen_pos: tuple) -> bool:
-        """Try to select a building at the given screen position. Returns True if selected."""
+        """Try to select a building at the given screen position. Returns True if selected.
+
+        WK53 R4: inflates the building hit-test rect by a margin (half a tile) so that
+        clicks near building edges register reliably. Complex Kenney kitbash models have
+        geometry gaps that caused precise-click misses with the exact footprint rect.
+        """
         world_x, world_y = self.pointer_world_xy(screen_pos)
-        
+
+        # Margin in sim-pixels: half a tile on each side for forgiving click targets.
+        margin = TILE_SIZE * 0.5
+
+        best = None
+        best_d2 = float("inf")
+
         for building in self.buildings:
             rect = building.get_rect()
-            if rect.collidepoint(world_x, world_y):
-                self.selected_building = building
-                self.selected_peasant = None
-                self.building_panel.select_building(building, self.heroes)
-                return True
-        
+            # Inflate rect by margin on all sides for easier clicking
+            if (
+                (rect.x - margin) <= world_x < (rect.x + rect.width + margin)
+                and (rect.y - margin) <= world_y < (rect.y + rect.height + margin)
+            ):
+                # Prefer the building whose center is closest to the click
+                cx = rect.x + rect.width * 0.5
+                cy = rect.y + rect.height * 0.5
+                d2 = (world_x - cx) ** 2 + (world_y - cy) ** 2
+                if d2 < best_d2:
+                    best_d2 = d2
+                    best = building
+
+        if best is not None:
+            self.selected_building = best
+            self.selected_peasant = None
+            self.building_panel.select_building(best, self.heroes)
+            return True
+
         return False
     
     def try_hire_hero(self):

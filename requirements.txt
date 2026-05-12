@@ -11,6 +11,9 @@ google-generativeai>=0.3.0
 httpx>=0.25.0
 python-dotenv>=1.0.0
 
+# Terrain generation
+noise>=1.2.2
+
 # Build / test
 pyinstaller>=6.0.0
 pytest
