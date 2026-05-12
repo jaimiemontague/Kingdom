@@ -77,9 +77,9 @@ class UrsinaTerrainFogCollab:
         if self._r._fog_tile_buf is None or len(self._r._fog_tile_buf) != need:
             self._r._fog_tile_buf = bytearray(need)
         buf = self._r._fog_tile_buf
-        # WK53 R1: UNSEEN fog is darker grey mist instead of black — (0.4, 0.4, 0.45) * 255.
-        # This creates a moody cool-grey "rolling mist" look for unexplored territory.
-        _unseen_r, _unseen_g, _unseen_b = 102, 102, 115  # ~(0.4, 0.4, 0.45)
+        # WK53 R1: UNSEEN fog is dark charcoal mist instead of black — (0.2, 0.2, 0.23) * 255.
+        # Dark enough to clearly hide unexplored territory, but reads as mist not void.
+        _unseen_r, _unseen_g, _unseen_b = 51, 51, 58  # ~(0.2, 0.2, 0.23)
         row_unseen = bytes((_unseen_r, _unseen_g, _unseen_b, 0xFF)) * tw
         for ty in range(th):
             buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
