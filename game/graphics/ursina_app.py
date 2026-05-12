@@ -66,22 +66,40 @@ class UrsinaApp:
         # Default shader: lit+shadows only when directional shadows are enabled (otherwise unlit = much cheaper).
         _ursina_shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))
         Entity.default_shader = lit_with_shadows_shader if _ursina_shadows else unlit_shader
-        # SPRINT-BUG-008: Ursina attaches linear Fog to the scene by default. Combined with
-        # lit_with_shadows_shader's own fog mix + a forest-green clear color, drivers often show
-        # thick horizontal banding in the upper view. Fog-of-war is handled by a floor quad in
-        # UrsinaRenderer — we do not need Panda scene fog here.
+        # WK53: clear Ursina's default linear fog first, then re-apply as exponential.
+        # SPRINT-BUG-008 history: linear fog + lit_with_shadows_shader caused horizontal
+        # banding; exponential fog avoids the banding artifact while giving atmospheric
+        # depth perspective.
         scene.clearFog()
 
         from ursina import color as ucolor
 
         from panda3d.core import LVecBase4f
         base = self.app
-        # Neutral sky/clear color (was forest green; green bands read as "broken terrain").
-        base.setBackgroundColor(LVecBase4f(0.06, 0.07, 0.09, 1))
+        # WK53 R1: sky-blue clear color (was 0.06, 0.07, 0.09 — near-black void).
+        _sky_r, _sky_g, _sky_b = 0.53, 0.72, 0.88
+        base.setBackgroundColor(LVecBase4f(_sky_r, _sky_g, _sky_b, 1))
         try:
-            window.color = ucolor.rgb(0.06, 0.07, 0.09)
+            window.color = ucolor.rgb(_sky_r, _sky_g, _sky_b)
         except Exception:
             pass
+
+        # WK53 R1: atmospheric distance fog — exponential mode.
+        # Exponential fog avoids the horizontal banding that linear fog caused with
+        # lit_with_shadows_shader (SPRINT-BUG-008). Fog color matches the sky clear
+        # color so distant objects fade naturally into the horizon.
+        # Density tuned so the nearest ~60% of the map renders clearly and the far
+        # ~40% fades gradually toward sky blue.
+        try:
+            from panda3d.core import Fog as PandaFog
+            _atmo_fog = PandaFog("atmospheric_distance_fog")
+            _atmo_fog.setColor(_sky_r, _sky_g, _sky_b, 1.0)
+            _atmo_fog.setExpDensity(0.008)
+            base.render.setFog(_atmo_fog)
+        except Exception:
+            # If exponential fog setup fails (driver/API issue), fall back to no fog.
+            # The sky clear color alone still eliminates the dark void.
+            scene.clearFog()
 
         tiles_w = config.MAP_WIDTH
         tiles_h = config.MAP_HEIGHT

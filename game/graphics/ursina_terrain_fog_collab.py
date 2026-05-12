@@ -77,16 +77,22 @@ class UrsinaTerrainFogCollab:
         if self._r._fog_tile_buf is None or len(self._r._fog_tile_buf) != need:
             self._r._fog_tile_buf = bytearray(need)
         buf = self._r._fog_tile_buf
-        row_unseen = b"\x00\x00\x00\xff" * tw
+        # WK53 R1: UNSEEN fog is darker grey mist instead of black — (0.4, 0.4, 0.45) * 255.
+        # This creates a moody cool-grey "rolling mist" look for unexplored territory.
+        _unseen_r, _unseen_g, _unseen_b = 102, 102, 115  # ~(0.4, 0.4, 0.45)
+        row_unseen = bytes((_unseen_r, _unseen_g, _unseen_b, 0xFF)) * tw
         for ty in range(th):
             buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
         vis_b = b"\x00\x00\x00\x00"
+        # WK53 R1: SEEN overlay is grey tint instead of semi-transparent black.
+        # (~0.35, 0.35, 0.4, alpha ~0.5) — visible mist over explored-but-not-visible areas.
+        _seen_r, _seen_g, _seen_b = 89, 89, 102  # ~(0.35, 0.35, 0.4)
         try:
-            seen_a = int(getattr(config, "URSINA_FOG_SEEN_ALPHA", 0xAA))
+            seen_a = int(getattr(config, "URSINA_FOG_SEEN_ALPHA", 0x80))
         except Exception:
-            seen_a = 0xAA
+            seen_a = 0x80
         seen_a = max(0, min(255, int(seen_a)))
-        seen_b = bytes((0, 0, 0, seen_a))
+        seen_b = bytes((_seen_r, _seen_g, _seen_b, seen_a))
         # WK23 FIX: write rows in REVERSE sim-Y order so the texture's row-0
         # corresponds to map-south (sim_py == th*ts).  sim_px_to_world_xz negates
         # the Y axis (world_z = -py/SCALE), so map-south ends at world_z=0 (the
@@ -139,8 +145,11 @@ class UrsinaTerrainFogCollab:
                 color=color.white,
                 double_sided=True,
             )
+            # WK53 R1: bilinear filtering smooths hard tile edges into gradual mist
+            # transitions. The fog texture is 1px-per-tile, so GPU bilinear interpolation
+            # across tile boundaries creates natural feathering — "rolling mist" not a grid.
             if self._r._fog_entity.texture:
-                self._r._fog_entity.texture.filtering = None
+                self._r._fog_entity.texture.filtering = True
             self._r._fog_entity.texture_scale = Vec2(1, -1)
             self._r._fog_entity.texture_offset = Vec2(0, 1)
             self._r._fog_entity.setTransparency(TransparencyAttrib.M_alpha)

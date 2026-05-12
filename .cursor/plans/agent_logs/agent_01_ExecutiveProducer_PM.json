@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-12 (Agent 01 WK53 Kickoff): Sprint wk53_world_beauty_terrain — World beauty + terrain elevation. Blue sky, misty fog of war, heightmap terrain with hills/mountains/cliffs. Plan: .cursor/plans/wk53_world_beauty_terrain.plan.md. R1: Agent 03 (architecture + sky/fog impl) + Agent 05 (gameplay consult) parallel.",
     "2026-05-08 (Agent 01 R13): Added wk52_r13_card_chat_enter_building — four items from Jaimie playtest: (A) chat closed by default on pin/select; (B) hero card close actions must not close building/hero menus; (C) remove blank space under card when chat closed; (D) Enter Building opens centered modal overlay showing interior heroes + pauses game.",
     "2026-05-08 (Agent 01 R12): R12 finished+verified. Scroll wheel now correctly routes to menus in Ursina mode via _handle_ursina_input intercept. Jaimie confirmed working.",
     "2026-05-08 (Agent 01 R11): R11 finished+verified. Bugs A+B (building menu alignment/overlap) fixed. Bug C (scroll wheel) NOT fixed in Ursina mode — carried forward to R12.",
@@ -5612,16 +5613,33 @@
               "08": "high"
             },
             "do_not_send": [
-              "01", "02", "03", "04", "05", "06", "07", "09", "10", "11", "12", "13", "14", "15"
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
             ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r12_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -5658,7 +5676,9 @@
               "reporter": "human_playtest",
               "expected": "When a hero is pinned or selected, the watch card appears with chat collapsed/closed. Player can open it manually if they want.",
               "actual": "Chat band is open by default, taking up space in the card.",
-              "acceptance_test": ["Pin a hero — chat band starts collapsed. Click to expand it manually."]
+              "acceptance_test": [
+                "Pin a hero — chat band starts collapsed. Click to expand it manually."
+              ]
             },
             {
               "id": "WK52-R13-B",
@@ -5687,7 +5707,9 @@
               "reporter": "human_playtest",
               "expected": "When chat is collapsed, the hero card shrinks so there is no gap between the last visible row (XP/Level) and the card bottom edge. Card height is dynamic based on whether chat is open or closed.",
               "actual": "When chat is closed, there is a ~25-50px blank area below the XP/Level/Mana row before the card bottom edge. Wasted space.",
-              "acceptance_test": ["Close chat on hero card — card bottom edge is snug against the last content row, no blank gap."]
+              "acceptance_test": [
+                "Close chat on hero card — card bottom edge is snug against the last content row, no blank gap."
+              ]
             },
             {
               "id": "WK52-R13-D",
@@ -5725,15 +5747,34 @@
             "intelligence_by_agent": {
               "08": "high"
             },
-            "do_not_send": ["01","02","03","04","05","06","07","09","10","11","12","13","14","15"]
+            "do_not_send": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["08"],
+            "runnable_agents": [
+              "08"
+            ],
             "dependencies": [
               {
                 "id": "wk52_r13_impl",
-                "agents": ["08"],
+                "agents": [
+                  "08"
+                ],
                 "parallel": false
               }
             ],
@@ -5748,6 +5789,65 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r13_card_chat_enter_building. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON. Run SDK receipt."
+        }
+      }
+    },
+    "wk53_world_beauty_terrain": {
+      "sprint_meta": {
+        "status": "in_progress",
+        "created_utc": "2026-05-12T12:00:00Z",
+        "plan_doc": ".cursor/plans/wk53_world_beauty_terrain.plan.md",
+        "notes": "World beauty sprint: blue sky, misty fog of war, terrain elevation (hills, mountains, cliffs)."
+      },
+      "rounds": {
+        "wk53_r1_sky_fog_architecture": {
+          "round_meta": {
+            "round_id": "wk53_r1_sky_fog_architecture",
+            "created_utc": "2026-05-12T12:00:00Z",
+            "wave": 1,
+            "note": "Combined Wave 0 (architecture contract) + Wave 1 (sky/fog impl). Agent 03 designs terrain architecture AND implements sky/fog visuals. Agent 05 provides gameplay advisory. Parallel."
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "R1: Agent 03 designs terrain elevation architecture contract and implements sky color + atmospheric fog + fog-of-war mist rework. Agent 05 provides gameplay implications advisory. Parallel."
+          },
+          "pm_next_actions_by_agent": {
+            "03": {
+              "status": "assigned",
+              "next_action": "Design terrain elevation architecture contract. Then implement Wave 1: blue sky, atmospheric fog, fog-of-war mist rework."
+            },
+            "05": {
+              "status": "assigned",
+              "next_action": "Write gameplay implications advisory for terrain elevation. Consult only, no code."
+            }
+          },
+          "pm_agent_prompts": {
+            "03": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r1_sky_fog_architecture.\n\nRead the sprint plan: .cursor/plans/wk53_world_beauty_terrain.plan.md\n\nYOUR ASSIGNMENT (two parts):\n\nPART A — TERRAIN ARCHITECTURE CONTRACT (Wave 0)\nWrite .cursor/plans/wk53_terrain_architecture_contract.md covering:\n1. Heightmap data model: resolution, storage, generation algorithm (Perlin/simplex noise)\n2. Terrain mesh approach: GeoMipTerrain vs custom Mesh vs Ursina Mesh — recommend one\n3. Public API: get_terrain_height(world_x, world_z) -> float — where it lives, how entities call it\n4. Fog-of-war on non-flat terrain: shader-based vs conforming mesh — recommend one\n5. Atmospheric fog: exponential vs fragment-shader — must NOT re-introduce banding (see scene.clearFog() in ursina_app.py)\n6. File ownership map for Wave 2 terrain implementation\n\nPART B — SKY & FOG IMPLEMENTATION (Wave 1)\nB1. Sky-blue clear color: change base.setBackgroundColor() in ursina_app.py from (0.06,0.07,0.09) to sky blue (~0.53,0.72,0.88). Update window.color.\nB2. Atmospheric distance fog: re-introduce using EXPONENTIAL mode (not linear). Fog color = sky blue. Tune so ~60% of map is clear, ~40% fades. If banding returns, fall back to fragment-shader.\nB3. Fog-of-war mist: in ursina_terrain_fog_collab.py change UNSEEN from black to grey mist (~0.6,0.6,0.65,0xFF). SEEN from semi-transparent black to lighter grey (~0.5,0.5,0.55,0.4). Switch texture filtering from nearest-neighbor to bilinear.\n\nVERIFICATION:\n- python main.py --provider mock\n- python tools/qa_smoke.py --quick (must PASS)\n\nUpdate your log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json -> sprints[\"wk53_world_beauty_terrain\"].rounds[\"wk53_r1_sky_fog_architecture\"]. Validate JSON.",
+            "05": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r1_sky_fog_architecture.\n\nRead the sprint plan: .cursor/plans/wk53_world_beauty_terrain.plan.md\n\nYOUR ASSIGNMENT (consult only, NO code changes):\nWrite .cursor/plans/wk53_gameplay_elevation_advisory.md covering:\n1. Building placement on slopes (restrictions, benefits, slope thresholds)\n2. Movement cost on hills (speed penalties, pathfinding preferences, cliff impassability)\n3. Combat elevation advantages (damage bonuses, range bonuses)\n4. Resource placement (trees on slopes, mines in mountains)\n5. Data requirements for the heightmap API to support future gameplay features\n\nMark ALL recommendations as future sprint — no gameplay code this sprint.\n\nUpdate your log at .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json -> sprints[\"wk53_world_beauty_terrain\"].rounds[\"wk53_r1_sky_fog_architecture\"]. Validate JSON."
+          },
+          "pm_send_list_minimal": {
+            "rationale": "R1 parallel: Agent 03 (HIGH — architecture design + sky/fog implementation, novel atmospheric fog). Agent 05 (LOW — advisory consult, no code).",
+            "intelligence_by_agent": {
+              "03": "high",
+              "05": "low"
+            },
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ]
+          },
+          "pm_universal_prompt": "You are activated for sprint wk53_world_beauty_terrain, round wk53_r1_sky_fog_architecture. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk53_world_beauty_terrain\"].rounds[\"wk53_r1_sky_fog_architecture\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON."
         }
       }
     }

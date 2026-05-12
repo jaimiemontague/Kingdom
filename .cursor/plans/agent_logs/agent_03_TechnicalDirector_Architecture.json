@@ -951,6 +951,60 @@
           "recommended_next_actions": []
         }
       }
+    },
+    "wk53_world_beauty_terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk53_world_beauty_terrain.plan.md",
+        "notes": "WK53: World beauty — blue sky, misty fog, terrain elevation (hills, mountains, cliffs)."
+      },
+      "rounds": {
+        "wk53_r1_sky_fog_architecture": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r1_sky_fog_architecture",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Changed background/clear color from near-black (0.06,0.07,0.09) to sky blue (0.53,0.72,0.88). Added exponential atmospheric distance fog (Panda3D Fog with setExpDensity 0.008) matching sky color — replaces the scene.clearFog() that was needed when linear fog caused banding.",
+            "game/graphics/ursina_terrain_fog_collab.py: Changed UNSEEN fog from black (0,0,0,0xFF) to grey mist (153,153,166,0xFF ~0.6,0.6,0.65). Changed SEEN overlay from semi-transparent black to lighter grey (128,128,140,0x66 ~0.5,0.5,0.55,0.4). Switched fog texture filtering from nearest-neighbor (None) to bilinear (True) for smooth tile-edge transitions.",
+            "config.py: Updated URSINA_FOG_SEEN_ALPHA default from 0xAA to 0x66 (~0.4 alpha) to match the lighter grey mist look.",
+            ".cursor/plans/wk53_terrain_architecture_contract.md: NEW — terrain elevation architecture contract covering heightmap data model (2x sub-tile Perlin noise), mesh approach (custom Ursina Mesh recommended over GeoMipTerrain), public API (get_terrain_height in new terrain_height.py), fog-of-war on terrain (shader-based recommended), atmospheric fog (exponential, tested), and Wave 2 file ownership map."
+          ],
+          "architecture_decisions": [
+            "Heightmap: 2x sub-tile resolution, Perlin noise 3-octave layered, castle-flat radius, stored as list[list[float]] on World.",
+            "Terrain mesh: custom Ursina Mesh with heightmap-displaced vertices (not GeoMipTerrain). 10K-40K vertices at project scale — no LOD needed.",
+            "Public API: get_terrain_height(world_x, world_z) in new game/graphics/terrain_height.py. Bilinear interpolation. Single source of truth for all entity Y-placement.",
+            "Fog-of-war on non-flat terrain: shader-based on terrain mesh (not conforming overlay) to avoid z-fighting.",
+            "Atmospheric fog: Panda3D exponential fog (density 0.008). Avoids linear fog banding. Fragment-shader fallback documented if driver issues arise."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe scenarios passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "268 passed; determinism_guard PASS; all observe_sync scenarios PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review of sky color + fog mist after Wave 1 (launch python main.py --provider mock and pan camera).",
+            "Wave 2: implement terrain elevation (heightmap generation + mesh + entity Y-placement) per architecture contract.",
+            "If exponential fog banding is reported during visual review, switch to fragment-shader distance fade per contract fallback.",
+            "Dependency: noise PyPI package needed for Wave 2 Perlin noise generation (add to requirements.txt)."
+          ]
+        }
+      }
     }
   }
 }

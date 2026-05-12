@@ -489,7 +489,7 @@ if _sb_env > 0:
     URSINA_ENV_SCATTER_BRIGHTNESS = max(0.5, min(2.0, _sb_env))
 
 # Explored (SEEN) fog tuning knobs.
-URSINA_FOG_SEEN_ALPHA = 0xAA  # 170 alpha (historical default)
+URSINA_FOG_SEEN_ALPHA = 0x80  # WK53: ~0.5 alpha (was 0xAA); darker grey mist over explored tiles
 _seen_a_env = os.environ.get("KINGDOM_URSINA_FOG_SEEN_ALPHA", "").strip()
 try:
     _seen_a_i = int(_seen_a_env) if _seen_a_env else -1
