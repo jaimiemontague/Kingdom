@@ -1,5 +1,17 @@
 # Changelog
 
+### WK25 — Packaging Spike (PyInstaller Proof of Concept)
+
+- **Standalone .exe:** Kingdom Sim can now be frozen into a distributable `KingdomSim.exe` (449 MB, 14k files) via PyInstaller `--onedir`. The game boots, renders the full 3D Ursina viewport, and runs the simulation on a machine without Python installed.
+- **Centralized path resolution:** New `game/paths.py` module with `sys._MEIPASS` support replaces 7 scattered `Path(__file__).parents[N]` call sites that broke inside frozen bundles.
+- **Panda3D DLL bundling:** Display module DLLs (`libpandagl.dll`, `libp3windisplay.dll`, etc.) and `Config.prc` files are explicitly bundled — PyInstaller's static analysis misses them because Panda3D loads them dynamically.
+- **Ursina resource bundling:** Fonts (`OpenSans-Regular.ttf`), built-in models (quad, cube), textures, and shaders from the Ursina package are included in the spec.
+- **Build automation:** `python tools/build_executable.py --clean --test` produces a complete build + smoke test in ~72s. Dedicated Python 3.11 venv at `C:\KingdomBuild\` (outside OneDrive to avoid sync conflicts).
+- **Smoke test:** `tools/test_frozen_exe.py` — 5 automated test cases (exe exists, boots without crash, no Python import errors, Panda3D display pipeline initializes, clean exit).
+- **Dependencies:** `ursina`, `panda3d`, and `pyinstaller` added to `requirements.txt` (were missing).
+- **Known issue:** Hero rendering exhibits frame skipping in the frozen build — pre-existing instanced unit renderer bottleneck, not a packaging defect. Needs Agent 10 profiling sprint.
+- **Docs:** Full packaging guide at `.cursor/plans/packaging_guide_pyinstaller.md`; master plan at `.cursor/plans/wk25_packaging_spike.plan.md`.
+
 ## Prototype v1.5.5 — Hero UI Basics
 
 - **Pin & Recall (WK51):** Pin a hero to track them — Recall button pans to their location and restores hero selection UI; works in both pygame and Ursina renderers.

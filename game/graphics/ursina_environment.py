@@ -9,7 +9,7 @@ from pathlib import Path
 import config
 from ursina import Entity, color
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+from game.paths import PROJECT_ROOT
 _ENV_MODEL_DIR = PROJECT_ROOT / "assets" / "models" / "environment"
 
 TERRAIN_SCALE_MULTIPLIER = 1.0

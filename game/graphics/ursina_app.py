@@ -32,6 +32,7 @@ from ursina.shaders import lit_with_shadows_shader, unlit_shader
 from game.display_manager import DisplayManager
 from game.engine import GameEngine
 from game.graphics.ursina_pick import pick_world_xz_on_floor_y0
+from game.paths import ASSETS_DIR
 from game.graphics.ursina_renderer import UrsinaRenderer, SCALE, sim_px_to_world_xz
 from game.input_manager import InputEvent
 from game.ursina_input_manager import UrsinaInputManager, ursina_key_to_input_event
@@ -55,6 +56,12 @@ class UrsinaApp:
         )
         window.exit_button.visible = False
         window.fps_counter.enabled = True
+
+        # PyInstaller / frozen-bundle: register asset directories on Panda3D's model-path
+        # so that Entity(model=...) and loader.loadModel() resolve correctly from _MEIPASS.
+        from panda3d.core import getModelPath
+        getModelPath().appendDirectory(str(ASSETS_DIR.resolve()))
+        getModelPath().appendDirectory(str((ASSETS_DIR / "models").resolve()))
 
         # Default shader: lit+shadows only when directional shadows are enabled (otherwise unlit = much cheaper).
         _ursina_shadows = bool(getattr(config, "URSINA_DIRECTIONAL_SHADOWS", False))

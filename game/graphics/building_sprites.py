@@ -3,13 +3,13 @@ from __future__ import annotations
 import random
 import zlib
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import pygame
 
 from config import BUILDING_COLORS, TILE_SIZE
 from game.graphics.animation import load_png_frames
+from game.paths import PROJECT_ROOT
 
 
 @dataclass(frozen=True)
@@ -31,11 +31,11 @@ class BuildingSpriteLibrary:
     _cache: Dict[Tuple[str, str, int, int], pygame.Surface] = {}  # (type, state, w, h) -> Surface
 
     @staticmethod
-    def _repo_root() -> Path:
-        return Path(__file__).resolve().parents[2]
+    def _repo_root():
+        return PROJECT_ROOT
 
     @classmethod
-    def _assets_dir(cls) -> Path:
+    def _assets_dir(cls):
         return cls._repo_root() / "assets" / "sprites" / "buildings"
 
     @classmethod

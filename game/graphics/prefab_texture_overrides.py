@@ -12,7 +12,8 @@ from typing import Any
 
 from PIL import Image
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+from game.paths import PROJECT_ROOT
+
 ASSETS_ROOT = PROJECT_ROOT / "assets"
 
 _TEXTURE_CACHE: dict[str, Any] = {}

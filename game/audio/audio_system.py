@@ -9,9 +9,10 @@ WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen an
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 import pygame
+
+from game.paths import ASSETS_DIR
 
 # WK6: Canonical event name → sound key mapping (flat contract)
 # WK6 Mid-Sprint: Expanded to cover more real-world actions
@@ -144,9 +145,9 @@ class AudioSystem:
                 self._sfx_cache[sound_key] = None
     
     @staticmethod
-    def _assets_dir() -> Path:
+    def _assets_dir():
         """Get assets directory path."""
-        return Path(__file__).resolve().parents[2] / "assets" / "audio"
+        return ASSETS_DIR / "audio"
     
     def set_listener_view(self, camera_x: float, camera_y: float, zoom: float, window_width: int, window_height: int, world: Optional[object] = None):
         """

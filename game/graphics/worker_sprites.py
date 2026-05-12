@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, Tuple
 
 import pygame
 
 from game.graphics.animation import AnimationClip, AnimationPlayer, load_png_frames
+from game.paths import PROJECT_ROOT
 
 
 @dataclass(frozen=True)
@@ -32,11 +32,11 @@ class WorkerSpriteLibrary:
     _cache: Dict[tuple[str, int], Dict[str, AnimationClip]] = {}
 
     @staticmethod
-    def _repo_root() -> Path:
-        return Path(__file__).resolve().parents[2]
+    def _repo_root():
+        return PROJECT_ROOT
 
     @classmethod
-    def _assets_dir(cls) -> Path:
+    def _assets_dir(cls):
         return cls._repo_root() / "assets" / "sprites" / "workers"
 
     @classmethod
