@@ -1540,6 +1540,19 @@ class HUD:
             self.memorial_card.render(surface)
         if getattr(self, "building_interior_overlay", None) is not None and self.building_interior_overlay.visible:
             self.building_interior_overlay.render(surface)
+            left = self._last_left_rect
+            if left is not None and selected_hero is not None and selected_building is None:
+                self._panel_left.render(surface)
+                self._hero_panel.render(
+                    surface,
+                    selected_hero,
+                    left,
+                    right_close_rect=None,
+                    debug_ui=bool(game_state.get("debug_ui", False)),
+                    hero_profile=game_state.get("selected_hero_profile"),
+                )
+                self._render_pin_button(surface, left, game_state)
+                self._render_left_close_button(surface, left)
         if getattr(self, "demolish_confirm_overlay", None) is not None and self.demolish_confirm_overlay.visible:
             self.demolish_confirm_overlay.render(surface)
 
@@ -1643,12 +1656,15 @@ class HUD:
 
         bio = getattr(self, "building_interior_overlay", None)
         if bio is not None and getattr(bio, "visible", False):
-            bio_result = bio.handle_click((x, y))
-            if bio_result is True:
-                return "close_building_interior_unpause"
-            if isinstance(bio_result, dict):
-                return bio_result
-            return None
+            left = self._last_left_rect
+            on_left_panel = left is not None and left.collidepoint(x, y)
+            if not on_left_panel:
+                bio_result = bio.handle_click((x, y))
+                if bio_result is True:
+                    return "close_building_interior_unpause"
+                if isinstance(bio_result, dict):
+                    return bio_result
+                return None
 
         dco = getattr(self, "demolish_confirm_overlay", None)
         if dco is not None and getattr(dco, "visible", False):
