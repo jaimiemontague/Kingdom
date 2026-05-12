@@ -1643,8 +1643,11 @@ class HUD:
 
         bio = getattr(self, "building_interior_overlay", None)
         if bio is not None and getattr(bio, "visible", False):
-            if bio.handle_click((x, y)):
+            bio_result = bio.handle_click((x, y))
+            if bio_result is True:
                 return "close_building_interior_unpause"
+            if isinstance(bio_result, dict):
+                return bio_result
             return None
 
         dco = getattr(self, "demolish_confirm_overlay", None)

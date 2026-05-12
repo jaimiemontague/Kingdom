@@ -41,6 +41,14 @@ class BuildingInteriorOverlay:
         self._building = None
         self._close_rect = None
 
+    def _body_rect(self, sw: int, sh: int) -> pygame.Rect:
+        cx = (sw - self.CARD_W) // 2
+        cy = (sh - self.CARD_H) // 2
+        body_top = cy + 4
+        btn_area_h = 56
+        body_h = self.CARD_H - 4 - btn_area_h
+        return pygame.Rect(cx + 4, body_top, self.CARD_W - 8, body_h)
+
     def render(self, surface: pygame.Surface) -> None:
         if not self.visible or self._building is None:
             return
@@ -58,10 +66,7 @@ class BuildingInteriorOverlay:
         pygame.draw.rect(surface, (22, 20, 30), card_rect, border_radius=8)
         pygame.draw.rect(surface, (100, 90, 60), card_rect, width=2, border_radius=8)
 
-        body_top = cy + 4
-        btn_area_h = 56
-        body_h = self.CARD_H - 4 - btn_area_h
-        body_rect = pygame.Rect(cx + 4, body_top, self.CARD_W - 8, body_h)
+        body_rect = self._body_rect(sw, sh)
 
         self._interior_panel.render(surface, body_rect, {}, self._building)
 
@@ -84,9 +89,16 @@ class BuildingInteriorOverlay:
             ),
         )
 
-    def handle_click(self, pos: tuple[int, int]) -> bool:
+    def handle_click(self, pos: tuple[int, int]) -> bool | dict:
         if not self.visible or self._building is None:
             return False
         if self._close_rect is not None and self._close_rect.collidepoint(pos):
             return True
+        display = pygame.display.get_surface()
+        if display is not None:
+            sw, sh = display.get_size()
+            body_rect = self._body_rect(sw, sh)
+            result = self._interior_panel.handle_click(pos, body_rect)
+            if isinstance(result, dict):
+                return result
         return False
