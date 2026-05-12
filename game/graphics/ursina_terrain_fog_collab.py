@@ -84,9 +84,9 @@ class UrsinaTerrainFogCollab:
         for ty in range(th):
             buf[ty * tw * 4 : (ty + 1) * tw * 4] = row_unseen
         vis_b = b"\x00\x00\x00\x00"
-        # WK53 R1: SEEN overlay is grey tint instead of semi-transparent black.
-        # (~0.35, 0.35, 0.4, alpha ~0.5) — visible mist over explored-but-not-visible areas.
-        _seen_r, _seen_g, _seen_b = 89, 89, 102  # ~(0.35, 0.35, 0.4)
+        # WK53 R1: SEEN overlay uses the same charcoal mist as UNSEEN but at lower alpha
+        # so explored-but-not-visible areas are tinted, not fully hidden.
+        _seen_r, _seen_g, _seen_b = 51, 51, 58  # same as UNSEEN — (0.2, 0.2, 0.23)
         try:
             seen_a = int(getattr(config, "URSINA_FOG_SEEN_ALPHA", 0x80))
         except Exception:
