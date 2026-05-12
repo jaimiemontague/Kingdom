@@ -404,6 +404,7 @@ class InputHandler:
                         "expand_watch_card",
                         "open_building_interior",
                         "close_building_interior_unpause",
+                        "confirm_demolish",
                     ):
                         if hasattr(c, "apply_hud_pin_action"):
                             c.apply_hud_pin_action(action)
@@ -548,19 +549,11 @@ class InputHandler:
                     c.build_catalog_panel.open()
                     return
                 elif isinstance(result, dict) and result.get("type") == "demolish_building":
-                    # Handle player demolish action
                     building = result.get("building")
                     if building and building in c.buildings and building.building_type != "castle":
-                        # Set HP to 0 to trigger cleanup
-                        building.hp = 0
-                        # Immediate cleanup (instant UX) - suppress auto-demolish message
-                        c._cleanup_destroyed_buildings(emit_messages=False)
-                        # Emit HUD message (player demolish: white)
-                        building_name = building.building_type.replace("_", " ").title()
-                        c.hud.add_message(f"Demolished: {building_name}", COLOR_WHITE)
-                        # Deselect building (panel will close)
-                        c.building_panel.deselect()
-                        c.selected_building = None
+                        dco = getattr(c.hud, "demolish_confirm_overlay", None)
+                        if dco is not None:
+                            dco.show(building)
                     return
                 elif isinstance(result, dict) and result.get("type") == "enter_building":
                     building = result.get("building")

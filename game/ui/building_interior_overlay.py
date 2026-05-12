@@ -20,8 +20,8 @@ def _building_interior_heading(building: Any) -> str:
 class BuildingInteriorOverlay:
     """Fullscreen dim + centered card with graphical interior scene."""
 
-    CARD_W = 520
-    CARD_H = 480
+    CARD_W = 780
+    CARD_H = 720
 
     def __init__(self, theme: UITheme, **panel_kwargs: Any) -> None:
         self.visible: bool = False

@@ -286,6 +286,10 @@ class HUD:
             slice_border=self._button_slice_border,
         )
 
+        from game.ui.demolish_confirm_overlay import DemolishConfirmOverlay
+
+        self.demolish_confirm_overlay = DemolishConfirmOverlay()
+
         from game.ui.pin_alert_watcher import PinAlertWatcher
 
         self._alert_watcher = PinAlertWatcher(self._pin_slot, self)
@@ -485,6 +489,9 @@ class HUD:
             regions.append(memorial)
         bio = getattr(self, "building_interior_overlay", None)
         if bio is not None and getattr(bio, "visible", False):
+            return True
+        dco = getattr(self, "demolish_confirm_overlay", None)
+        if dco is not None and getattr(dco, "visible", False):
             return True
         if pin.hero_id is not None:
             ch = self._effective_watch_card_h(h)
@@ -1533,6 +1540,8 @@ class HUD:
             self.memorial_card.render(surface)
         if getattr(self, "building_interior_overlay", None) is not None and self.building_interior_overlay.visible:
             self.building_interior_overlay.render(surface)
+        if getattr(self, "demolish_confirm_overlay", None) is not None and self.demolish_confirm_overlay.visible:
+            self.demolish_confirm_overlay.render(surface)
 
     def is_mouse_over_menu(
         self,
@@ -1636,6 +1645,15 @@ class HUD:
         if bio is not None and getattr(bio, "visible", False):
             if bio.handle_click((x, y)):
                 return "close_building_interior_unpause"
+            return None
+
+        dco = getattr(self, "demolish_confirm_overlay", None)
+        if dco is not None and getattr(dco, "visible", False):
+            result = dco.handle_click((x, y))
+            if result == "confirm":
+                return "confirm_demolish"
+            elif result == "cancel":
+                dco.hide()
             return None
 
         if (

@@ -1412,6 +1412,20 @@ class GameEngine:
                 bio.hide()
             setattr(self, "_ursina_hud_force_upload", True)
             return
+        if action == "confirm_demolish":
+            dco = getattr(hud, "demolish_confirm_overlay", None)
+            if dco is not None and dco.visible:
+                building = dco.building
+                dco.hide()
+                if building and building in self.buildings and building.building_type != "castle":
+                    building.hp = 0
+                    self._cleanup_destroyed_buildings(emit_messages=False)
+                    building_name = building.building_type.replace("_", " ").title()
+                    hud.add_message(f"Demolished: {building_name}", (255, 255, 255))
+                    self.building_panel.deselect()
+                    self.selected_building = None
+            setattr(self, "_ursina_hud_force_upload", True)
+            return
         if action == "expand_watch_card":
             if hasattr(hud, "_watch_card_expanded"):
                 hud._watch_card_expanded = True
