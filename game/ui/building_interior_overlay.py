@@ -29,6 +29,7 @@ class BuildingInteriorOverlay:
         self._close_rect: Optional[pygame.Rect] = None
         self._overlay: Optional[pygame.Surface] = None
         self._overlay_size: tuple[int, int] = (0, 0)
+        self._last_surface_size: tuple[int, int] = (1920, 1080)
         self._interior_panel = InteriorViewPanel(theme, **panel_kwargs)
         self._theme = theme
 
@@ -54,6 +55,7 @@ class BuildingInteriorOverlay:
             return
 
         sw, sh = surface.get_size()
+        self._last_surface_size = (sw, sh)
         if self._overlay is None or self._overlay_size != (sw, sh):
             self._overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
             self._overlay.fill((0, 0, 0, OVERLAY_ALPHA))
@@ -94,11 +96,9 @@ class BuildingInteriorOverlay:
             return False
         if self._close_rect is not None and self._close_rect.collidepoint(pos):
             return True
-        display = pygame.display.get_surface()
-        if display is not None:
-            sw, sh = display.get_size()
-            body_rect = self._body_rect(sw, sh)
-            result = self._interior_panel.handle_click(pos, body_rect)
-            if isinstance(result, dict):
-                return result
+        sw, sh = self._last_surface_size
+        body_rect = self._body_rect(sw, sh)
+        result = self._interior_panel.handle_click(pos, body_rect)
+        if isinstance(result, dict):
+            return result
         return False

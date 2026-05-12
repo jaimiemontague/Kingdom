@@ -431,10 +431,6 @@ class InputHandler:
                         if hero is not None:
                             c.selected_hero = hero
                             c.selected_building = None
-                        bio = getattr(c.hud, "building_interior_overlay", None)
-                        if bio is not None and bio.visible:
-                            bio.hide()
-                            c.paused = False
                         chat_panel = getattr(c.hud, "_chat_panel", None)
                         if chat_panel is not None:
                             chat_panel.start_conversation(action["hero"])
