@@ -1,0 +1,29 @@
+The POIs proposal is written at .cursor/plans/pois_proposal.md. Here's a summary of what it covers:
+
+  Map & Zones — A ring+sector zone system (Castle Town, Darkwood Forest, Bone Wastes, Thornmarsh, Ember Peaks,
+  Frostmere, Sunken Depths) overlaid on the existing 150×150 map, with per-zone terrain biases for vegetation density,
+  rock scatter, and elevation profile. Option to expand to 250×250 later if density requires it.
+
+  17 POI types across four size classes:
+  - Small (1×1-2×2): Shrine, Treasure Cache, Hermit Hut, Mysterious Well, Overgrown Gravestone — simple 3-8 piece
+  prefabs using existing Kenney models
+  - Medium (2×2-3×3): Abandoned Camp, Druid Grove, Ruined Outpost, Wizard's Tower, Windmill Ruin — 10-20 piece composed
+  prefabs
+  - Large (4×4-6×6): Overgrown Graveyard, Ancient Ruins, Bandit Fortress — 30-80 pieces, needs a new compound prefab
+  system with mesh merging for performance
+  - Special: Cave/Mine/Dragon Cave entrances, Demon Portal — gateway POIs that connect to underground content
+
+  Underground/Mines — three approaches ranked by effort:
+  1. Interior Overlay (Phase 1): Reuse the existing building interior system with dungeon-themed procedural layouts.
+  Mines get a side-view resource gathering minigame. Zero renderer changes.
+  2. Layer Culling (Phase 2): Add a layer property to entities, cull by active layer, separate underground terrain mesh.
+   Heroes walk around underground in 3D.
+  3. Vertical Stacking (Phase 3+): Physical underground geometry below Y=0 with cutaway rendering. Most impressive but
+  most expensive.
+
+  Key architectural pieces: POI entity class extending Building, compound prefab schema v0.6 with sub-prefab references,
+   procedural placement system using zone palettes + rarity weights, fog-of-war discovery with silhouette rendering for
+  undiscovered POIs, and LLM integration with personality-driven POI decisions.
+
+  3-phase roadmap: Foundation (simple POIs + zones), Depth (underground + large prefabs), Polish (items/quests/bosses
+  integration).

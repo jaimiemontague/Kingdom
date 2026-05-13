@@ -72,3 +72,6 @@ tools/ai_studio_orchestrator/dist/
 # Local-only scratch (never commit)
 local/
 
+# Claude Code local worktrees / settings (nested copy of repo; do not commit)
+.claude/
+
