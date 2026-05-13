@@ -100,6 +100,9 @@ PROJECTILE_BILLBOARD_SCALE = 0.075
 # Vertical lift: match enemy sprite center (ENEMY_SCALE*0.5) so arrows aren't drawn under terrain.
 PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 
+# Debug toggle: render all POIs regardless of discovery state (dev/testing aid).
+_debug_show_pois = os.environ.get("KINGDOM_DEBUG_SHOW_ALL_POIS", "").strip().lower() in ("1", "true", "yes")
+
 
 def _unit_raster_px() -> int:
     return int(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE))
@@ -378,6 +381,13 @@ class UrsinaRenderer:
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         for b in getattr(snapshot, "buildings", ()):
+            # Skip undiscovered POIs — Option A: invisible until hero discovers them
+            if (
+                not _debug_show_pois
+                and getattr(b, "is_poi", False)
+                and not getattr(b, "is_discovered", True)
+            ):
+                continue
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
@@ -440,6 +450,15 @@ class UrsinaRenderer:
                     state=state,
                     terrain_y=bld_terrain_y,
                 )
+                # WK57: Visual hint for cave/mine entrances — cool dark tint
+                if not getattr(ent, "_ks_cave_tint_applied", False):
+                    poi_def = getattr(b, 'poi_def', None)
+                    if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                        try:
+                            ent.color = color.rgb(180, 180, 200)
+                        except Exception:
+                            pass
+                        ent._ks_cave_tint_applied = True
                 active_ids.add(obj_id)
                 continue
 
@@ -460,6 +479,15 @@ class UrsinaRenderer:
                     state=state,
                     terrain_y=bld_terrain_y,
                 )
+                # WK57: Visual hint for cave/mine entrances — cool dark tint
+                if not getattr(ent, '_ks_cave_tint_applied', False):
+                    poi_def = getattr(b, 'poi_def', None)
+                    if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                        try:
+                            ent.color = color.rgb(180, 180, 200)
+                        except Exception:
+                            pass
+                        ent._ks_cave_tint_applied = True
                 active_ids.add(obj_id)
                 continue
 
@@ -498,9 +526,18 @@ class UrsinaRenderer:
                 pos_xyz=(wx, bld_terrain_y + hy * 0.5, wz),
                 shader=sprite_unlit_shader,
             )
+            # WK57: Visual hint for cave/mine entrances — cool dark tint
+            if not getattr(ent, '_ks_cave_tint_applied', False):
+                poi_def = getattr(b, 'poi_def', None)
+                if poi_def and getattr(poi_def, 'poi_type', None) in ('poi_cave_entrance', 'poi_mine_entrance'):
+                    try:
+                        ent.color = color.rgb(180, 180, 200)
+                    except Exception:
+                        pass
+                    ent._ks_cave_tint_applied = True
             active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — pixel billboards (WK22 R3: walk/idle/inside + attack/hurt from _render_anim_trigger)
         for h in getattr(snapshot, "heroes", ()):

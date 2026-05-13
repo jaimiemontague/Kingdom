@@ -1,0 +1,85 @@
+{
+  "prefab_id": "poi_demon_portal_v1",
+  "building_type": "poi_demon_portal",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/pillar-large-graveyard.glb",
+      "pos": [-0.3, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-large-graveyard.glb",
+      "pos": [1.0, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-large-graveyard.glb",
+      "pos": [-0.3, 0.0, 1.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-large-graveyard.glb",
+      "pos": [1.0, 0.0, 1.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [-0.5, 0.0, -0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [1.2, 0.0, -0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [-0.5, 0.0, 1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-graveyard.glb",
+      "pos": [1.2, 0.0, 1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/altar-stone-graveyard.glb",
+      "pos": [0.35, 0.0, 0.35],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-multiple-graveyard.glb",
+      "pos": [0.35, 0.35, 0.35],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.7, 0.7, 0.7]
+    },
+    {
+      "model": "Models/GLB format/fire-basket-graveyard.glb",
+      "pos": [0.35, 0.0, -0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/fire-basket-graveyard.glb",
+      "pos": [0.35, 0.0, 1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    }
+  ],
+  "notes": "Demon portal: four large pillars forming a square, candles at outer corners, stone altar at center with candelabra on top, fire baskets at north and south midpoints for ominous glow."
+}

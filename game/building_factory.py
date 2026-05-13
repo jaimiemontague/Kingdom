@@ -30,6 +30,13 @@ from game.entities import (
     Palace,
 )
 
+# WK54: POI type registration
+try:
+    from game.entities.poi import PointOfInterest, POI_DEFINITIONS
+except Exception:
+    PointOfInterest = None  # type: ignore[assignment, misc]
+    POI_DEFINITIONS = {}  # type: ignore[assignment]
+
 
 class BuildingFactory:
     """Create building instances from placement type keys."""
@@ -65,6 +72,9 @@ class BuildingFactory:
 
     def create(self, building_type: str, grid_x: int, grid_y: int):
         """Return a placed building instance, or None for unknown type."""
+        # WK54: Check POI types first (different constructor than regular buildings)
+        if POI_DEFINITIONS and str(building_type) in POI_DEFINITIONS:
+            return PointOfInterest(grid_x, grid_y, POI_DEFINITIONS[str(building_type)])
         cls = self.BUILDING_REGISTRY.get(str(building_type))
         if cls is None:
             return None

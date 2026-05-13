@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-12 (Agent 01 WK54-58 Overnight): Implementing entire POI roadmap overnight per Jaimie request. WK54 DONE (map 250x250, 3 zones, POI architecture, 14 POIs placed, terrain flattening). WK55 DONE (12 prefab JSONs, discovery mechanic, minimap icons). WK56 DONE (POI interaction system, LLM hero awareness, 6 interaction types). WK57 IN PROGRESS (underground data model done, visuals in progress). WK58 IN PROGRESS (boss enemies, discovery toast). All QA gates PASS throughout. Sub-agent execution.",
+    "2026-05-12 (Agent 01 WK54 Kickoff): Sprint wk54_map_zones_poi_foundation — Map expansion 250x250, 3 biome zones (Darkwood south, Mountains north, Canyon Land east), POI entity architecture, placement system, terrain flattening. Plan: .cursor/plans/wk54_map_zones_poi_foundation.plan.md. Roadmap: .cursor/plans/pois_multisprint_roadmap.md. Agents: 03 (config+world+factory), 05 (zones+POI entity+placement), 09 (terrain/heightmap/renderer). Sub-agent execution, no orchestrator.",
     "2026-05-12 (Agent 01 WK53 Close): Sprint wk53_world_beauty_terrain closed_success. Shipped as v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors. 4 rounds (R1-R4), all PASS. Agents: 03 (primary implementer), 05 (gameplay consult).",
     "2026-05-12 (Agent 01 WK53 Kickoff): Sprint wk53_world_beauty_terrain — World beauty + terrain elevation. Blue sky, misty fog of war, heightmap terrain with hills/mountains/cliffs. Plan: .cursor/plans/wk53_world_beauty_terrain.plan.md. R1: Agent 03 (architecture + sky/fog impl) + Agent 05 (gameplay consult) parallel.",
     "2026-05-08 (Agent 01 R13): Added wk52_r13_card_chat_enter_building — four items from Jaimie playtest: (A) chat closed by default on pin/select; (B) hero card close actions must not close building/hero menus; (C) remove blank space under card when chat closed; (D) Enter Building opens centered modal overlay showing interior heroes + pauses game.",
@@ -5790,6 +5792,84 @@
             }
           },
           "pm_universal_prompt": "You are activated for sprint wk52_attachment_phase3_radar_alerts_memorial, round wk52_r13_card_chat_enter_building. Read your assignment: .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk52_attachment_phase3_radar_alerts_memorial\"].rounds[\"wk52_r13_card_chat_enter_building\"].pm_agent_prompts[\"YOUR_AGENT_NUMBER\"]. Update log per the prompt. Validate JSON. Run SDK receipt."
+        }
+      }
+    },
+    "wk54_map_zones_poi_foundation": {
+      "sprint_meta": {
+        "status": "in_progress",
+        "created_utc": "2026-05-12T21:00:00Z",
+        "plan_doc": ".cursor/plans/wk54_map_zones_poi_foundation.plan.md",
+        "roadmap_doc": ".cursor/plans/pois_multisprint_roadmap.md",
+        "notes": "POI Foundation sprint (Sprint 1 of 5). Map 150->250, 3 biome zones, POI architecture, terrain flattening. Sub-agent execution mode (no orchestrator).",
+        "version_target": "v1.6.0"
+      },
+      "rounds": {
+        "wk54_r1_zones_and_config": {
+          "round_meta": {
+            "round_id": "wk54_r1_zones_and_config",
+            "created_utc": "2026-05-12T21:00:00Z",
+            "wave": 1,
+            "note": "Parallel: Agent 05 creates world_zones.py (zone system), Agent 03 updates config.py (map 250x250) + makes world.py map-size dynamic."
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "R1: Agent 05 creates zone system. Agent 03 updates config + world.py for 250x250. Parallel."
+          },
+          "pm_next_actions_by_agent": {
+            "03": { "status": "assigned", "next_action": "config.py map 250x250, camera zoom, version. world.py dynamic map size." },
+            "05": { "status": "assigned", "next_action": "Create game/world_zones.py with Zone dataclass and 4 zone definitions." }
+          }
+        },
+        "wk54_r2_terrain_scaling_zones_flatten": {
+          "round_meta": {
+            "round_id": "wk54_r2_terrain_scaling_zones_flatten",
+            "created_utc": "2026-05-12T21:00:00Z",
+            "wave": 2,
+            "depends_on": "wk54_r1_zones_and_config",
+            "note": "Agent 09 updates terrain_height.py (heightmap 501x501, zone elevation biases, terrain flattening), fog texture scaling, camera/fog adjustments."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R2: Agent 09 implements terrain scaling + zone elevation + flattening. Agent 03 integrates zones into world.py vegetation/rock generation."
+          },
+          "pm_next_actions_by_agent": {
+            "09": { "status": "pending", "next_action": "terrain_height.py heightmap scaling + zone elevation + flattening. fog collab scaling. ursina_app camera/fog." },
+            "03": { "status": "pending", "next_action": "world.py zone-influenced vegetation/rock scatter + terrain flattening integration for buildings." }
+          }
+        },
+        "wk54_r3_poi_architecture": {
+          "round_meta": {
+            "round_id": "wk54_r3_poi_architecture",
+            "created_utc": "2026-05-12T21:00:00Z",
+            "wave": 3,
+            "depends_on": "wk54_r2_terrain_scaling_zones_flatten",
+            "note": "Agent 05 creates POI entity + placement system. Agent 03 registers POI types in factory + wires placement into world.py."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R3: Agent 05 creates poi.py + poi_placement.py + POI config registrations. Agent 03 updates building_factory.py + world.py POI wiring."
+          },
+          "pm_next_actions_by_agent": {
+            "05": { "status": "pending", "next_action": "Create game/entities/poi.py, game/systems/poi_placement.py, POI config registrations." },
+            "03": { "status": "pending", "next_action": "building_factory.py POI registration + world.py POI placement integration." }
+          }
+        },
+        "wk54_r4_renderer_and_verification": {
+          "round_meta": {
+            "round_id": "wk54_r4_renderer_and_verification",
+            "created_utc": "2026-05-12T21:00:00Z",
+            "wave": 4,
+            "depends_on": "wk54_r3_poi_architecture",
+            "note": "Agent 09 adds POI visibility gating to renderer. Then full QA verification."
+          },
+          "pm_status_summary": {
+            "status": "pending",
+            "summary": "R4: Agent 09 renderer integration. QA verification + screenshots."
+          },
+          "pm_next_actions_by_agent": {
+            "09": { "status": "pending", "next_action": "ursina_renderer.py POI visibility gating (Option A — invisible until discovered)." }
+          }
         }
       }
     },

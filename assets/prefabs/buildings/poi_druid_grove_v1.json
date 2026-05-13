@@ -1,0 +1,92 @@
+{
+  "prefab_id": "poi_druid_grove_v1",
+  "building_type": "poi_druid_grove",
+  "footprint_tiles": [3, 3],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_nature-kit",
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/tree-large.glb",
+      "pos": [-1.2, 0.0, -1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/tree-large.glb",
+      "pos": [1.2, 0.0, -1.2],
+      "rot": [0.0, 120.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/tree-large.glb",
+      "pos": [-1.2, 0.0, 1.2],
+      "rot": [0.0, 240.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/tree-large.glb",
+      "pos": [1.2, 0.0, 1.2],
+      "rot": [0.0, 60.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [-0.6, 0.0, 0.0],
+      "rot": [0.0, 30.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [0.6, 0.0, 0.0],
+      "rot": [0.0, 150.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [0.0, 0.0, -0.6],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [0.0, 0.0, 0.6],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/altar-stone-graveyard.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pumpkin-graveyard.glb",
+      "pos": [-0.3, 0.0, 0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.6, 0.6, 0.6]
+    },
+    {
+      "model": "Models/GLB format/pumpkin-graveyard.glb",
+      "pos": [0.3, 0.0, -0.3],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [0.6, 0.6, 0.6]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [0.8, 0.0, 0.5],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [-0.8, 0.0, -0.5],
+      "rot": [0.0, 200.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Druid sacred grove: ring of four large trees at corners, shrubs forming inner ring, stone altar at center, pumpkins and grass patches as mystical decoration."
+}

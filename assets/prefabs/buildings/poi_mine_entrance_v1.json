@@ -1,0 +1,63 @@
+{
+  "prefab_id": "poi_mine_entrance_v1",
+  "building_type": "poi_mine_entrance",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_nature-kit",
+    "kenney_survival-kit",
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/rock-a.glb",
+      "pos": [-0.2, 0.0, 0.0],
+      "rot": [0.0, 10.0, 0.0],
+      "scale": [1.3, 1.5, 1.0]
+    },
+    {
+      "model": "Models/GLB format/rock-b.glb",
+      "pos": [1.0, 0.0, 0.0],
+      "rot": [0.0, 170.0, 0.0],
+      "scale": [1.3, 1.5, 1.0]
+    },
+    {
+      "model": "Models/GLB format/rock-flat.glb",
+      "pos": [0.4, 1.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.5, 0.8, 1.2]
+    },
+    {
+      "model": "Models/GLB format/resource-stone.glb",
+      "pos": [-0.4, 0.0, 0.7],
+      "rot": [0.0, 30.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/barrel.glb",
+      "pos": [1.1, 0.0, 0.6],
+      "rot": [0.0, -20.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/detail-crate.glb",
+      "pos": [1.3, 0.0, 0.9],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/lantern-glass-graveyard.glb",
+      "pos": [0.4, 0.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tool-pickaxe.glb",
+      "pos": [-0.5, 0.15, 0.5],
+      "rot": [0.0, 45.0, 60.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Mine entrance: rocks forming mine shaft mouth, stone resource pile, barrel and crate for supplies, glass lantern for light, pickaxe leaning nearby."
+}

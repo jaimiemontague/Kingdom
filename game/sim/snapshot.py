@@ -32,6 +32,7 @@ class SimStateSnapshot:
     # --- World / map ---
     world: Any
     trees: tuple = ()
+    pois: tuple = ()  # WK54: POI subset for renderer discovery checks
     log_stacks: tuple = ()
     fog_revision: int = 0
 

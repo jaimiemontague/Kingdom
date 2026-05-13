@@ -1,0 +1,157 @@
+{
+  "prefab_id": "poi_graveyard_v1",
+  "building_type": "poi_graveyard",
+  "footprint_tiles": [4, 4],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/gravestone-cross-graveyard.glb",
+      "pos": [-1.2, 0.0, -1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-round-graveyard.glb",
+      "pos": [-0.2, 0.0, -1.2],
+      "rot": [0.0, 5.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-decorative-graveyard.glb",
+      "pos": [0.8, 0.0, -1.2],
+      "rot": [0.0, -5.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-bevel-graveyard.glb",
+      "pos": [-1.2, 0.0, 0.0],
+      "rot": [0.0, 10.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-wide-graveyard.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-broken-graveyard.glb",
+      "pos": [1.0, 0.0, 0.0],
+      "rot": [0.0, -10.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-cross-large-graveyard.glb",
+      "pos": [-0.5, 0.0, 1.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/gravestone-roof-graveyard.glb",
+      "pos": [0.8, 0.0, 1.0],
+      "rot": [0.0, 15.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [-1.5, 0.0, -1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [-0.5, 0.0, -1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [0.5, 0.0, -1.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [1.5, 0.0, -1.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [1.5, 0.0, -0.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [1.5, 0.0, 0.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [1.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [0.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-border-gate-graveyard.glb",
+      "pos": [-0.5, 0.0, 1.5],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [-1.5, 0.0, 1.5],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [-1.5, 0.0, 0.5],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/iron-fence-graveyard.glb",
+      "pos": [-1.5, 0.0, -0.5],
+      "rot": [0.0, 270.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/crypt-small-graveyard.glb",
+      "pos": [0.0, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/crypt-small-roof-graveyard.glb",
+      "pos": [0.0, 0.88, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [-1.3, 0.0, -1.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [1.3, 0.0, 1.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "notes": "Overgrown graveyard: 8 varied gravestones arranged in rows, iron fence perimeter with gate at south, small crypt at center, lanterns at two corners."
+}

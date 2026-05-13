@@ -1,0 +1,31 @@
+{
+  "prefab_id": "poi_hermit_hut_v1",
+  "building_type": "poi_hermit_hut",
+  "footprint_tiles": [1, 1],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_survival-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/tent.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/campfire-pit.glb",
+      "pos": [0.35, 0.0, 0.35],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.7, 0.7, 0.7]
+    },
+    {
+      "model": "Models/GLB format/bedroll.glb",
+      "pos": [-0.3, 0.0, 0.3],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [0.6, 0.6, 0.6]
+    }
+  ],
+  "notes": "Lonely hermit dwelling: small tent with a campfire and bedroll outside."
+}

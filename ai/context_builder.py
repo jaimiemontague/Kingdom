@@ -1,6 +1,8 @@
 """
 Builds context dictionaries for LLM decision making.
 """
+import math
+
 from config import TILE_SIZE
 from game.sim.timebase import now_ms as sim_now_ms
 
@@ -164,7 +166,33 @@ class ContextBuilder:
                 "wizard_guild",
             ):
                 context["distances"][building.building_type] = round(dist / TILE_SIZE, 1)
-        
+
+        # WK56: Nearby POI awareness for LLM decisions
+        nearby_pois = []
+        pois = game_state.get("pois", ()) or getattr(game_state.get("sim"), "pois", []) if isinstance(game_state, dict) else []
+        for poi in pois:
+            if not getattr(poi, 'is_discovered', False):
+                continue
+            poi_def = getattr(poi, 'poi_def', None)
+            if poi_def is None:
+                continue
+            poi_cx = (getattr(poi, 'grid_x', 0) + getattr(poi_def, 'size', (1, 1))[0] / 2) * TILE_SIZE
+            poi_cy = (getattr(poi, 'grid_y', 0) + getattr(poi_def, 'size', (1, 1))[1] / 2) * TILE_SIZE
+            hx = getattr(hero, 'world_x', getattr(hero, 'x', 0))
+            hy = getattr(hero, 'world_y', getattr(hero, 'y', 0))
+            dist = math.hypot(hx - poi_cx, hy - poi_cy) / TILE_SIZE
+            if dist < 30:  # Only include POIs within 30 tiles
+                nearby_pois.append({
+                    "name": getattr(poi_def, 'display_name', 'Unknown POI'),
+                    "type": getattr(poi_def, 'interaction_type', 'unknown'),
+                    "distance_tiles": round(dist, 1),
+                    "difficulty": getattr(poi_def, 'difficulty_tier', 0),
+                    "depleted": getattr(poi, 'is_depleted', False),
+                    "interacted": getattr(poi, 'is_interacted', False),
+                })
+        nearby_pois.sort(key=lambda p: p["distance_tiles"])
+        context["nearby_pois"] = nearby_pois[:5]
+
         # Add situational flags
         context["situation"] = {
             "in_combat": len([e for e in context["nearby_enemies"] if e["distance_tiles"] < 2]) > 0,

@@ -88,18 +88,25 @@ class UrsinaApp:
         # Exponential fog avoids the horizontal banding that linear fog caused with
         # lit_with_shadows_shader (SPRINT-BUG-008). Fog color matches the sky clear
         # color so distant objects fade naturally into the horizon.
-        # Density tuned so the nearest ~60% of the map renders clearly and the far
-        # ~40% fades gradually toward sky blue.
+        # WK54: Density reduced from 0.008 to 0.005 for the 250x250 map expansion
+        # (proportional to 150/250 scale change). Keeps distant terrain visible so
+        # the larger world feels expansive rather than claustrophobic.
+        self._atmo_fog = None
         try:
             from panda3d.core import Fog as PandaFog
             _atmo_fog = PandaFog("atmospheric_distance_fog")
             _atmo_fog.setColor(_sky_r, _sky_g, _sky_b, 1.0)
-            _atmo_fog.setExpDensity(0.008)
+            _atmo_fog.setExpDensity(0.005)
             base.render.setFog(_atmo_fog)
+            self._atmo_fog = _atmo_fog
         except Exception:
             # If exponential fog setup fails (driver/API issue), fall back to no fog.
             # The sky clear color alone still eliminates the dark void.
             scene.clearFog()
+
+        # WK57/58: Zone-specific fog color — current lerp target and state
+        self._zone_fog_current = (_sky_r, _sky_g, _sky_b)
+        self._zone_fog_target = (_sky_r, _sky_g, _sky_b)
 
         tiles_w = config.MAP_WIDTH
         tiles_h = config.MAP_HEIGHT
@@ -467,6 +474,65 @@ class UrsinaApp:
         z = max(z, 1e-6)
         ref = float(self._ursina_reference_fov)
         camera.fov = max(8.0, min(95.0, ref / z))
+
+    # WK57/58: Zone-specific fog color hints
+    _ZONE_FOG_COLORS: dict[str, tuple[float, float, float]] = {
+        "darkwood": (0.35, 0.55, 0.35),       # Greenish forest mist
+        "mountains": (0.60, 0.70, 0.85),       # Cool blue mountain haze
+        "canyon_land": (0.75, 0.60, 0.50),      # Warm reddish canyon dust
+        "castle_town": (0.53, 0.72, 0.88),     # Default sky blue
+    }
+    _DEFAULT_FOG_COLOR: tuple[float, float, float] = (0.53, 0.72, 0.88)
+
+    def update_zone_fog_color(self, camera_world_x: float, camera_world_z: float) -> None:
+        """Lerp atmospheric fog color toward the zone under the camera."""
+        fog = self._atmo_fog
+        if fog is None:
+            return
+        try:
+            from game.world_zones import get_zone
+        except Exception:
+            return
+
+        # Convert camera world position to tile coords
+        tile_x = int(camera_world_x * SCALE / float(config.TILE_SIZE))
+        tile_z = int(-camera_world_z * SCALE / float(config.TILE_SIZE))
+
+        # Castle center in tile coords for zone lookup
+        castle_cx = int(config.MAP_WIDTH) // 2
+        castle_cy = int(config.MAP_HEIGHT) // 2
+        try:
+            castle = next(
+                (b for b in self.engine.buildings
+                 if getattr(b, "building_type", "") == "castle" and getattr(b, "hp", 1) > 0),
+                None,
+            )
+            if castle is not None:
+                castle_cx = int(getattr(castle, "grid_x", castle_cx)) + int(getattr(castle, "size", (1, 1))[0]) // 2
+                castle_cy = int(getattr(castle, "grid_y", castle_cy)) + int(getattr(castle, "size", (1, 1))[1]) // 2
+        except Exception:
+            pass
+
+        zone = get_zone(tile_x, tile_z, castle_cx, castle_cy)
+        zone_id = getattr(zone, "zone_id", None) if zone is not None else None
+        target = self._ZONE_FOG_COLORS.get(zone_id, self._DEFAULT_FOG_COLOR) if zone_id else self._DEFAULT_FOG_COLOR
+        self._zone_fog_target = target
+
+        # Lerp current color toward target for smooth transition
+        cr, cg, cb = self._zone_fog_current
+        tr, tg, tb = self._zone_fog_target
+        lerp_speed = 0.02  # per-frame lerp factor — gradual over ~50 frames
+        nr = cr + (tr - cr) * lerp_speed
+        ng = cg + (tg - cg) * lerp_speed
+        nb = cb + (tb - cb) * lerp_speed
+        self._zone_fog_current = (nr, ng, nb)
+
+        # Apply only when the delta is perceptible (avoid per-frame setColor thrash)
+        if abs(nr - cr) > 0.001 or abs(ng - cg) > 0.001 or abs(nb - cb) > 0.001:
+            try:
+                fog.setColor(nr, ng, nb, 1.0)
+            except Exception:
+                pass
 
     def _install_ursina_input_hook(self) -> None:
         app = self
@@ -1126,6 +1192,15 @@ class UrsinaApp:
                     min_cam_y = ground_y + 1.0  # offset above ground for comfortable feel
                     if float(camera.world_position.y) < min_cam_y:
                         camera.world_position = Vec3(cam_wx, min_cam_y, cam_wz)
+            except Exception:
+                pass
+
+            # WK57/58: Zone-specific fog color based on camera position
+            try:
+                self.update_zone_fog_color(
+                    float(camera.world_position.x),
+                    float(camera.world_position.z),
+                )
             except Exception:
                 pass
 

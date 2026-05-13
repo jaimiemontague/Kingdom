@@ -301,8 +301,81 @@ class HUD:
         self._card_slot_kind: str | None = None
         self._last_left_rect: pygame.Rect | None = None
 
+        # POI discovery toast notifications (WK58)
+        self._poi_toasts: list[tuple[str, float]] = []  # (message, remaining_ms)
+        self._POI_TOAST_DURATION_MS = 4000  # milliseconds to show each toast
+        self._poi_toast_ids: set[int] = set()  # track which POIs already triggered a toast
+        self._poi_last_tick_ms: int = pygame.time.get_ticks()
+
     def effective_card_full_h(self) -> int:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
+
+    def notify_poi_discovered(self, poi_name: str) -> None:
+        """Queue a POI discovery toast notification."""
+        msg = f"Discovered: {poi_name}"
+        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS)))
+        if len(self._poi_toasts) > 3:
+            self._poi_toasts.pop(0)
+
+    def _check_poi_discoveries(self, game_state: dict) -> None:
+        """Scan buildings for newly discovered POIs and fire toasts."""
+        buildings = game_state.get("buildings", [])
+        for b in buildings:
+            if not getattr(b, "is_poi", False):
+                continue
+            if not getattr(b, "is_discovered", False):
+                continue
+            poi_def = getattr(b, "poi_def", None)
+            if poi_def is None:
+                continue
+            b_id = id(b)
+            if b_id in self._poi_toast_ids:
+                continue
+            self._poi_toast_ids.add(b_id)
+            name = getattr(poi_def, "display_name", None) or "Unknown POI"
+            self.notify_poi_discovered(str(name))
+
+    def _render_poi_toasts(self, surface: pygame.Surface) -> None:
+        """Render and tick POI discovery toast notifications (WK58)."""
+        if not self._poi_toasts:
+            return
+
+        now_ms = pygame.time.get_ticks()
+        dt_ms = float(now_ms - self._poi_last_tick_ms)
+        self._poi_last_tick_ms = now_ms
+
+        screen_w = surface.get_width()
+        y_offset = self.top_bar_height + 12
+
+        remaining: list[tuple[str, float]] = []
+        for msg, time_left_ms in self._poi_toasts:
+            time_left_ms -= dt_ms
+            if time_left_ms <= 0:
+                continue
+            remaining.append((msg, time_left_ms))
+
+            # Fade out during last second
+            if time_left_ms < 1000.0:
+                alpha = max(0, int(time_left_ms * 255 / 1000.0))
+            else:
+                alpha = 255
+
+            text_surf = self.font_small.render(msg, True, (255, 255, 200))
+            tw, th = text_surf.get_size()
+            bg_w = tw + 20
+            bg_h = th + 10
+            bg_x = (screen_w - bg_w) // 2
+
+            bg = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+            bg.fill((30, 30, 50, min(200, alpha)))
+            surface.blit(bg, (bg_x, y_offset))
+
+            text_surf.set_alpha(alpha)
+            surface.blit(text_surf, (bg_x + 10, y_offset + 5))
+
+            y_offset += bg_h + 5
+
+        self._poi_toasts = remaining
 
     def _desired_watch_card_expanded_h(self) -> int:
         """Natural expanded height: no slack band under stats when chat is collapsed (WK52 R13)."""
@@ -1129,6 +1202,36 @@ class HUD:
             else:
                 pygame.draw.circle(surface, (80, 100, 160), (rx, ry), 2)
 
+        # WK55: POI icons on minimap
+        _poi_colors = {
+            "shrine": (100, 180, 255),
+            "loot": (255, 215, 0),
+            "combat": (220, 120, 30),
+            "knowledge": (180, 100, 255),
+            "npc": (100, 200, 100),
+            "dungeon": (160, 40, 40),
+            "boss": (255, 50, 50),
+        }
+        for b in buildings:
+            if not getattr(b, "is_poi", False):
+                continue
+            if not getattr(b, "is_discovered", False):
+                continue
+            poi_def = getattr(b, "poi_def", None)
+            if poi_def is None:
+                continue
+            sz = getattr(b, "size", (1, 1))
+            bx = (getattr(b, "grid_x", 0) + sz[0] / 2) * TILE_SIZE
+            by = (getattr(b, "grid_y", 0) + sz[1] / 2) * TILE_SIZE
+            if not is_revealed(float(bx), float(by)):
+                continue
+            rx, ry = to_radar(float(bx), float(by))
+            itype = getattr(poi_def, "interaction_type", "") or ""
+            color = _poi_colors.get(itype, (150, 150, 150))
+            if itype == "boss":
+                pygame.draw.circle(surface, (255, 255, 255), (rx, ry), 4)
+            pygame.draw.circle(surface, color, (rx, ry), 3)
+
         for en in enemies:
             ex, ey = float(getattr(en, "x", 0.0)), float(getattr(en, "y", 0.0))
             if int(getattr(en, "hp", 1)) <= 0:
@@ -1522,6 +1625,11 @@ class HUD:
 
         show_left = selected_hero is not None or selected_peasant is not None
         self.render_messages(surface, left if show_left else None)
+
+        # POI discovery toasts (WK58)
+        self._check_poi_discoveries(game_state)
+        self._render_poi_toasts(surface)
+
         _cur = game_state.get("ui_cursor_pos")
         cursor_pos: tuple[int, int] | None
         if _cur is not None and len(_cur) >= 2:
