@@ -51,6 +51,19 @@ LLM_PRIORITY_PLACE_TYPES = frozenset(
         "rogue_guild",
         "wizard_guild",
         "trading_post",
+        # WK56: POI building types for LLM hero awareness
+        "poi_shrine",
+        "poi_treasure_cache",
+        "poi_hermit_hut",
+        "poi_gravestone",
+        "poi_abandoned_camp",
+        "poi_druid_grove",
+        "poi_wizard_tower",
+        "poi_graveyard",
+        "poi_bandit_fortress",
+        "poi_cave_entrance",
+        "poi_mine_entrance",
+        "poi_demon_portal",
     }
 )
 

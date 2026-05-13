@@ -8,9 +8,11 @@ Stage 2 refactor: split the former GameEngine "god object" into:
 
 from __future__ import annotations
 
+import math
+
 from game.world import Visibility, World
 from game.events import EventBus, GameEventType
-from game.sim.determinism import set_sim_seed
+from game.sim.determinism import get_rng, set_sim_seed
 from game.sim.timebase import set_time_multiplier
 from game.sim.timebase import set_sim_now_ms, get_time_multiplier
 
@@ -49,6 +51,7 @@ from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
 from game.entities.builder_peasant import BuilderPeasant
 from game.entities.nature import LogStack, Tree
 from game.systems.nature import NatureSystem
+from game.systems.poi_interaction import POIInteractionSystem
 
 
 class SimEngine:
@@ -78,6 +81,7 @@ class SimEngine:
 
         # Game objects (entity lists)
         self.buildings = []
+        self.pois = []  # WK54: quick-access list (POIs also live in self.buildings)
         self.heroes = []
         self.enemies = []
         self.bounties = []
@@ -103,11 +107,15 @@ class SimEngine:
         self.buff_system = BuffSystem()
         self.building_factory = BuildingFactory()
         self.bounty_system = BountySystem()
+        self.poi_interaction_system = POIInteractionSystem()
 
         # Selection (sim-owned: used by coordinate queries + gameplay)
         self.selected_building = None
         self.selected_peasant = None
         self.selected_hero = None
+
+        # WK57: Underground areas keyed by area_id
+        self.underground_areas = {}
 
         # AI controller (wired by main.py / UrsinaApp)
         self.ai_controller = None
@@ -187,8 +195,18 @@ class SimEngine:
             }
         )
 
+    def _on_boss_spawned(self, event: dict) -> None:
+        """WK58: Handle boss_spawned event — add boss entity to enemies list."""
+        boss = event.get("boss")
+        if boss is not None and hasattr(self, "enemies"):
+            self.enemies.append(boss)
+
     def setup_initial_state(self) -> None:
         """Set up initial sim state (no camera/UI side effects)."""
+        # WK58: Listen for boss spawn events from POI interactions.
+        if hasattr(self, "event_bus") and self.event_bus:
+            self.event_bus.subscribe("boss_spawned", self._on_boss_spawned)
+
         center_x = MAP_WIDTH // 2 - 1
         center_y = MAP_HEIGHT // 2 - 1
 
@@ -208,6 +226,42 @@ class SimEngine:
                 self.world.set_tile(center_x + dx, center_y + dy, 2)  # PATH
 
         self.lair_system.spawn_initial_lairs(self.buildings, castle)
+
+        # WK54: Generate POIs after buildings and lairs are placed
+        try:
+            from game.systems.poi_placement import POIPlacementSystem
+            from game.sim.determinism import get_rng
+
+            poi_system = POIPlacementSystem()
+            poi_rng = get_rng("poi_placement")
+            pois = poi_system.generate_pois(
+                self.world, self.buildings,
+                getattr(self.lair_system, 'lairs', []), poi_rng,
+            )
+            for poi in pois:
+                poi.is_constructed = True
+                self.buildings.append(poi)
+            self.pois = pois  # quick-access list (also in self.buildings)
+        except Exception:
+            self.pois = []
+
+        # WK57: Generate underground areas for cave/mine entrances
+        self.underground_areas = {}
+        try:
+            from game.underground import generate_underground_area
+            ug_rng = get_rng("underground_gen")
+            for poi in getattr(self, 'pois', []):
+                poi_type = getattr(getattr(poi, 'poi_def', None), 'poi_type', '')
+                if poi_type in ('poi_cave_entrance', 'poi_mine_entrance'):
+                    area = generate_underground_area(poi, ug_rng)
+                    self.underground_areas[area.area_id] = area
+        except (ImportError, Exception):
+            self.underground_areas = {}
+
+        # WK54: Flatten terrain under all buildings (including POIs)
+        if hasattr(self.world, 'flatten_building_footprints'):
+            self.world.flatten_building_footprints(self.buildings)
+
         self._update_fog_of_war()
 
     def _build_system_context(self) -> SystemContext:
@@ -314,6 +368,7 @@ class SimEngine:
             peasants=tuple(self.peasants),
             guards=tuple(self.guards),
             bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
+            pois=tuple(getattr(self, 'pois', ())),
             trees=tuple(self.trees),
             log_stacks=tuple(self.log_stacks),
             world=self.world,
@@ -608,7 +663,44 @@ class SimEngine:
         # Buildings
         self._update_buildings(dt)
 
+        # WK55: POI discovery — check if any hero is within discovery range of undiscovered POIs
+        self._check_poi_discovery()
+
+        # WK56: POI interactions — tick cooldowns and resolve proximity interactions
+        self.poi_interaction_system.tick_cooldowns(getattr(self, 'pois', []), dt)
+        self.poi_interaction_system.check_interactions(
+            self.heroes, getattr(self, 'pois', []), self.world,
+            self.economy, self.event_bus, dt)
+
     # --- Below are sim helpers copied/adapted from engine.py ---
+    def _check_poi_discovery(self):
+        """Check if any hero is within discovery range of undiscovered POIs."""
+        DISCOVERY_RANGE_TILES = 5
+        pois = getattr(self, 'pois', [])
+        if not pois:
+            return
+        for poi in pois:
+            if poi.is_discovered:
+                continue
+            poi_cx = (poi.grid_x + poi.poi_def.size[0] / 2) * TILE_SIZE
+            poi_cy = (poi.grid_y + poi.poi_def.size[1] / 2) * TILE_SIZE
+            for hero in self.heroes:
+                hx = getattr(hero, 'world_x', getattr(hero, 'x', 0))
+                hy = getattr(hero, 'world_y', getattr(hero, 'y', 0))
+                dist_tiles = math.hypot(hx - poi_cx, hy - poi_cy) / TILE_SIZE
+                if dist_tiles <= DISCOVERY_RANGE_TILES:
+                    poi.is_discovered = True
+                    poi.discoverer_hero_id = getattr(hero, 'id', None)
+                    # Emit discovery event if event bus available
+                    if hasattr(self, 'event_bus') and self.event_bus:
+                        try:
+                            from game.events import GameEventType
+                            self.event_bus.emit(GameEventType.POI_DISCOVERED if hasattr(GameEventType, 'POI_DISCOVERED') else 'poi_discovered',
+                                              poi=poi, hero=hero)
+                        except Exception:
+                            pass
+                    break  # Only need one hero to discover
+
     def _update_buildings(self, dt: float) -> None:
         from game.sim.timebase import now_ms as sim_now_ms
 

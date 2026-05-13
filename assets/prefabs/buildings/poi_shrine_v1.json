@@ -1,0 +1,37 @@
+{
+  "prefab_id": "poi_shrine_v1",
+  "building_type": "poi_shrine",
+  "footprint_tiles": [1, 1],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/altar-stone-graveyard.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-small-graveyard.glb",
+      "pos": [-0.4, 0.0, -0.4],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-small-graveyard.glb",
+      "pos": [0.4, 0.0, -0.4],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/candle-multiple-graveyard.glb",
+      "pos": [0.0, 0.35, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    }
+  ],
+  "notes": "Small roadside shrine: stone altar flanked by two pillars with candles on top."
+}

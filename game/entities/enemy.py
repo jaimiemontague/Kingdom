@@ -575,3 +575,45 @@ class Bandit(Enemy):
     def register_attacker(self, hero):
         self.attackers.add(hero.name)
 
+
+class BanditLord(Enemy):
+    """WK58: Boss enemy at the Bandit Fortress POI."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "bandit_lord")
+        self.hp = 300
+        self.max_hp = 300
+        self.attack_power = 20
+        self.speed = 1.5
+        self.xp_reward = 150
+        self.gold_reward = 200
+        self.name = "The Bandit Lord"
+        self.is_boss = True
+        self.color = (180, 100, 30)
+        self.size = 28
+        self.attackers = set()
+
+    def register_attacker(self, hero):
+        self.attackers.add(hero.name)
+
+
+class DemonOverlord(Enemy):
+    """WK58: Boss enemy at the Demon Portal POI."""
+
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, "demon_overlord")
+        self.hp = 500
+        self.max_hp = 500
+        self.attack_power = 30
+        self.speed = 1.2
+        self.xp_reward = 300
+        self.gold_reward = 500
+        self.name = "The Demon Overlord"
+        self.is_boss = True
+        self.color = (200, 30, 30)
+        self.size = 32
+        self.attackers = set()
+
+    def register_attacker(self, hero):
+        self.attackers.add(hero.name)
+

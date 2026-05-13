@@ -1,0 +1,38 @@
+{
+  "prefab_id": "poi_gravestone_v1",
+  "building_type": "poi_gravestone",
+  "footprint_tiles": [1, 1],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_graveyard-kit_5.0",
+    "kenney_nature-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/gravestone-decorative-graveyard.glb",
+      "pos": [0.0, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass-large.glb",
+      "pos": [-0.3, 0.0, 0.2],
+      "rot": [0.0, 30.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/grass.glb",
+      "pos": [0.3, 0.0, -0.15],
+      "rot": [0.0, -20.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tree-shrub.glb",
+      "pos": [0.35, 0.0, 0.3],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [0.6, 0.6, 0.6]
+    }
+  ],
+  "notes": "Overgrown gravestone: decorative headstone with grass and a small shrub growing around it."
+}

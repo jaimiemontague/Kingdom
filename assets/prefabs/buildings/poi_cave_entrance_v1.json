@@ -1,0 +1,62 @@
+{
+  "prefab_id": "poi_cave_entrance_v1",
+  "building_type": "poi_cave_entrance",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_nature-kit",
+    "kenney_graveyard-kit_5.0"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/rock-a.glb",
+      "pos": [-0.3, 0.0, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.5, 1.8, 1.2]
+    },
+    {
+      "model": "Models/GLB format/rock-b.glb",
+      "pos": [1.0, 0.0, 0.0],
+      "rot": [0.0, 180.0, 0.0],
+      "scale": [1.5, 1.8, 1.2]
+    },
+    {
+      "model": "Models/GLB format/rock-c.glb",
+      "pos": [0.35, 0.0, -0.5],
+      "rot": [0.0, 90.0, 0.0],
+      "scale": [2.0, 1.2, 1.5]
+    },
+    {
+      "model": "Models/GLB format/rock-flat.glb",
+      "pos": [0.35, 1.2, 0.0],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.8, 1.0, 1.5]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [-0.5, 0.0, 0.6],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/lantern-candle-graveyard.glb",
+      "pos": [1.2, 0.0, 0.6],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/rocks-graveyard.glb",
+      "pos": [-0.5, 0.0, -0.5],
+      "rot": [0.0, 40.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/rocks-graveyard.glb",
+      "pos": [1.2, 0.0, -0.4],
+      "rot": [0.0, 150.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    }
+  ],
+  "notes": "Cave entrance: large rocks arranged as an arch/mouth opening to the south, flat rock as lintel on top, smaller rock debris at sides, lanterns flanking the entrance."
+}

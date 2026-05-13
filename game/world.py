@@ -9,6 +9,7 @@ from config import (
 )
 from game.graphics.tile_sprites import TileSpriteLibrary
 from game.sim.determinism import get_rng
+from game.world_zones import get_zone_blend
 
 try:
     from noise import pnoise2 as _pnoise2
@@ -92,13 +93,19 @@ class World:
         # Target: noticeably forested maps (avoid barren look) while leaving plenty of buildable space.
         area = int(self.width) * int(self.height)
         cluster_count = max(22, area // 900)
+        castle_cx, castle_cy = self.width // 2, self.height // 2
         for _ in range(int(cluster_count)):
             cx = rng.randint(0, self.width - 1)
             cy = rng.randint(0, self.height - 1)
             if self.tiles[cy][cx] == TileType.WATER:
                 continue
             radius = rng.randint(5, 12)
-            points = rng.randint(90, 220)
+            # WK54: zone-influenced tree density
+            zone, blend = get_zone_blend(cx, cy, castle_cx, castle_cy)
+            tree_mult = 1.0
+            if zone is not None:
+                tree_mult = 1.0 + (zone.terrain_bias.get("tree_density", 1.0) - 1.0) * blend
+            points = int(rng.randint(90, 220) * tree_mult)
             for _k in range(points):
                 dx = rng.randint(-radius, radius)
                 dy = rng.randint(-radius, radius)
@@ -115,11 +122,16 @@ class World:
                     self.tiles[y][x] = TileType.TREE
 
         # Light background sprinkle to connect clusters (keeps edges from feeling empty).
+        # WK54: zone-influenced sprinkle probability
         for y in range(self.height):
             for x in range(self.width):
                 if self.tiles[y][x] != TileType.GRASS:
                     continue
-                if rng.random() < 0.045:
+                zone_s, blend_s = get_zone_blend(x, y, castle_cx, castle_cy)
+                sprinkle_mult = 1.0
+                if zone_s is not None:
+                    sprinkle_mult = 1.0 + (zone_s.terrain_bias.get("tree_density", 1.0) - 1.0) * blend_s
+                if rng.random() < 0.045 * sprinkle_mult:
                     self.tiles[y][x] = TileType.TREE
         
         # Create paths from edges to center
@@ -139,7 +151,8 @@ class World:
 
         # WK45: trim excess TREE tiles AFTER carving paths (paths erase lots of trees along the cross).
         # Target ~600 visible forest tiles at match start; sapling spawning uses a separate total cap.
-        max_starting_trees = 750
+        # WK54: scale tree cap proportionally with map area (750 for 150x150, ~2083 for 250x250).
+        max_starting_trees = max(750, int(area * 750 / (150 * 150)))
         tree_tiles: list[tuple[int, int]] = []
         for ty in range(self.height):
             row = self.tiles[ty]
@@ -226,6 +239,14 @@ class World:
                 row.append(h)
             hmap.append(row)
 
+        # WK54: Zone-influenced elevation biases (applied before castle flattening
+        # so the flat plateau overrides any zone elevation changes).
+        try:
+            from game.graphics.terrain_height import apply_zone_elevation
+            apply_zone_elevation(hmap, gw, gh, tw, th, castle_gx, castle_gy)
+        except (ImportError, AttributeError):
+            pass  # Zone elevation not yet available
+
         # Castle flattening: cosine falloff toward a flat plateau at castle center height
         castle_h = hmap[castle_hz][castle_hx]
         for gz in range(gh):
@@ -248,6 +269,28 @@ class World:
                     hmap[gz][gx] = water_level
 
         self.heightmap = hmap
+
+    def flatten_building_footprints(self, buildings):
+        """Flatten terrain under all placed buildings/lairs.
+
+        Called after buildings are placed during world generation.
+        buildings: iterable of objects with grid_x, grid_y, and size (w, h) attributes.
+        """
+        if self.heightmap is None:
+            return
+        try:
+            from game.graphics.terrain_height import flatten_footprint
+        except (ImportError, AttributeError):
+            return  # flatten_footprint not yet available
+        for b in buildings:
+            w, h = getattr(b, 'size', (1, 1))
+            if isinstance(w, (list, tuple)):
+                w, h = w[0], w[1]
+            flatten_footprint(
+                self.heightmap, self.heightmap_grid_w, self.heightmap_grid_h,
+                int(getattr(b, 'grid_x', 0)), int(getattr(b, 'grid_y', 0)),
+                int(w), int(h),
+            )
 
     def get_tile(self, x: int, y: int) -> int:
         """Get tile type at grid position."""

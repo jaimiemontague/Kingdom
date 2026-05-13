@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.6"
-    game_title: str = "Kingdom Sim (Prototype v1.5.6) — Elevation, Sky, New Fog of War, and Centered Interiors"
+    prototype_version: str = "1.6.0"
+    game_title: str = "Kingdom Sim (Prototype v1.6.0) — Map Expansion, Zones & POI Foundation"
     default_borderless: bool = True
 
 
@@ -29,15 +29,15 @@ class SimConfig:
 @dataclass(frozen=True)
 class MapConfig:
     tile_size: int = 32
-    width: int = 150
-    height: int = 150
+    width: int = 250
+    height: int = 250
 
 
 @dataclass(frozen=True)
 class CameraConfig:
     speed_px_per_sec: int = 900
     edge_margin_px: int = 40
-    zoom_min: float = 0.5
+    zoom_min: float = 0.3
     zoom_max: float = 5.0
     zoom_step: float = 1.15
 
@@ -262,6 +262,19 @@ BUILDING_COSTS = {
     "house": 0,
     "farm": 0,
     "food_stand": 0,
+    # POIs (not player-purchasable)
+    "poi_shrine": 0,
+    "poi_treasure_cache": 0,
+    "poi_hermit_hut": 0,
+    "poi_gravestone": 0,
+    "poi_abandoned_camp": 0,
+    "poi_druid_grove": 0,
+    "poi_wizard_tower": 0,
+    "poi_graveyard": 0,
+    "poi_bandit_fortress": 0,
+    "poi_cave_entrance": 0,
+    "poi_mine_entrance": 0,
+    "poi_demon_portal": 0,
 }
 
 BUILDING_SIZES = {
@@ -308,6 +321,19 @@ BUILDING_SIZES = {
     "skeleton_crypt": (3, 3),
     "spider_nest": (2, 2),
     "bandit_camp": (3, 3),
+    # POIs (Points of Interest)
+    "poi_shrine": (1, 1),
+    "poi_treasure_cache": (1, 1),
+    "poi_hermit_hut": (1, 1),
+    "poi_gravestone": (1, 1),
+    "poi_abandoned_camp": (2, 2),
+    "poi_druid_grove": (3, 3),
+    "poi_wizard_tower": (2, 2),
+    "poi_graveyard": (4, 4),
+    "poi_bandit_fortress": (5, 5),
+    "poi_cave_entrance": (2, 2),
+    "poi_mine_entrance": (2, 2),
+    "poi_demon_portal": (2, 2),
 }
 
 BUILDING_COLORS = {
@@ -354,6 +380,19 @@ BUILDING_COLORS = {
     "skeleton_crypt": (70, 60, 90),
     "spider_nest": (20, 20, 20),
     "bandit_camp": (110, 70, 40),
+    # POIs
+    "poi_shrine": (100, 180, 255),
+    "poi_treasure_cache": (255, 215, 0),
+    "poi_hermit_hut": (139, 90, 43),
+    "poi_gravestone": (140, 140, 140),
+    "poi_abandoned_camp": (160, 120, 80),
+    "poi_druid_grove": (50, 180, 50),
+    "poi_wizard_tower": (147, 112, 219),
+    "poi_graveyard": (90, 90, 110),
+    "poi_bandit_fortress": (139, 69, 19),
+    "poi_cave_entrance": (80, 60, 40),
+    "poi_mine_entrance": (100, 80, 60),
+    "poi_demon_portal": (180, 30, 30),
 }
 
 # Building constraints (mutually exclusive buildings)
@@ -405,6 +444,19 @@ BUILDING_MAX_OCCUPANTS = {
     "house": 0,
     "farm": 0,
     "food_stand": 0,
+    # POIs
+    "poi_shrine": 0,
+    "poi_treasure_cache": 0,
+    "poi_hermit_hut": 0,
+    "poi_gravestone": 0,
+    "poi_abandoned_camp": 0,
+    "poi_druid_grove": 0,
+    "poi_wizard_tower": 2,
+    "poi_graveyard": 0,
+    "poi_bandit_fortress": 6,
+    "poi_cave_entrance": 4,
+    "poi_mine_entrance": 4,
+    "poi_demon_portal": 4,
 }
 
 # Fog: player building line-of-sight (WK34; SimEngine `GameEngine` / `SimEngine._update_fog_of_war`)

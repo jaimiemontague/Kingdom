@@ -1,0 +1,67 @@
+{
+  "prefab_id": "poi_wizard_tower_v1",
+  "building_type": "poi_wizard_tower",
+  "footprint_tiles": [2, 2],
+  "ground_anchor_y": 0.0,
+  "rotation_steps": 90,
+  "attribution": [
+    "kenney_retro-fantasy-kit"
+  ],
+  "pieces": [
+    {
+      "model": "Models/GLB format/tower-base.glb",
+      "pos": [0.5, 0.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tower.glb",
+      "pos": [0.5, 1.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tower.glb",
+      "pos": [0.5, 2.0, 0.5],
+      "rot": [0.0, 45.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/tower-top.glb",
+      "pos": [0.5, 3.0, 0.5],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-stone-fantasy-town.glb",
+      "pos": [-0.3, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-stone-fantasy-town.glb",
+      "pos": [1.3, 0.0, -0.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-stone-fantasy-town.glb",
+      "pos": [-0.3, 0.0, 1.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/pillar-stone-fantasy-town.glb",
+      "pos": [1.3, 0.0, 1.3],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    },
+    {
+      "model": "Models/GLB format/banner-red-fantasy-town.glb",
+      "pos": [0.5, 2.5, -0.2],
+      "rot": [0.0, 0.0, 0.0],
+      "scale": [0.8, 0.8, 0.8]
+    }
+  ],
+  "notes": "Wizard tower: three-story tower (base, two mid sections, top) with four stone pillars at corners and a red banner."
+}
