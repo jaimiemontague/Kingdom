@@ -614,7 +614,7 @@ TERRAIN_CLIFF_THRESHOLD = 45.0
 # Fixed Y for water tile surfaces (world units). Water tiles clamp to this height.
 TERRAIN_WATER_LEVEL = 1.0
 # Radius (in tiles) around castle center that is flattened to a plateau.
-TERRAIN_CASTLE_FLAT_RADIUS = 5
+TERRAIN_CASTLE_FLAT_RADIUS = 4
 # WK53 R3: Flatness exponent — power curve applied to raw [0,1] noise before scaling.
 # Values > 1.0 push low noise toward zero (flat). 2.5 gives ~60-70% flat terrain.
 TERRAIN_FLATNESS_EXPONENT = 2.5

@@ -110,9 +110,9 @@ class BuildingSpriteLibrary:
             px = rnd.randrange(0, w)
             py = rnd.randrange(0, h)
             c = (
-                min(255, base[0] + rnd.randrange(-12, 13)),
-                min(255, base[1] + rnd.randrange(-12, 13)),
-                min(255, base[2] + rnd.randrange(-12, 13)),
+                max(0, min(255, base[0] + rnd.randrange(-12, 13))),
+                max(0, min(255, base[1] + rnd.randrange(-12, 13))),
+                max(0, min(255, base[2] + rnd.randrange(-12, 13))),
                 255,
             )
             surf.set_at((px, py), c)

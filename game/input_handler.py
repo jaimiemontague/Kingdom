@@ -154,6 +154,36 @@ class InputHandler:
         """Handle keyboard input."""
         c = self.commands
 
+        # --- Universal command mode input (Enter to open, typed text captured) ---
+        eng = getattr(c, '_engine', None)
+        if eng and getattr(eng, '_command_mode', False):
+            # Command mode active: consume all keystrokes for typing
+            if event.key in ('enter', '13'):
+                cmd = getattr(eng, '_command_buffer', '')
+                if cmd:
+                    eng.process_command(cmd)
+                eng._command_mode = False
+                eng._command_buffer = ''
+                return
+            elif event.key == 'esc':
+                eng._command_mode = False
+                eng._command_buffer = ''
+                return
+            elif event.key in ('backspace', '8'):
+                eng._command_buffer = eng._command_buffer[:-1]
+                return
+            else:
+                # Try to extract the typed character from the raw pygame event
+                raw = getattr(event, 'raw_event', None)
+                ch = None
+                if raw is not None:
+                    ch = getattr(raw, 'unicode', None)
+                if ch and ch.isprintable():
+                    eng._command_buffer += ch
+                elif event.key and len(event.key) == 1 and event.key.isprintable():
+                    eng._command_buffer += event.key
+                return
+
         # ESC menu takes priority
         if event.key == 'esc':
             from game.ui.micro_view_manager import ViewMode
@@ -230,6 +260,13 @@ class InputHandler:
 
         # Block world camera/zoom input while paused (even if menu not visible).
         if c.paused:
+            return
+
+        # Enter key opens universal command mode (when no chat panel is active)
+        if event.key in ('enter', '13'):
+            if eng:
+                eng._command_mode = True
+                eng._command_buffer = ''
             return
 
         if event.key == 'tab':

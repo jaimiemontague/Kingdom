@@ -381,6 +381,21 @@ class UrsinaRenderer:
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         for b in getattr(snapshot, "buildings", ()):
+            # WK54+fix: Debug mode — force POI tiles to SEEN so they render consistently
+            if _debug_show_pois and getattr(b, 'is_poi', False):
+                b.is_discovered = True
+                # Also mark POI tiles as SEEN in fog-of-war so lair-visibility checks pass
+                _world = getattr(snapshot, 'world', None)
+                if _world is not None:
+                    _poi_def = getattr(b, 'poi_def', None)
+                    _pw, _ph = (getattr(_poi_def, 'size', (1,1)) if _poi_def else (1,1))
+                    _gx, _gy = int(getattr(b, 'grid_x', 0)), int(getattr(b, 'grid_y', 0))
+                    for _dy in range(_ph):
+                        for _dx in range(_pw):
+                            _tx, _ty = _gx + _dx, _gy + _dy
+                            if 0 <= _tx < _world.width and 0 <= _ty < _world.height:
+                                if _world.visibility[_ty][_tx] == 0:  # UNSEEN
+                                    _world.visibility[_ty][_tx] = 1  # SEEN
             # Skip undiscovered POIs — Option A: invisible until hero discovers them
             if (
                 not _debug_show_pois

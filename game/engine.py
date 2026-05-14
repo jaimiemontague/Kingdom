@@ -100,6 +100,10 @@ class GameEngine:
         self.running = True
         self.paused = False
 
+        # Universal command/chat input (opened with Enter key)
+        self._command_mode = False
+        self._command_buffer = ""
+
         # Perf counters (diagnostic, always safe to init)
         self.show_perf = False
         self._perf_last_ms = 0
@@ -283,6 +287,39 @@ class GameEngine:
                 self.hud.add_message(str(text), tuple(color))
         except Exception:
             pass
+
+    # ----- Universal command/chat input (Enter key) -----
+
+    def toggle_command_mode(self) -> None:
+        """Flip the command input mode on/off."""
+        self._command_mode = not self._command_mode
+        if self._command_mode:
+            self._command_buffer = ""
+
+    def process_command(self, text: str) -> None:
+        """Handle a typed command or chat message from the universal input."""
+        text = text.strip()
+        if not text:
+            return
+        if text.lower() in ('/revealmap', '/nowar', '/reveal'):
+            # Reveal all fog of war
+            world = getattr(self, 'world', None)
+            if world is None and hasattr(self, 'sim'):
+                world = getattr(self.sim, 'world', None)
+            if world:
+                for ty in range(world.height):
+                    for tx in range(world.width):
+                        world.visibility[ty][tx] = Visibility.SEEN
+                # Force fog texture re-upload
+                self._fog_revision = getattr(self, '_fog_revision', 0) + 100
+                if hasattr(self, 'hud') and self.hud:
+                    self.hud.add_message("Fog of war revealed!", (100, 255, 100))
+        elif text.startswith('/'):
+            if hasattr(self, 'hud') and self.hud:
+                self.hud.add_message(f"Unknown command: {text}", (255, 100, 100))
+        else:
+            if hasattr(self, 'hud') and self.hud:
+                self.hud.add_message(f"> {text}", (200, 200, 200))
 
     # ---------------------------------------------------------------------
     # Stage 2: backward-compat property forwarding (engine.<x> -> sim.<x>)
@@ -597,12 +634,20 @@ class GameEngine:
     def try_select_guard(self, screen_pos: tuple) -> bool:
         """Try to select a guard at the given screen position. Returns True if selected."""
         world_x, world_y = self.pointer_world_xy(screen_pos)
+        best = None
+        best_d = float("inf")
         for guard in self.guards:
-            if getattr(guard, "is_alive", True) and guard.distance_to(world_x, world_y) < guard.size:
-                self.selected_hero = guard
-                self.selected_building = None
-                self.selected_peasant = None
-                return True
+            if not getattr(guard, "is_alive", True):
+                continue
+            d = guard.distance_to(world_x, world_y)
+            if d < guard.size * 1.5 and d < best_d:
+                best_d = d
+                best = guard
+        if best is not None:
+            self.selected_hero = best
+            self.selected_building = None
+            self.selected_peasant = None
+            return True
         return False
 
     def try_select_peasant(self, screen_pos: tuple) -> bool:
@@ -1534,7 +1579,7 @@ class GameEngine:
         WK32: each entry in ``buildings`` has ``construction_progress`` in [0, 1] for staged build visuals;
         ``buildings_construction_progress`` matches ``buildings`` order for consumers that need parallel arrays.
         """
-        return self.sim.get_game_state(
+        gs = self.sim.get_game_state(
             screen_w=int(getattr(self, "window_width", WINDOW_WIDTH)),
             screen_h=int(getattr(self, "window_height", WINDOW_HEIGHT)),
             display_mode=getattr(self, "display_mode", "windowed"),
@@ -1549,6 +1594,9 @@ class GameEngine:
             llm_available=getattr(self.ai_controller, "llm_brain", None) is not None,
             ui_cursor_pos=getattr(self, "_last_ui_cursor_pos", None),
         )
+        # Expose the presentation-layer engine for HUD command mode rendering.
+        gs["engine"] = self
+        return gs
 
     def build_snapshot(self) -> "SimStateSnapshot":
         """Build a frozen snapshot of current sim state for renderers (read-only)."""

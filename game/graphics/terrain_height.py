@@ -196,9 +196,6 @@ def flatten_footprint(
     """
     import math as _math
 
-    import config as _cfg
-    water_level = float(getattr(_cfg, "TERRAIN_WATER_LEVEL", 1.0))
-
     # Convert tile coords to heightmap grid coords (heightmap is 2x tile resolution)
     fp_gx0 = center_tile_x * 2
     fp_gy0 = center_tile_y * 2
@@ -211,9 +208,6 @@ def flatten_footprint(
     mid_gx = max(0, min(grid_w - 1, mid_gx))
     mid_gy = max(0, min(grid_h - 1, mid_gy))
     flat_h = heightmap[mid_gy][mid_gx]
-
-    # Ensure flattened height does not go below water level
-    flat_h = max(flat_h, water_level)
 
     margin_grid = margin_tiles * 2  # margin in grid units
 
@@ -259,5 +253,5 @@ def flatten_footprint(
                     blend = 0.5 * (1.0 + _math.cos(t * _math.pi))
                     natural_h = heightmap[gy][gx]
                     blended = flat_h * blend + natural_h * (1.0 - blend)
-                    heightmap[gy][gx] = max(water_level, blended)
+                    heightmap[gy][gx] = blended
                 # else: outside margin ring, leave natural height unchanged

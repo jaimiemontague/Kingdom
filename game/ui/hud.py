@@ -1664,6 +1664,18 @@ class HUD:
         if getattr(self, "demolish_confirm_overlay", None) is not None and self.demolish_confirm_overlay.visible:
             self.demolish_confirm_overlay.render(surface)
 
+        # Command mode input display (universal Enter-key command bar)
+        eng = game_state.get('engine')
+        if eng and getattr(eng, '_command_mode', False):
+            cmd_text = getattr(eng, '_command_buffer', '')
+            font = pygame.font.SysFont(None, 28)
+            prompt_surf = font.render(f"> {cmd_text}_", True, (255, 255, 200))
+            bg = pygame.Surface((surface.get_width(), 36), pygame.SRCALPHA)
+            bg.fill((20, 20, 40, 220))
+            y = surface.get_height() - 40
+            surface.blit(bg, (0, y))
+            surface.blit(prompt_surf, (10, y + 6))
+
     def is_mouse_over_menu(
         self,
         pos: tuple[int, int],
