@@ -247,17 +247,23 @@ class World:
         except (ImportError, AttributeError):
             pass  # Zone elevation not yet available
 
-        # Castle flattening: cosine falloff toward a flat plateau at castle center height
-        castle_h = hmap[castle_hz][castle_hx]
+        # Castle flattening: average height across footprint, then gentle cosine falloff
+        # Sample average height across the castle's 3×3 footprint (6×6 grid cells)
+        castle_footprint_samples = []
+        for fz in range(castle_hz - 3, castle_hz + 4):
+            for fx in range(castle_hx - 3, castle_hx + 4):
+                if 0 <= fx < gw and 0 <= fz < gh:
+                    castle_footprint_samples.append(hmap[fz][fx])
+        castle_h = sum(castle_footprint_samples) / len(castle_footprint_samples) if castle_footprint_samples else hmap[castle_hz][castle_hx]
+
         for gz in range(gh):
             for gx in range(gw):
                 dx = gx - castle_hx
                 dz = gz - castle_hz
                 dist = math.sqrt(dx * dx + dz * dz)
                 if dist < flat_radius_grid:
-                    # Cosine falloff: 1.0 at center -> 0.0 at edge
                     t = dist / flat_radius_grid
-                    blend = 0.5 * (1.0 + math.cos(t * math.pi))  # 1.0 at center, 0.0 at edge
+                    blend = 0.5 * (1.0 + math.cos(t * math.pi))
                     hmap[gz][gx] = hmap[gz][gx] * (1.0 - blend) + castle_h * blend
 
         # Water tile clamping: clamp heightmap samples that fall on water tiles

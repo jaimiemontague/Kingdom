@@ -77,7 +77,7 @@ class POIPlacementSystem:
     """Places POIs across the map based on zone palettes and constraints."""
 
     # Spacing constraints (tiles)
-    MIN_POI_SPACING = 8
+    MIN_POI_SPACING = 6
     MIN_BUILDING_SPACING = 5
 
     def generate_pois(
@@ -165,12 +165,12 @@ class POIPlacementSystem:
     ) -> int:
         """Compute how many POIs to place in a zone."""
         area = _estimate_zone_area(zone, castle_cx, castle_cy, rng)
-        base = max(1, area // 2000)
+        base = max(2, area // 600)
         bonus = zone.difficulty_tier - 1
-        total = min(8, max(1, base + bonus))
+        total = min(20, max(2, base + bonus))
 
         if zone.zone_id == "castle_town":
-            total = min(total, 2)
+            total = min(total, 3)
 
         return total
 
