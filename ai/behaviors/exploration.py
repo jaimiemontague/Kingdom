@@ -292,6 +292,13 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
             hero.target = {"type": "get_drink", "inn": inn}
             return
 
+    # WK55: Personality-driven POI visit (chance-gated to avoid constant POI chasing).
+    from ai.behaviors.poi_awareness import maybe_visit_poi
+    if ai._ai_rng.random() < 0.08:  # ~8% per idle tick
+        if maybe_visit_poi(ai, hero, game_state):
+            ai._debug_log(f"{hero.name} -> visiting personality-matched POI")
+            return
+
     # Get this hero's patrol zone.
     zone_x, zone_y = assign_patrol_zone(ai, hero, game_state)
 

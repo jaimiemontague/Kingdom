@@ -301,19 +301,25 @@ class HUD:
         self._card_slot_kind: str | None = None
         self._last_left_rect: pygame.Rect | None = None
 
-        # POI discovery toast notifications (WK58)
-        self._poi_toasts: list[tuple[str, float]] = []  # (message, remaining_ms)
+        # POI discovery toast notifications (WK55/WK58)
+        # Each toast: (message, remaining_ms, interaction_type)
+        self._poi_toasts: list[tuple[str, float, str]] = []
         self._POI_TOAST_DURATION_MS = 4000  # milliseconds to show each toast
+        self._POI_TOAST_FADE_MS = 500.0  # fade-in / fade-out duration
         self._poi_toast_ids: set[int] = set()  # track which POIs already triggered a toast
         self._poi_last_tick_ms: int = pygame.time.get_ticks()
+        self._poi_toast_font: pygame.font.Font = pygame.font.Font(None, 26)  # slightly larger than font_small(18)
+
+        # POI interaction toast subscriptions (lazy-bound to event bus on first render)
+        self._poi_interaction_subscribed: bool = False
 
     def effective_card_full_h(self) -> int:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
 
-    def notify_poi_discovered(self, poi_name: str) -> None:
+    def notify_poi_discovered(self, poi_name: str, interaction_type: str = "") -> None:
         """Queue a POI discovery toast notification."""
         msg = f"Discovered: {poi_name}"
-        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS)))
+        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), interaction_type))
         if len(self._poi_toasts) > 3:
             self._poi_toasts.pop(0)
 
@@ -333,10 +339,72 @@ class HUD:
                 continue
             self._poi_toast_ids.add(b_id)
             name = getattr(poi_def, "display_name", None) or "Unknown POI"
-            self.notify_poi_discovered(str(name))
+            itype = getattr(poi_def, "interaction_type", "") or ""
+            self.notify_poi_discovered(str(name), interaction_type=str(itype))
+            # Play discovery chime via engine audio system
+            engine = game_state.get("engine")
+            if engine is not None:
+                audio = getattr(engine, "audio_system", None)
+                if audio is not None:
+                    audio.play_sfx("poi_discovered")
+
+    # ------------------------------------------------------------------
+    # POI interaction toasts (WK59)
+    # ------------------------------------------------------------------
+
+    def _ensure_poi_interaction_subscription(self, game_state: dict) -> None:
+        """Lazily subscribe to poi_interaction / boss_spawned events on first render."""
+        if self._poi_interaction_subscribed:
+            return
+        sim = game_state.get("sim")
+        if sim is None:
+            return
+        bus = getattr(sim, "event_bus", None)
+        if bus is None:
+            return
+        bus.subscribe("poi_interaction", self._on_poi_interaction)
+        bus.subscribe("boss_spawned", self._on_boss_spawned_toast)
+        self._poi_interaction_subscribed = True
+
+    def _on_poi_interaction(self, event: dict) -> None:
+        """EventBus callback: format and queue a toast for a POI interaction."""
+        itype = event.get("interaction_type", "")
+        hero_name = event.get("hero_name", "A hero")
+        poi_name = event.get("poi_name", "a place of interest")
+
+        if itype == "shrine":
+            buff = event.get("buff_attack", 0)
+            msg = f"{hero_name} prayed at {poi_name}. HP restored! ATK +{buff}"
+        elif itype == "loot":
+            gold = event.get("gold", 0)
+            msg = f"{hero_name} found treasure at {poi_name}! +{gold} gold"
+        elif itype == "combat":
+            msg = f"Enemies emerge from {poi_name}!"
+        elif itype == "knowledge":
+            revealed = event.get("revealed_poi_name")
+            suffix = "A hidden location is revealed!" if revealed else "The fog parts..."
+            msg = f"{hero_name} reads ancient text at {poi_name}. {suffix}"
+        elif itype == "npc":
+            msg = f"A figure beckons from {poi_name}..."
+        elif itype == "dungeon":
+            msg = f"{hero_name} peers into {poi_name}..."
+        else:
+            return  # Unknown interaction type, skip toast
+
+        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), itype))
+        if len(self._poi_toasts) > 3:
+            self._poi_toasts.pop(0)
+
+    def _on_boss_spawned_toast(self, event: dict) -> None:
+        """EventBus callback: format and queue a toast for a boss spawn."""
+        poi_name = event.get("poi_name", "a place of interest")
+        msg = f"A powerful foe appears at {poi_name}!"
+        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), "boss"))
+        if len(self._poi_toasts) > 3:
+            self._poi_toasts.pop(0)
 
     def _render_poi_toasts(self, surface: pygame.Surface) -> None:
-        """Render and tick POI discovery toast notifications (WK58)."""
+        """Render and tick POI discovery toast notifications (WK55 polish)."""
         if not self._poi_toasts:
             return
 
@@ -345,35 +413,68 @@ class HUD:
         self._poi_last_tick_ms = now_ms
 
         screen_w = surface.get_width()
-        y_offset = self.top_bar_height + 12
+        y_offset = self.top_bar_height + 16
 
-        remaining: list[tuple[str, float]] = []
-        for msg, time_left_ms in self._poi_toasts:
+        # POI type -> dot color (matches minimap palette)
+        _type_colors = {
+            "shrine": (100, 180, 255),
+            "loot": (255, 215, 0),
+            "combat": (220, 120, 30),
+            "knowledge": (180, 100, 255),
+            "npc": (100, 200, 100),
+            "dungeon": (160, 40, 40),
+            "boss": (255, 50, 50),
+        }
+
+        duration = float(self._POI_TOAST_DURATION_MS)
+        fade_ms = self._POI_TOAST_FADE_MS
+
+        remaining: list[tuple[str, float, str]] = []
+        for msg, time_left_ms, itype in self._poi_toasts:
             time_left_ms -= dt_ms
             if time_left_ms <= 0:
                 continue
-            remaining.append((msg, time_left_ms))
+            remaining.append((msg, time_left_ms, itype))
 
-            # Fade out during last second
-            if time_left_ms < 1000.0:
-                alpha = max(0, int(time_left_ms * 255 / 1000.0))
+            # Compute alpha: fade-in during first fade_ms, fade-out during last fade_ms
+            elapsed_ms = duration - time_left_ms
+            if elapsed_ms < fade_ms:
+                # Fade in
+                alpha = max(0, min(255, int(elapsed_ms * 255 / fade_ms)))
+            elif time_left_ms < fade_ms:
+                # Fade out
+                alpha = max(0, min(255, int(time_left_ms * 255 / fade_ms)))
             else:
                 alpha = 255
 
-            text_surf = self.font_small.render(msg, True, (255, 255, 200))
+            text_surf = self._poi_toast_font.render(msg, True, (255, 255, 220))
             tw, th = text_surf.get_size()
-            bg_w = tw + 20
-            bg_h = th + 10
+            dot_radius = 5
+            dot_padding = dot_radius * 2 + 8  # space for colored dot on left
+            bg_w = tw + dot_padding + 20
+            bg_h = th + 14
             bg_x = (screen_w - bg_w) // 2
 
+            # Draw background pill
             bg = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
-            bg.fill((30, 30, 50, min(200, alpha)))
+            bg.fill((20, 20, 40, min(210, alpha)))
+            # Rounded-corner border highlight
+            pygame.draw.rect(bg, (80, 80, 120, min(140, alpha)), bg.get_rect(), 1, border_radius=4)
             surface.blit(bg, (bg_x, y_offset))
 
-            text_surf.set_alpha(alpha)
-            surface.blit(text_surf, (bg_x + 10, y_offset + 5))
+            # Draw colored type dot
+            dot_color = _type_colors.get(itype, (180, 180, 180))
+            dot_x = bg_x + dot_radius + 8
+            dot_y = y_offset + bg_h // 2
+            dot_surf = pygame.Surface((dot_radius * 2 + 2, dot_radius * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(dot_surf, (*dot_color, alpha), (dot_radius + 1, dot_radius + 1), dot_radius)
+            surface.blit(dot_surf, (dot_x - dot_radius - 1, dot_y - dot_radius - 1))
 
-            y_offset += bg_h + 5
+            # Draw text
+            text_surf.set_alpha(alpha)
+            surface.blit(text_surf, (bg_x + dot_padding + 6, y_offset + 7))
+
+            y_offset += bg_h + 6
 
         self._poi_toasts = remaining
 
@@ -1232,6 +1333,32 @@ class HUD:
                 pygame.draw.circle(surface, (255, 255, 255), (rx, ry), 4)
             pygame.draw.circle(surface, color, (rx, ry), 3)
 
+        # WK55: Undiscovered-but-seen POIs shown as gray "?" dots on minimap
+        for b in buildings:
+            if not getattr(b, "is_poi", False):
+                continue
+            if getattr(b, "is_discovered", False):
+                continue  # Already drawn above with full color
+            poi_def = getattr(b, "poi_def", None)
+            if poi_def is None:
+                continue
+            sz = getattr(b, "size", (1, 1))
+            bx = (getattr(b, "grid_x", 0) + sz[0] / 2) * TILE_SIZE
+            by = (getattr(b, "grid_y", 0) + sz[1] / 2) * TILE_SIZE
+            # Only show if the tile has been SEEN (explored) — not UNSEEN
+            if world is not None:
+                try:
+                    gx, gy = world.world_to_grid(float(bx), float(by))
+                    if 0 <= gx < world.width and 0 <= gy < world.height:
+                        if world.visibility[gy][gx] < 1:  # UNSEEN = 0
+                            continue
+                    else:
+                        continue
+                except Exception:
+                    continue
+            rx, ry = to_radar(float(bx), float(by))
+            pygame.draw.circle(surface, (150, 150, 150), (rx, ry), 2)
+
         for en in enemies:
             ex, ey = float(getattr(en, "x", 0.0)), float(getattr(en, "y", 0.0))
             if int(getattr(en, "hp", 1)) <= 0:
@@ -1626,7 +1753,8 @@ class HUD:
         show_left = selected_hero is not None or selected_peasant is not None
         self.render_messages(surface, left if show_left else None)
 
-        # POI discovery toasts (WK58)
+        # POI discovery + interaction toasts (WK58/WK59)
+        self._ensure_poi_interaction_subscription(game_state)
         self._check_poi_discoveries(game_state)
         self._render_poi_toasts(surface)
 

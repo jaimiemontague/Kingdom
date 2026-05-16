@@ -619,6 +619,10 @@ TERRAIN_CASTLE_FLAT_RADIUS = 4
 # Values > 1.0 push low noise toward zero (flat). 2.5 gives ~60-70% flat terrain.
 TERRAIN_FLATNESS_EXPONENT = 2.5
 
+# WK55: POI Discovery range (tiles). Slightly less than hero vision (7) so the
+# hero sees the mystery marker before the POI flips to discovered.
+POI_DISCOVERY_RANGE_TILES = 5
+
 # WK6: Bounty targeting in black fog
 BOUNTY_BLACK_FOG_DISTANCE_PENALTY = BOUNTY.black_fog_distance_penalty  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
 

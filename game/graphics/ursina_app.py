@@ -400,6 +400,12 @@ class UrsinaApp:
             else:
                 camera.position = Vec3(cx, elev, cz - back)
                 camera.look_at(Vec3(cx, 0, cz))
+            self._default_cam_state = {
+                'cam_position': Vec3(camera.position),
+                'cam_rotation': Vec3(camera.rotation),
+                'cam_world_position': Vec3(camera.world_position),
+            }
+            self._camera_orbit_locked = False
             return
 
         target = Vec3(cx, 0.0, cz)
@@ -457,6 +463,14 @@ class UrsinaApp:
             pass
         ec.target_z = camera.z
         self._editor_camera = ec
+        self._default_cam_state = {
+            'ec_position': Vec3(ec.position),
+            'ec_rotation': Vec3(ec.rotation),
+            'cam_position': Vec3(camera.position),
+            'cam_world_position': Vec3(camera.world_position),
+            'target_z': ec.target_z,
+        }
+        self._camera_orbit_locked = False
 
     def _recenter_editor_camera_to_sim_xy(self, sim_x: float, sim_y: float) -> None:
         """WK51: move EditorCamera pivot to follow recall / camera snap (sim pixel coords)."""
@@ -464,6 +478,56 @@ class UrsinaApp:
         ec = getattr(self, "_editor_camera", None)
         if ec is not None:
             ec.position = Vec3(wx, 0.0, wz)
+
+    def _is_chat_active(self) -> bool:
+        cp = getattr(getattr(self.engine, "hud", None), "_chat_panel", None)
+        return cp is not None and getattr(cp, "is_active", lambda: False)()
+
+    def _reset_camera_to_default(self) -> None:
+        state = getattr(self, '_default_cam_state', None)
+        if state is None:
+            return
+
+        if self._camera_orbit_locked:
+            self._camera_orbit_locked = False
+            ec = getattr(self, '_editor_camera', None)
+            if ec is not None:
+                ec.rotation_speed = 200.0
+
+        ec = getattr(self, '_editor_camera', None)
+        if ec is not None and state.get('ec_position') is not None:
+            ec.position = Vec3(state['ec_position'])
+            ec.rotation = Vec3(state['ec_rotation'])
+            camera.position = Vec3(state['cam_position'])
+            camera.world_position = Vec3(state['cam_world_position'])
+            ec.target_z = state['target_z']
+            try:
+                camera.editor_position = camera.position
+            except Exception:
+                pass
+        else:
+            camera.position = Vec3(state['cam_position'])
+            camera.world_position = Vec3(state['cam_world_position'])
+            rot = state.get('cam_rotation')
+            if rot is not None:
+                camera.rotation = Vec3(rot)
+
+        self.engine.zoom = float(getattr(self.engine, 'default_zoom', 1.0))
+        self._sync_ursina_camera_fov_from_zoom()
+
+        hud = getattr(self.engine, 'hud', None)
+        if hud:
+            hud.add_message("Camera reset", (100, 200, 255))
+
+    def _toggle_camera_lock(self) -> None:
+        self._camera_orbit_locked = not getattr(self, '_camera_orbit_locked', False)
+        ec = getattr(self, '_editor_camera', None)
+        if ec is not None:
+            ec.rotation_speed = 0.0 if self._camera_orbit_locked else 200.0
+        hud = getattr(self.engine, 'hud', None)
+        if hud:
+            label = "Camera Lock: ON" if self._camera_orbit_locked else "Camera Lock: OFF"
+            hud.add_message(label, (100, 200, 255))
 
     def _sync_ursina_camera_fov_from_zoom(self) -> None:
         """Keep perspective FOV tied to engine.zoom so wheel, +/-, and Q/E match HUD/world mapping."""
@@ -640,9 +704,16 @@ class UrsinaApp:
             pos = self._last_engine_screen_pos
             self.input_manager.queue_event(InputEvent(type="MOUSEUP", button=1, pos=pos, key=None))
             return
+        _ks = str(key).strip().lower()
+        if not self._is_chat_active():
+            if _ks == 'home':
+                self._reset_camera_to_default()
+                return
+            if _ks == 'l':
+                self._toggle_camera_lock()
+                return
         # WK52 R12: Route wheel to left menus before queuing — MOUSEMOTION may map pointer to
         # world-relative coords while building/hero menus use virtual framebuffer pixels only.
-        _ks = str(key).strip().lower()
         if _ks in ("scroll up", "scroll down"):
             _wy = 1 if _ks == "scroll up" else -1
             _eng = self.engine
@@ -1157,7 +1228,7 @@ class UrsinaApp:
             if not _chat_captures_keyboard():
                 ecam = getattr(self, "_editor_camera", None)
                 try:
-                    orbiting = bool(getattr(mouse, "right", False))
+                    orbiting = bool(getattr(mouse, "right", False)) and not getattr(self, '_camera_orbit_locked', False)
                 except Exception:
                     orbiting = False
                 if ecam is not None and not orbiting:

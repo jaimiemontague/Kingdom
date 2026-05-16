@@ -167,31 +167,9 @@ class ContextBuilder:
             ):
                 context["distances"][building.building_type] = round(dist / TILE_SIZE, 1)
 
-        # WK56: Nearby POI awareness for LLM decisions
-        nearby_pois = []
-        pois = game_state.get("pois", ()) or getattr(game_state.get("sim"), "pois", []) if isinstance(game_state, dict) else []
-        for poi in pois:
-            if not getattr(poi, 'is_discovered', False):
-                continue
-            poi_def = getattr(poi, 'poi_def', None)
-            if poi_def is None:
-                continue
-            poi_cx = (getattr(poi, 'grid_x', 0) + getattr(poi_def, 'size', (1, 1))[0] / 2) * TILE_SIZE
-            poi_cy = (getattr(poi, 'grid_y', 0) + getattr(poi_def, 'size', (1, 1))[1] / 2) * TILE_SIZE
-            hx = getattr(hero, 'world_x', getattr(hero, 'x', 0))
-            hy = getattr(hero, 'world_y', getattr(hero, 'y', 0))
-            dist = math.hypot(hx - poi_cx, hy - poi_cy) / TILE_SIZE
-            if dist < 30:  # Only include POIs within 30 tiles
-                nearby_pois.append({
-                    "name": getattr(poi_def, 'display_name', 'Unknown POI'),
-                    "type": getattr(poi_def, 'interaction_type', 'unknown'),
-                    "distance_tiles": round(dist, 1),
-                    "difficulty": getattr(poi_def, 'difficulty_tier', 0),
-                    "depleted": getattr(poi, 'is_depleted', False),
-                    "interacted": getattr(poi, 'is_interacted', False),
-                })
-        nearby_pois.sort(key=lambda p: p["distance_tiles"])
-        context["nearby_pois"] = nearby_pois[:5]
+        # WK55: Nearby POI awareness for LLM decisions (discovered + seen-fog unknowns).
+        from ai.behaviors.poi_awareness import get_nearby_pois_for_hero
+        context["nearby_pois"] = get_nearby_pois_for_hero(hero, game_state)
 
         # Add situational flags
         context["situation"] = {
@@ -393,6 +371,25 @@ Current State: {context['current_state']}
                     f"dist={b.get('distance_tiles','?')} tiles risk={b.get('risk',0)}{assigned}\n"
                 )
         
+        # WK55: Nearby POIs for LLM awareness
+        nearby_pois = context.get("nearby_pois") or []
+        if nearby_pois:
+            summary += "\nNearby Points of Interest:\n"
+            for poi in nearby_pois[:5]:
+                name = poi.get("name", "Unknown")
+                ptype = poi.get("type", "unknown")
+                dist = poi.get("distance_tiles", "?")
+                direction = poi.get("direction", "")
+                dir_str = f" ({direction})" if direction else ""
+                depleted = poi.get("depleted", False)
+                visited = poi.get("previously_visited", False)
+                status = ""
+                if depleted:
+                    status = " [DEPLETED]"
+                elif visited:
+                    status = " [VISITED]"
+                summary += f"  - {name} [{ptype}] at {dist} tiles{dir_str}{status}\n"
+
         summary += f"\nDistances: Castle {context['distances'].get('castle', '?')} tiles, "
         summary += f"Market {context['distances'].get('marketplace', '?')} tiles\n"
         

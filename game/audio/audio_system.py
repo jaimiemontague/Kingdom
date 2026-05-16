@@ -38,6 +38,9 @@ AUDIO_EVENT_MAP = {
     "hero_hired": "hero_hired",
     "purchase_made": "purchase",
     
+    # POI discovery event (WK55)
+    "poi_discovered": "poi_discovered",
+
     # UI events (optional, not visibility-gated)
     "ui_click": "ui_click",
     "ui_confirm": "ui_confirm",
@@ -63,6 +66,7 @@ SOUND_COOLDOWNS_MS = {
     "ui_confirm": 150,
     "ui_error": 200,
     "building_under_attack_rumble": 3000,  # wk14: throttle so not every frame
+    "poi_discovered": 1000,  # WK55: brief cooldown for discovery chime
 }
 
 
@@ -113,7 +117,11 @@ class AudioSystem:
         self._load_sfx()
     
     def _load_sfx(self):
-        """Preload all SFX files from assets/audio/sfx/ (flat structure, supports .wav and .ogg)."""
+        """Preload all SFX files from assets/audio/sfx/ (flat structure, supports .wav and .ogg).
+
+        TODO (Audio Agent): Add assets/audio/sfx/poi_discovered.ogg — a brief discovery chime
+        (short rising arpeggio or crystal chime, ~0.5s, for POI discovery notifications).
+        """
         if not self.enabled:
             return
         

@@ -80,6 +80,7 @@ _COMMITTED_DESTINATION_TYPES = frozenset({
     "patrol_castle",
     "defend_castle",
     "direct_prompt",
+    "visit_poi",  # WK55: personality-driven POI visit
 })
 
 # Debug logging (set to True to see AI decision logs).
