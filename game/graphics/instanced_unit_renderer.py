@@ -33,6 +33,7 @@ from game.graphics.ursina_units_anim import (
     _hero_base_clip,
     _peasant_base_clip,
     _tax_collector_base_clip,
+    _unit_facing_direction,
 )
 from game.world import Visibility
 
@@ -63,6 +64,16 @@ GUARD_SCALE_UNIFORM = 0.5 * _US  # legacy xz; Y was 0.7 — single-instanced qua
 # Match ``ursina_renderer.PROJECTILE_*`` — instanced arrow billboards + shadow skip via negative scale.w.
 PROJECTILE_BILLBOARD_SCALE = 0.075
 PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
+
+
+def _flip_uv_horizontal(uv: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    """Flip a UV region (u_start, v_start, u_width, v_height) horizontally.
+
+    Returns (u_start + u_width, v_start, -u_width, v_height) so the shader
+    samples the texture in reverse U order, mirroring the sprite.
+    """
+    u, v, uw, vh = uv
+    return (u + uw, v, -uw, vh)
 
 
 class InstancedUnitRenderer:
@@ -340,6 +351,9 @@ class InstancedUnitRenderer:
                 obj_id, h, clips_h, _hero_base_clip
             )
             uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
+            facing = _unit_facing_direction(h)
+            if facing < 0:
+                uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             wy = HERO_SCALE * 0.5
             vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)
@@ -364,6 +378,9 @@ class InstancedUnitRenderer:
                 obj_id, e, clips_e, _enemy_base_clip
             )
             uv = self._atlas_builder.lookup_uv("enemy", et_key, clip_name, frame_idx)
+            facing_e = _unit_facing_direction(e)
+            if facing_e < 0:
+                uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             wy = ENEMY_SCALE * 0.5
             vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)
@@ -448,6 +465,9 @@ class InstancedUnitRenderer:
                 obj_id, h, clips_h, _hero_base_clip
             )
             uv = self._atlas_builder.lookup_uv("hero", hc_key, clip_name, frame_idx)
+            facing_in = _unit_facing_direction(h)
+            if facing_in < 0:
+                uv = _flip_uv_horizontal(uv)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             wy = HERO_SCALE * 0.5
             vx, vy, vz = self._smooth_visual_position(obj_id, wx, wy, wz, dt)

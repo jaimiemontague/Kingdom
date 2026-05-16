@@ -1,7 +1,10 @@
 {
   "prefab_id": "poi_abandoned_camp_v1",
   "building_type": "poi_abandoned_camp",
-  "footprint_tiles": [2, 2],
+  "footprint_tiles": [
+    2,
+    2
+  ],
   "ground_anchor_y": 0.0,
   "rotation_steps": 90,
   "attribution": [
@@ -11,51 +14,129 @@
   "pieces": [
     {
       "model": "Models/GLB format/tent.glb",
-      "pos": [-0.3, 0.0, -0.3],
-      "rot": [0.0, 45.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        -0.3,
+        0.0,
+        -0.3
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/tent-canvas.glb",
-      "pos": [0.8, 0.0, 0.7],
-      "rot": [0.0, 200.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        0.8,
+        0.0,
+        0.7
+      ],
+      "rot": [
+        0.0,
+        200.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/campfire-pit.glb",
-      "pos": [0.3, 0.0, 0.2],
-      "rot": [0.0, 0.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
-    },
-    {
-      "model": "Models/GLB format/barrel.glb",
-      "pos": [0.9, 0.0, -0.3],
-      "rot": [0.0, 20.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        0.3,
+        0.0,
+        0.2
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/barrels.glb",
-      "pos": [-0.4, 0.0, 0.8],
-      "rot": [0.0, -15.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        -0.4,
+        0.0,
+        0.8
+      ],
+      "rot": [
+        0.0,
+        -15.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/fence-wood.glb",
-      "pos": [-0.5, 0.0, 0.0],
-      "rot": [0.0, 90.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        -0.5,
+        0.0,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/fence-wood.glb",
-      "pos": [-0.5, 0.0, 1.0],
-      "rot": [0.0, 90.0, 0.0],
-      "scale": [1.0, 1.0, 1.0]
+      "pos": [
+        -0.5,
+        0.0,
+        1.0
+      ],
+      "rot": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "model": "Models/GLB format/bedroll.glb",
-      "pos": [0.6, 0.0, -0.5],
-      "rot": [0.0, 60.0, 0.0],
-      "scale": [0.8, 0.8, 0.8]
+      "pos": [
+        0.6,
+        0.0,
+        -0.5
+      ],
+      "rot": [
+        0.0,
+        60.0,
+        0.0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
     }
   ],
   "notes": "Abandoned campsite: two tents, a campfire, barrels, wood fences, and a bedroll scattered around a 2x2 area."
