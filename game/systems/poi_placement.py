@@ -79,6 +79,18 @@ class POIPlacementSystem:
     # Spacing constraints (tiles)
     MIN_POI_SPACING = 6
     MIN_BUILDING_SPACING = 5
+    # Buffer zone: no POIs within this many tiles of the absolute map edge.
+    MAP_EDGE_BUFFER = 15
+
+    # POI types suitable for unzoned frontier areas (west/northwest and gap sectors).
+    _FRONTIER_PALETTE: list[str] = [
+        "poi_shrine",
+        "poi_treasure_cache",
+        "poi_hermit_hut",
+        "poi_abandoned_camp",
+        "poi_gravestone",
+        "poi_cave_entrance",
+    ]
 
     def generate_pois(
         self,
@@ -150,6 +162,15 @@ class POIPlacementSystem:
                 if poi_type in _LEGENDARY_UNIQUE_TYPES:
                     legendary_placed.add(poi_type)
 
+        # Frontier pass: place POIs in unzoned areas (west/northwest gaps).
+        # These areas have no defined Zone, so get_zone() returns None for them.
+        # We generate a moderate budget and place from a general-purpose palette.
+        frontier_pois = self._place_frontier_pois(
+            world, placed_pois, all_structures, castle_cx, castle_cy,
+            legendary_placed, rng,
+        )
+        placed_pois.extend(frontier_pois)
+
         return placed_pois
 
     # ------------------------------------------------------------------
@@ -163,7 +184,11 @@ class POIPlacementSystem:
         castle_cy: int,
         rng,
     ) -> int:
-        """Compute how many POIs to place in a zone."""
+        """Compute how many POIs to place in a zone.
+
+        Budget is area-based but capped more aggressively for far-reaching zones
+        to prevent excessive clustering at map edges.
+        """
         area = _estimate_zone_area(zone, castle_cx, castle_cy, rng)
         base = max(2, area // 600)
         bonus = zone.difficulty_tier - 1
@@ -171,6 +196,11 @@ class POIPlacementSystem:
 
         if zone.zone_id == "castle_town":
             total = min(total, 3)
+
+        # Cap outer zones (max_distance=999) to prevent too many POIs at far edges.
+        # With center-biased sampling most will land in the inner portion anyway.
+        if zone.max_distance >= 999:
+            total = min(total, 8)
 
         return total
 
@@ -220,12 +250,33 @@ class POIPlacementSystem:
         rng,
         max_attempts: int = 120,
     ) -> Optional[tuple[int, int]]:
-        """Find a valid grid position for the POI within *zone*."""
+        """Find a valid grid position for the POI within *zone*.
+
+        Uses center-biased sampling: candidate positions are generated with a
+        Gaussian distribution centered on the map center, which naturally places
+        more POIs near the town and fewer at the far edges.
+        """
         fw, fh = definition.size
+        buf = self.MAP_EDGE_BUFFER
+
+        # Gaussian sigma: ~40% of map half-width gives a nice center-heavy spread
+        sigma_x = (MAP_WIDTH - 2 * buf) * 0.4
+        sigma_y = (MAP_HEIGHT - 2 * buf) * 0.4
 
         for _ in range(max_attempts):
-            gx = rng.randint(0, MAP_WIDTH - fw)
-            gy = rng.randint(0, MAP_HEIGHT - fh)
+            # Center-biased sampling via Gaussian (clamped to valid range)
+            gx = int(rng.gauss(castle_cx, sigma_x))
+            gy = int(rng.gauss(castle_cy, sigma_y))
+
+            # Clamp to valid range respecting edge buffer
+            gx = max(buf, min(MAP_WIDTH - fw - buf, gx))
+            gy = max(buf, min(MAP_HEIGHT - fh - buf, gy))
+
+            # Enforce map edge buffer (reject if footprint extends into buffer)
+            if gx < buf or gy < buf:
+                continue
+            if (gx + fw) > (MAP_WIDTH - buf) or (gy + fh) > (MAP_HEIGHT - buf):
+                continue
 
             # Must be inside the target zone
             z = get_zone(gx, gy, castle_cx, castle_cy)
@@ -245,6 +296,108 @@ class POIPlacementSystem:
                 continue
 
             # Elevation preference check
+            if not self._elevation_ok(world, gx, gy, fw, fh, definition.elevation_preference):
+                continue
+
+            return (gx, gy)
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Frontier placement (unzoned areas)
+    # ------------------------------------------------------------------
+
+    def _place_frontier_pois(
+        self,
+        world,
+        placed_pois: list[PointOfInterest],
+        all_structures: list,
+        castle_cx: int,
+        castle_cy: int,
+        legendary_placed: set[str],
+        rng,
+    ) -> list[PointOfInterest]:
+        """Place POIs in unzoned frontier areas (west/northwest)."""
+        palette_types = [
+            pt for pt in self._FRONTIER_PALETTE if pt in POI_DEFINITIONS
+        ]
+        if not palette_types:
+            return []
+
+        # Budget: comparable to a mid-tier zone (6-8 POIs for the unzoned gap).
+        budget = rng.randint(6, 8)
+        new_pois: list[PointOfInterest] = []
+
+        for _ in range(budget):
+            poi_type = self._weighted_pick(palette_types, rng, legendary_placed)
+            if poi_type is None:
+                continue
+            definition = POI_DEFINITIONS[poi_type]
+
+            # Try to find a spot in unzoned territory (get_zone returns None).
+            spot = self._find_frontier_spot(
+                world, definition, placed_pois + new_pois,
+                all_structures, castle_cx, castle_cy, rng,
+            )
+            if spot is None:
+                continue
+
+            poi = PointOfInterest(spot[0], spot[1], definition)
+            new_pois.append(poi)
+
+        return new_pois
+
+    def _find_frontier_spot(
+        self,
+        world,
+        definition: POIDefinition,
+        placed_pois: list[PointOfInterest],
+        all_structures: list,
+        castle_cx: int,
+        castle_cy: int,
+        rng,
+        max_attempts: int = 150,
+    ) -> Optional[tuple[int, int]]:
+        """Find a valid spot in unzoned frontier territory.
+
+        Uses center-biased sampling and only accepts positions where
+        get_zone returns None (i.e. west/northwest and inter-zone gaps).
+        """
+        fw, fh = definition.size
+        buf = self.MAP_EDGE_BUFFER
+        # Gaussian centered on map center, moderate spread to keep POIs
+        # away from extreme edges while still covering the frontier.
+        sigma = (MAP_WIDTH - 2 * buf) * 0.35
+
+        for _ in range(max_attempts):
+            gx = int(rng.gauss(castle_cx, sigma))
+            gy = int(rng.gauss(castle_cy, sigma))
+
+            # Clamp to valid range respecting edge buffer
+            gx = max(buf, min(MAP_WIDTH - fw - buf, gx))
+            gy = max(buf, min(MAP_HEIGHT - fh - buf, gy))
+
+            # Must be in unzoned territory
+            z = get_zone(gx, gy, castle_cx, castle_cy)
+            if z is not None:
+                continue
+
+            # Must be outside castle-town radius (at least 16 tiles from center)
+            dist = math.hypot(gx - castle_cx, gy - castle_cy)
+            if dist < 16:
+                continue
+
+            # Full footprint must be walkable and buildable
+            if not self._footprint_ok(world, gx, gy, fw, fh):
+                continue
+
+            # Spacing checks
+            if not self._spacing_ok(gx, gy, (fw, fh), placed_pois, self.MIN_POI_SPACING):
+                continue
+            if not self._structure_spacing_ok(gx, gy, (fw, fh), all_structures, self.MIN_BUILDING_SPACING):
+                continue
+
+            # Elevation preference
             if not self._elevation_ok(world, gx, gy, fw, fh, definition.elevation_preference):
                 continue
 

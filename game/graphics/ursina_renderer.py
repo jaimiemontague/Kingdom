@@ -156,6 +156,7 @@ from game.graphics.ursina_units_anim import (
     _enemy_base_clip,
     _peasant_base_clip,
     _tax_collector_base_clip,
+    _unit_facing_direction,
 )
 
 from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
@@ -396,13 +397,9 @@ class UrsinaRenderer:
                             if 0 <= _tx < _world.width and 0 <= _ty < _world.height:
                                 if _world.visibility[_ty][_tx] == 0:  # UNSEEN
                                     _world.visibility[_ty][_tx] = 1  # SEEN
-            # Skip undiscovered POIs — Option A: invisible until hero discovers them
-            if (
-                not _debug_show_pois
-                and getattr(b, "is_poi", False)
-                and not getattr(b, "is_discovered", True)
-            ):
-                continue
+            # POIs are always visible — discovery still triggers interactions
+            if getattr(b, "is_poi", False) and not b.is_discovered:
+                b.is_discovered = True
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
@@ -590,11 +587,13 @@ class UrsinaRenderer:
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             y_center = terrain_y + sy * 0.5
+            facing = _unit_facing_direction(h)
+            sx = sy * facing  # negative scale_x flips the billboard horizontally
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=htex,
                 tint_col=col,
-                scale_xyz=(sy, sy, 1),
+                scale_xyz=(sx, sy, 1),
                 pos_xyz=(wx, y_center, wz),
                 shader=sprite_unlit_shader,
             )
@@ -633,11 +632,13 @@ class UrsinaRenderer:
             etex = TerrainTextureBridge.surface_to_texture(esurf, cache_key=e_cache_key)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
+            facing_e = _unit_facing_direction(e)
+            sx_e = s * facing_e
             self._entity_render.sync_billboard_entity(
                 ent,
                 tex=etex,
                 tint_col=col,
-                scale_xyz=(s, s, 1),
+                scale_xyz=(sx_e, s, 1),
                 pos_xyz=(wx, terrain_y + s * 0.5, wz),
                 shader=sprite_unlit_shader,
             )

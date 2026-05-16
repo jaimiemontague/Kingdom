@@ -14,7 +14,7 @@ from game.types import EnemyType
 
 class CombatSystem(GameSystem):
     """Manages combat between heroes and enemies."""
-    
+
     def __init__(self):
         self.combat_log = []
         self._emitted_events: list[dict] = []
@@ -30,7 +30,39 @@ class CombatSystem(GameSystem):
             except Exception:
                 return not bool(getattr(hero, "is_inside_building", False))
         return not bool(getattr(hero, "is_inside_building", False))
-        
+
+    @staticmethod
+    def _hero_in_combat_state(hero) -> bool:
+        """Check if hero is in a state that permits attacking.
+
+        Heroes should only attack when they are actively engaged in combat
+        (FIGHTING state) or have an explicit enemy/lair target they are pursuing.
+        This prevents attack animations from playing while walking/idle with
+        no combat intent.
+        """
+        from game.entities.hero import HeroState
+
+        state = getattr(hero, "state", None)
+
+        # No state attribute means legacy/test hero — allow attacks (backwards compat).
+        if state is None:
+            return True
+
+        if state == HeroState.FIGHTING:
+            return True
+
+        # Allow attacks if hero has an explicit enemy target (chasing).
+        # This covers the brief frames between entering range and AI setting FIGHTING.
+        target = getattr(hero, "target", None)
+        if target is not None and hasattr(target, "is_alive") and getattr(target, "is_alive", False):
+            return True
+
+        # Allow attacks if hero is targeting a lair (explicit lair assault).
+        if target is not None and getattr(target, "is_lair", False):
+            return True
+
+        return False
+
     @staticmethod
     def _normalize_enemy_type(enemy_type: object) -> str:
         enum_value = getattr(enemy_type, "value", None)
@@ -83,6 +115,11 @@ class CombatSystem(GameSystem):
             if hero.attack_cooldown > 0:
                 continue
 
+            # Only allow attacks when hero is in an active combat state.
+            # Prevents attack animations from firing while walking/idle with no target.
+            if not self._hero_in_combat_state(hero):
+                continue
+
             # P0 hard gate: no damage while hero is inside a building.
             if not self._hero_can_attack(hero):
                 # Optional breadcrumb for debug/QA counters (kept internal; non-contract).
@@ -92,11 +129,11 @@ class CombatSystem(GameSystem):
                 except Exception:
                     pass
                 continue
-                
+
             # Find closest enemy in range
             closest_enemy = None
             closest_dist = float('inf')
-            
+
             for enemy in enemies:
                 if not enemy.is_alive:
                     continue
@@ -104,7 +141,7 @@ class CombatSystem(GameSystem):
                 if dist <= hero.attack_range and dist < closest_dist:
                     closest_dist = dist
                     closest_enemy = enemy
-            
+
             if closest_enemy:
                 # If the enemy is currently targeting a building, being attacked should make it retarget the attacker.
                 # This prevents enemies from mindlessly chewing on buildings while a hero hits them.
@@ -114,7 +151,7 @@ class CombatSystem(GameSystem):
                 # Register this hero as an attacker for gold distribution
                 if hasattr(closest_enemy, 'register_attacker'):
                     closest_enemy.register_attacker(hero)
-                
+
                 # Attack!
                 damage = hero.attack
                 if hasattr(hero, "compute_attack_damage"):
@@ -132,7 +169,7 @@ class CombatSystem(GameSystem):
                     except TypeError:
                         # Backwards-compatible signature
                         hero.on_attack_landed()
-                
+
                 self._emit_event(emit_event, GameEventType.HERO_ATTACK, {
                     "attacker": hero.name,
                     "target": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
@@ -140,7 +177,7 @@ class CombatSystem(GameSystem):
                     "x": closest_enemy.x,
                     "y": closest_enemy.y,
                 })
-                
+
                 # WK5: Emit ranged projectile event for ranged attackers
                 if getattr(hero, "is_ranged_attacker", False):
                     spec = None
@@ -149,11 +186,11 @@ class CombatSystem(GameSystem):
                             spec = hero.get_ranged_spec()
                         except Exception:
                             spec = None
-                    
+
                     kind = (spec or {}).get("kind", "arrow")
                     color = (spec or {}).get("color", (200, 200, 200))
                     size = (spec or {}).get("size_px", 2)  # Build B: default 2px for readability
-                    
+
                     self._emit_event(emit_event, GameEventType.RANGED_PROJECTILE, {
                         "from_x": float(hero.x),
                         "from_y": float(hero.y),
@@ -163,22 +200,22 @@ class CombatSystem(GameSystem):
                         "color": color,
                         "size_px": size,
                     })
-                
+
                 if killed:
                     # Distribute gold among all heroes who participated or are nearby
                     gold_recipients = self.get_gold_recipients(
                         closest_enemy, heroes
                     )
-                    
+
                     if gold_recipients:
                         gold_per_hero = closest_enemy.gold_reward // len(gold_recipients)
                         remainder = closest_enemy.gold_reward % len(gold_recipients)
-                        
+
                         for i, recipient in enumerate(gold_recipients):
                             # First recipient gets any remainder
                             gold_share = gold_per_hero + (1 if i == 0 and remainder > 0 else 0)
                             recipient.add_gold(gold_share)
-                        
+
                         self._emit_event(emit_event, GameEventType.ENEMY_KILLED, {
                             "hero": hero.name,
                             "enemy": self._normalize_enemy_type(getattr(closest_enemy, "enemy_type", "")),
@@ -188,7 +225,7 @@ class CombatSystem(GameSystem):
                             "x": closest_enemy.x,
                             "y": closest_enemy.y,
                         })
-                    
+
                     # XP goes to the killer only
                     hero.add_xp(closest_enemy.xp_reward)
 
@@ -197,6 +234,8 @@ class CombatSystem(GameSystem):
             if not getattr(hero, "is_alive", False):
                 continue
             if getattr(hero, "attack_cooldown", 0) > 0:
+                continue
+            if not self._hero_in_combat_state(hero):
                 continue
             if not self._hero_can_attack(hero):
                 try:
@@ -237,7 +276,7 @@ class CombatSystem(GameSystem):
             # WK6 Mid-Sprint: Add position for visibility-gated audio
             lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
             lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-            
+
             self._emit_event(emit_event, GameEventType.HERO_ATTACK_LAIR, {
                 "attacker": hero.name,
                 "target": getattr(lair, "building_type", "lair"),
@@ -245,7 +284,7 @@ class CombatSystem(GameSystem):
                 "x": lair_x,  # WK6 Mid-Sprint: Position for visibility gating
                 "y": lair_y,  # WK6 Mid-Sprint: Position for visibility gating
             })
-            
+
             # WK5: Emit ranged projectile event for ranged attackers attacking lairs
             if getattr(hero, "is_ranged_attacker", False):
                 spec = None
@@ -254,11 +293,11 @@ class CombatSystem(GameSystem):
                         spec = hero.get_ranged_spec()
                     except Exception:
                         spec = None
-                
+
                 kind = (spec or {}).get("kind", "arrow")
                 color = (spec or {}).get("color", (200, 200, 200))
                 size = (spec or {}).get("size_px", 1)
-                
+
                 self._emit_event(emit_event, GameEventType.RANGED_PROJECTILE, {
                     "from_x": float(hero.x),
                     "from_y": float(hero.y),
@@ -278,7 +317,7 @@ class CombatSystem(GameSystem):
                 # WK6 Mid-Sprint: Add position for visibility-gated audio
                 lair_x = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
                 lair_y = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-                
+
                 self._emit_event(emit_event, GameEventType.LAIR_CLEARED, {
                     "hero": hero.name,
                     "lair_type": getattr(lair, "building_type", "lair"),
@@ -288,22 +327,22 @@ class CombatSystem(GameSystem):
                     "x": lair_x,  # WK6 Mid-Sprint: Position for visibility gating
                     "y": lair_y,  # WK6 Mid-Sprint: Position for visibility gating
                 })
-        
+
         # Enemies attacking (handled in enemy update, but we track deaths here)
         for enemy in enemies:
             if not enemy.is_alive:
                 continue
-            
+
             # Enemy attacks are processed in enemy.update()
             # Here we just check for hero deaths
             pass
-        
+
         # Check for building destruction
         for building in buildings:
             if building.hp <= 0 and building.building_type == "castle":
                 self._emit_event(emit_event, GameEventType.CASTLE_DESTROYED, {
                 })
-    
+
     def get_enemies_in_range(self, x: float, y: float, range_dist: float, enemies: list) -> list:
         """Get all enemies within range of a position."""
         in_range = []
@@ -313,21 +352,21 @@ class CombatSystem(GameSystem):
                 if dist <= range_dist:
                     in_range.append((enemy, dist))
         return sorted(in_range, key=lambda e: e[1])
-    
+
     def get_nearest_enemy(self, x: float, y: float, enemies: list):
         """Get the nearest living enemy to a position."""
         nearest = None
         nearest_dist = float('inf')
-        
+
         for enemy in enemies:
             if enemy.is_alive:
                 dist = math.sqrt((x - enemy.x) ** 2 + (y - enemy.y) ** 2)
                 if dist < nearest_dist:
                     nearest_dist = dist
                     nearest = enemy
-        
+
         return nearest, nearest_dist if nearest else None
-    
+
     def get_gold_recipients(self, enemy, heroes: list) -> list:
         """
         Get list of heroes who should receive gold from a kill.
@@ -335,20 +374,19 @@ class CombatSystem(GameSystem):
         """
         recipients = []
         attacker_names = getattr(enemy, 'attackers', set())
-        
+
         for hero in heroes:
             if not hero.is_alive:
                 continue
-            
+
             # Check if hero attacked this enemy
             if hero.name in attacker_names:
                 recipients.append(hero)
                 continue
-            
+
             # Check if hero is within the same tile (TILE_SIZE distance)
             dist = math.sqrt((hero.x - enemy.x) ** 2 + (hero.y - enemy.y) ** 2)
             if dist <= TILE_SIZE:
                 recipients.append(hero)
-        
-        return recipients
 
+        return recipients

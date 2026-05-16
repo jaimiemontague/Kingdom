@@ -480,7 +480,7 @@ class UrsinaTerrainFogCollab:
                 elif tile == TileType.WATER:
                     water_y = float(getattr(config, "TERRAIN_WATER_LEVEL", 1.0)) if has_heightmap else 0.005
                     tile_w = (float(ts) / SCALE) * m
-                    Entity(
+                    water_ent = Entity(
                         parent=root,
                         model="quad",
                         rotation=(90, 0, 0),
@@ -492,6 +492,7 @@ class UrsinaTerrainFogCollab:
                         shader=unlit_shader,
                         add_to_scene_entities=False,
                     )
+                    self.track_visibility_gated_terrain(water_ent, tx, ty)
 
                 on_scatter_grid = (tx % scatter_stride == 0) and (ty % scatter_stride == 0)
                 in_occ = (tx, ty) in occupied_tiles
