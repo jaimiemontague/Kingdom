@@ -469,6 +469,13 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                 _clear_direct_prompt_explore_meta(hero)
                 return
 
+            # WK55: Arrived at POI — hero naturally discovers/interacts via proximity system.
+            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "visit_poi":
+                hero.target = None
+                hero.target_position = None
+                hero.state = HeroState.IDLE
+                return
+
             # Check if we were going home.
             if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
                 hero.transfer_taxes_to_home()
@@ -543,6 +550,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             "defend_castle",
             "direct_prompt",
             "bounty",
+            "visit_poi",  # WK55: personality-driven POI visit
         ]:
             return
 

@@ -173,6 +173,8 @@ class UrsinaRenderer:
         self._tree_entities: dict[tuple[int, int], Entity] = {}
         # WK46 Stage 3: log pile entities keyed by tile (tx,ty).
         self._log_stack_entities: dict[tuple[int, int], Entity] = {}
+        # WK55: POI mystery "?" marker entities, keyed by POI id().
+        self._poi_mystery_markers: dict[int, Entity] = {}
 
         # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
@@ -379,6 +381,11 @@ class UrsinaRenderer:
                 pass
             self._shadow_bounds_initialized = True
 
+    def _apply_poi_mystery_state(self, b, ent, wx, wz, bld_terrain_y) -> None:
+        """WK55: No-op — binary visibility is handled in _sync_snapshot_buildings.
+        Kept as stub so any stray calls don't crash."""
+        pass
+
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         for b in getattr(snapshot, "buildings", ()):
@@ -397,9 +404,23 @@ class UrsinaRenderer:
                             if 0 <= _tx < _world.width and 0 <= _ty < _world.height:
                                 if _world.visibility[_ty][_tx] == 0:  # UNSEEN
                                     _world.visibility[_ty][_tx] = 1  # SEEN
-            # POIs are always visible — discovery still triggers interactions
-            if getattr(b, "is_poi", False) and not b.is_discovered:
-                b.is_discovered = True
+            # WK55-fix: Binary POI visibility — hidden until discovered by hero.
+            # Undiscovered POIs are completely hidden (minimap gray dots are the only hint).
+            # Once a hero walks within discovery range, the POI becomes fully visible.
+            if getattr(b, "is_poi", False) and not _debug_show_pois:
+                _poi_obj_id = id(b)
+                if not getattr(b, 'is_discovered', False):
+                    # UNDISCOVERED — hide entity completely; minimap shows gray dot instead
+                    existing = self._entities.get(_poi_obj_id)
+                    if existing is not None:
+                        existing.enabled = False
+                        active_ids.add(_poi_obj_id)
+                    # Also hide any leftover mystery marker from old code
+                    marker = self._poi_mystery_markers.get(_poi_obj_id)
+                    if marker is not None:
+                        marker.enabled = False
+                    continue
+                # DISCOVERED — fall through to normal rendering below
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
@@ -471,6 +492,8 @@ class UrsinaRenderer:
                         except Exception:
                             pass
                         ent._ks_cave_tint_applied = True
+                # WK55: POI 3-state visibility post-processing
+                self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 active_ids.add(obj_id)
                 continue
 
@@ -500,6 +523,8 @@ class UrsinaRenderer:
                         except Exception:
                             pass
                         ent._ks_cave_tint_applied = True
+                # WK55: POI 3-state visibility post-processing
+                self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 active_ids.add(obj_id)
                 continue
 
@@ -547,6 +572,8 @@ class UrsinaRenderer:
                     except Exception:
                         pass
                     ent._ks_cave_tint_applied = True
+            # WK55: POI 3-state visibility post-processing
+            self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
             active_ids.add(obj_id)
 
 

@@ -45,6 +45,8 @@ class PointOfInterest(Building):
         self.discoverer_hero_id = None
         self.interaction_count = 0
         self.cooldown_remaining = 0.0
+        # WK55: tick stamp of last interaction (renderer can flash/glow for ~1s)
+        self.last_interaction_tick: int = 0
 
         # POIs are always fully "constructed" — they exist as world features
         self.is_constructed = True

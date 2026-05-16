@@ -45,6 +45,7 @@ from config import (
     PLAYER_BUILDING_VISION_TILES,
     PLAYER_GUILD_EXTRA_VISION_TILES,
     PLAYER_GUILD_TYPES,
+    POI_DISCOVERY_RANGE_TILES,
 )
 
 from game.entities import Castle, Hero, TaxCollector, Peasant, Guard
@@ -201,11 +202,41 @@ class SimEngine:
         if boss is not None and hasattr(self, "enemies"):
             self.enemies.append(boss)
 
+    def _on_poi_combat_triggered(self, event: dict) -> None:
+        """WK56: Handle poi_combat_triggered — spawn enemies at the POI location."""
+        from game.entities.enemy import Goblin, Skeleton, Bandit
+
+        _ENEMY_CLASSES = {
+            "goblin": Goblin,
+            "skeleton": Skeleton,
+            "bandit": Bandit,
+        }
+
+        spawn_count = int(event.get("spawn_count", 2))
+        enemy_types = event.get("enemy_types", ["goblin"])
+        spawn_x = float(event.get("spawn_x", 0))
+        spawn_y = float(event.get("spawn_y", 0))
+
+        if not enemy_types:
+            enemy_types = ["goblin"]
+
+        rng = get_rng("poi_combat_spawn")
+        for i in range(spawn_count):
+            etype = enemy_types[i % len(enemy_types)]
+            cls = _ENEMY_CLASSES.get(etype, Goblin)
+            # Small random offset so enemies don't stack on top of each other.
+            offset_x = (rng.random() - 0.5) * TILE_SIZE
+            offset_y = (rng.random() - 0.5) * TILE_SIZE
+            enemy = cls(spawn_x + offset_x, spawn_y + offset_y)
+            self.enemies.append(enemy)
+
     def setup_initial_state(self) -> None:
         """Set up initial sim state (no camera/UI side effects)."""
         # WK58: Listen for boss spawn events from POI interactions.
+        # WK56: Listen for POI combat trigger events to spawn enemies.
         if hasattr(self, "event_bus") and self.event_bus:
             self.event_bus.subscribe("boss_spawned", self._on_boss_spawned)
+            self.event_bus.subscribe("poi_combat_triggered", self._on_poi_combat_triggered)
 
         center_x = MAP_WIDTH // 2 - 1
         center_y = MAP_HEIGHT // 2 - 1
@@ -675,30 +706,43 @@ class SimEngine:
     # --- Below are sim helpers copied/adapted from engine.py ---
     def _check_poi_discovery(self):
         """Check if any hero is within discovery range of undiscovered POIs."""
-        DISCOVERY_RANGE_TILES = 5
         pois = getattr(self, 'pois', [])
-        if not pois:
+        if not pois or not self.heroes:
             return
+
+        discovery_range_px = POI_DISCOVERY_RANGE_TILES * TILE_SIZE
+
         for poi in pois:
             if poi.is_discovered:
                 continue
-            poi_cx = (poi.grid_x + poi.poi_def.size[0] / 2) * TILE_SIZE
-            poi_cy = (poi.grid_y + poi.poi_def.size[1] / 2) * TILE_SIZE
+
+            poi_def = getattr(poi, 'poi_def', None)
+            if poi_def is None:
+                continue
+
+            size = getattr(poi_def, 'size', (1, 1))
+            poi_cx = (poi.grid_x + size[0] / 2.0) * TILE_SIZE
+            poi_cy = (poi.grid_y + size[1] / 2.0) * TILE_SIZE
+
             for hero in self.heroes:
-                hx = getattr(hero, 'world_x', getattr(hero, 'x', 0))
-                hy = getattr(hero, 'world_y', getattr(hero, 'y', 0))
-                dist_tiles = math.hypot(hx - poi_cx, hy - poi_cy) / TILE_SIZE
-                if dist_tiles <= DISCOVERY_RANGE_TILES:
+                if not getattr(hero, 'is_alive', False):
+                    continue
+                hx = float(getattr(hero, 'world_x', getattr(hero, 'x', 0)))
+                hy = float(getattr(hero, 'world_y', getattr(hero, 'y', 0)))
+                dist = math.hypot(hx - poi_cx, hy - poi_cy)
+                if dist <= discovery_range_px:
                     poi.is_discovered = True
-                    poi.discoverer_hero_id = getattr(hero, 'id', None)
-                    # Emit discovery event if event bus available
-                    if hasattr(self, 'event_bus') and self.event_bus:
-                        try:
-                            from game.events import GameEventType
-                            self.event_bus.emit(GameEventType.POI_DISCOVERED if hasattr(GameEventType, 'POI_DISCOVERED') else 'poi_discovered',
-                                              poi=poi, hero=hero)
-                        except Exception:
-                            pass
+                    poi.discoverer_hero_id = getattr(hero, 'hero_id', None)
+                    # Emit discovery event as a proper dict for event bus consumers
+                    if self.event_bus:
+                        self.event_bus.emit({
+                            "type": "poi_discovered",
+                            "poi": poi,
+                            "hero": hero,
+                            "hero_id": str(getattr(hero, 'hero_id', '') or ''),
+                            "poi_type": getattr(poi_def, 'poi_type', ''),
+                            "display_name": getattr(poi_def, 'display_name', ''),
+                        })
                     break  # Only need one hero to discover
 
     def _update_buildings(self, dt: float) -> None:
@@ -974,6 +1018,9 @@ class SimEngine:
                 continue
             # Lairs are hostile world structures, not player vision sources.
             if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
+                continue
+            # POIs are world features, not player buildings — don't reveal fog.
+            if getattr(building, "is_poi", False):
                 continue
             raw_bt = getattr(building, "building_type", None)
             btype_name = str(getattr(raw_bt, "value", raw_bt) or "")
