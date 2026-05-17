@@ -38,16 +38,22 @@ from ursina.shaders import unlit_shader
 
 FOG_TEX_BRIDGE_KEY = "kingdom_ursina_fog_overlay"
 
+TERRAIN_CHUNK_SIZE = 16  # tiles per chunk edge for frustum culling
+
 
 class UrsinaTerrainFogCollab:
     """Terrain root + fog quad + visibility-gated props + optional grid overlay."""
 
-    __slots__ = ("_r", "_tree_sync_tick_counter", "_last_growth_by_tile")
+    __slots__ = ("_r", "_tree_sync_tick_counter", "_last_growth_by_tile",
+                 "_terrain_chunks", "_visible_chunks", "_chunks_built")
 
     def __init__(self, renderer) -> None:
         self._r = renderer
         self._tree_sync_tick_counter = 0
         self._last_growth_by_tile = None
+        self._terrain_chunks: dict[tuple[int, int], list] = {}
+        self._visible_chunks: set[tuple[int, int]] = set()
+        self._chunks_built = False
 
     def ensure_fog_overlay(self, world, fog_revision: int) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
@@ -318,6 +324,75 @@ class UrsinaTerrainFogCollab:
                     self.sync_terrain_prop_tile_visibility(ent, vis)
         self._r._terrain_visible_tiles_seen = current_visible
         self._r._terrain_visibility_revision_seen = engine_rev
+
+    def _build_terrain_chunks(self) -> None:
+        """Group terrain entities into spatial chunks for frustum culling."""
+        chunks: dict[tuple[int, int], list] = {}
+        for entry in self._r._visibility_gated_terrain:
+            ent, tx, ty = entry
+            cx = tx // TERRAIN_CHUNK_SIZE
+            cy = ty // TERRAIN_CHUNK_SIZE
+            key = (cx, cy)
+            if key not in chunks:
+                chunks[key] = []
+            chunks[key].append(entry)
+        # Also include dynamic tree entities
+        for (tx, ty), ent in self._r._tree_entities.items():
+            cx = tx // TERRAIN_CHUNK_SIZE
+            cy = ty // TERRAIN_CHUNK_SIZE
+            key = (cx, cy)
+            if key not in chunks:
+                chunks[key] = []
+            # Avoid duplicates — trees are already in _visibility_gated_terrain
+            if not any(e is ent for e, _, _ in chunks[key]):
+                chunks[key].append((ent, tx, ty))
+        self._terrain_chunks = chunks
+        self._visible_chunks = set(chunks.keys())  # All visible initially
+        self._chunks_built = True
+
+    def cull_terrain_chunks(self, visible_rect: tuple[int, int, int, int], world) -> None:
+        """Enable/disable terrain chunks based on camera frustum.
+        Called every frame from renderer.update()."""
+        if not getattr(self, '_chunks_built', False):
+            return
+
+        min_tx, min_ty, max_tx, max_ty = visible_rect
+        # Convert tile rect to chunk rect
+        min_cx = min_tx // TERRAIN_CHUNK_SIZE
+        min_cy = min_ty // TERRAIN_CHUNK_SIZE
+        max_cx = max_tx // TERRAIN_CHUNK_SIZE
+        max_cy = max_ty // TERRAIN_CHUNK_SIZE
+
+        # Compute new set of visible chunks
+        new_visible: set[tuple[int, int]] = set()
+        for cx in range(min_cx, max_cx + 1):
+            for cy in range(min_cy, max_cy + 1):
+                if (cx, cy) in self._terrain_chunks:
+                    new_visible.add((cx, cy))
+
+        # Chunks that became hidden
+        became_hidden = self._visible_chunks - new_visible
+        for chunk_key in became_hidden:
+            for ent, tx, ty in self._terrain_chunks[chunk_key]:
+                try:
+                    ent.enabled = False
+                except (AssertionError, Exception):
+                    pass
+
+        # Chunks that became visible — restore fog-based visibility
+        became_visible = new_visible - self._visible_chunks
+        for chunk_key in became_visible:
+            for ent, tx, ty in self._terrain_chunks[chunk_key]:
+                try:
+                    if 0 <= ty < world.height and 0 <= tx < world.width:
+                        vis = world.visibility[ty][tx]
+                        ent.enabled = (vis != Visibility.UNSEEN)
+                    else:
+                        ent.enabled = True
+                except (AssertionError, Exception):
+                    pass
+
+        self._visible_chunks = new_visible
 
     def ensure_grid_debug_overlay(self, world, buildings) -> None:
         """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
@@ -603,6 +678,7 @@ class UrsinaTerrainFogCollab:
                         self.track_visibility_gated_terrain(rock_ent, tx, ty)
 
         self._r._terrain_entity = root
+        self._build_terrain_chunks()
 
     def _build_terrain_ground_mesh(
         self, root, world, tw: int, th: int, ts: int,
@@ -869,6 +945,14 @@ class UrsinaTerrainFogCollab:
                     self.track_visibility_gated_terrain(tree_ent, tx, ty)
                     ents[key] = tree_ent
                     tree_ent._ks_tree_base_scale = float(tm)
+                    # Register in terrain chunk for frustum culling
+                    if getattr(self, '_chunks_built', False):
+                        cx = tx // TERRAIN_CHUNK_SIZE
+                        cy = ty // TERRAIN_CHUNK_SIZE
+                        ckey = (cx, cy)
+                        if ckey not in self._terrain_chunks:
+                            self._terrain_chunks[ckey] = []
+                        self._terrain_chunks[ckey].append((tree_ent, tx, ty))
                 except Exception:
                     # Spawn visibility should never crash the renderer.
                     pass
