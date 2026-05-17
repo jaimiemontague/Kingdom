@@ -79,6 +79,26 @@ class POIInteractionSystem:
             return
 
         interaction_range_px = _INTERACTION_RANGE_TILES * TILE_SIZE
+        # Squared distance for fast rejection (avoids math.hypot for most pairs).
+        range_sq = interaction_range_px * interaction_range_px
+
+        # Pre-filter POIs: only active (discovered, not depleted, has def) with cached centers.
+        active_pois = []
+        for poi in pois:
+            if not getattr(poi, "is_discovered", False):
+                continue
+            if getattr(poi, "is_depleted", False):
+                continue
+            poi_def = getattr(poi, "poi_def", None)
+            if poi_def is None:
+                continue
+            size = getattr(poi_def, "size", (1, 1))
+            poi_cx = (getattr(poi, "grid_x", 0) + size[0] / 2.0) * TILE_SIZE
+            poi_cy = (getattr(poi, "grid_y", 0) + size[1] / 2.0) * TILE_SIZE
+            active_pois.append((poi, poi_def, poi_cx, poi_cy))
+
+        if not active_pois:
+            return
 
         for hero in heroes:
             if not getattr(hero, "is_alive", False):
@@ -88,28 +108,15 @@ class POIInteractionSystem:
             hy = float(getattr(hero, "world_y", getattr(hero, "y", 0)))
             hero_id = id(hero)
 
-            for poi in pois:
-                if not getattr(poi, "is_discovered", False):
-                    continue
-                if getattr(poi, "is_depleted", False):
-                    continue
-
-                poi_def = getattr(poi, "poi_def", None)
-                if poi_def is None:
-                    continue
-
-                # Distance check (center of POI footprint).
-                size = getattr(poi_def, "size", (1, 1))
-                poi_cx = (getattr(poi, "grid_x", 0) + size[0] / 2.0) * TILE_SIZE
-                poi_cy = (getattr(poi, "grid_y", 0) + size[1] / 2.0) * TILE_SIZE
-                dist = math.hypot(hx - poi_cx, hy - poi_cy)
-                if dist > interaction_range_px:
+            for poi, poi_def, poi_cx, poi_cy in active_pois:
+                dx = hx - poi_cx
+                dy = hy - poi_cy
+                if dx * dx + dy * dy > range_sq:
                     continue
 
                 poi_id = id(poi)
                 cooldown_key = (hero_id, poi_id)
 
-                # Skip if this hero has a cooldown on this POI.
                 if cooldown_key in self._hero_poi_cooldowns:
                     continue
 

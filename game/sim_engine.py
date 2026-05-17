@@ -547,6 +547,10 @@ class SimEngine:
 
     def update(self, dt: float, game_state: dict) -> None:
         """Core sim update loop (no UI/render/vfx)."""
+        # Reset per-frame pathfinding budget before any entity updates.
+        from game.systems.navigation import get_pathfinding_budget
+        get_pathfinding_budget().begin_frame()
+
         # Deterministic sim-time accounting
         if DETERMINISTIC_SIM:
             self._sim_now_ms += int(round(float(dt) * 1000.0))
@@ -967,7 +971,15 @@ class SimEngine:
         moved by at least one full tile since the last rebuild.
 
         WK34: All constructed player-placed buildings reveal 3 tiles (building LoS).
+
+        WK59 perf: throttle to every 3 ticks — heroes move ~0.08 tiles/tick at normal
+        speed, so skipping 2 ticks adds at most 0.24-tile latency (invisible to player).
         """
+        tick_counter = getattr(self, "_fog_tick_counter", 0) + 1
+        self._fog_tick_counter = tick_counter
+        if tick_counter % 3 != 0 and getattr(self, "_fog_revealers_snapshot", None) is not None:
+            return
+
         # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.
         # WK17: per docs/vision_rules_fog_of_war.md (Agent 05 spec).
         CASTLE_VISION_TILES = 10
@@ -1042,9 +1054,12 @@ class SimEngine:
 
         # ---- Dirty check: skip update if no revealer moved a full tile ----
         w2g = self.world.world_to_grid
-        grid_snapshot = tuple(
-            sorted((w2g(wx, wy)[0], w2g(wx, wy)[1], r) for wx, wy, r in revealers)
-        )
+        grid_list = []
+        for wx, wy, r in revealers:
+            gxy = w2g(wx, wy)
+            grid_list.append((gxy[0], gxy[1], r))
+        grid_list.sort()
+        grid_snapshot = tuple(grid_list)
         prev = getattr(self, "_fog_revealers_snapshot", None)
         if prev is not None and prev == grid_snapshot:
             return

@@ -29,6 +29,7 @@ class UnitAtlasBuilder:
     def __init__(self):
         self._atlas_surface: pygame.Surface | None = None
         self._uv_map: Dict[AtlasKey, UVRegion] = {}
+        self._ursina_tex = None
 
     @classmethod
     def get(cls) -> "UnitAtlasBuilder":
@@ -98,3 +99,19 @@ class UnitAtlasBuilder:
         # Ranged VFX — shared billboard texture with pygame/Ursina legacy path (wk48 instancing).
         proj_surf = get_projectile_billboard_surface()
         self._pack_frame(proj_surf, ("vfx", "projectile", "arrow", 0), cursor)
+
+    def get_ursina_texture(self):
+        """Return the single GPU-resident atlas Texture (lazy-created, cached)."""
+        if self._ursina_tex is not None:
+            return self._ursina_tex
+        from game.graphics.terrain_texture_bridge import TerrainTextureBridge
+        self._ursina_tex = TerrainTextureBridge.surface_to_texture(
+            self._atlas_surface, cache_key="__unit_atlas_master__"
+        )
+        return self._ursina_tex
+
+    def get_texture_offset_scale(self, unit_type: str, class_key: str, action: str, frame_idx: int):
+        """Return (offset_x, offset_y, scale_x, scale_y) for atlas UV sub-region."""
+        uv = self.lookup_uv(unit_type, class_key, action, frame_idx)
+        # uv = (u_start, v_start, u_width, v_height)
+        return (uv[0], uv[1], uv[2], uv[3])

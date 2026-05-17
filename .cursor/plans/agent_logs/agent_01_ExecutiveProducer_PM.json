@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-16 (Agent 01 WK60 Kickoff): Sprint wk60_v16_perf_optimization — Performance optimization. Game at 10-20 FPS with hero spring-forward. Three root causes: (1) per-frame PIL texture pipeline 8-12ms/frame, (2) pathfinding storms without global budget, (3) frame-rate dependent movement * 60 + no render interpolation. Plan: .cursor/plans/v1.6_performance_analysis.md. R1: texture atlas pipeline (10 profiles → 03 implements → 11 validates). R2: pathfinding frame budget. R3: render interpolation. Target: stable 40-60 FPS.",
     "2026-05-12 (Agent 01 WK54-58 Overnight): Implementing entire POI roadmap overnight per Jaimie request. WK54 DONE (map 250x250, 3 zones, POI architecture, 14 POIs placed, terrain flattening). WK55 DONE (12 prefab JSONs, discovery mechanic, minimap icons). WK56 DONE (POI interaction system, LLM hero awareness, 6 interaction types). WK57 IN PROGRESS (underground data model done, visuals in progress). WK58 IN PROGRESS (boss enemies, discovery toast). All QA gates PASS throughout. Sub-agent execution.",
     "2026-05-12 (Agent 01 WK54 Kickoff): Sprint wk54_map_zones_poi_foundation — Map expansion 250x250, 3 biome zones (Darkwood south, Mountains north, Canyon Land east), POI entity architecture, placement system, terrain flattening. Plan: .cursor/plans/wk54_map_zones_poi_foundation.plan.md. Roadmap: .cursor/plans/pois_multisprint_roadmap.md. Agents: 03 (config+world+factory), 05 (zones+POI entity+placement), 09 (terrain/heightmap/renderer). Sub-agent execution, no orchestrator.",
     "2026-05-12 (Agent 01 WK53 Close): Sprint wk53_world_beauty_terrain closed_success. Shipped as v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors. 4 rounds (R1-R4), all PASS. Agents: 03 (primary implementer), 05 (gameplay consult).",
@@ -6126,6 +6127,148 @@
               "14",
               "15"
             ]
+          }
+        }
+      }
+    },
+    "wk60_v16_perf_optimization": {
+      "sprint_meta": {
+        "status": "in_progress",
+        "created_utc": "2026-05-16T18:00:00Z",
+        "plan_doc": ".cursor/plans/v1.6_performance_analysis.md",
+        "notes": "Performance optimization sprint. Game running at 10-20 FPS with hero spring-forward artifacts. Three root causes identified: (1) per-frame PIL texture pipeline, (2) pathfinding storms without global frame budget, (3) frame-rate dependent movement with no render interpolation. Target: stable 40-60 FPS with smooth hero movement.",
+        "version_target": "v1.6.2"
+      },
+      "rounds": {
+        "wk60_r1_texture_atlas_pipeline": {
+          "round_meta": {
+            "round_id": "wk60_r1_texture_atlas_pipeline",
+            "build_target": "Replace per-frame PIL texture conversion with pre-baked atlas lookups — target +20-30 FPS gain",
+            "created_utc": "2026-05-16T18:00:00Z",
+            "reported_by": "agent_01_pm_v16_perf_analysis"
+          },
+          "pm_status_summary": {
+            "status": "ready_to_launch",
+            "summary": "R1: Fix the #1 bottleneck — per-frame pygame→PIL→GPU texture conversion for ~66 unit sprites. Replace with pre-baked texture atlas (UV lookup per frame, no PIL per tick). Agent 10 profiles baseline + designs atlas strategy, Agent 03 implements renderer changes, Agent 11 validates FPS gain + visual correctness."
+          },
+          "pm_context": {
+            "problem": "Every frame, for every visible unit (~66 entities), the renderer calls _unit_anim_surface() then TerrainTextureBridge.surface_to_texture() which runs pygame.image.tobytes() + PIL.Image.frombytes() + synchronous GPU upload. Cost: 8-12ms/frame (50-70% of frame budget). All single-threaded, blocking.",
+            "affected_files": [
+              "game/graphics/ursina_renderer.py (lines 255-326: _unit_anim_surface, lines 610-767: unit sync loops)",
+              "game/graphics/terrain_texture_bridge.py (surface_to_texture, refresh_surface_texture)",
+              "game/graphics/unit_atlas.py (existing atlas builder — currently only used by instanced path)",
+              "game/graphics/hero_sprite_library.py (clips_for() called per-unit per-frame)"
+            ],
+            "existing_atlas": "unit_atlas.py already has a UnitAtlasBuilder that packs all frames into a 2048x2048 atlas. Currently only used when KINGDOM_URSINA_INSTANCING=1 (disabled by default due to visual bugs). The atlas concept is proven but not wired into the legacy billboard path.",
+            "target_architecture": "Pre-render ALL animation frames into the atlas at startup. Per-frame rendering becomes: lookup (unit_type, anim_clip, frame_index) -> UV rect in atlas -> update billboard UV coords. No PIL, no pygame.image.tobytes(), no per-frame GPU upload. Single atlas texture stays resident on GPU.",
+            "secondary_fixes_this_round": [
+              "Cache clips_for() at unit spawn instead of per-frame (save 2-4ms/frame)",
+              "Skip ent.position = pos_xyz when position unchanged (avoid Panda3D transform invalidation)",
+              "Replace time.time() with frame-indexed timing in _unit_anim_state (fix Windows 15ms jitter)"
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "10": {
+              "status": "assigned",
+              "next_action": "Profile baseline frame times (tick_simulation, ursina_renderer, hud_texture_upload). Design atlas integration strategy for legacy billboard path. Write perf baseline + target metrics."
+            },
+            "03": {
+              "status": "assigned",
+              "next_action": "Implement texture atlas integration into legacy billboard renderer. Replace _unit_anim_surface() + surface_to_texture() hot path with atlas UV lookups. Wire unit_atlas.py into the default (non-instanced) render path."
+            },
+            "11": {
+              "status": "assigned",
+              "next_action": "Run perf_ursina_stress.py before and after. Verify FPS improvement (target: >35 FPS with 30 heroes + 60 enemies). Visual smoke test: all unit types animate correctly, no missing sprites."
+            }
+          },
+          "pm_send_list_minimal": {
+            "batch_1_parallel": ["10"],
+            "then_in_order": ["03", "11"],
+            "intelligence_by_agent": {
+              "10": "high",
+              "03": "high",
+              "11": "medium"
+            },
+            "do_not_send": ["01", "02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
+            "rationale": "Agent 10 profiles first to establish baseline metrics, then Agent 03 implements the atlas pipeline change (high complexity — renderer architecture), then Agent 11 validates FPS + visual correctness."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["10", "03", "11"],
+            "dependencies": [
+              {
+                "id": "wave1_profile",
+                "agents": ["10"],
+                "parallel": false
+              },
+              {
+                "id": "wave2_implement",
+                "after": ["wave1_profile"],
+                "agents": ["03"],
+                "parallel": false
+              },
+              {
+                "id": "wave3_qa",
+                "after": ["wave2_implement"],
+                "agents": ["11"],
+                "parallel": false
+              }
+            ],
+            "human_gates": [
+              "visual_approval",
+              "manual_playtest",
+              "version_bump",
+              "commit",
+              "push"
+            ],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python -m tests.perf_ursina_stress"
+              ]
+            },
+            "failure_policy": {
+              "retry_limit": 1,
+              "on_failure": "stop_for_pm"
+            },
+            "model_policy": {
+              "required_model": "composer-2",
+              "allow_overrides": false
+            }
+          },
+          "pm_agent_prompts": {
+            "10": "You are activated for sprint wk60_v16_perf_optimization, round wk60_r1_texture_atlas_pipeline.\n\nREAD FIRST: .cursor/plans/v1.6_performance_analysis.md (full perf analysis)\n\nYOUR ASSIGNMENT — PERFORMANCE BASELINE + ATLAS STRATEGY:\n\n1. PROFILE BASELINE:\n   - Run: python -m tests.perf_ursina_stress (30 heroes + 60 enemies, 10s)\n   - Record per-stage timing: tick_simulation, ursina_renderer, hud_texture_upload\n   - Record overall FPS (expected: 10-20)\n   - If the stress test won't run headless, profile by adding perf_counter timing around the hot paths in ursina_renderer.py lines 610-767 (the unit sync loops)\n\n2. ATLAS INTEGRATION STRATEGY:\n   - Read game/graphics/unit_atlas.py — this already builds a 2048x2048 atlas with all animation frames\n   - Read game/graphics/ursina_renderer.py lines 255-326 (_unit_anim_surface) and 610-767 (unit sync loops)\n   - Read game/graphics/terrain_texture_bridge.py (the expensive surface_to_texture path)\n   - Design how to wire the atlas into the DEFAULT billboard path (not the instanced path)\n   - Key question: can we set each billboard's texture to the atlas once, then just update UV coords per frame? Or do we need a shader approach?\n\n3. SECONDARY OPTIMIZATIONS (document but don't implement yet):\n   - clips_for() caching strategy\n   - Position-change guard for ent.position setter\n   - Frame-indexed timing to replace time.time()\n\nOUTPUT:\n   - Write profiling results + strategy doc to: .cursor/plans/wk60_r1_perf_baseline_and_strategy.md\n   - Update your agent log\n\nDO NOT COMMIT. DO NOT edit game code. Profile + strategy only this wave.\nDO NOT push, version-bump, or run git commands beyond status/diff.",
+            "03": "You are activated for sprint wk60_v16_perf_optimization, round wk60_r1_texture_atlas_pipeline.\n\nREAD FIRST:\n- .cursor/plans/v1.6_performance_analysis.md (perf analysis)\n- .cursor/plans/wk60_r1_perf_baseline_and_strategy.md (Agent 10's profiling + strategy — written in wave 1)\n- game/graphics/unit_atlas.py (existing atlas builder)\n- game/graphics/ursina_renderer.py (the hot path you're optimizing)\n- game/graphics/terrain_texture_bridge.py (the expensive PIL bridge to replace)\n- game/graphics/hero_sprite_library.py (clips_for)\n\nYOUR ASSIGNMENT — IMPLEMENT TEXTURE ATLAS PIPELINE:\n\nThe current per-frame path costs 8-12ms:\n  _unit_anim_surface() -> pygame Surface -> TerrainTextureBridge.surface_to_texture() -> PIL -> GPU upload\n  This happens ~66 times per frame (once per visible unit).\n\nReplace with:\n  1. At startup/first-use: build the unit atlas (unit_atlas.py already does this)\n  2. Create ONE Ursina Texture from the atlas, keep it GPU-resident\n  3. For each unit billboard: set texture = atlas_texture (once, at entity creation)\n  4. Per frame: compute (anim_clip, frame_index) -> UV rect in atlas -> update billboard UV coords\n  5. No PIL, no pygame.image.tobytes(), no per-frame texture upload\n\nADDITIONAL FIXES (same round):\n  A. Cache clips_for() result on the entity at spawn time (hero_sprite_library.py)\n     - Currently called per-unit per-frame, rebuilds clip dicts\n     - Cache on first call, invalidate only on unit type change\n  B. Guard ent.position writes:\n     - In sync_billboard_entity (or equivalent), skip position update if unchanged\n     - Avoids triggering Panda3D transform invalidation for stationary units\n  C. Replace time.time() with Ursina's frame time in _unit_anim_state:\n     - time.time() has 15ms granularity on Windows\n     - Use time.perf_counter() or accumulate dt passed from update()\n\nFILES YOU MAY EDIT:\n- game/graphics/ursina_renderer.py\n- game/graphics/unit_atlas.py\n- game/graphics/terrain_texture_bridge.py (minimize changes, keep fog path working)\n- game/graphics/hero_sprite_library.py\n- game/graphics/ursina_entity_render_collab.py (if position guard lives here)\n- game/graphics/ursina_units_anim.py (if timing lives here)\n\nFILES YOU MUST NOT BREAK:\n- Fog overlay (terrain_texture_bridge still used for fog — don't remove, just bypass for units)\n- Building rendering (buildings use different texture path)\n- The instanced renderer path (leave KINGDOM_URSINA_INSTANCING codepath intact)\n\nVERIFICATION:\n- python tools/qa_smoke.py --quick (must PASS)\n- python -m tests.perf_ursina_stress (must show FPS improvement)\n- All unit types (hero, enemy, peasant, guard, tax collector) must animate visually\n\nDO NOT COMMIT. DO NOT push or version-bump.\nUpdate your agent log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json.",
+            "11": "You are activated for sprint wk60_v16_perf_optimization, round wk60_r1_texture_atlas_pipeline.\n\nREAD FIRST:\n- .cursor/plans/v1.6_performance_analysis.md\n- .cursor/plans/wk60_r1_perf_baseline_and_strategy.md (Agent 10 baseline)\n\nYOUR ASSIGNMENT — QA VALIDATION:\n\n1. RUN PERF TEST:\n   python -m tests.perf_ursina_stress\n   - Record FPS with 30 heroes + 60 enemies\n   - Compare against Agent 10's baseline (expected: was 10-20 FPS, target >35 FPS)\n\n2. RUN SMOKE TEST:\n   python tools/qa_smoke.py --quick\n   - Must PASS\n\n3. VISUAL VERIFICATION:\n   - Launch: python main.py --provider mock\n   - Verify all unit types render and animate (heroes, enemies, peasants, guards)\n   - Check for: missing sprites, frozen animations, texture glitches, UV tearing\n   - Verify fog overlay still works correctly\n   - Verify buildings render correctly (they use a different texture path)\n\n4. REGRESSION CHECK:\n   - Hero selection still works (click to select)\n   - Combat animations play correctly\n   - Units face correct direction when moving\n\nOUTPUT:\n   - FPS before vs after (from stress test)\n   - qa_smoke exit code\n   - Visual pass/fail for each unit type\n   - Any regressions found\n\nDO NOT COMMIT. DO NOT edit game code. QA only.\nUpdate your agent log at .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json."
+          },
+          "pm_universal_prompt": "Sprint wk60_v16_perf_optimization — Performance optimization targeting 10-20 FPS issue.\n\nRound wk60_r1_texture_atlas_pipeline: Replace per-frame PIL texture conversion (8-12ms/frame) with pre-baked atlas UV lookups.\n\nPerformance analysis: .cursor/plans/v1.6_performance_analysis.md\n\nDO NOT COMMIT. DO NOT push. DO NOT version-bump. Report results in your agent log only."
+        },
+        "wk60_r2_pathfinding_frame_budget": {
+          "round_meta": {
+            "round_id": "wk60_r2_pathfinding_frame_budget",
+            "build_target": "Global pathfinding frame budget + staggered replans — eliminate frame spikes and spring-forward",
+            "created_utc": "2026-05-16T18:00:00Z",
+            "reported_by": "agent_01_pm_v16_perf_analysis",
+            "depends_on": "wk60_r1_texture_atlas_pipeline"
+          },
+          "pm_status_summary": {
+            "status": "planned",
+            "summary": "R2 (after R1): Add global per-frame pathfinding budget (max 3ms). Queue-based replanning with priority. Stagger hero replans across frames. Fix enemy goal_key to use grid coords."
+          }
+        },
+        "wk60_r3_render_interpolation": {
+          "round_meta": {
+            "round_id": "wk60_r3_render_interpolation",
+            "build_target": "Render-side position interpolation + fix frame-rate dependent movement",
+            "created_utc": "2026-05-16T18:00:00Z",
+            "reported_by": "agent_01_pm_v16_perf_analysis",
+            "depends_on": "wk60_r2_pathfinding_frame_budget"
+          },
+          "pm_status_summary": {
+            "status": "planned",
+            "summary": "R3 (after R2): Store prev/curr position per entity. Renderer interpolates between them. Fix move_dist = speed * dt (remove * 60 multiplier). Eliminates visual spring-forward even under frame drops."
           }
         }
       }

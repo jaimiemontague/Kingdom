@@ -11,29 +11,62 @@ from __future__ import annotations
 import math
 from typing import Iterable, Optional, Tuple, List
 import time
+import time as _time
 
 from config import TILE_SIZE
-from game.systems.pathfinding import find_path, grid_to_world_path
+from game.systems.pathfinding import find_path, grid_to_world_path, _rebuild_blocked_cache
 from game.systems import perf_stats
 
 
+class PathfindingBudget:
+    """Global per-frame budget for A* pathfinding. Prevents frame stalls from simultaneous replans."""
+
+    MAX_MS_PER_FRAME = 3.0
+
+    def __init__(self):
+        self._frame_start: float = 0.0
+        self._frame_ms_used: float = 0.0
+        self._pending_queue: list = []  # [(entity_id, world, buildings, sx, sy, gx, gy)]
+
+    def begin_frame(self):
+        """Call at start of each simulation frame to reset budget."""
+        self._frame_start = _time.perf_counter()
+        self._frame_ms_used = 0.0
+
+    def budget_available(self) -> bool:
+        """Check if there's budget remaining this frame."""
+        return self._frame_ms_used < self.MAX_MS_PER_FRAME
+
+    def record_time(self, ms: float):
+        """Record time spent on a pathfinding call."""
+        self._frame_ms_used += ms
+
+    def enqueue(self, entity_id, world, buildings, sx, sy, gx, gy):
+        """Queue a replan request for next frame when budget is exhausted."""
+        # Don't duplicate - replace existing entry for same entity
+        for i, item in enumerate(self._pending_queue):
+            if item[0] == entity_id:
+                self._pending_queue[i] = (entity_id, world, buildings, sx, sy, gx, gy)
+                return
+        self._pending_queue.append((entity_id, world, buildings, sx, sy, gx, gy))
+
+    def drain_pending(self) -> list:
+        """Return and clear pending requests from last frame (to be processed this frame within budget)."""
+        pending = self._pending_queue
+        self._pending_queue = []
+        return pending
+
+
+# Global singleton
+_pathfinding_budget = PathfindingBudget()
+
+
+def get_pathfinding_budget() -> PathfindingBudget:
+    return _pathfinding_budget
+
+
 def _occupied_tiles(buildings: Iterable) -> set[tuple[int, int]]:
-    blocked: set[tuple[int, int]] = set()
-    for b in buildings or []:
-        # Only treat constructed (or castle) buildings as solid for navigation.
-        if getattr(b, "hp", 1) <= 0:
-            continue
-        if getattr(b, "building_type", "") != "castle" and getattr(b, "is_constructed", True) is False:
-            continue
-        gx = getattr(b, "grid_x", None)
-        gy = getattr(b, "grid_y", None)
-        size = getattr(b, "size", None)
-        if gx is None or gy is None or not size:
-            continue
-        for dx in range(size[0]):
-            for dy in range(size[1]):
-                blocked.add((gx + dx, gy + dy))
-    return blocked
+    return _rebuild_blocked_cache(list(buildings) if buildings else [])
 
 
 def best_adjacent_tile(world, buildings: list, building, from_x: float, from_y: float) -> Optional[tuple[int, int]]:
@@ -91,12 +124,20 @@ def compute_path_worldpoints(
     goal_y: float,
 ) -> list[tuple[float, float]]:
     """Compute an A* path (as world-space waypoints) avoiding solid buildings."""
+    budget = get_pathfinding_budget()
+
+    # If budget exhausted, return empty (caller keeps existing path)
+    if not budget.budget_available():
+        return []
+
     t0 = time.perf_counter()
     start = world.world_to_grid(start_x, start_y)
     goal = world.world_to_grid(goal_x, goal_y)
     # Cap expansions to keep worst-case pathfinding bounded on large maps.
     grid_path = find_path(world, start, goal, buildings=buildings, max_expansions=8000)
     dt_ms = (time.perf_counter() - t0) * 1000.0
+
+    budget.record_time(dt_ms)
     perf_stats.pathfinding.calls += 1
     perf_stats.pathfinding.total_ms += dt_ms
     if not grid_path:

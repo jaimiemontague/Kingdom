@@ -1796,13 +1796,22 @@ class HUD:
         eng = game_state.get('engine')
         if eng and getattr(eng, '_command_mode', False):
             cmd_text = getattr(eng, '_command_buffer', '')
+            cursor = "|" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
             font = pygame.font.SysFont(None, 28)
-            prompt_surf = font.render(f"> {cmd_text}_", True, (255, 255, 200))
-            bg = pygame.Surface((surface.get_width(), 36), pygame.SRCALPHA)
+            if cmd_text:
+                prompt_surf = font.render(f"> {cmd_text}{cursor}", True, (255, 255, 200))
+            else:
+                prompt_surf = font.render(f"> {cursor}", True, (255, 255, 200))
+            bar_h = 36
+            bg = pygame.Surface((surface.get_width(), bar_h), pygame.SRCALPHA)
             bg.fill((20, 20, 40, 220))
-            y = surface.get_height() - 40
+            y = surface.get_height() - bar_h - 4
             surface.blit(bg, (0, y))
             surface.blit(prompt_surf, (10, y + 6))
+            if not cmd_text:
+                hint_font = pygame.font.SysFont(None, 22)
+                hint_surf = hint_font.render("Type a command (/help) or message... ESC to close", True, (120, 120, 140))
+                surface.blit(hint_surf, (30, y + 10))
 
     def is_mouse_over_menu(
         self,

@@ -55,14 +55,11 @@ def ursina_key_to_input_event(key: str) -> InputEvent | None:
     # Function keys
     if len(kl) <= 3 and kl.startswith('f') and kl[1:].isdigit():
         return InputEvent(type='KEYDOWN', key=kl)
-    # Single-character alnum (raw letter/digit keys)
+    # Single printable character (letters, digits, symbols like / ? ! etc.)
     if len(ks) == 1:
         if ks.isalpha():
             return InputEvent(type='KEYDOWN', key=ks.lower())
-        if ks.isdigit():
-            return InputEvent(type='KEYDOWN', key=ks)
-        # symbols used by hotkeys (+/-/=/`/[ ])
-        if ks in '=`+-[]':
+        if ks.isprintable():
             return InputEvent(type='KEYDOWN', key=ks)
     return None
 

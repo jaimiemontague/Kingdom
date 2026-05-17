@@ -41,7 +41,11 @@ BOUNTY_COMMIT_WINDOW_S: float = 2.5
 
 # Minimum sim-time between A* replans when the chase goal tile changes in quick succession
 # (reduces main-thread churn when targets jitter at tile boundaries or AI updates every tick).
-PATH_REPLAN_MIN_INTERVAL_MS: int = 120
+# WK59 perf: raised from 120 to 250 — at 30 heroes this prevents pathfinding spikes from
+# dominating the frame budget while remaining responsive to target changes.
+# WK60 perf: raised to 400ms — combined with per-hero stagger (0-200ms spread), heroes
+# replan between 400-600ms apart, capping ~5 heroes per frame instead of ~15.
+PATH_REPLAN_MIN_INTERVAL_MS: int = 400
 
 
 # -----------------------------
