@@ -1,13 +1,56 @@
 """
 Simple A* pathfinding implementation.
 WK17: Bounded path cache to reduce allocation churn (memory leak mitigation).
+WK59: Perf pass — cached blocked tiles, larger path cache, reduced expansions for long paths.
 """
 import heapq
 from config import TILE_SIZE
 
-# Bounded path cache: key (start, goal) -> path. FIFO eviction, max 256 entries.
+# Bounded path cache: key (start, goal) -> path. FIFO eviction.
 _PATH_CACHE: dict[tuple[tuple[int, int], tuple[int, int]], list] = {}
-_PATH_CACHE_MAX = 256
+_PATH_CACHE_MAX = 1024
+
+# Cached blocked tiles set — rebuilt only when building count/hp changes.
+_BLOCKED_CACHE: set[tuple[int, int]] = set()
+_BLOCKED_CACHE_KEY: tuple = ()
+
+
+def _rebuild_blocked_cache(buildings: list) -> set[tuple[int, int]]:
+    """Rebuild the blocked tiles set from buildings and cache it."""
+    global _BLOCKED_CACHE, _BLOCKED_CACHE_KEY
+    if not buildings:
+        _BLOCKED_CACHE = set()
+        _BLOCKED_CACHE_KEY = ()
+        return _BLOCKED_CACHE
+
+    cache_key = (
+        len(buildings),
+        sum(1 for b in buildings if getattr(b, "is_constructed", True)),
+    )
+    if cache_key == _BLOCKED_CACHE_KEY and _BLOCKED_CACHE:
+        return _BLOCKED_CACHE
+
+    blocked: set[tuple[int, int]] = set()
+    for building in buildings:
+        size = getattr(building, "size", None)
+        if not size:
+            continue
+        gx = getattr(building, "grid_x", None)
+        gy = getattr(building, "grid_y", None)
+        if gx is None or gy is None:
+            continue
+        for dx in range(size[0]):
+            for dy in range(size[1]):
+                blocked.add((gx + dx, gy + dy))
+    _BLOCKED_CACHE = blocked
+    _BLOCKED_CACHE_KEY = cache_key
+    return blocked
+
+
+def invalidate_blocked_cache() -> None:
+    """Call when buildings are added/removed/destroyed to force cache rebuild."""
+    global _BLOCKED_CACHE_KEY
+    _BLOCKED_CACHE_KEY = ()
 
 
 def heuristic(a: tuple, b: tuple) -> float:
@@ -48,26 +91,26 @@ def find_path(
 ) -> list:
     """
     Find a path from start to goal using A*.
-    
+
     Args:
         world: The World object with tile data
         start: (grid_x, grid_y) starting position
         goal: (grid_x, grid_y) target position
         buildings: Optional list of buildings to avoid
-        
+
     Returns:
         List of (grid_x, grid_y) positions forming the path, or empty list if no path.
     """
     if start == goal:
         return [start]
 
-    # Build set of blocked tiles from buildings (needed for cache validation and A*)
-    blocked = set()
-    if buildings:
-        for building in buildings:
-            for dx in range(building.size[0]):
-                for dy in range(building.size[1]):
-                    blocked.add((building.grid_x + dx, building.grid_y + dy))
+    # Use cached blocked tiles set (rebuilt only when buildings change).
+    blocked = _rebuild_blocked_cache(buildings) if buildings else set()
+
+    # Scale max_expansions by distance — short paths don't need 8000 nodes.
+    dist = abs(start[0] - goal[0]) + abs(start[1] - goal[1])
+    if max_expansions == 8000:
+        max_expansions = min(8000, max(800, dist * 12))
 
     # Check if goal is walkable; adjust to nearest walkable if not
     if not world.is_walkable(goal[0], goal[1]):

@@ -100,19 +100,19 @@ class UrsinaTerrainFogCollab:
         # +Z edge of the quad after rotation_x=90°).  Without this reversal the
         # fog is mirrored North↔South and the lit circle tracks the wrong half of
         # the map relative to where heroes actually stand.
+        # WK59 perf: pre-build lookup table to avoid per-tile branching in Python.
+        _VIS_VAL = int(Visibility.VISIBLE)
+        _SEEN_VAL = int(Visibility.SEEN)
+        _pixel_lut = {_VIS_VAL: vis_b, _SEEN_VAL: seen_b}
         for ty in range(th):
             row = world.visibility[ty]
-            # Map sim row ty → buf row (th-1-ty) to flip N/S in texture space.
             buf_row = th - 1 - ty
             base = buf_row * tw * 4
             for tx in range(tw):
-                st = row[tx]
-                if st == Visibility.VISIBLE:
+                px = _pixel_lut.get(row[tx])
+                if px is not None:
                     o = base + tx * 4
-                    buf[o : o + 4] = vis_b
-                elif st == Visibility.SEEN:
-                    o = base + tx * 4
-                    buf[o : o + 4] = seen_b
+                    buf[o : o + 4] = px
 
         surf = pygame.image.frombuffer(buf, (tw, th), "RGBA")
         self._r._fog_full_surf = surf

@@ -805,17 +805,15 @@ class Hero:
                 dist = self.distance_to(goal_x, goal_y)
                 goal_grid_x, goal_grid_y = world.world_to_grid(goal_x, goal_y)
                 goal_in_black_fog = False
-                
+
                 # Check if goal is in black fog (UNSEEN)
                 if (0 <= goal_grid_x < world.width and 0 <= goal_grid_y < world.height):
                     goal_visibility = world.visibility[goal_grid_y][goal_grid_x]
                     goal_in_black_fog = (goal_visibility == Visibility.UNSEEN)
-                
-                # Use direct steering for far-away black-fog targets (like enemy AI does)
-                # Switch to A* pathfinding when close or terrain is revealed
-                if goal_in_black_fog and dist > TILE_SIZE * 12:
-                    # Direct steering toward black-fog target (optimistic pathing)
-                    # When hero gets close, terrain will be revealed and we can switch to A*
+
+                # Use direct steering for far-away targets (avoids expensive A* on large maps).
+                # WK59 perf: also use direct steering for long revealed-terrain paths (>20 tiles).
+                if dist > TILE_SIZE * 20 or (goal_in_black_fog and dist > TILE_SIZE * 12):
                     self.move_towards(goal_x, goal_y, dt)
                     return
 
@@ -826,10 +824,21 @@ class Hero:
                 goal_changed = self._path_goal != goal_key
                 need_replan = path_empty or goal_changed
 
-                if need_replan and self.path and goal_changed:
+                # WK59 perf: apply rate limit to ALL replans (not just goal-changed).
+                # Prevents heroes with failed paths from spamming A* every tick.
+                if need_replan:
                     now_ms = int(sim_now_ms())
                     last = int(getattr(self, "_path_last_replan_ms", 0) or 0)
-                    if (now_ms - last) < int(PATH_REPLAN_MIN_INTERVAL_MS):
+                    # Stagger offset: each hero has a different effective cooldown phase
+                    # to spread 30 heroes across a 200ms window instead of all replanning
+                    # at the same boundary. Uses stable hero_id via crc32 (determinism-safe).
+                    stagger = getattr(self, "_path_stagger_offset_ms", None)
+                    if stagger is None:
+                        import zlib
+                        self._path_stagger_offset_ms = (zlib.crc32(self.hero_id.encode()) % 6) * 40  # 0-200ms spread
+                        stagger = self._path_stagger_offset_ms
+                    effective_interval = int(PATH_REPLAN_MIN_INTERVAL_MS) + stagger
+                    if (now_ms - last) < effective_interval:
                         need_replan = False
 
                 if need_replan:

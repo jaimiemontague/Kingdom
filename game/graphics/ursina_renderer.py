@@ -160,6 +160,7 @@ from game.graphics.ursina_units_anim import (
 )
 
 from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_height_ok
+from game.graphics.unit_atlas import UnitAtlasBuilder, ATLAS_SIZE, FRAME_SIZE
 from game.graphics.ursina_entity_render_collab import UrsinaEntityRenderCollab
 from game.graphics.ursina_terrain_fog_collab import UrsinaTerrainFogCollab
 
@@ -207,6 +208,8 @@ class UrsinaRenderer:
         self._unit_anim_state: dict[int, dict] = {}
         # WK23: single shared GPU texture for VFX projectiles (arrow-shaped, not yellow fallback).
         self._projectile_tex = None
+        # Atlas renderer: cached clips metadata per (unit_type, class_key).
+        self._clips_cache: dict[tuple[str, str], dict] = {}
 
         # --- v1.5: base lighting for 3D meshes (flat-shaded, optional shadows) ---
         self._directional_light = None
@@ -325,6 +328,146 @@ class UrsinaRenderer:
         )
         return surf, cache_key
 
+    # ------------------------------------------------------------------
+    # Atlas-based UV rendering (WK59 perf): single shared texture, UV offsets
+    # ------------------------------------------------------------------
+
+    def _get_cached_clips(self, unit_type: str, class_key: str) -> dict:
+        """Return cached animation clips metadata. Avoids per-frame clips_for() calls."""
+        cache_key = (unit_type, class_key)
+        if cache_key not in self._clips_cache:
+            size = _unit_raster_px()
+            if unit_type == "hero":
+                self._clips_cache[cache_key] = HeroSpriteLibrary.clips_for(class_key, size=size)
+            elif unit_type == "enemy":
+                self._clips_cache[cache_key] = EnemySpriteLibrary.clips_for(class_key, size=size)
+            else:
+                self._clips_cache[cache_key] = WorkerSpriteLibrary.clips_for(class_key, size=size)
+        return self._clips_cache[cache_key]
+
+    def _compute_anim_frame(self, obj_id, entity, unit_type: str, class_key: str, base_clip_fn) -> tuple:
+        """Compute current animation clip name and frame index. Uses perf_counter for precision."""
+        trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
+            entity, "_render_anim_trigger", None
+        )
+
+        base = base_clip_fn(entity)
+        st = self._unit_anim_state.get(obj_id)
+        now = time.perf_counter()
+
+        if trigger:
+            tname = str(trigger)
+            setattr(entity, "_ursina_anim_trigger", None)
+            setattr(entity, "_render_anim_trigger", None)
+            clips = self._get_cached_clips(unit_type, class_key)
+            if tname in clips:
+                self._unit_anim_state[obj_id] = {
+                    "clip": tname,
+                    "t0": now,
+                    "base": base,
+                    "oneshot": not clips[tname].loop,
+                }
+                st = self._unit_anim_state[obj_id]
+
+        if st is None:
+            self._unit_anim_state[obj_id] = {
+                "clip": base, "t0": now, "base": base, "oneshot": False
+            }
+            st = self._unit_anim_state[obj_id]
+        else:
+            st["base"] = base
+            if st.get("oneshot"):
+                clips = self._get_cached_clips(unit_type, class_key)
+                oc = clips.get(st["clip"])
+                if oc:
+                    elapsed_done = now - st["t0"]
+                    _i, finished = _frame_index_for_clip(oc, elapsed_done)
+                    if finished:
+                        st["clip"] = base
+                        st["t0"] = now
+                        st["oneshot"] = False
+            if not st.get("oneshot"):
+                if st["clip"] != base:
+                    st["clip"] = base
+                    st["t0"] = now
+
+        clip_name = st["clip"]
+        clips = self._get_cached_clips(unit_type, class_key)
+        clip = clips.get(clip_name)
+        if clip is None:
+            return base, 0
+        elapsed = now - st["t0"]
+        idx, _fin = _frame_index_for_clip(clip, elapsed)
+        return clip_name, idx
+
+    def _sync_unit_atlas_billboard(
+        self, ent, obj_id, entity, unit_type: str, class_key: str,
+        base_clip_fn, tint_col, scale_xyz, pos_xyz, shader
+    ) -> None:
+        """Update a unit billboard using atlas UV coords instead of per-frame texture swap."""
+        atlas = UnitAtlasBuilder.get()
+        atlas_tex = atlas.get_ursina_texture()
+
+        # Set atlas texture once (on first frame or if missing)
+        if getattr(ent, "_ks_atlas_tex_set", False) is False:
+            ent.texture = atlas_tex
+            ent.texture_scale = (FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)
+            ent._ks_atlas_tex_set = True
+
+        # Compute current animation frame
+        clip_name, frame_idx = self._compute_anim_frame(
+            obj_id, entity, unit_type, class_key, base_clip_fn
+        )
+
+        # Update UV offset (cheap — just a vec2 uniform)
+        uv = atlas.lookup_uv(unit_type, class_key, clip_name, frame_idx)
+        new_offset = (uv[0], 1.0 - uv[1] - uv[3])
+        if getattr(ent, "_ks_last_uv_offset", None) != new_offset:
+            ent.texture_offset = new_offset
+            ent._ks_last_uv_offset = new_offset
+
+        # Position smoothing: lerp toward target to eliminate visual jumps from frame stalls.
+        # Snap if first frame, or if distance is large (teleport/entering building).
+        prev_visual = getattr(ent, "_ks_visual_pos", None)
+        if prev_visual is None:
+            smooth_pos = pos_xyz
+        else:
+            dx = pos_xyz[0] - prev_visual[0]
+            dy = pos_xyz[1] - prev_visual[1]
+            dz = pos_xyz[2] - prev_visual[2]
+            dist_sq = dx * dx + dy * dy + dz * dz
+            if dist_sq < 0.0001 or dist_sq > 9.0:
+                smooth_pos = pos_xyz
+            else:
+                a = 0.82
+                smooth_pos = (
+                    prev_visual[0] + dx * a,
+                    prev_visual[1] + dy * a,
+                    prev_visual[2] + dz * a,
+                )
+        ent._ks_visual_pos = smooth_pos
+        if getattr(ent, "_ks_last_pos", None) != smooth_pos:
+            ent.position = smooth_pos
+            ent._ks_last_pos = smooth_pos
+
+        # Update scale (with guard)
+        if getattr(ent, "_ks_last_scale", None) != scale_xyz:
+            ent.scale = scale_xyz
+            ent._ks_last_scale = scale_xyz
+
+        # Color (with guard)
+        target_color = color.white if atlas_tex is not None else tint_col
+        if getattr(ent, "_ks_last_color", None) != target_color:
+            ent.color = target_color
+            ent._ks_last_color = target_color
+
+        # Billboard + shader (one-time setup)
+        if not getattr(ent, "_ks_billboard_configured", False):
+            ent.billboard = True
+            UrsinaEntityRenderCollab.apply_pixel_billboard_settings(ent)
+            ent._ks_billboard_configured = True
+        UrsinaEntityRenderCollab.set_shader_if_changed(ent, shader)
+
     def update(self, snapshot: "SimStateSnapshot"):
         """Called every frame by the Ursina app loop."""
         try:
@@ -344,7 +487,7 @@ class UrsinaRenderer:
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
-        # Opt-in: set KINGDOM_URSINA_INSTANCING=1 (blob shadows + atlas path). Default 0 = legacy Entity billboards.
+        # Opt-in: set KINGDOM_URSINA_INSTANCING=1 (known visual issues — see project memory).
         if os.environ.get("KINGDOM_URSINA_INSTANCING", "0") == "1":
             if not hasattr(self, "_instanced_unit_renderer"):
                 from game.graphics.instanced_unit_renderer import InstancedUnitRenderer
@@ -578,7 +721,7 @@ class UrsinaRenderer:
 
 
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
-        # Heroes — pixel billboards (WK22 R3: walk/idle/inside + attack/hurt from _render_anim_trigger)
+        # Heroes — atlas UV billboards (WK59 perf: single shared texture, UV offset per frame)
         for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
                 continue
@@ -597,7 +740,6 @@ class UrsinaRenderer:
                     col = color.rgb(48 / 255, 186 / 255, 178 / 255)
 
             hc_key = str(getattr(h, "hero_class", "warrior") or "warrior").lower()
-            clips_h = HeroSpriteLibrary.clips_for(hc_key, size=_unit_raster_px())
             sy = UNIT_BILLBOARD_SCALE
             ent, obj_id = self._entity_render.get_or_create_entity(
                 h,
@@ -607,44 +749,36 @@ class UrsinaRenderer:
                 texture=None,
                 billboard=True,
             )
-            hsurf, h_cache_key = self._unit_anim_surface(
-                obj_id, h, clips_h, _hero_base_clip, "hero", hc_key
-            )
-            htex = TerrainTextureBridge.surface_to_texture(hsurf, cache_key=h_cache_key)
             wx, wz = sim_px_to_world_xz(h.x, h.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             y_center = terrain_y + sy * 0.5
             facing = _unit_facing_direction(h)
             sx = sy * facing  # negative scale_x flips the billboard horizontally
-            self._entity_render.sync_billboard_entity(
-                ent,
-                tex=htex,
-                tint_col=col,
-                scale_xyz=(sx, sy, 1),
-                pos_xyz=(wx, y_center, wz),
-                shader=sprite_unlit_shader,
+
+            self._sync_unit_atlas_billboard(
+                ent, obj_id, h, "hero", hc_key, _hero_base_clip,
+                col, (sx, sy, 1), (wx, y_center, wz), sprite_unlit_shader,
             )
             # Layer compositing (not Y offset): draw after building billboards; skip depth so the
-            # "inside" bubble paints over the same footprint as the façade.
+            # "inside" bubble paints over the same footprint as the facade.
             self._entity_render.sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
             active_ids.add(obj_id)
 
         
     def _sync_snapshot_enemies(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
-        # Enemies — billboards (same animation contract as pygame EnemyRenderer)
+        # Enemies — atlas UV billboards (WK59 perf: single shared texture)
         ts = float(config.TILE_SIZE)
         for e in getattr(snapshot, "enemies", ()):
             tx, ty = int(e.x / ts), int(e.y / ts)
             is_visible = True
             if 0 <= ty < world.height and 0 <= tx < world.width:
                 is_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)
-            
+
             if not getattr(e, "is_alive", True) or not is_visible:
                 continue
             s = ENEMY_SCALE
             col = COLOR_ENEMY
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
-            clips_e = EnemySpriteLibrary.clips_for(et_key, size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 e,
                 model="quad",
@@ -653,27 +787,20 @@ class UrsinaRenderer:
                 texture=None,
                 billboard=True,
             )
-            esurf, e_cache_key = self._unit_anim_surface(
-                obj_id, e, clips_e, _enemy_base_clip, "enemy", et_key
-            )
-            etex = TerrainTextureBridge.surface_to_texture(esurf, cache_key=e_cache_key)
             wx, wz = sim_px_to_world_xz(e.x, e.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
             facing_e = _unit_facing_direction(e)
             sx_e = s * facing_e
-            self._entity_render.sync_billboard_entity(
-                ent,
-                tex=etex,
-                tint_col=col,
-                scale_xyz=(sx_e, s, 1),
-                pos_xyz=(wx, terrain_y + s * 0.5, wz),
-                shader=sprite_unlit_shader,
+
+            self._sync_unit_atlas_billboard(
+                ent, obj_id, e, "enemy", et_key, _enemy_base_clip,
+                col, (sx_e, s, 1), (wx, terrain_y + s * 0.5, wz), sprite_unlit_shader,
             )
             active_ids.add(obj_id)
 
 
     def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Peasants — billboards (Legacy Vania / procedural; time-based clips like guards).
+        # Peasants — atlas UV billboards (WK59 perf: single shared texture)
         for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
                 continue
@@ -683,7 +810,6 @@ class UrsinaRenderer:
             sy = PEASANT_SCALE_Y
             col = color.white
             wk = str(getattr(p, "render_worker_type", "peasant") or "peasant")
-            clips_p = WorkerSpriteLibrary.clips_for(wk, size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 p,
                 model="quad",
@@ -692,31 +818,22 @@ class UrsinaRenderer:
                 texture=None,
                 billboard=True,
             )
-            psurf, p_cache_key = self._unit_anim_surface(
-                obj_id, p, clips_p, _peasant_base_clip, "worker", wk
-            )
-            ptex = TerrainTextureBridge.surface_to_texture(psurf, cache_key=p_cache_key)
             wx, wz = sim_px_to_world_xz(p.x, p.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-            self._entity_render.sync_billboard_entity(
-                ent,
-                tex=ptex,
-                tint_col=col,
-                scale_xyz=(sx, sy, 1),
-                pos_xyz=(wx, terrain_y + sy * 0.5, wz),
-                shader=sprite_unlit_shader,
-                tint_textured=False,
+
+            self._sync_unit_atlas_billboard(
+                ent, obj_id, p, "worker", wk, _peasant_base_clip,
+                col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
             )
             active_ids.add(obj_id)
 
 
     def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Guards — pixel billboards (same clip/frame contract as heroes; Tiny RPG Soldier PNGs).
+        # Guards — atlas UV billboards (WK59 perf: single shared texture)
         for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
                 continue
             col = color.white
-            clips_g = WorkerSpriteLibrary.clips_for("guard", size=_unit_raster_px())
             ent, obj_id = self._entity_render.get_or_create_entity(
                 g,
                 model="quad",
@@ -725,32 +842,25 @@ class UrsinaRenderer:
                 texture=None,
                 billboard=True,
             )
-            gsurf, g_cache_key = self._unit_anim_surface(
-                obj_id, g, clips_g, _guard_base_clip, "worker", "guard"
-            )
-            gtex = TerrainTextureBridge.surface_to_texture(gsurf, cache_key=g_cache_key)
             wx, wz = sim_px_to_world_xz(g.x, g.y)
             terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-            self._entity_render.sync_billboard_entity(
-                ent,
-                tex=gtex,
-                tint_col=col,
-                scale_xyz=(GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
-                pos_xyz=(wx, terrain_y + GUARD_SCALE_Y * 0.5, wz),
-                shader=sprite_unlit_shader,
+
+            self._sync_unit_atlas_billboard(
+                ent, obj_id, g, "worker", "guard", _guard_base_clip,
+                col, (GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
+                (wx, terrain_y + GUARD_SCALE_Y * 0.5, wz), sprite_unlit_shader,
             )
             active_ids.add(obj_id)
 
 
     def _sync_snapshot_tax_collector(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
-        # Tax Collector — billboards (Legacy Vania believer; time-based clips).
+        # Tax Collector — atlas UV billboards (WK59 perf: single shared texture)
         tc = getattr(snapshot, "tax_collector", None)
         if tc is not None:
             if not getattr(tc, "is_alive", True):
                 pass
             else:
                 col = color.white
-                clips_tc = WorkerSpriteLibrary.clips_for("tax_collector", size=_unit_raster_px())
                 sx = PEASANT_SCALE_XZ
                 sy = PEASANT_SCALE_Y
                 ent, obj_id = self._entity_render.get_or_create_entity(
@@ -761,19 +871,12 @@ class UrsinaRenderer:
                     texture=None,
                     billboard=True,
                 )
-                tcsurf, tc_cache_key = self._unit_anim_surface(
-                    obj_id, tc, clips_tc, _tax_collector_base_clip, "worker", "tax_collector"
-                )
-                tctex = TerrainTextureBridge.surface_to_texture(tcsurf, cache_key=tc_cache_key)
                 wx, wz = sim_px_to_world_xz(tc.x, tc.y)
                 terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
-                self._entity_render.sync_billboard_entity(
-                    ent,
-                    tex=tctex,
-                    tint_col=col,
-                    scale_xyz=(sx, sy, 1),
-                    pos_xyz=(wx, terrain_y + sy * 0.5, wz),
-                    shader=sprite_unlit_shader,
+
+                self._sync_unit_atlas_billboard(
+                    ent, obj_id, tc, "worker", "tax_collector", _tax_collector_base_clip,
+                    col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
                 )
                 active_ids.add(obj_id)
 

@@ -480,6 +480,8 @@ class UrsinaApp:
             ec.position = Vec3(wx, 0.0, wz)
 
     def _is_chat_active(self) -> bool:
+        if getattr(self.engine, '_command_mode', False):
+            return True
         cp = getattr(getattr(self.engine, "hud", None), "_chat_panel", None)
         return cp is not None and getattr(cp, "is_active", lambda: False)()
 
@@ -1108,7 +1110,9 @@ class UrsinaApp:
             eng = self.engine
 
             def _chat_captures_keyboard() -> bool:
-                """True while hero chat is open — block 3D pan/zoom so WASD/EQ type into chat."""
+                """True while hero chat or command mode is open — block 3D pan/zoom so keys type into input."""
+                if getattr(eng, '_command_mode', False):
+                    return True
                 cp = getattr(getattr(eng, "hud", None), "_chat_panel", None)
                 return cp is not None and getattr(cp, "is_active", lambda: False)()
 

@@ -63,7 +63,7 @@ class World:
         # Fog-of-war visibility grid (tile-based).
         # UNSEEN: never revealed; SEEN: explored but not currently visible; VISIBLE: in vision now.
         self.visibility = [[Visibility.UNSEEN for _ in range(self.width)] for _ in range(self.height)]
-        self._currently_visible = set()  # set[(x, y)] currently marked as VISIBLE (so we can demote efficiently)
+        self._currently_visible: list[tuple[int, int]] = []  # tiles marked VISIBLE this frame (demoted next update)
 
         # Reusable fog tile overlays (avoid per-tile Surface allocations).
         self._fog_tile_unseen = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
@@ -382,37 +382,43 @@ class World:
     def _reveal_circle(self, grid_cx: int, grid_cy: int, radius_tiles: int, newly_revealed: set = None):
         """
         Mark tiles within a circle as VISIBLE.
-        
+
         Args:
             grid_cx, grid_cy: Center grid coordinates
             radius_tiles: Vision radius in tiles
             newly_revealed: Optional set to populate with (grid_x, grid_y) tiles that transitioned UNSEEN -> VISIBLE
         """
         r = max(0, int(radius_tiles))
+        vis = self.visibility
+        cv = self._currently_visible
+        VISIBLE = Visibility.VISIBLE
+        UNSEEN = Visibility.UNSEEN
+        w = self.width
+        h = self.height
+
         if r <= 0:
-            if 0 <= grid_cx < self.width and 0 <= grid_cy < self.height:
-                # WK6: Track UNSEEN -> VISIBLE transitions
-                if newly_revealed is not None and self.visibility[grid_cy][grid_cx] == Visibility.UNSEEN:
+            if 0 <= grid_cx < w and 0 <= grid_cy < h:
+                if newly_revealed is not None and vis[grid_cy][grid_cx] == UNSEEN:
                     newly_revealed.add((grid_cx, grid_cy))
-                self.visibility[grid_cy][grid_cx] = Visibility.VISIBLE
-                self._currently_visible.add((grid_cx, grid_cy))
+                vis[grid_cy][grid_cx] = VISIBLE
+                cv.append((grid_cx, grid_cy))
             return
 
         y0 = max(0, grid_cy - r)
-        y1 = min(self.height - 1, grid_cy + r)
+        y1 = min(h - 1, grid_cy + r)
         r2 = r * r
+        track_new = newly_revealed is not None
         for y in range(y0, y1 + 1):
             dy = y - grid_cy
-            dx_max = int(math.sqrt(max(0, r2 - (dy * dy))))
+            dx_max = int((r2 - dy * dy) ** 0.5)
             x0 = max(0, grid_cx - dx_max)
-            x1 = min(self.width - 1, grid_cx + dx_max)
-            row = self.visibility[y]
+            x1 = min(w - 1, grid_cx + dx_max)
+            row = vis[y]
             for x in range(x0, x1 + 1):
-                # WK6: Track UNSEEN -> VISIBLE transitions
-                if newly_revealed is not None and row[x] == Visibility.UNSEEN:
+                if track_new and row[x] == UNSEEN:
                     newly_revealed.add((x, y))
-                row[x] = Visibility.VISIBLE
-                self._currently_visible.add((x, y))
+                row[x] = VISIBLE
+                cv.append((x, y))
 
     def update_visibility(self, revealers: list[tuple[float, float, int]], return_new_reveals: bool = False):
         """
@@ -426,13 +432,18 @@ class World:
             Otherwise: None
         """
         newly_revealed = set() if return_new_reveals else None
-        
+
         # Demote last frame's visible tiles to SEEN (without scanning the whole map).
+        vis = self.visibility
+        VISIBLE = Visibility.VISIBLE
+        SEEN = Visibility.SEEN
+        w = self.width
+        h = self.height
         for (x, y) in self._currently_visible:
-            if 0 <= x < self.width and 0 <= y < self.height:
-                if self.visibility[y][x] == Visibility.VISIBLE:
-                    self.visibility[y][x] = Visibility.SEEN
-        self._currently_visible.clear()
+            if 0 <= x < w and 0 <= y < h:
+                if vis[y][x] == VISIBLE:
+                    vis[y][x] = SEEN
+        self._currently_visible = []
 
         for world_x, world_y, radius_tiles in revealers:
             gx, gy = self.world_to_grid(world_x, world_y)

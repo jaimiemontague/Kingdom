@@ -301,8 +301,13 @@ class GameEngine:
         text = text.strip()
         if not text:
             return
-        if text.lower() in ('/revealmap', '/nowar', '/reveal'):
-            # Reveal all fog of war
+
+        parts = text.split(None, 1)
+        cmd = parts[0].lower()
+        arg = parts[1].strip() if len(parts) > 1 else ""
+        hud = self.hud if hasattr(self, 'hud') else None
+
+        if cmd in ('/revealmap', '/nowar', '/reveal'):
             world = getattr(self, 'world', None)
             if world is None and hasattr(self, 'sim'):
                 world = getattr(self.sim, 'world', None)
@@ -310,16 +315,81 @@ class GameEngine:
                 for ty in range(world.height):
                     for tx in range(world.width):
                         world.visibility[ty][tx] = Visibility.SEEN
-                # Force fog texture re-upload
                 self._fog_revision = getattr(self, '_fog_revision', 0) + 100
-                if hasattr(self, 'hud') and self.hud:
-                    self.hud.add_message("Fog of war revealed!", (100, 255, 100))
-        elif text.startswith('/'):
-            if hasattr(self, 'hud') and self.hud:
-                self.hud.add_message(f"Unknown command: {text}", (255, 100, 100))
+                if hud:
+                    hud.add_message("Fog of war revealed!", (100, 255, 100))
+
+        elif cmd == '/gold':
+            amount = 500
+            if arg:
+                try:
+                    amount = int(arg)
+                except ValueError:
+                    if hud:
+                        hud.add_message("Usage: /gold <amount>", (255, 200, 100))
+                    return
+            self.economy.player_gold += amount
+            if hud:
+                hud.add_message(f"Added {amount} gold (total: {self.economy.player_gold})", (255, 215, 0))
+
+        elif cmd == '/speed':
+            if not arg:
+                if hud:
+                    from game.sim.timebase import get_time_multiplier
+                    hud.add_message(f"Speed: {get_time_multiplier():.1f}x. Usage: /speed <0.5-5>", (200, 200, 255))
+                return
+            try:
+                val = float(arg)
+                val = max(0.0, min(5.0, val))
+                from game.sim.timebase import set_time_multiplier
+                set_time_multiplier(val)
+                if hud:
+                    hud.add_message(f"Speed set to {val:.1f}x", (200, 200, 255))
+            except ValueError:
+                if hud:
+                    hud.add_message("Usage: /speed <0.5-5>", (255, 200, 100))
+
+        elif cmd == '/heal':
+            healed = 0
+            for hero in self.heroes:
+                if getattr(hero, 'is_alive', False) and getattr(hero, 'hp', 0) < getattr(hero, 'max_hp', 1):
+                    hero.hp = hero.max_hp
+                    healed += 1
+            if hud:
+                if healed:
+                    hud.add_message(f"Healed {healed} hero{'es' if healed != 1 else ''}!", (100, 255, 100))
+                else:
+                    hud.add_message("No heroes need healing.", (200, 200, 200))
+
+        elif cmd == '/kill':
+            killed = 0
+            for enemy in list(self.enemies):
+                if getattr(enemy, 'is_alive', False):
+                    enemy.hp = 0
+                    enemy.is_alive = False
+                    killed += 1
+            if hud:
+                hud.add_message(f"Killed {killed} enem{'ies' if killed != 1 else 'y'}!", (255, 100, 100))
+
+        elif cmd == '/spawn':
+            self.try_hire_hero()
+
+        elif cmd == '/pause':
+            self.paused = not self.paused
+            if hud:
+                hud.add_message("Paused" if self.paused else "Unpaused", (200, 200, 255))
+
+        elif cmd == '/help':
+            if hud:
+                hud.add_message("/gold [n] /speed [x] /heal /kill /spawn /reveal /pause", (180, 220, 255))
+
+        elif cmd.startswith('/'):
+            if hud:
+                hud.add_message(f"Unknown command: {cmd}. Type /help", (255, 100, 100))
+
         else:
-            if hasattr(self, 'hud') and self.hud:
-                self.hud.add_message(f"> {text}", (200, 200, 200))
+            if hud:
+                hud.add_message(f"> {text}", (200, 200, 200))
 
     # ---------------------------------------------------------------------
     # Stage 2: backward-compat property forwarding (engine.<x> -> sim.<x>)

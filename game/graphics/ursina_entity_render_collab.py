@@ -166,7 +166,9 @@ class UrsinaEntityRenderCollab:
             UrsinaEntityRenderCollab.apply_pixel_billboard_settings(ent)
             ent._ks_billboard_configured = True
         UrsinaEntityRenderCollab.set_shader_if_changed(ent, shader)
-        ent.position = pos_xyz
+        if getattr(ent, "_ks_last_pos", None) != pos_xyz:
+            ent.position = pos_xyz
+            ent._ks_last_pos = pos_xyz
 
     @staticmethod
     def apply_lit_3d_building_settings(ent: Entity) -> None:
