@@ -42,10 +42,12 @@ FOG_TEX_BRIDGE_KEY = "kingdom_ursina_fog_overlay"
 class UrsinaTerrainFogCollab:
     """Terrain root + fog quad + visibility-gated props + optional grid overlay."""
 
-    __slots__ = ("_r",)
+    __slots__ = ("_r", "_tree_sync_tick_counter", "_last_growth_by_tile")
 
     def __init__(self, renderer) -> None:
         self._r = renderer
+        self._tree_sync_tick_counter = 0
+        self._last_growth_by_tile = None
 
     def ensure_fog_overlay(self, world, fog_revision: int) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
@@ -285,6 +287,13 @@ class UrsinaTerrainFogCollab:
         """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
         engine_rev = int(fog_revision)
         if self._r._terrain_visibility_revision_seen == engine_rev:
+            return
+
+        if getattr(world, 'fog_disabled', False):
+            for ent, tx, ty in self._r._visibility_gated_terrain:
+                self.sync_terrain_prop_tile_visibility(ent, Visibility.VISIBLE)
+            self._r._terrain_visible_tiles_seen = None
+            self._r._terrain_visibility_revision_seen = engine_rev
             return
 
         current_visible = set(getattr(world, "_currently_visible", set()) or set())
@@ -798,6 +807,13 @@ class UrsinaTerrainFogCollab:
         if not snapshot_trees:
             return
 
+        # R2-A: Throttle to every 4th frame — tree growth is sim-minutes, checking
+        # every frame wastes 3-5ms.  counter==0 on first call passes (0%4==0).
+        counter = self._tree_sync_tick_counter
+        self._tree_sync_tick_counter = counter + 1
+        if counter % 4 != 0:
+            return
+
         # WK45: saplings can spawn on previously-grass tiles. Create new tree Entities on-demand
         # so spawned saplings are visible in Ursina without rebuilding the whole terrain.
         root = getattr(self._r, "_terrain_entity", None)
@@ -856,6 +872,13 @@ class UrsinaTerrainFogCollab:
                 except Exception:
                     # Spawn visibility should never crash the renderer.
                     pass
+
+        # R2-E: Skip the entity scale loop entirely if growth_by_tile is identical
+        # to the previous run — no tree has grown or been removed since last sync.
+        last_growth = self._last_growth_by_tile
+        if growth_by_tile == last_growth:
+            return
+        self._last_growth_by_tile = growth_by_tile
 
         for key, ent in list(ents.items()):
             g = growth_by_tile.get(key)

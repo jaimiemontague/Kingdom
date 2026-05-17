@@ -33,7 +33,7 @@ class TaxCollector:
         self.target_guild = None
         self.guilds_to_visit = []
         
-        self.speed = 1.5
+        self.speed = 90.0  # px/sec (baked: old 1.5 * 60)
         self.size = 14
         self.color = (218, 165, 32)  # Gold color
         
@@ -72,7 +72,7 @@ class TaxCollector:
             self.y = target_y
             return True
         
-        move_dist = self.speed * dt * 60
+        move_dist = self.speed * dt
         self.x += (dx / dist) * move_dist
         self.y += (dy / dist) * move_dist
         return False

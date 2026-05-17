@@ -40,7 +40,7 @@ class Peasant:
 
         self.max_hp = 40
         self.hp = self.max_hp
-        self.speed = 1.6
+        self.speed = 96.0  # px/sec (baked: old 1.6 * 60)
         self.size = 14
 
         self.state = PeasantState.MOVING
@@ -91,7 +91,7 @@ class Peasant:
             self.y = target_y
             return True
         if dist > 0:
-            move_dist = self.speed * dt * 60
+            move_dist = self.speed * dt
             if move_dist >= dist:
                 self.x = target_x
                 self.y = target_y

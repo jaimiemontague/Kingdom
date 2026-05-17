@@ -34,7 +34,7 @@ class Enemy:
         self.hp = 30
         self.max_hp = 30
         self.attack_power = 5
-        self.speed = 1.5
+        self.speed = 90.0  # px/sec (baked: old 1.5 * 60)
         self.xp_reward = 25
         self.gold_reward = 15  # wk15: +50% for pacing (was 10)
         
@@ -120,7 +120,7 @@ class Enemy:
         dist = math.sqrt(dx * dx + dy * dy)
         
         if dist > 0:
-            move_dist = self.speed * dt * 60
+            move_dist = self.speed * dt
             if move_dist >= dist:
                 self.x = target_x
                 self.y = target_y
@@ -548,7 +548,7 @@ class Spider(Enemy):
         self.hp = 18
         self.max_hp = 18
         self.attack_power = 4
-        self.speed = 2.6
+        self.speed = 156.0  # px/sec (baked: old 2.6 * 60)
         self.xp_reward = 18
         self.gold_reward = 8   # wk15: +50% for pacing (was 5)
         self.color = (30, 30, 30)
@@ -566,7 +566,7 @@ class Bandit(Enemy):
         self.hp = 42
         self.max_hp = 42
         self.attack_power = 9
-        self.speed = 1.7
+        self.speed = 102.0  # px/sec (baked: old 1.7 * 60)
         self.xp_reward = 32
         self.gold_reward = 18  # wk15: +50% for pacing (was 12)
         self.color = (120, 80, 50)
@@ -584,7 +584,7 @@ class BanditLord(Enemy):
         self.hp = 300
         self.max_hp = 300
         self.attack_power = 20
-        self.speed = 1.5
+        self.speed = 90.0  # px/sec (baked: old 1.5 * 60)
         self.xp_reward = 150
         self.gold_reward = 200
         self.name = "The Bandit Lord"
@@ -605,7 +605,7 @@ class DemonOverlord(Enemy):
         self.hp = 500
         self.max_hp = 500
         self.attack_power = 30
-        self.speed = 1.2
+        self.speed = 72.0  # px/sec (baked: old 1.2 * 60)
         self.xp_reward = 300
         self.gold_reward = 500
         self.name = "The Demon Overlord"

@@ -733,7 +733,7 @@ class Hero:
         
         if dist > 0:
             # Normalize and apply speed
-            move_dist = self.speed * dt * 60  # 60 is base FPS
+            move_dist = self.speed * dt
             if move_dist >= dist:
                 self.x = target_x
                 self.y = target_y

@@ -667,9 +667,16 @@ class SimEngine:
         events = self.combat_system.get_emitted_events()
         self._route_combat_events(events)
 
-        # Cleanup
-        self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
-        self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
+        # R2-F: Dead-entity cleanup — only rebuild lists when something died
+        # or every 60 ticks as a fallback safety net.
+        if len(events) > 0:
+            self._dead_entity_dirty = True
+        cleanup_tick = getattr(self, '_cleanup_tick', 0)
+        self._cleanup_tick = cleanup_tick + 1
+        if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
+            self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
+            self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
+            self._dead_entity_dirty = False
 
         # Bounties
         claimed = self.bounty_system.check_claims(self.heroes)
@@ -792,6 +799,13 @@ class SimEngine:
             self.event_bus.emit_batch(building_ranged_events)
 
     def _apply_entity_separation(self, dt: float) -> None:
+        # R2-B: Throttle to every 2 frames — sub-pixel pushes are dt-scaled,
+        # so skipping alternating frames has zero visual impact.
+        tick = getattr(self, '_separation_tick', 0)
+        self._separation_tick = tick + 1
+        if tick % 2 != 0:
+            return
+
         import math
 
         min_dist_px = 16.0
@@ -977,6 +991,8 @@ class SimEngine:
         """
         tick_counter = getattr(self, "_fog_tick_counter", 0) + 1
         self._fog_tick_counter = tick_counter
+        if getattr(self.world, 'fog_disabled', False):
+            return
         if tick_counter % 3 != 0 and getattr(self, "_fog_revealers_snapshot", None) is not None:
             return
 

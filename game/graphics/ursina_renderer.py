@@ -414,10 +414,16 @@ class UrsinaRenderer:
             ent.texture_scale = (FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)
             ent._ks_atlas_tex_set = True
 
-        # Compute current animation frame
+        # Compute current animation frame (must run every frame for timer advancement)
         clip_name, frame_idx = self._compute_anim_frame(
             obj_id, entity, unit_type, class_key, base_clip_fn
         )
+
+        # Early-out: skip UV/position/scale/color/shader writes when nothing changed
+        sync_key = (pos_xyz, clip_name, frame_idx, scale_xyz)
+        if getattr(ent, '_ks_last_sync_key', None) == sync_key:
+            return
+        ent._ks_last_sync_key = sync_key
 
         # Update UV offset (cheap — just a vec2 uniform)
         uv = atlas.lookup_uv(unit_type, class_key, clip_name, frame_idx)

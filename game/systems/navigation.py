@@ -146,13 +146,13 @@ def compute_path_worldpoints(
 
 
 def step_towards(x: float, y: float, tx: float, ty: float, speed: float, dt: float) -> tuple[float, float, bool]:
-    """Move a point towards (tx, ty) at speed (tiles/sec style), returns (x, y, reached)."""
+    """Move a point towards (tx, ty) at speed (px/sec), returns (x, y, reached)."""
     dx = tx - x
     dy = ty - y
     dist = math.sqrt(dx * dx + dy * dy)
     if dist < 1e-6:
         return tx, ty, True
-    move_dist = speed * dt * 60
+    move_dist = speed * dt
     if move_dist >= dist:
         return tx, ty, True
     return x + (dx / dist) * move_dist, y + (dy / dist) * move_dist, False

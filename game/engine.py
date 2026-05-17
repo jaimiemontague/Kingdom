@@ -312,12 +312,16 @@ class GameEngine:
             if world is None and hasattr(self, 'sim'):
                 world = getattr(self.sim, 'world', None)
             if world:
+                world.fog_disabled = True
                 for ty in range(world.height):
                     for tx in range(world.width):
-                        world.visibility[ty][tx] = Visibility.SEEN
+                        world.visibility[ty][tx] = Visibility.VISIBLE
+                world._currently_visible = []
+                sim = getattr(self, 'sim', self)
+                sim._fog_revealers_snapshot = None
                 self._fog_revision = getattr(self, '_fog_revision', 0) + 100
                 if hud:
-                    hud.add_message("Fog of war revealed!", (100, 255, 100))
+                    hud.add_message("Fog of war disabled — all entities visible!", (100, 255, 100))
 
         elif cmd == '/gold':
             amount = 500
