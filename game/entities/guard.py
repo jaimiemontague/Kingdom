@@ -29,7 +29,7 @@ class Guard:
         self.max_hp = 80
         self.hp = self.max_hp
         self.attack_power = 8
-        self.speed = 2.0
+        self.speed = 120.0  # px/sec (baked: old 2.0 * 60)
 
         # Combat
         self.attack_cooldown = 0.0
@@ -83,7 +83,7 @@ class Guard:
             self.y = target_y
             return True
         if dist > 0:
-            move_dist = self.speed * dt * 60
+            move_dist = self.speed * dt
             self.x += (dx / dist) * move_dist
             self.y += (dy / dist) * move_dist
         return False

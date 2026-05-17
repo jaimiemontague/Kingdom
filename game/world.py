@@ -64,6 +64,7 @@ class World:
         # UNSEEN: never revealed; SEEN: explored but not currently visible; VISIBLE: in vision now.
         self.visibility = [[Visibility.UNSEEN for _ in range(self.width)] for _ in range(self.height)]
         self._currently_visible: list[tuple[int, int]] = []  # tiles marked VISIBLE this frame (demoted next update)
+        self.fog_disabled = False
 
         # Reusable fog tile overlays (avoid per-tile Surface allocations).
         self._fog_tile_unseen = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
@@ -426,19 +427,31 @@ class World:
 
         `revealers`: list of (world_x, world_y, radius_tiles).
         `return_new_reveals`: If True, return set of (grid_x, grid_y) tiles that transitioned UNSEEN -> VISIBLE.
-        
+
         Returns:
             If return_new_reveals=True: set of (grid_x, grid_y) tuples for newly revealed tiles.
             Otherwise: None
         """
         newly_revealed = set() if return_new_reveals else None
 
-        # Demote last frame's visible tiles to SEEN (without scanning the whole map).
         vis = self.visibility
         VISIBLE = Visibility.VISIBLE
         SEEN = Visibility.SEEN
         w = self.width
         h = self.height
+
+        if self.fog_disabled:
+            for y in range(h):
+                row = vis[y]
+                for x in range(w):
+                    if row[x] != VISIBLE:
+                        if newly_revealed is not None and row[x] == Visibility.UNSEEN:
+                            newly_revealed.add((x, y))
+                        row[x] = VISIBLE
+            self._currently_visible = []
+            return newly_revealed if return_new_reveals else None
+
+        # Demote last frame's visible tiles to SEEN (without scanning the whole map).
         for (x, y) in self._currently_visible:
             if 0 <= x < w and 0 <= y < h:
                 if vis[y][x] == VISIBLE:
@@ -448,11 +461,10 @@ class World:
         for world_x, world_y, radius_tiles in revealers:
             gx, gy = self.world_to_grid(world_x, world_y)
             if return_new_reveals:
-                # Track which tiles transition UNSEEN -> VISIBLE
                 self._reveal_circle(gx, gy, int(radius_tiles), newly_revealed=newly_revealed)
             else:
                 self._reveal_circle(gx, gy, int(radius_tiles))
-        
+
         return newly_revealed if return_new_reveals else None
 
     def render_fog(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):

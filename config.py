@@ -48,25 +48,25 @@ class HeroConfig:
     base_hp: int = 100
     base_attack: int = 10
     base_defense: int = 5
-    speed: int = 2
+    speed: float = 120.0  # px/sec (baked: old 2 * 60)
 
 
 @dataclass(frozen=True)
 class EnemyConfig:
     goblin_hp: int = 30
     goblin_attack: int = 5
-    goblin_speed: float = 1.5
+    goblin_speed: float = 90.0  # px/sec (baked: old 1.5 * 60)
     goblin_spawn_interval: int = 3500   # wk15: lower = more frequent waves (was 5000)
     max_alive_enemies: int = 32         # wk15: higher cap for more aggressive waves (was 20)
     wolf_hp: int = 22
     wolf_attack: int = 4
-    wolf_speed: float = 2.3
+    wolf_speed: float = 138.0  # px/sec (baked: old 2.3 * 60)
     skeleton_hp: int = 55
     skeleton_attack: int = 7
-    skeleton_speed: float = 1.1
+    skeleton_speed: float = 66.0  # px/sec (baked: old 1.1 * 60)
     skeleton_archer_hp: int = 40
     skeleton_archer_attack: int = 4
-    skeleton_archer_speed: float = 1.35
+    skeleton_archer_speed: float = 81.0  # px/sec (baked: old 1.35 * 60)
     skeleton_archer_attack_range_tiles: float = 6.0
     skeleton_archer_min_range_tiles: float = 2.0
     skeleton_archer_attack_cooldown_ms: int = 1400
