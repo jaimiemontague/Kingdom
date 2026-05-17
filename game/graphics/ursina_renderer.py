@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING
 
 import pygame
 import config
-from ursina import Entity, Vec2, Vec3, color, Text, scene
+from ursina import Entity, Vec2, Vec3, color, Text, scene, camera
 from ursina.lights import AmbientLight, DirectionalLight
 from ursina.shaders import lit_with_shadows_shader, unlit_shader
 
@@ -474,6 +474,67 @@ class UrsinaRenderer:
             ent._ks_billboard_configured = True
         UrsinaEntityRenderCollab.set_shader_if_changed(ent, shader)
 
+    # ------------------------------------------------------------------
+    # Camera frustum culling helpers (WK59 perf: skip off-screen entities)
+    # ------------------------------------------------------------------
+
+    def _get_visible_tile_rect(self) -> tuple[int, int, int, int]:
+        """Return (min_tx, min_ty, max_tx, max_ty) of tiles visible to the camera.
+
+        Traces the camera's forward ray to the Y=0 ground plane to find the
+        actual center of the visible area regardless of camera tilt/orbit angle.
+        Includes a 5-tile margin to prevent pop-in during panning.
+        Falls back to the full map if camera is unavailable (first frame).
+        """
+        map_w = int(config.MAP_WIDTH)
+        map_h = int(config.MAP_HEIGHT)
+        full_rect = (0, 0, map_w - 1, map_h - 1)
+        try:
+            cam_pos = camera.world_position
+            if cam_pos is None:
+                return full_rect
+            cam_y = float(cam_pos.y)
+            if cam_y <= 0:
+                return full_rect
+
+            # Compute where the camera's forward ray hits the Y=0 ground plane.
+            # This gives the actual center of the visible area regardless of tilt.
+            cam_fwd = camera.forward
+            fwd_y = float(cam_fwd.y)
+            if fwd_y >= -0.01:
+                # Camera is looking up or horizontal — can't determine ground target
+                return full_rect
+
+            t = -cam_y / fwd_y
+            ground_x = float(cam_pos.x) + t * float(cam_fwd.x)
+            ground_z = float(cam_pos.z) + t * float(cam_fwd.z)
+
+            # Convert ground hit to tile coords (world_z = -sim_y / SCALE, so tile_y = -ground_z)
+            center_tile_x = int(ground_x)
+            center_tile_y = int(-ground_z)
+
+            # Generous radius: camera height × 1.8, minimum 30 tiles.
+            # Oblique views see further than top-down, so be generous.
+            view_radius = max(int(cam_y * 1.8), 30)
+            margin = 5
+            half = view_radius + margin
+
+            min_tx = max(0, center_tile_x - half)
+            min_ty = max(0, center_tile_y - half)
+            max_tx = min(map_w - 1, center_tile_x + half)
+            max_ty = min(map_h - 1, center_tile_y + half)
+            return (min_tx, min_ty, max_tx, max_ty)
+        except Exception:
+            return full_rect
+
+    def _entity_in_view(self, sim_x: float, sim_y: float) -> bool:
+        """Check if an entity at sim pixel coords is within the cached visible rect."""
+        tile_size = float(config.TILE_SIZE)
+        tx = int(sim_x / tile_size)
+        ty = int(sim_y / tile_size)
+        rect = self._frame_visible_rect
+        return rect[0] <= tx <= rect[2] and rect[1] <= ty <= rect[3]
+
     def update(self, snapshot: "SimStateSnapshot"):
         """Called every frame by the Ursina app loop."""
         try:
@@ -483,6 +544,9 @@ class UrsinaRenderer:
 
         self._ensure_shadow_bounds_once()
 
+        # WK59 perf: cache visible tile rect for frustum culling this frame
+        self._frame_visible_rect = self._get_visible_tile_rect()
+
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
         self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
@@ -490,6 +554,7 @@ class UrsinaRenderer:
         self._terrain_fog.sync_log_stacks(world, getattr(snapshot, "log_stacks", ()) or ())
         self._terrain_fog.ensure_fog_overlay(world, fog_revision)
         self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
+        self._terrain_fog.cull_terrain_chunks(self._frame_visible_rect, world)
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
@@ -570,6 +635,18 @@ class UrsinaRenderer:
                         marker.enabled = False
                     continue
                 # DISCOVERED — fall through to normal rendering below
+            # WK59 perf: frustum culling — skip buildings outside visible tile rect
+            if not self._entity_in_view(getattr(b, "x", 0.0), getattr(b, "y", 0.0)):
+                _bld_obj_id = id(b)
+                _bld_existing = self._entities.get(_bld_obj_id)
+                if _bld_existing is not None:
+                    _bld_existing.enabled = False
+                    active_ids.add(_bld_obj_id)
+                continue
+            # Re-enable building if it was previously culled and is now in view
+            _bld_reenable = self._entities.get(id(b))
+            if _bld_reenable is not None and getattr(_bld_reenable, "enabled", True) is False:
+                _bld_reenable.enabled = True
             bt_raw = getattr(b, "building_type", "") or ""
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
@@ -731,6 +808,18 @@ class UrsinaRenderer:
         for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
                 continue
+            # WK59 perf: frustum culling — skip heroes outside visible tile rect
+            if not self._entity_in_view(h.x, h.y):
+                _h_obj_id = id(h)
+                _h_existing = self._entities.get(_h_obj_id)
+                if _h_existing is not None:
+                    _h_existing.enabled = False
+                    active_ids.add(_h_obj_id)
+                continue
+            # Re-enable hero if it was previously culled and is now in view
+            _h_reenable = self._entities.get(id(h))
+            if _h_reenable is not None and getattr(_h_reenable, "enabled", True) is False:
+                _h_reenable.enabled = True
             col = COLOR_HERO
             if HeroClass:
                 hc = getattr(h, "hero_class", None)
@@ -782,6 +871,18 @@ class UrsinaRenderer:
 
             if not getattr(e, "is_alive", True) or not is_visible:
                 continue
+            # WK59 perf: frustum culling — skip enemies outside visible tile rect
+            if not self._entity_in_view(e.x, e.y):
+                _e_obj_id = id(e)
+                _e_existing = self._entities.get(_e_obj_id)
+                if _e_existing is not None:
+                    _e_existing.enabled = False
+                    active_ids.add(_e_obj_id)
+                continue
+            # Re-enable enemy if it was previously culled and is now in view
+            _e_reenable = self._entities.get(id(e))
+            if _e_reenable is not None and getattr(_e_reenable, "enabled", True) is False:
+                _e_reenable.enabled = True
             s = ENEMY_SCALE
             col = COLOR_ENEMY
             et_key = str(getattr(e, "enemy_type", "goblin") or "goblin").lower()
@@ -812,6 +913,18 @@ class UrsinaRenderer:
                 continue
             if bool(getattr(p, "is_inside_castle", False)):
                 continue
+            # WK59 perf: frustum culling — skip peasants outside visible tile rect
+            if not self._entity_in_view(p.x, p.y):
+                _p_obj_id = id(p)
+                _p_existing = self._entities.get(_p_obj_id)
+                if _p_existing is not None:
+                    _p_existing.enabled = False
+                    active_ids.add(_p_obj_id)
+                continue
+            # Re-enable peasant if it was previously culled and is now in view
+            _p_reenable = self._entities.get(id(p))
+            if _p_reenable is not None and getattr(_p_reenable, "enabled", True) is False:
+                _p_reenable.enabled = True
             sx = PEASANT_SCALE_XZ
             sy = PEASANT_SCALE_Y
             col = color.white
@@ -839,6 +952,18 @@ class UrsinaRenderer:
         for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
                 continue
+            # WK59 perf: frustum culling — skip guards outside visible tile rect
+            if not self._entity_in_view(g.x, g.y):
+                _g_obj_id = id(g)
+                _g_existing = self._entities.get(_g_obj_id)
+                if _g_existing is not None:
+                    _g_existing.enabled = False
+                    active_ids.add(_g_obj_id)
+                continue
+            # Re-enable guard if it was previously culled and is now in view
+            _g_reenable = self._entities.get(id(g))
+            if _g_reenable is not None and getattr(_g_reenable, "enabled", True) is False:
+                _g_reenable.enabled = True
             col = color.white
             ent, obj_id = self._entity_render.get_or_create_entity(
                 g,

@@ -86,6 +86,9 @@ class GameEngine:
 
         # Camera dt is presentation-owned (camera moves independently of sim tick rate).
         self._camera_dt = 0.0
+
+        # Fixed-rate simulation accumulator (decouples sim Hz from render Hz).
+        self._sim_accumulator = 0.0
         
         # Camera state (always needed for simulation coordinate queries)
         self.camera_x = 0
@@ -1717,10 +1720,16 @@ class GameEngine:
     def render_perf_overlay(self, surface: pygame.Surface):
         return self._render_coordinator.render_perf_overlay(surface)
 
+    # Fixed-rate simulation constants (decouples sim Hz from render Hz).
+    _FIXED_SIM_DT = 1.0 / 20.0   # 50ms per sim tick (20 Hz sim rate)
+    _MAX_TICKS_PER_FRAME = 4      # Safety cap: never run more than 4 ticks per render frame
+
     def tick_simulation(self, dt: float) -> tuple[float, float]:
         """
-        Advance the game simulation by one logical step.
-        Returns a tuple of (events_ms, update_ms) for profiling.
+        Advance the game simulation using a fixed-rate accumulator loop.
+        The sim runs at 20 Hz regardless of render frame rate; the accumulator
+        carries leftover time to the next frame for natural interpolation.
+        Returns a tuple of (events_ms, update_ms) covering ALL ticks this frame.
         """
         # Apply any queued display settings change at a safe point (outside event polling).
         pending = getattr(self, "_pending_display_settings", None)
@@ -1733,18 +1742,35 @@ class GameEngine:
                 # If anything goes wrong, clear the pending request and continue.
                 self._pending_display_settings = None
 
+        # Store real frame dt for camera (presentation-rate, not sim-rate).
         self._camera_dt = dt
-        sim_dt = dt * get_time_multiplier()
 
+        # Handle events ONCE per render frame (before sim ticks).
         t0 = time.perf_counter()
         self.handle_events()
         t1 = time.perf_counter()
 
-        self.update(sim_dt)
+        # Accumulate scaled sim time.
+        sim_time_to_advance = dt * get_time_multiplier()
+        self._sim_accumulator += sim_time_to_advance
+
+        # Run fixed-rate sim ticks until accumulator is drained (or safety cap hit).
+        ticks_this_frame = 0
+        t_update_start = time.perf_counter()
+
+        while (self._sim_accumulator >= self._FIXED_SIM_DT
+               and ticks_this_frame < self._MAX_TICKS_PER_FRAME):
+            self.update(self._FIXED_SIM_DT)
+            self._sim_accumulator -= self._FIXED_SIM_DT
+            ticks_this_frame += 1
+            # After the first tick, zero camera_dt so update_camera (inside
+            # _prepare_sim_and_camera) does not move the camera again this frame.
+            self._camera_dt = 0.0
+
         t2 = time.perf_counter()
 
         evt_ms = (t1 - t0) * 1000.0
-        upd_ms = (t2 - t1) * 1000.0
+        upd_ms = (t2 - t_update_start) * 1000.0
         return evt_ms, upd_ms
 
     def render_pygame(self) -> float:
