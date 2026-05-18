@@ -1394,6 +1394,46 @@
           ]
         }
       }
+    },
+    "v16_r5_hud_perf_worldspace_ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
+        "notes": "v1.6 Round 5 — World-Space UI as Native Ursina Entities (Phase 2)"
+      },
+      "rounds": {
+        "r5_round2_building_labels_and_hero_labels": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round2_building_labels_and_hero_labels",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_renderer.py _sync_snapshot_heroes(): Added hero name label (UrsinaText, billboard, y=-0.6), hero gold display ($X or $X(+Y) when total_gold>0, gold-yellow HSV, y=-0.8), hero rest indicator ('Zzz' when state==RESTING, light blue, y=0.7 x=0.3). All three blocks placed AFTER Agent 09 health bar code (line ~1017) and BEFORE active_ids.add(obj_id) (line ~1067).",
+            "game/graphics/ursina_renderer.py _sync_snapshot_tax_collector(): Added tax collector carried_gold display ($N when carried>0, gold-yellow HSV, y=0.5). Placed AFTER billboard sync and BEFORE active_ids.add(obj_id)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "307 passed in 35.49s"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/ -x -q --tb=short exit_code=0 (307 passed)",
+            "agent_09_health_bar_preserved": "Agent 09 health bar code at lines 973-1015 untouched; Agent 08 code begins at line 1017",
+            "agent_03_building_labels_preserved": "_sync_building_worldspace_ui calls at lines 830, 862, 914 untouched",
+            "tax_collector_var": "tc (single object via getattr(snapshot, 'tax_collector', None), not a loop)",
+            "ursina_note": "These are native Ursina Text entities (Panda3D TextNode GPU-rendered); they do NOT go through the pygame HUD texture upload pipeline. Create once, toggle .enabled and update .text only on value change."
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 15 --subdir r5_hero_labels --stem heroes --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 8",
+            "python main.py --no-llm"
+          ]
+        }
+      }
     }
   }
 }

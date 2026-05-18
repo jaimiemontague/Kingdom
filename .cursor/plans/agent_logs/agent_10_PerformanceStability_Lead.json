@@ -798,6 +798,119 @@
           ]
         }
       }
+    },
+    "v16_r5_hud_perf_worldspace_ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
+        "notes": "v1.6 Round 5: PIL bypass + world-space UI (building labels, hero names, health bars). Agent 10 Round 3 profiling assessment."
+      },
+      "rounds": {
+        "r5_round3_profiling_assessment": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round3_profiling_assessment",
+          "round_meta": {
+            "prompt_set_id": "r5_round3",
+            "build_target": "Before/after profiling of PIL bypass + world-space UI changes",
+            "sent_at_local": "2026-05-17"
+          },
+          "response": {
+            "status": "complete",
+            "raw": "R5 Round 3 profiling assessment: Ran two 20s Ursina FPS probes with 10-hero spawn (20 heroes measured) and 10s warmup. Results consistent across both runs. hud_texture_upload P90 is 42-43ms — improved from 49ms baseline but NOT below the 15ms target. PIL bypass reduced avg from 13.4ms to 13-14ms and max from 67ms to 48-61ms, but P90 remains in the 42-43ms range. ursina_renderer P90 is 9-10ms — within the 12ms budget but increased from 7.6ms baseline due to world-space Text/Entity additions. Avg FPS 24.8-26.0 with 20 heroes (probe spawned 20 via warrior guild), below 30.8 baseline with 10 heroes — expected given doubled hero count. Phase 3 (dirty-region upload) IS recommended. All 307 unit tests pass. Visual: building labels visible, hero names visible, HUD correct orientation.",
+            "summary_bullets": [
+              "hud_texture_upload: avg=13.0-14.1ms P90=42.8-43.3ms max=48.0-60.8ms — P90 NOT below 15ms target; partial improvement from 49ms baseline.",
+              "ursina_renderer: avg=7.9-8.4ms P90=9.0-10.5ms max=22.8-24.6ms — within 12ms P90 budget.",
+              "tick_simulation: avg=2.4-2.8ms P90=5.2-5.4ms max=30.3-31.3ms — slight increase from 1.7ms avg baseline, expected with more entities.",
+              "pygame_hud_render: avg=2.6-2.7ms P90=3.0-3.2ms max=4.9-6.1ms — stable vs 2.0ms baseline.",
+              "Overall FPS: avg 24.8-26.0 with 20 heroes (probe spawns 20 via warrior guild); p50=28-31.",
+              "Phase 3 (dirty-region upload) RECOMMENDED: hud_texture_upload P90 still 42-43ms, well above 10ms threshold.",
+              "Visual: building labels, hero names, HUD all rendering correctly; text correctly oriented.",
+              "Unit tests: 307 passed."
+            ],
+            "what_i_changed": [],
+            "how_to_test": [
+              "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
+              "python -m pytest tests/ -x -q --tb=short"
+            ],
+            "evidence": {
+              "capture_run1": {
+                "command": "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
+                "exit_code": 0,
+                "screenshot_path": "docs/screenshots/r5_final_perf/final_20260517_220223_799.png",
+                "fps_probe": {
+                  "heroes": 20,
+                  "frames": 205,
+                  "avg_fps": 24.8,
+                  "min_fps": 8.6,
+                  "p10_fps": 11.7,
+                  "p50_fps": 28.2,
+                  "p90_fps": 34.3,
+                  "max_fps": 36.1
+                },
+                "probe_stages_ms": {
+                  "hud_texture_upload_avg_ms": 14.082,
+                  "hud_texture_upload_p90_ms": 43.330,
+                  "hud_texture_upload_max_ms": 60.771,
+                  "pygame_hud_render_avg_ms": 2.721,
+                  "pygame_hud_render_p90_ms": 3.231,
+                  "pygame_hud_render_max_ms": 6.100,
+                  "tick_simulation_avg_ms": 2.763,
+                  "tick_simulation_p90_ms": 5.368,
+                  "tick_simulation_max_ms": 31.304,
+                  "ursina_renderer_avg_ms": 8.394,
+                  "ursina_renderer_p90_ms": 10.488,
+                  "ursina_renderer_max_ms": 22.847
+                },
+                "note": "First run had OBJ-to-BAM cache writes for several environment models during session."
+              },
+              "capture_run2": {
+                "command": "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_final_perf --stem final_run2 --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
+                "exit_code": 0,
+                "screenshot_path": "docs/screenshots/r5_final_perf/final_run2_20260517_220337_855.png",
+                "fps_probe": {
+                  "heroes": 20,
+                  "frames": 217,
+                  "avg_fps": 26.0,
+                  "min_fps": 8.9,
+                  "p10_fps": 12.2,
+                  "p50_fps": 30.6,
+                  "p90_fps": 34.8,
+                  "max_fps": 36.6
+                },
+                "probe_stages_ms": {
+                  "hud_texture_upload_avg_ms": 13.012,
+                  "hud_texture_upload_p90_ms": 42.803,
+                  "hud_texture_upload_max_ms": 48.017,
+                  "pygame_hud_render_avg_ms": 2.591,
+                  "pygame_hud_render_p90_ms": 2.980,
+                  "pygame_hud_render_max_ms": 4.871,
+                  "tick_simulation_avg_ms": 2.387,
+                  "tick_simulation_p90_ms": 5.176,
+                  "tick_simulation_max_ms": 30.328,
+                  "ursina_renderer_avg_ms": 7.883,
+                  "ursina_renderer_p90_ms": 9.013,
+                  "ursina_renderer_max_ms": 24.593
+                },
+                "note": "Second run (BAM cache warm for most models; still had some OBJ-to-BAM writes)."
+              },
+              "unit_tests": {
+                "command": "python -m pytest tests/ -x -q --tb=short",
+                "exit_code": 0,
+                "passed": 307,
+                "failed": 0
+              },
+              "visual_quality": {
+                "building_labels": "Visible as white text above buildings (CASTLE, INN, WARRIORS, etc. observed in screenshots).",
+                "hero_names": "Hero name labels visible below hero sprites in the scene.",
+                "hud_top_bar": "Top bar renders correctly: gold, heroes count, wave counter visible in correct position.",
+                "hud_bottom_bar": "Bottom bar renders correctly: Build, Hire, Bounty buttons visible.",
+                "text_orientation": "All text correctly oriented — not upside-down or mirrored.",
+                "perf_overlay": "F2 performance overlay visible in lower-left with stage timings."
+              },
+              "phase3_recommendation": "IMPLEMENT Phase 3 (dirty-region upload). hud_texture_upload P90 is 42-43ms, well above the 10ms threshold. The PIL bypass reduced max from 67ms to 48-61ms and brought slight avg improvement, but the core cost of uploading the full 8MB RGBA surface remains dominant. The byte-level vertical flip saved the PIL object construction overhead but the raw data transfer (pygame.tobytes + memoryview reversal + setRamImageAs for 8MB) is still expensive. Dirty-region upload would reduce the upload payload from 8MB (full surface) to typically <500KB (changed region), which should bring P90 well below 10ms."
+            }
+          }
+        }
+      }
     }
   }
 }

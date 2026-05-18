@@ -40,6 +40,20 @@ from tools.ursina_input_debug import is_ursina_debug_input_enabled, print_wk20_i
 from tools.ursina_screenshot import save_ursina_window_screenshot
 
 
+def _flip_surface_bytes_vertical(raw_rgba: bytes, width: int, height: int) -> bytes:
+    """Flip RGBA pixel data vertically (reverse row order).
+
+    Pygame's Y-axis points down; Panda3D's points up. PIL.Image.transpose(FLIP_TOP_BOTTOM)
+    does this, but PIL adds ~15-30ms of Python overhead for the 8MB allocation + object
+    construction. This function does the same operation directly on the byte buffer.
+    """
+    row_stride = width * 4
+    # Build reversed row list — each slice is a memoryview into the original buffer,
+    # so this allocates only the final joined result, not N intermediate copies.
+    mv = memoryview(raw_rgba)
+    return b"".join(mv[i * row_stride : (i + 1) * row_stride] for i in range(height - 1, -1, -1))
+
+
 class UrsinaApp:
     def __init__(self, ai_controller_factory):
         # Pygame hidden — engine may expect SDL/font/audio
@@ -190,6 +204,8 @@ class UrsinaApp:
         self._last_ui_overlay_scale: tuple[float, float] | None = None
         # Row-sampled CRC — skip GPU re-upload when pygame HUD likely unchanged (WK22 R3).
         self._hud_quick_sig: int | None = None
+        # Dirty-region tracking: previous frame's raw bytes for row-level diff (R5 phase 3).
+        self._hud_prev_raw: bytes | None = None
 
         # WK32: ``_editor_camera`` is set by ``_setup_ursina_camera_for_castle()``. EditorCamera is
         # default-on; ``KINGDOM_URSINA_EDITORCAMERA=0`` is the legacy fallback. Do not reassign here
@@ -733,12 +749,12 @@ class UrsinaApp:
             self.input_manager.queue_event(evt)
 
     def _refresh_ui_overlay_texture(self) -> None:
-        """Upload pygame HUD to GPU only when pixel data changes (WK22 R3 jitter fix).
+        """Upload pygame HUD to GPU — zero-copy Y-inversion via GPU texture coords (R5 round 3.5).
 
-        Full-window ``tobytes`` + PIL + ``Texture.apply`` was running on a timer every
-        100ms even when the HUD was static, which produced periodic main-thread hitches
-        (audible as music glitches). A CRC32 of the packed framebuffer skips that work
-        entirely when nothing drew into ``engine.screen`` since the last upload.
+        Previous path: pygame.tobytes -> _flip_surface_bytes_vertical (8MB memcpy) -> setRamImageAs
+        New path:      pygame.tobytes -> setRamImageAs (raw, un-flipped)
+        GPU handles the Pygame-vs-Panda3D Y-axis difference via texture_scale=(1,-1) + texture_offset=(0,1)
+        on the ui_overlay entity, which is free (just different UV interpolation during rasterization).
         """
         scale = (camera.aspect_ratio, 1)
         if self._last_ui_overlay_scale != scale:
@@ -753,8 +769,6 @@ class UrsinaApp:
         except Exception:
             quick = None
 
-        # WK51 r6: stride-8 row fingerprint catches thin header/footer HUD (pin/recall); pin/unpin
-        # also sets _ursina_hud_force_upload in GameEngine.apply_hud_pin_action.
         force_upload = bool(getattr(self.engine, "_ursina_hud_force_upload", False))
         if force_upload:
             setattr(self.engine, "_ursina_hud_force_upload", False)
@@ -770,29 +784,98 @@ class UrsinaApp:
             return
 
         raw_data = pygame.image.tobytes(surf, "RGBA")
-        img = Image.frombytes("RGBA", sz, raw_data)
+
         try:
             self._hud_quick_sig = self._hud_quick_fingerprint(surf)
         except Exception:
             self._hud_quick_sig = zlib.crc32(raw_data) & 0xFFFFFFFF
 
+        # Skip Python-side byte flip; GPU handles Y-inversion via texture_scale=(1,-1).
+        # This eliminates an 8MB memoryview reversal (~15-30ms at 1080p RGBA).
+
+        from panda3d.core import Texture as PandaTexture
+
         if self._hud_composite_texture is None or self._hud_composite_size != sz:
-            self._hud_composite_texture = Texture(img, filtering=False)
-            self._sync_hud_texture_filter_mode(self._hud_composite_texture)
+            panda_tex = PandaTexture()
+            panda_tex.setup2dTexture(sz[0], sz[1], PandaTexture.TUnsignedByte, PandaTexture.FRgba)
+            panda_tex.setRamImageAs(raw_data, "RGBA")
+            self._hud_composite_texture = Texture(panda_tex)
             self._hud_composite_size = sz
             self.ui_overlay.texture = self._hud_composite_texture
+            # GPU-side Y-inversion: flip V coord so Pygame's top-down rows render correctly
+            # in Panda3D's bottom-up coordinate system. Must be set AFTER texture assignment
+            # since Ursina may reset texture properties during assignment.
+            self.ui_overlay.texture_scale = (1, -1)
+            self.ui_overlay.texture_offset = (0, 1)
+            self._sync_hud_texture_filter_mode(self._hud_composite_texture)
+            self._hud_prev_raw = raw_data
         else:
-            # If GPU texture size ever diverges, recreating avoids row-stride corruption (stripes).
-            tex = self._hud_composite_texture
-            if int(tex.width) != int(sz[0]) or int(tex.height) != int(sz[1]):
-                self._hud_composite_texture = Texture(img, filtering=False)
-                self._sync_hud_texture_filter_mode(self._hud_composite_texture)
+            panda_tex = self._hud_composite_texture._texture
+            if int(panda_tex.getXSize()) != int(sz[0]) or int(panda_tex.getYSize()) != int(sz[1]):
+                panda_tex = PandaTexture()
+                panda_tex.setup2dTexture(sz[0], sz[1], PandaTexture.TUnsignedByte, PandaTexture.FRgba)
+                panda_tex.setRamImageAs(raw_data, "RGBA")
+                self._hud_composite_texture = Texture(panda_tex)
                 self._hud_composite_size = sz
                 self.ui_overlay.texture = self._hud_composite_texture
+                # Re-apply GPU-side Y-inversion after texture reassignment
+                self.ui_overlay.texture_scale = (1, -1)
+                self.ui_overlay.texture_offset = (0, 1)
+                self._sync_hud_texture_filter_mode(self._hud_composite_texture)
+                self._hud_prev_raw = raw_data
             else:
-                tex._cached_image = img
-                tex.apply()
-                self._sync_hud_texture_filter_mode(tex)
+                # R5 phase 3: dirty-region upload — only upload changed rows to GPU.
+                if self._hud_prev_raw is not None and len(self._hud_prev_raw) == len(raw_data):
+                    row_stride = sz[0] * 4
+                    dirty_min = sz[1]
+                    dirty_max = -1
+
+                    # Scan from top to find first dirty row
+                    for y in range(sz[1]):
+                        offset = y * row_stride
+                        if raw_data[offset:offset + row_stride] != self._hud_prev_raw[offset:offset + row_stride]:
+                            dirty_min = y
+                            break
+
+                    if dirty_min < sz[1]:
+                        # Scan from bottom to find last dirty row
+                        for y in range(sz[1] - 1, dirty_min - 1, -1):
+                            offset = y * row_stride
+                            if raw_data[offset:offset + row_stride] != self._hud_prev_raw[offset:offset + row_stride]:
+                                dirty_max = y
+                                break
+
+                    if dirty_max >= dirty_min:
+                        sub_h = dirty_max - dirty_min + 1
+                        sub_offset = dirty_min * row_stride
+                        sub_bytes = raw_data[sub_offset:sub_offset + sub_h * row_stride]
+
+                        try:
+                            from panda3d.core import PNMImage as _PNMImage
+
+                            # Create temp texture holding only the dirty rows
+                            temp_tex = PandaTexture()
+                            temp_tex.setup2dTexture(sz[0], sub_h, PandaTexture.TUnsignedByte, PandaTexture.FRgba)
+                            temp_tex.setRamImageAs(sub_bytes, "RGBA")
+
+                            # Convert to PNMImage for load_sub_image
+                            sub_pnm = _PNMImage()
+                            temp_tex.store(sub_pnm)
+
+                            # Panda3D texture y=0 is at BOTTOM. Our RAM is un-flipped (pygame top-down),
+                            # so RAM row 0 maps to panda_y = height-1. The sub-image's top edge
+                            # (dirty_min) maps to panda_y = height - dirty_min - sub_h.
+                            panda_y = sz[1] - dirty_min - sub_h
+                            self._hud_composite_texture._texture.load_sub_image(sub_pnm, 0, panda_y)
+                        except Exception:
+                            # Fallback: full upload if load_sub_image fails
+                            panda_tex.setRamImageAs(raw_data, "RGBA")
+                    # else: no dirty rows (fingerprint false positive) — skip upload
+                else:
+                    # No previous data or size changed — full upload
+                    panda_tex.setRamImageAs(raw_data, "RGBA")
+
+                self._hud_prev_raw = raw_data
 
     def _sync_headless_ui_canvas_to_window(self) -> None:
         """Poll Ursina ``window.size`` and resize ``engine.screen`` to match — fonts/layout rasterize at native pixels."""
@@ -811,6 +894,7 @@ class UrsinaApp:
             self._hud_quick_sig = None
             self._hud_composite_texture = None
             self._hud_composite_size = None
+            self._hud_prev_raw = None
 
     def _add_wk30_debug_prefab_layout(self) -> None:
         """WK30 debug: place one of each prefab-backed building near the castle.
@@ -1148,6 +1232,7 @@ class UrsinaApp:
             _stage_t0 = pytime.perf_counter()
             self.engine.tick_simulation(dt)
             self._record_fps_probe_stage_ms("tick_simulation", _stage_t0)
+            self.engine._last_frame_dt_ms = float(dt or 0.0) * 1000.0
 
             if getattr(self, "_worker_scale_shot_reattach", 0) > 0:
                 self._worker_scale_shot_reattach -= 1

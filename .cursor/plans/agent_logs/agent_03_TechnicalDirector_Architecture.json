@@ -1194,6 +1194,92 @@
           ]
         }
       }
+    },
+    "v16_r5_hud_perf_worldspace_ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
+        "notes": "v1.6 Round 5: HUD texture pipeline PIL bypass + world-space UI native Ursina entities"
+      },
+      "rounds": {
+        "r5_round1_pil_bypass_and_healthbars": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round1_pil_bypass_and_healthbars",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Added module-level _flip_surface_bytes_vertical(raw_rgba, width, height) helper that reverses RGBA row order using memoryview slicing — replaces PIL.Image.transpose(FLIP_TOP_BOTTOM).",
+            "game/graphics/ursina_app.py: Replaced entire body of _refresh_ui_overlay_texture() to bypass PIL entirely. New path: pygame.image.tobytes -> _flip_surface_bytes_vertical -> panda3d.core.Texture.setRamImageAs (direct GPU upload). Eliminates PIL.Image.frombytes, PIL.transpose, PIL.tobytes, and Ursina tex.apply() (which internally did another PIL transpose). Fresh textures created via PandaTexture.setup2dTexture + setRamImageAs wrapped in Ursina Texture(panda_tex). Existing texture updates go directly to panda_tex.setRamImageAs. Size-mismatch handling recreates the PandaTexture.",
+            "PIL Image import at line 15 is now unused by this method but retained (other code may reference it; removal is out of scope)."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_app.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "307 passed, 1 warning in 36.23s"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "307 passed"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10: Run Ursina capture with --fps-probe to measure hud_texture_upload P90 after PIL bypass (target: <15ms from 49ms baseline).",
+            "Visual verification: python tools/run_ursina_capture_once.py --seconds 12 --subdir r5_pil_bypass --stem after_bypass --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8"
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 12 --subdir r5_pil_bypass --stem after_bypass --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8"
+          ]
+        },
+        "r5_round2_building_labels_and_hero_labels": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round2_building_labels_and_hero_labels",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_renderer.py: Added module-level _BUILDING_LABEL_MAP dict (28 entries) mapping building_type strings to display labels (castle->CASTLE, warrior_guild->WARRIORS, etc., plus 7 temple types).",
+            "game/graphics/ursina_renderer.py: Added module-level _sync_building_worldspace_ui(b, bts, ent, is_lair) helper that creates/updates three native Ursina child entities on each building: (1) Text label with building name (white, billboard, y=1.2), (2) HP bar quad (green/red, y=1.5, only shown when damaged), (3) Gold display Text ($amount, gold-yellow HSV, y=0.9, only shown when stash>0).",
+            "game/graphics/ursina_renderer.py: Inserted _sync_building_worldspace_ui() call before active_ids.add(obj_id) in all three building rendering paths: prefab (line ~830), 3D mesh (line ~863), billboard quad (line ~914). POI buildings and lairs are skipped by the helper.",
+            "Uses existing Text import from ursina (already at line 40). No new imports needed. Labels are created once per entity and cached via _ks_label/_ks_hp_bar/_ks_gold_label attributes. HP bar and gold display toggle enabled/disabled as values change."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "307 passed, 1 warning in 35.92s"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "307 passed"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Visual verification required: python tools/run_ursina_capture_once.py --seconds 15 --subdir r5_building_labels --stem labels --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8",
+            "Agent 10: confirm building labels are visible in Ursina capture screenshot and ursina_renderer P90 stays below 12ms."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 15 --subdir r5_building_labels --stem labels --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8",
+            "python main.py --no-llm"
+          ]
+        }
+      }
     }
   }
 }
