@@ -388,6 +388,8 @@ class SimEngine:
         paused: bool,
         running: bool,
         pause_menu_visible: bool,
+        sim_blend_fraction: float = 0.0,
+        sim_tick_id: int = 0,
     ):
         from game.sim.snapshot import SimStateSnapshot
 
@@ -423,6 +425,8 @@ class SimEngine:
             paused=bool(paused),
             running=bool(running),
             pause_menu_visible=bool(pause_menu_visible),
+            sim_blend_fraction=float(sim_blend_fraction),
+            sim_tick_id=int(sim_tick_id),
         )
 
     # ---------------------------------------------------------------------

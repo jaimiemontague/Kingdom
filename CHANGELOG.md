@@ -1,5 +1,37 @@
 # Changelog
 
+## Prototype v1.5.7 — HUD/UI Pygame to Ursina Issues Fixed for Better FPS
+
+### HUD Texture Pipeline Optimization (Phase 1 + Phase 3)
+- **PIL bypass:** Eliminated the `PIL.Image.frombytes()` / `transpose()` / `tobytes()` pipeline from the HUD texture upload path. Raw pygame bytes go directly to the GPU.
+- **GPU-side Y-inversion:** Replaced the Python-side 8MB byte-flip (`_flip_surface_bytes_vertical`) with free GPU texture coordinate inversion (`texture_scale=(1,-1)`). Zero CPU cost.
+- **Dirty-region upload:** Row-level diff tracking detects which rows of the HUD changed between frames. Only the changed sub-region is uploaded via Panda3D's `load_sub_image()` instead of the full 1920x1080 surface. Typical HUD updates now upload ~200-400KB instead of 8MB.
+- **Result:** `hud_texture_upload` P90 dropped from **49ms to 12.7ms** (74% reduction). Average dropped from 17ms to 4.1ms.
+
+### World-Space UI as Native Ursina Entities (Phase 2)
+- **Building labels:** All 27 building types display white billboard text labels above their 3D models (CASTLE, WARRIORS, RANGERS, SMITH, INN, etc.). Labels are native Ursina Text entities — not pygame HUD drawings.
+- **Building HP bars:** Damaged buildings show a colored health bar (green > 50% HP, red below). Hidden at full health.
+- **Building gold displays:** Buildings with gold stash (markets, tax-collecting buildings) show a gold-yellow `$amount` indicator.
+- **Hero name labels:** Each hero displays their name below their sprite as a billboard Text entity.
+- **Hero gold display:** Heroes carrying gold show `$X` (or `$X(+Y)` with taxed gold) below their name.
+- **Hero rest indicator:** Heroes resting at an Inn display a light-blue "Zzz" above their sprite.
+- **Tax collector gold:** Tax collectors show their carried gold amount while collecting.
+- **Health bars for all units:** Heroes, enemies, peasants, and guards display native Ursina health bar quads when damaged. Two quads per entity (dark background + colored foreground), billboard-mode, left-aligned.
+- **Performance:** `ursina_renderer` P90 increased from 7.6ms to 8.7ms (within 12ms budget) — world-space UI adds minimal overhead since Text/Entity nodes are GPU-rendered.
+
+### Performance Summary
+| Metric | Before | After |
+|---|---|---|
+| `hud_texture_upload` avg | 17ms | **4.1ms** |
+| `hud_texture_upload` P90 | 49ms | **12.7ms** |
+| `ursina_renderer` P90 | 7.6ms | 8.7ms |
+| Average FPS (20 heroes) | ~25 | **29.1** |
+
+### Smoothness Monitor & Interpolation (Round 4 — included)
+- **Linear position interpolation:** Replaced the broken exponential lerp (alpha=0.82) with proper linear interpolation using `sim_blend_fraction` from the sim accumulator. Entities move uniformly between 20Hz sim ticks instead of lurching.
+- **Sim tick window advancement:** Interpolation window (prev/curr positions) advances on every sim tick boundary via monotonic `sim_tick_id`, not on position change — fixes jitter for stationary entities.
+- **Smoothness monitor:** F2 overlay now shows frame-time bar graph, P50/P95/P99 percentiles, 1% Low FPS, jitter, and per-stage EMA timings.
+
 ## Prototype v1.5.6 — Elevation, Sky, New Fog of War, and Centered Interiors
 
 ### WK53 — World Beauty & Terrain Elevation

@@ -69,3 +69,7 @@ class SimStateSnapshot:
     running: bool = True
     pause_menu_visible: bool = False
 
+    # --- Interpolation (R4: blend fraction and tick counter for smooth rendering) ---
+    sim_blend_fraction: float = 0.0
+    sim_tick_id: int = 0
+

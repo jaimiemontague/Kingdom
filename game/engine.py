@@ -120,6 +120,11 @@ class GameEngine:
         self._perf_events_ms = 0.0
         self._perf_update_ms = 0.0
         self._perf_render_ms = 0.0
+        self._last_frame_sim_ticks = 0
+        self._last_frame_dt_ms = 0.0
+        self._sim_tick_counter = 0
+        self._smoothness_frame_times: list[float] = []
+        self._smoothness_max_frames = 300
 
         self.renderer_registry = None if headless and not headless_ui else RendererRegistry()
         self._renderer_prune_accum_s = 0.0
@@ -1687,6 +1692,10 @@ class GameEngine:
             else:
                 vfx_projectiles = tuple(getattr(self.vfx_system, "active_projectiles", ()))
 
+        blend = 0.0
+        if self._FIXED_SIM_DT > 0:
+            blend = max(0.0, min(1.0, self._sim_accumulator / self._FIXED_SIM_DT))
+
         return self.sim.build_snapshot(
             vfx_projectiles=vfx_projectiles,
             screen_w=int(getattr(self, "window_width", 0) or 0),
@@ -1698,6 +1707,8 @@ class GameEngine:
             paused=bool(getattr(self, "paused", False)),
             running=bool(getattr(self, "running", True)),
             pause_menu_visible=bool(getattr(getattr(self, "pause_menu", None), "visible", False)),
+            sim_blend_fraction=blend,
+            sim_tick_id=self._sim_tick_counter,
         )
     
     def render(self):
@@ -1763,11 +1774,14 @@ class GameEngine:
             self.update(self._FIXED_SIM_DT)
             self._sim_accumulator -= self._FIXED_SIM_DT
             ticks_this_frame += 1
+            self._sim_tick_counter += 1
             # After the first tick, zero camera_dt so update_camera (inside
             # _prepare_sim_and_camera) does not move the camera again this frame.
             self._camera_dt = 0.0
 
         t2 = time.perf_counter()
+
+        self._last_frame_sim_ticks = ticks_this_frame
 
         evt_ms = (t1 - t0) * 1000.0
         upd_ms = (t2 - t_update_start) * 1000.0

@@ -494,6 +494,48 @@
         }
       }
     },
+    "v16_r5_hud_perf_worldspace_ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
+        "notes": "v1.6 Round 5: HUD texture pipeline perf + world-space UI as native Ursina entities."
+      },
+      "rounds": {
+        "r5_round1_health_bars": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round1_health_bars",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added native Ursina health bar quads (background dark + foreground colored) for all 4 entity types: heroes, enemies, peasants, guards. Bars show only when entity is damaged (hp < max_hp), hidden at full health. Left-aligned foreground via center-anchor shift. Green if >50% HP, red otherwise. Bars are billboard, unlit, depth-test disabled.",
+            "files": ["game/graphics/ursina_renderer.py"],
+            "methods_modified": [
+              "_sync_snapshot_heroes() — hero bars: bar_w=0.8, bar_h=0.04, bar_y=0.50",
+              "_sync_snapshot_enemies() — enemy bars: bar_w=0.6, bar_h=0.03, bar_y=0.40",
+              "_sync_snapshot_peasants() — peasant bars: bar_w=0.5, bar_h=0.03, bar_y=0.35",
+              "_sync_snapshot_guards() — guard bars: bar_w=0.7, bar_h=0.03, bar_y=0.45"
+            ],
+            "pattern": "Two child Entity quads (_ks_hp_bg, _ks_hp_fg) parented to billboard ent. Created once, then toggle .enabled and update scale/color/position on subsequent frames."
+          },
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 20 --subdir r5_health_bars --stem bars --no-llm --fps-probe --hero-fps-probe-count 10 --fps-warmup-sec 10",
+            "python main.py --no-llm  (Ursina default: wait for combat, observe damaged entity health bars)"
+          ],
+          "evidence": {
+            "pytest": {
+              "status": "PASS",
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "result": "307 passed in 37.08s"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08 Round 2: hero name/gold/rest text labels in same sync methods (different insertion points)",
+            "Agent 03 Round 2: building labels + HP bars + gold displays in _sync_snapshot_buildings()",
+            "Agent 10 Round 3: before/after profiling to verify ursina_renderer P90 stayed under 12ms"
+          ]
+        }
+      }
+    },
     "tiny_rpg_sprite_rebuild": {
       "sprint_meta": {
         "notes": "Direct human request: rebuild Tiny RPG hero/enemy sprites from clean vendor crops."

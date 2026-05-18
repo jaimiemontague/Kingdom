@@ -103,6 +103,97 @@ PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 # Debug toggle: render all POIs regardless of discovery state (dev/testing aid).
 _debug_show_pois = os.environ.get("KINGDOM_DEBUG_SHOW_ALL_POIS", "").strip().lower() in ("1", "true", "yes")
 
+# ---------------------------------------------------------------------------
+# R5 Phase 2 (Agent 03): Building label display names for native Ursina text
+# ---------------------------------------------------------------------------
+_BUILDING_LABEL_MAP: dict[str, str] = {
+    "castle": "CASTLE",
+    "warrior_guild": "WARRIORS",
+    "ranger_guild": "RANGERS",
+    "rogue_guild": "ROGUES",
+    "wizard_guild": "WIZARDS",
+    "market": "MARKET",
+    "blacksmith": "SMITH",
+    "inn": "INN",
+    "trading_post": "TRADE",
+    "guard_tower": "GUARDS",
+    "house": "HOUSE",
+    "farm": "FARM",
+    "palace": "PALACE",
+    "ballista_tower": "BALLISTA",
+    "wizard_tower": "WIZ TOWER",
+    "fairground": "FAIR",
+    "library": "LIBRARY",
+    "gardens": "GARDENS",
+    "gnome_hovel": "GNOMES",
+    "elven_bungalow": "ELVES",
+    "dwarven_settlement": "DWARVES",
+    # Temples
+    "temple_agrela": "AGRELA",
+    "temple_dauros": "DAUROS",
+    "temple_fervus": "FERVUS",
+    "temple_helia": "HELIA",
+    "temple_krolm": "KROLM",
+    "temple_lunord": "LUNORD",
+    "temple_krypta": "KRYPTA",
+}
+
+
+def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
+    """R5 Phase 2 (Agent 03): Attach/update label, HP bar, and gold display
+    as native Ursina child entities on a building entity.
+
+    Skips POI buildings and lairs — only normal player-built buildings get labels.
+    """
+    # Skip POIs (discovery-gated) and lairs (enemy structures)
+    if getattr(b, "is_poi", False) or is_lair:
+        return
+
+    # --- Building label ---
+    label_ent = getattr(ent, '_ks_label', None)
+    if label_ent is None:
+        label_text = _BUILDING_LABEL_MAP.get(bts, bts.upper())
+        label_ent = Text(
+            text=label_text, parent=ent, origin=(0, 0), scale=15,
+            color=color.white, billboard=True, y=1.2,
+        )
+        ent._ks_label = label_ent
+
+    # --- Building HP bar (show only when damaged) ---
+    b_hp = int(getattr(b, 'hp', 0) or 0)
+    b_max_hp = int(getattr(b, 'max_hp', 1) or 1)
+    hp_bar_ent = getattr(ent, '_ks_hp_bar', None)
+    if b_max_hp > 0 and b_hp > 0 and b_hp < b_max_hp:
+        ratio = b_hp / b_max_hp
+        if hp_bar_ent is None:
+            hp_bar_ent = Entity(parent=ent, model='quad',
+                color=color.green if ratio > 0.5 else color.red,
+                scale=(1.0 * ratio, 0.05, 1), y=1.5, billboard=True, unlit=True)
+            hp_bar_ent.set_depth_test(False)
+            ent._ks_hp_bar = hp_bar_ent
+        else:
+            hp_bar_ent.scale_x = ratio
+            hp_bar_ent.color = color.green if ratio > 0.5 else color.red
+            hp_bar_ent.enabled = True
+    elif hp_bar_ent is not None:
+        hp_bar_ent.enabled = False
+
+    # --- Gold display (show when building has gold stash) ---
+    stash = int(getattr(b, 'stash_gold', 0) or getattr(b, 'stored_tax_gold', 0) or 0)
+    gold_ent = getattr(ent, '_ks_gold_label', None)
+    if stash > 0:
+        text = f"${stash}"
+        if gold_ent is None:
+            gold_ent = Text(text=text, parent=ent, origin=(0, 0), scale=12,
+                color=color.rgb(1.0, 0.8, 0.2), billboard=True, y=0.9)
+            ent._ks_gold_label = gold_ent
+        else:
+            if gold_ent.text != text:
+                gold_ent.text = text
+            gold_ent.enabled = True
+    elif gold_ent is not None:
+        gold_ent.enabled = False
+
 
 def _unit_raster_px() -> int:
     return int(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE))
@@ -176,6 +267,10 @@ class UrsinaRenderer:
         self._log_stack_entities: dict[tuple[int, int], Entity] = {}
         # WK55: POI mystery "?" marker entities, keyed by POI id().
         self._poi_mystery_markers: dict[int, Entity] = {}
+
+        # R4: sim interpolation state for linear position interpolation
+        self._frame_blend: float = 0.0
+        self._frame_tick_id: int = -1
 
         # v1.5: parent Entity for per-tile 3D terrain meshes (see _build_3d_terrain).
         self._terrain_entity: Entity | None = None
@@ -414,47 +509,54 @@ class UrsinaRenderer:
             ent.texture_scale = (FRAME_SIZE / ATLAS_SIZE, FRAME_SIZE / ATLAS_SIZE)
             ent._ks_atlas_tex_set = True
 
-        # Compute current animation frame (must run every frame for timer advancement)
+        # --- Phase 1: Position interpolation (runs every frame) ---
+        # Advance the interpolation window on sim tick boundaries, not on
+        # position change — otherwise stationary entities never converge
+        # (prev stays stale and blend cycling causes visual oscillation).
+        last_tick = getattr(ent, "_ks_last_tick_id", -1)
+        if last_tick != self._frame_tick_id:
+            ent._ks_prev_sim_pos = getattr(ent, "_ks_curr_sim_pos", pos_xyz)
+            ent._ks_curr_sim_pos = pos_xyz
+            ent._ks_last_tick_id = self._frame_tick_id
+
+        prev_sim = getattr(ent, "_ks_prev_sim_pos", pos_xyz)
+        curr_sim = getattr(ent, "_ks_curr_sim_pos", pos_xyz)
+
+        dx = curr_sim[0] - prev_sim[0]
+        dy = curr_sim[1] - prev_sim[1]
+        dz = curr_sim[2] - prev_sim[2]
+        dist_sq = dx * dx + dy * dy + dz * dz
+
+        if dist_sq < 0.0001 or dist_sq > 9.0:
+            interp_pos = curr_sim
+        else:
+            t = self._frame_blend
+            interp_pos = (
+                prev_sim[0] + dx * t,
+                prev_sim[1] + dy * t,
+                prev_sim[2] + dz * t,
+            )
+
+        if getattr(ent, "_ks_last_pos", None) != interp_pos:
+            ent.position = interp_pos
+            ent._ks_last_pos = interp_pos
+
+        # --- Phase 2: Appearance updates (skippable when unchanged) ---
         clip_name, frame_idx = self._compute_anim_frame(
             obj_id, entity, unit_type, class_key, base_clip_fn
         )
 
-        # Early-out: skip UV/position/scale/color/shader writes when nothing changed
-        sync_key = (pos_xyz, clip_name, frame_idx, scale_xyz)
-        if getattr(ent, '_ks_last_sync_key', None) == sync_key:
+        appearance_key = (clip_name, frame_idx, scale_xyz)
+        if getattr(ent, '_ks_last_appearance_key', None) == appearance_key:
             return
-        ent._ks_last_sync_key = sync_key
+        ent._ks_last_appearance_key = appearance_key
 
-        # Update UV offset (cheap — just a vec2 uniform)
+        # Update UV offset
         uv = atlas.lookup_uv(unit_type, class_key, clip_name, frame_idx)
         new_offset = (uv[0], 1.0 - uv[1] - uv[3])
         if getattr(ent, "_ks_last_uv_offset", None) != new_offset:
             ent.texture_offset = new_offset
             ent._ks_last_uv_offset = new_offset
-
-        # Position smoothing: lerp toward target to eliminate visual jumps from frame stalls.
-        # Snap if first frame, or if distance is large (teleport/entering building).
-        prev_visual = getattr(ent, "_ks_visual_pos", None)
-        if prev_visual is None:
-            smooth_pos = pos_xyz
-        else:
-            dx = pos_xyz[0] - prev_visual[0]
-            dy = pos_xyz[1] - prev_visual[1]
-            dz = pos_xyz[2] - prev_visual[2]
-            dist_sq = dx * dx + dy * dy + dz * dz
-            if dist_sq < 0.0001 or dist_sq > 9.0:
-                smooth_pos = pos_xyz
-            else:
-                a = 0.82
-                smooth_pos = (
-                    prev_visual[0] + dx * a,
-                    prev_visual[1] + dy * a,
-                    prev_visual[2] + dz * a,
-                )
-        ent._ks_visual_pos = smooth_pos
-        if getattr(ent, "_ks_last_pos", None) != smooth_pos:
-            ent.position = smooth_pos
-            ent._ks_last_pos = smooth_pos
 
         # Update scale (with guard)
         if getattr(ent, "_ks_last_scale", None) != scale_xyz:
@@ -543,6 +645,10 @@ class UrsinaRenderer:
             HeroClass = None
 
         self._ensure_shadow_bounds_once()
+
+        # R4: cache sim interpolation state for this frame
+        self._frame_blend = float(getattr(snapshot, 'sim_blend_fraction', 0.0))
+        self._frame_tick_id = int(getattr(snapshot, 'sim_tick_id', 0))
 
         # WK59 perf: cache visible tile rect for frustum culling this frame
         self._frame_visible_rect = self._get_visible_tile_rect()
@@ -720,6 +826,8 @@ class UrsinaRenderer:
                         ent._ks_cave_tint_applied = True
                 # WK55: POI 3-state visibility post-processing
                 self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
+                # R5 Phase 2 (Agent 03): native building label / HP bar / gold
+                _sync_building_worldspace_ui(b, bts, ent, is_lair)
                 active_ids.add(obj_id)
                 continue
 
@@ -751,6 +859,8 @@ class UrsinaRenderer:
                         ent._ks_cave_tint_applied = True
                 # WK55: POI 3-state visibility post-processing
                 self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
+                # R5 Phase 2 (Agent 03): native building label / HP bar / gold
+                _sync_building_worldspace_ui(b, bts, ent, is_lair)
                 active_ids.add(obj_id)
                 continue
 
@@ -800,6 +910,8 @@ class UrsinaRenderer:
                     ent._ks_cave_tint_applied = True
             # WK55: POI 3-state visibility post-processing
             self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
+            # R5 Phase 2 (Agent 03): native building label / HP bar / gold
+            _sync_building_worldspace_ui(b, bts, ent, is_lair)
             active_ids.add(obj_id)
 
 
@@ -857,9 +969,104 @@ class UrsinaRenderer:
             # Layer compositing (not Y offset): draw after building billboards; skip depth so the
             # "inside" bubble paints over the same footprint as the facade.
             self._entity_render.sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
+
+            # --- R5: Native Ursina health bar (Agent 09) ---
+            _h_hp = int(getattr(h, 'hp', 0) or 0)
+            _h_max_hp = int(getattr(h, 'max_hp', 1) or 1)
+            _h_hp_bg = getattr(ent, '_ks_hp_bg', None)
+            _h_hp_fg = getattr(ent, '_ks_hp_fg', None)
+
+            if _h_max_hp > 0 and _h_hp > 0 and _h_hp < _h_max_hp:
+                _h_ratio = _h_hp / _h_max_hp
+                _h_bar_w = 0.8
+                _h_bar_h = 0.04
+                _h_bar_y = 0.50
+
+                if _h_hp_bg is None:
+                    _h_hp_bg = Entity(
+                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
+                        scale=(_h_bar_w, _h_bar_h, 1), position=(0, _h_bar_y, -0.01),
+                        billboard=True, unlit=True,
+                    )
+                    _h_hp_bg.set_depth_test(False)
+                    ent._ks_hp_bg = _h_hp_bg
+
+                if _h_hp_fg is None:
+                    _h_hp_fg = Entity(
+                        parent=ent, model='quad',
+                        color=color.green if _h_ratio > 0.5 else color.red,
+                        scale=(_h_bar_w * _h_ratio, _h_bar_h, 1),
+                        position=(-(_h_bar_w * (1 - _h_ratio) / 2), _h_bar_y, -0.02),
+                        billboard=True, unlit=True,
+                    )
+                    _h_hp_fg.set_depth_test(False)
+                    ent._ks_hp_fg = _h_hp_fg
+                else:
+                    _h_hp_fg.scale_x = _h_bar_w * _h_ratio
+                    _h_hp_fg.x = -(_h_bar_w * (1 - _h_ratio) / 2)
+                    _h_hp_fg.color = color.green if _h_ratio > 0.5 else color.red
+
+                _h_hp_bg.enabled = True
+                _h_hp_fg.enabled = True
+            else:
+                if _h_hp_bg is not None:
+                    _h_hp_bg.enabled = False
+                if _h_hp_fg is not None:
+                    _h_hp_fg.enabled = False
+
+            # --- R5: Hero name label (Agent 08) ---
+            hero_name = getattr(h, 'name', '') or ''
+            name_ent = getattr(ent, '_ks_name_label', None)
+            if name_ent is None and hero_name:
+                from ursina import Text as UrsinaText
+                name_ent = UrsinaText(
+                    text=hero_name, parent=ent, origin=(0, 0), scale=12,
+                    color=color.white, billboard=True, y=-0.6,
+                )
+                ent._ks_name_label = name_ent
+            elif name_ent is not None and name_ent.text != hero_name:
+                name_ent.text = hero_name
+
+            # --- R5: Hero gold display (Agent 08) ---
+            hero_gold = int(getattr(h, 'gold', 0) or 0)
+            hero_taxed = int(getattr(h, 'taxed_gold', 0) or 0)
+            total_gold = hero_gold + hero_taxed
+            gold_ent = getattr(ent, '_ks_gold_label', None)
+            if total_gold > 0:
+                gold_text = f"${hero_gold}(+{hero_taxed})" if hero_taxed > 0 else f"${hero_gold}"
+                if gold_ent is None:
+                    from ursina import Text as UrsinaText
+                    gold_ent = UrsinaText(
+                        text=gold_text, parent=ent, origin=(0, 0), scale=10,
+                        color=color.rgb(1.0, 0.8, 0.2), billboard=True, y=-0.8,
+                    )
+                    ent._ks_gold_label = gold_ent
+                else:
+                    if gold_ent.text != gold_text:
+                        gold_ent.text = gold_text
+                    gold_ent.enabled = True
+            elif gold_ent is not None:
+                gold_ent.enabled = False
+
+            # --- R5: Hero rest indicator (Agent 08) ---
+            is_resting = (getattr(h, 'state', '') == 'RESTING')
+            rest_ent = getattr(ent, '_ks_rest_label', None)
+            if is_resting:
+                if rest_ent is None:
+                    from ursina import Text as UrsinaText
+                    rest_ent = UrsinaText(
+                        text='Zzz', parent=ent, origin=(0, 0), scale=12,
+                        color=color.rgb(0.7, 0.85, 1.0), billboard=True, y=0.7, x=0.3,
+                    )
+                    ent._ks_rest_label = rest_ent
+                else:
+                    rest_ent.enabled = True
+            elif rest_ent is not None:
+                rest_ent.enabled = False
+
             active_ids.add(obj_id)
 
-        
+
     def _sync_snapshot_enemies(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Enemies — atlas UV billboards (WK59 perf: single shared texture)
         ts = float(config.TILE_SIZE)
@@ -903,6 +1110,51 @@ class UrsinaRenderer:
                 ent, obj_id, e, "enemy", et_key, _enemy_base_clip,
                 col, (sx_e, s, 1), (wx, terrain_y + s * 0.5, wz), sprite_unlit_shader,
             )
+
+            # --- R5: Native Ursina health bar (Agent 09) ---
+            _e_hp = int(getattr(e, 'hp', 0) or 0)
+            _e_max_hp = int(getattr(e, 'max_hp', 1) or 1)
+            _e_hp_bg = getattr(ent, '_ks_hp_bg', None)
+            _e_hp_fg = getattr(ent, '_ks_hp_fg', None)
+
+            if _e_max_hp > 0 and _e_hp > 0 and _e_hp < _e_max_hp:
+                _e_ratio = _e_hp / _e_max_hp
+                _e_bar_w = 0.6
+                _e_bar_h = 0.03
+                _e_bar_y = 0.40
+
+                if _e_hp_bg is None:
+                    _e_hp_bg = Entity(
+                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
+                        scale=(_e_bar_w, _e_bar_h, 1), position=(0, _e_bar_y, -0.01),
+                        billboard=True, unlit=True,
+                    )
+                    _e_hp_bg.set_depth_test(False)
+                    ent._ks_hp_bg = _e_hp_bg
+
+                if _e_hp_fg is None:
+                    _e_hp_fg = Entity(
+                        parent=ent, model='quad',
+                        color=color.green if _e_ratio > 0.5 else color.red,
+                        scale=(_e_bar_w * _e_ratio, _e_bar_h, 1),
+                        position=(-(_e_bar_w * (1 - _e_ratio) / 2), _e_bar_y, -0.02),
+                        billboard=True, unlit=True,
+                    )
+                    _e_hp_fg.set_depth_test(False)
+                    ent._ks_hp_fg = _e_hp_fg
+                else:
+                    _e_hp_fg.scale_x = _e_bar_w * _e_ratio
+                    _e_hp_fg.x = -(_e_bar_w * (1 - _e_ratio) / 2)
+                    _e_hp_fg.color = color.green if _e_ratio > 0.5 else color.red
+
+                _e_hp_bg.enabled = True
+                _e_hp_fg.enabled = True
+            else:
+                if _e_hp_bg is not None:
+                    _e_hp_bg.enabled = False
+                if _e_hp_fg is not None:
+                    _e_hp_fg.enabled = False
+
             active_ids.add(obj_id)
 
 
@@ -944,6 +1196,51 @@ class UrsinaRenderer:
                 ent, obj_id, p, "worker", wk, _peasant_base_clip,
                 col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
             )
+
+            # --- R5: Native Ursina health bar (Agent 09) ---
+            _p_hp = int(getattr(p, 'hp', 0) or 0)
+            _p_max_hp = int(getattr(p, 'max_hp', 1) or 1)
+            _p_hp_bg = getattr(ent, '_ks_hp_bg', None)
+            _p_hp_fg = getattr(ent, '_ks_hp_fg', None)
+
+            if _p_max_hp > 0 and _p_hp > 0 and _p_hp < _p_max_hp:
+                _p_ratio = _p_hp / _p_max_hp
+                _p_bar_w = 0.5
+                _p_bar_h = 0.03
+                _p_bar_y = 0.35
+
+                if _p_hp_bg is None:
+                    _p_hp_bg = Entity(
+                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
+                        scale=(_p_bar_w, _p_bar_h, 1), position=(0, _p_bar_y, -0.01),
+                        billboard=True, unlit=True,
+                    )
+                    _p_hp_bg.set_depth_test(False)
+                    ent._ks_hp_bg = _p_hp_bg
+
+                if _p_hp_fg is None:
+                    _p_hp_fg = Entity(
+                        parent=ent, model='quad',
+                        color=color.green if _p_ratio > 0.5 else color.red,
+                        scale=(_p_bar_w * _p_ratio, _p_bar_h, 1),
+                        position=(-(_p_bar_w * (1 - _p_ratio) / 2), _p_bar_y, -0.02),
+                        billboard=True, unlit=True,
+                    )
+                    _p_hp_fg.set_depth_test(False)
+                    ent._ks_hp_fg = _p_hp_fg
+                else:
+                    _p_hp_fg.scale_x = _p_bar_w * _p_ratio
+                    _p_hp_fg.x = -(_p_bar_w * (1 - _p_ratio) / 2)
+                    _p_hp_fg.color = color.green if _p_ratio > 0.5 else color.red
+
+                _p_hp_bg.enabled = True
+                _p_hp_fg.enabled = True
+            else:
+                if _p_hp_bg is not None:
+                    _p_hp_bg.enabled = False
+                if _p_hp_fg is not None:
+                    _p_hp_fg.enabled = False
+
             active_ids.add(obj_id)
 
 
@@ -981,6 +1278,51 @@ class UrsinaRenderer:
                 col, (GUARD_SCALE_XZ, GUARD_SCALE_Y, 1),
                 (wx, terrain_y + GUARD_SCALE_Y * 0.5, wz), sprite_unlit_shader,
             )
+
+            # --- R5: Native Ursina health bar (Agent 09) ---
+            _g_hp = int(getattr(g, 'hp', 0) or 0)
+            _g_max_hp = int(getattr(g, 'max_hp', 1) or 1)
+            _g_hp_bg = getattr(ent, '_ks_hp_bg', None)
+            _g_hp_fg = getattr(ent, '_ks_hp_fg', None)
+
+            if _g_max_hp > 0 and _g_hp > 0 and _g_hp < _g_max_hp:
+                _g_ratio = _g_hp / _g_max_hp
+                _g_bar_w = 0.7
+                _g_bar_h = 0.03
+                _g_bar_y = 0.45
+
+                if _g_hp_bg is None:
+                    _g_hp_bg = Entity(
+                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
+                        scale=(_g_bar_w, _g_bar_h, 1), position=(0, _g_bar_y, -0.01),
+                        billboard=True, unlit=True,
+                    )
+                    _g_hp_bg.set_depth_test(False)
+                    ent._ks_hp_bg = _g_hp_bg
+
+                if _g_hp_fg is None:
+                    _g_hp_fg = Entity(
+                        parent=ent, model='quad',
+                        color=color.green if _g_ratio > 0.5 else color.red,
+                        scale=(_g_bar_w * _g_ratio, _g_bar_h, 1),
+                        position=(-(_g_bar_w * (1 - _g_ratio) / 2), _g_bar_y, -0.02),
+                        billboard=True, unlit=True,
+                    )
+                    _g_hp_fg.set_depth_test(False)
+                    ent._ks_hp_fg = _g_hp_fg
+                else:
+                    _g_hp_fg.scale_x = _g_bar_w * _g_ratio
+                    _g_hp_fg.x = -(_g_bar_w * (1 - _g_ratio) / 2)
+                    _g_hp_fg.color = color.green if _g_ratio > 0.5 else color.red
+
+                _g_hp_bg.enabled = True
+                _g_hp_fg.enabled = True
+            else:
+                if _g_hp_bg is not None:
+                    _g_hp_bg.enabled = False
+                if _g_hp_fg is not None:
+                    _g_hp_fg.enabled = False
+
             active_ids.add(obj_id)
 
 
@@ -1009,6 +1351,26 @@ class UrsinaRenderer:
                     ent, obj_id, tc, "worker", "tax_collector", _tax_collector_base_clip,
                     col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
                 )
+
+                # --- R5: Tax collector gold display (Agent 08) ---
+                carried = int(getattr(tc, 'carried_gold', 0) or 0)
+                tc_gold_ent = getattr(ent, '_ks_tc_gold', None)
+                if carried > 0:
+                    tc_text = f"${carried}"
+                    if tc_gold_ent is None:
+                        from ursina import Text as UrsinaText
+                        tc_gold_ent = UrsinaText(
+                            text=tc_text, parent=ent, origin=(0, 0), scale=10,
+                            color=color.rgb(1.0, 0.8, 0.2), billboard=True, y=0.5,
+                        )
+                        ent._ks_tc_gold = tc_gold_ent
+                    else:
+                        if tc_gold_ent.text != tc_text:
+                            tc_gold_ent.text = tc_text
+                        tc_gold_ent.enabled = True
+                elif tc_gold_ent is not None:
+                    tc_gold_ent.enabled = False
+
                 active_ids.add(obj_id)
 
 
