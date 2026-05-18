@@ -843,6 +843,10 @@ class UrsinaTerrainFogCollab:
         Converts POI grid positions to fog UV space [0,1] and sets shader uniforms.
         Call this whenever POI discovery state changes.
         """
+        # FEATURE GATE: underground visuals disabled — shader defaults (radius=0,
+        # entrances at 99,99) already produce no holes, so just skip the update.
+        return
+
         ground_ent = getattr(self._r, '_terrain_ground_entity', None)
         if ground_ent is None:
             return

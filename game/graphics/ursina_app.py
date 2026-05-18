@@ -129,6 +129,9 @@ class UrsinaApp:
         self._camera_transition_speed: float = 0.0
         self._camera_surface_y: float | None = None  # stored when descending
 
+        # WK57 Wave 4: Track pinned hero's last known layer for auto-follow
+        self._hero_follow_last_layer: int | None = None
+
         tiles_w = config.MAP_WIDTH
         tiles_h = config.MAP_HEIGHT
 
@@ -554,6 +557,27 @@ class UrsinaApp:
             label = "Camera Lock: ON" if self._camera_orbit_locked else "Camera Lock: OFF"
             hud.add_message(label, (100, 200, 255))
 
+    def _toggle_underground_camera(self) -> None:
+        """WK57 Wave 4: Toggle camera between surface (layer 0) and underground (layer -1)."""
+        if self._camera_transitioning:
+            return  # ignore while already transitioning
+        if self._camera_active_layer == 0:
+            # Descend to underground
+            from config import UNDERGROUND_DEPTH
+            target_y = -(UNDERGROUND_DEPTH - 3.0)  # ~-7.0, above cave floor
+            self.begin_camera_underground_transition(target_y)
+            print("Camera: Underground", flush=True)
+            hud = getattr(self.engine, 'hud', None)
+            if hud:
+                hud.add_message("Camera: Underground", (100, 200, 255))
+        else:
+            # Ascend to surface
+            self.begin_camera_surface_transition()
+            print("Camera: Surface", flush=True)
+            hud = getattr(self.engine, 'hud', None)
+            if hud:
+                hud.add_message("Camera: Surface", (100, 200, 255))
+
     def _sync_ursina_camera_fov_from_zoom(self) -> None:
         """Keep perspective FOV tied to engine.zoom so wheel, +/-, and Q/E match HUD/world mapping."""
         eng = self.engine
@@ -765,6 +789,9 @@ class UrsinaApp:
                 return
             if _ks == 'l':
                 self._toggle_camera_lock()
+                return
+            if _ks == 'u':
+                self._toggle_underground_camera()
                 return
         # WK52 R12: Route wheel to left menus before queuing — MOUSEMOTION may map pointer to
         # world-relative coords while building/hero menus use virtual framebuffer pixels only.
@@ -1403,6 +1430,37 @@ class UrsinaApp:
                         min_cam_y = ground_y + 1.0  # offset above ground for comfortable feel
                         if float(camera.world_position.y) < min_cam_y:
                             camera.world_position = Vec3(cam_wx, min_cam_y, cam_wz)
+                except Exception:
+                    pass
+
+            # WK57 Wave 4: Auto-follow pinned hero underground/surface transitions.
+            # If the pinned hero's layer changes, automatically move the camera to match.
+            if not self._camera_transitioning:
+                try:
+                    _hud = getattr(eng, 'hud', None)
+                    _ps = getattr(_hud, '_pin_slot', None) if _hud else None
+                    _ph_id = getattr(_ps, 'hero_id', None) if _ps else None
+                    if _ph_id is not None:
+                        _ph = eng._find_hero_by_id(_ph_id)
+                        _ph_layer = getattr(_ph, 'layer', 0) if _ph is not None else 0
+                        _prev_layer = self._hero_follow_last_layer
+                        if _prev_layer is not None and _ph_layer != _prev_layer:
+                            if _ph_layer == -1 and self._camera_active_layer == 0:
+                                # Hero entered underground — follow
+                                from config import UNDERGROUND_DEPTH
+                                self.begin_camera_underground_transition(-(UNDERGROUND_DEPTH - 3.0))
+                                print("Camera: Auto-follow underground", flush=True)
+                                if _hud:
+                                    _hud.add_message("Camera: Following hero underground", (100, 200, 255))
+                            elif _ph_layer == 0 and self._camera_active_layer == -1:
+                                # Hero returned to surface — follow
+                                self.begin_camera_surface_transition()
+                                print("Camera: Auto-follow surface", flush=True)
+                                if _hud:
+                                    _hud.add_message("Camera: Following hero to surface", (100, 200, 255))
+                        self._hero_follow_last_layer = _ph_layer
+                    else:
+                        self._hero_follow_last_layer = None
                 except Exception:
                     pass
 

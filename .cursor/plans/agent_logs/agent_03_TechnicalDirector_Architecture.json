@@ -1385,6 +1385,49 @@
           ]
         }
       }
+    },
+    "wk57-wave4-underground-camera-hotfix": {
+      "sprint_meta": {
+        "plan_ref": "hotfix (direct assignment from PM)",
+        "notes": "WK57 Wave 4 hotfix: Underground camera system had no player trigger. Added U key toggle + auto-follow pinned hero layer changes."
+      },
+      "rounds": {
+        "wk57_wave4_r0_hotfix": {
+          "sprint_id": "wk57-wave4-underground-camera-hotfix",
+          "round_id": "wk57_wave4_r0_hotfix",
+          "status": "done",
+          "summary_bullets": [
+            "Task 1: Added U key binding in _handle_ursina_input() to toggle camera between surface (layer 0) and underground (layer -1). Uses begin_camera_underground_transition(target_y=-7.0) and begin_camera_surface_transition(). Follows same pattern as Home/L key handlers. Blocked during chat/command mode.",
+            "Task 2: Verified terrain height clamp bypass already works correctly — line 1423 skips clamp when _camera_active_layer != 0 or _camera_transitioning is True. No changes needed.",
+            "Task 3: Added auto-follow logic in update() that tracks pinned hero layer via _hero_follow_last_layer. When pinned hero's layer changes from 0 to -1, automatically triggers begin_camera_underground_transition(). When layer changes from -1 to 0, triggers begin_camera_surface_transition(). Uses engine._find_hero_by_id() via hud._pin_slot.hero_id.",
+            "Task 4: Verified _sync_underground_meshes() in ursina_renderer.py correctly toggles visibility: cave floor (idx 0) always visible, stalactites/decorations (idx 1+) only when _camera_active_layer == -1. Buildings/heroes/enemies/peasants/guards all check _active_layer for show/hide. No changes needed.",
+            "Added _toggle_underground_camera() method alongside existing _toggle_camera_lock() and _reset_camera_to_default() for consistency."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_app.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "import_verify_app": "PASS (python -c 'from game.graphics.ursina_app import UrsinaApp; print(\"OK\")' succeeded)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Manual playtest: press U key in-game to verify camera descends/ascends smoothly",
+            "Manual playtest: pin a hero, send it into a cave entrance, verify camera auto-follows underground",
+            "Consider adding HUD indicator for current camera layer (surface/underground)"
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_app import UrsinaApp; print('OK')\"",
+            "In-game: press U to toggle underground camera view",
+            "In-game: pin a hero and watch it enter underground — camera should auto-follow"
+          ]
+        }
+      }
     }
   }
 }

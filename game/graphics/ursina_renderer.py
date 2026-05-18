@@ -1006,6 +1006,10 @@ class UrsinaRenderer:
         Also triggers the cave entrance shader update (Wave 1 Task 1D) when
         POI discovery state changes.
         """
+        # FEATURE GATE: underground visuals disabled — no cave meshes, stalactites,
+        # or torch lights created. All infrastructure code preserved for future use.
+        return
+
         ug_areas = getattr(snapshot, 'underground_areas', None) or {}
         pois = getattr(snapshot, 'pois', ())
 

@@ -372,7 +372,8 @@ class POIInteractionSystem:
             world.reveal_underground_circle(area_id, cx, 0, 4)
 
         # WK57 Wave 5C: Spawn underground enemies
-        _spawn_underground_enemies(area, self._sim_engine, event_bus)
+        # FEATURE GATE: underground visuals disabled — skip enemy spawning underground.
+        # _spawn_underground_enemies(area, self._sim_engine, event_bus)
 
         poi.is_interacted = True
         poi.interaction_count = getattr(poi, "interaction_count", 0) + 1
