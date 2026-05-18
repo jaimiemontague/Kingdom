@@ -521,6 +521,93 @@
           ]
         }
       }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk57_underground_vertical_stacking.plan.md",
+        "notes": "WK57: Underground vertical stacking. Agent 05 owns Wave 4 (layer pathfinding + underground fog) and Wave 5 (hero transitions + spawning + AI cave exploration)."
+      },
+      "rounds": {
+        "wk57_w4_layer_pathfinding_fog": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w4_layer_pathfinding_fog",
+          "status": "done",
+          "what_i_changed": [
+            "game/systems/pathfinding.py: Added LayerPathfinder class wrapping existing find_path() with layer-aware routing. Handles 4 cases: surface-only, underground-only, surface-to-underground (via cave entrance), underground-to-surface. Underground A* uses 4-directional movement on area walkability grid with local/world coord conversion.",
+            "game/world.py: Added underground_visibility dict in World.__init__. Added init_underground_fog(area) to create per-area UNSEEN grids. Added reveal_underground_circle(area_id, local_x, local_z, radius) for circular fog reveal.",
+            "game/sim_engine.py: After underground area generation in setup_initial_state(), added fog grid initialization loop and LayerPathfinder instantiation (self.layer_pathfinder).",
+            "tests/test_underground.py (new): 13 tests covering UndergroundArea data model (chambers, walkability, heightmap, corridors), underground fog (init, reveal, bounds, unknown area), and LayerPathfinder (surface-only, start==goal, unknown goal, underground-only)."
+          ],
+          "files_changed": [
+            "game/systems/pathfinding.py",
+            "game/world.py",
+            "game/sim_engine.py",
+            "tests/test_underground.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "320 passed, DONE: PASS"
+            },
+            "underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "summary": "13 passed"
+            },
+            "import_check": {
+              "command": "python -c \"from game.systems.pathfinding import LayerPathfinder; print('OK')\"",
+              "exit_code": 0
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 5 (Agent 05): hero descent/ascent state machine, cave entry via POI interaction, underground enemy spawning, AI cave exploration scoring."
+          ]
+        },
+        "wk57_w5_hero_transitions_spawning_ai": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w5_hero_transitions_spawning_ai",
+          "status": "done",
+          "what_i_changed": [
+            "game/entities/hero.py: Added underground_area_id, underground_local_x, underground_local_z fields to Hero.__init__. Added begin_descent(area_id, entrance_x, entrance_y) and begin_ascent() transition methods.",
+            "game/systems/poi_interaction.py: Added _underground_areas and _sim_engine references to POIInteractionSystem.__init__. Replaced _handle_dungeon from flavor-text-only to full cave entry: triggers hero.begin_descent(), marks entrance chamber explored, reveals underground fog, spawns underground enemies. Added module-level _spawn_underground_enemies() function that instantiates enemies from chamber data at layer=-1.",
+            "game/sim_engine.py: Wired underground_areas and sim self-reference to poi_interaction_system after setup. Added WK57 Wave 5E retreat check in update loop: calls check_underground_hero_retreat for underground heroes each tick.",
+            "game/underground.py: Added check_underground_hero_retreat(hero, underground_areas) function that triggers begin_ascent() when hero HP < 30% max or all chambers cleared.",
+            "ai/behaviors/poi_awareness.py: Added dungeon_factor to score_poi_for_personality(): aggressive/brave heroes get 1.5x, cautious heroes get 0.2x (low level) or 0.8x, low HP heroes (<70%) get 0.1x multiplier. Updated maybe_visit_poi() to target entrance tile directly for dungeon POIs.",
+            "tests/test_underground.py: Extended from 13 to 25 tests. Added TestHeroTransitions (5 tests: descent/ascent layer, local coords, field existence), TestHeroRetreat (5 tests: low HP, healthy, all cleared, surface no-op, missing area), TestDungeonScoring (2 tests: aggressive bonus, low HP avoidance)."
+          ],
+          "files_changed": [
+            "game/entities/hero.py",
+            "game/systems/poi_interaction.py",
+            "game/sim_engine.py",
+            "game/underground.py",
+            "ai/behaviors/poi_awareness.py",
+            "tests/test_underground.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "332 passed, DONE: PASS"
+            },
+            "underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "summary": "25 passed"
+            },
+            "method_check": {
+              "command": "python -c \"from game.entities.hero import Hero; h = Hero.__new__(Hero); print(hasattr(h, 'begin_descent'), hasattr(h, 'begin_ascent'))\"",
+              "exit_code": 0,
+              "output": "True True"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 6: QA + performance verification (Agents 10 + 11)."
+          ]
+        }
+      }
     }
   }
 }

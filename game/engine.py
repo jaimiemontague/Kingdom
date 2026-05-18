@@ -328,8 +328,16 @@ class GameEngine:
                 sim = getattr(self, 'sim', self)
                 sim._fog_revealers_snapshot = None
                 self._fog_revision = getattr(self, '_fog_revision', 0) + 100
+                poi_count = 0
+                for poi in getattr(sim, 'pois', []):
+                    if not getattr(poi, 'is_discovered', False):
+                        poi.is_discovered = True
+                        poi_count += 1
+                msg = "Fog of war disabled — all entities visible!"
+                if poi_count:
+                    msg += f" ({poi_count} POI{'s' if poi_count != 1 else ''} revealed)"
                 if hud:
-                    hud.add_message("Fog of war disabled — all entities visible!", (100, 255, 100))
+                    hud.add_message(msg, (100, 255, 100))
 
         elif cmd == '/gold':
             amount = 500

@@ -153,6 +153,13 @@ class Hero:
         self.last_decision: HeroDecisionRecord | None = None
         self._intent_prev_key: tuple | None = None
         
+        # WK57: Layer tracking (0 = surface, -1 = underground)
+        self.layer = 0
+        # WK57 Wave 5: Underground area tracking
+        self.underground_area_id: str | None = None  # which area hero is in
+        self.underground_local_x: int = 0  # position in area local coords
+        self.underground_local_z: int = 0
+
         # Visual
         self.size = 20
         self.color = COLOR_BLUE
@@ -210,6 +217,25 @@ class Hero:
     def set_event_bus(self, event_bus) -> None:
         """Wire the sim event bus so level-up can emit HERO_LEVEL_UP (WK52)."""
         self._event_bus = event_bus
+
+    # ------------------------------------------------------------------
+    # WK57 Wave 5: Underground transition methods
+    # ------------------------------------------------------------------
+
+    def begin_descent(self, area_id: str, entrance_x: int, entrance_y: int):
+        """Start descending into an underground area."""
+        self.layer = -1
+        self.underground_area_id = area_id
+        # Place hero at entrance chamber (local coords: center_x, z=0)
+        self.underground_local_x = 0
+        self.underground_local_z = 0
+
+    def begin_ascent(self):
+        """Start ascending back to surface."""
+        self.layer = 0
+        self.underground_area_id = None
+        self.underground_local_x = 0
+        self.underground_local_z = 0
 
     @property
     def attack(self) -> int:

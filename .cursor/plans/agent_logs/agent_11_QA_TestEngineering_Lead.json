@@ -1548,6 +1548,129 @@
           ]
         }
       }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "plan_ref": "wk57_underground_vertical_stacking",
+        "pm_hub_round": "wk57_wave6_final_verification",
+        "notes": "WK57 Wave 6 (final verification): 6-gate QA pass for underground vertical stacking sprint."
+      },
+      "rounds": {
+        "wk57_wave6_final_verification": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_wave6_final_verification",
+          "status": "done",
+          "pm_context": "wk57_underground_vertical_stacking Wave 6 — final QA verification of functionally complete sprint. 6 gates executed in order.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 final QA verification only).",
+            "Executed all 6 gates in sequence: smoke suite, asset validation, underground tests, regression spot checks, import verification, data model integrity."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; 332 passed, 1 warning; determinism_guard + all observe_sync profiles exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "25 passed, 1 warning"
+            },
+            {
+              "command": "python -m pytest tests/test_hero.py tests/test_combat.py tests/test_poi_interaction.py tests/test_enemy.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "hero=11, combat=7, poi_interaction=19, enemy=7 — all passed"
+            },
+            {
+              "command": "python -c import checks (5 one-liners)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "underground OK, underground_terrain OK, LayerPathfinder OK, shader OK, hero.begin_descent exists: True"
+            },
+            {
+              "command": "python -c data model integrity (generate_underground_area + validate)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "chambers=4 grid=12x34 walkable_cells=158 heightmap_size=34x12 entrance_at=(50,50) all_chambers_connected=True"
+            }
+          ],
+          "evidence": {
+            "gate_1_smoke_suite": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "pytest_count": "332 passed, 1 warning",
+              "result_line": "[qa_smoke] DONE: PASS",
+              "profiles_all_exit_0": true
+            },
+            "gate_2_asset_validation": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline — expected and OK)"
+            },
+            "gate_3_underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "count": "25 passed",
+              "suites": [
+                "TestUndergroundDataModel (5)",
+                "TestUndergroundFog (4)",
+                "TestLayerPathfinder (4)",
+                "TestHeroTransitions (5)",
+                "TestHeroRetreat (5)",
+                "TestDungeonScoring (2)"
+              ]
+            },
+            "gate_4_regression_spot_checks": {
+              "status": "PASS",
+              "test_hero": "11 passed",
+              "test_combat": "7 passed",
+              "test_poi_interaction": "19 passed",
+              "test_enemy": "7 passed"
+            },
+            "gate_5_import_verification": {
+              "status": "PASS",
+              "checks": {
+                "underground_import": "OK",
+                "underground_terrain_import": "OK",
+                "layer_pathfinder_import": "OK",
+                "terrain_fog_shader_import": "OK",
+                "hero_begin_descent_exists": true
+              }
+            },
+            "gate_6_data_model_integrity": {
+              "status": "PASS",
+              "chambers": 4,
+              "grid": "12x34",
+              "walkable_cells": 158,
+              "heightmap_size": "34x12",
+              "entrance_at": "(50,50)",
+              "all_chambers_connected": true,
+              "notes": "chambers>=3 met; non-zero walkable cells; heightmap matches grid; entrance matches POI position; all non-root chambers connected"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Sprint is clear for release. All 6 gates PASS with 0 failures and 0 regressions."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
     }
   }
 }

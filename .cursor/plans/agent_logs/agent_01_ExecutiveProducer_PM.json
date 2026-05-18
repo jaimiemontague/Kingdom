@@ -6332,6 +6332,115 @@
           }
         }
       }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "status": "human_gate_pending",
+        "created_utc": "2026-05-17T23:00:00Z",
+        "closed_utc": null,
+        "plan_doc": ".cursor/plans/wk57_underground_vertical_stacking.plan.md",
+        "notes": "Sprint 4 of 5 POI roadmap. Full Approach C — ALL 6 WAVES COMPLETE. 332 tests pass (25 new underground tests). All QA gates pass. Awaiting human visual approval + playtest.",
+        "version_target": "TBD",
+        "sprint_results": {
+          "tests_before": 307,
+          "tests_after": 332,
+          "new_test_file": "tests/test_underground.py (25 tests)",
+          "qa_smoke": "PASS",
+          "validate_assets": "PASS (0 errors, 46 warnings — baseline)",
+          "agents_activated": ["03", "05", "11"],
+          "waves_completed": 6,
+          "files_created": ["game/graphics/underground_terrain.py", "tests/test_underground.py"],
+          "files_modified": ["game/underground.py", "config.py", "game/graphics/terrain_fog_shader.py", "game/graphics/ursina_terrain_fog_collab.py", "game/entities/hero.py", "game/entities/enemy.py", "game/sim/snapshot.py", "game/sim_engine.py", "game/graphics/ursina_renderer.py", "game/graphics/ursina_app.py", "game/systems/pathfinding.py", "game/world.py", "game/systems/poi_interaction.py", "ai/behaviors/poi_awareness.py"]
+        }
+      },
+      "rounds": {
+        "wk57_w1_datamodel_shader": {
+          "round_meta": {
+            "round_id": "wk57_w1_datamodel_shader",
+            "build_target": "Extend underground data model with world coords + layout. Add config constants. Implement surface cave hole shader (fragment discard). Pipeline cave entrance positions to shader. Add layer field to Hero/Enemy.",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 1
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 1 DONE. Agent 03: Extended underground.py with compute_layout(), walkability grid, floor heightmap. Added 19 UNDERGROUND_* config constants. Extended terrain_fog_shader with 8 cave entrance discard uniforms. Added shader pipeline in ursina_terrain_fog_collab. Added layer=0 to Hero/Enemy. 307 tests pass."
+          },
+          "pm_agent_prompts": {
+            "03": "You are activated for sprint wk57_underground_vertical_stacking, Wave 1.\n\nREAD THE FULL PLAN FIRST: .cursor/plans/wk57_underground_vertical_stacking.plan.md — Section 'Wave 1'.\n\nYOU HAVE 5 TASKS:\n\n1A. Extend game/underground.py: Add world_offset_x, world_offset_z to UndergroundChamber. Add total_width, total_height, walkability grid, floor_heightmap to UndergroundArea. Add compute_layout() method that assigns chamber positions (vertical stack), builds walkability grid, generates Perlin noise floor heightmap. Call compute_layout() at end of generate_underground_area().\n\n1B. Add UNDERGROUND_* config constants to config.py (see plan for exact values). Place after TERRAIN_CASTLE_FLAT_RADIUS.\n\n1C. Extend game/graphics/terrain_fog_shader.py: Add 8 cave_entrance_N uniforms (vec2, default 99.0,99.0), cave_hole_radius (float, default 0.0), cave_edge_width (float, default 0.0). Fragment shader computes distance from v_fog_uv to each entrance, discards if < radius, darkens edge gradient. The plan has the EXACT shader code — copy it.\n\n1D. In game/graphics/ursina_terrain_fog_collab.py: Store terrain ground entity as self._terrain_ground_ent. Add update_cave_entrance_shader() method that converts discovered dungeon POI grid positions to fog UV space and sets shader uniforms. The plan has the EXACT code.\n\n1E. Add self.layer = 0 to Hero.__init__ and Enemy.__init__.\n\nVERIFICATION:\n- python tools/qa_smoke.py --quick (MUST PASS, 307+ tests)\n- python main.py --provider mock (must boot without shader errors)\n- python -c \"from game.underground import generate_underground_area; from game.entities.poi import PointOfInterest, POI_DEFINITIONS; poi = PointOfInterest(50, 50, POI_DEFINITIONS['poi_cave_entrance']); area = generate_underground_area(poi); print(f'chambers={len(area.chambers)}, grid={area.total_width}x{area.total_height}, walkable={sum(sum(r) for r in area.walkability)}')\"\n\nDO NOT COMMIT. Update your agent log when done."
+          },
+          "pm_send_list_minimal": {
+            "waves": [{"wave": 1, "agents": ["03"], "parallel": false}],
+            "intelligence_by_agent": {"03": "high"},
+            "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15"],
+            "rationale": "Wave 1: Agent 03 (high — novel shader work + data model architecture). Sequential only — all subsequent waves depend on this."
+          }
+        },
+        "wk57_w2_underground_mesh": {
+          "round_meta": {
+            "round_id": "wk57_w2_underground_mesh",
+            "build_target": "Generate and render underground cave floor mesh + stalactites",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 2,
+            "depends_on": "wk57_w1_datamodel_shader"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 2 DONE. Agent 03: Created game/graphics/underground_terrain.py (UndergroundTerrainManager). Cave floor mesh from Perlin heightmap + stalactite cones. Integrated into ursina_renderer via _sync_underground_meshes(). Wired underground_areas into SimStateSnapshot. 307 tests pass."
+          }
+        },
+        "wk57_w3_camera_lighting": {
+          "round_meta": {
+            "round_id": "wk57_w3_camera_lighting",
+            "build_target": "Camera layer transitions + underground lighting",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 3,
+            "depends_on": "wk57_w2_underground_mesh"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 3 DONE. Agent 03: Camera layer awareness (camera_active_layer property, begin_camera_underground/surface_transition). Torch PointLights per chamber. Layer-aware entity visibility (surface entities hidden underground, underground entities hidden on surface). Cave floor mesh always visible for hole effect. 307 tests pass."
+          }
+        },
+        "wk57_w4_pathfinding_fog": {
+          "round_meta": {
+            "round_id": "wk57_w4_pathfinding_fog",
+            "build_target": "Layer-aware pathfinding + underground fog of war",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 4,
+            "depends_on": "wk57_w3_camera_lighting"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 4 DONE. Agent 05: LayerPathfinder wrapper in pathfinding.py (4 routing cases: surface-only, underground-only, surface-to-underground, underground-to-surface). Underground fog visibility grid in world.py (init + reveal_underground_circle). Wired in sim_engine.py. 13 tests in test_underground.py. 320 tests pass."
+          }
+        },
+        "wk57_w5_hero_transitions_ai": {
+          "round_meta": {
+            "round_id": "wk57_w5_hero_transitions_ai",
+            "build_target": "Hero descent/ascent + underground spawning + AI cave exploration",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 5,
+            "depends_on": "wk57_w4_pathfinding_fog"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 5 DONE. Agent 05: Hero begin_descent/begin_ascent methods. Dungeon POI handler wired to actual cave entry (marks chamber explored, reveals fog, spawns enemies). Underground enemy spawning from chamber data. AI dungeon scoring (brave=1.5x, cautious=0.2x low-level, low-HP=0.1x). Hero retreat on low HP or all-cleared. 25 tests in test_underground.py. 332 tests pass."
+          }
+        },
+        "wk57_w6_qa_perf": {
+          "round_meta": {
+            "round_id": "wk57_w6_qa_perf",
+            "build_target": "QA gates + performance verification + visual screenshots",
+            "created_utc": "2026-05-17T23:00:00Z",
+            "wave": 6,
+            "depends_on": "wk57_w5_hero_transitions_ai"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 6 DONE. Agent 11 QA: All 6 gates PASS. qa_smoke 332 tests pass. validate_assets 0 errors. 25/25 underground tests pass. Regression checks pass (hero, combat, poi_interaction, enemy tests all green). All imports verified. Data model integrity confirmed (4 chambers, walkability correct, heightmap correct)."
+          }
+        }
+      }
     }
   }
 }

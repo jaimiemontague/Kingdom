@@ -837,6 +837,52 @@ class UrsinaTerrainFogCollab:
         # Store reference so ensure_fog_overlay can upload the fog texture to this entity.
         self._r._terrain_ground_entity = ground_ent
 
+    def update_cave_entrance_shader(self, pois, map_width, map_height):
+        """Upload discovered cave/mine entrance positions to the terrain shader.
+
+        Converts POI grid positions to fog UV space [0,1] and sets shader uniforms.
+        Call this whenever POI discovery state changes.
+        """
+        ground_ent = getattr(self._r, '_terrain_ground_entity', None)
+        if ground_ent is None:
+            return
+
+        from config import UNDERGROUND_HOLE_RADIUS_TILES, UNDERGROUND_HOLE_EDGE_TILES
+
+        entrances = []
+        for poi in pois:
+            poi_def = getattr(poi, 'poi_def', None)
+            if poi_def is None:
+                continue
+            if poi_def.interaction_type != 'dungeon':
+                continue
+            if not getattr(poi, 'is_discovered', False):
+                continue
+            size = poi_def.size
+            cx = poi.grid_x + size[0] / 2.0
+            cy = poi.grid_y + size[1] / 2.0
+            # Convert to fog UV space: x/map_width, 1 - y/map_height (Y is flipped)
+            uv_x = cx / map_width
+            uv_y = 1.0 - (cy / map_height)
+            entrances.append((uv_x, uv_y))
+            if len(entrances) >= 8:
+                break
+
+        for i in range(8):
+            if i < len(entrances):
+                ground_ent.set_shader_input(f"cave_entrance_{i}", Vec2(*entrances[i]))
+            else:
+                ground_ent.set_shader_input(f"cave_entrance_{i}", Vec2(99.0, 99.0))
+
+        if entrances:
+            hole_r = UNDERGROUND_HOLE_RADIUS_TILES / max(map_width, map_height)
+            edge_w = UNDERGROUND_HOLE_EDGE_TILES / max(map_width, map_height)
+            ground_ent.set_shader_input("cave_hole_radius", hole_r)
+            ground_ent.set_shader_input("cave_edge_width", edge_w)
+        else:
+            ground_ent.set_shader_input("cave_hole_radius", 0.0)
+            ground_ent.set_shader_input("cave_edge_width", 0.0)
+
     def _apply_grass_texture(self, ground_ent, tw: int, th: int, use_texture_scale: bool = True) -> None:
         """Load and apply the grass albedo texture to a ground entity."""
         try:

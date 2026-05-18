@@ -314,6 +314,15 @@ class UrsinaRenderer:
         self._terrain_fog = UrsinaTerrainFogCollab(self)
         self._entity_render = UrsinaEntityRenderCollab(self)
 
+        # WK57 Wave 2: Underground terrain mesh manager
+        from game.graphics.underground_terrain import UndergroundTerrainManager
+        self._underground_mgr = UndergroundTerrainManager()
+        self._underground_cave_shader_rev = -1  # tracks when to update cave entrance shader
+
+        # WK57 Wave 3: Underground lighting (torch PointLights) + layer visibility state
+        self._underground_lights: list = []  # Panda3D PointLight NodePaths
+        self._camera_active_layer: int = 0  # set each frame by UrsinaApp
+
     def _setup_scene_lighting(self) -> None:
         """Dim gray-blue ambient + warm directional sun; directional casts shadow maps when enabled.
 
@@ -672,6 +681,7 @@ class UrsinaRenderer:
                 self._instanced_unit_renderer = InstancedUnitRenderer()
             active_ids: set[int] = set()
             self._sync_snapshot_buildings(snapshot, world, active_ids)
+            self._sync_underground_meshes(snapshot, world)
             unit_ids = self._instanced_unit_renderer.update(snapshot)
             active_ids.update(unit_ids)
             # Projectiles draw inside ``InstancedUnitRenderer`` (wk48); skip legacy Entities.
@@ -681,6 +691,8 @@ class UrsinaRenderer:
 
         active_ids = set()
         self._sync_snapshot_buildings(snapshot, world, active_ids)
+        # WK57 Wave 2: Create underground meshes for discovered dungeon POIs
+        self._sync_underground_meshes(snapshot, world)
         self._sync_snapshot_heroes(snapshot, active_ids, HeroClass)
         self._sync_snapshot_enemies(snapshot, world, active_ids)
         self._sync_snapshot_peasants(snapshot, active_ids)
@@ -708,7 +720,16 @@ class UrsinaRenderer:
 
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
+        _active_layer = self._camera_active_layer
         for b in getattr(snapshot, "buildings", ()):
+            # WK57 Wave 3: Buildings are always surface (layer 0) — hide when camera underground
+            if _active_layer != 0:
+                _bld_obj_id = id(b)
+                _bld_existing = self._entities.get(_bld_obj_id)
+                if _bld_existing is not None:
+                    _bld_existing.enabled = False
+                    active_ids.add(_bld_obj_id)
+                continue
             # WK54+fix: Debug mode — force POI tiles to SEEN so they render consistently
             if _debug_show_pois and getattr(b, 'is_poi', False):
                 b.is_discovered = True
@@ -915,10 +936,142 @@ class UrsinaRenderer:
             active_ids.add(obj_id)
 
 
+    # ------------------------------------------------------------------
+    # WK57 Wave 3: Underground lighting (torch PointLights per chamber)
+    # ------------------------------------------------------------------
+
+    def _create_underground_lighting(self, area) -> None:
+        """Create torch PointLights for an underground area's chambers."""
+        try:
+            from panda3d.core import PointLight as PandaPointLight, Vec4
+            from panda3d.core import Vec3 as PVec3
+            from panda3d.core import NodePath
+        except ImportError:
+            return
+        from config import (
+            UNDERGROUND_TORCH_COLOR, UNDERGROUND_TORCH_INTENSITY,
+            UNDERGROUND_TORCH_ATTENUATION, UNDERGROUND_DEPTH, TILE_SIZE,
+        )
+
+        entrance_px = area.entrance_grid_x * TILE_SIZE + TILE_SIZE
+        entrance_py = area.entrance_grid_y * TILE_SIZE + TILE_SIZE
+        base_wx, base_wz = sim_px_to_world_xz(entrance_px, entrance_py)
+        cx = area.total_width // 2
+
+        for ch in area.chambers:
+            gx = cx + ch.world_offset_x + ch.width // 2
+            gz = ch.world_offset_z + ch.height // 2
+
+            wx = (gx - cx) * 1.0 + base_wx
+            wz = -gz * 1.0 + base_wz
+            wy = -UNDERGROUND_DEPTH + 3.0  # torch height above cave floor
+
+            try:
+                from ursina import scene as _scene
+                pl = PandaPointLight(f"torch_{area.area_id}_{ch.chamber_id}")
+                r, g, b = UNDERGROUND_TORCH_COLOR
+                pl.setColor(Vec4(
+                    r * UNDERGROUND_TORCH_INTENSITY,
+                    g * UNDERGROUND_TORCH_INTENSITY,
+                    b * UNDERGROUND_TORCH_INTENSITY,
+                    1.0,
+                ))
+                a1, a2, a3 = UNDERGROUND_TORCH_ATTENUATION
+                pl.setAttenuation(PVec3(a1, a2, a3))
+
+                from panda3d.core import NodePath as NP
+                render_node = _scene.getParent()  # Panda3D render node
+                plnp = render_node.attachNewNode(pl)
+                plnp.setPos(wx, wy, wz)
+                render_node.setLight(plnp)
+                self._underground_lights.append(plnp)
+            except Exception:
+                pass
+
+    def _remove_underground_lighting(self) -> None:
+        """Remove all torch PointLights."""
+        for plnp in self._underground_lights:
+            try:
+                parent = plnp.getParent()
+                if parent:
+                    parent.clearLight(plnp)
+                plnp.removeNode()
+            except Exception:
+                pass
+        self._underground_lights.clear()
+
+    def _sync_underground_meshes(self, snapshot: "SimStateSnapshot", world) -> None:
+        """WK57 Wave 2: Create underground cave meshes for discovered dungeon POIs.
+
+        Also triggers the cave entrance shader update (Wave 1 Task 1D) when
+        POI discovery state changes.
+        """
+        ug_areas = getattr(snapshot, 'underground_areas', None) or {}
+        pois = getattr(snapshot, 'pois', ())
+
+        # Task 2C: Update cave entrance shader when fog revision changes
+        fog_rev = int(getattr(snapshot, 'fog_revision', 0))
+        if fog_rev != self._underground_cave_shader_rev:
+            self._underground_cave_shader_rev = fog_rev
+            if pois and world:
+                map_w = int(getattr(world, 'width', 1))
+                map_h = int(getattr(world, 'height', 1))
+                self._terrain_fog.update_cave_entrance_shader(pois, map_w, map_h)
+
+        # WK57 Wave 3: Toggle stalactite/decoration visibility by camera layer.
+        # Cave floor mesh (index 0 in entity list) stays always visible (seen through
+        # surface holes). Stalactites (index 1+) are only visible when camera is underground.
+        active_layer = self._camera_active_layer
+        for area_id, ent_list in self._underground_mgr._area_entities.items():
+            for idx, ent in enumerate(ent_list):
+                if idx == 0:
+                    # Cave floor mesh — always visible once created
+                    if not ent.enabled:
+                        ent.enabled = True
+                else:
+                    # Stalactite/decoration — only when camera underground
+                    ent.enabled = (active_layer == -1)
+
+        # Task 2B: Create underground meshes for discovered dungeon POIs
+        if not ug_areas:
+            return
+
+        for b in getattr(snapshot, 'buildings', ()):
+            if not getattr(b, 'is_poi', False):
+                continue
+            if not getattr(b, 'is_discovered', False):
+                continue
+            poi_def = getattr(b, 'poi_def', None)
+            if poi_def is None:
+                continue
+            poi_type = getattr(poi_def, 'poi_type', '')
+            if poi_type not in ('poi_cave_entrance', 'poi_mine_entrance'):
+                continue
+
+            area_id = f"underground_{getattr(b, 'grid_x', 0)}_{getattr(b, 'grid_y', 0)}"
+            if area_id in self._underground_mgr._area_entities:
+                continue  # already created
+
+            area = ug_areas.get(area_id)
+            if area and area.is_generated:
+                self._underground_mgr.create_underground_mesh(area, scene)
+                self._underground_mgr.create_stalactites(area, scene)
+                self._create_underground_lighting(area)
+
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — atlas UV billboards (WK59 perf: single shared texture, UV offset per frame)
+        _active_layer = self._camera_active_layer
         for h in getattr(snapshot, "heroes", ()):
             if not getattr(h, "is_alive", True):
+                continue
+            # WK57 Wave 3: Layer-aware visibility — hide heroes on a different layer
+            _hero_layer = getattr(h, 'layer', 0)
+            if _hero_layer != _active_layer:
+                _h_obj_id = id(h)
+                _h_existing = self._entities.get(_h_obj_id)
+                if _h_existing is not None:
+                    _h_existing.enabled = False
+                    active_ids.add(_h_obj_id)
                 continue
             # WK59 perf: frustum culling — skip heroes outside visible tile rect
             if not self._entity_in_view(h.x, h.y):
@@ -1069,8 +1222,19 @@ class UrsinaRenderer:
 
     def _sync_snapshot_enemies(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Enemies — atlas UV billboards (WK59 perf: single shared texture)
+        _active_layer = self._camera_active_layer
         ts = float(config.TILE_SIZE)
         for e in getattr(snapshot, "enemies", ()):
+            # WK57 Wave 3: Layer-aware visibility — hide enemies on a different layer
+            _enemy_layer = getattr(e, 'layer', 0)
+            if _enemy_layer != _active_layer:
+                _e_obj_id = id(e)
+                _e_existing = self._entities.get(_e_obj_id)
+                if _e_existing is not None:
+                    _e_existing.enabled = False
+                    active_ids.add(_e_obj_id)
+                continue
+
             tx, ty = int(e.x / ts), int(e.y / ts)
             is_visible = True
             if 0 <= ty < world.height and 0 <= tx < world.width:
@@ -1160,10 +1324,19 @@ class UrsinaRenderer:
 
     def _sync_snapshot_peasants(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Peasants — atlas UV billboards (WK59 perf: single shared texture)
+        _active_layer = self._camera_active_layer
         for p in getattr(snapshot, "peasants", ()):
             if not getattr(p, "is_alive", True):
                 continue
             if bool(getattr(p, "is_inside_castle", False)):
+                continue
+            # WK57 Wave 3: Peasants are always surface (layer 0) — hide when camera underground
+            if _active_layer != 0:
+                _p_obj_id = id(p)
+                _p_existing = self._entities.get(_p_obj_id)
+                if _p_existing is not None:
+                    _p_existing.enabled = False
+                    active_ids.add(_p_obj_id)
                 continue
             # WK59 perf: frustum culling — skip peasants outside visible tile rect
             if not self._entity_in_view(p.x, p.y):
@@ -1246,8 +1419,17 @@ class UrsinaRenderer:
 
     def _sync_snapshot_guards(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
         # Guards — atlas UV billboards (WK59 perf: single shared texture)
+        _active_layer = self._camera_active_layer
         for g in getattr(snapshot, "guards", ()):
             if not getattr(g, "is_alive", True):
+                continue
+            # WK57 Wave 3: Guards are always surface (layer 0) — hide when camera underground
+            if _active_layer != 0:
+                _g_obj_id = id(g)
+                _g_existing = self._entities.get(_g_obj_id)
+                if _g_existing is not None:
+                    _g_existing.enabled = False
+                    active_ids.add(_g_obj_id)
                 continue
             # WK59 perf: frustum culling — skip guards outside visible tile rect
             if not self._entity_in_view(g.x, g.y):
@@ -1332,6 +1514,12 @@ class UrsinaRenderer:
         if tc is not None:
             if not getattr(tc, "is_alive", True):
                 pass
+            # WK57 Wave 3: Tax collector is always surface — hide when camera underground
+            elif self._camera_active_layer != 0:
+                _tc_existing = self._entities.get(id(tc))
+                if _tc_existing is not None:
+                    _tc_existing.enabled = False
+                    active_ids.add(id(tc))
             else:
                 col = color.white
                 sx = PEASANT_SCALE_XZ

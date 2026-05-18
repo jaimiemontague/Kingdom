@@ -289,6 +289,19 @@ class SimEngine:
         except (ImportError, Exception):
             self.underground_areas = {}
 
+        # WK57 Wave 5: Wire underground areas into POI interaction system
+        self.poi_interaction_system._underground_areas = self.underground_areas
+        self.poi_interaction_system._sim_engine = self
+
+        # WK57 Wave 4: Init underground fog grids + layer-aware pathfinder
+        for _area_id, _area in self.underground_areas.items():
+            self.world.init_underground_fog(_area)
+        try:
+            from game.systems.pathfinding import LayerPathfinder
+            self.layer_pathfinder = LayerPathfinder(self.world, self.underground_areas)
+        except (ImportError, Exception):
+            self.layer_pathfinder = None
+
         # WK54: Flatten terrain under all buildings (including POIs)
         if hasattr(self.world, 'flatten_building_footprints'):
             self.world.flatten_building_footprints(self.buildings)
@@ -427,6 +440,7 @@ class SimEngine:
             pause_menu_visible=bool(pause_menu_visible),
             sim_blend_fraction=float(sim_blend_fraction),
             sim_tick_id=int(sim_tick_id),
+            underground_areas=getattr(self, 'underground_areas', None),
         )
 
     # ---------------------------------------------------------------------
@@ -607,6 +621,13 @@ class SimEngine:
                 hero.llm_move_request = None
         for hero in self.heroes:
             hero.update(dt, game_state)
+
+        # WK57 Wave 5E: Check if underground heroes should retreat
+        if self.underground_areas:
+            from game.underground import check_underground_hero_retreat
+            for hero in self.heroes:
+                if getattr(hero, "is_alive", False) and getattr(hero, "layer", 0) == -1:
+                    check_underground_hero_retreat(hero, self.underground_areas)
 
         # Fog + buffs + early pacing (castle from game_state)
         self._update_fog_of_war()

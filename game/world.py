@@ -66,6 +66,10 @@ class World:
         self._currently_visible: list[tuple[int, int]] = []  # tiles marked VISIBLE this frame (demoted next update)
         self.fog_disabled = False
 
+        # WK57 Wave 4: Per-underground-area visibility grids.
+        # area_id -> 2D grid of Visibility values (UNSEEN/SEEN/VISIBLE)
+        self.underground_visibility: dict[str, list[list[int]]] = {}
+
         # Reusable fog tile overlays (avoid per-tile Surface allocations).
         self._fog_tile_unseen = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
         self._fog_tile_unseen.fill((0, 0, 0, 255))
@@ -490,4 +494,30 @@ class World:
                     surface.blit(self._fog_tile_unseen, (screen_x, screen_y))
                 else:
                     surface.blit(self._fog_tile_seen, (screen_x, screen_y))
+
+    # ------------------------------------------------------------------
+    # WK57 Wave 4: Underground fog of war
+    # ------------------------------------------------------------------
+
+    def init_underground_fog(self, area):
+        """Create a fresh UNSEEN visibility grid for an underground area."""
+        grid = [[Visibility.UNSEEN for _ in range(area.total_width)]
+                for _ in range(area.total_height)]
+        self.underground_visibility[area.area_id] = grid
+
+    def reveal_underground_circle(self, area_id, local_x, local_z, radius):
+        """Reveal underground fog in a circle around (local_x, local_z)."""
+        grid = self.underground_visibility.get(area_id)
+        if grid is None:
+            return
+        h = len(grid)
+        w = len(grid[0]) if h > 0 else 0
+        r2 = radius * radius
+        for dz in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                if dx * dx + dz * dz <= r2:
+                    gz = local_z + dz
+                    gx = local_x + dx
+                    if 0 <= gz < h and 0 <= gx < w:
+                        grid[gz][gx] = Visibility.VISIBLE
 

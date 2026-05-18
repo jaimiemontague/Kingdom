@@ -32,26 +32,53 @@ out vec4 vertex_color;
 void main() {
     gl_Position = p3d_ModelViewProjectionMatrix * p3d_Vertex;
     uvs = (p3d_MultiTexCoord0 * texture_scale) + texture_offset;
-    // Fog UV: remap grass-tiled UV back to [0,1] map extent.
-    // fog_uv_scale and fog_uv_offset convert from tiled UVs to map-wide [0,1].
     v_fog_uv = p3d_MultiTexCoord0 * fog_uv_scale + fog_uv_offset;
     vertex_color = p3d_Color;
 }
 """,
     fragment="""#version 140
-uniform sampler2D p3d_Texture0;   // grass albedo (tiled)
-uniform sampler2D fog_texture;    // fog-of-war (1px per tile, bilinear)
+uniform sampler2D p3d_Texture0;
+uniform sampler2D fog_texture;
 uniform vec4 p3d_ColorScale;
 in vec2 uvs;
 in vec2 v_fog_uv;
 out vec4 fragColor;
 in vec4 vertex_color;
 
+uniform vec2 cave_entrance_0;
+uniform vec2 cave_entrance_1;
+uniform vec2 cave_entrance_2;
+uniform vec2 cave_entrance_3;
+uniform vec2 cave_entrance_4;
+uniform vec2 cave_entrance_5;
+uniform vec2 cave_entrance_6;
+uniform vec2 cave_entrance_7;
+uniform float cave_hole_radius;
+uniform float cave_edge_width;
+
 void main() {
     vec4 terrain = texture(p3d_Texture0, uvs) * p3d_ColorScale * vertex_color;
     vec4 fog = texture(fog_texture, v_fog_uv);
-    // Alpha-blend fog over terrain: fog.a controls coverage.
+
+    float d0 = distance(v_fog_uv, cave_entrance_0);
+    float d1 = distance(v_fog_uv, cave_entrance_1);
+    float d2 = distance(v_fog_uv, cave_entrance_2);
+    float d3 = distance(v_fog_uv, cave_entrance_3);
+    float d4 = distance(v_fog_uv, cave_entrance_4);
+    float d5 = distance(v_fog_uv, cave_entrance_5);
+    float d6 = distance(v_fog_uv, cave_entrance_6);
+    float d7 = distance(v_fog_uv, cave_entrance_7);
+    float min_d = min(min(min(d0, d1), min(d2, d3)), min(min(d4, d5), min(d6, d7)));
+
+    if (min_d < cave_hole_radius) discard;
+
+    float cave_edge = 1.0;
+    if (cave_edge_width > 0.0 && min_d < cave_hole_radius + cave_edge_width) {
+        cave_edge = (min_d - cave_hole_radius) / cave_edge_width;
+    }
+
     vec3 final_rgb = mix(terrain.rgb, fog.rgb, fog.a);
+    final_rgb *= cave_edge;
     fragColor = vec4(final_rgb, 1.0);
 }
 """,
@@ -60,5 +87,15 @@ void main() {
         "texture_offset": Vec2(0.0, 0.0),
         "fog_uv_scale": Vec2(1, 1),
         "fog_uv_offset": Vec2(0.0, 0.0),
+        "cave_entrance_0": Vec2(99.0, 99.0),
+        "cave_entrance_1": Vec2(99.0, 99.0),
+        "cave_entrance_2": Vec2(99.0, 99.0),
+        "cave_entrance_3": Vec2(99.0, 99.0),
+        "cave_entrance_4": Vec2(99.0, 99.0),
+        "cave_entrance_5": Vec2(99.0, 99.0),
+        "cave_entrance_6": Vec2(99.0, 99.0),
+        "cave_entrance_7": Vec2(99.0, 99.0),
+        "cave_hole_radius": 0.0,
+        "cave_edge_width": 0.0,
     },
 )

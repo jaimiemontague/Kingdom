@@ -60,6 +60,9 @@ class Enemy:
         self.attack_cooldown_max = 1500  # ms between attacks
         self.attack_range = TILE_SIZE * 1.2
         
+        # WK57: Layer tracking (0 = surface, -1 = underground)
+        self.layer = 0
+
         # Visual
         self.size = 18
         self.color = COLOR_RED

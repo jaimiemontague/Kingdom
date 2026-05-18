@@ -228,13 +228,31 @@ def score_poi_for_personality(
         if diff_delta >= 1:
             difficulty_factor = 0.3
 
+    # WK57 Wave 5D: Dungeon-specific scoring adjustments
+    dungeon_factor = 1.0
+    if interaction_type == "dungeon":
+        # Bold/aggressive heroes are attracted to caves
+        if "aggressive" in personality.lower() or "brave" in personality.lower():
+            dungeon_factor = 1.5
+        # Cautious heroes avoid unless strong enough
+        elif "cautious" in personality.lower():
+            if hero_level < difficulty * 2:
+                dungeon_factor = 0.2  # strongly discourage
+            else:
+                dungeon_factor = 0.8
+        # Don't enter caves when hurt (< 70% max HP)
+        hero_hp = getattr(hero, "hp", 0)
+        hero_max_hp = getattr(hero, "max_hp", 1)
+        if hero_max_hp > 0 and hero_hp < hero_max_hp * 0.7:
+            dungeon_factor *= 0.1
+
     # Depleted POI penalty.
     depleted_factor = 0.1 if getattr(poi, "is_depleted", False) else 1.0
 
     # Already interacted penalty (reduce but don't eliminate for persistent POIs).
     interacted_factor = 0.4 if getattr(poi, "is_interacted", False) else 1.0
 
-    score = base_weight * dist_factor * difficulty_factor * depleted_factor * interacted_factor
+    score = base_weight * dist_factor * difficulty_factor * depleted_factor * interacted_factor * dungeon_factor
     return score
 
 
@@ -286,8 +304,18 @@ def maybe_visit_poi(ai: Any, hero: Any, game_state: dict) -> bool:
         return False
 
     # Set movement target toward the POI.
-    pcx, pcy = _poi_center_world(best_poi)
-    hero.set_target_position(pcx, pcy)
+    best_poi_def = getattr(best_poi, "poi_def", None)
+    best_interaction_type = getattr(best_poi_def, "interaction_type", "")
+
+    # WK57 Wave 5D: For dungeon POIs, target the entrance tile directly
+    # (actual entry happens via poi_interaction when hero arrives within range)
+    if best_interaction_type == "dungeon":
+        target_x = getattr(best_poi, "grid_x", 0) * TILE_SIZE + TILE_SIZE // 2
+        target_y = getattr(best_poi, "grid_y", 0) * TILE_SIZE + TILE_SIZE // 2
+    else:
+        target_x, target_y = _poi_center_world(best_poi)
+
+    hero.set_target_position(target_x, target_y)
     hero.target = {"type": "visit_poi", "poi": best_poi}
     hero.state = HeroState.MOVING
     return True

@@ -122,6 +122,13 @@ class UrsinaApp:
         self._zone_fog_current = (_sky_r, _sky_g, _sky_b)
         self._zone_fog_target = (_sky_r, _sky_g, _sky_b)
 
+        # WK57 Wave 3: Camera layer awareness (0 = surface, -1 = underground)
+        self._camera_active_layer: int = 0
+        self._camera_transitioning: bool = False
+        self._camera_transition_target_y: float | None = None
+        self._camera_transition_speed: float = 0.0
+        self._camera_surface_y: float | None = None  # stored when descending
+
         tiles_w = config.MAP_WIDTH
         tiles_h = config.MAP_HEIGHT
 
@@ -615,6 +622,35 @@ class UrsinaApp:
                 fog.setColor(nr, ng, nb, 1.0)
             except Exception:
                 pass
+
+    # ------------------------------------------------------------------
+    # WK57 Wave 3: Camera layer transition API
+    # ------------------------------------------------------------------
+
+    @property
+    def camera_active_layer(self) -> int:
+        """Current camera layer: 0 = surface, -1 = underground."""
+        return self._camera_active_layer
+
+    def begin_camera_underground_transition(self, target_y: float) -> None:
+        """Start smooth camera descent to underground level."""
+        from config import UNDERGROUND_CAMERA_TRANSITION_SPEED
+        self._camera_surface_y = camera.y
+        self._camera_transition_target_y = target_y
+        self._camera_transition_speed = UNDERGROUND_CAMERA_TRANSITION_SPEED
+        self._camera_transitioning = True
+        self._camera_active_layer = -1
+
+    def begin_camera_surface_transition(self) -> None:
+        """Start smooth camera ascent back to surface."""
+        from config import UNDERGROUND_CAMERA_TRANSITION_SPEED
+        if self._camera_surface_y is not None:
+            self._camera_transition_target_y = self._camera_surface_y
+        else:
+            self._camera_transition_target_y = 30.0  # reasonable default
+        self._camera_transition_speed = UNDERGROUND_CAMERA_TRANSITION_SPEED
+        self._camera_transitioning = True
+        self._camera_active_layer = 0
 
     def _install_ursina_input_hook(self) -> None:
         app = self
@@ -1340,20 +1376,40 @@ class UrsinaApp:
                     if hk["s"]:
                         camera.z -= pan_speed * dt
 
+            # WK57 Wave 3: Camera layer transition lerp — smooth descent/ascent
+            # between surface and underground. Runs before terrain clamp so we can
+            # override the clamp during underground transitions.
+            if self._camera_transitioning and self._camera_transition_target_y is not None:
+                dy = self._camera_transition_target_y - camera.y
+                if abs(dy) < 0.5:
+                    camera.y = self._camera_transition_target_y
+                    self._camera_transitioning = False
+                    self._camera_transition_target_y = None
+                else:
+                    step = self._camera_transition_speed * dt
+                    camera.y += step if dy > 0 else -step
+
             # WK53 R3: Camera terrain clamp — prevent camera from clipping below the
             # terrain surface when orbiting/panning. Sample terrain height at the
             # camera's world XZ position and enforce a minimum Y offset above ground.
-            try:
-                from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_ok
-                if _terrain_ok():
-                    cam_wx = float(camera.world_position.x)
-                    cam_wz = float(camera.world_position.z)
-                    ground_y = get_terrain_height(cam_wx, cam_wz)
-                    min_cam_y = ground_y + 1.0  # offset above ground for comfortable feel
-                    if float(camera.world_position.y) < min_cam_y:
-                        camera.world_position = Vec3(cam_wx, min_cam_y, cam_wz)
-            except Exception:
-                pass
+            # WK57 Wave 3: Skip terrain clamp when camera is underground or transitioning.
+            if not self._camera_transitioning and self._camera_active_layer == 0:
+                try:
+                    from game.graphics.terrain_height import get_terrain_height, is_initialized as _terrain_ok
+                    if _terrain_ok():
+                        cam_wx = float(camera.world_position.x)
+                        cam_wz = float(camera.world_position.z)
+                        ground_y = get_terrain_height(cam_wx, cam_wz)
+                        min_cam_y = ground_y + 1.0  # offset above ground for comfortable feel
+                        if float(camera.world_position.y) < min_cam_y:
+                            camera.world_position = Vec3(cam_wx, min_cam_y, cam_wz)
+                except Exception:
+                    pass
+
+            # WK57 Wave 3: Pass camera active layer to renderer for entity visibility
+            _renderer = getattr(self, 'renderer', None)
+            if _renderer is not None:
+                _renderer._camera_active_layer = self._camera_active_layer
 
             # WK57/58: Zone-specific fog color based on camera position
             try:

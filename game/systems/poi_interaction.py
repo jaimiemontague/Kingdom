@@ -41,6 +41,10 @@ class POIInteractionSystem:
         # Per-hero per-POI cooldown tracker: (hero_id, poi_id) -> remaining seconds.
         self._hero_poi_cooldowns: dict[tuple[int, int], float] = {}
         self._rng = get_rng("poi_interaction")
+        # WK57 Wave 5: underground areas reference (set by sim_engine after setup)
+        self._underground_areas: dict = {}
+        # WK57 Wave 5: sim engine reference for enemy spawning
+        self._sim_engine = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -314,24 +318,74 @@ class POIInteractionSystem:
         )
 
     def _handle_dungeon(self, hero, poi, world, economy, event_bus, cooldown_key, pois=None) -> None:
-        """Mark as interacted and emit sealed entrance flavor text."""
-        if getattr(poi, "is_interacted", False):
+        """Handle hero entering a dungeon (cave/mine) POI.
+
+        WK57 Wave 5: triggers actual cave entry with descent, fog reveal,
+        and underground enemy spawning instead of just flavor text.
+        """
+        area_id = f"underground_{poi.grid_x}_{poi.grid_y}"
+
+        # Access underground areas from the stored reference
+        underground_areas = self._underground_areas
+        if not underground_areas:
+            # Fallback: emit flavor text only
+            self._hero_poi_cooldowns[cooldown_key] = _ONESHOT_COOLDOWN_SEC
+            poi_def = getattr(poi, "poi_def", None)
+            hero_name = getattr(hero, "name", "Unknown")
+            poi_name = getattr(poi_def, "display_name", "Unknown POI")
+            self._emit_event(
+                event_bus, "poi_interaction",
+                hero=hero, poi=poi, interaction_type="dungeon",
+                hero_name=hero_name, poi_name=poi_name,
+                narrative="The entrance yawns darkly. Cold air seeps out.",
+            )
             return
+
+        area = underground_areas.get(area_id)
+        if area is None or not area.is_generated:
+            # No underground area generated for this POI
+            self._hero_poi_cooldowns[cooldown_key] = _ONESHOT_COOLDOWN_SEC
+            self._emit_event(
+                event_bus, "poi_interaction",
+                hero=hero, poi=poi, interaction_type="dungeon",
+                hero_name=getattr(hero, "name", "Unknown"),
+                poi_name=getattr(getattr(poi, "poi_def", None), "display_name", "Unknown POI"),
+                narrative="The entrance yawns darkly.",
+            )
+            return
+
+        hero_layer = getattr(hero, "layer", 0)
+        if hero_layer == -1:
+            return  # Already underground
+
+        # Begin descent
+        if hasattr(hero, "begin_descent"):
+            hero.begin_descent(area_id, poi.grid_x, poi.grid_y)
+
+        # Mark first chamber as explored
+        if area.chambers:
+            area.chambers[0].is_explored = True
+
+        # Reveal underground fog at entrance
+        cx = area.total_width // 2
+        if hasattr(world, "reveal_underground_circle"):
+            world.reveal_underground_circle(area_id, cx, 0, 4)
+
+        # WK57 Wave 5C: Spawn underground enemies
+        _spawn_underground_enemies(area, self._sim_engine, event_bus)
+
         poi.is_interacted = True
+        poi.interaction_count = getattr(poi, "interaction_count", 0) + 1
         self._hero_poi_cooldowns[cooldown_key] = _ONESHOT_COOLDOWN_SEC
 
         poi_def = getattr(poi, "poi_def", None)
         hero_name = getattr(hero, "name", "Unknown")
         poi_name = getattr(poi_def, "display_name", "Unknown POI")
-        narrative = (
-            "The entrance yawns darkly. Cold air seeps out, carrying echoes "
-            "from below. Whatever lies within will have to wait."
-        )
 
         self._emit_event(
-            event_bus, "poi_interaction",
-            hero=hero, poi=poi, interaction_type="dungeon",
-            hero_name=hero_name, poi_name=poi_name, narrative=narrative,
+            event_bus, "hero_entered_underground",
+            hero=hero, area_id=area_id, poi=poi,
+            hero_name=hero_name, poi_name=poi_name,
         )
 
     def _handle_boss(self, hero, poi, world, economy, event_bus, cooldown_key, pois=None) -> None:
@@ -381,6 +435,59 @@ class POIInteractionSystem:
             event_bus.emit(payload)
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# WK57 Wave 5C: Underground Enemy Spawning
+# ---------------------------------------------------------------------------
+
+def _spawn_underground_enemies(area, sim_engine, event_bus):
+    """Spawn enemies in unexplored chambers when hero enters underground.
+
+    Each chamber's enemy list (populated by generate_underground_area) is
+    instantiated into actual Enemy entities placed at the chamber center
+    in world-pixel coordinates, on layer -1.
+    """
+    if area is None or sim_engine is None:
+        return
+
+    from game.entities.enemy import Enemy, Goblin, Skeleton
+
+    _ENEMY_CLASSES = {
+        "goblin": Goblin,
+        "skeleton": Skeleton,
+        "spider": Enemy,  # generic fallback for spider type
+    }
+
+    rng = get_rng("underground_spawn")
+
+    for ch in area.chambers:
+        if ch.is_cleared:
+            continue
+        # Only spawn enemies for chambers that have not yet been populated
+        # (is_explored may have been set by the entrance reveal above)
+        if not ch.enemies:
+            continue
+
+        # Calculate world-pixel center of this chamber
+        cx_local = area.total_width // 2 + ch.world_offset_x + ch.width // 2
+        cz_local = ch.world_offset_z + ch.height // 2
+        # Convert local coords to world grid coords then to pixels
+        world_gx = cx_local - area.total_width // 2 + area.entrance_grid_x
+        world_gy = cz_local + area.entrance_grid_y
+        px = world_gx * TILE_SIZE + TILE_SIZE // 2
+        py = world_gy * TILE_SIZE + TILE_SIZE // 2
+
+        for enemy_type in ch.enemies:
+            cls = _ENEMY_CLASSES.get(enemy_type, Enemy)
+            # Small random offset so enemies don't stack
+            offset_x = (rng.random() - 0.5) * TILE_SIZE
+            offset_y = (rng.random() - 0.5) * TILE_SIZE
+            enemy = cls(px + offset_x, py + offset_y)
+            if enemy.enemy_type == "enemy" and enemy_type == "spider":
+                enemy.enemy_type = "spider"
+            enemy.layer = -1  # underground
+            sim_engine.enemies.append(enemy)
 
 
 # Dispatch table — avoids a long if/elif chain.

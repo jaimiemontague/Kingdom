@@ -212,3 +212,156 @@ def grid_to_world_path(grid_path: list) -> list:
         world_path.append((wx, wy))
     return world_path
 
+
+# ---------------------------------------------------------------------------
+# WK57 Wave 4: Layer-aware pathfinding wrapper
+# ---------------------------------------------------------------------------
+
+class LayerPathfinder:
+    """Layer-aware pathfinding wrapper.
+
+    Same-layer surface paths delegate to existing find_path().
+    Cross-layer paths route through cave entrances.
+    Underground paths use A* on the area's walkability grid.
+    """
+
+    def __init__(self, world, underground_areas: dict):
+        self._world = world
+        self._underground_areas = underground_areas
+        self._cave_entrances: dict[tuple[int, int], str] = {}  # (grid_x, grid_y) -> area_id
+        for area_id, area in underground_areas.items():
+            self._cave_entrances[(area.entrance_grid_x, area.entrance_grid_y)] = area_id
+
+    def find_layer_path(self, start_x, start_y, start_layer, goal_x, goal_y, goal_layer):
+        """Find path between any two points, potentially across layers.
+
+        Returns list of (x, y, layer) tuples, or empty list if no path.
+        """
+        if start_layer == goal_layer == 0:
+            # Pure surface path -- delegate to existing pathfinder
+            path = find_path(self._world, (start_x, start_y), (goal_x, goal_y))
+            return [(x, y, 0) for x, y in path] if path else []
+
+        if start_layer == goal_layer == -1:
+            # Pure underground path within same area
+            return self._find_underground_path(start_x, start_y, goal_x, goal_y)
+
+        if start_layer == 0 and goal_layer == -1:
+            # Surface to underground: route to cave entrance, then descend
+            area = self._find_area_for_underground_pos(goal_x, goal_y)
+            if area is None:
+                return []
+            entrance = (area.entrance_grid_x, area.entrance_grid_y)
+
+            # Surface path to entrance
+            surface_path = find_path(self._world, (start_x, start_y), (entrance[0], entrance[1]))
+            if not surface_path:
+                return []
+
+            # Underground path from entrance to goal
+            ug_path = self._find_underground_path(entrance[0], entrance[1], goal_x, goal_y)
+
+            result = [(x, y, 0) for x, y in surface_path]
+            result.extend(ug_path)
+            return result
+
+        if start_layer == -1 and goal_layer == 0:
+            # Underground to surface: underground path to entrance, ascend, then surface
+            area = self._find_area_for_underground_pos(start_x, start_y)
+            if area is None:
+                return []
+            entrance = (area.entrance_grid_x, area.entrance_grid_y)
+
+            ug_path = self._find_underground_path(start_x, start_y, entrance[0], entrance[1])
+
+            surface_path = find_path(self._world, (entrance[0], entrance[1]), (goal_x, goal_y))
+            if not surface_path:
+                return ug_path  # at least get to entrance
+
+            result = list(ug_path)
+            result.extend([(x, y, 0) for x, y in surface_path])
+            return result
+
+        return []
+
+    def _find_underground_path(self, start_x, start_y, goal_x, goal_y):
+        """A* pathfinding within an underground area using the walkability grid."""
+        # Find which area these coords belong to
+        area = self._find_area_for_underground_pos(start_x, start_y)
+        if area is None:
+            area = self._find_area_for_underground_pos(goal_x, goal_y)
+        if area is None:
+            return []
+
+        # Convert world grid coords to underground local coords
+        cx = area.total_width // 2
+
+        def to_local(gx, gy):
+            return (gx - area.entrance_grid_x + cx, gy - area.entrance_grid_y)
+
+        def to_world(lx, lz):
+            return (lx - cx + area.entrance_grid_x, lz + area.entrance_grid_y)
+
+        sx, sz = to_local(start_x, start_y)
+        gx_l, gz_l = to_local(goal_x, goal_y)
+
+        # Clamp to grid bounds (entrance tile might be at edge)
+        sx = max(0, min(area.total_width - 1, sx))
+        sz = max(0, min(area.total_height - 1, sz))
+        gx_l = max(0, min(area.total_width - 1, gx_l))
+        gz_l = max(0, min(area.total_height - 1, gz_l))
+
+        # Simple A* on the walkability grid (4-directional)
+        def ug_heuristic(a, b):
+            return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+        start_node = (sx, sz)
+        goal_node = (gx_l, gz_l)
+
+        open_set = [(ug_heuristic(start_node, goal_node), 0, start_node)]
+        came_from: dict = {}
+        g_score: dict = {start_node: 0}
+
+        while open_set:
+            _, _, current = heapq.heappop(open_set)
+
+            if current == goal_node:
+                # Reconstruct path
+                path = []
+                while current in came_from:
+                    wx, wy = to_world(*current)
+                    path.append((wx, wy, -1))
+                    current = came_from[current]
+                wx, wy = to_world(*current)
+                path.append((wx, wy, -1))
+                path.reverse()
+                return path
+
+            for dx, dz in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, nz = current[0] + dx, current[1] + dz
+                if 0 <= nx < area.total_width and 0 <= nz < area.total_height:
+                    if not area.walkability[nz][nx]:
+                        continue
+                    new_g = g_score[current] + 1
+                    if (nx, nz) not in g_score or new_g < g_score[(nx, nz)]:
+                        g_score[(nx, nz)] = new_g
+                        f = new_g + ug_heuristic((nx, nz), goal_node)
+                        heapq.heappush(open_set, (f, new_g, (nx, nz)))
+                        came_from[(nx, nz)] = current
+
+        return []  # no path found
+
+    def _find_area_for_underground_pos(self, world_gx, world_gy):
+        """Find which UndergroundArea contains the given world grid position."""
+        for area in self._underground_areas.values():
+            # Check if pos is within area bounds
+            dx = world_gx - area.entrance_grid_x
+            dy = world_gy - area.entrance_grid_y
+            cx = area.total_width // 2
+            lx = dx + cx
+            lz = dy
+            if 0 <= lx < area.total_width and 0 <= lz < area.total_height:
+                if area.walkability[lz][lx]:
+                    return area
+        return None
+

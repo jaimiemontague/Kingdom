@@ -73,3 +73,6 @@ class SimStateSnapshot:
     sim_blend_fraction: float = 0.0
     sim_tick_id: int = 0
 
+    # --- WK57: Underground areas (dict[str, UndergroundArea]) ---
+    underground_areas: Any = None
+
