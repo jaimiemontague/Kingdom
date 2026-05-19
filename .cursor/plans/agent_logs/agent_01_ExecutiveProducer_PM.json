@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-19 (Agent 01 WK60 Kickoff): Sprint wk60_v159_gameplay_fun — The 'Make It Fun' sprint. 9 features to transform Kingdom Sim into a challenging game: (1) Wave events system (Option B), (2) aggressive lair spawn tuning, (3) guild hero cap of 8, (4) hero cost doubled to 100g, (5) guardhouse shoots arrows, (6) starting buildings (warriors/rangers guild, market, guardhouse), (7) bounty flags visible in Ursina 3D, (8) difficulty setting (Easy/Normal/Hard) with lock option, (9) dev mode ($env:KINGDOM_DEV_MODE). Phases: v1.5.9 implementation, then playtest tuning to v1.6.0. Plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md. R1 parallel: Agent 05 (gameplay HIGH) + Agent 03 (architecture MEDIUM). R2: Agents 08 (HUD+difficulty menu)/14/11/09. Assumes lairs restored from WK59.",
     "2026-05-19 (Agent 01 WK59 Kickoff): Sprint wk59_lair_diagnostic \u2014 Jaimie reports lairs disappeared since ~WK54 POI updates. Investigation confirmed all lair code intact. Dispatching Agent 03 for diagnostic: test fog visibility, placement, spawn slots, frustum culling. Diagnostic only, no fixes yet.",
     "2026-05-16 (Agent 01 WK60 Kickoff): Sprint wk60_v16_perf_optimization \u00e2\u20ac\u201d Performance optimization. Game at 10-20 FPS with hero spring-forward. Three root causes: (1) per-frame PIL texture pipeline 8-12ms/frame, (2) pathfinding storms without global budget, (3) frame-rate dependent movement * 60 + no render interpolation. Plan: .cursor/plans/v1.6_performance_analysis.md. R1: texture atlas pipeline (10 profiles \u00e2\u2020\u2019 03 implements \u00e2\u2020\u2019 11 validates). R2: pathfinding frame budget. R3: render interpolation. Target: stable 40-60 FPS.",
     "2026-05-12 (Agent 01 WK54-58 Overnight): Implementing entire POI roadmap overnight per Jaimie request. WK54 DONE (map 250x250, 3 zones, POI architecture, 14 POIs placed, terrain flattening). WK55 DONE (12 prefab JSONs, discovery mechanic, minimap icons). WK56 DONE (POI interaction system, LLM hero awareness, 6 interaction types). WK57 IN PROGRESS (underground data model done, visuals in progress). WK58 IN PROGRESS (boss enemies, discovery toast). All QA gates PASS throughout. Sub-agent execution.",
@@ -1116,6 +1117,156 @@
             ],
             "rationale": "03 (low \u2014 well-defined one-line fix with exact line number and recipe from diagnostic)."
           }
+        }
+      }
+    },
+    "wk60_v159_gameplay_fun": {
+      "sprint_meta": {
+        "status": "planning_complete",
+        "created_utc": "2026-05-19T18:00:00Z",
+        "plan_doc": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
+        "notes": "The 'Make It Fun' sprint. 9 features across 2-3 rounds to make v1.5.9 a genuinely challenging and fun game. Features 8-9 (difficulty system + dev mode) added after initial planning. After playtest tuning, ships as v1.6.0. Assumes WK59 lair fix is merged before R1 lair tuning work.",
+        "version_target": "Prototype v1.5.9 (then v1.6.0 after playtest tuning)",
+        "definition_of_done": [
+          "Wave events fire on schedule with HUD warnings",
+          "Lair spawn rates increased (faster intervals, larger packs)",
+          "Guilds capped at 8 heroes each with UI feedback",
+          "Hero hire cost is 100 gold",
+          "Guardhouse fires arrows at nearby enemies",
+          "Game starts with Warriors Guild, Rangers Guild, Marketplace, Guardhouse pre-built",
+          "Bounty flags visible in Ursina 3D mode",
+          "Difficulty selector (Easy/Normal/Hard) in pause menu with Lock button + confirmation",
+          "Dev mode ($env:KINGDOM_DEV_MODE=1) gives free heroes, infinite gold, no guild cap",
+          "python tools/qa_smoke.py --quick PASS",
+          "python -m pytest tests/ -x -q PASS",
+          "Game playable for 20+ minutes without crashes"
+        ]
+      },
+      "rounds": {
+        "wk60_r1_core_gameplay": {
+          "round_meta": {
+            "round_id": "wk60_r1_core_gameplay",
+            "build_target": "Implement all 9 gameplay features: wave events, lair tuning, guild cap, hero cost, guardhouse arrows, starting buildings, bounty flags in 3D, difficulty system, dev mode.",
+            "created_utc": "2026-05-19T18:00:00Z",
+            "wave": 1,
+            "depends_on": "wk59_r2_lair_visibility_fix"
+          },
+          "pm_status_summary": {
+            "status": "ready_to_kick_off",
+            "summary": "Plan complete. 9 features designed. Agent 05 owns gameplay systems (features 1-5, 8-9), Agent 03 owns architecture/rendering (features 6-7). Ready for Jaimie to activate agents."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK60-BUG-001",
+              "title": "Bounty flags invisible in Ursina 3D mode",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "python main.py --no-llm",
+                "Press B to place a bounty flag",
+                "Observe: nothing visible at the placed location"
+              ],
+              "expected": "A visible flag with pole, pennant, and $reward text",
+              "actual": "Nothing renders. ursina_renderer.py has no bounty sync code. pygame BountyRenderer is bypassed in Ursina mode.",
+              "root_cause": "ursina_renderer.py has _sync_snapshot_* methods for heroes/enemies/peasants/guards/projectiles but nothing for bounties. The pygame bounty_renderer.py is skipped when skip_pygame_world=True (always true in Ursina mode).",
+              "acceptance_test": [
+                "Place bounty with B key -> visible flag+pole+reward text in 3D",
+                "Flag disappears when bounty is claimed"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK60-FEAT-001",
+              "title": "Wave Events System (Option B)",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "New WaveEventSystem fires named siege events every 2-4 minutes starting at minute 3. Each event: name, enemy composition, spawn direction, 10s HUD warning, wave-clear gold reward. Escalates to boss waves at 20+ minutes. See plan Feature 1 for full wave table.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-002",
+              "title": "Aggressive Lair Spawn Tuning",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "Faster lair spawn intervals, larger packs, MAX_ALIVE_ENEMIES 32->48, LAIR_INITIAL_COUNT 4->5, min distance 18->15 tiles. See plan Feature 2 for full tuning table.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-003",
+              "title": "Guild Hero Cap (8 per guild)",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "HiringBuilding.can_hire() checks heroes_hired < max_heroes (default 8). New GUILD_MAX_HEROES config. try_hire_hero() shows 'Guild is full!' if at cap. Dead heroes free a slot.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-004",
+              "title": "Double Hero Cost (50->100 gold)",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "Change HeroConfig.hire_cost from 50 to 100 in config.py. Single line change.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-005",
+              "title": "Guardhouse Shoots Arrows",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "Add ranged attack to Guardhouse: 8-tile range, 12 damage, 2s cooldown. Fires ranged_projectile events (reuse existing projectile system from BallistaTower). In addition to existing guard spawning. New config: GUARDHOUSE_ARROW_RANGE_TILES, GUARDHOUSE_ARROW_DAMAGE, GUARDHOUSE_ARROW_COOLDOWN.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-006",
+              "title": "Starting Buildings (Rangers, Warriors, Market, Guardhouse)",
+              "owner_agent": "03_TechnicalDirector",
+              "spec": "In SimEngine.setup_initial_state(), place 4 buildings pre-constructed around castle: Warriors Guild (128,124), Rangers Guild (119,124), Marketplace (124,128), Guardhouse (124,131). All is_constructed=True, full HP, path tiles, fog revealers. New STARTING_BUILDINGS config list.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-007",
+              "title": "Bounty Flags Visible in Ursina 3D",
+              "owner_agent": "03_TechnicalDirector",
+              "spec": "Add _sync_snapshot_bounties() to ursina_renderer.py. Create Ursina Entity for each unclaimed bounty: pole (cylinder/line), flag pennant (gold quad), $reward text. Manage _bounty_entities dict keyed by bounty_id. Call from update(). Ensure GameSnapshot includes bounty data.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-008",
+              "title": "Difficulty Setting (Easy/Normal/Hard) with Lock",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "New game/systems/difficulty.py with DifficultySystem. Three levels with multiplier tables affecting: spawn intervals, enemies per wave/lair tick, enemy HP on spawn, enemy damage on spawn. Does NOT affect gold costs, hero costs, or economy. Changeable mid-game from pause menu. Lock Difficulty button with confirmation dialog ('Once you lock difficulty, it can't be unlocked for the remaining duration of the game. Are you sure?'). New DifficultyConfig in config.py. Agent 08 builds the menu UI in R2.",
+              "status": "assigned"
+            },
+            {
+              "id": "WK60-FEAT-009",
+              "title": "Dev Mode (Environment Variable)",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "spec": "Activated by $env:KINGDOM_DEV_MODE=1 before launch. Effects: HERO_HIRE_COST=0, STARTING_GOLD=999999, GUILD_MAX_HEROES=999, difficulty defaults to Easy. HUD shows '[DEV MODE]' label. Console prints banner. Pure config overrides at bottom of config.py.",
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": "Implement Features 1-5, 8-9: Wave events system, lair spawn tuning, guild hero cap, hero cost doubling, guardhouse arrows, difficulty system, dev mode. See pm_agent_prompts and plan doc.",
+            "03": "Implement Features 6-7: Starting buildings in sim_engine, bounty flag rendering in ursina_renderer. See pm_agent_prompts and plan doc."
+          },
+          "pm_agent_prompts": {
+            "05": "You are Agent 05 (GameplaySystemsDesigner) activated for sprint wk60_v159_gameplay_fun, round wk60_r1_core_gameplay. GOAL: Make Kingdom Sim actually fun and challenging. You own 7 features. Read the full plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md\n\nFEATURE 1 — WAVE EVENTS SYSTEM (highest priority):\nCreate game/systems/wave_events.py with a WaveEventSystem(GameSystem). Fire named siege events on a timer: first event at ~3 minutes, then every 2-4 minutes. Each event has: name, enemy_composition (list of type+count), spawn_direction, 10s warning before arrival, wave-clear gold reward. Use the wave table in the plan (Goblin Raid at 3:00, Wolf Pack at 5:30, etc). After the table exhausts, cycle with increasing count multipliers. Wave events can temporarily exceed MAX_ALIVE_ENEMIES by up to 50%. Emit EventBus events for HUD warnings ('wave_incoming' with name + seconds) and wave clear ('wave_cleared' with reward). Also tune the existing trickle spawner in game/systems/spawner.py: mixed enemy types (not Goblins-only), raise enemies_per_wave cap from 4 to 6, reduce spawn interval floor from 21000ms to 15000ms, increase interval reduction from -250ms to -500ms.\n\nFEATURE 2 — LAIR SPAWN TUNING:\nIn game/entities/lair.py, update each lair subclass: faster spawn intervals and larger packs per the plan table. In config.py: MAX_ALIVE_ENEMIES 32->48, LAIR_INITIAL_COUNT 4->5, LAIR_MIN_DISTANCE_FROM_CASTLE_TILES 18->15.\n\nFEATURE 3 — GUILD HERO CAP:\nIn game/entities/buildings/hiring_mixin.py: add max_heroes attribute (default 8 from new GUILD_MAX_HEROES config). can_hire() returns False if heroes_hired >= max_heroes. In game/engine.py try_hire_hero(): check can_hire() before deducting gold; emit an event or set a message for 'Guild is full!' HUD feedback. IMPORTANT: dead heroes must free a slot — ensure heroes_hired is decremented when a hero from that guild dies (check hero death handling in engine.py or hero.py).\n\nFEATURE 4 — HERO COST:\nIn config.py HeroConfig: change hire_cost from 50 to 100.\n\nFEATURE 5 — GUARDHOUSE ARROWS:\nIn game/entities/buildings/defensive.py Guardhouse class: add ranged attack. Properties: attack_range_tiles=8.0, arrow_damage=12, arrow_cooldown_sec=2.0. In update(): find nearest enemy within range, fire a ranged_projectile event (look at how BallistaTower does it in the same file for the pattern). Add config values: GUARDHOUSE_ARROW_RANGE_TILES, GUARDHOUSE_ARROW_DAMAGE, GUARDHOUSE_ARROW_COOLDOWN. The guardhouse still spawns guards as before — arrow shooting is IN ADDITION.\n\nFEATURE 8 — DIFFICULTY SYSTEM (Easy/Normal/Hard):\nCreate game/systems/difficulty.py with DifficultySystem. Three levels with multiplier tables. Multipliers affect ONLY monster-related values at runtime: spawn intervals (lair + trickle), enemies per wave/lair tick, enemy HP on spawn, enemy damage on spawn. Does NOT affect gold costs, hero costs, building prices, bounty costs, or any economy values. Easy: spawn_interval x1.5 (slower), enemy counts x0.6, HP x0.7, damage x0.7. Normal: all x1.0. Hard: spawn_interval x0.7 (faster), enemy counts x1.5, HP x1.3, damage x1.3. Default: Normal. Changeable mid-game (Agent 08 builds the menu UI in R2). Add lock_difficulty() method — once locked, set_difficulty() returns False. Already-spawned enemies are NOT retroactively modified. Add DifficultyConfig dataclass in config.py with all multiplier values as tunable fields. Wire DifficultySystem into spawner.py, lair.py, wave_events.py, and enemy.py — all these systems read multipliers from the shared DifficultySystem instance.\n\nFEATURE 9 — DEV MODE:\nActivated by env var KINGDOM_DEV_MODE=1 (checked once at startup). In config.py: add DEV_MODE = os.getenv('KINGDOM_DEV_MODE', '0') == '1'. When DEV_MODE is True, override: HERO_HIRE_COST=0, STARTING_GOLD=999999, GUILD_MAX_HEROES=999. Print '*** DEV MODE ACTIVE — free heroes, infinite gold ***' to console. Agent 08 will add the '[DEV MODE]' HUD label in R2. Keep it simple — just override the config values, no parallel config path.\n\nAFTER ALL CHANGES: Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your agent log. DO NOT COMMIT.",
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) activated for sprint wk60_v159_gameplay_fun, round wk60_r1_core_gameplay. GOAL: Two features. Read the full plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md\n\nFEATURE 6 — STARTING BUILDINGS:\nIn game/sim_engine.py setup_initial_state(): After the castle is placed at (124,124) 3x3, add 4 pre-constructed buildings: Warriors Guild at grid (128,124), Rangers Guild at (119,124), Marketplace at (124,128), Guardhouse at (124,131). All 2x2. Follow the exact same pattern used for castle placement: create the building entity, set is_constructed=True, full HP, place path tiles under footprint, register fog-of-war revealers. Add a STARTING_BUILDINGS config list in config.py for easy tuning. Verify no grid overlaps with castle footprint (124-126, 124-126).\n\nFEATURE 7 — BOUNTY FLAGS IN URSINA 3D:\nIn game/graphics/ursina_renderer.py: Add _sync_snapshot_bounties() method. For each unclaimed bounty in the game snapshot: create an Ursina Entity with a vertical pole (brown cylinder or scaled cube) and a triangular flag pennant (gold-colored quad, billboard mode). Add a Text entity showing '$reward' above the flag. Cache entities in _bounty_entities: dict[int, Entity] keyed by bounty_id. On each frame, create new entities for new bounties, remove entities for claimed/expired bounties. Call _sync_snapshot_bounties() from the update() method alongside the other _sync_snapshot_* calls. IMPORTANT: First check if GameSnapshot already includes bounty data (positions, rewards, IDs, claimed status). If not, add it to the snapshot.\n\nAFTER ALL CHANGES: Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your agent log. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w1_parallel": ["05", "03"],
+              "w2_parallel_after_w1": ["08", "14", "11", "09"]
+            },
+            "intelligence_by_agent": {
+              "05": "high",
+              "03": "medium",
+              "08": "medium",
+              "14": "low",
+              "11": "low",
+              "09": "low"
+            },
+            "do_not_send": ["02", "04", "06", "07", "10", "12", "13", "15"],
+            "rationale": "R1 Wave 1: 05 (high — novel wave events system + difficulty system + 5 other gameplay changes requiring design judgement) + 03 (medium — starting buildings follows existing pattern + bounty renderer is new _sync_snapshot method following established pattern). R1 Wave 2: 08 (medium — HUD toasts/guild UI + difficulty menu with Easy/Normal/Hard selector + Lock Difficulty button with confirmation dialog + [DEV MODE] HUD label), 14 (low — horn SFX), 11 (low — QA gates), 09 (low — visual consult)."
+          },
+          "pm_universal_prompt": "You are being activated for the wk60_v159_gameplay_fun sprint — the 'Make It Fun' update.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk60_v159_gameplay_fun\"].rounds[\"wk60_r1_core_gameplay\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nFull plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md\nBug tickets: pm_bug_tickets. Feature specs: pm_feature_requests.\n\nAfter completing your work:\n1. Update your agent log\n2. Run: python tools/qa_smoke.py --quick (must PASS)\n3. Run: python -m pytest tests/ -x -q\n4. Report status back\n5. DO NOT COMMIT"
         }
       }
     }

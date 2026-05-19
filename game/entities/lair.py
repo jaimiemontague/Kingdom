@@ -164,7 +164,7 @@ class GoblinCamp(MonsterLair):
             grid_x,
             grid_y,
             "goblin_camp",
-            spawn_interval_sec=8.5,
+            spawn_interval_sec=6.0,  # WK60: faster from 8.5s
             stash_gold=113,  # wk15: +50% for pacing (was 75)
             threat_level=1,
         )
@@ -172,8 +172,14 @@ class GoblinCamp(MonsterLair):
         self.color = (120, 80, 40)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        # Small bursts.
-        n = 1 if self.rng.random() < 0.7 else 2
+        # WK60: larger packs — 50% x2, 30% x3, 20% x1
+        r = self.rng.random()
+        if r < 0.50:
+            n = 2
+        elif r < 0.80:
+            n = 3
+        else:
+            n = 1
         return [Goblin(world_x, world_y) for _ in range(n)]
 
 
@@ -183,7 +189,7 @@ class WolfDen(MonsterLair):
             grid_x,
             grid_y,
             "wolf_den",
-            spawn_interval_sec=7.5,
+            spawn_interval_sec=5.5,  # WK60: faster from 7.5s
             stash_gold=90,   # wk15: +50% for pacing (was 60)
             threat_level=1,
         )
@@ -191,7 +197,8 @@ class WolfDen(MonsterLair):
         self.color = (90, 90, 90)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        n = 2 if self.rng.random() < 0.6 else 1
+        # WK60: larger packs — 60% x2, 40% x3
+        n = 2 if self.rng.random() < 0.6 else 3
         return [Wolf(world_x, world_y) for _ in range(n)]
 
 
@@ -201,7 +208,7 @@ class SkeletonCrypt(MonsterLair):
             grid_x,
             grid_y,
             "skeleton_crypt",
-            spawn_interval_sec=10.5,
+            spawn_interval_sec=8.0,  # WK60: faster from 10.5s
             stash_gold=180,  # wk15: +50% for pacing (was 120)
             threat_level=2,
         )
@@ -209,12 +216,14 @@ class SkeletonCrypt(MonsterLair):
         self.color = (70, 60, 90)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        # Deterministic 80/20 mix: skeleton / skeleton_archer
-        # Use lair RNG for deterministic spawn selection
-        if self.rng.random() < 0.8:
-            return [Skeleton(world_x, world_y)]
+        # WK60: larger mixed packs — 60% x2 skel, 20% x2 archer, 20% x1 each
+        r = self.rng.random()
+        if r < 0.60:
+            return [Skeleton(world_x, world_y) for _ in range(2)]
+        elif r < 0.80:
+            return [SkeletonArcher(world_x, world_y) for _ in range(2)]
         else:
-            return [SkeletonArcher(world_x, world_y)]
+            return [Skeleton(world_x, world_y), SkeletonArcher(world_x, world_y)]
 
 
 class SpiderNest(MonsterLair):
@@ -223,7 +232,7 @@ class SpiderNest(MonsterLair):
             grid_x,
             grid_y,
             "spider_nest",
-            spawn_interval_sec=7.0,
+            spawn_interval_sec=5.0,  # WK60: faster from 7.0s
             stash_gold=98,   # wk15: +50% for pacing (was 65)
             threat_level=1,
         )
@@ -231,8 +240,14 @@ class SpiderNest(MonsterLair):
         self.color = (20, 20, 20)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        # Frequent swarms; low individual threat.
-        n = 2 if self.rng.random() < 0.65 else 3
+        # WK60: larger swarms — 50% x3, 30% x4, 20% x2
+        r = self.rng.random()
+        if r < 0.50:
+            n = 3
+        elif r < 0.80:
+            n = 4
+        else:
+            n = 2
         return [Spider(world_x, world_y) for _ in range(n)]
 
 
@@ -242,7 +257,7 @@ class BanditCamp(MonsterLair):
             grid_x,
             grid_y,
             "bandit_camp",
-            spawn_interval_sec=10.0,
+            spawn_interval_sec=7.5,  # WK60: faster from 10.0s
             stash_gold=180,  # wk15: +50% for pacing (was 120)
             threat_level=2,
         )
@@ -250,8 +265,14 @@ class BanditCamp(MonsterLair):
         self.color = (110, 70, 40)
 
     def spawn_enemies(self, world_x: float, world_y: float) -> list:
-        # Slower, tougher spawns.
-        n = 1 if self.rng.random() < 0.8 else 2
+        # WK60: larger packs — 60% x2, 30% x1, 10% x3
+        r = self.rng.random()
+        if r < 0.60:
+            n = 2
+        elif r < 0.90:
+            n = 1
+        else:
+            n = 3
         return [Bandit(world_x, world_y) for _ in range(n)]
 
 

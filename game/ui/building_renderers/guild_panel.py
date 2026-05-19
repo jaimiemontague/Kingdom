@@ -33,7 +33,14 @@ class GuildPanelRenderer:
         surface.blit(tax_text, (10, y))
         y += 25
 
-        total_text = panel.font_normal.render(f"Total Heroes: {hero_info['total']}", True, COLOR_WHITE)
+        # WK60 Feature 3: show guild hero cap (N/max_heroes)
+        max_heroes = int(getattr(building, "max_heroes", 0))
+        hired = int(getattr(building, "heroes_hired", hero_info["total"]))
+        if max_heroes > 0:
+            cap_color = (255, 100, 100) if hired >= max_heroes else COLOR_WHITE
+            total_text = panel.font_normal.render(f"Heroes: {hired}/{max_heroes}", True, cap_color)
+        else:
+            total_text = panel.font_normal.render(f"Total Heroes: {hero_info['total']}", True, COLOR_WHITE)
         surface.blit(total_text, (10, y))
         y += 25
 

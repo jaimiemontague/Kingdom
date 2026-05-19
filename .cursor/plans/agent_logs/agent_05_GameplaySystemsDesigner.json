@@ -495,6 +495,87 @@
           ]
         }
       }
+    },
+    "wk60_v159_gameplay_fun": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
+        "notes": "WK60: Make It Fun sprint. Agent 05 owns 7 features: wave events, lair tuning, guild hero cap, hero cost doubling, guardhouse arrows, difficulty system, dev mode."
+      },
+      "rounds": {
+        "wk60_r1_core_gameplay": {
+          "round_id": "wk60_r1_core_gameplay",
+          "sprint_id": "wk60_v159_gameplay_fun",
+          "round_meta": {
+            "prompt_set_id": "wk60_r1_core_gameplay",
+            "build_target": "7 gameplay features for Make It Fun v1.5.9",
+            "created_utc": "2026-05-19T18:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/ui/ (Agent 08), ai/basic_ai.py (Agent 06), game/audio/ (Agent 14).",
+                "Edited game/engine.py and game/sim_engine.py only for wiring (guild cap check, guardhouse enemies param, difficulty/wave system init) — minimal changes per Feature 3/5/8 wiring."
+              ],
+              "what_i_changed": [
+                "FEATURE 1 — WAVE EVENTS: Created game/systems/wave_events.py with WaveEventSystem. 8-event wave table (Goblin Raid at 3:00 through Demon Siege at 25:00), cycling with escalating count multipliers after table exhausts. Emits 'wave_incoming' and 'wave_cleared' EventBus events for Agent 08 HUD. Awards bonus gold on wave clear. Difficulty-aware (scales enemy counts, HP, damage). Respects MAX_ALIVE_ENEMIES * 1.5 overflow cap.",
+                "FEATURE 1 — SPAWNER TUNING: Updated game/systems/spawner.py: mixed enemy types (weighted pools by game time: early/mid/late), enemies_per_wave cap raised 4->6, spawn interval floor 21000->15000ms, interval reduction -250->-500ms per escalation. Difficulty multipliers applied to spawn interval and enemy stats on creation.",
+                "FEATURE 2 — LAIR TUNING: Updated game/entities/lair.py: GoblinCamp 8.5->6.0s (50%x2/30%x3/20%x1), WolfDen 7.5->5.5s (60%x2/40%x3), SkeletonCrypt 10.5->8.0s (60%x2skel/20%x2archer/20%x1each), SpiderNest 7.0->5.0s (50%x3/30%x4/20%x2), BanditCamp 10.0->7.5s (60%x2/30%x1/10%x3). Updated config.py: MAX_ALIVE_ENEMIES 32->48, LAIR_INITIAL_COUNT 4->5, LAIR_MIN_DISTANCE_FROM_CASTLE_TILES 18->15. Updated game/systems/lairs.py: difficulty multipliers applied to lair spawn intervals (via effective_dt scaling) and enemy HP/damage on spawn.",
+                "FEATURE 3 — GUILD HERO CAP: Updated game/entities/buildings/hiring_mixin.py: added max_heroes attribute (default GUILD_MAX_HEROES=8 from config), can_hire() returns False when heroes_hired >= max_heroes, added on_hero_death() to decrement counter. Updated game/engine.py try_hire_hero(): checks guild.can_hire() with 'Guild is full!' feedback. Updated game/engine.py _cleanup_after_combat(): detects newly dead heroes and calls home_building.on_hero_death() to free guild slots.",
+                "FEATURE 4 — HERO COST: Updated config.py HeroConfig.hire_cost: 50->100.",
+                "FEATURE 5 — GUARDHOUSE ARROWS: Updated game/entities/buildings/defensive.py Guardhouse: added ranged attack (8-tile range, 12 damage, 2s cooldown) using the same projectile event pattern as BallistaTower. Fires arrows at nearest enemy within range while also spawning guards as before. Updated game/engine.py and game/sim_engine.py: pass enemies list to guardhouse update call.",
+                "FEATURE 8 — DIFFICULTY SYSTEM: Created game/systems/difficulty.py with DifficultyLevel enum (EASY/NORMAL/HARD) and DifficultySystem class. Multiplier tables from DifficultyConfig in config.py. get_multiplier(key) for spawn_interval, enemies_per_wave, enemy_hp, enemy_damage, wave_event_count. set_difficulty(level) with lock support. Wired into spawner.py, lairs.py, wave_events.py. Dev mode defaults to Easy.",
+                "FEATURE 9 — DEV MODE: Added DEV_MODE check at bottom of config.py (KINGDOM_DEV_MODE env var). Overrides: HERO_HIRE_COST=0, STARTING_GOLD=999999, GUILD_MAX_HEROES=999. Console banner on activation. DifficultySystem defaults to Easy when DEV_MODE active.",
+                "Updated game/systems/__init__.py: exports DifficultySystem, DifficultyLevel, WaveEventSystem.",
+                "Updated game/sim_engine.py: creates DifficultySystem instance, passes to EnemySpawner, LairSystem, WaveEventSystem. Calls wave_event_system.update() in tick loop.",
+                "Updated tests/test_spawner.py: adjusted enemies_per_wave cap assertion from 4 to 6."
+              ],
+              "files_created": [
+                "game/systems/wave_events.py",
+                "game/systems/difficulty.py"
+              ],
+              "files_changed": [
+                "config.py",
+                "game/entities/lair.py",
+                "game/entities/buildings/hiring_mixin.py",
+                "game/entities/buildings/defensive.py",
+                "game/systems/spawner.py",
+                "game/systems/lairs.py",
+                "game/systems/__init__.py",
+                "game/sim_engine.py",
+                "game/engine.py",
+                "tests/test_spawner.py"
+              ],
+              "how_to_test": [
+                "python -m pytest tests/ -x -q",
+                "python tools/qa_smoke.py --quick",
+                "$env:KINGDOM_DEV_MODE='1'; python main.py  # verify dev mode banner and free heroes"
+              ],
+              "evidence": {
+                "pytest": {
+                  "command": "python -m pytest tests/ -x -q",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "339 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "DONE: PASS"
+                }
+              },
+              "blockers": [],
+              "follow_ups": [
+                "Agent 08 (R2): Wave warning HUD toasts, guild 'N/8' display, 'Guild is full!' HUD feedback, difficulty menu UI (Easy/Normal/Hard selector + Lock Difficulty button), '[DEV MODE]' HUD label.",
+                "Agent 14 (R2): Horn SFX for wave warnings, wave-clear fanfare.",
+                "Agent 10 (R3): Perf check with 48 enemy cap + wave events active.",
+                "Phase 2 playtest tuning: all values in config.py are starting points — will iterate on spawn rates, gold costs, wave timing, difficulty curve."
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

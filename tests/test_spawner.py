@@ -101,7 +101,7 @@ def test_enemy_per_wave_cap_applied_when_wave_grows(make_world) -> None:
     assert len(spawned) == 1
     assert spawner.total_spawned == 10
     assert spawner.wave_number == 21
-    assert spawner.enemies_per_wave == 4
+    assert spawner.enemies_per_wave == 6  # WK60: cap raised from 4 to 6
 
 
 def test_spawn_positions_are_deterministic_for_same_seed(make_world) -> None:

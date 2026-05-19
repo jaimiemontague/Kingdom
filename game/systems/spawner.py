@@ -1,17 +1,49 @@
 """
 Enemy spawning system.
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, GOBLIN_SPAWN_INTERVAL
-from game.entities.enemy import Goblin, SkeletonArcher
+from game.entities.enemy import Goblin, Wolf, Skeleton, SkeletonArcher, Spider, Bandit
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
+
+if TYPE_CHECKING:
+    from game.systems.difficulty import DifficultySystem
+
+
+# WK60: weighted enemy pool for mixed-type trickle spawns (not Goblins-only).
+# Weight shifts toward tougher enemies as game_time increases.
+_ENEMY_POOL_EARLY = [
+    (Goblin, 6),
+    (Wolf, 3),
+    (Spider, 2),
+]
+_ENEMY_POOL_MID = [
+    (Goblin, 3),
+    (Wolf, 3),
+    (Spider, 3),
+    (Skeleton, 2),
+    (SkeletonArcher, 1),
+]
+_ENEMY_POOL_LATE = [
+    (Goblin, 2),
+    (Wolf, 2),
+    (Spider, 2),
+    (Skeleton, 3),
+    (SkeletonArcher, 2),
+    (Bandit, 2),
+]
 
 
 class EnemySpawner(GameSystem):
     """Manages enemy wave spawning."""
-    
-    def __init__(self, world):
+
+    def __init__(self, world, difficulty: "DifficultySystem | None" = None):
         self.world = world
+        self.difficulty = difficulty
         # Deterministic stream for wave spawns.
         self.rng = get_rng("enemy_spawner")
         self.spawn_timer = 0
@@ -25,7 +57,7 @@ class EnemySpawner(GameSystem):
         self.elapsed_ms = 0
         self.initial_no_spawn_ms = 5000  # First wave comes 25 seconds sooner than the original 30s
         self.wave_number = 1
-        # (~2/3 reduction vs old 4-per-wave baseline)
+        # WK60: raised cap from 4 to 6
         self.enemies_per_wave = 1
         self.total_spawned = 0
         self.enabled = True
@@ -88,6 +120,20 @@ class EnemySpawner(GameSystem):
         if spawned:
             ctx.enemies.extend(spawned)
 
+    def _pick_enemy_class(self):
+        """WK60: pick a weighted random enemy class based on elapsed game time."""
+        minutes = self.elapsed_ms / 60_000.0
+        if minutes < 5:
+            pool = _ENEMY_POOL_EARLY
+        elif minutes < 12:
+            pool = _ENEMY_POOL_MID
+        else:
+            pool = _ENEMY_POOL_LATE
+        bag = []
+        for cls, w in pool:
+            bag.extend([cls] * w)
+        return self.rng.choice(bag)
+
     def spawn(self, dt: float) -> list:
         """
         Update spawner and return list of newly spawned enemies.
@@ -99,35 +145,59 @@ class EnemySpawner(GameSystem):
         self.elapsed_ms += dt * 1000
         if self.elapsed_ms < self.initial_no_spawn_ms:
             return []
-        
+
+        # WK60: apply difficulty multiplier to spawn interval
+        interval_mult = 1.0
+        if self.difficulty is not None:
+            interval_mult = self.difficulty.get_multiplier("spawn_interval")
+
         self.spawn_timer += dt * 1000
         new_enemies = []
-        
-        current_interval = self.first_wave_interval_ms if self.total_spawned == 0 else self.spawn_interval
 
-        if self.spawn_timer >= current_interval:
+        current_interval = self.first_wave_interval_ms if self.total_spawned == 0 else self.spawn_interval
+        effective_interval = current_interval * interval_mult
+
+        if self.spawn_timer >= effective_interval:
             self.spawn_timer = 0
-            
+
+            # WK60: apply difficulty multiplier to enemies per wave
+            epw = self.enemies_per_wave
+            if self.difficulty is not None:
+                epw = max(1, int(round(epw * self.difficulty.get_multiplier("enemies_per_wave"))))
+
             # Spawn enemies for this wave
-            for _ in range(self.enemies_per_wave):
+            for _ in range(epw):
                 if not self._spawned_first_wave_archer:
                     x, y = self._get_first_wave_spawn_position()
                     enemy = SkeletonArcher(x, y)
                     self._spawned_first_wave_archer = True
                 else:
                     x, y = self.get_spawn_position()
-                    enemy = Goblin(x, y)
+                    # WK60: mixed enemy types instead of Goblins-only
+                    enemy_cls = self._pick_enemy_class()
+                    enemy = enemy_cls(x, y)
+
+                # WK60: apply difficulty multipliers to enemy stats on spawn
+                if self.difficulty is not None:
+                    hp_mult = self.difficulty.get_multiplier("enemy_hp")
+                    dmg_mult = self.difficulty.get_multiplier("enemy_damage")
+                    if hp_mult != 1.0:
+                        enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
+                        enemy.hp = enemy.max_hp
+                    if dmg_mult != 1.0:
+                        enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
+
                 new_enemies.append(enemy)
                 self.total_spawned += 1
-            
+
             # Increase difficulty every few waves
             if self.total_spawned % 10 == 0:
                 self.wave_number += 1
-                # Keep growth modest for release; cap wave size low.
-                self.enemies_per_wave = min(4, 1 + (self.wave_number // 3))
-                # Slightly decrease spawn interval, but keep a large floor.
-                self.spawn_interval = max(9000 + self.extra_spawn_delay_ms, self.spawn_interval - 250)
-        
+                # WK60: raised cap from 4 to 6
+                self.enemies_per_wave = min(6, 1 + (self.wave_number // 3))
+                # WK60: faster interval reduction (-500 from -250), lower floor (15000 from 21000)
+                self.spawn_interval = max(15000, self.spawn_interval - 500)
+
         return new_enemies
     
     def set_enabled(self, enabled: bool):

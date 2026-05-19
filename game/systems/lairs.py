@@ -5,6 +5,7 @@ Lair system: places monster lairs in the world and updates them to spawn enemies
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from config import (
     MAP_WIDTH,
@@ -15,6 +16,9 @@ from config import (
 from game.entities.lair import GoblinCamp, WolfDen, SkeletonCrypt, SpiderNest, BanditCamp, MonsterLair
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
+
+if TYPE_CHECKING:
+    from game.systems.difficulty import DifficultySystem
 
 
 @dataclass
@@ -33,8 +37,9 @@ DEFAULT_LAIR_SPECS: list[LairSpawnSpec] = [
 
 
 class LairSystem(GameSystem):
-    def __init__(self, world):
+    def __init__(self, world, difficulty: "DifficultySystem | None" = None):
         self.world = world
+        self.difficulty = difficulty
         self.lairs: list[MonsterLair] = []
         # Deterministic stream for lair placement / type selection.
         self.rng = get_rng("lair_system")
@@ -119,12 +124,34 @@ class LairSystem(GameSystem):
         Update lairs; return a list of newly spawned enemies.
 
         Lairs are stored both in `self.lairs` and in the shared `buildings` list.
+        WK60: applies difficulty multipliers to lair spawn intervals and enemy stats.
         """
+        # WK60: apply difficulty spawn_interval multiplier to effective dt
+        effective_dt = dt
+        if self.difficulty is not None:
+            interval_mult = self.difficulty.get_multiplier("spawn_interval")
+            if interval_mult > 0:
+                # Higher interval_mult = slower spawns → divide dt by it so the timer ticks slower
+                effective_dt = dt / interval_mult
+
         spawned = []
         for lair in list(self.lairs):
             if lair.hp <= 0:
                 continue
-            spawned.extend(lair.update(dt, self.world, buildings))
+            new_enemies = lair.update(effective_dt, self.world, buildings)
+            spawned.extend(new_enemies)
+
+        # WK60: apply difficulty HP/damage multipliers to newly spawned lair enemies
+        if spawned and self.difficulty is not None:
+            hp_mult = self.difficulty.get_multiplier("enemy_hp")
+            dmg_mult = self.difficulty.get_multiplier("enemy_damage")
+            for enemy in spawned:
+                if hp_mult != 1.0:
+                    enemy.max_hp = max(1, int(round(enemy.max_hp * hp_mult)))
+                    enemy.hp = enemy.max_hp
+                if dmg_mult != 1.0:
+                    enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
+
         return spawned
 
 

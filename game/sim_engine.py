@@ -20,6 +20,7 @@ from config import (
     EARLY_PACING_NUDGE_MODE,
     SIM_SEED,
     DEFAULT_SPEED_TIER,
+    STARTING_BUILDINGS,
 )
 
 from game.systems import (
@@ -31,6 +32,8 @@ from game.systems import (
     NeutralBuildingSystem,
 )
 from game.systems.buffs import BuffSystem
+from game.systems.difficulty import DifficultySystem, DifficultyLevel
+from game.systems.wave_events import WaveEventSystem
 from game.building_factory import BuildingFactory
 from game.systems.protocol import SystemContext
 from game.types import BountyType, HeroClass
@@ -99,11 +102,15 @@ class SimEngine:
         self._init_trees_from_world()
         self.world.tree_growth_lookup = self._tree_growth_lookup
 
+        # WK60: Difficulty system (shared by spawner, lair system, wave events)
+        self.difficulty_system = DifficultySystem()
+
         # Systems (sim-owned)
         self.combat_system = CombatSystem()
         self.economy = EconomySystem()
-        self.spawner = EnemySpawner(self.world)
-        self.lair_system = LairSystem(self.world)
+        self.spawner = EnemySpawner(self.world, difficulty=self.difficulty_system)
+        self.lair_system = LairSystem(self.world, difficulty=self.difficulty_system)
+        self.wave_event_system = WaveEventSystem(difficulty=self.difficulty_system)
         self.neutral_building_system = NeutralBuildingSystem(self.world)
         self.buff_system = BuffSystem()
         self.building_factory = BuildingFactory()
@@ -255,6 +262,25 @@ class SimEngine:
         for dy in range(castle.size[1]):
             for dx in range(castle.size[0]):
                 self.world.set_tile(center_x + dx, center_y + dy, 2)  # PATH
+
+        # WK60 Feature 6: Place pre-constructed starting buildings around the castle.
+        for btype, gx, gy in STARTING_BUILDINGS:
+            bld = self.building_factory.create(btype, gx, gy)
+            if bld is None:
+                continue
+            bld.is_constructed = True
+            bld.construction_started = True
+            bld.hp = bld.max_hp
+            self.buildings.append(bld)
+            if hasattr(bld, "set_event_bus"):
+                bld.set_event_bus(self.event_bus)
+            # Clear trees from the footprint before placing path tiles.
+            bw, bh = bld.size
+            self.remove_trees_in_footprint(gx, gy, bw, bh)
+            # Lay path tiles under the footprint (same pattern as castle).
+            for dy in range(bh):
+                for dx in range(bw):
+                    self.world.set_tile(gx + dx, gy + dy, 2)  # PATH
 
         self.lair_system.spawn_initial_lairs(self.buildings, castle)
 
@@ -682,6 +708,9 @@ class SimEngine:
                 if lair_enemies:
                     self.enemies.extend(lair_enemies[:remaining_slots])
 
+        # WK60 Feature 1: Wave events (fires on timer, independent from trickle/lair spawns)
+        self.wave_event_system.update(system_ctx, dt)
+
         # Separation (copied from engine; sim-owned)
         self._apply_entity_separation(dt)
 
@@ -802,7 +831,8 @@ class SimEngine:
             elif building.building_type == "fairgrounds" and hasattr(building, "update"):
                 building.update(dt, self.economy, self.heroes)
             elif building.building_type == "guardhouse" and hasattr(building, "update"):
-                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building])
+                # WK60: pass enemies list for arrow attacks (Feature 5)
+                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building], enemies=self.enemies)
                 if should_spawn:
                     g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
                     self.guards.append(g)

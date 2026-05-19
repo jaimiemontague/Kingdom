@@ -1322,6 +1322,62 @@
           ]
         }
       }
+    },
+    "wk60_v159_gameplay_fun": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
+        "notes": "WK60 'Make It Fun' — R2 UI integration: wave toasts, guild N/8, difficulty menu, DEV MODE label"
+      },
+      "rounds": {
+        "wk60_r2_ui_integration": {
+          "sprint_id": "wk60_v159_gameplay_fun",
+          "round_id": "wk60_r2_ui_integration",
+          "status": "done",
+          "what_i_changed": [
+            "TASK 1 — WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) — prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.",
+            "TASK 2 — GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.",
+            "TASK 3 — GUILD IS FULL FEEDBACK: Already implemented by Agent 05 in game/engine.py try_hire_hero() line ~835 (hud.add_message 'Guild is full!' with red color + ui_error SFX). No additional work needed — verified routing works through existing hud_message system.",
+            "TASK 4 — DIFFICULTY MENU IN PAUSE MENU: game/ui/pause_menu.py: Added 'difficulty' page button to main menu (6 buttons total). New _render_difficulty_page method with Easy/Normal/Hard selection buttons (current highlighted blue, disabled grayed), Lock Difficulty button (red-tinted), description text. Added _render_difficulty_confirm_dialog for lock confirmation overlay with 'Yes, Lock It' / 'Cancel' buttons. handle_click updated for difficulty page: level selection, lock prompt, confirmation dialog. Wired difficulty_system parameter through constructor. game/engine.py: PauseMenu constructor now passes difficulty_system=self.difficulty_system.",
+            "TASK 5 — DEV MODE HUD LABEL: game/ui/hud.py: Added _render_dev_mode_label method — renders '[DEV MODE]' in top-right corner with semi-transparent background when config.DEV_MODE is True. Called from render() alongside wave toast."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "339 passed in 37.79s"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/ -x -q --tb=short exit_code=0 (339 passed — same count as baseline)",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "files_modified": [
+              "game/ui/hud.py (wave toast system + DEV MODE label)",
+              "game/ui/pause_menu.py (difficulty page + confirmation dialog)",
+              "game/ui/building_renderers/guild_panel.py (N/max_heroes display)",
+              "game/engine.py (wave event subscriptions + difficulty_system wiring to PauseMenu)"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie manual test: python main.py --no-llm — open ESC menu, verify Difficulty page shows Easy/Normal/Hard selector + Lock button. Change difficulty and observe lock confirmation.",
+            "Jaimie manual test: python main.py --no-llm — wait 3 minutes for first wave, verify centered toast banner with countdown.",
+            "Jaimie manual test: $env:KINGDOM_DEV_MODE='1'; python main.py --no-llm — verify [DEV MODE] label in top-right.",
+            "Jaimie manual test: select a guild building, verify Heroes: N/8 display."
+          ],
+          "recommended_next_actions": [],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q",
+            "python tools/qa_smoke.py --quick"
+          ]
+        }
+      }
     }
   }
 }

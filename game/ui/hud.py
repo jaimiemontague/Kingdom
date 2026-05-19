@@ -313,6 +313,101 @@ class HUD:
         # POI interaction toast subscriptions (lazy-bound to event bus on first render)
         self._poi_interaction_subscribed: bool = False
 
+        # WK60: Wave event toast state (richer than plain hud_message)
+        self._wave_toast_text: str | None = None
+        self._wave_toast_color: tuple[int, int, int] = (255, 100, 100)
+        self._wave_toast_start_ms: int = 0
+        self._wave_toast_duration_ms: int = 4000
+        self._wave_toast_countdown_end_ms: int = 0  # 0 = no countdown
+        self._wave_toast_font: pygame.font.Font = pygame.font.Font(None, 30)
+
+    # ------------------------------------------------------------------
+    # WK60: Wave event toast API (consumed by engine EventBus subscription)
+    # ------------------------------------------------------------------
+
+    def on_wave_incoming(self, event: dict) -> None:
+        """Handle 'wave_incoming' EventBus event — show a prominent countdown toast."""
+        name = event.get("name", "Unknown Wave")
+        seconds = int(event.get("seconds", 10))
+        self._wave_toast_text = f"INCOMING: {name}!"
+        self._wave_toast_color = (255, 100, 100)
+        self._wave_toast_start_ms = pygame.time.get_ticks()
+        self._wave_toast_duration_ms = (seconds + 2) * 1000  # show for countdown duration + 2s
+        self._wave_toast_countdown_end_ms = pygame.time.get_ticks() + seconds * 1000
+
+    def on_wave_cleared(self, event: dict) -> None:
+        """Handle 'wave_cleared' EventBus event — show a reward toast."""
+        name = event.get("name", "Wave")
+        reward = int(event.get("reward", 0))
+        self._wave_toast_text = f"Wave Cleared! +{reward} Gold"
+        self._wave_toast_color = (255, 215, 0)
+        self._wave_toast_start_ms = pygame.time.get_ticks()
+        self._wave_toast_duration_ms = 4000
+        self._wave_toast_countdown_end_ms = 0  # no countdown for cleared
+
+    def _render_wave_toast(self, surface: pygame.Surface) -> None:
+        """Render the wave event toast banner (centered, top-center area)."""
+        if self._wave_toast_text is None:
+            return
+        now = pygame.time.get_ticks()
+        elapsed = now - self._wave_toast_start_ms
+        if elapsed > self._wave_toast_duration_ms:
+            self._wave_toast_text = None
+            return
+
+        # Build display text with optional countdown
+        display_text = self._wave_toast_text
+        if self._wave_toast_countdown_end_ms > 0:
+            remaining_sec = max(0, (self._wave_toast_countdown_end_ms - now) / 1000.0)
+            if remaining_sec > 0:
+                display_text = f"{self._wave_toast_text} ({int(remaining_sec)}s)"
+
+        # Fade in/out
+        alpha = 255
+        fade_ms = 400
+        if elapsed < fade_ms:
+            alpha = int(255 * elapsed / fade_ms)
+        elif elapsed > self._wave_toast_duration_ms - fade_ms:
+            alpha = int(255 * (self._wave_toast_duration_ms - elapsed) / fade_ms)
+        alpha = max(0, min(255, alpha))
+
+        text_surf = self._wave_toast_font.render(display_text, True, self._wave_toast_color)
+        tw, th = text_surf.get_size()
+        pad_x, pad_y = 20, 8
+        banner_w = tw + pad_x * 2
+        banner_h = th + pad_y * 2
+
+        # Position: top-center, below top bar
+        bx = (surface.get_width() - banner_w) // 2
+        by = self.top_bar_height + 8
+
+        bg = pygame.Surface((banner_w, banner_h), pygame.SRCALPHA)
+        bg.fill((20, 20, 40, min(200, alpha)))
+        pygame.draw.rect(bg, (*self._wave_toast_color, min(180, alpha)), (0, 0, banner_w, banner_h), 2)
+        surface.blit(bg, (bx, by))
+
+        text_surf.set_alpha(alpha)
+        surface.blit(text_surf, (bx + pad_x, by + pad_y))
+
+    # ------------------------------------------------------------------
+    # WK60 Feature 9: DEV MODE HUD label
+    # ------------------------------------------------------------------
+
+    def _render_dev_mode_label(self, surface: pygame.Surface) -> None:
+        """Render '[DEV MODE]' label in the top-right when config.DEV_MODE is True."""
+        from config import DEV_MODE
+        if not DEV_MODE:
+            return
+        text_surf = self.font_small.render("[DEV MODE]", True, (255, 200, 60))
+        tw = text_surf.get_size()[0]
+        # Top-right corner, semi-transparent background
+        x = surface.get_width() - tw - 12
+        y = 6
+        bg = pygame.Surface((tw + 8, 18), pygame.SRCALPHA)
+        bg.fill((20, 20, 40, 140))
+        surface.blit(bg, (x - 4, y - 2))
+        surface.blit(text_surf, (x, y))
+
     def effective_card_full_h(self) -> int:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
 
@@ -1757,6 +1852,12 @@ class HUD:
         self._ensure_poi_interaction_subscription(game_state)
         self._check_poi_discoveries(game_state)
         self._render_poi_toasts(surface)
+
+        # WK60: Wave event toast (centered, prominent)
+        self._render_wave_toast(surface)
+
+        # WK60: DEV MODE label
+        self._render_dev_mode_label(surface)
 
         _cur = game_state.get("ui_cursor_pos")
         cursor_pos: tuple[int, int] | None

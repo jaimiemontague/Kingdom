@@ -44,7 +44,7 @@ class CameraConfig:
 
 @dataclass(frozen=True)
 class HeroConfig:
-    hire_cost: int = 50
+    hire_cost: int = 100  # WK60: doubled from 50 (Feature 4 — Make It Fun)
     base_hp: int = 100
     base_attack: int = 10
     base_defense: int = 5
@@ -57,7 +57,7 @@ class EnemyConfig:
     goblin_attack: int = 5
     goblin_speed: float = 90.0  # px/sec (baked: old 1.5 * 60)
     goblin_spawn_interval: int = 3500   # wk15: lower = more frequent waves (was 5000)
-    max_alive_enemies: int = 32         # wk15: higher cap for more aggressive waves (was 20)
+    max_alive_enemies: int = 48         # WK60: raised from 32 for wave events + lair pressure
     wolf_hp: int = 22
     wolf_attack: int = 4
     wolf_speed: float = 138.0  # px/sec (baked: old 2.3 * 60)
@@ -74,8 +74,8 @@ class EnemyConfig:
 
 @dataclass(frozen=True)
 class LairConfig:
-    initial_count: int = 4   # wk15: more lairs = more monster density (was 2)
-    min_distance_from_castle_tiles: int = 18
+    initial_count: int = 5   # WK60: raised from 4 for more early pressure
+    min_distance_from_castle_tiles: int = 15  # WK60: reduced from 18 (lairs feel closer, more threatening)
     stash_growth_per_spawn: int = 8
     rogue_lair_gold_threshold: int = 100
     bounty_cost: int = 90
@@ -116,6 +116,54 @@ class RangerConfig:
     explore_black_fog_bias: float = 0.7
     frontier_scan_radius_tiles: int = 10
     frontier_commit_ms: int = 4000
+
+
+# WK60: Starting Buildings (Feature 6 — Make It Fun)
+# Pre-constructed buildings placed around castle at game start.
+# Each entry: (building_type, grid_x, grid_y)
+# Castle is at (124, 124) 3x3 footprint, occupying tiles (124-126, 124-126).
+# All starting buildings are 2x2.
+STARTING_BUILDINGS = [
+    ("warrior_guild", 128, 124),   # East of castle
+    ("ranger_guild", 119, 124),    # West of castle (2 tiles gap)
+    ("marketplace", 124, 128),     # South of castle
+    ("guardhouse", 124, 131),      # Further south
+]
+
+# WK60: Guild Hero Cap (Feature 3 — Make It Fun)
+GUILD_MAX_HEROES = 8
+
+# WK60: Guardhouse Arrow Config (Feature 5 — Make It Fun)
+GUARDHOUSE_ARROW_RANGE_TILES = 8.0
+GUARDHOUSE_ARROW_DAMAGE = 12
+GUARDHOUSE_ARROW_COOLDOWN = 2.0
+
+
+@dataclass(frozen=True)
+class DifficultyConfig:
+    """WK60: Difficulty system tuning knobs (Feature 8 — Make It Fun)."""
+    default_difficulty: str = "normal"  # easy, normal, hard
+    easy_spawn_interval_mult: float = 1.5
+    easy_enemy_count_mult: float = 0.6
+    easy_enemy_hp_mult: float = 0.7
+    easy_enemy_damage_mult: float = 0.7
+    hard_spawn_interval_mult: float = 0.7
+    hard_enemy_count_mult: float = 1.5
+    hard_enemy_hp_mult: float = 1.3
+    hard_enemy_damage_mult: float = 1.3
+
+
+@dataclass(frozen=True)
+class WaveEventConfig:
+    """WK60: Wave events system tuning knobs (Feature 1 — Make It Fun)."""
+    first_event_minute: float = 3.0
+    interval_minutes: float = 2.5
+    warning_seconds: float = 10.0
+    max_enemy_cap_overflow: float = 1.5  # wave events can temporarily exceed MAX_ALIVE_ENEMIES by this factor
+
+
+DIFFICULTY = DifficultyConfig()
+WAVE_EVENT = WaveEventConfig()
 
 
 # Speed tiers (wk12 Chronos: 5-tier player-facing speed control)
@@ -645,4 +693,12 @@ POI_DISCOVERY_RANGE_TILES = 5
 
 # WK6: Bounty targeting in black fog
 BOUNTY_BLACK_FOG_DISTANCE_PENALTY = BOUNTY.black_fog_distance_penalty  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
+
+# ---------- WK60: Dev Mode (Feature 9 — Make It Fun) ----------
+DEV_MODE = os.getenv("KINGDOM_DEV_MODE", "0") == "1"
+if DEV_MODE:
+    HERO_HIRE_COST = 0
+    STARTING_GOLD = 999_999
+    GUILD_MAX_HEROES = 999
+    print("*** DEV MODE ACTIVE — free heroes, infinite gold ***")
 

@@ -963,6 +963,42 @@
           ]
         }
       }
+    },
+    "wk60_v159_gameplay_fun": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json sprints.wk60_v159_gameplay_fun",
+        "notes": "WK60: Make It Fun sprint. Agent 03 owns Feature 6 (starting buildings) and Feature 7 (bounty flags in Ursina 3D)."
+      },
+      "rounds": {
+        "wk60_r1_core_gameplay": {
+          "sprint_id": "wk60_v159_gameplay_fun",
+          "round_id": "wk60_r1_core_gameplay",
+          "status": "done",
+          "features_implemented": {
+            "feature_6_starting_buildings": {
+              "status": "done",
+              "summary": "Added STARTING_BUILDINGS config list in config.py and placement loop in SimEngine.setup_initial_state(). 4 buildings (Warriors Guild, Rangers Guild, Marketplace, Guardhouse) placed pre-constructed around castle with full HP, path tiles, and tree clearing. Fog-of-war revealers handled automatically by existing _update_fog_of_war() logic.",
+              "files_modified": ["config.py", "game/sim_engine.py"],
+              "config_added": "STARTING_BUILDINGS = [(warrior_guild,128,124), (ranger_guild,119,124), (marketplace,124,128), (guardhouse,124,131)]",
+              "grid_overlap_check": "Castle footprint 124-126,124-126 (3x3). Warriors Guild 128-129,124-125 — no overlap. Rangers Guild 119-120,124-125 — no overlap. Marketplace 124-125,128-129 — no overlap. Guardhouse 124-125,131-132 — no overlap."
+            },
+            "feature_7_bounty_flags_ursina_3d": {
+              "status": "done",
+              "summary": "Added _sync_snapshot_bounties() method to UrsinaRenderer. Creates 3-part flag assemblies (brown pole, gold pennant, $reward text) for each unclaimed bounty. Manages lifecycle via _bounty_entities dict keyed by bounty_id. Removes entities when bounties are claimed/expired. Called from update() alongside other _sync_snapshot_* methods.",
+              "files_modified": ["game/graphics/ursina_renderer.py"],
+              "snapshot_data": "SimStateSnapshot.bounties tuple already populated from bounty_system.get_unclaimed_bounties() — no snapshot changes needed.",
+              "entities_per_bounty": "3 (pole Entity, flag Entity, Text entity)",
+              "cleanup": "Automatic — removed_ids = cached - active; ursina.destroy each part"
+            }
+          },
+          "gate_results": {
+            "pytest": "339 passed, 1 warning in 37.99s",
+            "qa_smoke": "DONE: PASS"
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

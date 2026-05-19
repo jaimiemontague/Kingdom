@@ -267,6 +267,8 @@ class UrsinaRenderer:
         self._log_stack_entities: dict[tuple[int, int], Entity] = {}
         # WK55: POI mystery "?" marker entities, keyed by POI id().
         self._poi_mystery_markers: dict[int, Entity] = {}
+        # WK60 Feature 7: Bounty flag 3D entities, keyed by bounty_id.
+        self._bounty_entities: dict[int, list[Entity]] = {}
 
         # R4: sim interpolation state for linear position interpolation
         self._frame_blend: float = 0.0
@@ -872,6 +874,8 @@ class UrsinaRenderer:
         if _stage_profile: _rec("16_sync_snapshot_tax_collector", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_projectiles(snapshot, active_ids)
         if _stage_profile: _rec("17_sync_snapshot_projectiles", _t0); _t0 = time.perf_counter()
+        self._sync_snapshot_bounties(snapshot, active_ids)
+        if _stage_profile: _rec("17b_sync_snapshot_bounties", _t0); _t0 = time.perf_counter()
         self._update_debug_status_text(snapshot)
         if _stage_profile: _rec("18_update_debug_status_text", _t0); _t0 = time.perf_counter()
         self._destroy_removed_entities(active_ids)
@@ -1802,6 +1806,85 @@ class UrsinaRenderer:
                 shader=sprite_unlit_shader,
             )
             active_ids.add(obj_id)
+
+    # ------------------------------------------------------------------
+    # WK60 Feature 7: Bounty flag 3D rendering
+    # ------------------------------------------------------------------
+    # Constants for bounty flag visual elements
+    _BOUNTY_POLE_HEIGHT = 0.6
+    _BOUNTY_POLE_RADIUS = 0.02
+    _BOUNTY_FLAG_SCALE = (0.18, 0.12, 0.01)
+    _BOUNTY_FLAG_OFFSET_Y = 0.05  # flag sits slightly below pole top
+    _BOUNTY_TEXT_OFFSET_Y = 0.12  # text sits above pole top
+
+    def _sync_snapshot_bounties(self, snapshot: "SimStateSnapshot", active_ids: set) -> None:
+        """Create/update/remove 3D bounty flag entities for each unclaimed bounty."""
+        import ursina
+
+        bounties = getattr(snapshot, "bounties", ()) or ()
+
+        # Build set of currently active bounty IDs
+        active_bounty_ids: set[int] = set()
+        for b in bounties:
+            bid = getattr(b, "bounty_id", None)
+            if bid is None:
+                continue
+            if getattr(b, "claimed", False):
+                continue
+            active_bounty_ids.add(bid)
+
+            bx = float(getattr(b, "x", 0))
+            by = float(getattr(b, "y", 0))
+            reward = int(getattr(b, "reward", 0))
+
+            wx, wz = sim_px_to_world_xz(bx, by)
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
+
+            if bid in self._bounty_entities:
+                # Update existing entities positions (in case bounty moved, unlikely but safe)
+                parts = self._bounty_entities[bid]
+                pole_y = terrain_y + self._BOUNTY_POLE_HEIGHT * 0.5
+                parts[0].position = Vec3(wx, pole_y, wz)  # pole
+                parts[1].position = Vec3(wx + 0.08, terrain_y + self._BOUNTY_POLE_HEIGHT - self._BOUNTY_FLAG_OFFSET_Y, wz)  # flag
+                parts[2].position = Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT + self._BOUNTY_TEXT_OFFSET_Y, wz)  # text
+            else:
+                # Create new flag assembly: pole + pennant + reward text
+                pole = Entity(
+                    model="cube",
+                    color=color.rgb(0.4, 0.25, 0.1),  # brown
+                    scale=Vec3(self._BOUNTY_POLE_RADIUS * 2, self._BOUNTY_POLE_HEIGHT, self._BOUNTY_POLE_RADIUS * 2),
+                    position=Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT * 0.5, wz),
+                    shader=unlit_shader,
+                )
+                # Gold pennant flag — offset slightly to the side of the pole
+                flag = Entity(
+                    model="quad",
+                    color=color.rgb(1.0, 0.84, 0.0),  # gold
+                    scale=Vec3(*self._BOUNTY_FLAG_SCALE),
+                    position=Vec3(wx + 0.08, terrain_y + self._BOUNTY_POLE_HEIGHT - self._BOUNTY_FLAG_OFFSET_Y, wz),
+                    billboard=True,
+                    shader=unlit_shader,
+                )
+                # Reward text label above the flag
+                reward_text = Text(
+                    text=f"${reward}",
+                    position=(0, 0),
+                    scale=1.0,
+                    color=color.rgb(1.0, 0.84, 0.0),
+                    billboard=True,
+                    parent=scene,
+                )
+                reward_text.world_position = Vec3(wx, terrain_y + self._BOUNTY_POLE_HEIGHT + self._BOUNTY_TEXT_OFFSET_Y, wz)
+                reward_text.world_scale = Vec3(0.15, 0.15, 0.15)
+
+                self._bounty_entities[bid] = [pole, flag, reward_text]
+
+        # Remove entities for claimed/expired bounties
+        removed_ids = set(self._bounty_entities.keys()) - active_bounty_ids
+        for bid in removed_ids:
+            parts = self._bounty_entities.pop(bid)
+            for part in parts:
+                ursina.destroy(part)
 
     def _update_debug_status_text(self, snapshot: "SimStateSnapshot") -> None:
         heroes_alive = len([h for h in getattr(snapshot, "heroes", ()) if getattr(h, "is_alive", True)])

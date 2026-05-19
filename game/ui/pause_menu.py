@@ -15,14 +15,15 @@ from config import COLOR_WHITE, COLOR_UI_BG, COLOR_UI_BORDER
 class PauseMenu:
     """Centered pause/settings menu modal."""
     
-    def __init__(self, screen_width: int, screen_height: int, engine=None, audio_system=None):
+    def __init__(self, screen_width: int, screen_height: int, engine=None, audio_system=None, difficulty_system=None):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.visible = False
-        self.current_page = "main"  # main, graphics, audio, controls
+        self.current_page = "main"  # main, graphics, audio, controls, difficulty
         self.theme = UITheme()
         self.engine = engine  # WK7: For apply_display_settings() and get_game_state()
         self.audio_system = audio_system  # WK7: For master volume control
+        self.difficulty_system = difficulty_system  # WK60: For difficulty selector
         self._panel_tex_modal = "assets/ui/kingdomsim_ui_cc0/panels/panel_modal.png"
         self._button_tex_normal = "assets/ui/kingdomsim_ui_cc0/buttons/button_normal.png"
         self._button_tex_hover = "assets/ui/kingdomsim_ui_cc0/buttons/button_hover.png"
@@ -37,6 +38,7 @@ class PauseMenu:
             "graphics": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_graphics.png", (16, 16)) or _blank_16,
             "audio": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_audio.png", (16, 16)) or _blank_16,
             "controls": load_image_cached("assets/ui/kingdomsim_ui_cc0/icons/icon_controls.png", (16, 16)) or _blank_16,
+            "difficulty": _blank_16,  # WK60: No dedicated icon yet; blank slot for alignment
         }
         
         # Modal panel
@@ -94,6 +96,10 @@ class PauseMenu:
         self.audio_slider_dragging = None  # "master" | "music" | "sfx" | None
         # Controls page: scroll long keybind list inside the modal
         self.controls_scroll_px = 0
+        # WK60: Difficulty lock confirmation dialog state
+        self._difficulty_confirm_visible: bool = False
+        self._difficulty_confirm_yes_rect: pygame.Rect | None = None
+        self._difficulty_confirm_cancel_rect: pygame.Rect | None = None
     
     def _update_page_buttons(self):
         """Update page button rectangles based on current panel size."""
@@ -109,7 +115,8 @@ class PauseMenu:
             "graphics": pygame.Rect(button_x, button_y + spacing, button_w, button_h),
             "audio": pygame.Rect(button_x, button_y + spacing * 2, button_w, button_h),
             "controls": pygame.Rect(button_x, button_y + spacing * 3, button_w, button_h),
-            "quit": pygame.Rect(button_x, button_y + spacing * 4, button_w, button_h),
+            "difficulty": pygame.Rect(button_x, button_y + spacing * 4, button_w, button_h),
+            "quit": pygame.Rect(button_x, button_y + spacing * 5, button_w, button_h),
         }
         self.page_button_widgets = {}
         for page_name, rect in self.page_buttons.items():
@@ -198,6 +205,7 @@ class PauseMenu:
         self.current_page = "main"
         self.audio_slider_dragging = None
         self.controls_scroll_px = 0
+        self._difficulty_confirm_visible = False
     
     def toggle(self):
         """Toggle menu visibility."""
@@ -319,13 +327,57 @@ class PauseMenu:
                 self.audio_sfx_slider.set_value_from_x(pos[0])
                 self._set_audio_volume("sfx", self.audio_sfx_slider.value)
                 return "audio_slider_drag"
-        
+
+        elif self.current_page == "difficulty":
+            # WK60: Difficulty page — confirmation dialog takes priority
+            if self._difficulty_confirm_visible:
+                if self._difficulty_confirm_yes_rect and self._difficulty_confirm_yes_rect.collidepoint(pos):
+                    if self.difficulty_system is not None:
+                        self.difficulty_system.lock_difficulty()
+                    self._difficulty_confirm_visible = False
+                    return "difficulty_locked"
+                if self._difficulty_confirm_cancel_rect and self._difficulty_confirm_cancel_rect.collidepoint(pos):
+                    self._difficulty_confirm_visible = False
+                    return "difficulty_lock_cancelled"
+                # Click anywhere else in confirm dialog = ignore (stay in dialog)
+                return None
+
+            # Difficulty level buttons
+            panel_rect = self.modal.get_panel_rect()
+            btn_w = 200
+            btn_h = 36
+            btn_x = panel_rect.centerx - btn_w // 2
+            btn_y_start = panel_rect.y + 100
+            btn_spacing = 44
+
+            from game.systems.difficulty import DifficultyLevel
+            levels = [
+                ("Easy", DifficultyLevel.EASY),
+                ("Normal", DifficultyLevel.NORMAL),
+                ("Hard", DifficultyLevel.HARD),
+            ]
+            for i, (label, level) in enumerate(levels):
+                btn_rect = pygame.Rect(btn_x, btn_y_start + i * btn_spacing, btn_w, btn_h)
+                if btn_rect.collidepoint(pos) and self.difficulty_system is not None:
+                    if not self.difficulty_system.locked:
+                        self.difficulty_system.set_difficulty(level)
+                        return f"difficulty_set_{level.value}"
+
+            # Lock Difficulty button
+            lock_y = btn_y_start + len(levels) * btn_spacing + 20
+            lock_rect = pygame.Rect(btn_x, lock_y, btn_w, btn_h)
+            if lock_rect.collidepoint(pos) and self.difficulty_system is not None:
+                if not self.difficulty_system.locked:
+                    self._difficulty_confirm_visible = True
+                    return "difficulty_lock_prompt"
+
         # Back button (top-left corner)
         panel_rect = self.modal.get_panel_rect()
         back_rect = pygame.Rect(panel_rect.x + 10, panel_rect.y + 10, 60, 30)
         if back_rect.collidepoint(pos):
             self.current_page = "main"
             self.controls_scroll_px = 0
+            self._difficulty_confirm_visible = False
             return "back"
         
         return None
@@ -560,3 +612,200 @@ class PauseMenu:
             # Back button
             back_text = self.theme.font_small.render("< Back", True, self.theme.text)
             surface.blit(back_text, (panel_rect.x + 10, panel_rect.y + 10))
+
+        elif self.current_page == "difficulty":
+            self._render_difficulty_page(surface, panel_rect, cur_mouse)
+
+    # ------------------------------------------------------------------
+    # WK60: Difficulty page rendering
+    # ------------------------------------------------------------------
+
+    def _render_difficulty_page(
+        self,
+        surface: pygame.Surface,
+        panel_rect: pygame.Rect,
+        cur_mouse: tuple[int, int],
+    ) -> None:
+        """Render the difficulty settings page with Easy/Normal/Hard buttons and Lock."""
+        from game.systems.difficulty import DifficultyLevel
+
+        title = self.theme.font_title.render("Difficulty", True, self.theme.text)
+        title_x = panel_rect.centerx - title.get_width() // 2
+        surface.blit(title, (title_x, panel_rect.y + 20))
+
+        # Current difficulty label
+        ds = self.difficulty_system
+        if ds is not None:
+            current_label = ds.current.value.capitalize()
+            locked = ds.locked
+        else:
+            current_label = "Normal"
+            locked = False
+
+        subtitle = self.theme.font_body.render(
+            f"Current: {current_label}" + (" (Locked)" if locked else ""),
+            True,
+            (180, 200, 220),
+        )
+        surface.blit(subtitle, (panel_rect.centerx - subtitle.get_width() // 2, panel_rect.y + 60))
+
+        # Difficulty level buttons
+        btn_w = 200
+        btn_h = 36
+        btn_x = panel_rect.centerx - btn_w // 2
+        btn_y_start = panel_rect.y + 100
+        btn_spacing = 44
+
+        levels = [
+            ("Easy", DifficultyLevel.EASY),
+            ("Normal", DifficultyLevel.NORMAL),
+            ("Hard", DifficultyLevel.HARD),
+        ]
+        for i, (label, level) in enumerate(levels):
+            btn_rect = pygame.Rect(btn_x, btn_y_start + i * btn_spacing, btn_w, btn_h)
+            is_selected = ds is not None and ds.current == level
+            is_hovered = btn_rect.collidepoint(cur_mouse)
+            is_disabled = locked
+
+            if is_disabled:
+                bg_color = (35, 35, 45)
+                text_color = (90, 90, 100) if not is_selected else (130, 150, 180)
+                border_color = (50, 50, 60)
+            elif is_selected:
+                bg_color = (60, 90, 130)
+                text_color = (255, 255, 255)
+                border_color = (100, 150, 200)
+            elif is_hovered:
+                bg_color = (55, 55, 70)
+                text_color = (230, 230, 240)
+                border_color = (80, 80, 100)
+            else:
+                bg_color = (45, 45, 58)
+                text_color = (200, 200, 210)
+                border_color = (60, 60, 75)
+
+            pygame.draw.rect(surface, bg_color, btn_rect)
+            pygame.draw.rect(surface, border_color, btn_rect, 2)
+            if is_selected:
+                # Draw selection indicator
+                indicator = pygame.Rect(btn_rect.x + 4, btn_rect.y + 4, 4, btn_rect.height - 8)
+                pygame.draw.rect(surface, (100, 180, 255), indicator)
+
+            btn_text = self.theme.font_body.render(label, True, text_color)
+            tx = btn_rect.centerx - btn_text.get_width() // 2
+            ty = btn_rect.centery - btn_text.get_height() // 2
+            surface.blit(btn_text, (tx, ty))
+
+        # Lock Difficulty button
+        lock_y = btn_y_start + len(levels) * btn_spacing + 20
+        lock_rect = pygame.Rect(btn_x, lock_y, btn_w, btn_h)
+        lock_hovered = lock_rect.collidepoint(cur_mouse)
+
+        if locked:
+            lock_bg = (35, 35, 45)
+            lock_text_color = (90, 90, 100)
+            lock_label = "Difficulty Locked"
+            lock_border = (50, 50, 60)
+        elif lock_hovered:
+            lock_bg = (80, 50, 50)
+            lock_text_color = (255, 200, 200)
+            lock_label = "Lock Difficulty"
+            lock_border = (120, 70, 70)
+        else:
+            lock_bg = (60, 40, 40)
+            lock_text_color = (220, 180, 180)
+            lock_label = "Lock Difficulty"
+            lock_border = (90, 55, 55)
+
+        pygame.draw.rect(surface, lock_bg, lock_rect)
+        pygame.draw.rect(surface, lock_border, lock_rect, 2)
+        lock_surf = self.theme.font_body.render(lock_label, True, lock_text_color)
+        surface.blit(lock_surf, (lock_rect.centerx - lock_surf.get_width() // 2,
+                                  lock_rect.centery - lock_surf.get_height() // 2))
+
+        # Difficulty description
+        desc_y = lock_y + btn_h + 16
+        descriptions = {
+            DifficultyLevel.EASY: "Slower spawns, weaker enemies",
+            DifficultyLevel.NORMAL: "Balanced challenge",
+            DifficultyLevel.HARD: "Faster spawns, tougher enemies",
+        }
+        if ds is not None:
+            desc_text = descriptions.get(ds.current, "")
+            desc_surf = self.theme.font_small.render(desc_text, True, (130, 130, 145))
+            surface.blit(desc_surf, (panel_rect.centerx - desc_surf.get_width() // 2, desc_y))
+
+        # Back button
+        back_text = self.theme.font_small.render("< Back", True, self.theme.text)
+        surface.blit(back_text, (panel_rect.x + 10, panel_rect.y + 10))
+
+        # Confirmation dialog overlay (if active)
+        if self._difficulty_confirm_visible:
+            self._render_difficulty_confirm_dialog(surface, panel_rect, cur_mouse)
+
+    def _render_difficulty_confirm_dialog(
+        self,
+        surface: pygame.Surface,
+        panel_rect: pygame.Rect,
+        cur_mouse: tuple[int, int],
+    ) -> None:
+        """Render the 'Lock Difficulty?' confirmation overlay inside the modal."""
+        # Semi-transparent overlay over the panel
+        overlay = pygame.Surface((panel_rect.width, panel_rect.height), pygame.SRCALPHA)
+        overlay.fill((10, 10, 20, 180))
+        surface.blit(overlay, (panel_rect.x, panel_rect.y))
+
+        # Dialog box
+        dlg_w = 280
+        dlg_h = 180
+        dlg_x = panel_rect.centerx - dlg_w // 2
+        dlg_y = panel_rect.centery - dlg_h // 2
+        dlg_rect = pygame.Rect(dlg_x, dlg_y, dlg_w, dlg_h)
+
+        pygame.draw.rect(surface, (30, 30, 45), dlg_rect)
+        pygame.draw.rect(surface, (80, 80, 100), dlg_rect, 2)
+
+        # Title
+        dlg_title = self.theme.font_body.render("Lock Difficulty?", True, (255, 220, 180))
+        surface.blit(dlg_title, (dlg_rect.centerx - dlg_title.get_width() // 2, dlg_y + 14))
+
+        # Warning text (wrapped)
+        warn_text = "Once you lock difficulty, it cannot be unlocked for the remaining duration of the game. Are you sure?"
+        lines = _wrap_text(self.theme.font_small, warn_text, dlg_w - 24)
+        wy = dlg_y + 42
+        for line in lines:
+            line_surf = self.theme.font_small.render(line, True, (190, 190, 200))
+            surface.blit(line_surf, (dlg_x + 12, wy))
+            wy += self.theme.font_small.get_height() + 2
+
+        # Buttons
+        btn_w = 110
+        btn_h = 32
+        btn_y = dlg_y + dlg_h - btn_h - 16
+        gap = 16
+        total_w = btn_w * 2 + gap
+        yes_x = dlg_rect.centerx - total_w // 2
+        cancel_x = yes_x + btn_w + gap
+
+        yes_rect = pygame.Rect(yes_x, btn_y, btn_w, btn_h)
+        cancel_rect = pygame.Rect(cancel_x, btn_y, btn_w, btn_h)
+        self._difficulty_confirm_yes_rect = yes_rect
+        self._difficulty_confirm_cancel_rect = cancel_rect
+
+        # Yes button
+        yes_hovered = yes_rect.collidepoint(cur_mouse)
+        yes_bg = (100, 60, 60) if yes_hovered else (70, 45, 45)
+        pygame.draw.rect(surface, yes_bg, yes_rect)
+        pygame.draw.rect(surface, (140, 80, 80), yes_rect, 2)
+        yes_label = self.theme.font_body.render("Yes, Lock It", True, (255, 200, 200))
+        surface.blit(yes_label, (yes_rect.centerx - yes_label.get_width() // 2,
+                                  yes_rect.centery - yes_label.get_height() // 2))
+
+        # Cancel button
+        cancel_hovered = cancel_rect.collidepoint(cur_mouse)
+        cancel_bg = (55, 55, 70) if cancel_hovered else (40, 40, 55)
+        pygame.draw.rect(surface, cancel_bg, cancel_rect)
+        pygame.draw.rect(surface, (80, 80, 100), cancel_rect, 2)
+        cancel_label = self.theme.font_body.render("Cancel", True, (200, 200, 210))
+        surface.blit(cancel_label, (cancel_rect.centerx - cancel_label.get_width() // 2,
+                                     cancel_rect.centery - cancel_label.get_height() // 2))

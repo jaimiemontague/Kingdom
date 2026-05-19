@@ -214,7 +214,7 @@ class GameEngine:
                 self.window_height,
                 on_request_ursina_hud_upload=self._request_ursina_hud_upload,
             )
-            self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system)
+            self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system, difficulty_system=self.difficulty_system)
             self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
             self.input_handler = InputHandler(EngineBackedGameCommands(self))
             self.cleanup_manager = CleanupManager(self)
@@ -233,6 +233,9 @@ class GameEngine:
             )
             # WK37 Stage2: bridge sim HUD_MESSAGE events into UI toasts.
             self.event_bus.subscribe(GameEventType.HUD_MESSAGE, self._on_hud_message_event)
+            # WK60: wave event toasts (prominent countdown banner)
+            self.event_bus.subscribe("wave_incoming", self._on_wave_incoming_event)
+            self.event_bus.subscribe("wave_cleared", self._on_wave_cleared_event)
             if hasattr(getattr(self, "hud", None), "_alert_watcher"):
                 try:
                     self.hud._alert_watcher.subscribe(self.event_bus)
@@ -293,6 +296,22 @@ class GameEngine:
             color = event.get("color") or (255, 255, 255)
             if text and hasattr(self, "hud") and self.hud:
                 self.hud.add_message(str(text), tuple(color))
+        except Exception:
+            pass
+
+    def _on_wave_incoming_event(self, event: dict) -> None:
+        """WK60: Route wave_incoming event to HUD wave toast banner."""
+        try:
+            if hasattr(self, "hud") and self.hud:
+                self.hud.on_wave_incoming(event)
+        except Exception:
+            pass
+
+    def _on_wave_cleared_event(self, event: dict) -> None:
+        """WK60: Route wave_cleared event to HUD wave toast banner."""
+        try:
+            if hasattr(self, "hud") and self.hud:
+                self.hud.on_wave_cleared(event)
         except Exception:
             pass
 
@@ -501,6 +520,14 @@ class GameEngine:
     @property
     def buff_system(self):
         return self.sim.buff_system
+
+    @property
+    def difficulty_system(self):
+        return self.sim.difficulty_system
+
+    @property
+    def wave_event_system(self):
+        return self.sim.wave_event_system
 
     @property
     def building_factory(self):
@@ -822,12 +849,19 @@ class GameEngine:
                 self.audio_system.play_sfx("ui_error")
             return
 
+        # WK60 Feature 3: check guild hero cap before hiring
+        if hasattr(guild, "can_hire") and not guild.can_hire():
+            self.hud.add_message("Guild is full!", (255, 100, 100))
+            if self.audio_system is not None:
+                self.audio_system.play_sfx("ui_error")
+            return
+
         if not self.economy.can_afford_hero():
             self.hud.add_message("Not enough gold to hire!", (255, 100, 100))
             if self.audio_system is not None:
                 self.audio_system.play_sfx("ui_error")
             return
-        
+
         # Hire the hero
         self.economy.hire_hero()
         guild.hire_hero()
@@ -1343,6 +1377,14 @@ class GameEngine:
 
     def _cleanup_after_combat(self):
         """Remove dead entities and destroyed buildings after combat resolution."""
+        # WK60 Feature 3: decrement guild hero count for newly dead heroes
+        for hero in self.heroes:
+            if not getattr(hero, "is_alive", True) and not getattr(hero, "_guild_death_processed", False):
+                hero._guild_death_processed = True
+                home = getattr(hero, "home_building", None)
+                if home is not None and hasattr(home, "on_hero_death"):
+                    home.on_hero_death()
+
         # Clean up dead enemies
         self.enemies = [e for e in self.enemies if e.is_alive]
 
@@ -1411,7 +1453,8 @@ class GameEngine:
                 building.update(dt, self.economy, self.heroes)
             elif building.building_type == "guardhouse" and hasattr(building, "update"):
                 # Guard spawning handled here so guards become real entities.
-                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building])
+                # WK60: pass enemies list for arrow attacks (Feature 5)
+                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building], enemies=self.enemies)
                 if should_spawn:
                     # Spawn a guard near the guardhouse.
                     g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)

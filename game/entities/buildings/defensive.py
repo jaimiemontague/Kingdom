@@ -2,12 +2,18 @@
 Defensive building entities.
 """
 
+from config import (
+    GUARDHOUSE_ARROW_RANGE_TILES,
+    GUARDHOUSE_ARROW_DAMAGE,
+    GUARDHOUSE_ARROW_COOLDOWN,
+    TILE_SIZE,
+)
 from .base import Building, is_research_unlocked
 from .types import BuildingType
 
 
 class Guardhouse(Building):
-    """Guardhouse - spawns guards to defend the kingdom."""
+    """Guardhouse - spawns guards AND shoots arrows at nearby enemies (WK60 Feature 5)."""
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.GUARDHOUSE)
@@ -16,18 +22,68 @@ class Guardhouse(Building):
         self.spawn_timer = 0.0
         self.spawn_interval = 30.0  # Spawn a guard every 30 seconds
 
-    def update(self, dt: float, guards_list: list):
-        """Update guard spawning."""
-        if not self.is_constructed:
-            return
+        # WK60 Feature 5: Ranged attack (in addition to guard spawning)
+        self.attack_range = GUARDHOUSE_ARROW_RANGE_TILES * TILE_SIZE
+        self.arrow_damage = GUARDHOUSE_ARROW_DAMAGE
+        self.arrow_cooldown_sec = GUARDHOUSE_ARROW_COOLDOWN
+        self._arrow_timer = 0.0
+        self.is_ranged_attacker = True
+        self._last_ranged_event = None
+        self.target = None
 
+    def update(self, dt: float, guards_list: list, enemies: list = None):
+        """Update guard spawning and arrow attacks."""
+        if not self.is_constructed:
+            return False
+
+        # --- Guard spawning (existing behavior) ---
+        should_spawn = False
         if len(guards_list) < self.max_guards:
             self.spawn_timer += dt
             if self.spawn_timer >= self.spawn_interval:
                 self.spawn_timer = 0.0
-                # Guard spawning will be handled by engine
-                return True
-        return False
+                should_spawn = True
+
+        # --- WK60 Feature 5: Arrow attacks ---
+        if enemies is not None:
+            self._arrow_timer = max(0.0, self._arrow_timer - dt)
+            if self._arrow_timer <= 0.0:
+                best_target = None
+                best_dist = float('inf')
+                for enemy in enemies:
+                    if not getattr(enemy, "is_alive", False):
+                        continue
+                    dist = ((self.center_x - enemy.x) ** 2 + (self.center_y - enemy.y) ** 2) ** 0.5
+                    if dist < self.attack_range and dist < best_dist:
+                        best_dist = dist
+                        best_target = enemy
+
+                if best_target is not None:
+                    best_target.take_damage(self.arrow_damage)
+                    self._arrow_timer = self.arrow_cooldown_sec
+                    self.target = best_target
+
+                    # Store ranged projectile event for engine collection
+                    if hasattr(best_target, "x") and hasattr(best_target, "y"):
+                        to_x, to_y = float(best_target.x), float(best_target.y)
+                    else:
+                        to_x = float(getattr(best_target, "center_x", 0.0))
+                        to_y = float(getattr(best_target, "center_y", 0.0))
+                    self._last_ranged_event = {
+                        "type": "ranged_projectile",
+                        "from_x": float(self.center_x),
+                        "from_y": float(self.center_y),
+                        "to_x": to_x,
+                        "to_y": to_y,
+                        "projectile_kind": "arrow",
+                        "color": (180, 140, 80),
+                        "size_px": 2,
+                    }
+                else:
+                    self.target = None
+                    self._last_ranged_event = None
+
+        return should_spawn
 
 
 class BallistaTower(Building):
