@@ -90,7 +90,7 @@ class AudioSystem:
         # Range: 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
         # Default: 0.8 (80% per PM decision)
         self._master_volume: float = 0.8
-        self._music_volume: float = 1.0  # Ambient/music slider (multiplies master)
+        self._music_volume: float = 0.0  # Ambient/music slider (multiplies master)
         self._sfx_volume: float = 1.0    # SFX slider (multiplies master)
         
         # WK6 Mid-Sprint: Viewport and world context for visibility gating
