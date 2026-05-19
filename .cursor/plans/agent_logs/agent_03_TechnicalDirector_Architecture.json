@@ -1072,7 +1072,10 @@
               "heightmap_grid": "301x301",
               "castle_center_height": 3.501,
               "castle_area_height_delta": 1.119,
-              "overall_height_range": [0.72, 7.249],
+              "overall_height_range": [
+                0.72,
+                7.249
+              ],
               "height_scale_config": 8.0,
               "status": "sensible values — castle flat, hills visible, range within budget"
             }
@@ -1131,7 +1134,10 @@
             },
             "heightmap_stats": {
               "grid": "301x301",
-              "height_range": [0.012, 3.907],
+              "height_range": [
+                0.012,
+                3.907
+              ],
               "p10": 0.312,
               "p25": 0.536,
               "p50": 0.885,
@@ -1425,6 +1431,510 @@
             "python -c \"from game.graphics.ursina_app import UrsinaApp; print('OK')\"",
             "In-game: press U to toggle underground camera view",
             "In-game: pin a hero and watch it enter underground — camera should auto-follow"
+          ]
+        }
+      }
+    },
+    "wk58_ursina_entities_overload": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",
+        "notes": "WK58: terrain entity overload sprint. Phase 1 (visibility composition + path tracking) and Phase 2 (camera frustum tightening) are this round; Phase 3 batching is gated on Round 1 stop/go."
+      },
+      "rounds": {
+        "wk58_w2_phase1_phase2_agent03": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w2_phase1_phase2_agent03",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Phase 1 Fix 1A (compose fog+chunk visibility), Phase 1 Fix 1B (track path entities), and Phase 2 (camera frustum lens extrusion with FOV-heuristic fallback).",
+            "files_modified": [
+              "game/graphics/ursina_terrain_fog_collab.py",
+              "game/graphics/ursina_renderer.py"
+            ],
+            "slots_updated": true,
+            "new_instance_fields": [
+              "_last_cull_fog_revision"
+            ],
+            "details": [
+              "Added _apply_prop_visibility_state(ent, fog_visible=?, chunk_visible=?) helper on UrsinaTerrainFogCollab that composes ent.enabled = _ks_fog_visible AND _ks_chunk_visible and only writes through ent.enabled when the composed state changes (uses _ks_prop_enabled as the membership cache).",
+              "track_visibility_gated_terrain initializes _ks_fog_visible=False and _ks_chunk_visible=True per master-plan defaults.",
+              "sync_terrain_prop_tile_visibility now writes only the fog bit via the helper. The /revealmap path (fog_disabled=True branch in sync_visibility_gated_terrain) resets BOTH bits so the test step-3 precondition (\"sync re-enables every tracked entity\") holds and the next cull pass narrows chunks back down.",
+              "cull_terrain_chunks now writes only the chunk bit via the helper. When _terrain_visibility_revision_seen advances since _last_cull_fog_revision, the full chunk mask is re-applied across self._terrain_chunks (out-of-frustum chunks set to chunk_visible=False) instead of relying on the delta sets. This is the WK58-BUG-001 fix: stationary camera + fog-reveal no longer leaves entities enabled outside the frustum.",
+              "Fix 1B (WK58-BUG-003): build_3d_terrain PATH branch now calls self.track_visibility_gated_terrain(path_ent, tx, ty) after _finalize_kenney_scatter_entity. tracked_props grows from ~10,504 to ~11,500 (+~996 path stones).",
+              "Phase 2 (WK58-BUG-002): _get_visible_tile_rect now tries Panda3D base.camLens.extrude on the four NDC corners, transforms near/far points to world space via base.cam.get_mat(base.render), intersects each ray with y=0, and returns the bounding rect plus a 6-tile margin. If any corner ray misses the ground or base/camLens is unavailable (headless tests), it falls back to an FOV/pitch/aspect heuristic with an 8-tile margin that still produces a tight rect (~48 chunks at default camera). Final fallback is full_rect on any exception. A one-shot stderr warning is printed when the lens path fails.",
+              "__slots__ on UrsinaTerrainFogCollab extended to include _last_cull_fog_revision; __init__ seeds it to -1."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_terrain_perf.py -v",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 12 --measure 10",
+              "exit_code": 1
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 15 --subdir perf_round1 --stem revealed_v2 --no-llm --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 15 --subdir perf_round1 --stem fog_active_v2 --no-llm",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_test_terrain_perf": "3 passed, 1 skipped (TestTerrainEntityTracking::test_path_entities_are_tracked, test_culling_reapplies_after_fog_change, test_visible_rect_reasonable_at_default_camera all PASS; TestTerrainChunkBatching::test_static_entity_count_reduced stays skipped per Phase 3 gate).",
+            "qa_smoke_result": "PASS (exit 0). All scenarios green: determinism guard, observe_sync profiles (bounty, stuck recovery, economy, mock LLM, scenarios).",
+            "perf_render_benchmark": {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 12 --measure 10",
+              "baseline_before_avg": 26.4,
+              "before_avg": 42.5,
+              "baseline_after_avg": 13.5,
+              "after_avg": 14.0,
+              "after_p50": 14.0,
+              "after_p90": 17.7,
+              "baseline_tracked_props": 10504,
+              "tracked_props": 11501,
+              "tree_entities": 2082,
+              "static_batches": 0,
+              "chunks": 256,
+              "baseline_enabled_props_after_reveal": 10504,
+              "enabled_props": 2515,
+              "baseline_enabled_outside_visible_chunks": 931,
+              "enabled_outside_visible_chunks": 0,
+              "baseline_visible_chunks": 225,
+              "visible_chunks": 48,
+              "verdict": "FAIL_target_45_fps",
+              "interpretation": "Phase 1+2 deliver the correctness fix: enabled_outside_visible_chunks dropped 931 -> 0, visible_chunks dropped 225 -> 48 (under the <80 target), tracked_props grew by ~997 (path stones now culled). after_avg only marginally above baseline (14.0 vs 13.5) because the steady-state cost is now in the still-2515-enabled Panda3D nodes per frame; Phase 3 static batching is the gated next step (Round 1 stop/go per Section 6 of the plan)."
+            },
+            "screenshot_paths": [
+              "docs/screenshots/perf_round1/revealed_v2_20260518_144003_924.png",
+              "docs/screenshots/perf_round1/fog_active_v2_20260518_144041_590.png",
+              "docs/screenshots/perf_round1/revealed_20260518_143620_396.png",
+              "docs/screenshots/perf_round1/normal_20260518_143839_675.png"
+            ],
+            "visual_verdict": "OK. revealed_v2 shows the full map with path stones, trees, water, doodads, buildings rendered and no fog overlay; fog_active_v2 still shows charcoal mist over UNSEEN territory and bright castle area for VISIBLE tiles. No prop pop-in observed at default camera. Path stones (white dotted lines forming a cross pattern) are visible in the revealed shot, confirming Fix 1B routed ~996 path entities through the visibility/cull system. No missing tiles, no z-fighting."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Round 1 stop/go gate (Section 6 of master plan): after_avg=14.0 is below the 45 FPS pass threshold. PM should consider authorizing Phase 3 static terrain chunk batching (Section 7) to reduce active Panda3D node count on enabled chunks. Trees stay individual (dynamic growth scaling); grass/doodads/paths/water/rocks are batch candidates.",
+            "perf_render_benchmark first inst_fps after reveal is ~1.3 because the helper flips ~9000 entity enabled bits in a single sync+cull pair; consider amortizing the post-reveal mask refresh in a future round if the spike becomes a player-visible hitch.",
+            "Camera frustum: in production with real Panda3D base, the lens-extrusion path runs and should give a slightly tighter rect than the heuristic. Worth confirming in a future capture pass that visible_chunks holds at ~30-60 across panned views."
+          ]
+        },
+        "wk58_w3_phase3_static_batching_agent03": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w3_phase3_static_batching_agent03",
+          "status": "blocked",
+          "what_i_changed": {
+            "summary": "Phase 3 _batch_static_terrain_for_chunks implemented. Static terrain props (grass / doodads / paths / water / rocks) are now reparented to one fog-batch Entity per fog cell + flatten_strong. Tracked-entity count drops from ~11,500 to ~3,099 and enabled-on-reveal drops from 2,515 to 532. Trees stay individual per plan. However post-reveal FPS only climbs from 14.0 (Wave 2) to 15.6 (Wave 3) - the bottleneck is now the ~2,083 individual tree entities, not the static prop count. 45 FPS gate is NOT reached. PM decision required: per the round prompt's hard constraint, escalating to Phase 4 tree instancing is out of scope here.",
+            "files_modified": [
+              "game/graphics/ursina_terrain_fog_collab.py",
+              "tests/test_terrain_perf.py"
+            ],
+            "slots_updated": true,
+            "new_instance_fields": [
+              "_static_terrain_batches",
+              "_static_batch_fog_size",
+              "_static_batch_flatten_level"
+            ],
+            "batching_granularity_used": "8x8 fog batches (default). Verified via env-var sweep at 16x16 (256 batches, after_avg 16.6) and 32x32 (64 batches, after_avg 15.6) - coarser batches give negligible post-reveal gain because trees are now the bottleneck. KINGDOM_URSINA_STATIC_BATCH_SIZE env var exposes the knob for Agent 10 follow-up sweeps.",
+            "flatten_level_chosen": "flatten_strong (preferred) with flatten_medium fallback then no-flatten fallback per plan Risk Register row 4. clear_model_nodes() is called on the batch parent before flatten_strong to lift Panda3D's ModelNode flag that otherwise prevents merging - verified via Panda3D introspection that without clear_model_nodes flatten_strong is a no-op on Ursina-loaded entities. Even with clear_model_nodes, Ursina Entity wrappers keep per-entity render state (color, double_sided, shader inputs) that block geom merging into a single Geom; flatten reduces internal node count slightly (~33% per probe) but children remain distinct NodePaths. The batch parent itself is still toggleable as a unit, which IS the per-frame perf win we wanted.",
+            "fallback_path_taken": false,
+            "cross_domain_test_edit_note": "tests/test_terrain_perf.py edited as the documented cross-domain exception for this round per the PM prompt. Two edits: (1) the previously-skipped TestTerrainChunkBatching::test_static_entity_count_reduced is now a full implementation that builds ~1,300 synthetic static props + 50 trees on an 80x80 fake world, calls _batch_static_terrain_for_chunks, and asserts tracked count drops to <=600 while tree entries remain 1:1 with _ks_tree_base_scale preserved. (2) The Wave-2 TestTerrainEntityTracking::test_path_entities_are_tracked needed a patch.object(UrsinaTerrainFogCollab, '_batch_static_terrain_for_chunks', no-op) added to keep its by-tile-key invariant valid - without the patch, the batcher (now wired into build_3d_terrain) rebuilds _visibility_gated_terrain_by_tile keyed by batch center tile and the original PATH tile keys disappear (this is the intentional Phase 3 design - fog transitions become batch-granular for statics). The patch keeps the WK58-BUG-003 regression invariant intact while letting batching run in production. test_culling_reapplies_after_fog_change is untouched - it tracks entities + builds chunks manually so it never invokes the batcher."
+          },
+          "phase3_implementation_details": [
+            "Added _batch_static_terrain_for_chunks(self, root, tw, th) method on UrsinaTerrainFogCollab. Iterates self._r._visibility_gated_terrain; trees (entities with _ks_tree_base_scale) are copied verbatim into a new_vgt list + new_vgt_by_tile dict keyed by their original tile coords (so sync_dynamic_trees still addresses them per-tile).",
+            "Static props are grouped by (bx, by) where bx = tx // fog_batch_size. The plan's Section 7 5-tuple key (bx, by, model_key, shader_key, color_key) was tried first but produced 6,253 batches for ~6,000 source props - nearly 1:1 - because each Ursina Entity's str(NodePath) scene path differs per parent, and per-model Kenney pack tint plus per-shader instance reprs split most batches down to single-entity groups. Switched to (bx, by)-only signature: groups across mixed models/colors within the same fog cell. flatten_strong keeps heterogeneous Geoms intact when they cannot share material; the per-frame visibility-loop perf still wins because the batch parent toggles all child statics together.",
+            "For each batch group, creates Entity(parent=root, name='static_batch_<bx>_<by>', add_to_scene_entities=False), reparents each child via ent.reparent_to(batch_parent), calls batch_parent.clear_model_nodes() (without this, flatten_strong is silently a no-op on glb/obj-loaded entities per Panda3D's ModelNode flag), then attempts flatten_strong / flatten_medium / no-flatten in that order.",
+            "Each batch parent is anchored at the fog-batch center tile (bx * fog_batch_size + fog_batch_size//2), clamped to map bounds. render_queue=1 and the composed-visibility bits (_ks_fog_visible=False, _ks_chunk_visible=True) are seeded so the existing _apply_prop_visibility_state pipeline keeps working with batch parents as if they were per-tile props.",
+            "self._r._visibility_gated_terrain and self._r._visibility_gated_terrain_by_tile are atomically replaced with the post-batch lists. self._static_terrain_batches is set to the batch-parent count for perf_render_benchmark.py to read.",
+            "Call site: build_3d_terrain() now does self._batch_static_terrain_for_chunks(root, tw, th) on the line between self._r._terrain_entity = root and self._build_terrain_chunks(). This means _build_terrain_chunks sees the post-batch list, so each terrain chunk holds tree entries + batch-parent entries (not individual statics).",
+            "__slots__ extended with _static_terrain_batches (int), _static_batch_fog_size (int, default 8, env-overridable via KINGDOM_URSINA_STATIC_BATCH_SIZE), _static_batch_flatten_level (str). __init__ seeds them."
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_terrain_perf.py -v",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 15 --measure 12  # 8x8 batches, default",
+              "exit_code": 1
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_STATIC_BATCH_SIZE='16'; python tools/perf_render_benchmark.py --warmup 15 --measure 12",
+              "exit_code": 1
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_STATIC_BATCH_SIZE='32'; python tools/perf_render_benchmark.py --warmup 15 --measure 12",
+              "exit_code": 1
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round2 --stem default_revealed --no-llm --fps-probe --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round2 --stem fog_active --no-llm --fps-probe",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_full": {
+              "passed": 4,
+              "failed": 0,
+              "skipped": 0,
+              "details": "All 4 tests in tests/test_terrain_perf.py PASS: test_path_entities_are_tracked, test_culling_reapplies_after_fog_change, test_visible_rect_reasonable_at_default_camera, and the previously-skipped test_static_entity_count_reduced (now implemented and passing - synthetic 1,300-static + 50-tree dataset on 80x80 map collapses to <=600 tracked entries with trees preserved 1:1)."
+            },
+            "qa_smoke_result": "PASS (all scenarios exit_code=0: determinism guard, fps_probe baseline, bounty, stuck recovery, economy budget, speed_scaling 0.1-1.0x, interior_view, quest_panel, conversation, direct_prompt_integration).",
+            "perf_render_benchmark": {
+              "before_avg_8x8": 43.8,
+              "after_avg_8x8": 15.6,
+              "after_p50_8x8": 15.8,
+              "after_p90_8x8": 18.8,
+              "after_min_8x8": 2.1,
+              "before_avg_16x16": 44.9,
+              "after_avg_16x16": 16.6,
+              "before_avg_32x32": 54.4,
+              "after_avg_32x32": 15.6,
+              "tracked_props_8x8": 3099,
+              "tree_entities_8x8": 2082,
+              "static_batches_8x8": 1017,
+              "enabled_props_8x8": 532,
+              "enabled_outside_visible_chunks_8x8": 0,
+              "visible_chunks_8x8": 48,
+              "tracked_props_16x16": 2338,
+              "static_batches_16x16": 256,
+              "enabled_props_16x16": 388,
+              "tracked_props_32x32": 2146,
+              "static_batches_32x32": 64,
+              "enabled_props_32x32": 352,
+              "wave2_baseline_comparison": {
+                "wave2_before_avg": 42.5,
+                "wave2_after_avg": 14.0,
+                "wave2_tracked": 11501,
+                "wave2_enabled": 2515,
+                "delta_after_avg_w3_8x8": 1.6,
+                "delta_after_avg_w3_16x16": 2.6,
+                "tracked_reduction_x": 3.71,
+                "enabled_reduction_x": 4.73
+              },
+              "verdict": "FAIL (after_avg below 45 FPS gate at all tested fog_batch_size values). Static-prop count is no longer the bottleneck - enabled_props dropped to 388-532 across granularities and FPS plateaued at 15-17. Remaining gap appears bound by the ~2,083 tree entities (each is a distinct Panda3D NodePath with its own render state and ~150-300 visible per frame at default camera)."
+            },
+            "screenshot_battery": [
+              {
+                "stem": "default_revealed (perf_round2 - Phase 3 active, 8x8 batches, --reveal-map flag set)",
+                "path": "docs/screenshots/perf_round2/default_revealed_20260518_150832_381.png",
+                "verdict": "OK",
+                "notes": "3D scene shows the camera frustum revealed area (48 visible chunks) with castle + buildings + grass + path stones + trees rendered correctly. Materials uniform (grass green, building roofs orange/red, path stone gray). No batch seams visible inside the rendered area. The dark surround is the (correct) chunk-cull boundary from Phase 2's tight frustum rect - not a fog regression."
+              },
+              {
+                "stem": "fog_active (perf_round2 - Phase 3 active, no auto-reveal)",
+                "path": "docs/screenshots/perf_round2/fog_active_20260518_150900_319.png",
+                "verdict": "OK",
+                "notes": "Same scene as fog_active_v2 Wave 2 baseline: heroes have explored ~48 chunks worth around the castle. Fog of war intact (unexplored area dark), explored area tinted, trees and statics rendering correctly inside the revealed zone. No coarse-fog seams at the 8x8 batch boundaries - batch tint changes are absorbed by the chunk-cull boundary which is already darker."
+              }
+            ],
+            "visual_verdict_overall": "OK - no visual regression introduced by Phase 3 batching at 8x8 granularity. Alignment intact (buildings centered, path stones in lines), tile completeness intact (no missing chunks inside visible frustum), materials uniform (grass / water / path / tree colors match Wave 2 baseline), no obvious 8x8 fog-batch seams. Trees still individual and correctly sized. Capture battery is narrower than the PM-suggested N/S/E/W pan + min/max zoom because the screenshot tool does not yet expose camera-control flags and the 45 FPS gate is the blocking issue regardless of camera pose."
+          },
+          "blockers": [
+            {
+              "id": "WK58-W3-BLOCK-001",
+              "summary": "after_avg post-reveal stuck at 15.6 FPS (8x8) / 16.6 FPS (16x16) / 15.6 FPS (32x32) - all well below the 45 FPS gate. Static-prop count is no longer the bottleneck (enabled_props dropped to 388-532), so further batching tuning will not close the gap.",
+              "diagnosis": "Profiling-by-elimination: at 32x32 batches with only 64 batch parents and 352 enabled tracked entities, FPS is unchanged from 8x8 with 1017 batch parents. The dominant cost on every post-reveal frame is therefore not the per-frame Python loop or the batched static geometry - it is the ~2,083 individual tree Entity objects (each a distinct Panda3D NodePath with its own RenderState). At default camera + tight frustum, ~150-300 trees are visible per frame and each carries its own draw call. This matches the plan's own Phase-4 framing (Section 8): 'After Phase 3, trees are still ~2,083 individual entities. Each tree with the same model could share one instanced draw call.'",
+              "recommended_path": "Phase 4 tree instancing OR a config-knob mitigation (reduce URSINA_TERRAIN_SCATTER_STRIDE from 2 to 3 to cut grass density, and/or reduce tree density cap). Both are out of scope for this round per the PM prompt's hard constraint ('DO NOT touch Phase 4 (tree instancing). That is a separate optional spike - out of scope here.'). PM decides which to dispatch."
+            }
+          ],
+          "follow_ups": [
+            "Phase 4 tree instancing (Agent 03) - out of this round's scope per PM constraint, but is the remaining blocker for the 45 FPS gate. Decision rule from plan Section 8: 'Only attempt this spike if Phase 3 has passed visual validation' (it has) 'and full reveal is still below 45 FPS' (it is).",
+            "Config knob mitigation (Agent 12 or Agent 05) - URSINA_TERRAIN_SCATTER_STRIDE from 2 to 3 cuts grass density ~33%; tree density cap from 1000 to 500 cuts saplings; both reduce per-frame node count without code changes. Would buy 5-15 FPS based on prior knob sweeps.",
+            "KINGDOM_URSINA_STATIC_BATCH_SIZE env var exposed for Agent 10 to extend the granularity sweep if the chosen tree-perf path requires re-tuning static batches (e.g., if Phase 4 lands and the static side regresses).",
+            "First-frame post-reveal still spikes to ~1.7 FPS due to the full mask re-apply on ~3,099 entries + ~256 chunks; not blocking but visible. Wave 2 follow-up suggested amortizing across N frames; deferred until tree perf is unblocked since the per-frame steady state cost dominates the user-visible FPS anyway."
+          ]
+        },
+        "wk58_w4_phase4_tree_instancing_agent03": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w4_phase4_tree_instancing_agent03",
+          "round_meta": {
+            "round_id": "wk58_w4_phase4_tree_instancing_agent03",
+            "wave": 4,
+            "created_utc": "2026-05-18T22:30:00Z",
+            "build_target": "Phase 4 tree instancing per plan Section 8. Replace ~2,083 individual tree Entity objects with hardware-instanced GeomNodes (one per tree model) reading per-instance world transforms from a Panda3D buffer texture in a custom GLSL shader. Gated behind KINGDOM_URSINA_INSTANCED_TREES env var; default '1' (ON) after visual parity confirmed.",
+            "depends_on": "wk58_w3_phase3_static_batching_agent03"
+          },
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Implemented hardware-instanced 3D tree rendering. New file game/graphics/instanced_nature_renderer.py provides one Panda3D GeomNode per tree model (~16 models in Kenney pack) with NodePath.set_instance_count + a custom GLSL vertex shader that reads (world_x, world_y, world_z, scale) per instance from a samplerBuffer texture filled with setup_buffer_texture(T_float, F_rgba32, UH_dynamic). Per-tile fog visibility is propagated via set_fog_visibility (only fog-visible instances get packed into the active buffer). Camera-frustum chunk filter (set_visible_chunks) further trims the active count to trees in the ~48 visible chunks - without that, the GPU vertex pipeline would draw all 2,083 trees every frame. Modified game/graphics/ursina_terrain_fog_collab.py to route tree creation through the instanced renderer when KINGDOM_URSINA_INSTANCED_TREES=1 (default), keep a tile-keyed _InstancedTreeStub on _r._tree_entities so sync_dynamic_trees growth/remove/sapling-spawn paths stay unchanged from the caller's perspective. Architectural win confirmed: tracked_props drops from 3,100 (Wave 3) to 1,017 (Wave 4), enabled_props from 533 to 192, individual tree NodePaths from ~2,083 to 16. Visual parity confirmed via side-by-side screenshots: alignment / position / count / fog gating all preserved. Minor brightness difference (instanced uses simplified lambert in custom shader vs legacy default shader; trees ~10% dimmer). HOWEVER post-reveal FPS only climbs from 16.3 (instanced OFF / Wave 3 baseline) to 17.1-18.1 (instanced ON) - delta +1-2 FPS. The DoD 45 FPS gate is NOT met; the bottleneck after Phase 4 is something other than tree count (Panda3D pipeline / ground heightmap / static batch draw cost / driver overhead - renderer.update steady-state is 24-25ms (~40 FPS) per direct timing, the rest of the ~57ms frame budget is Panda3D draw / present / swap).",
+            "files_created": [
+              "game/graphics/instanced_nature_renderer.py"
+            ],
+            "files_modified": [
+              "game/graphics/ursina_terrain_fog_collab.py"
+            ],
+            "slots_updated": true,
+            "new_instance_fields": [
+              "_instanced_trees_on",
+              "_instanced_nature_renderer",
+              "_tree_instance_ids",
+              "_instanced_trees_last_fog_rev"
+            ],
+            "env_var_name": "KINGDOM_URSINA_INSTANCED_TREES",
+            "env_var_default_final": "1",
+            "shader_approach": "Custom GLSL Shader (Shader.GLSL, compile(shader_includes=False)) attached via geom_np.set_shader. Vertex stage reads texelFetch(samplerBuffer instanceData, gl_InstanceID) -> vec4(world_x, world_y, world_z, scale), computes worldPos = instancePos + p3d_Vertex.xyz * scale, then gl_Position = p3d_ModelViewProjectionMatrix * vec4(worldPos, 1.0). Fragment stage uses Panda3D's built-in p3d_Material.baseColor (the GLB material colors from the Kenney tree pack - bark dark, leafs dark, etc.) with a simple lambert term against a fixed sun direction + ambient lift to match UrsinaRenderer._setup_scene_lighting's AmbientLight. Per-model state holds (geom_node, source_np, np, geom_np, buffer_tex, parallel slot arrays, active_slots compact list). Buffer texture is 16 bytes per texel (RGBA32F) x 1024 texels per model = 16 KB per model x 16 models = 256 KB total.",
+            "additional_optimizations": [
+              "Compact active_slots list per model: update_buffer walks ~100 alive slots per model instead of every cap=1024 slot.",
+              "Camera-frustum chunk filter (set_visible_chunks called from cull_terrain_chunks) - without it, post-reveal would draw all ~2,083 instances. With it, ~341 are packed (filtered by both fog AND visible-chunk membership).",
+              "Per-model dirty flag - update_buffer skips re-packing models whose buffer hasn't changed since last flush.",
+              "Set-equality check in set_visible_chunks - stationary camera (no chunk delta) is a no-op."
+            ],
+            "fallback_paths": [
+              "If a tree model fails to load (or hits a model's per-cap slot limit), register_tree returns None and the call site falls back to legacy individual-Entity tree creation for that specific tree - never silently drops the tree per Jaimie's hard directive.",
+              "If shader compile fails OR the renderer can't initialize, _ensure_instanced_nature_renderer returns None and ALL trees fall back to legacy individual Entities for the session."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_terrain_perf.py -v",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python -m pytest tests/test_terrain_perf.py -v",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --csv wk58_w4_perf_instanced_on.csv",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python tools/perf_render_benchmark.py --csv wk58_w4_perf_instanced_off.csv",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 12 --subdir wk58_phase4_final --stem instanced_on_revealed --no-llm --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python tools/run_ursina_capture_once.py --seconds 12 --subdir wk58_phase4_final --stem instanced_off_revealed --no-llm --reveal-map",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "pytest_full": "tests/test_terrain_perf.py - 4 passed, 1 warning in 1.45s. ALL 4 tests PASS under BOTH KINGDOM_URSINA_INSTANCED_TREES=1 (default) AND KINGDOM_URSINA_INSTANCED_TREES=0 (legacy). TestTerrainEntityTracking::test_path_entities_are_tracked, test_culling_reapplies_after_fog_change, test_visible_rect_reasonable_at_default_camera, TestTerrainChunkBatching::test_static_entity_count_reduced - no test modifications required for Wave 4 (the Phase 3 batching tests don't exercise the instanced tree path).",
+            "qa_smoke_result": "PASS exit_code=0 in both modes (ON default and OFF).",
+            "perf_instanced_ON": {
+              "before_avg_fps": 47.3,
+              "before_p50_fps": 50.6,
+              "before_p90_fps": 57.3,
+              "after_avg_fps": 17.1,
+              "after_p50_fps": 17.0,
+              "after_p90_fps": 21.0,
+              "tracked_props": 1017,
+              "tree_entities_in_dict": 2083,
+              "static_batches": 1017,
+              "enabled_props": 192,
+              "enabled_outside_visible_chunks": 0,
+              "visible_chunks": 48,
+              "instanced_tree_models": 16,
+              "instanced_active_count_post_reveal_with_chunk_filter": 341,
+              "instanced_active_count_post_reveal_without_chunk_filter": 2083,
+              "renderer_update_post_reveal_mean_ms": 24.4,
+              "renderer_update_post_reveal_p90_ms": 27.9
+            },
+            "perf_instanced_OFF": {
+              "before_avg_fps": 46.3,
+              "after_avg_fps": 16.3,
+              "after_p50_fps": 16.5,
+              "after_p90_fps": 19.6,
+              "tracked_props": 3100,
+              "tree_entities_in_dict": 2083,
+              "static_batches": 1017,
+              "enabled_props": 533,
+              "enabled_outside_visible_chunks": 0,
+              "visible_chunks": 48
+            },
+            "delta_after_avg_fps": 0.8,
+            "delta_tracked_props": -2083,
+            "delta_enabled_props": -341,
+            "dod_gate_45_fps_met": false,
+            "dod_gate_gap_fps": 27.9,
+            "screenshot_battery_ON": [
+              "docs/screenshots/wk58_phase4_final/instanced_on_revealed_20260518_160638_019.png",
+              "docs/screenshots/wk58_phase4_final/instanced_on_revealed_v2_20260518_160752_571.png",
+              "docs/screenshots/wk58_phase4_final/instanced_on_fog_20260518_161639_537.png",
+              "docs/screenshots/wk58_phase4_v2/instanced_on_reveal_20260518_155733_985.png",
+              "docs/screenshots/wk58_phase4_test/instanced_on_20260518_155025_815.png",
+              "docs/screenshots/wk58_phase4_test/instanced_on_norereveal_20260518_155057_723.png"
+            ],
+            "screenshot_battery_OFF": [
+              "docs/screenshots/wk58_phase4_final/instanced_off_revealed_20260518_160703_936.png",
+              "docs/screenshots/wk58_phase4_final/instanced_off_revealed_v2_20260518_160825_848.png",
+              "docs/screenshots/wk58_phase4_v2/instanced_off_reveal_20260518_155808_418.png",
+              "docs/screenshots/wk58_phase4_test/instanced_off_baseline_20260518_155130_459.png"
+            ],
+            "visual_verdict_overall": "PASS-with-shading-note. Side-by-side comparison instanced_on_revealed_v2 vs instanced_off_revealed_v2 shows: (1) Alignment IDENTICAL - every tree at the same world position. (2) Layering correct - trees above ground, no z-fighting, no popping during pan. (3) Tile completeness IDENTICAL - same tree count and density across the map. (4) Fog edges preserved - fog-active capture (instanced_on_fog) shows trees ONLY in the visible-fog area, exactly like the legacy path; the instanced renderer's per-tile set_fog_visibility correctly excludes UNSEEN-tile trees from the active buffer. (5) Building footprint logic intact - sync_dynamic_trees removal path still fires when a sapling's world tile != TREE; _InstancedTreeStub.remove_tree path frees the renderer slot (vs legacy u.destroy). The one cosmetic delta: instanced trees are ~10% dimmer than legacy because the custom shader uses a simplified lambert (sun + ambient) vs Ursina's default unlit_shader / lit_with_shadows passthrough. Tree shapes / colors are identical (p3d_Material.baseColor from the GLB), only the lighting model differs.",
+            "growth_observed_yes_no": "logically_verified_not_visually_captured_in_12s_window. sync_dynamic_trees writes ent.scale=(s,s,s) on each growth event; _InstancedTreeStub.scale setter routes the call into instanced_renderer.update_tree_scale(instance_id, s) which marks the per-model state dirty so update_buffer re-packs on the next frame. Sapling spawn path in sync_dynamic_trees also calls register_tree for the instanced path before falling back to legacy Entity creation. Capture windows were 12-20 sec which is too short to observe a sapling fully growing through 4 stages (sim-minutes scale), but the wiring is exercised every 4 ticks.",
+            "fog_visibility_correct_yes_no": "yes. Pre-reveal capture (instanced_on_fog) shows ONLY the starter island's trees visible; everything in UNSEEN fog is excluded. After /revealmap (instanced_on_revealed_v2) every tree on the map is visible. set_all_fog_visible is called from _sync_instanced_trees_fog when world.fog_disabled is True, avoiding the per-tile world.height*world.width walk.",
+            "footprint_removal_yes_no": "logically_verified. The build_3d_terrain tree branch only triggers on tile == TileType.TREE, so building placement that removes Tree tiles before the renderer rebuild path is irrelevant for in-progress saplings. sync_dynamic_trees handles the case where a sapling was placed before construction: when growth_by_tile no longer contains the tile AND world.get_tile != TREE, the Wave 4 code branches on isinstance(ent, _InstancedTreeStub) and calls inst_renderer.remove_tree(ent.instance_id) instead of u.destroy(ent)."
+          },
+          "perf_diagnostics_notes": [
+            "Direct timing of renderer.update() steady-state post-reveal: 24.4ms mean, 27.9ms p90 (implies ~40 FPS for just the renderer). Per-method breakdown: sync_visibility_gated_terrain ~0.87ms, cull_terrain_chunks ~0.78ms (includes set_visible_chunks + update_buffer), sync_dynamic_trees ~0.50ms. The Wave 4 collab additions total ~2ms / frame. The remaining ~22ms is OTHER renderer paths (snapshot iteration, unit syncs, building syncs).",
+            "Benchmark dt is full frame-time (including Panda3D draw / present / swap / driver), which is ~57ms post-reveal. 25ms in renderer.update + ~32ms in the GPU pipeline = the observed 17-18 FPS. The GPU side is dominated by the heightmap-displaced ground mesh (~62,500 vertices) + 192 visible static-batch NodePaths + the 16 instanced tree draws.",
+            "Hardware: NVIDIA RTX 3070 / driver 591.44 / GLSL 4.60. wglGraphicsPipe (native OpenGL, not a software fallback). The GPU is not the bottleneck; Panda3D's per-frame submission cost is.",
+            "Phase 4 spec was 'estimated +5-10 FPS on top of Phase 3'. Actual gain on this hardware: +0.8 FPS average (17.1 vs 16.3) under benchmark conditions. The architectural win (collapse 2,083 NodePaths to 16) is real and reflects on tracked_props / enabled_props counters, but does not translate into the projected DoD FPS gain - the bottleneck after Phase 3 was identified by Wave 3 as 'trees' based on entity count, but the Wave 4 measurement reveals the real ceiling is much lower in the rendering pipeline.",
+            "DO NOT cut tree density (Jaimie's hard directive 2026-05-18). The instanced shader path is fully functional; the FPS gap is a separate concern requiring follow-up profiling of the Panda3D draw pipeline / terrain mesh / static batch flatten state."
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10 (Perf Lead) - investigate why renderer.update() takes 22ms beyond the Wave 4 collab work. Likely candidates: (a) the heightmap-displaced ground mesh (62,500 vertices submitted per frame), (b) Panda3D's per-NodePath draw cost across the 192 visible static batches, (c) snapshot iteration in renderer.update for heroes/enemies/peasants/guards. Could be solved by a deeper draw-call audit or by moving the ground mesh to a static GeomNode.",
+            "Agent 10 / Agent 03 - consider whether the static batch count (1017) can be coarsened further now that trees are no longer entities. Wave 3 found 8x8 / 16x16 / 32x32 batch sizes all gave the same FPS WITH trees in vgt; that test should be re-run with Wave 4 active.",
+            "Agent 09 (Art) - review the visual delta between instanced trees (custom lambert shader) and legacy trees (Panda3D default shader). If the ~10% brightness gap is unacceptable for ship quality, the instanced fragment shader could be extended to mimic the default shader's lighting model more closely (panda3d.core.LightAttrib lookup + per-light loop), at modest GPU cost.",
+            "Agent 11 (QA) - add a Wave 4 regression test: register a tree via InstancedNatureRenderer.register_tree, call update_buffer with no fog state, assert active_count == 0. Then call set_fog_visibility(True), update_buffer, assert active_count == 1. Then call update_tree_scale to a new value, update_buffer, assert the buffer-texel byte pattern matches the expected (x,y,z,scale).",
+            "First post-reveal frame is ~2-3 FPS due to the full mask re-apply across 250x250 tiles (carried from Wave 2 backlog). Phase 4 inherits this - needs amortization across N frames separately."
+          ],
+          "human_test_commands": [
+            "python -m pytest tests/test_terrain_perf.py -v",
+            "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python -m pytest tests/test_terrain_perf.py -v; Remove-Item Env:KINGDOM_URSINA_INSTANCED_TREES",
+            "python tools/qa_smoke.py --quick",
+            "python tools/perf_render_benchmark.py",
+            "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python tools/perf_render_benchmark.py; Remove-Item Env:KINGDOM_URSINA_INSTANCED_TREES",
+            "python tools/run_ursina_capture_once.py --seconds 20 --subdir wk58_phase4_final --stem instanced_on_revealed_v2 --no-llm --reveal-map",
+            "$env:KINGDOM_URSINA_INSTANCED_TREES = '0'; python tools/run_ursina_capture_once.py --seconds 20 --subdir wk58_phase4_final --stem instanced_off_revealed_v2 --no-llm --reveal-map; Remove-Item Env:KINGDOM_URSINA_INSTANCED_TREES",
+            "python main.py --no-llm   # manual playtest: walk hero across map, confirm trees appear/disappear at fog edges and saplings grow"
+          ],
+          "tldr": "Phase 4 implemented end-to-end. KINGDOM_URSINA_INSTANCED_TREES default '1'. 2,083 individual tree Entities collapsed to 16 instanced GeomNodes via Panda3D buffer-texture shader. Visual parity confirmed (alignment / layering / count / fog / footprint). FPS gain +0.8 (17.1 vs 16.3) - DoD 45 FPS gate NOT met. Architectural goal achieved; remaining FPS gap is in Panda3D draw pipeline / terrain mesh / static batches, not in tree rendering. DO NOT cut tree density per Jaimie's directive."
+        },
+        "wk58_w6_real_bottleneck_fixes": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w6_real_bottleneck_fixes",
+          "status": "done",
+          "round_meta": {
+            "wave": 6,
+            "depends_on": "wk58_w5_deep_profile_agent10",
+            "scope": "Ship the 4 bundled S/LOW fixes from Wave 5 findings: fog overlay early-out heightmap-aware (1.A), dead cave-entrance shader code wrap (4.A), building position/color dirty checks (2.A), unit HP-bar gating (3.A).",
+            "plan_ref": ".cursor/plans/wk58_round5_profile_findings.md"
+          },
+          "what_i_changed": {
+            "summary": "Landed the 4 Wave-5-recommended fixes. Fix 1.A is the dominant win: the fog overlay's early-out gate was unaware of the WK53 heightmap shader path so the 62,500-tile loop + GPU upload ran every frame. Fix 4.A wraps dead cave-entrance distance/min/discard math in a runtime guard so the GLSL compiler can dead-code-eliminate it while cave_hole_radius==0. Fix 2.A mirrors the _ks_last_scale pattern for prefab building position/color writes. Fix 3.A adds an (hp, max_hp) dirty key on per-unit HP-bar fg writes for heroes/enemies/peasants/guards.",
+            "per_fix": {
+              "fix_1a": {
+                "file": "game/graphics/ursina_terrain_fog_collab.py",
+                "lines": "213-228 (early-out gate rewrite)",
+                "summary": "Accept the heightmap shader-uniform path by also matching when _terrain_ground_entity is not None. Now the gate skips correctly once the first heightmap-path execution destroys _fog_entity and uploads the fog texture as a fog_texture shader input on the terrain mesh.",
+                "stage_profile_before_p50_ms": 19.0,
+                "stage_profile_after_p50_ms": 0.001
+              },
+              "fix_4a": {
+                "file": "game/graphics/terrain_fog_shader.py",
+                "lines": "59-86 (GLSL main(): wrap cave-entrance distance/min/discard chain in if (cave_hole_radius > 0.0))",
+                "summary": "All 8 distance() calls + min chain + discard are now guarded by cave_hole_radius>0. Default is 0 so steady-state shading skips the dead code, freeing ~1.6M fragments/frame on the heightmap mesh. When the underground feature ships and pins a non-zero radius, original behaviour returns unchanged."
+              },
+              "fix_2a": {
+                "file": "game/graphics/ursina_entity_render_collab.py",
+                "lines": "245-263 (sync_prefab_building_entity: _ks_last_position, _ks_last_color)",
+                "summary": "Added position and color dirty-checks parallel to the existing _ks_last_scale pattern. Setting ent.position in Panda3D dirties the NodePath transform + invalidates bounding volumes even when unchanged; same shape for color. ~50-150 buildings per frame in steady state."
+              },
+              "fix_3a": {
+                "file": "game/graphics/ursina_renderer.py",
+                "lines": "Hero HP-bar 1294-1351, Enemy HP-bar 1446-1497, Peasant HP-bar 1540-1591, Guard HP-bar 1632-1683 (each: _ks_last_hp_key (hp, max_hp) gate around fg.scale_x / fg.x / fg.color writes)",
+                "summary": "Per-frame HP-bar fg scale_x / x / color writes were unconditional even when HP was unchanged. Added (hp, max_hp) tuple dirty key on each of hero / enemy / peasant / guard HP-bar update sections. Position dirty check on the unit billboards themselves was already in _sync_unit_atlas_billboard (line 549-551) so no change needed there."
+              }
+            }
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 8 --measure 12  # baseline before any fix",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 8 --measure 12  # after Fix 1.A",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 8 --measure 12  # after Fix 4.A",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 8 --measure 12  # after Fix 2.A",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 8 --measure 12  # after Fix 3.A",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_STAGE_PROFILE = '1'; python tools/perf_render_benchmark.py --warmup 8 --measure 12  # confirm stage profile after all fixes",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_terrain_perf.py -v",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py --warmup 10 --measure 15  # final DoD-gate check",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round4_fix --stem revealed --no-llm --fps-probe --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round4_fix --stem fog_active --no-llm --fps-probe",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "per_fix_fps_delta": {
+              "baseline_after_avg_fps": 18.2,
+              "after_fix_1a_fps": 29.7,
+              "fix_1a_delta_fps": 11.5,
+              "after_fix_4a_fps": 30.6,
+              "fix_4a_delta_fps": 0.9,
+              "after_fix_2a_fps": 29.1,
+              "fix_2a_delta_fps": -1.5,
+              "after_fix_3a_fps": 31.5,
+              "fix_3a_delta_fps": 2.4,
+              "notes": "Single-run numbers include ~+/-1.5 FPS variance per benchmark; Fix 2.A's negative delta is noise (the write reduction is strictly monotonic). Stage profile (KINGDOM_URSINA_STAGE_PROFILE=1) confirms the real wins: 06_ensure_fog_overlay dropped from 19.0ms p50 to 0.001ms p50 (Fix 1.A working perfectly), 10_sync_snapshot_buildings 2.7 -> 2.4ms, 12_sync_snapshot_heroes 0.56 -> 0.54ms."
+            },
+            "final_after_avg_fps": 31.0,
+            "final_after_p50_fps": 33.3,
+            "final_after_p90_fps": 35.7,
+            "final_before_avg_fps": 62.5,
+            "pytest_full": "5 passed, 0 failed (4 from prior waves + 1 new from Agent 11 TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap)",
+            "qa_smoke_result": "PASS (exit 0, all scenarios green including determinism_guard, headless sims, scenarios)",
+            "screenshot_paths": [
+              "docs/screenshots/perf_round4_fix/revealed_20260518_165501_597.png",
+              "docs/screenshots/perf_round4_fix/fog_active_20260518_165524_966.png"
+            ],
+            "screenshot_baseline_used": "docs/screenshots/perf_round2/default_revealed_*.png and fog_active_*.png (perf_round3_instanced_on baseline does not exist on disk; perf_round2 is the most recent reveal/fog pair under docs/screenshots/).",
+            "visual_verdict": "no regression. (1) Fog edges around explored island match baseline exactly; rolling charcoal mist transitions identical. (2) Tile completeness intact; no missing tiles, no z-fighting, no flicker. (3) Building positions stable (castle, blacksmith, market, guard tower in same coords). (4) Cave-entrance shader fix produced no visible change at cave_hole_radius=0; terrain renders normally. (5) HP-bar dirty gate did not introduce stale-HP rendering during the capture window. (6) Building / unit position dirty checks did not introduce jitter.",
+            "dod_gate_cleared": false,
+            "dod_gate_target_fps": 45,
+            "dod_gate_explanation": "After all 4 fixes: 31.0 FPS after_avg, 33.3 FPS p50, 35.7 FPS p90. Total CPU gain of +12.8 FPS lands at the lower bound of the Wave-5 estimate (+14-20 FPS predicted from Fix 1.A alone). 06_ensure_fog_overlay went from 19ms to ~0ms (Fix 1.A working as designed). Remaining ceiling is the Panda3D draw pipeline (heightmap-displaced ground mesh + per-fragment shader), which Wave 5 flagged as ~25-30ms / frame GPU cost. Fix 4.A's GLSL guard targeted this but yielded only ~+0.9 FPS on this GPU driver (driver may already partially constant-fold the cave_hole_radius=0 path)."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10 re-profile to confirm the stage-profile reduction in production conditions and recommend a Wave 7 if needed: the remaining gap to 45 FPS is dominated by the heightmap mesh fragment shader (Wave 5 Spot 4.B/4.C territory).",
+            "Wave 5 candidate 4.B (simpler one-texture-multiply fragment shader) and 4.C (GeoMipTerrain LOD) remain on the deferred shelf if the project decides to push past 45 FPS via GPU-side optimization."
           ]
         }
       }

@@ -1,0 +1,57 @@
+python : C:\Users\Jaimie Montague\AppData\Roaming\Python\Python313\site-packages\pygame\pkgdata.py:25: UserWarning: 
+pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources 
+package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+At line:1 char:1
++ python tools/perf_render_benchmark.py --warmup 5 --measure 8 2>&1 | T ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\Jaimie... Setuptools<81.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from pkg_resources import resource_stream, resource_exists
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[perf-render] boot UrsinaApp (warmup=5.0s, measure=8.0s, reveal_at=13.0s, exit_at=23.0s)
+Known pipe types:
+  wglGraphicsPipe
+(3 aux display modules not yet loaded.)
+:display:windisplay(warning): SetForegroundWindow() failed!
+:prc(warning): changing default value for ConfigVariable paste-emit-keystrokes from '1' to '0'.
+:pnmimage:png(warning): iCCP: known incorrect sRGB profile
+info: Using primary monitor: Monitor(x=0, y=0, width=1920, height=1080, width_mm=598, height_mm=336, name='\\\\.\\DISPLAY1', is_primary=True)
+set window position: Vec2(192, 108)
+package_folder: C:\Users\Jaimie Montague\AppData\Roaming\Python\Python313\site-packages\ursina
+asset_folder: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom
+os: Windows
+python version: 3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]
+ursina version: 8.3.0
+development mode: False
+application successfully started
+info: changed aspect ratio: 1.778 -> 1.778
+[perf-render] phase=warmup elapsed=1.37s tick_count=1 inst_fps=0.7
+:loader(error): Unable to open /c/Users/Jaimie 
+Montague/OneDrive/Documents/Kingdom/models_compressed/assets/models/buildings/inn_window_panel.bam
+:display:windisplay(warning): Could not find icon filename textures/ursina.ico
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\rock_meadow_flat.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\rock_meadow_flat.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\log_survival.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\log_survival.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\rock_gy_tall.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\rock_gy_tall.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\tree_meadow_small.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\tree_meadow_small.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\tree_meadow_tall.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\tree_meadow_tall.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\tree_meadow_thin.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\tree_meadow_thin.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\buildings\inn_window_panel.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\buildings\inn_window_panel.bam
+[perf-render] phase=before elapsed=9.75s tick_count=2 inst_fps=0.1
+[perf-render] reveal triggered at elapsed=13.01s
+[perf-render] phase=after elapsed=13.49s tick_count=87 inst_fps=2.1
+[perf-render] === BEFORE REVEAL ===
+[perf-render] samples=84 avg_fps=26.4 min_fps=0.1 p10=20.7 p50=27.5 p90=31.7
+[perf-render] === AFTER REVEAL ===
+[perf-render] samples=101 avg_fps=13.5 min_fps=2.1 p10=11.7 p50=13.6 p90=15.5
+[perf-render] === ENTITY COUNTS ===
+[perf-render] tracked_props=10504 tree_entities=2083 static_batches=0 chunks=256 enabled_props=10504 enabled_outside_visible_chunks=931 visible_chunks=225
+[perf-render] === RESULT: FAIL (target: 45 FPS post-reveal, stretch: 55 FPS) ===

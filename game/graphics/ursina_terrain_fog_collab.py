@@ -41,11 +41,105 @@ FOG_TEX_BRIDGE_KEY = "kingdom_ursina_fog_overlay"
 TERRAIN_CHUNK_SIZE = 16  # tiles per chunk edge for frustum culling
 
 
+class _InstancedTreeStub:
+    """Tile-keyed record for trees rendered by ``InstancedNatureRenderer``.
+
+    WK58 Phase 4: when the instanced path is active, ``UrsinaRenderer._tree_entities``
+    no longer holds Ursina ``Entity`` objects — it holds these stubs. The stub
+    presents the SAME attribute surface that ``sync_dynamic_trees`` reads on a
+    legacy tree entity (``_ks_tree_base_scale``, ``_ks_tree_growth``, ``scale``,
+    ``enabled``), but writes go to the instanced renderer via ``instance_id``.
+
+    This keeps the dynamic-growth code path unchanged from the legacy perspective:
+    ``ent.scale = (s, s, s)`` becomes ``renderer.update_tree_scale(instance_id, s)``.
+    """
+
+    __slots__ = (
+        "_instance_id",
+        "_renderer_ref",
+        "_ks_tree_base_scale",
+        "_ks_tree_growth",
+        "_scale",
+        "_tile_xy",
+        "enabled",
+        "_ks_fog_visible",
+        "_ks_chunk_visible",
+        "_ks_prop_enabled",
+        "render_queue",
+        "_ks_base_color",
+        "_ks_fog_mult",
+        "color",
+    )
+
+    def __init__(
+        self,
+        *,
+        instance_id: int,
+        renderer_ref,
+        base_scale: float,
+        tile_xy: tuple[int, int],
+    ) -> None:
+        self._instance_id = int(instance_id)
+        self._renderer_ref = renderer_ref
+        self._ks_tree_base_scale = float(base_scale)
+        self._ks_tree_growth = None  # matches "first scale write always applies" semantics
+        self._scale = (base_scale, base_scale, base_scale)
+        self._tile_xy = tile_xy
+        # ``sync_visibility_*`` /``cull_terrain_chunks`` read these via getattr; we
+        # never register the stub in ``_visibility_gated_terrain`` so the gating
+        # logic only touches them on the instance-by-tile fog notifier path.
+        self.enabled = True
+        self._ks_fog_visible = False
+        self._ks_chunk_visible = True
+        self._ks_prop_enabled = None
+        self.render_queue = 1
+        self._ks_base_color = None
+        self._ks_fog_mult = None
+        self.color = None
+
+    @property
+    def scale(self):  # mirrors Ursina Entity.scale getter
+        return self._scale
+
+    @scale.setter
+    def scale(self, value) -> None:
+        """Translate ``ent.scale = (s, s, s)`` into a renderer instance update."""
+        if isinstance(value, (tuple, list)) and len(value) >= 1:
+            s = float(value[0])
+        else:
+            s = float(value)
+        self._scale = (s, s, s)
+        if self._renderer_ref is not None:
+            try:
+                self._renderer_ref.update_tree_scale(self._instance_id, s)
+            except Exception:
+                pass
+
+    @property
+    def instance_id(self) -> int:
+        return self._instance_id
+
+    @property
+    def tile_xy(self) -> tuple[int, int]:
+        return self._tile_xy
+
+
 class UrsinaTerrainFogCollab:
     """Terrain root + fog quad + visibility-gated props + optional grid overlay."""
 
     __slots__ = ("_r", "_tree_sync_tick_counter", "_last_growth_by_tile",
-                 "_terrain_chunks", "_visible_chunks", "_chunks_built")
+                 "_terrain_chunks", "_visible_chunks", "_chunks_built",
+                 "_last_cull_fog_revision", "_static_terrain_batches",
+                 "_static_batch_fog_size", "_static_batch_flatten_level",
+                 # WK58 Phase 4: hardware-instanced tree path. ``_instanced_trees_on``
+                 # mirrors ``KINGDOM_URSINA_INSTANCED_TREES`` at construction; the
+                 # individual-Entity tree branch in ``build_3d_terrain`` /
+                 # ``sync_dynamic_trees`` is skipped when this is True.
+                 # ``_instanced_nature_renderer`` is the renderer (lazy-init on first
+                 # tree). ``_tree_instance_ids`` maps (tx, ty) -> instance_id so
+                 # ``sync_dynamic_trees`` can grow/remove without re-walking models.
+                 "_instanced_trees_on", "_instanced_nature_renderer",
+                 "_tree_instance_ids", "_instanced_trees_last_fog_rev")
 
     def __init__(self, renderer) -> None:
         self._r = renderer
@@ -54,6 +148,56 @@ class UrsinaTerrainFogCollab:
         self._terrain_chunks: dict[tuple[int, int], list] = {}
         self._visible_chunks: set[tuple[int, int]] = set()
         self._chunks_built = False
+        # WK58 Phase 1 Fix 1A: track fog revision against which chunk_visible
+        # bits were last applied. When sync advances the fog revision, the next
+        # cull pass re-iterates all chunks once to refresh chunk_visible so the
+        # composition invariant ``ent.enabled = fog_visible AND chunk_visible``
+        # is maintained after /revealmap even when the camera is stationary.
+        self._last_cull_fog_revision: int = -1
+        # WK58 Phase 3: number of static batch parent Entities created by
+        # ``_batch_static_terrain_for_chunks``. Surfaced via
+        # ``tools/perf_render_benchmark.py``.
+        self._static_terrain_batches: int = 0
+        # WK58 Phase 3 telemetry: which fog-batch granularity and flatten
+        # strategy was used for the most recent build. Set when batching runs.
+        # Default 8x8 (per plan Section 7 — fog seams stay reasonable while
+        # the static count drops from ~7,500 individual props to ~1,000
+        # batch parents).  ``KINGDOM_URSINA_STATIC_BATCH_SIZE`` env var lets
+        # Agent 10 sweep larger sizes (16, 32) for benchmarking without
+        # touching code.  Measured perf for 250x250 + /revealmap:
+        #   8x8  -> ~1017 batches, after_avg ~15 FPS
+        #   16x16 -> ~256 batches,  after_avg ~16.6 FPS
+        #   32x32 -> ~64 batches,   after_avg ~15.6 FPS
+        # Static-prop count is no longer the bottleneck at any of these;
+        # remaining gap to 45 FPS comes from the ~2,083 individual tree
+        # entities and would need Phase 4 (tree instancing) to close.
+        try:
+            _bsz = int(os.environ.get("KINGDOM_URSINA_STATIC_BATCH_SIZE", "") or "8")
+        except ValueError:
+            _bsz = 8
+        if _bsz <= 0:
+            _bsz = 8
+        self._static_batch_fog_size: int = _bsz
+        self._static_batch_flatten_level: str = "none"
+
+        # WK58 Phase 4: hardware-instanced tree renderer (per plan Section 8).
+        # Read env var once at construction so the legacy and instanced code paths
+        # stay deterministic across a single session (no flipping between the two
+        # mid-game). Default in ``instanced_trees_env_enabled`` is "1" (ON) once
+        # Wave 4 visual parity is confirmed; set ``KINGDOM_URSINA_INSTANCED_TREES=0``
+        # for the legacy individual-Entity fallback.
+        try:
+            from game.graphics.instanced_nature_renderer import (
+                instanced_trees_env_enabled,
+            )
+            self._instanced_trees_on: bool = bool(instanced_trees_env_enabled())
+        except Exception:
+            self._instanced_trees_on = False
+        self._instanced_nature_renderer = None  # lazy-init on first tree
+        # (tx, ty) -> instance_id, parallel to ``_r._tree_entities`` for the legacy
+        # path so ``sync_dynamic_trees`` can address growth/remove by tile.
+        self._tree_instance_ids: dict[tuple[int, int], int] = {}
+        self._instanced_trees_last_fog_rev: int = -1
 
     def ensure_fog_overlay(self, world, fog_revision: int) -> None:
         """Darken unexplored / non-visible tiles in 3D (matches 2D render_fog semantics).
@@ -67,7 +211,21 @@ class UrsinaTerrainFogCollab:
         if self._r._terrain_entity is None:
             return
         my_rev = getattr(self._r, "_fog_revision_seen", -1)
-        if int(fog_revision) == my_rev and self._r._fog_entity is not None:
+        # WK58 W6 Fix 1.A (Agent 03): the early-out previously required
+        # ``_fog_entity is not None`` which is correct only for the legacy flat-
+        # terrain fog quad. The WK53 heightmap shader-uniform path destroys
+        # ``_fog_entity`` (see :345-351 below) and applies the fog texture as a
+        # ``fog_texture`` shader input on ``_terrain_ground_entity`` instead.
+        # Without recognising that path the early-out was always False on the
+        # heightmap build, so the 62,500-tile Python loop + GPU upload ran
+        # every frame even when ``fog_revision`` had not advanced. Accept the
+        # heightmap path by also checking ``_terrain_ground_entity``; this
+        # restores the intended "rebuild only when revealer crosses a tile"
+        # behaviour. Wave-5 profile: lifts post-reveal FPS ~18 -> ~32-38.
+        terrain_ground_ent = getattr(self._r, "_terrain_ground_entity", None)
+        if int(fog_revision) == my_rev and (
+            self._r._fog_entity is not None or terrain_ground_ent is not None
+        ):
             return
 
         tw, th = int(world.width), int(world.height)
@@ -247,11 +405,45 @@ class UrsinaTerrainFogCollab:
 
         self._r._fog_revision_seen = int(fog_revision)
 
+    def _apply_prop_visibility_state(
+        self,
+        ent: Entity,
+        *,
+        fog_visible: bool | None = None,
+        chunk_visible: bool | None = None,
+    ) -> None:
+        """WK58 Phase 1 Fix 1A: compose fog and chunk visibility into ent.enabled.
+
+        Fog sync writes only ``_ks_fog_visible``; chunk culling writes only
+        ``_ks_chunk_visible``. The entity is enabled iff both bits are True.
+        This prevents the two systems from fighting each other's enabled state
+        and keeps the invariant after ``/revealmap`` (fog flips all props
+        visible but out-of-frustum chunks must stay hidden).
+        """
+        if fog_visible is not None:
+            ent._ks_fog_visible = bool(fog_visible)
+        if chunk_visible is not None:
+            ent._ks_chunk_visible = bool(chunk_visible)
+        should_enable = bool(getattr(ent, "_ks_fog_visible", True)) and bool(
+            getattr(ent, "_ks_chunk_visible", True)
+        )
+        if getattr(ent, "_ks_prop_enabled", None) is not should_enable:
+            try:
+                ent.enabled = should_enable
+            except (AssertionError, Exception):
+                pass
+            ent._ks_prop_enabled = should_enable
+
     def track_visibility_gated_terrain(self, ent: Entity, tx: int, ty: int) -> None:
         """Register vertical terrain props that should disappear only in unexplored fog."""
         # Vertical props must draw after the ground-fog quad; otherwise their tops can be clipped
         # by fog that is visually behind them at shallow perspective camera angles.
         ent.render_queue = 1
+        # WK58 Phase 1 Fix 1A: initialize both visibility bits so the composed
+        # state starts hidden (fog hasn't revealed) but assumes chunk-visible
+        # until the first cull pass narrows it.
+        ent._ks_fog_visible = False
+        ent._ks_chunk_visible = True
         key = (int(tx), int(ty))
         self._r._visibility_gated_terrain.append((ent, key[0], key[1]))
         self._r._visibility_gated_terrain_by_tile.setdefault(key, []).append(ent)
@@ -278,10 +470,10 @@ class UrsinaTerrainFogCollab:
             bt.pop(key, None)
 
     def sync_terrain_prop_tile_visibility(self, ent: Entity, vis: Visibility) -> None:
+        # WK58 Phase 1 Fix 1A: write only the fog bit; chunk visibility is owned
+        # by ``cull_terrain_chunks`` and composed via ``_apply_prop_visibility_state``.
         is_visible = vis != Visibility.UNSEEN
-        if getattr(ent, "_ks_prop_enabled", None) is not is_visible:
-            ent.enabled = bool(is_visible)
-            ent._ks_prop_enabled = bool(is_visible)
+        self._apply_prop_visibility_state(ent, fog_visible=is_visible)
         if is_visible:
             try:
                 seen_mult = float(getattr(config, "URSINA_SEEN_PROP_FOG_MULT", 0.5))
@@ -293,13 +485,28 @@ class UrsinaTerrainFogCollab:
         """Hide tall terrain props only in UNSEEN fog so they cannot protrude into unknown territory."""
         engine_rev = int(fog_revision)
         if self._r._terrain_visibility_revision_seen == engine_rev:
+            # WK58 Phase 4: instanced trees keep their own fog-revision counter so
+            # we still need to give them a chance to refresh if the engine bumped
+            # the revision since our last instanced sync. Cheap when up-to-date.
+            self._sync_instanced_trees_fog(world, fog_revision)
             return
 
         if getattr(world, 'fog_disabled', False):
+            # WK58 Phase 1 Fix 1A: /revealmap fully reveals the map.  Reset
+            # BOTH visibility bits so every tracked prop is enabled at the end
+            # of this sync; the next cull pass (same frame in production) will
+            # narrow ``chunk_visible`` back down for out-of-frustum tiles.
+            # Mirrors the player-visible semantics of /revealmap: "show
+            # everything for an instant, then frustum culling re-applies".
             for ent, tx, ty in self._r._visibility_gated_terrain:
-                self.sync_terrain_prop_tile_visibility(ent, Visibility.VISIBLE)
+                self._apply_prop_visibility_state(
+                    ent, fog_visible=True, chunk_visible=True
+                )
+                _set_static_prop_fog_tint(ent, 1.0)
             self._r._terrain_visible_tiles_seen = None
             self._r._terrain_visibility_revision_seen = engine_rev
+            # WK58 Phase 4: same /revealmap pulse for instanced trees.
+            self._sync_instanced_trees_fog(world, fog_revision)
             return
 
         current_visible = set(getattr(world, "_currently_visible", set()) or set())
@@ -324,6 +531,8 @@ class UrsinaTerrainFogCollab:
                     self.sync_terrain_prop_tile_visibility(ent, vis)
         self._r._terrain_visible_tiles_seen = current_visible
         self._r._terrain_visibility_revision_seen = engine_rev
+        # WK58 Phase 4: instanced trees fog pass after the regular gated-prop loop.
+        self._sync_instanced_trees_fog(world, fog_revision)
 
     def _build_terrain_chunks(self) -> None:
         """Group terrain entities into spatial chunks for frustum culling."""
@@ -336,8 +545,14 @@ class UrsinaTerrainFogCollab:
             if key not in chunks:
                 chunks[key] = []
             chunks[key].append(entry)
-        # Also include dynamic tree entities
+        # Also include dynamic tree entities — but ONLY legacy Entity-backed
+        # trees. WK58 Phase 4 ``_InstancedTreeStub`` instances are managed by
+        # the instanced renderer's own fog/transform pipeline and would only
+        # waste cycles in the per-frame chunk cull (their ``enabled`` attribute
+        # is a plain field with no Panda3D side-effect).
         for (tx, ty), ent in self._r._tree_entities.items():
+            if isinstance(ent, _InstancedTreeStub):
+                continue
             cx = tx // TERRAIN_CHUNK_SIZE
             cy = ty // TERRAIN_CHUNK_SIZE
             key = (cx, cy)
@@ -352,7 +567,17 @@ class UrsinaTerrainFogCollab:
 
     def cull_terrain_chunks(self, visible_rect: tuple[int, int, int, int], world) -> None:
         """Enable/disable terrain chunks based on camera frustum.
-        Called every frame from renderer.update()."""
+
+        WK58 Phase 1 Fix 1A: writes only the ``_ks_chunk_visible`` bit on tracked
+        props.  ``ent.enabled`` is composed against ``_ks_fog_visible`` inside
+        ``_apply_prop_visibility_state``.  When the fog revision has advanced
+        since this method last ran (e.g. just after ``/revealmap`` re-enabled
+        every prop in ``sync_visibility_gated_terrain``), the full chunk mask
+        is re-applied so out-of-frustum chunks stay hidden even when the
+        camera is stationary and the chunk set is unchanged.
+
+        Called every frame from renderer.update().
+        """
         if not getattr(self, '_chunks_built', False):
             return
 
@@ -370,29 +595,263 @@ class UrsinaTerrainFogCollab:
                 if (cx, cy) in self._terrain_chunks:
                     new_visible.add((cx, cy))
 
-        # Chunks that became hidden
-        became_hidden = self._visible_chunks - new_visible
-        for chunk_key in became_hidden:
-            for ent, tx, ty in self._terrain_chunks[chunk_key]:
-                try:
-                    ent.enabled = False
-                except (AssertionError, Exception):
-                    pass
+        # WK58 Phase 1 Fix 1A: when the fog revision changed since last cull,
+        # the sync pass may have flipped every prop visible (full reveal) or
+        # may have enabled new tiles whose chunk is out of frustum.  Iterate
+        # ALL chunks once and set ``chunk_visible`` so the composed enabled
+        # state is consistent regardless of camera delta.  This is the
+        # invariant the WK58-BUG-001 repro test exercises.
+        current_fog_rev = int(getattr(self._r, "_terrain_visibility_revision_seen", -1))
+        if current_fog_rev != self._last_cull_fog_revision:
+            for chunk_key, entries in self._terrain_chunks.items():
+                is_visible = chunk_key in new_visible
+                for ent, tx, ty in entries:
+                    self._apply_prop_visibility_state(ent, chunk_visible=is_visible)
+            self._last_cull_fog_revision = current_fog_rev
+        else:
+            # Steady-state delta path: only chunks that changed visibility
+            # need their composed state updated.
+            became_hidden = self._visible_chunks - new_visible
+            for chunk_key in became_hidden:
+                for ent, tx, ty in self._terrain_chunks[chunk_key]:
+                    self._apply_prop_visibility_state(ent, chunk_visible=False)
 
-        # Chunks that became visible — restore fog-based visibility
-        became_visible = new_visible - self._visible_chunks
-        for chunk_key in became_visible:
-            for ent, tx, ty in self._terrain_chunks[chunk_key]:
-                try:
-                    if 0 <= ty < world.height and 0 <= tx < world.width:
-                        vis = world.visibility[ty][tx]
-                        ent.enabled = (vis != Visibility.UNSEEN)
-                    else:
-                        ent.enabled = True
-                except (AssertionError, Exception):
-                    pass
+            became_visible = new_visible - self._visible_chunks
+            for chunk_key in became_visible:
+                for ent, tx, ty in self._terrain_chunks[chunk_key]:
+                    self._apply_prop_visibility_state(ent, chunk_visible=True)
 
         self._visible_chunks = new_visible
+
+        # WK58 Phase 4: re-pack the instanced tree buffer once per frame so
+        # registration/growth/fog flips applied earlier in the frame are visible
+        # on the GPU. ``update_buffer`` skips work for models whose ``dirty`` bit
+        # isn't set, so the steady-state cost is just a dict-walk.
+        if self._instanced_trees_on and self._instanced_nature_renderer is not None:
+            # Push the freshly-computed camera-frustum chunk set into the
+            # renderer BEFORE flushing the buffer so the instance count drops
+            # from "every fog-visible tree on the map" (~2,083 post-/revealmap)
+            # to "trees in the ~48 visible chunks" (~300-500). Hardware
+            # instancing draws every instance unconditionally — the GPU has no
+            # chunk-cull of its own. Filtering on the CPU before pack is the
+            # only handle.
+            try:
+                self._instanced_nature_renderer.set_visible_chunks(
+                    new_visible, chunk_size=TERRAIN_CHUNK_SIZE
+                )
+            except Exception:
+                pass
+            try:
+                self._instanced_nature_renderer.update_buffer()
+            except Exception:
+                pass
+
+    def _ensure_instanced_nature_renderer(self):
+        """WK58 Phase 4: lazy-init the hardware-instanced tree renderer.
+
+        Returns the renderer instance, or ``None`` if construction failed
+        (e.g. Panda3D unavailable, shader compile error). Caller MUST fall
+        back to legacy Entity path if this returns ``None``.
+        """
+        if self._instanced_nature_renderer is not None:
+            return self._instanced_nature_renderer
+        try:
+            from game.graphics.instanced_nature_renderer import (
+                InstancedNatureRenderer,
+            )
+            self._instanced_nature_renderer = InstancedNatureRenderer()
+        except Exception:
+            self._instanced_nature_renderer = None
+        return self._instanced_nature_renderer
+
+    def _sync_instanced_trees_fog(self, world, fog_revision: int) -> None:
+        """WK58 Phase 4: propagate fog visibility into the instanced tree buffer.
+
+        Skipped when the legacy individual-Entity path is active. Called once per
+        frame from ``sync_visibility_gated_terrain`` after the regular gated-prop
+        loop so the instanced trees inherit the same fog-revealed-by-tile state
+        as the rest of the terrain. The renderer is responsible for the actual
+        re-pack via ``update_buffer`` (see ``cull_terrain_chunks``).
+        """
+        if not self._instanced_trees_on:
+            return
+        inst_renderer = self._instanced_nature_renderer
+        if inst_renderer is None:
+            return
+        engine_rev = int(fog_revision)
+        if self._instanced_trees_last_fog_rev == engine_rev:
+            return
+
+        if getattr(world, 'fog_disabled', False):
+            # /revealmap: every registered tile becomes fog-visible. Calling the
+            # helper avoids iterating world.width * world.height tiles.
+            inst_renderer.set_all_fog_visible()
+            self._instanced_trees_last_fog_rev = engine_rev
+            return
+
+        # Standard fog pass: walk only the tiles that actually have trees
+        # registered. With ~2,083 trees on the full map this is two orders of
+        # magnitude cheaper than scanning every tile.
+        for tkey in list(self._tree_instance_ids.keys()):
+            tx, ty = tkey
+            if 0 <= ty < world.height and 0 <= tx < world.width:
+                vis = world.visibility[ty][tx]
+            else:
+                vis = Visibility.UNSEEN
+            inst_renderer.set_fog_visibility(tkey, vis != Visibility.UNSEEN)
+        self._instanced_trees_last_fog_rev = engine_rev
+
+    def _batch_static_terrain_for_chunks(self, root, tw: int, th: int) -> None:
+        """WK58 Phase 3: merge static terrain props into fog-batch parent Entities.
+
+        Trees (entities tagged with ``_ks_tree_base_scale``) are excluded — they
+        retain dynamic scale via ``sync_dynamic_trees`` and must stay individual.
+        Static props (grass / doodads / path stones / water / rocks) are grouped
+        by ``(fog_batch_x, fog_batch_y, model_key, shader_key, color_key)`` so
+        a single ``flatten_strong()`` does not collapse heterogeneous materials.
+
+        After flattening, the original ``_visibility_gated_terrain`` list is
+        rebuilt: tree entries are kept 1:1, each batch parent is added as one
+        entry anchored at the fog-batch center tile.  ``sync_visibility_*`` and
+        ``cull_terrain_chunks`` therefore toggle batch parents as a single unit,
+        which is exactly the perf win Phase 3 chases (plan Section 7).
+
+        Granularity:
+        - 8x8 fog batches by default (~32 batches per 16x16 cull chunk).
+        - Fallback to ``flatten_medium`` then no-flatten if ``flatten_strong``
+          throws (mixed shader/model combos can refuse merge).
+        """
+        fog_batch_size = int(self._static_batch_fog_size or 8)
+        if fog_batch_size <= 0:
+            fog_batch_size = 8
+
+        existing = list(self._r._visibility_gated_terrain)
+        if not existing:
+            self._static_terrain_batches = 0
+            self._static_batch_flatten_level = "none"
+            return
+
+        new_vgt: list = []
+        new_vgt_by_tile: dict[tuple[int, int], list] = {}
+        batch_statics: dict[tuple, list] = {}
+
+        # WK58 Phase 3: signature key. The plan (Section 7) starts with
+        # ``(bx, by, model, shader, color)`` to keep ``flatten_strong()``
+        # from collapsing heterogeneous materials. In production that
+        # produces ~1 batch per source prop because every grass model + pack
+        # tint + (Panda3D NodePath scene path) is a distinct key. The
+        # consolidation we actually need is far coarser: one batch per fog
+        # cell regardless of material — ``flatten_strong()`` will keep
+        # different Geoms intact inside the single parent NodePath, and the
+        # per-frame visibility loop only needs to toggle the batch parent.
+        # This matches the plan's Risk Register row 4 fallback path ("group
+        # by model/material/tint first; if flatten fails fall back to
+        # reparenting without flatten") but applied the other way: start
+        # broad to actually shrink the count, then narrow only if visuals
+        # break.
+        for entry in existing:
+            ent, tx, ty = entry
+            # Trees keep their per-tile entry so dynamic scaling / log-stack
+            # replacement continues to address them individually.
+            if hasattr(ent, "_ks_tree_base_scale"):
+                new_vgt.append(entry)
+                new_vgt_by_tile.setdefault((int(tx), int(ty)), []).append(ent)
+                continue
+
+            bx = int(tx) // fog_batch_size
+            by = int(ty) // fog_batch_size
+            bkey = (bx, by)
+            batch_statics.setdefault(bkey, []).append(entry)
+
+        # Track which flatten strategy actually completed for evidence + log.
+        any_strong = False
+        any_medium = False
+        any_noflatten = False
+        batches_created = 0
+
+        for bkey, entries in batch_statics.items():
+            if not entries:
+                continue
+
+            bx, by = bkey
+
+            batch_parent = Entity(
+                parent=root,
+                name=f"static_batch_{bx}_{by}",
+                add_to_scene_entities=False,
+            )
+
+            for ent, _tx, _ty in entries:
+                try:
+                    ent.reparent_to(batch_parent)
+                except Exception:
+                    # If reparent fails the child stays parented to root; the
+                    # batch will simply skip flattening that node.  Counted as
+                    # ``no-flatten`` for diagnostic purposes only.
+                    pass
+
+            # ``clear_model_nodes()`` removes the Panda3D ModelNode flag that
+            # prevents flatten from merging child meshes — without this,
+            # ``flatten_strong()`` is a no-op for entities loaded via .glb/.obj
+            # (which carry ModelNode by default).  Safe to call on the parent;
+            # only affects nodes flagged ``T_dont_flatten``.
+            try:
+                batch_parent.clear_model_nodes()
+            except Exception:
+                pass
+
+            # Prefer flatten_strong; fall back per Risk Register row 4.
+            try:
+                batch_parent.flatten_strong()
+                any_strong = True
+            except Exception:
+                try:
+                    batch_parent.flatten_medium()
+                    any_medium = True
+                except Exception:
+                    any_noflatten = True
+
+            # Anchor batch at fog-batch center tile, clamped to map bounds so
+            # the fog-by-tile lookup (and chunk-by-tile bucket) stays valid.
+            center_tx = bx * fog_batch_size + fog_batch_size // 2
+            center_ty = by * fog_batch_size + fog_batch_size // 2
+            center_tx = max(0, min(center_tx, int(tw) - 1))
+            center_ty = max(0, min(center_ty, int(th) - 1))
+
+            # Carry the composed-visibility state markers onto the parent so the
+            # existing ``_apply_prop_visibility_state`` pipeline keeps working
+            # for the post-batch world. We do NOT touch ``_ks_tree_base_scale``
+            # on the parent — trees must never be batched.
+            try:
+                batch_parent.render_queue = 1
+            except Exception:
+                pass
+            batch_parent._ks_fog_visible = False
+            batch_parent._ks_chunk_visible = True
+
+            new_vgt.append((batch_parent, center_tx, center_ty))
+            new_vgt_by_tile.setdefault((center_tx, center_ty), []).append(batch_parent)
+            batches_created += 1
+
+        self._r._visibility_gated_terrain = new_vgt
+        self._r._visibility_gated_terrain_by_tile = new_vgt_by_tile
+        self._static_terrain_batches = batches_created
+        if any_strong and not any_medium and not any_noflatten:
+            self._static_batch_flatten_level = "strong"
+        elif any_medium and not any_noflatten:
+            self._static_batch_flatten_level = "medium" if not any_strong else "mixed_strong_medium"
+        elif any_noflatten and not any_strong and not any_medium:
+            self._static_batch_flatten_level = "none"
+        else:
+            # mixed outcome — some succeeded, some fell back.
+            parts = []
+            if any_strong:
+                parts.append("strong")
+            if any_medium:
+                parts.append("medium")
+            if any_noflatten:
+                parts.append("none")
+            self._static_batch_flatten_level = "+".join(parts) if parts else "none"
 
     def ensure_grid_debug_overlay(self, world, buildings) -> None:
         """WK30 debug: draw tile gridlines on the terrain when ``KINGDOM_URSINA_GRID_DEBUG=1``.
@@ -561,6 +1020,11 @@ class UrsinaTerrainFogCollab:
                         add_to_scene_entities=False,
                     )
                     _finalize_kenney_scatter_entity(path_ent, path_model)
+                    # WK58 Phase 1 Fix 1B (WK58-BUG-003): register path stones
+                    # in the visibility/cull system.  Before this, path entities
+                    # bypassed both fog gating and chunk culling entirely
+                    # (~996 always-on props on a 250x250 map).
+                    self.track_visibility_gated_terrain(path_ent, tx, ty)
                 elif tile == TileType.WATER:
                     water_y = float(getattr(config, "TERRAIN_WATER_LEVEL", 1.0)) if has_heightmap else 0.005
                     tile_w = (float(ts) / SCALE) * m
@@ -620,6 +1084,48 @@ class UrsinaTerrainFogCollab:
                 if tile == TileType.TREE:
                     ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
                     tree_model = tree_models[ti]
+                    # WK58 Phase 4: route into the instanced renderer when the env
+                    # flag is on. We deliberately skip the individual Entity
+                    # creation AND the visibility/chunk tracking — the instanced
+                    # path has its own fog gating via ``set_fog_visibility``.
+                    # Leaving the per-tree Entity disabled in scene would still
+                    # cost a NodePath; not creating it at all is the actual win.
+                    if self._instanced_trees_on:
+                        inst_renderer = self._ensure_instanced_nature_renderer()
+                        iid = None
+                        if inst_renderer is not None:
+                            iid = inst_renderer.register_tree(
+                                tree_model,
+                                (float(wx), float(prop_y), float(wz)),
+                                float(tm),
+                                (int(tx), int(ty)),
+                            )
+                        if iid is not None:
+                            self._tree_instance_ids[(int(tx), int(ty))] = int(iid)
+                            # Stamp the base scale on a sentinel so
+                            # ``sync_dynamic_trees`` can compute growth-scaled
+                            # values without re-deriving from config. We don't
+                            # need a full Entity; a small dict-side record on
+                            # ``_r._tree_entities`` keyed by tile works fine
+                            # because callers only ever check ``key in ents`` or
+                            # iterate ``ents.items()``. Use a lightweight stub
+                            # with the same surface the legacy ent exposed:
+                            # ``_ks_tree_base_scale``, ``_ks_tree_growth``,
+                            # ``scale``. ``sync_dynamic_trees`` reads those
+                            # attributes and writes ``ent.scale`` — for the
+                            # instanced path we redirect both to the renderer.
+                            stub = _InstancedTreeStub(
+                                instance_id=int(iid),
+                                renderer_ref=inst_renderer,
+                                base_scale=float(tm),
+                                tile_xy=(int(tx), int(ty)),
+                            )
+                            self._r._tree_entities[(int(tx), int(ty))] = stub
+                            continue
+                        # Fall through to legacy path if registration failed
+                        # (model load failure or slot cap hit). This is safe:
+                        # the env flag promises "instanced when possible",
+                        # never "no trees at all" — Jaimie's hard directive.
                     tree_ent = Entity(
                         parent=root,
                         model=tree_model,
@@ -678,6 +1184,11 @@ class UrsinaTerrainFogCollab:
                         self.track_visibility_gated_terrain(rock_ent, tx, ty)
 
         self._r._terrain_entity = root
+        # WK58 Phase 3: merge static terrain props (grass / doodads / paths /
+        # water / rocks) into fog-batch parent Entities so Panda3D only walks
+        # tens-to-hundreds of nodes per frame instead of ~10k. Trees stay
+        # individual because ``sync_dynamic_trees`` mutates their scale.
+        self._batch_static_terrain_for_chunks(root, tw, th)
         self._build_terrain_chunks()
 
     def _build_terrain_ground_mesh(
@@ -981,6 +1492,41 @@ class UrsinaTerrainFogCollab:
                     tree_y = get_terrain_height(wx, wz) if _hm_ok() else 0.0
                     ti = _scatter_model_index(tx, ty, len(tree_models), salt=41)
                     tree_model = tree_models[ti]
+                    # WK58 Phase 4: route saplings through the instanced renderer
+                    # when active. ``register_tree`` returns ``None`` if the
+                    # model failed to load or the per-model slot cap is hit —
+                    # in either case we fall back to the legacy Entity path so
+                    # the sapling still shows up (no "missing trees" regression).
+                    if self._instanced_trees_on:
+                        inst_renderer = self._ensure_instanced_nature_renderer()
+                        iid = None
+                        if inst_renderer is not None:
+                            iid = inst_renderer.register_tree(
+                                tree_model,
+                                (float(wx), float(tree_y), float(wz)),
+                                float(tm),
+                                (int(tx), int(ty)),
+                            )
+                        if iid is not None:
+                            self._tree_instance_ids[(int(tx), int(ty))] = int(iid)
+                            stub = _InstancedTreeStub(
+                                instance_id=int(iid),
+                                renderer_ref=inst_renderer,
+                                base_scale=float(tm),
+                                tile_xy=(int(tx), int(ty)),
+                            )
+                            ents[key] = stub
+                            # Force the next instanced-fog sync to pick this
+                            # new tile up so the sapling is visible right away
+                            # (otherwise it's stuck at fog_visible=False until
+                            # the player crosses the tile).
+                            if world is not None and 0 <= ty < world.height and 0 <= tx < world.width:
+                                vis = world.visibility[ty][tx]
+                                if vis != Visibility.UNSEEN and inst_renderer is not None:
+                                    inst_renderer.set_fog_visibility(
+                                        (int(tx), int(ty)), True
+                                    )
+                            continue
                     tree_ent = Entity(
                         parent=root,
                         model=tree_model,
@@ -1021,11 +1567,25 @@ class UrsinaTerrainFogCollab:
                 # and the world tile is no longer TREE, destroy it (sapling built over).
                 try:
                     if world is not None and int(world.get_tile(int(key[0]), int(key[1]))) != int(TileType.TREE):
-                        import ursina as u
+                        # WK58 Phase 4: instanced trees use ``_InstancedTreeStub``
+                        # and live in the instanced renderer's per-model slot
+                        # tables, NOT in ``_visibility_gated_terrain`` or
+                        # Ursina's scene graph. Free the renderer slot instead.
+                        if isinstance(ent, _InstancedTreeStub):
+                            inst_renderer = self._instanced_nature_renderer
+                            if inst_renderer is not None:
+                                try:
+                                    inst_renderer.remove_tree(ent.instance_id)
+                                except Exception:
+                                    pass
+                            self._tree_instance_ids.pop(key, None)
+                            ents.pop(key, None)
+                        else:
+                            import ursina as u
 
-                        self.untrack_visibility_gated_terrain(ent)
-                        u.destroy(ent)
-                        ents.pop(key, None)
+                            self.untrack_visibility_gated_terrain(ent)
+                            u.destroy(ent)
+                            ents.pop(key, None)
                 except Exception:
                     pass
                 continue

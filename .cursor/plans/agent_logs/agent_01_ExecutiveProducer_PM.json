@@ -5818,8 +5818,14 @@
             "summary": "R1: Agent 05 creates zone system. Agent 03 updates config + world.py for 250x250. Parallel."
           },
           "pm_next_actions_by_agent": {
-            "03": { "status": "assigned", "next_action": "config.py map 250x250, camera zoom, version. world.py dynamic map size." },
-            "05": { "status": "assigned", "next_action": "Create game/world_zones.py with Zone dataclass and 4 zone definitions." }
+            "03": {
+              "status": "assigned",
+              "next_action": "config.py map 250x250, camera zoom, version. world.py dynamic map size."
+            },
+            "05": {
+              "status": "assigned",
+              "next_action": "Create game/world_zones.py with Zone dataclass and 4 zone definitions."
+            }
           }
         },
         "wk54_r2_terrain_scaling_zones_flatten": {
@@ -5835,8 +5841,14 @@
             "summary": "R2: Agent 09 implements terrain scaling + zone elevation + flattening. Agent 03 integrates zones into world.py vegetation/rock generation."
           },
           "pm_next_actions_by_agent": {
-            "09": { "status": "pending", "next_action": "terrain_height.py heightmap scaling + zone elevation + flattening. fog collab scaling. ursina_app camera/fog." },
-            "03": { "status": "pending", "next_action": "world.py zone-influenced vegetation/rock scatter + terrain flattening integration for buildings." }
+            "09": {
+              "status": "pending",
+              "next_action": "terrain_height.py heightmap scaling + zone elevation + flattening. fog collab scaling. ursina_app camera/fog."
+            },
+            "03": {
+              "status": "pending",
+              "next_action": "world.py zone-influenced vegetation/rock scatter + terrain flattening integration for buildings."
+            }
           }
         },
         "wk54_r3_poi_architecture": {
@@ -5852,8 +5864,14 @@
             "summary": "R3: Agent 05 creates poi.py + poi_placement.py + POI config registrations. Agent 03 updates building_factory.py + world.py POI wiring."
           },
           "pm_next_actions_by_agent": {
-            "05": { "status": "pending", "next_action": "Create game/entities/poi.py, game/systems/poi_placement.py, POI config registrations." },
-            "03": { "status": "pending", "next_action": "building_factory.py POI registration + world.py POI placement integration." }
+            "05": {
+              "status": "pending",
+              "next_action": "Create game/entities/poi.py, game/systems/poi_placement.py, POI config registrations."
+            },
+            "03": {
+              "status": "pending",
+              "next_action": "building_factory.py POI registration + world.py POI placement integration."
+            }
           }
         },
         "wk54_r4_renderer_and_verification": {
@@ -5869,7 +5887,10 @@
             "summary": "R4: Agent 09 renderer integration. QA verification + screenshots."
           },
           "pm_next_actions_by_agent": {
-            "09": { "status": "pending", "next_action": "ursina_renderer.py POI visibility gating (Option A — invisible until discovered)." }
+            "09": {
+              "status": "pending",
+              "next_action": "ursina_renderer.py POI visibility gating (Option A — invisible until discovered)."
+            }
           }
         }
       }
@@ -6182,35 +6203,67 @@
             }
           },
           "pm_send_list_minimal": {
-            "batch_1_parallel": ["10"],
-            "then_in_order": ["03", "11"],
+            "batch_1_parallel": [
+              "10"
+            ],
+            "then_in_order": [
+              "03",
+              "11"
+            ],
             "intelligence_by_agent": {
               "10": "high",
               "03": "high",
               "11": "medium"
             },
-            "do_not_send": ["01", "02", "04", "05", "06", "07", "08", "09", "12", "13", "14", "15"],
+            "do_not_send": [
+              "01",
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
             "rationale": "Agent 10 profiles first to establish baseline metrics, then Agent 03 implements the atlas pipeline change (high complexity — renderer architecture), then Agent 11 validates FPS + visual correctness."
           },
           "automation": {
             "mode": "auto_until_human_gate",
-            "runnable_agents": ["10", "03", "11"],
+            "runnable_agents": [
+              "10",
+              "03",
+              "11"
+            ],
             "dependencies": [
               {
                 "id": "wave1_profile",
-                "agents": ["10"],
+                "agents": [
+                  "10"
+                ],
                 "parallel": false
               },
               {
                 "id": "wave2_implement",
-                "after": ["wave1_profile"],
-                "agents": ["03"],
+                "after": [
+                  "wave1_profile"
+                ],
+                "agents": [
+                  "03"
+                ],
                 "parallel": false
               },
               {
                 "id": "wave3_qa",
-                "after": ["wave2_implement"],
-                "agents": ["11"],
+                "after": [
+                  "wave2_implement"
+                ],
+                "agents": [
+                  "11"
+                ],
                 "parallel": false
               }
             ],
@@ -6223,7 +6276,9 @@
             ],
             "success_signals": {
               "required_log_entries": true,
-              "required_exit_codes": [0],
+              "required_exit_codes": [
+                0
+              ],
               "required_gates": [
                 "python tools/qa_smoke.py --quick",
                 "python -m tests.perf_ursina_stress"
@@ -6347,10 +6402,32 @@
           "new_test_file": "tests/test_underground.py (25 tests)",
           "qa_smoke": "PASS",
           "validate_assets": "PASS (0 errors, 46 warnings — baseline)",
-          "agents_activated": ["03", "05", "11"],
+          "agents_activated": [
+            "03",
+            "05",
+            "11"
+          ],
           "waves_completed": 6,
-          "files_created": ["game/graphics/underground_terrain.py", "tests/test_underground.py"],
-          "files_modified": ["game/underground.py", "config.py", "game/graphics/terrain_fog_shader.py", "game/graphics/ursina_terrain_fog_collab.py", "game/entities/hero.py", "game/entities/enemy.py", "game/sim/snapshot.py", "game/sim_engine.py", "game/graphics/ursina_renderer.py", "game/graphics/ursina_app.py", "game/systems/pathfinding.py", "game/world.py", "game/systems/poi_interaction.py", "ai/behaviors/poi_awareness.py"]
+          "files_created": [
+            "game/graphics/underground_terrain.py",
+            "tests/test_underground.py"
+          ],
+          "files_modified": [
+            "game/underground.py",
+            "config.py",
+            "game/graphics/terrain_fog_shader.py",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/entities/hero.py",
+            "game/entities/enemy.py",
+            "game/sim/snapshot.py",
+            "game/sim_engine.py",
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_app.py",
+            "game/systems/pathfinding.py",
+            "game/world.py",
+            "game/systems/poi_interaction.py",
+            "ai/behaviors/poi_awareness.py"
+          ]
         }
       },
       "rounds": {
@@ -6369,9 +6446,33 @@
             "03": "You are activated for sprint wk57_underground_vertical_stacking, Wave 1.\n\nREAD THE FULL PLAN FIRST: .cursor/plans/wk57_underground_vertical_stacking.plan.md — Section 'Wave 1'.\n\nYOU HAVE 5 TASKS:\n\n1A. Extend game/underground.py: Add world_offset_x, world_offset_z to UndergroundChamber. Add total_width, total_height, walkability grid, floor_heightmap to UndergroundArea. Add compute_layout() method that assigns chamber positions (vertical stack), builds walkability grid, generates Perlin noise floor heightmap. Call compute_layout() at end of generate_underground_area().\n\n1B. Add UNDERGROUND_* config constants to config.py (see plan for exact values). Place after TERRAIN_CASTLE_FLAT_RADIUS.\n\n1C. Extend game/graphics/terrain_fog_shader.py: Add 8 cave_entrance_N uniforms (vec2, default 99.0,99.0), cave_hole_radius (float, default 0.0), cave_edge_width (float, default 0.0). Fragment shader computes distance from v_fog_uv to each entrance, discards if < radius, darkens edge gradient. The plan has the EXACT shader code — copy it.\n\n1D. In game/graphics/ursina_terrain_fog_collab.py: Store terrain ground entity as self._terrain_ground_ent. Add update_cave_entrance_shader() method that converts discovered dungeon POI grid positions to fog UV space and sets shader uniforms. The plan has the EXACT code.\n\n1E. Add self.layer = 0 to Hero.__init__ and Enemy.__init__.\n\nVERIFICATION:\n- python tools/qa_smoke.py --quick (MUST PASS, 307+ tests)\n- python main.py --provider mock (must boot without shader errors)\n- python -c \"from game.underground import generate_underground_area; from game.entities.poi import PointOfInterest, POI_DEFINITIONS; poi = PointOfInterest(50, 50, POI_DEFINITIONS['poi_cave_entrance']); area = generate_underground_area(poi); print(f'chambers={len(area.chambers)}, grid={area.total_width}x{area.total_height}, walkable={sum(sum(r) for r in area.walkability)}')\"\n\nDO NOT COMMIT. Update your agent log when done."
           },
           "pm_send_list_minimal": {
-            "waves": [{"wave": 1, "agents": ["03"], "parallel": false}],
-            "intelligence_by_agent": {"03": "high"},
-            "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15"],
+            "waves": [
+              {
+                "wave": 1,
+                "agents": [
+                  "03"
+                ],
+                "parallel": false
+              }
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
             "rationale": "Wave 1: Agent 03 (high — novel shader work + data model architecture). Sequential only — all subsequent waves depend on this."
           }
         },
@@ -6438,6 +6539,676 @@
           "pm_status_summary": {
             "status": "done",
             "summary": "Wave 6 DONE. Agent 11 QA: All 6 gates PASS. qa_smoke 332 tests pass. validate_assets 0 errors. 25/25 underground tests pass. Regression checks pass (hero, combat, poi_interaction, enemy tests all green). All imports verified. Data model integrity confirmed (4 chambers, walkability correct, heightmap correct)."
+          }
+        }
+      }
+    },
+    "wk58_ursina_entities_overload": {
+      "sprint_meta": {
+        "status": "awaiting_human_gate_dod_partial",
+        "created_utc": "2026-05-18T19:45:00Z",
+        "closed_utc": null,
+        "plan_doc": ".cursor/plans/Ursina Entities Overload Solution.md",
+        "notes": "Perf sprint. Goal: 45+ FPS post-/revealmap REQUIRED (55+ target, 60 FPS stretch). Root cause: ~13,000 individual Ursina Entity props enabled simultaneously after fog reveal. Plan delivers two implementation rounds (Phase 1/2 culling fix + Phase 3 static batching) plus an optional Phase 4 tree-instancing spike. Wave 1 builds test tooling + regression tests BEFORE Agent 03 touches render code. Subagents must NOT commit and must NOT iterate after reporting done.",
+        "version_target": "TBD",
+        "definition_of_done": [
+          "python tools/perf_render_benchmark.py shows after_avg >= 45 FPS (>=55 stretch)",
+          "python -m pytest tests/ -x -q PASS (incl. new tests/test_terrain_perf.py)",
+          "enabled_props_outside_visible_chunks ~ 0 after reveal",
+          "visible_chunks at default zoom < 80",
+          "Fog of war visually intact (unexplored dark, explored tinted, visible bright)",
+          "Tree growth still works (saplings -> 4 stages)",
+          "No visual artifacts (no popping, no missing chunks, no z-fighting)",
+          "Building placement still removes trees from footprint",
+          "Screenshots captured in docs/screenshots/perf_final/"
+        ]
+      },
+      "rounds": {
+        "wk58_w1_test_tooling_and_regression": {
+          "round_meta": {
+            "round_id": "wk58_w1_test_tooling_and_regression",
+            "build_target": "Build test tooling (perf_render_benchmark.py + --reveal-map flag) and regression tests (test_terrain_perf.py). Capture baseline FPS BEFORE Agent 03 touches render code.",
+            "created_utc": "2026-05-18T19:45:00Z",
+            "wave": 1,
+            "depends_on": null
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 1 DONE. Agent 10 shipped tools/perf_render_benchmark.py (matches plan output spec), extended tools/run_ursina_capture_once.py with --reveal-map, and added the 5-line env-var reveal trigger to game/graphics/ursina_app.py:1370-1377 (scoped cross-domain edit, documented). qa_smoke PASS. Baseline (warm-cache): before_avg=26.4 FPS, after_avg=13.5 FPS, tracked_props=10504, tree_entities=2083, enabled_props=10504, enabled_outside_visible_chunks=931, visible_chunks=225/256 (88%). All three diagnoses confirmed live. Agent 11 shipped tests/test_terrain_perf.py with 4 tests: 3 active failures match WK58-BUG-001/002/003 exactly; 4th is pytest.skip pending Phase 3. 332 pre-existing tests still PASS. qa_smoke fails ONLY because the new tests fail intentionally — will flip back to PASS automatically when Agent 03 lands Phase 1+2.",
+            "wave1_baseline": {
+              "before_avg_fps": 26.4,
+              "after_avg_fps": 13.5,
+              "tracked_props": 10504,
+              "tree_entities": 2083,
+              "enabled_props_after_reveal": 10504,
+              "enabled_outside_visible_chunks_after_reveal": 931,
+              "visible_chunks_at_default_camera": 225,
+              "total_chunks": 256,
+              "visible_pct_of_map": 0.879,
+              "result": "FAIL_target_45_fps",
+              "baseline_file": ".cursor/plans/agent_logs/wk58_round1_baseline_perf.txt"
+            },
+            "wave1_evidence": {
+              "tools_created": [
+                "tools/perf_render_benchmark.py",
+                "tests/test_terrain_perf.py"
+              ],
+              "tools_modified": [
+                "tools/run_ursina_capture_once.py (added --reveal-map flag)",
+                "game/graphics/ursina_app.py:1370-1377 (scoped 5-line env-var reveal trigger, cross-domain edit per plan)"
+              ],
+              "tests_authored": 4,
+              "tests_failing_as_expected": [
+                "test_path_entities_are_tracked -> WK58-BUG-003",
+                "test_culling_reapplies_after_fog_change -> WK58-BUG-001",
+                "test_visible_rect_reasonable_at_default_camera -> WK58-BUG-002"
+              ],
+              "tests_skipped": [
+                "test_static_entity_count_reduced (xfail pending Phase 3)"
+              ]
+            }
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK58-BUG-001",
+              "title": "Culling/visibility composition fails to re-apply after /revealmap",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "python main.py --no-llm",
+                "Wait for terrain to load",
+                "Type /revealmap in chat",
+                "FPS drops from ~29-43 to ~6-15"
+              ],
+              "expected": "After /revealmap, chunk culling re-applies so only camera-visible chunks render (~30-60 chunks at default zoom).",
+              "actual": "sync_visibility_gated_terrain() enables ~10,506 entities by fog alone. cull_terrain_chunks() only processes camera-delta and skips work when camera is stationary, so out-of-frustum props stay enabled.",
+              "acceptance_test": [
+                "python tools/perf_render_benchmark.py reports enabled_props_outside_visible_chunks near zero after reveal",
+                "python -m pytest tests/test_terrain_perf.py::TestTerrainEntityTracking::test_culling_reapplies_after_fog_change -v PASS"
+              ],
+              "status": "assigned",
+              "fix_phase": "Phase 1 (Section 4 of plan)"
+            },
+            {
+              "id": "WK58-BUG-002",
+              "title": "Camera visible rect covers 88% of the map (cam_y * 1.8 heuristic)",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "agent_diagnostic",
+              "repro_steps": [
+                "Inspect _get_visible_tile_rect() at game/graphics/ursina_renderer.py line 629",
+                "view_radius = max(int(cam_y * 1.8), 30) -> 108-144 tiles at default cam_y ~60-80",
+                "Map is 250x250 -> rect covers 225/256 chunks"
+              ],
+              "expected": "Visible rect proportional to actual screen area + 5-8 tile margin (~30-60 chunks).",
+              "actual": "view_radius * 2 ~= 88% of map width.",
+              "acceptance_test": [
+                "python tools/perf_render_benchmark.py reports visible_chunks < 80 at default camera",
+                "Screenshots show no prop pop-in panning N/S/E/W and at min/max zoom"
+              ],
+              "status": "assigned",
+              "fix_phase": "Phase 2 (Section 5 of plan)"
+            },
+            {
+              "id": "WK58-BUG-003",
+              "title": "Path stone entities (~996) bypass visibility tracking entirely",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "agent_diagnostic",
+              "repro_steps": [
+                "Inspect ursina_terrain_fog_collab.py:552-563",
+                "build_3d_terrain() creates path entities but never calls track_visibility_gated_terrain()"
+              ],
+              "expected": "Path entities are registered and culled like other terrain props.",
+              "actual": "Always enabled, always rendered, never culled.",
+              "acceptance_test": [
+                "tests/test_terrain_perf.py::TestTerrainEntityTracking::test_path_entities_are_tracked PASS",
+                "perf_render_benchmark shows tracked_props increased by ~996 after Phase 1"
+              ],
+              "status": "assigned",
+              "fix_phase": "Phase 1 / Fix 1B (Section 4 of plan)"
+            }
+          ],
+          "pm_feature_requests": [
+            {
+              "id": "WK58-FEAT-001",
+              "title": "Static terrain chunk batching (grass/doodads/path/water/rocks merged per 8x8 fog batch)",
+              "owner_agent": "03_TechnicalDirector",
+              "fix_phase": "Phase 3 (Section 7 of plan)",
+              "spec_ref": "Section 7 of plan; _batch_static_terrain_for_chunks pseudocode",
+              "conditional_on": "Round 1 stop/go gate FAILS to reach 45+ FPS"
+            },
+            {
+              "id": "WK58-FEAT-002",
+              "title": "Hardware-instanced tree rendering (~2,083 trees -> ~13 instanced GeomNodes)",
+              "owner_agent": "03_TechnicalDirector",
+              "fix_phase": "Phase 4 spike (Section 8 of plan)",
+              "spec_ref": "Section 8 of plan",
+              "conditional_on": "Phase 3 still below 45 FPS, OR Jaimie wants 60 FPS stretch"
+            }
+          ],
+          "pm_integration_order": [
+            "Wave 1 (parallel): Agent 10 tooling + Agent 11 regression tests + BASELINE benchmark capture",
+            "Wave 2 (sequential): Agent 03 Phase 1 (culling composition + path tracking) + Phase 2 (frustum tightening)",
+            "Wave 3 (validation): Agent 10 runs perf_render_benchmark + screenshots; STOP/GO GATE",
+            "Wave 4 (conditional): Agent 03 Phase 3 static batching ONLY IF Round 1 < 45 FPS",
+            "Wave 5 (polish): Agent 10 final validation, screenshots, regression checks",
+            "Wave 6 (QA gate): Agent 11 full pytest + DoD checklist"
+          ],
+          "pm_next_actions_by_agent": {
+            "10": "Build tools/perf_render_benchmark.py + extend tools/run_ursina_capture_once.py with --reveal-map per Section 3 of plan. Capture BASELINE FPS run BEFORE any fix lands and save to .cursor/plans/agent_logs/wk58_round1_baseline_perf.txt.",
+            "11": "Create tests/test_terrain_perf.py per Section 3 / Tool 2 of plan. Tests target POST-FIX behavior so initial run will fail in 1-3 places (intentional). Document expected failure reasons in test docstrings."
+          },
+          "pm_agent_prompts": {
+            "10": "You are Agent 10 (PerformanceStability_Lead). Read .cursor/rules/01-studio-onboarding.mdc and .cursor/rules/agent-10-performance-onboarding.mdc to onboard. Then read the plan at .cursor/plans/Ursina Entities Overload Solution.md (Sections 3 Tool 1 + Tool 3, 6, 9, 10). Build tools/perf_render_benchmark.py exactly per the spec (output format must match for parsing). Extend tools/run_ursina_capture_once.py with --reveal-map flag that sets KINGDOM_URSINA_REVEAL_ON_START=1; wire the env-var trigger in game/graphics/ursina_app.py inside update() closure (5-line guarded snippet from plan; this is a tightly scoped cross-domain edit, document in your log). After tooling builds, run perf_render_benchmark.py ONCE to capture BASELINE pre-fix perf and save raw stdout to .cursor/plans/agent_logs/wk58_round1_baseline_perf.txt. Run python tools/qa_smoke.py --quick (must PASS). Update your log at .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json: sprints['wk58_ursina_entities_overload'].rounds['wk58_w1_test_tooling_and_regression'] with sprint_id, round_id, status, what_i_changed, commands_run (with exit codes), evidence (baseline numbers + qa_smoke result + file paths), blockers, follow_ups. Validate with python -m json.tool. DO NOT COMMIT. DO NOT iterate after done. PowerShell syntax in logged commands.",
+            "11": "You are Agent 11 (QA_TestEngineering_Lead). Read .cursor/rules/01-studio-onboarding.mdc and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/Ursina Entities Overload Solution.md (Sections 3 Tool 2, 4, 5, 7, 10). Create tests/test_terrain_perf.py with: TestTerrainEntityTracking (test_path_entities_are_tracked, test_culling_reapplies_after_fog_change, test_visible_rect_reasonable_at_default_camera) and TestTerrainChunkBatching (test_static_entity_count_reduced — mark pytest.skip or xfail with reason='Phase 3 not yet implemented'). Use small/fake test worlds where possible; init Ursina/Panda3D minimally only when a real Entity is required. Each test's docstring must explain which bug it validates. Run python -m pytest tests/test_terrain_perf.py -v and capture the failure summary — tests SHOULD fail (testing post-fix behavior). Confirm failures match expected reasons. Run python tools/qa_smoke.py --quick to confirm the rest of the suite still passes. Update your log at .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json: sprints['wk58_ursina_entities_overload'].rounds['wk58_w1_test_tooling_and_regression'] with the standard fields (sprint_id, round_id, status, what_i_changed, commands_run + exit codes, evidence including pytest failure paste, blockers, follow_ups). Validate with python -m json.tool. DO NOT COMMIT. DO NOT iterate after done."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w1_parallel": [
+                "10",
+                "11"
+              ]
+            },
+            "intelligence_by_agent": {
+              "10": "medium",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 1 parallel: 10 (medium — scoped tooling implementation with concrete spec in plan, but Ursina+Panda3D launch plumbing has real-world gotchas), 11 (medium — pytest authorship with explicit docstring contracts, but terrain entity construction may need minimal Panda3D context). Agent 03 (high) activates in Wave 2 after Wave 1 is green."
+          }
+        },
+        "wk58_w2_phase1_phase2_agent03": {
+          "round_meta": {
+            "round_id": "wk58_w2_phase1_phase2_agent03",
+            "build_target": "Agent 03 fixes WK58-BUG-001 (culling/visibility composition), WK58-BUG-003 (path entities not tracked), and WK58-BUG-002 (camera frustum too generous). All 3 active regression tests must flip to PASS.",
+            "created_utc": "2026-05-18T20:30:00Z",
+            "wave": 2,
+            "depends_on": "wk58_w1_test_tooling_and_regression"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 2 DONE. Agent 03 implemented Phase 1 Fix 1A (compose fog+chunk visibility via _apply_prop_visibility_state, re-apply chunk mask on fog_revision advance), Phase 1 Fix 1B (track_visibility_gated_terrain for path entities, +997 tracked props), and Phase 2 (Panda3D base.camLens-based frustum extrusion with heuristic fallback for headless tests + 6-tile margin). All 3 active test_terrain_perf tests PASS. qa_smoke PASS. Files modified: game/graphics/ursina_terrain_fog_collab.py (__slots__ updated, new _last_cull_fog_revision field), game/graphics/ursina_renderer.py. Screenshots OK (no pop-in, fog still works, path/water render correctly).",
+            "wave2_perf": {
+              "before_avg_fps": 42.5,
+              "after_avg_fps": 14.0,
+              "after_avg_p50": 14.0,
+              "after_avg_p90": 17.7,
+              "tracked_props": 11501,
+              "enabled_props_after_reveal": 2515,
+              "enabled_outside_visible_chunks_after_reveal": 0,
+              "visible_chunks_at_default_camera": 48,
+              "delta_vs_baseline": {
+                "after_avg_delta_fps": 0.5,
+                "enabled_props_reduction_x": 4.18,
+                "visible_chunks_reduction_x": 4.69,
+                "enabled_outside_chunks_eliminated": true
+              },
+              "screenshots": [
+                "docs/screenshots/perf_round1/revealed_v2_20260518_144003_924.png",
+                "docs/screenshots/perf_round1/fog_active_v2_20260518_144041_590.png",
+                "docs/screenshots/perf_round1/revealed_20260518_143620_396.png",
+                "docs/screenshots/perf_round1/normal_20260518_143839_675.png"
+              ],
+              "visual_verdict": "OK (no prop pop-in, fog mechanic intact, path/water render correctly)"
+            },
+            "stop_go_decision": {
+              "verdict": "GO_TO_PHASE_3",
+              "rationale": "after_avg=14.0 well below 45 FPS gate. Phase 1+2 fixed correctness (enabled_outside=0, visible_chunks=48) but the remaining 2515 individual Panda3D Entity nodes per frame are the active bottleneck. Plan Section 6 explicitly directs: 'If Round 1 is below 45 FPS, proceed to Phase 3 static terrain batching.' Section 7 estimates +10-15 FPS from batching. Screenshots are clean so we have a stable visual baseline to compare batched output against.",
+              "decided_by": "Agent 01 PM auto-call (numbers + screenshots already validated by Agent 03 in Wave 2; redundant Agent 10 dispatch skipped)",
+              "decided_utc": "2026-05-18T20:55:00Z"
+            },
+            "wave2_followups_carried": [
+              "First post-reveal frame takes ~1.3 FPS due to full-mask re-apply touching ~9000 enabled bits in one sync+cull pair. Not blocking. Agent 03 to consider amortizing the post-reveal refresh across N frames if Phase 3 doesn't hide it.",
+              "Lens-extrusion path is production-only; headless tests use heuristic fallback. Future capture pass at min/max zoom + N/S/E/W pan should confirm visible_chunks stays 30-60."
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "03": "Implement Phase 1 (Fix 1A + Fix 1B) and Phase 2 per plan Sections 4 and 5. Update __slots__ if adding new instance fields. Re-apply chunk mask when terrain is first built and when fog revision advances. Camera frustum: prefer Panda3D base.camLens extrusion; fall back to tuned heuristic if lens APIs misbehave; always keep 5-8 tile margin and fall back to full_rect on math error. Then run the full DoD validation suite (pytest, perf_render_benchmark, screenshots)."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture). Onboard: read .cursor/rules/01-studio-onboarding.mdc and .cursor/rules/agent-03-techdir-onboarding.mdc plus the shell/QA/log/role rules. Then read the master plan at .cursor/plans/Ursina Entities Overload Solution.md (Sections 1, 4, 5, 6, 10, 11). Your assignment is at PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w2_phase1_phase2_agent03'].pm_agent_prompts['03']. Implement EXACTLY the changes in Sections 4 (Phase 1: Fix 1A + Fix 1B) and 5 (Phase 2). Do NOT scope-creep into Phase 3 batching — that is a future wave gated by Round 1 stop/go. Run python -m pytest tests/test_terrain_perf.py -v after each major change; the three active tests must turn green. Run python tools/qa_smoke.py --quick — must PASS. Run python tools/perf_render_benchmark.py and verify: enabled_props_outside_visible_chunks ~ 0, visible_chunks < 80, after_avg > baseline 13.5 (target progress toward 45). Capture before/after screenshots via python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round1 --stem revealed --no-llm --fps-probe --reveal-map and inspect them — no prop pop-in, no missing path/water tiles, fog still works. Update __slots__ on UrsinaTerrainFogCollab if you add new instance fields. DO NOT COMMIT, DO NOT iterate after done. Update your log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w2_phase1_phase2_agent03'] with sprint_id, round_id, status, what_i_changed, commands_run + exit codes, evidence (test results, perf numbers, screenshot paths), blockers, follow_ups. Validate JSON before reporting."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w2_sequential": [
+                "03"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 2: 03 (high — novel render-state composition; chunk/fog two-channel visibility helper is invariant-sensitive; Panda3D lens extrusion is environment-fragile and requires real-time judgment + screenshot validation)."
+          }
+        },
+        "wk58_w3_phase3_static_batching_agent03": {
+          "round_meta": {
+            "round_id": "wk58_w3_phase3_static_batching_agent03",
+            "build_target": "Agent 03 implements Phase 3 static terrain chunk batching (grass/doodads/paths/water/rocks merged per fog batch with material/tint signature grouping). Trees stay individual due to dynamic growth scaling. Target: after_avg >= 45 FPS (stretch 55+), enabled_static_batches proportional to visible_chunks, no visual regression.",
+            "created_utc": "2026-05-18T20:55:00Z",
+            "wave": 3,
+            "depends_on": "wk58_w2_phase1_phase2_agent03"
+          },
+          "pm_status_summary": {
+            "status": "done_implementation_fps_gate_blocked",
+            "summary": "Wave 3 IMPLEMENTATION DONE. Agent 03 shipped _batch_static_terrain_for_chunks at 8x8 fog granularity with flatten_strong + clear_model_nodes(). Trees excluded (have _ks_tree_base_scale). New env knob KINGDOM_URSINA_STATIC_BATCH_SIZE for tuning. Signature simplified to (bx, by) tuple after the 5-tuple variant produced 6253 degenerate single-entity batches (each Ursina Entity has a unique NodePath str, so the 5-tuple effectively never matched). All 4 pytest tests PASS (including the previously-skipped test_static_entity_count_reduced — Agent 03 unblocked it with a documented cross-domain edit to tests/test_terrain_perf.py). qa_smoke PASS. Screenshots at docs/screenshots/perf_round2/ show NO visual regression. BUT: after_avg only 14.0 -> 15.6 FPS (+1.6) versus Phase 3 plan estimate of +10-15 FPS. Diagnosis: 8x8 vs 32x32 batch sizes produced identical FPS, proving static-prop count is no longer the bottleneck. ~390 visible individual tree entities are now the GPU-node ceiling. Phase 4 (tree instancing) was explicitly flagged in plan Section 8 as the gate for this exact case.",
+            "wave3_perf": {
+              "before_avg_fps": 43.8,
+              "after_avg_fps": 15.6,
+              "tracked_props": 3099,
+              "enabled_props_after_reveal": 532,
+              "enabled_outside_visible_chunks_after_reveal": 0,
+              "visible_chunks_at_default_camera": 48,
+              "static_batches_total": 1017,
+              "delta_vs_wave2": {
+                "after_avg_delta_fps": 1.6,
+                "enabled_props_reduction_x": 4.73,
+                "tracked_props_reduction_x": 3.71,
+                "screenshots_clean": true
+              },
+              "batch_size_sweep": {
+                "8x8": {
+                  "batches": 1017,
+                  "after_avg": 15.6
+                },
+                "16x16": {
+                  "batches": "~256",
+                  "after_avg": "~15-17"
+                },
+                "32x32": {
+                  "batches": 64,
+                  "after_avg": "~15-17"
+                }
+              },
+              "screenshots": [
+                "docs/screenshots/perf_round2/default_revealed_20260518_150832_381.png",
+                "docs/screenshots/perf_round2/fog_active_20260518_150900_319.png"
+              ],
+              "visual_verdict": "OK (materials uniform, no batch seams, fog mechanic intact, chunk-cull boundary clean)"
+            },
+            "round2_stop_go_decision": {
+              "status": "AWAITING_HUMAN_GATE",
+              "summary": "Phase 3 implementation succeeded but FPS plateaued at ~15-17 across batch sizes (8x8 / 16x16 / 32x32). Trees are now the bottleneck. Plan Section 8 explicitly requires Jaimie's approval for Phase 4 tree instancing spike (custom Panda3D buffer-texture shader). PM presenting options to Jaimie."
+            },
+            "remaining_to_dod": [
+              "after_avg_fps >= 45 (gap: 29.4 FPS)",
+              "Optional stretch: 55+ FPS"
+            ],
+            "wave3_followups_carried": [
+              "Tree instancing per plan Section 8 — custom Panda3D buffer-texture shader; plan says 'materially harder than existing unit instancer'; estimated +5-10 FPS gain",
+              "Config knob alternatives per plan Section 8 fallback: URSINA_TERRAIN_SCATTER_STRIDE 2->3, tree density cap 1000->500 (visual tradeoffs)",
+              "Wave 2 followup carried: first post-reveal frame ~1.3 FPS due to full-mask re-apply (still unmitigated; may need amortization across N frames)"
+            ]
+          },
+          "pm_next_actions_by_agent": {
+            "03": "Implement Phase 3 per plan Section 7. After build_3d_terrain finishes (just before _build_terrain_chunks), call new method _batch_static_terrain_for_chunks(root, tw, th). Method groups visibility-tracked entities by 8x8 fog batch + render signature, excludes trees (have _ks_tree_base_scale), reparents statics to a batch Entity, flatten_strong(), replaces _visibility_gated_terrain with batch-parent entries + tree entries. Update __slots__ if new instance fields added (e.g., _static_terrain_batches counter). Adjust perf_render_benchmark output if you expose new counters (Agent 10 already wired static_batches into the report block). Then unblock tests/test_terrain_perf.py::TestTerrainChunkBatching::test_static_entity_count_reduced (Agent 11 wrote it with pytest.skip — update the skip reason or remove if the test can run now). Required: re-run pytest + qa_smoke + perf_render_benchmark + comprehensive screenshot battery."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) — Wave 3 of sprint wk58_ursina_entities_overload. Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-03-techdir-onboarding.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w3_phase3_static_batching_agent03'].pm_agent_prompts['03']. Read plan Sections 7 (Phase 3 implementation), 9 (Phase 5 validation), 10 (DoD), 11 (Risk Register row 1, 4, 5, 6). Implement _batch_static_terrain_for_chunks EXACTLY per the plan: 8x8 fog batches, group by (bx, by, model_key, shader_key, color_key) signature, reparent statics, try flatten_strong then flatten_medium then no-flatten. Trees (entities with _ks_tree_base_scale) stay individual. Replace _visibility_gated_terrain with new_vgt + new_vgt_by_tile lookups. Update __slots__ if needed. Unblock Agent 11's test_static_entity_count_reduced by replacing pytest.skip with a real implementation that builds a small terrain, calls _batch_static_terrain_for_chunks, asserts _visibility_gated_terrain dropped to hundreds, asserts trees remain individual (a tests/ edit by Agent 03 is a documented cross-domain exception for this single test — note in log). Run python -m pytest tests/test_terrain_perf.py -v (4 should PASS now). Run python tools/qa_smoke.py --quick (must PASS). Run python tools/perf_render_benchmark.py (target after_avg >= 45 FPS; stretch 55+). Run screenshot battery: default camera, panned N/S/E/W (use --reveal-map), min zoom, max zoom — compare before/after for material/tint regressions. If 8x8 batches show coarse fog edges, downgrade to 4x4. If flatten_strong breaks materials, fallback per plan. DO NOT COMMIT, DO NOT iterate. Update log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w3_phase3_static_batching_agent03'] with sprint_id, round_id, status, what_i_changed (files modified, slots updated, batching granularity used, flatten level chosen), commands_run + exit codes, evidence (full pytest, qa_smoke, perf numbers, screenshot battery paths + verdicts per pan direction), blockers, follow_ups. Validate JSON."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w3_sequential": [
+                "03"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 3: 03 (high — Panda3D flatten_strong material grouping is invariant-fragile; per Risk Register rows 1 and 4, material/tint can break per-entity; needs real-time judgment on flatten level + batch granularity + visual verdict)."
+          }
+        },
+        "wk58_w4_phase4_tree_instancing_agent03": {
+          "round_meta": {
+            "round_id": "wk58_w4_phase4_tree_instancing_agent03",
+            "build_target": "Agent 03 implements Phase 4 tree instancing per plan Section 8. Custom Panda3D buffer-texture shader to render ~2,083 trees as ~13 instanced GeomNodes (one per tree model). Replaces the ~390 visible individual tree Entity objects. Gated behind env flag KINGDOM_URSINA_INSTANCED_TREES=1 (default off for safety) initially; once verified, default ON. Target: after_avg >= 45 FPS (DoD gate). Constraint: TREE DENSITY CAP STAYS AT 1000 per Jaimie's hard directive 2026-05-18 (see feedback memory).",
+            "created_utc": "2026-05-18T21:25:00Z",
+            "wave": 4,
+            "depends_on": "wk58_w3_phase3_static_batching_agent03"
+          },
+          "pm_status_summary": {
+            "status": "done_implementation_fps_gate_still_blocked",
+            "summary": "Wave 4 (Phase 4 tree instancing) IMPLEMENTATION DONE and correct. Agent 03 created game/graphics/instanced_nature_renderer.py (664 lines) with custom GLSL shader reading per-instance (x,y,z,scale) from RGBA32F samplerBuffer via gl_InstanceID. Modified game/graphics/ursina_terrain_fog_collab.py with _InstancedTreeStub class, sync_dynamic_trees integration, fog visibility integration, chunk-frustum filter. Env var KINGDOM_URSINA_INSTANCED_TREES default flipped to '1' after visual parity confirmed. Screenshots A/B prove identical alignment/layering/tile completeness/fog edges/growth. All 4 pytest tests PASS in both modes. qa_smoke PASS in both modes. CRITICAL DIAGNOSTIC FINDING: tree-entity reduction did NOT close the FPS gap. Instanced ON after_avg=17.1, instanced OFF after_avg=16.3 (delta only +0.8 FPS). Agent 03's profiling pinned the cause: renderer.update() inner loops + 62,500-vert heightmap-displaced ground mesh (added in WK53) account for ~22ms of the ~57ms post-reveal frame. The plan's hypothesis (entity count is the bottleneck) was correct for Phases 1-2 (correctness) but incomplete — entity reduction caps out around 17 FPS because the ground-mesh / per-frame sync paths dominate. Phase 4 is architecturally correct and worth keeping (16 instanced GeomNodes vs 2083 individual NodePaths is the right shape for the future), but does not close the DoD FPS gate alone.",
+            "wave4_perf_AB": {
+              "instanced_ON": {
+                "before_avg": 47.3,
+                "after_avg": 17.1,
+                "tracked_props": 1017,
+                "enabled_props": 192,
+                "instanced_tree_models": 16,
+                "instanced_active_count_in_visible_chunks": 341
+              },
+              "instanced_OFF": {
+                "before_avg": 46.3,
+                "after_avg": 16.3,
+                "tracked_props": 3100,
+                "enabled_props": 533
+              },
+              "delta_after_avg_fps": 0.8,
+              "architectural_wins": [
+                "tracked_props 3100 -> 1017 (-2083 trees as individual entities)",
+                "enabled_props 533 -> 192 (-341 visible trees)",
+                "individual tree NodePaths 2083 -> 16 instanced GeomNodes"
+              ]
+            },
+            "wave4_screenshots_verdict": {
+              "alignment": "IDENTICAL (every tree same world position both modes)",
+              "layering": "OK (no z-fighting, no popping)",
+              "tile_completeness": "IDENTICAL (same count and density)",
+              "fog_edges": "PRESERVED (only-visible-fog trees in active set; full-reveal shows all trees)",
+              "growth": "VERIFIED (saplings progress through stages over 12s capture)",
+              "footprint_removal": "LOGIC PRESERVED via _InstancedTreeStub.remove_tree",
+              "cosmetic_delta": "Instanced trees ~10% dimmer (simplified lambert vs Panda3D default lit_with_shadows_shader). Tree shapes/colors identical. NOT BLOCKING but follow-up for Agent 09."
+            },
+            "diagnosis_pivot": {
+              "old_hypothesis": "~13,000 individual Ursina entities are the bottleneck (plan Section 1)",
+              "new_finding": "Entities WERE part of it — Phases 1-2 fixed correctness (visible_chunks 225->48, enabled_outside 931->0) and Phases 3-4 reduced node count from ~10,500 -> ~341 visible. But FPS plateaued at 17.1, proving entity count was not the dominant cost beyond a threshold. Agent 03's frame-time profile: renderer.update() = 24-25ms (~40 FPS upper bound), full frame = ~57ms (~17 FPS). The remaining 22ms is in OTHER paths: heightmap-displaced ground mesh (62,500 verts, added WK53), snapshot iteration loops, unit syncs, building syncs. The plan did not enumerate these.",
+              "recommendation": "Wave 5 = Agent 10 deep profile to identify the real hot spots before any Phase 5 mitigation work."
+            },
+            "dod_status_summary": {
+              "after_avg_fps_>=_45": "NOT MET (17.1; gap 27.9)",
+              "pytest_PASS": "MET (4/4 in tests/test_terrain_perf.py; 332 pre-existing pass)",
+              "enabled_outside_~_0": "MET (0)",
+              "static_batches_proportional": "MET",
+              "visible_chunks_<_80": "MET (48)",
+              "fog_works": "MET (screenshots confirm)",
+              "tree_growth_works": "MET (screenshots confirm)",
+              "no_visual_artifacts": "MET (screenshots clean; 10% brightness delta is non-blocking aesthetic)",
+              "building_footprint_chops_trees": "MET (logic preserved)",
+              "screenshots_captured": "MET (perf_round1, perf_round2, perf_round3_instanced_on, perf_round3_instanced_off)",
+              "items_met": "8 / 9",
+              "items_unmet": [
+                "after_avg_fps_>=_45"
+              ]
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": "Implement Phase 4 per plan Section 8. Create game/graphics/instanced_nature_renderer.py. Modify game/graphics/ursina_terrain_fog_collab.py to (a) disable individual tree entities when instancing active, (b) wire growth changes from sync_dynamic_trees to the instance buffer. Update __slots__ if adding new fields. Gate the whole feature behind env var KINGDOM_URSINA_INSTANCED_TREES (default '1' once validated; start at '0' for visual A/B, flip to '1' once screenshots prove parity). Required: 4 pytest tests still PASS; qa_smoke PASS; perf_render_benchmark.py after_avg >= 45 FPS (DoD gate); comprehensive screenshot battery comparing instanced vs individual tree rendering (default cam + min/max zoom + tree growth observable over 12+ seconds)."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) — Wave 4 of sprint wk58_ursina_entities_overload. Phase 4: tree instancing. Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-03-techdir-onboarding.mdc. Read your assignment in PM hub at sprints['wk58_ursina_entities_overload'].rounds['wk58_w4_phase4_tree_instancing_agent03'].pm_agent_prompts['03']. Read plan Section 8 in full. CRITICAL CONSTRAINT (Jaimie's direct order 2026-05-18): DO NOT reduce TREE density cap or URSINA_TERRAIN_SCATTER_STRIDE. Perf gains MUST come from instancing. Implementation: Create game/graphics/instanced_nature_renderer.py. Reference pattern: game/graphics/instanced_unit_renderer.py (buffer texture, set_instance_count, custom shader). For trees you need per-instance world transform (x,y,z,scale), NOT per-frame animation UV offsets. Group trees by model path; create one GeomNode per model. Maintain a buffer texture with (world_x, world_y, world_z, scale) per active tree. Update buffer when sync_dynamic_trees detects growth changes (saplings -> stage 4). Disable individual tree Entity objects when instancing is active. Respect fog visibility (only include trees in VISIBLE/SEEN tiles in instance buffer). Wire into game/graphics/ursina_terrain_fog_collab.py at the right point in build_3d_terrain. Gate the whole feature behind KINGDOM_URSINA_INSTANCED_TREES env var. Start at default off; once screenshots verify parity, flip default on. Validation: python -m pytest tests/test_terrain_perf.py -v (all 4 still PASS); python tools/qa_smoke.py --quick (PASS); python tools/perf_render_benchmark.py with env on AND off (compare; instanced must hit >= 45 FPS post-reveal); screenshot battery via python tools/run_ursina_capture_once.py --reveal-map for both modes — open and compare PNGs side by side; verify tree positions identical, no z-fighting, no flicker; verify saplings still grow through 4 stages by watching a 12-second run. If shader path is fundamentally blocked by an Ursina/Panda3D API limit, STOP and report blocked with detailed root cause — DO NOT fall back to density cuts (Jaimie has explicitly forbidden). DO NOT COMMIT. DO NOT iterate after reporting done. Update log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w4_phase4_tree_instancing_agent03'] with sprint_id, round_id, status, what_i_changed (files created/modified, slots updated, env var name, default value), commands_run + exit codes, evidence (full pytest, qa_smoke, perf numbers WITH and WITHOUT env flag for A/B comparison, screenshot paths + visual verdict for both modes), blockers, follow_ups. Validate JSON."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w4_sequential": [
+                "03"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 4: 03 (high — plan calls Phase 4 'materially harder than the existing unit instancer'; needs custom Panda3D buffer-texture shader for per-instance world transforms; tree growth dynamics must integrate with instance buffer updates; fog visibility integration; gated env-flag rollout requires careful default-off-then-flip-on discipline)."
+          }
+        },
+        "wk58_w5_deep_profile_agent10": {
+          "round_meta": {
+            "round_id": "wk58_w5_deep_profile_agent10",
+            "build_target": "Agent 10 deep-profiles renderer.update() + the full Ursina frame post-/revealmap to identify the actual remaining hot spots (heightmap ground mesh, snapshot loops, unit/building syncs, fog-shader fragment cost). Output: ranked top-5 hot spots with per-call cost in ms, file:line citations, and 2-3 candidate mitigations per spot. NO CODE FIXES this wave — pure diagnosis. Agent 03 will implement in Wave 6.",
+            "created_utc": "2026-05-18T22:30:00Z",
+            "wave": 5,
+            "depends_on": "wk58_w4_phase4_tree_instancing_agent03"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 5 DONE. Agent 10 deep-profiled the post-/revealmap frame and IDENTIFIED THE REAL BOTTLENECK: a one-line regression in ensure_fog_overlay introduced by WK53 heightmap migration. Findings doc at .cursor/plans/wk58_round5_profile_findings.md (542 lines). Top hot spots: (1) ensure_fog_overlay = 19.0ms p50 due to broken early-out — 62,500-iteration Python tile loop + GPU texture upload runs every frame; (2) dead cave-entrance shader code = 25-30ms/frame GPU draw cost (distance/min chain on 1.6M fragments for a feature whose CPU path is disabled by early return); (3) unconditional position/color writes on buildings + units = 2.7ms p50 + 0.5ms each. All 4 mitigations are S effort, LOW risk, rendering-side (no density cuts). Estimated combined FPS gain: 22-27 FPS over current 17.1 -> lands at ~39-44 FPS. Stop/go after Fix 1.A alone in case the one-line patch is sufficient. Diagnosis-only wave: no code fixes shipped, env-flag-gated debug timers added (default off, KINGDOM_URSINA_STAGE_PROFILE=1) and behavior unchanged.",
+            "wave5_top5_hot_spots": [
+              {
+                "rank": 1,
+                "name": "ensure_fog_overlay early-out broken post-WK53",
+                "cost_p50_ms": 19.0,
+                "cost_p90_ms": 20.4,
+                "location": "game/graphics/ursina_terrain_fog_collab.py:202-353 (gate at L213-215)",
+                "root_cause": "Early-out gate `if int(fog_revision) == my_rev and self._r._fog_entity is not None: return` was designed for legacy flat-terrain fog quad. WK53 heightmap shader path destroys _fog_entity and uploads fog as shader uniform instead, so `_fog_entity is not None` always evaluates False post-WK53. 62,500-iteration tile loop + GPU upload runs every single frame whether or not fog_revision actually advanced.",
+                "fix_id": "1.A",
+                "fix": "Add `or self._r._terrain_ground_entity is not None` (or equivalent heightmap-aware check) to the early-out condition. Single-line patch.",
+                "effort": "S",
+                "risk": "LOW",
+                "fps_estimate": "+14-20 FPS (after_avg 18 -> 32-38)"
+              },
+              {
+                "rank": 2,
+                "name": "Dead cave-entrance fragment shader cost",
+                "cost_per_frame_ms": "25-30 (GPU draw pipeline, not renderer.update)",
+                "location": "game/graphics/terrain_fog_shader.py:42-83",
+                "root_cause": "8 separate distance() calls + min() chain per fragment for cave-entrance hole effect. CPU-side path (update_cave_entrance_shader) was disabled by an early return in WK57, but GPU fragment shader still pays the cost on every fragment. 1920x1080 = 1.6M fragments paying dead cost.",
+                "fix_id": "4.A",
+                "fix": "Wrap dead distance/min block in `if (cave_hole_radius > 0.0)` so GPU dead-code-eliminates.",
+                "effort": "S",
+                "risk": "LOW",
+                "fps_estimate": "+3-6 FPS (integrated GPUs benefit most)"
+              },
+              {
+                "rank": 3,
+                "name": "Unconditional building position/color writes",
+                "cost_p50_ms": 2.7,
+                "cost_p90_ms": 3.3,
+                "location": "game/graphics/ursina_entity_render_collab.py:249-255",
+                "root_cause": "Per-building ent.position and ent.color are written every frame unconditionally; only scale is dirty-checked. With ~50 buildings, ~1.5-2ms recoverable.",
+                "fix_id": "2.A",
+                "fix": "Dirty-check position and color, mirroring existing _ks_last_scale pattern.",
+                "effort": "S",
+                "risk": "LOW",
+                "fps_estimate": "+0.5-0.7 FPS"
+              },
+              {
+                "rank": 4,
+                "name": "Unit atlas billboard position/color writes + HP bar gating",
+                "cost_p50_ms": "estimate 0.5-1.0",
+                "location": "(unit sync paths in ursina renderer collabs)",
+                "fix_id": "3.A",
+                "fix": "Position dirty check on hero/enemy/peasant/guard atlas billboards + HP-bar gating (don't update HP-bar nodes when HP unchanged).",
+                "effort": "S",
+                "risk": "LOW",
+                "fps_estimate": "+0.2-0.5 FPS"
+              }
+            ],
+            "wave5_findings_doc": ".cursor/plans/wk58_round5_profile_findings.md",
+            "wave5_profile_dumps": [
+              ".cursor/plans/agent_logs/wk58_round5_stage_profile.txt",
+              ".cursor/plans/agent_logs/wk58_round5_stage_profile_full.txt"
+            ],
+            "wave5_instrumentation": "env-flag-gated per-substage timers in game/graphics/ursina_renderer.py and tools/perf_render_benchmark.py, KINGDOM_URSINA_STAGE_PROFILE=1, default off, behavior unchanged when off"
+          },
+          "pm_next_actions_by_agent": {
+            "10": "Deep-profile renderer.update() and the full Ursina frame after /revealmap. Use Panda3D pstats AND/OR Python cProfile AND/OR per-stage EMA timers (the smoothness monitor already emits per-stage data per v1.5.7 changelog). Identify top-5 hot spots with measured cost and file:line citations. Recommend 2-3 candidate mitigations per spot with effort+risk estimates. DO NOT implement fixes — that is Agent 03's Wave 6."
+          },
+          "pm_agent_prompts": {
+            "10": "You are Agent 10 (PerformanceStability_Lead). Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-10-performance-onboarding.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w5_deep_profile_agent10'].pm_agent_prompts['10']. Read Wave 4 results at rounds['wk58_w4_phase4_tree_instancing_agent03'].pm_status_summary to understand the diagnosis pivot. CONTEXT: after_avg=17.1 FPS post-/revealmap, DoD gate 45 FPS. Phases 1-4 reduced entities from ~10,500 to 341 visible, but FPS plateaued because renderer.update() is ~24-25ms and the remaining ~22ms of the 57ms frame is elsewhere. YOUR JOB: identify the real hot spots. Methodology: (1) Add per-stage EMA timers (or use the smoothness monitor's F2 overlay) to break down renderer.update() by sub-stage (terrain, fog, units, buildings, projectiles, vfx, hud_upload). (2) Run python tools/perf_render_benchmark.py with KINGDOM_URSINA_INSTANCED_TREES=1; capture per-stage timings post-/revealmap. (3) Inspect game/graphics/ursina_renderer.py update() for hot loops; review ursina_terrain_fog_collab.py's full-mask re-apply path (Wave 2 backlog: first post-reveal frame at ~1.3 FPS). (4) Heightmap ground mesh suspect: game/graphics/terrain_height.py + WK53 plan; 62,500 verts is small for modern GPUs but the fog-of-war shader runs per-fragment over the whole screen — check fragment cost. (5) Run python -c with Python cProfile if needed. Deliverable: write findings to .cursor/plans/wk58_round5_profile_findings.md with: (a) ranked top-5 hot spots, each with measured cost (ms/frame), file:line citation, and brief explanation; (b) 2-3 candidate mitigations per spot with effort estimate (S/M/L) and risk note; (c) a recommended Wave 6 plan (which spots to fix, in what order, by which agent). DO NOT IMPLEMENT FIXES. DO NOT touch game/, ai/, tools/ except for adding NON-PERSISTENT timing instrumentation (use env-flag-gated debug timers; remove the instrumentation before reporting done OR keep it behind an off-by-default flag and document). DO NOT COMMIT. DO NOT iterate. Update your log at .cursor/plans/agent_logs/agent_10_PerformanceStability_Lead.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w5_deep_profile_agent10'] with sprint_id, round_id, status, what_i_changed (any temporary instrumentation, deliverable path), commands_run + exit codes, evidence (top-5 hot spots summary, candidate mitigations summary, link to findings doc), blockers, follow_ups. Validate JSON. Report a one-paragraph summary to PM with the top 3 findings and a recommended Wave 6 plan."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w5_sequential": [
+                "10"
+              ]
+            },
+            "intelligence_by_agent": {
+              "10": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 5: 10 (high — profile-by-elimination across renderer.update() sub-stages, snapshot loops, fog shader, ground mesh; requires real measurement + judgment + Wave 6 plan synthesis; no code fixes this wave so safety low)."
+          }
+        },
+        "wk58_w6_real_bottleneck_fixes": {
+          "round_meta": {
+            "round_id": "wk58_w6_real_bottleneck_fixes",
+            "build_target": "Bundle all 4 S/LOW Wave-5 recommended fixes (Fix 1.A fog early-out + Fix 4.A dead cave shader + Fix 2.A building dirty checks + Fix 3.A unit dirty checks) into one Agent 03 dispatch. Agent 11 in parallel writes the fog-early-out regression test. Target: after_avg >= 45 FPS (DoD gate cleared).",
+            "created_utc": "2026-05-18T22:55:00Z",
+            "wave": 6,
+            "depends_on": "wk58_w5_deep_profile_agent10"
+          },
+          "pm_status_summary": {
+            "status": "done_implementation_dod_partial",
+            "summary": "Wave 6 DONE. Agent 03 shipped all 4 Wave-5 fixes: (1.A) fog early-out heightmap-aware [+11.5 FPS, the big win], (4.A) cave-shader DCE guard [+0.9], (2.A) building dirty checks [variance], (3.A) HP-bar gating [+2.4]. Final after_avg = 31.0 FPS (p50 33.3, p90 35.7). Stage profile confirms Fix 1.A: ensure_fog_overlay p50 19.0ms -> 0.001ms. Agent 11 added TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap regression test; all 5 active tests PASS. qa_smoke PASS. Screenshots at docs/screenshots/perf_round4_fix/ show no regression. DoD gate NOT cleared: 31.0 vs 45 target, gap 14 FPS. Agent 03 attribution: CPU side is now optimal (sum of stage p50s ~3.6ms); the remaining ~28ms of the ~50ms frame is the Panda3D GPU draw pipeline (heightmap mesh 62,500 verts + per-fragment fog shader). Wave 5 candidate 4.B (simpler fragment shader) or 4.C (GeoMipTerrain LOD) would bridge the gap but are M effort / MED-HIGH risk and go beyond the original plan scope. Sprint state: 8 of 9 DoD items MET; only the FPS gate is partial.",
+            "wave6_perf": {
+              "before_avg_fps": 47.0,
+              "after_avg_fps": 31.0,
+              "after_avg_p50": 33.3,
+              "after_avg_p90": 35.7,
+              "delta_vs_wave4_after_avg": 13.9,
+              "delta_vs_baseline_after_avg": 17.5,
+              "improvement_x": 2.3,
+              "screenshots": [
+                "docs/screenshots/perf_round4_fix/revealed_20260518_165501_597.png",
+                "docs/screenshots/perf_round4_fix/fog_active_20260518_165524_966.png"
+              ],
+              "visual_verdict": "OK (no regression vs baseline; fog edges intact; building positions unchanged; terrain rendering clean)"
+            },
+            "wave6_per_fix_attribution": {
+              "fix_1a_fog_early_out": {
+                "delta_fps": 11.5,
+                "status": "shipped",
+                "before_after_p50_ms": "19.0 -> 0.001"
+              },
+              "fix_4a_cave_shader_dce": {
+                "delta_fps": 0.9,
+                "status": "shipped",
+                "note": "driver may already partially constant-fold"
+              },
+              "fix_2a_building_dirty": {
+                "delta_fps": -1.5,
+                "status": "shipped",
+                "note": "negative is variance; write reduction is monotonic"
+              },
+              "fix_3a_unit_dirty_hpbar_gating": {
+                "delta_fps": 2.4,
+                "status": "shipped"
+              }
+            },
+            "files_modified": [
+              "game/graphics/ursina_terrain_fog_collab.py (L213-228)",
+              "game/graphics/terrain_fog_shader.py (L59-86)",
+              "game/graphics/ursina_entity_render_collab.py (L245-263)",
+              "game/graphics/ursina_renderer.py (HP-bar sections at L1294-1351, L1446-1497, L1540-1591, L1632-1683)",
+              "tests/test_terrain_perf.py (appended TestFogOverlayPerf class + 2 minimal fakes; +125 lines)"
+            ],
+            "dod_status_summary_post_wave6": {
+              "after_avg_fps_>=_45": "PARTIAL (31.0; gap 14 FPS; from baseline 13.5 = +17.5 FPS / 2.3x improvement)",
+              "pytest_PASS": "MET (5/5 active in test_terrain_perf.py; 332 pre-existing)",
+              "enabled_outside_~_0": "MET (0)",
+              "static_batches_proportional": "MET",
+              "visible_chunks_<_80": "MET (48)",
+              "fog_works": "MET (screenshots confirm, stage profile confirms early-out fires)",
+              "tree_growth_works": "MET",
+              "no_visual_artifacts": "MET (screenshots clean)",
+              "building_footprint_chops_trees": "MET",
+              "screenshots_captured": "MET (perf_round1, perf_round2, perf_round3_instanced_*, perf_round4_fix)",
+              "items_met": "8 / 9",
+              "items_unmet": [
+                "after_avg_fps_>=_45 (gap 14 FPS, GPU pipeline-bound)"
+              ]
+            },
+            "next_step_options_for_jaimie": {
+              "option_a_continue_wave7_gpu_pipeline": "Open Wave 7 targeting Wave-5 candidates 4.B (simplify fog fragment shader) or 4.C (GeoMipTerrain LOD on heightmap ground mesh). Both M effort / MED-HIGH risk. Expected: +5-15 FPS depending on approach. May or may not clear the 45 gate. Goes beyond original plan scope.",
+              "option_b_close_sprint_partial_dod": "Close wk58 as a 2.3x perf win (13.5 -> 31.0 FPS), all correctness DoD met, all 6 waves shipped. Document the residual 14 FPS gap as the seed for a wk59 GPU-pipeline sprint. The original plan is FULLY shipped + a critical fix-pack on top.",
+              "option_c_accept_31fps_as_new_dod": "Effectively redefine 'playable enough': 31 avg / p50 33 / p90 36 is a reasonable post-/revealmap experience. Close wk58 at current state, mark the 45-FPS gate as a stretch goal for future work."
+            }
+          },
+          "pm_next_actions_by_agent": {
+            "03": "Ship the bundled 4 fixes per Wave 5 findings doc .cursor/plans/wk58_round5_profile_findings.md. Each is S effort, LOW risk. Verify with perf_render_benchmark + screenshot battery + pytest. STOP-GO: after each fix, briefly note the FPS delta in your log so we can attribute gains correctly. If FPS clears 45 after Fix 1.A alone, the remaining 3 fixes are still worth shipping for headroom (S/LOW each) — ship them anyway.",
+            "11": "Add to tests/test_terrain_perf.py a new test (e.g., TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap) that asserts ensure_fog_overlay's early-out triggers when fog_revision == _fog_revision_seen regardless of whether _fog_entity exists. Test should FAIL pre-fix (the bug case) and PASS post-fix. Run before and after Agent 03's fix to confirm. Stay in tests/ lane."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) — Wave 6 of sprint wk58_ursina_entities_overload. Wave 5 by Agent 10 found the REAL bottleneck: 4 S/LOW fixes that should land us at >=45 FPS. Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-03-techdir-onboarding.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w6_real_bottleneck_fixes'].pm_agent_prompts['03'] and Wave 5 findings doc .cursor/plans/wk58_round5_profile_findings.md (full ranked findings + per-fix instructions + risk/effort matrix). Ship the FOUR fixes: (1.A) ensure_fog_overlay early-out heightmap-aware in game/graphics/ursina_terrain_fog_collab.py:213-215; (4.A) wrap dead cave-entrance distance/min code in game/graphics/terrain_fog_shader.py:42-83 in `if (cave_hole_radius > 0.0)` for GPU DCE; (2.A) position/color dirty checks in game/graphics/ursina_entity_render_collab.py:249-255 mirroring _ks_last_scale; (3.A) position dirty check on hero/enemy/peasant/guard atlas billboards + HP-bar update gating. After each fix, run python tools/perf_render_benchmark.py and note FPS delta in your log so we can attribute gains correctly. Final: all 4 ship; run full pytest (4 from Wave 1 + 1 new from Agent 11 = 5 active), qa_smoke, perf_render_benchmark (must hit >=45 FPS post-reveal -- DoD gate), screenshot battery via run_ursina_capture_once.py --reveal-map AND without --reveal-map for fog-active mode. Compare to perf_round3_instanced_on baseline. Visual checks per visual-review feedback: alignment / layering / tile completeness / fog edges / building positions / unit positions / no flicker. DO NOT COMMIT, DO NOT iterate, DO NOT cut tree density. Update log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w6_real_bottleneck_fixes'] with sprint_id, round_id, status, what_i_changed (per-fix files+lines), commands_run + exit codes, evidence (per-fix FPS delta, final perf, screenshot paths, visual verdict), blockers, follow_ups. Validate JSON.",
+            "11": "You are Agent 11 (QA_TestEngineering_Lead) — Wave 6 of sprint wk58_ursina_entities_overload. Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-11-qa-onboarding.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w6_real_bottleneck_fixes'].pm_agent_prompts['11'] and Wave 5 findings doc .cursor/plans/wk58_round5_profile_findings.md (Fix 1.A details). Add ONE new test to tests/test_terrain_perf.py: TestFogOverlayPerf::test_ensure_fog_overlay_early_out_post_heightmap. Assertion: when ensure_fog_overlay is called and fog_revision == _fog_revision_seen, the method must early-return BEFORE iterating the 62,500-tile loop, EVEN IF _fog_entity is None (heightmap shader path). Approach: monkeypatch / spy on the loop body or use a small fake-world setup with _fog_entity=None and _terrain_ground_entity=valid, call ensure_fog_overlay twice (first to set baseline, second to verify early-out), assert the second call did NOT execute the loop. Run python -m pytest tests/test_terrain_perf.py -v BEFORE Agent 03's fix: your new test should FAIL (the bug case). Then re-run AFTER (Agent 03 will report when their Fix 1.A is in); should PASS. Run qa_smoke --quick after final state. DO NOT touch game/ code or any non-test file. DO NOT COMMIT. DO NOT iterate. Update log at .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w6_real_bottleneck_fixes']. Validate JSON. Report to PM: test path, pre-fix fail confirmed yes/no, post-fix pass confirmed yes/no, qa_smoke result."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w6_parallel": [
+                "03",
+                "11"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high",
+              "11": "medium"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 6: 03 (high — bundled 4-fix delivery with per-fix FPS attribution + visual battery + DoD gate validation), 11 (medium — single targeted regression test with explicit assertion contract from Wave 5 findings). Parallel because Agent 03 edits game/ files and Agent 11 edits tests/ — no file collision."
           }
         }
       }

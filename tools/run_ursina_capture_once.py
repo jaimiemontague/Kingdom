@@ -82,6 +82,11 @@ def main() -> int:
         action="store_true",
         help="For hero FPS probes, prevent auto-spawned houses/farms from entering the measurement",
     )
+    ap.add_argument(
+        "--reveal-map",
+        action="store_true",
+        help="Auto-trigger /revealmap once on first frame (sets KINGDOM_URSINA_REVEAL_ON_START=1)",
+    )
     ns = ap.parse_args()
 
     env = os.environ.copy()
@@ -97,6 +102,8 @@ def main() -> int:
         env["KINGDOM_URSINA_HERO_FPS_PROBE_COUNT"] = str(max(0, ns.hero_fps_probe_count))
     if ns.disable_neutral_spawn:
         env["KINGDOM_URSINA_DISABLE_NEUTRAL_SPAWN"] = "1"
+    if ns.reveal_map:
+        env["KINGDOM_URSINA_REVEAL_ON_START"] = "1"
 
     path: str | None = None
     if not ns.no_screenshot:

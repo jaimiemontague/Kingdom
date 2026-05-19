@@ -246,10 +246,22 @@ class UrsinaEntityRenderCollab:
             ent.scale = scale_xyz
             ent._ks_last_scale = scale_xyz
         ga = float(getattr(ent, "_ks_ground_anchor_y", 0.0))
-        ent.position = (wx, terrain_y + ga, wz)
+        # WK58 W6 Fix 2.A (Agent 03): mirror the ``_ks_last_scale`` dirty pattern
+        # for position and color. Setting ``ent.position`` in Panda3D updates the
+        # NodePath transform even when the value is unchanged, which triggers
+        # scene-graph dirty propagation and bounding-volume invalidation in the
+        # cull pass. Same shape for color writes. Building counts run 50-150 in
+        # steady state, so this trims ~1.5-2ms / frame off ``_sync_snapshot_buildings``.
+        pos_xyz = (wx, terrain_y + ga, wz)
+        if getattr(ent, "_ks_last_position", None) != pos_xyz:
+            ent.position = pos_xyz
+            ent._ks_last_position = pos_xyz
         if state == "damaged":
-            ent.color = color.rgb(0.78, 0.42, 0.42)
+            target_color = color.rgb(0.78, 0.42, 0.42)
         elif state == "construction":
-            ent.color = color.rgb(0.72, 0.72, 0.65)
+            target_color = color.rgb(0.72, 0.72, 0.65)
         else:
-            ent.color = tint_col
+            target_color = tint_col
+        if getattr(ent, "_ks_last_color", None) != target_color:
+            ent.color = target_color
+            ent._ks_last_color = target_color

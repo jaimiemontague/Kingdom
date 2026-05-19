@@ -1,0 +1,104 @@
+C:\Users\Jaimie Montague\AppData\Roaming\Python\Python313\site-packages\pygame\pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+[perf-render] boot UrsinaApp (warmup=8.0s, measure=15.0s, reveal_at=23.0s, exit_at=40.0s)
+Known pipe types:
+  wglGraphicsPipe
+(3 aux display modules not yet loaded.)
+:display:windisplay(warning): SetForegroundWindow() failed!
+:prc(warning): changing default value for ConfigVariable paste-emit-keystrokes from '1' to '0'.
+:pnmimage:png(warning): iCCP: known incorrect sRGB profile
+info: Using primary monitor: Monitor(x=0, y=0, width=1920, height=1080, width_mm=598, height_mm=337, name='\\\\.\\DISPLAY2', is_primary=True)
+set window position: Vec2(192, 108)
+package_folder: C:\Users\Jaimie Montague\AppData\Roaming\Python\Python313\site-packages\ursina
+asset_folder: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom
+os: Windows
+python version: 3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]
+ursina version: 8.3.0
+development mode: False
+application successfully started
+info: changed aspect ratio: 1.778 -> 1.778
+[perf-render] phase=warmup elapsed=1.46s tick_count=1 inst_fps=0.7
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../models/assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/ursina/fonts/assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Windows/Fonts/assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_small.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../models/assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/ursina/fonts/assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Windows/Fonts/assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_tall.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_thin.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../assets/models/environment/tree_meadow_thin.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/panda3d/etc/../models/assets/models/environment/tree_meadow_thin.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/AppData/Roaming/Python/Python313/site-packages/ursina/fonts/assets/models/environment/tree_meadow_thin.obj".
+:assimp(error): Unable to open file "/c/Windows/Fonts/assets/models/environment/tree_meadow_thin.obj".
+:assimp(error): Unable to open file "/c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/tools/assets/models/environment/tree_meadow_thin.obj".
+:loader(error): Unable to open /c/Users/Jaimie Montague/OneDrive/Documents/Kingdom/models_compressed/assets/models/buildings/inn_window_panel.bam
+:display:windisplay(warning): Could not find icon filename textures/ursina.ico
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\rock_meadow_flat.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\rock_meadow_flat.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\log_survival.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\log_survival.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\environment\rock_gy_tall.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\environment\rock_gy_tall.bam
+read obj at: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\assets\models\buildings\inn_window_panel.obj
+saved .bam to: C:\Users\Jaimie Montague\OneDrive\Documents\Kingdom\models_compressed\assets\models\buildings\inn_window_panel.bam
+[perf-render] phase=before elapsed=11.89s tick_count=2 inst_fps=0.1
+[perf-render] reveal triggered at elapsed=23.01s
+[perf-render] phase=after elapsed=23.35s tick_count=489 inst_fps=2.9
+[perf-render] === BEFORE REVEAL ===
+[perf-render] samples=486 avg_fps=47.4 min_fps=0.1 p10=31.8 p50=50.6 p90=57.0
+[perf-render] === AFTER REVEAL ===
+[perf-render] samples=265 avg_fps=18.5 min_fps=2.9 p10=15.0 p50=19.8 p90=21.0
+[perf-render] === ENTITY COUNTS ===
+[perf-render] tracked_props=1018 tree_entities=2082 static_batches=1017 chunks=256 enabled_props=193 enabled_outside_visible_chunks=0 visible_chunks=48
+[perf-render] === RESULT: FAIL (target: 45 FPS post-reveal, stretch: 55 FPS) ===
+[perf-render] === STAGE PROFILE (renderer.update sub-stages, ms/frame, BEFORE reveal) ===
+[perf-render] === STAGE PROFILE (renderer.update sub-stages, ms/frame) ===
+[perf-render] stage frames p50_ms p90_ms p99_ms max_ms mean_ms
+[perf-render-stage] 06_ensure_fog_overlay              frames= 485 p50=  4.225 p90=  5.182 p99=  9.805 max=  33.393 mean=  4.638
+[perf-render-stage] 10_sync_snapshot_buildings         frames= 485 p50=  2.227 p90=  2.782 p99=  3.608 max=  16.051 mean=  2.379
+[perf-render-stage] 12_sync_snapshot_heroes            frames= 485 p50=  0.459 p90=  0.675 p99=  1.063 max=   1.650 mean=  0.520
+[perf-render-stage] 08_cull_terrain_chunks             frames= 485 p50=  0.051 p90=  0.096 p99=  0.628 max=   1.048 mean=  0.091
+[perf-render-stage] 14_sync_snapshot_peasants          frames= 485 p50=  0.047 p90=  0.102 p99=  0.210 max=   0.420 mean=  0.064
+[perf-render-stage] 02_get_visible_tile_rect           frames= 485 p50=  0.045 p90=  0.065 p99=  0.096 max=   0.118 mean=  0.050
+[perf-render-stage] 16_sync_snapshot_tax_collector     frames= 485 p50=  0.018 p90=  0.057 p99=  0.114 max=   0.131 mean=  0.026
+[perf-render-stage] 18_update_debug_status_text        frames= 485 p50=  0.010 p90=  0.015 p99=  0.230 max=   2.315 mean=  0.020
+[perf-render-stage] 13_sync_snapshot_enemies           frames= 485 p50=  0.008 p90=  0.026 p99=  0.078 max=   0.391 mean=  0.012
+[perf-render-stage] 09_ensure_grid_debug_overlay       frames= 485 p50=  0.008 p90=  0.011 p99=  0.023 max=   0.044 mean=  0.008
+[perf-render-stage] 19_destroy_removed_entities        frames= 485 p50=  0.006 p90=  0.008 p99=  0.015 max=   0.039 mean=  0.007
+[perf-render-stage] 04_sync_dynamic_trees              frames= 485 p50=  0.002 p90=  1.163 p99=  1.920 max=   2.219 mean=  0.306
+[perf-render-stage] 07_sync_visibility_gated_terrain   frames= 485 p50=  0.002 p90=  0.003 p99=  1.149 max=   1.979 mean=  0.075
+[perf-render-stage] 05_sync_log_stacks                 frames= 485 p50=  0.001 p90=  0.002 p99=  0.005 max=   0.029 mean=  0.002
+[perf-render-stage] 17_sync_snapshot_projectiles       frames= 485 p50=  0.001 p90=  0.002 p99=  0.003 max=   0.009 mean=  0.001
+[perf-render-stage] 03_build_3d_terrain                frames= 485 p50=  0.001 p90=  0.002 p99=  0.003 max=   0.025 mean=  0.002
+[perf-render-stage] 01_ensure_shadow_bounds_once       frames= 485 p50=  0.001 p90=  0.002 p99=  0.002 max=   0.028 mean=  0.001
+[perf-render-stage] 15_sync_snapshot_guards            frames= 485 p50=  0.001 p90=  0.002 p99=  0.004 max=   0.026 mean=  0.001
+[perf-render-stage] 11_sync_underground_meshes         frames= 485 p50=  0.001 p90=  0.001 p99=  0.002 max=   0.002 mean=  0.001
+[perf-render] === STAGE PROFILE (renderer.update sub-stages, ms/frame, AFTER reveal) ===
+[perf-render] === STAGE PROFILE (renderer.update sub-stages, ms/frame) ===
+[perf-render] stage frames p50_ms p90_ms p99_ms max_ms mean_ms
+[perf-render-stage] 06_ensure_fog_overlay              frames= 300 p50= 18.851 p90= 19.873 p99= 25.215 max=  37.309 mean= 19.073
+[perf-render-stage] 10_sync_snapshot_buildings         frames= 300 p50=  2.664 p90=  3.345 p99=  4.368 max=  18.787 mean=  2.893
+[perf-render-stage] 12_sync_snapshot_heroes            frames= 300 p50=  0.564 p90=  0.750 p99=  1.121 max=   1.478 mean=  0.583
+[perf-render-stage] 05_sync_log_stacks                 frames= 300 p50=  0.193 p90=  0.227 p99=  0.389 max=   8.788 mean=  0.157
+[perf-render-stage] 14_sync_snapshot_peasants          frames= 300 p50=  0.168 p90=  0.239 p99=  0.422 max=   0.584 mean=  0.176
+[perf-render-stage] 13_sync_snapshot_enemies           frames= 300 p50=  0.051 p90=  0.084 p99=  0.131 max=   0.202 mean=  0.055
+[perf-render-stage] 08_cull_terrain_chunks             frames= 300 p50=  0.051 p90=  0.068 p99=  0.130 max=   0.191 mean=  0.056
+[perf-render-stage] 02_get_visible_tile_rect           frames= 300 p50=  0.045 p90=  0.057 p99=  0.100 max=   0.134 mean=  0.049
+[perf-render-stage] 16_sync_snapshot_tax_collector     frames= 300 p50=  0.021 p90=  0.043 p99=  0.070 max=   0.075 mean=  0.026
+[perf-render-stage] 18_update_debug_status_text        frames= 300 p50=  0.010 p90=  0.012 p99=  0.221 max=   2.099 mean=  0.027
+[perf-render-stage] 09_ensure_grid_debug_overlay       frames= 300 p50=  0.008 p90=  0.009 p99=  0.024 max=   0.025 mean=  0.009
+[perf-render-stage] 19_destroy_removed_entities        frames= 300 p50=  0.006 p90=  0.008 p99=  0.047 max=   0.073 mean=  0.008
+[perf-render-stage] 04_sync_dynamic_trees              frames= 300 p50=  0.002 p90=  1.115 p99=  1.443 max=   1.854 mean=  0.282
+[perf-render-stage] 07_sync_visibility_gated_terrain   frames= 300 p50=  0.002 p90=  0.002 p99=  0.014 max=   0.018 mean=  0.002
+[perf-render-stage] 17_sync_snapshot_projectiles       frames= 300 p50=  0.001 p90=  0.015 p99=  0.324 max=   0.431 mean=  0.010
+[perf-render-stage] 03_build_3d_terrain                frames= 300 p50=  0.001 p90=  0.002 p99=  0.002 max=   0.004 mean=  0.001
+[perf-render-stage] 01_ensure_shadow_bounds_once       frames= 300 p50=  0.001 p90=  0.002 p99=  0.002 max=   0.020 mean=  0.001
+[perf-render-stage] 15_sync_snapshot_guards            frames= 300 p50=  0.001 p90=  0.001 p99=  0.002 max=   0.024 mean=  0.001
+[perf-render-stage] 11_sync_underground_meshes         frames= 300 p50=  0.001 p90=  0.001 p99=  0.001 max=   0.002 mean=  0.001

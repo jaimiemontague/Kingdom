@@ -592,48 +592,177 @@ class UrsinaRenderer:
     def _get_visible_tile_rect(self) -> tuple[int, int, int, int]:
         """Return (min_tx, min_ty, max_tx, max_ty) of tiles visible to the camera.
 
-        Traces the camera's forward ray to the Y=0 ground plane to find the
-        actual center of the visible area regardless of camera tilt/orbit angle.
-        Includes a 5-tile margin to prevent pop-in during panning.
-        Falls back to the full map if camera is unavailable (first frame).
+        WK58 Phase 2 (WK58-BUG-002): replaces the ``cam_y * 1.8`` heuristic that
+        covered ~88% of the map with a real lens-frustum query.  Strategy:
+
+        1.  Try Panda3D ``base.camLens.extrude(corner)`` for the four NDC corners
+            (-1,-1), (1,-1), (-1,1), (1,1).  Transform near/far points to world
+            space and intersect each ray with the y=0 ground plane.  Use the
+            bounding box of the four hits, plus a small safety margin.
+        2.  If any corner ray fails to hit the ground plane (e.g. shallow
+            pitch, no ``base`` in headless tests, lens API mismatch), fall
+            back to an FOV-based heuristic: pitch + ``camera.fov`` give the
+            near/far ground-hit distances, ``aspect_ratio`` scales the
+            horizontal extent.  This still produces a much tighter rect than
+            the old ``cam_y * 1.8`` formula.
+        3.  If anything else goes wrong, return the full map rect for that
+            frame (matches old fallback contract).
         """
+        import math as _math
+
         map_w = int(config.MAP_WIDTH)
         map_h = int(config.MAP_HEIGHT)
         full_rect = (0, 0, map_w - 1, map_h - 1)
+
+        # --- Read camera state up front; bail to full_rect if anything missing.
         try:
             cam_pos = camera.world_position
-            if cam_pos is None:
-                return full_rect
-            cam_y = float(cam_pos.y)
-            if cam_y <= 0:
-                return full_rect
-
-            # Compute where the camera's forward ray hits the Y=0 ground plane.
-            # This gives the actual center of the visible area regardless of tilt.
             cam_fwd = camera.forward
-            fwd_y = float(cam_fwd.y)
-            if fwd_y >= -0.01:
-                # Camera is looking up or horizontal — can't determine ground target
+            if cam_pos is None or cam_fwd is None:
                 return full_rect
+            cam_x = float(cam_pos.x)
+            cam_y = float(cam_pos.y)
+            cam_z = float(cam_pos.z)
+            fwd_x = float(cam_fwd.x)
+            fwd_y = float(cam_fwd.y)
+            fwd_z = float(cam_fwd.z)
+        except Exception:
+            return full_rect
 
-            t = -cam_y / fwd_y
-            ground_x = float(cam_pos.x) + t * float(cam_fwd.x)
-            ground_z = float(cam_pos.z) + t * float(cam_fwd.z)
+        if cam_y <= 0:
+            return full_rect
 
-            # Convert ground hit to tile coords (world_z = -sim_y / SCALE, so tile_y = -ground_z)
+        # --- Strategy 1: Panda3D lens extrusion of the four NDC corners.
+        # Only runs in real Ursina runtime; headless tests fall through to
+        # strategy 2 because ``application.base`` is None there.
+        lens_rect: tuple[int, int, int, int] | None = None
+        try:
+            from panda3d.core import Point2, Point3
+            from ursina import application as _ursina_app
+
+            _base = getattr(_ursina_app, "base", None)
+            lens = getattr(_base, "camLens", None) if _base is not None else None
+            cam_node = getattr(_base, "cam", None) if _base is not None else None
+            if lens is not None and cam_node is not None and _base is not None:
+                cam_to_world = cam_node.get_mat(_base.render)
+                xs: list[float] = []
+                zs: list[float] = []
+                lens_ok = True
+                for sx, sy in ((-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)):
+                    np_near = Point3()
+                    np_far = Point3()
+                    if not lens.extrude(Point2(sx, sy), np_near, np_far):
+                        lens_ok = False
+                        break
+                    wn = cam_to_world.xform_point(np_near)
+                    wf = cam_to_world.xform_point(np_far)
+                    ry = float(wf.y) - float(wn.y)
+                    if abs(ry) < 1e-6:
+                        lens_ok = False
+                        break
+                    t = -float(wn.y) / ry
+                    if not _math.isfinite(t) or t <= 0:
+                        # Ray points away from ground (e.g. corner aimed above
+                        # horizon).  Fall back rather than guess.
+                        lens_ok = False
+                        break
+                    hx = float(wn.x) + t * (float(wf.x) - float(wn.x))
+                    hz = float(wn.z) + t * (float(wf.z) - float(wn.z))
+                    xs.append(hx)
+                    zs.append(hz)
+                if lens_ok and xs and zs:
+                    margin = 6  # tiles
+                    min_tx = max(0, int(min(xs)) - margin)
+                    max_tx = min(map_w - 1, int(max(xs)) + margin)
+                    # world_z = -sim_y / SCALE = -tile_y (TILE_SIZE == SCALE).
+                    min_ty = max(0, int(-max(zs)) - margin)
+                    max_ty = min(map_h - 1, int(-min(zs)) + margin)
+                    if max_tx >= min_tx and max_ty >= min_ty:
+                        lens_rect = (min_tx, min_ty, max_tx, max_ty)
+        except Exception as _exc:
+            lens_rect = None
+            if not getattr(self, "_visible_rect_lens_warned", False):
+                try:
+                    print(
+                        "[ursina-cull] camera-lens extrusion unavailable; "
+                        f"falling back to FOV heuristic ({_exc!r})",
+                        flush=True,
+                    )
+                except Exception:
+                    pass
+                try:
+                    setattr(self, "_visible_rect_lens_warned", True)
+                except Exception:
+                    pass
+
+        if lens_rect is not None:
+            return lens_rect
+
+        # --- Strategy 2: FOV/pitch heuristic.  Self-contained (no self access).
+        try:
+            flen_sq = fwd_x * fwd_x + fwd_y * fwd_y + fwd_z * fwd_z
+            if flen_sq < 1e-9 or fwd_y >= -0.01:
+                return full_rect
+            flen = _math.sqrt(flen_sq)
+            nfx = fwd_x / flen
+            nfy = fwd_y / flen
+            nfz = fwd_z / flen
+
+            t_ground = -cam_y / nfy
+            if not _math.isfinite(t_ground) or t_ground <= 0:
+                return full_rect
+            ground_x = cam_x + t_ground * nfx
+            ground_z = cam_z + t_ground * nfz
             center_tile_x = int(ground_x)
             center_tile_y = int(-ground_z)
 
-            # Generous radius: camera height × 1.8, minimum 30 tiles.
-            # Oblique views see further than top-down, so be generous.
-            view_radius = max(int(cam_y * 1.8), 30)
-            margin = 5
-            half = view_radius + margin
+            try:
+                fov_deg = float(getattr(camera, "fov", 42.0))
+            except Exception:
+                fov_deg = 42.0
+            if not (1.0 <= fov_deg <= 170.0):
+                fov_deg = 42.0
+            half_fov_v = _math.radians(fov_deg) * 0.5
+
+            try:
+                aspect = float(getattr(camera, "aspect_ratio", None) or (16.0 / 9.0))
+            except Exception:
+                aspect = 16.0 / 9.0
+            if not (0.5 <= aspect <= 4.0):
+                aspect = 16.0 / 9.0
+            half_fov_h = _math.atan(_math.tan(half_fov_v) * aspect)
+
+            horizontal_len = _math.sqrt(nfx * nfx + nfz * nfz)
+            pitch = _math.atan2(abs(nfy), max(1e-3, horizontal_len))
+
+            sin_pitch = _math.sin(pitch)
+            look_dist = cam_y / max(0.05, sin_pitch)
+
+            half_w = look_dist * _math.tan(half_fov_h)
+
+            near_pitch = pitch + half_fov_v
+            far_pitch = pitch - half_fov_v
+            if near_pitch >= _math.pi * 0.5 - 0.01:
+                near_dist = cam_y
+            else:
+                near_dist = cam_y / max(0.05, _math.sin(near_pitch))
+            if far_pitch <= 0.05:
+                far_dist = look_dist * 3.0
+            else:
+                far_dist = cam_y / max(0.05, _math.sin(far_pitch))
+            half_along = max(8.0, (far_dist - near_dist) * 0.5)
+
+            half_extent = max(half_w, half_along)
+
+            margin = 8  # tiles of safety
+            half = int(half_extent + margin)
 
             min_tx = max(0, center_tile_x - half)
             min_ty = max(0, center_tile_y - half)
             max_tx = min(map_w - 1, center_tile_x + half)
             max_ty = min(map_h - 1, center_tile_y + half)
+            if max_tx < min_tx or max_ty < min_ty:
+                return full_rect
             return (min_tx, min_ty, max_tx, max_ty)
         except Exception:
             return full_rect
@@ -653,7 +782,24 @@ class UrsinaRenderer:
         except Exception:
             HeroClass = None
 
+        # WK58 Wave 5 (Agent 10) — per-stage profiling. Off by default; enable with
+        # KINGDOM_URSINA_STAGE_PROFILE=1 to record per-substage ms in self._stage_ms_samples.
+        # Removed/disabled by default before reporting done.
+        _stage_profile = os.environ.get("KINGDOM_URSINA_STAGE_PROFILE", "0") == "1"
+        if _stage_profile:
+            if not hasattr(self, "_stage_ms_samples"):
+                self._stage_ms_samples: dict[str, list[float]] = {}
+            _stage_samples = self._stage_ms_samples
+            _perf = time.perf_counter
+            def _rec(name, t0):
+                _stage_samples.setdefault(name, []).append((_perf() - t0) * 1000.0)
+            _t0 = _perf()
+        else:
+            _rec = None
+            _t0 = 0.0
+
         self._ensure_shadow_bounds_once()
+        if _stage_profile: _rec("01_ensure_shadow_bounds_once", _t0); _t0 = time.perf_counter()
 
         # R4: cache sim interpolation state for this frame
         self._frame_blend = float(getattr(snapshot, 'sim_blend_fraction', 0.0))
@@ -661,16 +807,24 @@ class UrsinaRenderer:
 
         # WK59 perf: cache visible tile rect for frustum culling this frame
         self._frame_visible_rect = self._get_visible_tile_rect()
+        if _stage_profile: _rec("02_get_visible_tile_rect", _t0); _t0 = time.perf_counter()
 
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
         self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        if _stage_profile: _rec("03_build_3d_terrain", _t0); _t0 = time.perf_counter()
         self._terrain_fog.sync_dynamic_trees(world, getattr(snapshot, "trees", ()) or ())
+        if _stage_profile: _rec("04_sync_dynamic_trees", _t0); _t0 = time.perf_counter()
         self._terrain_fog.sync_log_stacks(world, getattr(snapshot, "log_stacks", ()) or ())
+        if _stage_profile: _rec("05_sync_log_stacks", _t0); _t0 = time.perf_counter()
         self._terrain_fog.ensure_fog_overlay(world, fog_revision)
+        if _stage_profile: _rec("06_ensure_fog_overlay", _t0); _t0 = time.perf_counter()
         self._terrain_fog.sync_visibility_gated_terrain(world, fog_revision)
+        if _stage_profile: _rec("07_sync_visibility_gated_terrain", _t0); _t0 = time.perf_counter()
         self._terrain_fog.cull_terrain_chunks(self._frame_visible_rect, world)
+        if _stage_profile: _rec("08_cull_terrain_chunks", _t0); _t0 = time.perf_counter()
         self._terrain_fog.ensure_grid_debug_overlay(world, getattr(snapshot, "buildings", ()))
+        if _stage_profile: _rec("09_ensure_grid_debug_overlay", _t0); _t0 = time.perf_counter()
 
         # WK47 Wave 2b: hardware-instanced units (snapshot → buffer texture).
         # Opt-in: set KINGDOM_URSINA_INSTANCING=1 (known visual issues — see project memory).
@@ -691,16 +845,26 @@ class UrsinaRenderer:
 
         active_ids = set()
         self._sync_snapshot_buildings(snapshot, world, active_ids)
+        if _stage_profile: _rec("10_sync_snapshot_buildings", _t0); _t0 = time.perf_counter()
         # WK57 Wave 2: Create underground meshes for discovered dungeon POIs
         self._sync_underground_meshes(snapshot, world)
+        if _stage_profile: _rec("11_sync_underground_meshes", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_heroes(snapshot, active_ids, HeroClass)
+        if _stage_profile: _rec("12_sync_snapshot_heroes", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_enemies(snapshot, world, active_ids)
+        if _stage_profile: _rec("13_sync_snapshot_enemies", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_peasants(snapshot, active_ids)
+        if _stage_profile: _rec("14_sync_snapshot_peasants", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_guards(snapshot, active_ids)
+        if _stage_profile: _rec("15_sync_snapshot_guards", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_tax_collector(snapshot, active_ids)
+        if _stage_profile: _rec("16_sync_snapshot_tax_collector", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_projectiles(snapshot, active_ids)
+        if _stage_profile: _rec("17_sync_snapshot_projectiles", _t0); _t0 = time.perf_counter()
         self._update_debug_status_text(snapshot)
+        if _stage_profile: _rec("18_update_debug_status_text", _t0); _t0 = time.perf_counter()
         self._destroy_removed_entities(active_ids)
+        if _stage_profile: _rec("19_destroy_removed_entities", _t0)
 
     def _ensure_shadow_bounds_once(self) -> None:
         if (
@@ -1128,10 +1292,16 @@ class UrsinaRenderer:
             self._entity_render.sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
 
             # --- R5: Native Ursina health bar (Agent 09) ---
+            # WK58 W6 Fix 3.A (Agent 03): gate HP-bar writes on the (hp, max_hp)
+            # tuple. Previously the fg scale_x / x / color were stomped every
+            # frame even when HP was unchanged, which dirties Panda3D NodePath
+            # transforms for two child entities per unit. With 5-10 heroes this
+            # was ~0.2-0.5ms / frame; the trend extrapolates with unit count.
             _h_hp = int(getattr(h, 'hp', 0) or 0)
             _h_max_hp = int(getattr(h, 'max_hp', 1) or 1)
             _h_hp_bg = getattr(ent, '_ks_hp_bg', None)
             _h_hp_fg = getattr(ent, '_ks_hp_fg', None)
+            _h_hp_key = (_h_hp, _h_max_hp)
 
             if _h_max_hp > 0 and _h_hp > 0 and _h_hp < _h_max_hp:
                 _h_ratio = _h_hp / _h_max_hp
@@ -1158,10 +1328,12 @@ class UrsinaRenderer:
                     )
                     _h_hp_fg.set_depth_test(False)
                     ent._ks_hp_fg = _h_hp_fg
-                else:
+                    ent._ks_last_hp_key = _h_hp_key
+                elif getattr(ent, '_ks_last_hp_key', None) != _h_hp_key:
                     _h_hp_fg.scale_x = _h_bar_w * _h_ratio
                     _h_hp_fg.x = -(_h_bar_w * (1 - _h_ratio) / 2)
                     _h_hp_fg.color = color.green if _h_ratio > 0.5 else color.red
+                    ent._ks_last_hp_key = _h_hp_key
 
                 _h_hp_bg.enabled = True
                 _h_hp_fg.enabled = True
@@ -1280,10 +1452,12 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
+            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
             _e_hp = int(getattr(e, 'hp', 0) or 0)
             _e_max_hp = int(getattr(e, 'max_hp', 1) or 1)
             _e_hp_bg = getattr(ent, '_ks_hp_bg', None)
             _e_hp_fg = getattr(ent, '_ks_hp_fg', None)
+            _e_hp_key = (_e_hp, _e_max_hp)
 
             if _e_max_hp > 0 and _e_hp > 0 and _e_hp < _e_max_hp:
                 _e_ratio = _e_hp / _e_max_hp
@@ -1310,10 +1484,12 @@ class UrsinaRenderer:
                     )
                     _e_hp_fg.set_depth_test(False)
                     ent._ks_hp_fg = _e_hp_fg
-                else:
+                    ent._ks_last_hp_key = _e_hp_key
+                elif getattr(ent, '_ks_last_hp_key', None) != _e_hp_key:
                     _e_hp_fg.scale_x = _e_bar_w * _e_ratio
                     _e_hp_fg.x = -(_e_bar_w * (1 - _e_ratio) / 2)
                     _e_hp_fg.color = color.green if _e_ratio > 0.5 else color.red
+                    ent._ks_last_hp_key = _e_hp_key
 
                 _e_hp_bg.enabled = True
                 _e_hp_fg.enabled = True
@@ -1375,10 +1551,12 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
+            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
             _p_hp = int(getattr(p, 'hp', 0) or 0)
             _p_max_hp = int(getattr(p, 'max_hp', 1) or 1)
             _p_hp_bg = getattr(ent, '_ks_hp_bg', None)
             _p_hp_fg = getattr(ent, '_ks_hp_fg', None)
+            _p_hp_key = (_p_hp, _p_max_hp)
 
             if _p_max_hp > 0 and _p_hp > 0 and _p_hp < _p_max_hp:
                 _p_ratio = _p_hp / _p_max_hp
@@ -1405,10 +1583,12 @@ class UrsinaRenderer:
                     )
                     _p_hp_fg.set_depth_test(False)
                     ent._ks_hp_fg = _p_hp_fg
-                else:
+                    ent._ks_last_hp_key = _p_hp_key
+                elif getattr(ent, '_ks_last_hp_key', None) != _p_hp_key:
                     _p_hp_fg.scale_x = _p_bar_w * _p_ratio
                     _p_hp_fg.x = -(_p_bar_w * (1 - _p_ratio) / 2)
                     _p_hp_fg.color = color.green if _p_ratio > 0.5 else color.red
+                    ent._ks_last_hp_key = _p_hp_key
 
                 _p_hp_bg.enabled = True
                 _p_hp_fg.enabled = True
@@ -1466,10 +1646,12 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
+            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
             _g_hp = int(getattr(g, 'hp', 0) or 0)
             _g_max_hp = int(getattr(g, 'max_hp', 1) or 1)
             _g_hp_bg = getattr(ent, '_ks_hp_bg', None)
             _g_hp_fg = getattr(ent, '_ks_hp_fg', None)
+            _g_hp_key = (_g_hp, _g_max_hp)
 
             if _g_max_hp > 0 and _g_hp > 0 and _g_hp < _g_max_hp:
                 _g_ratio = _g_hp / _g_max_hp
@@ -1496,10 +1678,12 @@ class UrsinaRenderer:
                     )
                     _g_hp_fg.set_depth_test(False)
                     ent._ks_hp_fg = _g_hp_fg
-                else:
+                    ent._ks_last_hp_key = _g_hp_key
+                elif getattr(ent, '_ks_last_hp_key', None) != _g_hp_key:
                     _g_hp_fg.scale_x = _g_bar_w * _g_ratio
                     _g_hp_fg.x = -(_g_bar_w * (1 - _g_ratio) / 2)
                     _g_hp_fg.color = color.green if _g_ratio > 0.5 else color.red
+                    ent._ks_last_hp_key = _g_hp_key
 
                 _g_hp_bg.enabled = True
                 _g_hp_fg.enabled = True

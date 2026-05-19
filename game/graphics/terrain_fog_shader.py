@@ -60,21 +60,32 @@ void main() {
     vec4 terrain = texture(p3d_Texture0, uvs) * p3d_ColorScale * vertex_color;
     vec4 fog = texture(fog_texture, v_fog_uv);
 
-    float d0 = distance(v_fog_uv, cave_entrance_0);
-    float d1 = distance(v_fog_uv, cave_entrance_1);
-    float d2 = distance(v_fog_uv, cave_entrance_2);
-    float d3 = distance(v_fog_uv, cave_entrance_3);
-    float d4 = distance(v_fog_uv, cave_entrance_4);
-    float d5 = distance(v_fog_uv, cave_entrance_5);
-    float d6 = distance(v_fog_uv, cave_entrance_6);
-    float d7 = distance(v_fog_uv, cave_entrance_7);
-    float min_d = min(min(min(d0, d1), min(d2, d3)), min(min(d4, d5), min(d6, d7)));
-
-    if (min_d < cave_hole_radius) discard;
-
+    // WK58 W6 Fix 4.A (Agent 03): the cave-entrance discard / edge-fade math
+    // is dead at runtime — ``update_cave_entrance_shader`` returns early
+    // (terrain_fog_collab.py:1337+) and the default uniforms pin all 8
+    // entrances at (99, 99) with cave_hole_radius=0. Wave-5 profile flagged
+    // ~1.6M fragments/frame paying for 8 distance() calls + a min chain on
+    // an integrated GPU. Wrap the whole block in a runtime guard so the GLSL
+    // compiler can dead-code-eliminate it while ``cave_hole_radius == 0.0``
+    // (the steady-state path). When the underground feature ships and pins
+    // a non-zero radius, the original behaviour returns unchanged.
     float cave_edge = 1.0;
-    if (cave_edge_width > 0.0 && min_d < cave_hole_radius + cave_edge_width) {
-        cave_edge = (min_d - cave_hole_radius) / cave_edge_width;
+    if (cave_hole_radius > 0.0) {
+        float d0 = distance(v_fog_uv, cave_entrance_0);
+        float d1 = distance(v_fog_uv, cave_entrance_1);
+        float d2 = distance(v_fog_uv, cave_entrance_2);
+        float d3 = distance(v_fog_uv, cave_entrance_3);
+        float d4 = distance(v_fog_uv, cave_entrance_4);
+        float d5 = distance(v_fog_uv, cave_entrance_5);
+        float d6 = distance(v_fog_uv, cave_entrance_6);
+        float d7 = distance(v_fog_uv, cave_entrance_7);
+        float min_d = min(min(min(d0, d1), min(d2, d3)), min(min(d4, d5), min(d6, d7)));
+
+        if (min_d < cave_hole_radius) discard;
+
+        if (cave_edge_width > 0.0 && min_d < cave_hole_radius + cave_edge_width) {
+            cave_edge = (min_d - cave_hole_radius) / cave_edge_width;
+        }
     }
 
     vec3 final_rgb = mix(terrain.rgb, fog.rgb, fog.a);

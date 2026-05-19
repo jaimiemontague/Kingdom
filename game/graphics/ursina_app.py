@@ -1367,6 +1367,15 @@ class UrsinaApp:
             self.renderer.update(snapshot)
             self._record_fps_probe_stage_ms("ursina_renderer", _stage_t0)
 
+            # WK58 Agent 10 (cross-domain, scoped): auto-reveal hook for perf_render_benchmark
+            # and tools/run_ursina_capture_once.py --reveal-map. Fires once when env flag is set.
+            if (
+                not getattr(self, "_auto_reveal_done", False)
+                and os.environ.get("KINGDOM_URSINA_REVEAL_ON_START", "").strip() == "1"
+            ):
+                self._auto_reveal_done = True
+                self.engine.process_command("/revealmap")
+
             _stage_t0 = pytime.perf_counter()
             self.engine.render_pygame()
             self._record_fps_probe_stage_ms("pygame_hud_render", _stage_t0)
