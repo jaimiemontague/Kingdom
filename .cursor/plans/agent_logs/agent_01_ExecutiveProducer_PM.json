@@ -6545,7 +6545,7 @@
     },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
-        "status": "awaiting_human_playtest_wave7",
+        "status": "awaiting_human_zoom_out_playtest_w8",
         "created_utc": "2026-05-18T19:45:00Z",
         "closed_utc": null,
         "plan_doc": ".cursor/plans/Ursina Entities Overload Solution.md",
@@ -7309,6 +7309,115 @@
               "15"
             ],
             "rationale": "Wave 7: 03 (high — debugging a render-pipeline visual bug they themselves introduced; needs careful Panda3D-level diagnosis of buffer/shader/instance state at runtime; must recheck their own prior screenshot verdict)."
+          }
+        },
+        "wk58_w8_4c_geomipterrain_lod": {
+          "round_meta": {
+            "round_id": "wk58_w8_4c_geomipterrain_lod",
+            "build_target": "Implement Wave 5 candidate 4.C: replace 62,500-vert custom Perlin Mesh with Panda3D GeoMipTerrain (distance-based LOD). Target: close the zoom-out FPS drop Jaimie surfaced post-Wave-7. Behind env flag KINGDOM_URSINA_GEOMIPTERRAIN (default '0' until visually validated). Hard requirement: get_terrain_height() must return IDENTICAL heights with flag on or off (prop/unit/building Y-placement, hero click pick, camera clamp all depend on it). Preserve WK53 fog-of-war shader on terrain. Preserve castle flat area.",
+            "created_utc": "2026-05-18T23:55:00Z",
+            "wave": 8,
+            "depends_on": "wk58_w7_invisible_trees_bug_fix"
+          },
+          "pm_status_summary": {
+            "status": "done_awaiting_jaimie_zoom_out_playtest",
+            "summary": "Wave 8 DONE. Agent 03 implemented Wave 5 candidate 4.C: GeoMipTerrain LOD swap behind KINGDOM_URSINA_GEOMIPTERRAIN env flag (default '0' = custom Mesh path; '1' = GeoMipTerrain path). Both paths share the same Perlin heightmap source-of-truth, so get_terrain_height(world_x, world_z) is invariant across env modes (new TestTerrainHeightInvariance regression test asserts this with strict float equality across 5x5 sample grid). New file game/graphics/terrain_geomipterrain.py builds a PNMImage from the heightmap (with castle flat plateau already baked in by World.generate_heightmap before either path reads it), constructs GeoMipTerrain with block_size and LOD bands, applies the WK53 fog-of-war shader directly on terrain.get_root() via set_shader/set_shader_input. ursina_renderer.update() calls terrain.update_lod() per frame. ensure_fog_overlay mirrors fog_texture uniform on the root NP when GeoMipTerrain handle is set. IMPORTANT FOLLOW-OF-W7-LESSON: Agent 03 caught a texture-binding regression mid-implementation by ACTUALLY opening the PNG (white terrain bug), then fixed by binding shader/texture directly on terrain.get_root() instead of relying on Ursina wrap entity propagation. Final captures show pixel-near-identical terrain in both modes. 7/7 pytest PASS. qa_smoke PASS in both modes. Default-cam perf: env=0 after_avg=29.9, env=1 after_avg=30.3 (delta +0.4 FPS within tolerance). The actual win is at zoom-out (LOD shines when more terrain is in frustum) — capture tool has no --zoom flag so this requires Jaimie playtest verdict before flipping env default to '1'.",
+            "wave8_files": {
+              "created": [
+                "game/graphics/terrain_geomipterrain.py"
+              ],
+              "modified": [
+                "game/graphics/ursina_terrain_fog_collab.py (env-flag branch + fog texture mirror on GeoMipTerrain root)",
+                "game/graphics/ursina_renderer.py (pre-declares _geomip_terrain_handle in __init__, per-frame update_lod call)",
+                "tests/test_terrain_perf.py (TestTerrainHeightInvariance::test_get_terrain_height_identical_across_env_flag added)"
+              ]
+            },
+            "wave8_perf_AB_default_cam": {
+              "env_off_before_reveal": 59.2,
+              "env_off_after_reveal": 29.9,
+              "env_off_after_p50": 32.2,
+              "env_on_before_reveal": 59.0,
+              "env_on_after_reveal": 30.3,
+              "env_on_after_p50": 32.2,
+              "delta_after_avg_default_cam": 0.4,
+              "zoom_out_gain": "TBD via Jaimie playtest — capture tool has no --zoom flag"
+            },
+            "wave8_screenshots": {
+              "env_off_default_revealed": "docs/screenshots/perf_round6_4c/env_off_final_20260518_215456_540.png",
+              "env_on_default_revealed": "docs/screenshots/perf_round6_4c/env_on_final_20260518_215516_937.png",
+              "env_off_with_fog": "docs/screenshots/perf_round6_4c/env_off_with_fog_20260518_215624_156.png",
+              "env_on_with_fog": "docs/screenshots/perf_round6_4c/env_on_with_fog_20260518_215644_408.png",
+              "pm_visual_verdict": "GeoMipTerrain path matches custom Mesh baseline. Castle flat preserved, fog shader renders correctly, no LOD seams or holes at default cam, all props at correct heights. Trees from W7 fix still render correctly under the GeoMipTerrain path."
+            },
+            "wave8_invariants_verified": {
+              "get_terrain_height_invariant_across_env": "PASS (strict float equality 5x5 grid)",
+              "castle_flat_preserved": "PASS (cosine falloff applied to heightmap pre-mesh, both paths inherit)",
+              "fog_shader_renders": "PASS (binding fix landed mid-impl; both modes show fog correctly)",
+              "props_at_correct_heights": "PASS (visually verified, regression test guards)",
+              "no_lod_seams_default_cam": "PASS (visually verified)"
+            },
+            "wave8_dod_followups": [
+              "Jaimie playtest: $env:KINGDOM_URSINA_GEOMIPTERRAIN='1'; python main.py --no-llm; /revealmap; zoom to max; vs unset env. If zoom-out FPS gap closes meaningfully (~5+ FPS), promote env default to '1' in a small follow-up wave.",
+              "Agent 10: re-profile with high camera y to measure the LOD effect numerically (capture tool needs a --cam-y or --zoom flag added).",
+              "Agent 09: review extreme zoom-in for visual diff caused by heightfield resample (501 -> 513).",
+              "Agent 03 self-flag: set_focal_point binds to base.camera once at build; if camera swaps (e.g. underground mode), LOD focal point stale until rebuild. Underground is feature-gated off so not blocking today."
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK58-PERF-005",
+              "title": "Zoom-out FPS drop on revealed map (GPU pipeline)",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest_2026-05-18",
+              "repro_steps": [
+                "python main.py --no-llm",
+                "/revealmap",
+                "Zoom out with mouse wheel until the camera is at max zoom",
+                "Observe: significant FPS drop vs default zoom"
+              ],
+              "expected": "Zoom-out FPS within ~10 FPS of default-cam FPS.",
+              "actual": "Significant drop. Hypothesis (per Wave 5 findings): heightmap-displaced ground mesh (62,500 verts) + per-fragment fog shader scale with the area in the frustum.",
+              "acceptance_test": [
+                "python tools/perf_render_benchmark.py with KINGDOM_URSINA_GEOMIPTERRAIN=1 shows after_avg unchanged or improved at default cam",
+                "Manual zoom-out playtest shows FPS gap closed by at least ~5 FPS",
+                "get_terrain_height() returns identical values flag on vs off (regression test)"
+              ],
+              "status": "assigned",
+              "fix_phase": "Wave 5 candidate 4.C (deferred from W6/W7)"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": "Implement Wave 5 candidate 4.C. Behind env flag KINGDOM_URSINA_GEOMIPTERRAIN (default '0' initially). When flag is '1', build a Panda3D GeoMipTerrain from the same Perlin heightmap that WK53's custom Mesh used; reparent it where the custom mesh is parented; apply the WK53 fog shader; ensure castle flat area is preserved. CRITICAL INVARIANT: get_terrain_height(world_x, world_z) must read from the source-of-truth Perlin heightmap array, NOT from the LOD geometry — otherwise prop/unit/building Y-placement drifts at distance. Both paths must coexist (the custom mesh remains the default until visual+perf parity confirmed). Screenshot battery at default cam AND zoom-out. Perf benchmark A/B."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) — Wave 8 of sprint wk58_ursina_entities_overload. Implementing Wave 5 candidate 4.C (GeoMipTerrain LOD). Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-03-techdir-onboarding.mdc + .cursor/rules/04-qa-gates.mdc + .cursor/rules/06-workflow-sop.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w8_4c_geomipterrain_lod']. Read Wave 5 findings doc .cursor/plans/wk58_round5_profile_findings.md (Section 4.C in particular). Read WK53 plan .cursor/plans/wk53_world_beauty_terrain.plan.md to understand the existing custom-Mesh terrain (Perlin heightmap, castle flat area cosine falloff, per-vertex normals, custom fog shader on terrain). Read game/graphics/terrain_height.py (the get_terrain_height single-source-of-truth API), game/graphics/ursina_terrain_fog_collab.py (where build_3d_terrain creates the custom Mesh), game/graphics/terrain_fog_shader.py (the WK53 fog-of-war shader). IMPLEMENTATION: (1) Env flag: KINGDOM_URSINA_GEOMIPTERRAIN, default '0'. When '1', build a Panda3D GeoMipTerrain from the SAME Perlin heightmap data that the custom Mesh uses. Investigate the GeoMipTerrain API in this Panda3D version (panda3d.core.GeoMipTerrain) — it requires a heightfield PNMImage (luminance image of heights). Set block_size (e.g. 32 or 64), set_min_level/set_max_level for LOD bands, set_focal_point to the camera. (2) Reparent the GeoMipTerrain root to where the custom Mesh parent goes. Apply the WK53 fog shader to it (same shader, same uniforms) — the shader should work because it operates per-fragment on whatever mesh is below it. Preserve the per-vertex normals semantics (GeoMipTerrain generates its own normals; verify they match within reason). (3) Preserve castle flat area: GeoMipTerrain reads from the heightfield image, so flatten the relevant pixels in the image before passing it to GeoMipTerrain. (4) CRITICAL: get_terrain_height(world_x, world_z) must continue to read from the source-of-truth Perlin array (the one terrain_height.py owns), NOT from the GeoMipTerrain LOD geometry. Otherwise props/units/buildings will hover/sink as LOD changes. Audit terrain_height.py to confirm the array is the source-of-truth and is built independent of which display mesh is active. (5) Both code paths must coexist — when env='0', custom Mesh path is unchanged. (6) Hero click pick (ursina_pick.py iterative height refinement) reads get_terrain_height — verify it still works. Camera ground clamp reads it — verify it still works. (7) Add regression test in tests/test_terrain_perf.py: TestTerrainHeightInvariance::test_get_terrain_height_identical_across_env_flag — sample a 5x5 grid of world positions; assert get_terrain_height returns the same value with env on and off. (8) VALIDATION: python -m pytest tests/test_terrain_perf.py -v (all 7 tests including the new one PASS); python tools/qa_smoke.py --quick (PASS); python tools/perf_render_benchmark.py with env=1 AND env=0 (A/B; default cam should be unchanged or improved); manual zoom-out perf via tools/run_ursina_capture_once.py at min zoom (need to add a --zoom flag or rely on default capture and document the zoom-out limitation). Screenshot battery: docs/screenshots/perf_round6_4c/ with env=1 default cam, env=1 zoomed out, env=0 default cam, env=0 zoomed out — OPEN all four PNGs and visually compare. Visual checks: castle area still flat, fog overlay still renders correctly, no terrain pop-in at LOD transitions, no prop hovering, hero clicks work. (9) Honor no-density-cut directive. (10) If GeoMipTerrain API is unavailable/broken in this Panda3D version, STOP and report blocked with the specific API gap. DO NOT COMMIT. DO NOT iterate after done. PowerShell syntax. File lanes: game/graphics/ursina_terrain_fog_collab.py + possibly new game/graphics/terrain_geomipterrain.py + tests/test_terrain_perf.py (regression test). Update log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w8_4c_geomipterrain_lod'] with sprint_id, round_id, status, what_i_changed (env var, files+lines, GeoMipTerrain config, castle preservation approach, fog shader wiring), commands_run + exit codes, evidence (per-mode perf at default+zoom, get_terrain_height parity test result, full pytest, qa_smoke, screenshot paths + visual verdict, prop/unit/building Y-placement sanity), blockers, follow_ups. Validate JSON."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w8_sequential": [
+                "03"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 8: 03 (high — L-effort/HIGH-risk per Wave 5 findings; large rewrite touching the WK53 terrain layer, must preserve get_terrain_height invariance across all dependent systems, integrate Panda3D GeoMipTerrain API which is unfamiliar in this codebase). Dual-path env flag keeps risk contained; default OFF until visual+perf parity confirmed."
           }
         }
       }

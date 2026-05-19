@@ -751,6 +751,161 @@ class TestFogOverlayPerf:
 # ---------------------------------------------------------------------------
 
 
+class TestTerrainHeightInvariance:
+    """Wave 8 / Section 4.C — ``get_terrain_height(wx, wz)`` must return
+    IDENTICAL values regardless of ``KINGDOM_URSINA_GEOMIPTERRAIN`` env flag.
+
+    This is the critical invariant for the GeoMipTerrain dual-path: prop /
+    unit / building Y-placement reads from ``terrain_height.get_terrain_height``
+    which by design reads from the source-of-truth Perlin heightmap array
+    (``terrain_height._heightmap`` set by ``init_heightmap``), NOT from the
+    active display mesh. The custom Mesh path and the GeoMipTerrain path both
+    consume the same source array but may produce different displayed
+    geometry; ``get_terrain_height`` must remain bound to the source array so
+    placement does not drift when the env flag flips.
+
+    If this test ever fails, it means ``get_terrain_height`` started sampling
+    the display mesh (custom-Mesh vertices or GeoMipTerrain LOD geometry)
+    instead of the Perlin source — and ``build_geomip_terrain`` will need to
+    be refactored or the placement code will need to switch back to the
+    source array.
+    """
+
+    def test_get_terrain_height_identical_across_env_flag(self):
+        """Sample a 5x5 grid of world positions; assert ``get_terrain_height``
+        returns the same value with ``KINGDOM_URSINA_GEOMIPTERRAIN=0`` and
+        ``=1``.
+
+        Approach: drive ``init_heightmap`` with a deterministic synthetic
+        heightmap, sample heights, toggle the env flag, sample again. Because
+        ``get_terrain_height`` reads from the in-memory ``_heightmap`` array
+        (which is what ``init_heightmap`` stores, NOT a display mesh), the
+        result must be byte-identical floats. We assert ``== 0.0`` delta
+        rather than a tolerance — there is no source of floating-point drift
+        if the function reads the same array under both env values.
+        """
+        from game.graphics import terrain_height as th_mod
+
+        # Synthetic 11x11 heightmap with a known non-trivial shape — a small
+        # gaussian bump in the centre plus an asymmetric slope. Using floats
+        # that don't round-trip cleanly through any uint8 image quantisation
+        # exposes accidental round-trips through the GeoMipTerrain pixel
+        # storage (would manifest as a mismatch under env=1).
+        import math as _math
+
+        grid = 11
+        world_extent = 20.0
+        hmap = [[0.0] * grid for _ in range(grid)]
+        cx = (grid - 1) / 2.0
+        cy = (grid - 1) / 2.0
+        for gz in range(grid):
+            for gx in range(grid):
+                dx = (gx - cx)
+                dz = (gz - cy)
+                d2 = dx * dx + dz * dz
+                # Gaussian peak + linear slope so heights vary smoothly.
+                hmap[gz][gx] = (
+                    3.14159 * _math.exp(-d2 / 8.0)
+                    + 0.317 * gx
+                    + 0.219 * gz
+                )
+
+        # Save then clear any pre-existing module state so this test is
+        # independent of test ordering.
+        saved_state = (
+            th_mod._heightmap,
+            th_mod._grid_w,
+            th_mod._grid_h,
+            th_mod._world_w,
+            th_mod._world_h,
+            th_mod._world_origin_x,
+            th_mod._world_origin_z,
+        )
+        try:
+            # Seed module-level state. ``world_origin_z=-world_extent`` mirrors
+            # production (grid row 0 maps to most-negative Z).
+            th_mod.init_heightmap(
+                heightmap=hmap,
+                grid_w=grid,
+                grid_h=grid,
+                world_w=world_extent,
+                world_h=world_extent,
+                world_origin_x=0.0,
+                world_origin_z=-world_extent,
+            )
+
+            # Sample positions: 5x5 grid spanning the inner region (avoid the
+            # exact edges so bilinear interp uses 4 distinct samples).
+            sample_positions = []
+            for i in range(5):
+                for j in range(5):
+                    wx = (i + 0.5) * (world_extent / 5.0)
+                    wz = -(world_extent) + (j + 0.5) * (world_extent / 5.0)
+                    sample_positions.append((wx, wz))
+
+            # --- Env flag OFF (custom Mesh path) ---
+            saved_env = os.environ.get("KINGDOM_URSINA_GEOMIPTERRAIN")
+            try:
+                os.environ["KINGDOM_URSINA_GEOMIPTERRAIN"] = "0"
+                heights_env_off = [
+                    th_mod.get_terrain_height(wx, wz)
+                    for wx, wz in sample_positions
+                ]
+
+                # --- Env flag ON (GeoMipTerrain path) ---
+                os.environ["KINGDOM_URSINA_GEOMIPTERRAIN"] = "1"
+                heights_env_on = [
+                    th_mod.get_terrain_height(wx, wz)
+                    for wx, wz in sample_positions
+                ]
+            finally:
+                if saved_env is None:
+                    os.environ.pop("KINGDOM_URSINA_GEOMIPTERRAIN", None)
+                else:
+                    os.environ["KINGDOM_URSINA_GEOMIPTERRAIN"] = saved_env
+
+            # The two height lists must be element-wise equal. Any difference
+            # would mean ``get_terrain_height`` started sampling the display
+            # geometry rather than the source-of-truth heightmap array.
+            mismatches = []
+            for idx, (h_off, h_on) in enumerate(zip(heights_env_off, heights_env_on)):
+                if h_off != h_on:
+                    mismatches.append(
+                        (sample_positions[idx], h_off, h_on, abs(h_off - h_on))
+                    )
+            assert not mismatches, (
+                "WK58 W8 / 4.C: get_terrain_height must return IDENTICAL "
+                "values regardless of KINGDOM_URSINA_GEOMIPTERRAIN env flag. "
+                "It MUST read from the source-of-truth Perlin heightmap "
+                "array, NOT from the active display mesh. Mismatches: "
+                f"{mismatches[:5]}{'...' if len(mismatches) > 5 else ''} "
+                "(first column: world (wx, wz); second: env=0 height; "
+                "third: env=1 height; fourth: absolute diff). If this test "
+                "fails, prop/unit/building Y-placement will drift between "
+                "the two env modes — fix get_terrain_height to read from "
+                "terrain_height._heightmap, not from the GeoMipTerrain LOD."
+            )
+
+            # Also sanity-check that the sampled heights aren't all zero —
+            # otherwise this test would pass vacuously even if the function
+            # were short-circuiting somehow.
+            assert any(h != 0.0 for h in heights_env_off), (
+                "Sampled heights are all zero; the synthetic heightmap or "
+                "init_heightmap is not being read correctly."
+            )
+        finally:
+            # Restore module state (or clear it if nothing was set before).
+            (
+                th_mod._heightmap,
+                th_mod._grid_w,
+                th_mod._grid_h,
+                th_mod._world_w,
+                th_mod._world_h,
+                th_mod._world_origin_x,
+                th_mod._world_origin_z,
+            ) = saved_state
+
+
 class TestInstancedTreeVisibility:
     """Wave 7 regression: hardware-instanced trees must use a permissive
     bounding volume so Panda3D's view-frustum culler does not hide the

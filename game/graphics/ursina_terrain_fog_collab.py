@@ -352,6 +352,26 @@ class UrsinaTerrainFogCollab:
                             terrain_ground_ent.setShaderInput("fog_texture", ftex)
                         except Exception:
                             pass
+
+                # WK58 W8 (4.C): when the GeoMipTerrain display path is active
+                # we ALSO need to push the fog_texture input directly onto the
+                # GeoMipTerrain root NodePath. The wrap Entity owns the
+                # ``_terrain_ground_entity`` reference and the shader, but
+                # GeoMipTerrain installs its own per-block RenderState during
+                # ``generate()`` and may not always inherit shader inputs set
+                # on the parent transform. Mirroring the input on the root NP
+                # is cheap and guarantees the fog texture is sampled in every
+                # block's fragment shader.
+                _gmt_handle = getattr(self._r, "_geomip_terrain_handle", None)
+                if _gmt_handle is not None:
+                    try:
+                        _root_np = _gmt_handle.terrain.get_root()
+                        if p3d_tex is not None:
+                            _root_np.set_shader_input("fog_texture", p3d_tex)
+                        elif ftex is not None:
+                            _root_np.set_shader_input("fog_texture", ftex)
+                    except Exception:
+                        pass
             except Exception:
                 pass
 
@@ -1226,6 +1246,14 @@ class UrsinaTerrainFogCollab:
         WK53 R3: The terrain mesh uses terrain_fog_shader which samples both the grass
         albedo and a fog-of-war texture in a single draw call. The fog texture is uploaded
         as a shader uniform by ensure_fog_overlay() each time visibility changes.
+
+        WK58 W8 (Agent 03, Section 4.C): When ``KINGDOM_URSINA_GEOMIPTERRAIN=1`` is set
+        AND a heightmap is available, build Panda3D's ``GeoMipTerrain`` with
+        distance-based LOD instead of the static 62,500-vert custom Mesh. Both code
+        paths populate ``self._r._terrain_ground_entity`` so the fog-shader uniform
+        upload in ``ensure_fog_overlay`` works identically. ``get_terrain_height``
+        keeps reading from the source-of-truth Perlin array via the ``terrain_height``
+        module — display mesh choice does NOT affect prop / unit / building Y.
         """
         import math as _math
 
@@ -1237,6 +1265,45 @@ class UrsinaTerrainFogCollab:
         hmap = getattr(world, "heightmap", None)
         gw = getattr(world, "heightmap_grid_w", 0)
         gh = getattr(world, "heightmap_grid_h", 0)
+
+        # --- WK58 W8 / 4.C: GeoMipTerrain LOD path (env-flag gated) -----------
+        # When KINGDOM_URSINA_GEOMIPTERRAIN=1 we use Panda3D's GeoMipTerrain
+        # for distance-based LOD on zoom-out. Falls through to the custom Mesh
+        # path on any error (env=1 silently degrades to env=0 — the custom
+        # Mesh remains the always-available implementation).
+        if has_heightmap and hmap is not None and gw >= 2 and gh >= 2:
+            try:
+                from game.graphics.terrain_geomipterrain import (
+                    geomipterrain_enabled,
+                    build_geomip_terrain,
+                )
+                if geomipterrain_enabled():
+                    height_scale = float(getattr(config, "TERRAIN_HEIGHT_SCALE", 8.0))
+                    handle = build_geomip_terrain(
+                        parent_entity=root,
+                        hmap=hmap,
+                        gw=int(gw),
+                        gh=int(gh),
+                        tw=int(tw),
+                        th=int(th),
+                        world_w=float(w_world),
+                        world_d=float(d_world),
+                        height_scale=height_scale,
+                        tiles_per_repeat=2.0,
+                    )
+                    if handle is not None:
+                        # ``ensure_fog_overlay`` targets ``_terrain_ground_entity``;
+                        # set it to the wrap Entity so the fog texture lands on
+                        # the same NodePath the shader is bound to.
+                        self._r._terrain_ground_entity = handle.wrap_entity
+                        # Renderer reads ``_geomip_terrain_handle`` once per
+                        # frame and calls ``update_lod()``. ``__init__`` of
+                        # UrsinaRenderer pre-declares None.
+                        setattr(self._r, "_geomip_terrain_handle", handle)
+                        return
+            except Exception:
+                # Fall through to custom mesh path on any GeoMipTerrain failure.
+                pass
 
         if not has_heightmap or hmap is None or gw < 2 or gh < 2:
             # Flat fallback — identical to old ground plane

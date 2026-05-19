@@ -276,6 +276,11 @@ class UrsinaRenderer:
         self._terrain_entity: Entity | None = None
         # WK53 R3: the heightmap-displaced ground mesh — fog shader updates target this.
         self._terrain_ground_entity: Entity | None = None
+        # WK58 W8 (4.C): handle for Panda3D GeoMipTerrain when
+        # KINGDOM_URSINA_GEOMIPTERRAIN=1. None when the custom Mesh path is
+        # active. Renderer.update() calls handle.update_lod() once per frame
+        # to refresh LOD blocks against the camera focal point.
+        self._geomip_terrain_handle: object | None = None
 
         # WK30 debug: tile-gridline overlay entity (populated once when env flag is set).
         self._grid_debug_entity: Entity | None = None
@@ -812,6 +817,12 @@ class UrsinaRenderer:
         world = getattr(snapshot, "world", None) or self._world
         fog_revision = int(getattr(snapshot, "fog_revision", 0))
         self._terrain_fog.build_3d_terrain(world, getattr(snapshot, "buildings", ()))
+        # WK58 W8 (4.C): per-frame LOD refresh for the GeoMipTerrain display
+        # path (env-flag gated; handle is None when the custom Mesh path is
+        # active, so this is a cheap attribute read in the default case).
+        _gmt = getattr(self, "_geomip_terrain_handle", None)
+        if _gmt is not None:
+            _gmt.update_lod()
         if _stage_profile: _rec("03_build_3d_terrain", _t0); _t0 = time.perf_counter()
         self._terrain_fog.sync_dynamic_trees(world, getattr(snapshot, "trees", ()) or ())
         if _stage_profile: _rec("04_sync_dynamic_trees", _t0); _t0 = time.perf_counter()
