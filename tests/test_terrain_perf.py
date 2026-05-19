@@ -744,3 +744,116 @@ class TestFogOverlayPerf:
             "expected <= 1. The early-out must skip both the loop body AND "
             "the GPU upload."
         )
+
+
+# ---------------------------------------------------------------------------
+# Test class 4: WK58-BUG-004 — instanced tree NodePath visibility (Wave 7 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestInstancedTreeVisibility:
+    """Wave 7 regression: hardware-instanced trees must use a permissive
+    bounding volume so Panda3D's view-frustum culler does not hide the
+    entire GeomNode just because the mesh's local-space bsphere sits at the
+    origin while instances live at (x, y, z) all over the map.
+
+    Original Wave 4 bug (WK58-BUG-004): the loader's GeomNode had a default
+    local-bounds bsphere of e.g. ``c (0, 0.6, 0), r 0.7``. With instancing,
+    per-instance world positions are computed in the vertex shader from a
+    buffer texture, so the GeomNode's local bsphere tells Panda3D nothing
+    about where instances actually land. The view-frustum cull pass dropped
+    the entire instanced draw, making trees invisible at runtime even though
+    ``set_instance_count(N)`` was being called with a non-zero N.
+
+    Fix: install ``OmniBoundingVolume`` + ``set_final(True)`` so the cull
+    pass always passes.
+    """
+
+    def test_instanced_geom_uses_omni_bounds_post_setup(self):
+        """After ``_ensure_per_model`` runs for a tree model, the GeomNode's
+        bounds must be ``OmniBoundingVolume``-equivalent (infinite extent).
+        Today (post-fix), ``np.node().get_bounds()`` returns an infinite-extent
+        volume so the view-frustum cull pass never skips the draw.
+
+        Pure-Panda3D test — no Ursina window or full game state needed.
+        Builds the renderer, registers one tree at an arbitrary world position,
+        runs ``update_buffer``, then asserts the GeomNode's bounds describe an
+        infinite volume (the symptom check) AND ``last_active_count > 0`` for
+        the registered slot (the "actually packed" check).
+        """
+        import os
+        os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+        os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+
+        # The renderer needs a Panda3D pipe; ursina headless boot is the
+        # cheapest way to get one in CI. Skip cleanly if ursina init fails
+        # (e.g. on a totally headless box without an OpenGL stack).
+        try:
+            from panda3d.core import load_prc_file_data, getModelPath, Filename
+            load_prc_file_data("", "window-type offscreen\n")
+            # Anchor model path to the repo root so ``assets/models/...``
+            # relative paths resolve regardless of pytest's CWD.
+            from pathlib import Path as _Path
+            repo_root = str(_Path(__file__).resolve().parents[1])
+            getModelPath().prependDirectory(
+                Filename.fromOsSpecific(repo_root)
+            )
+
+            import ursina  # noqa: F401
+            from ursina import Ursina  # noqa: F401
+            from game.graphics.instanced_nature_renderer import (
+                InstancedNatureRenderer,
+            )
+        except Exception as e:
+            pytest.skip(f"Panda3D/Ursina not available for offscreen test: {e}")
+
+        try:
+            app = Ursina(borderless=False)
+        except Exception as e:
+            pytest.skip(f"Could not initialize offscreen Ursina: {e}")
+
+        renderer = InstancedNatureRenderer()
+        # Use a real Kenney tree model (small to keep load time minimal).
+        model_rel = "assets/models/environment/tree_simple.glb"
+        iid = renderer.register_tree(
+            model_rel,
+            (123.5, 1.0, -45.5),
+            scale=1.0,
+            tile_xy=(123, 45),
+        )
+        # Either registration succeeded (preferred), or the model failed to
+        # load on this environment and the test should skip rather than
+        # report a spurious bounds failure.
+        if iid is None:
+            pytest.skip(
+                "tree_simple.glb did not load in offscreen Ursina (loader path)"
+            )
+
+        renderer.set_fog_visibility((123, 45), True)
+        renderer.update_buffer()
+
+        state = renderer._per_model.get(model_rel)
+        assert state is not None, "register_tree should have created per-model state"
+        assert state["last_active_count"] >= 1, (
+            "WK58-BUG-004 regression: after register_tree + update_buffer, the "
+            "per-model active count must be >=1. Got "
+            f"{state['last_active_count']}."
+        )
+
+        np_root = state["np"]
+        bnd = np_root.node().get_bounds()
+        # OmniBoundingVolume stringifies as 'bsphere, infinite' in this Panda3D
+        # build. A regular BoundingSphere prints e.g. 'bsphere, c (...) r ...'.
+        bnd_str = str(bnd)
+        assert "infinite" in bnd_str.lower(), (
+            "WK58-BUG-004 regression: the instanced tree NodePath must use an "
+            "OmniBoundingVolume so Panda3D's view-frustum cull does not drop "
+            "the GeomNode just because its local-space bsphere sits at the "
+            f"origin. Got bounds={bnd_str!r}."
+        )
+
+        renderer.destroy()
+        try:
+            app.destroy()
+        except Exception:
+            pass

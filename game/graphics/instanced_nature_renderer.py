@@ -38,6 +38,7 @@ from panda3d.core import (
     GeomEnums,
     GeomNode,
     NodePath,
+    OmniBoundingVolume,
     PandaNode,
     Texture,
 )
@@ -83,16 +84,16 @@ instanced_nature_shader = Shader(
     vertex="""#version 330
 
 uniform mat4 p3d_ModelViewProjectionMatrix;
-uniform mat4 p3d_ModelMatrixInverseTranspose;
 
 in vec4 p3d_Vertex;
 in vec3 p3d_Normal;
+in vec4 p3d_Color;          /* per-vertex color baked into the Kenney GLBs */
 
 /* Panda3D buffer texture from ``setup_buffer_texture(T_float, F_rgba32)`` → samplerBuffer. */
 uniform samplerBuffer instanceData;
 
 out vec3 v_normal_world;
-out float v_pass_through;
+out vec4 v_vertex_color;
 
 void main() {
     vec4 posScale = texelFetch(instanceData, gl_InstanceID);
@@ -109,22 +110,24 @@ void main() {
        lighting. Since the NodePath sits at origin with identity model matrix,
        the normal is already in world-equivalent space. */
     v_normal_world = normalize(p3d_Normal);
-    v_pass_through = scale;
+    /* Kenney nature pack bakes the trunk/foliage colors into per-vertex colors
+       rather than a material uniform. Pass through so the fragment stage can
+       use them directly — no ``p3d_Material`` lookup needed (which only auto-
+       populates under Panda's auto-shader-generator, NOT custom shaders). */
+    v_vertex_color = p3d_Color;
 }
 """,
     fragment="""#version 330
 
-uniform struct p3d_MaterialParameters {
-    vec4 baseColor;
-    vec4 emission;
-    vec3 specular;
-    float roughness;
-    float metallic;
-    float refractiveIndex;
-} p3d_Material;
-
 in vec3 v_normal_world;
-in float v_pass_through;
+in vec4 v_vertex_color;
+
+/* Per-model base color extracted from the GLB material at load time. The
+   instanced renderer binds this once per model NodePath (16 trees in the
+   Kenney pack ⇒ 16 distinct values). When the model has per-vertex colors
+   baked, we multiply them with the model color so individual leaf / trunk
+   tints survive; pure-material models render flat at the model color. */
+uniform vec4 u_modelColor;
 
 out vec4 fragColor;
 
@@ -142,8 +145,13 @@ void main() {
     float ambient = 0.55;
     float light = ambient + 0.55 * ndotl;
 
-    vec3 albedo = p3d_Material.baseColor.rgb;
-    fragColor = vec4(albedo * light, p3d_Material.baseColor.a);
+    /* Combine per-vertex (if any) with per-model color. Kenney GLBs typically
+       don't bake vertex colors so ``v_vertex_color`` is white and the
+       per-model uniform dominates; if a future asset bakes vertex tints they
+       still modulate the per-model color correctly. */
+    vec3 albedo = v_vertex_color.rgb * u_modelColor.rgb;
+    float alpha = v_vertex_color.a * u_modelColor.a;
+    fragColor = vec4(albedo * light, alpha);
 
     if (fragColor.a < 0.05) {
         discard;
@@ -159,25 +167,36 @@ instanced_nature_shader.compile(shader_includes=False)
 # -------------------------------------------------------------------------
 
 
-def _load_geom_node_for_model(model_path: str) -> tuple[Optional[GeomNode], Optional[NodePath]]:
+def _load_geom_node_for_model(
+    model_path: str,
+) -> tuple[Optional[GeomNode], Optional[NodePath], tuple[float, float, float, float]]:
     """Resolve a tree model file into a Panda3D ``GeomNode`` plus its source NodePath.
 
     Uses Panda3D's loader rather than spinning up an Ursina ``Entity`` so we don't
-    pay for an Entity per model in scene-entities. Returns ``(None, None)`` on
-    failure so the caller can fall back to legacy individual-Entity rendering for
-    that specific model.
+    pay for an Entity per model in scene-entities. Returns ``(None, None, ...)``
+    on failure so the caller can fall back to legacy individual-Entity rendering
+    for that specific model.
 
     Returns:
-        (geom_node, source_np):
+        (geom_node, source_np, base_color):
           - ``geom_node``: the FIRST GeomNode found under the loaded model. Tree
             models in the Kenney pack are single-mesh; if a model has multiple
             GeomNodes we currently only use one — log a warning so we know.
           - ``source_np``: the loaded model NodePath, kept alive so the GeomNode's
             material/state references aren't garbage-collected.
+          - ``base_color``: ``(r, g, b, a)`` extracted from the GLB material's
+            base color (or ColorAttrib / per-geom material). Used as a per-model
+            uniform input by the instanced shader because ``p3d_Material`` is NOT
+            auto-bound for custom GLSL shaders (only for Panda's auto-shader
+            generator path), and Kenney trees don't have ``p3d_Color`` baked.
+            Falls back to ``(1, 1, 1, 1)`` if no material can be found — the
+            shader will render the trees white in that case, which is at least
+            visible (vs the cyan-defaults that come from an unbound struct).
     """
+    fallback_color = (1.0, 1.0, 1.0, 1.0)
     try:
         from direct.showbase.Loader import Loader
-        from panda3d.core import NodePath as _NP
+        from panda3d.core import NodePath as _NP, ColorAttrib, MaterialAttrib
 
         # Reuse the global ShowBase loader if available; fall back to a private one.
         try:
@@ -194,7 +213,7 @@ def _load_geom_node_for_model(model_path: str) -> tuple[Optional[GeomNode], Opti
 
         loaded = loader.load_model(model_path)
         if loaded is None:
-            return None, None
+            return None, None, fallback_color
         # Ursina sometimes returns a NodePath; Panda3D loader returns a NodePath too.
         if not isinstance(loaded, _NP):
             loaded = _NP(loaded)
@@ -202,13 +221,194 @@ def _load_geom_node_for_model(model_path: str) -> tuple[Optional[GeomNode], Opti
         # Find the first GeomNode under the loaded model.
         geom_paths = loaded.find_all_matches("**/+GeomNode")
         if geom_paths.get_num_paths() == 0:
-            return None, None
-        geom_node = geom_paths.get_path(0).node()
+            return None, None, fallback_color
+        geom_np_loaded = geom_paths.get_path(0)
+        geom_node = geom_np_loaded.node()
         if not isinstance(geom_node, GeomNode):
-            return None, None
-        return geom_node, loaded
+            return None, None, fallback_color
+
+        # WK58 W7 BUG FIX (Agent 03): extract the per-model base color so the
+        # instanced shader can use it as a uniform input. Panda3D's auto-shader
+        # generator handles this automatically; custom shaders must bind the
+        # material themselves. Kenney GLBs do not bake per-vertex colors.
+        # Search up the model tree for any ColorAttrib (often added by the GLB
+        # importer when a single base color exists) and any MaterialAttrib.
+        base_color = fallback_color
+        try:
+            # First check the GeomNode's own state (per-geom render state).
+            for gi in range(geom_node.get_num_geoms()):
+                gs = geom_node.get_geom_state(gi)
+                if gs.has_attrib(MaterialAttrib):
+                    mat = gs.get_attrib(MaterialAttrib).get_material()
+                    if mat is not None:
+                        try:
+                            bc = mat.get_base_color()
+                        except Exception:
+                            try:
+                                bc = mat.get_diffuse()
+                            except Exception:
+                                bc = None
+                        if bc is not None and (bc[0] or bc[1] or bc[2]):
+                            base_color = (float(bc[0]), float(bc[1]), float(bc[2]), float(bc[3]) if len(bc) > 3 else 1.0)
+                            break
+                if gs.has_attrib(ColorAttrib):
+                    ca = gs.get_attrib(ColorAttrib)
+                    # ColorAttrib.T_flat: state-attached single color
+                    try:
+                        if ca.get_color_type() == ColorAttrib.T_flat:
+                            c = ca.get_color()
+                            base_color = (float(c[0]), float(c[1]), float(c[2]), float(c[3]))
+                            break
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        # Also walk up the NodePath tree (some GLBs put ColorAttrib on the
+        # parent node above the GeomNode).
+        if base_color == fallback_color:
+            try:
+                walk = geom_np_loaded
+                for _ in range(8):
+                    if walk.is_empty():
+                        break
+                    state = walk.get_state()
+                    if state.has_attrib(ColorAttrib):
+                        ca = state.get_attrib(ColorAttrib)
+                        try:
+                            if ca.get_color_type() == ColorAttrib.T_flat:
+                                c = ca.get_color()
+                                base_color = (float(c[0]), float(c[1]), float(c[2]), float(c[3]))
+                                break
+                        except Exception:
+                            pass
+                    if state.has_attrib(MaterialAttrib):
+                        mat = state.get_attrib(MaterialAttrib).get_material()
+                        if mat is not None:
+                            try:
+                                bc = mat.get_base_color()
+                            except Exception:
+                                try:
+                                    bc = mat.get_diffuse()
+                                except Exception:
+                                    bc = None
+                            if bc is not None and (bc[0] or bc[1] or bc[2]):
+                                base_color = (float(bc[0]), float(bc[1]), float(bc[2]), float(bc[3]) if len(bc) > 3 else 1.0)
+                                break
+                    parent = walk.get_parent()
+                    if parent.is_empty():
+                        break
+                    walk = parent
+            except Exception:
+                pass
+
+        # WK58 W7 BUG FIX (Agent 03): bake per-geom material colors into a new
+        # vertex-color column so the custom instanced shader can read
+        # ``p3d_Color`` and produce the right trunk-vs-foliage tint per
+        # triangle. Without this, a single per-model uniform can only paint
+        # ONE color for the whole tree (some trees are 2-3 Geoms in a single
+        # GeomNode — trunk + leaves + crown — each with its own material).
+        try:
+            _bake_per_geom_material_to_vertex_colors(geom_node)
+        except Exception:
+            pass
+
+        return geom_node, loaded, base_color
     except Exception:
-        return None, None
+        return None, None, fallback_color
+
+
+def _resolve_geom_color(geom_state) -> tuple[float, float, float, float]:
+    """Pull the (r,g,b,a) base color off a Panda3D GeomState (material/color attribs)."""
+    from panda3d.core import ColorAttrib as _CA, MaterialAttrib as _MA
+
+    color = (1.0, 1.0, 1.0, 1.0)
+    try:
+        if geom_state.has_attrib(_MA):
+            mat = geom_state.get_attrib(_MA).get_material()
+            if mat is not None:
+                bc = None
+                try:
+                    bc = mat.get_base_color()
+                except Exception:
+                    try:
+                        bc = mat.get_diffuse()
+                    except Exception:
+                        bc = None
+                if bc is not None:
+                    r, g, b = float(bc[0]), float(bc[1]), float(bc[2])
+                    a = float(bc[3]) if len(bc) > 3 else 1.0
+                    if r or g or b:
+                        color = (r, g, b, a)
+                        return color
+        if geom_state.has_attrib(_CA):
+            ca = geom_state.get_attrib(_CA)
+            try:
+                if ca.get_color_type() == _CA.T_flat:
+                    c = ca.get_color()
+                    color = (float(c[0]), float(c[1]), float(c[2]), float(c[3]))
+                    return color
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return color
+
+
+def _bake_per_geom_material_to_vertex_colors(geom_node: GeomNode) -> None:
+    """Rewrite every Geom inside ``geom_node`` so its vertex data has a per-vertex
+    color column filled with the Geom's own material/ColorAttrib base color.
+
+    This is a one-time mutation at load time. After it runs:
+    - The vertex data exposes a ``color`` column (vec4 floats).
+    - The custom instanced shader's ``in vec4 p3d_Color;`` reads the correct
+      tint for every vertex — trunk vertices get the trunk material color,
+      foliage vertices get the foliage material color, etc.
+
+    Why this is needed: custom GLSL shaders cannot read ``p3d_Material``
+    (Panda3D only auto-binds it in the auto-shader-generator path), and we
+    can't use a single per-model uniform because a single GeomNode draw covers
+    multiple Geoms with different materials.
+    """
+    from panda3d.core import (
+        Geom as _Geom,
+        GeomVertexArrayFormat as _AF,
+        GeomVertexData as _VD,
+        GeomVertexFormat as _VF,
+        GeomVertexWriter as _VW,
+        InternalName as _IN,
+    )
+
+    for gi in range(geom_node.get_num_geoms()):
+        gs = geom_node.get_geom_state(gi)
+        color = _resolve_geom_color(gs)
+        geom = geom_node.modify_geom(gi)
+        old_vd = geom.get_vertex_data()
+        # If a color column already exists, just overwrite it.
+        has_color = bool(old_vd.has_column(_IN.get_color()))
+        if not has_color:
+            # Build new format with the existing arrays + a separate color array.
+            new_fmt = _VF(old_vd.get_format())
+            af = _AF()
+            af.add_column(
+                _IN.get_color(),
+                4,
+                _Geom.NT_float32,
+                _Geom.C_color,
+            )
+            new_fmt.add_array(af)
+            registered = _VF.register_format(new_fmt)
+            new_vd = old_vd.convert_to(registered)
+            geom.set_vertex_data(new_vd)
+            target_vd = geom.modify_vertex_data()
+        else:
+            target_vd = geom.modify_vertex_data()
+        # Fill the color column for every vertex.
+        cw = _VW(target_vd, _IN.get_color())
+        cw.set_row(0)
+        r, g, b, a = color
+        num_rows = target_vd.get_num_rows()
+        for _ in range(num_rows):
+            cw.set_data4f(r, g, b, a)
 
 
 # -------------------------------------------------------------------------
@@ -287,7 +487,7 @@ class InstancedNatureRenderer:
         if model_path in self._failed_models:
             return None
 
-        geom_node, source_np = _load_geom_node_for_model(model_path)
+        geom_node, source_np, base_color = _load_geom_node_for_model(model_path)
         if geom_node is None:
             self._failed_models.add(model_path)
             return None
@@ -333,12 +533,48 @@ class InstancedNatureRenderer:
             geom_np.set_shader_input("instanceData", buf)
         except Exception:
             pass
+        # WK58 W7 BUG FIX (Agent 03): bind a neutral white per-model uniform.
+        # The fragment shader reads ``vertex_color * u_modelColor``; the
+        # ``_bake_per_geom_material_to_vertex_colors`` pass at load time already
+        # bakes the correct trunk-vs-foliage tint into the per-vertex color,
+        # so the model-level uniform stays white and only acts as a fallback
+        # multiplier if a future asset wants to override globally.
+        try:
+            from panda3d.core import LVector4f
+            geom_np.set_shader_input("u_modelColor", LVector4f(1.0, 1.0, 1.0, 1.0))
+        except Exception:
+            try:
+                geom_np.set_shader_input("u_modelColor", (1.0, 1.0, 1.0, 1.0))
+            except Exception:
+                pass
         geom_np.set_instance_count(0)
         # Trees are opaque; keep default render queue. Disable backface culling
         # because Kenney foliage meshes are single-sided and would otherwise lose
         # leaves from low camera angles.
         try:
             geom_np.set_two_sided(True)
+        except Exception:
+            pass
+        # WK58 W7 BUG FIX (Agent 03): the loaded model's bounding sphere lives in
+        # the model's LOCAL coord space (e.g. ``c (0, 0.6, 0), r 0.7``). With
+        # hardware instancing, per-instance world positions are computed in the
+        # vertex shader from a buffer texture — the GeomNode's local bounds tell
+        # Panda3D nothing about where instances actually land in world space.
+        # Result: Panda3D's view-frustum cull skips the entire GeomNode because
+        # its bsphere is far from where the camera is pointing, even when 300+
+        # instanced trees should be on-screen. Symptom: trees invisible at runtime.
+        # Fix: install an OmniBoundingVolume so the cull pass always passes.
+        # ``set_final(True)`` prevents Panda3D from auto-computing tighter bounds
+        # from the mesh data on later traversals.
+        try:
+            gnode = geom_np.node()
+            gnode.set_bounds(OmniBoundingVolume())
+            gnode.set_final(True)
+        except Exception:
+            pass
+        try:
+            np.node().set_bounds(OmniBoundingVolume())
+            np.node().set_final(True)
         except Exception:
             pass
 
@@ -540,6 +776,115 @@ class InstancedNatureRenderer:
                         state["dirty"] = True
 
     # ---- per-frame upload ----------------------------------------------
+
+    def diagnostic_dump(self, label: str = "") -> None:
+        """Print a one-line-per-model summary of the renderer state.
+
+        Gated on ``KINGDOM_DIAG_INSTANCED_TREES=1`` to keep noise out of
+        production logs. When the env var is set, ``UrsinaTerrainFogCollab``
+        invokes this after ``build_3d_terrain`` and on each fog-revision
+        change so the bug-search history is reproducible. To enable from a
+        capture command:
+
+        ``$env:KINGDOM_DIAG_INSTANCED_TREES = "1"; python main.py --renderer ursina``
+
+        Originally written for WK58 Wave 7 (WK58-BUG-004 — invisible trees);
+        kept in place so any future "trees stop rendering" regression can be
+        diagnosed without recreating the scaffolding.
+        """
+        if os.environ.get("KINGDOM_DIAG_INSTANCED_TREES", "").strip() != "1":
+            return
+        try:
+            from ursina import scene as _scene
+        except Exception:
+            _scene = None
+        try:
+            from direct.showbase.ShowBaseGlobal import base as _base  # type: ignore[attr-defined]
+            render_root = getattr(_base, "render", None)
+        except Exception:
+            render_root = None
+        print(f"[diag-trees] === {label} ===", flush=True)
+        print(
+            f"[diag-trees] total_registered={self.total_registered_count} "
+            f"total_active={self.total_active_count} models={self.model_count} "
+            f"chunk_filter_on={self._chunk_filter_enabled} "
+            f"chunk_visible_count={len(self._chunk_visible_set)} "
+            f"fog_visible_tiles={sum(1 for v in self._fog_visible_by_tile.values() if v)}",
+            flush=True,
+        )
+        for mp, state in self._per_model.items():
+            np = state["np"]
+            geom_np = state["geom_np"]
+            buf = state["buffer_tex"]
+            num_alive = sum(1 for a in state["alive"] if a)
+            try:
+                np_parent = np.get_parent()
+                np_parent_name = str(np_parent) if np_parent else "<no-parent>"
+            except Exception:
+                np_parent_name = "<err>"
+            try:
+                hidden = np.is_hidden()
+            except Exception:
+                hidden = "<err>"
+            try:
+                ic = geom_np.get_instance_count()
+            except Exception:
+                ic = "<err>"
+            try:
+                # Different Panda3D versions: has_shader / hasShader / get_shader
+                sh_attr = geom_np.get_shader()
+                has_shader = (sh_attr is not None)
+            except Exception as e:
+                try:
+                    has_shader = f"getshader-err:{type(e).__name__}"
+                except Exception:
+                    has_shader = "<err>"
+            # Also get the shader name if possible
+            try:
+                shader_state = geom_np.get_state()
+                shader_state_str = str(shader_state).replace("\n", " ")[:120]
+            except Exception:
+                shader_state_str = "<state-err>"
+            try:
+                first_row = None
+                mv = memoryview(buf.modify_ram_image())
+                if num_alive > 0 and len(mv) >= 16:
+                    first_row = struct.unpack_from("ffff", mv, 0)
+            except Exception:
+                first_row = None
+            try:
+                last_active_count = int(state.get("last_active_count", 0))
+            except Exception:
+                last_active_count = -1
+            stem = Path(mp).stem
+            # Inspect the geom node itself: how many geoms, how many vertices?
+            try:
+                gnode = state["geom_node"]
+                num_geoms = gnode.get_num_geoms()
+                total_verts = 0
+                for gi in range(num_geoms):
+                    gg = gnode.get_geom(gi)
+                    total_verts += int(gg.get_vertex_data().get_num_rows())
+                geom_info = f"geoms={num_geoms} verts={total_verts}"
+            except Exception as e:
+                geom_info = f"geom-info-err:{type(e).__name__}"
+            # Inspect bounds — if instance_count > 0 but bounds are degenerate, that's the bug.
+            try:
+                bounds = geom_np.get_bounds()
+                bounds_str = str(bounds).replace("\n", " ")[:80]
+            except Exception:
+                bounds_str = "<bounds-err>"
+            print(
+                f"[diag-trees] model={stem!r:32s} alive={num_alive:3d} "
+                f"active_packed={last_active_count:3d} instance_count={ic} "
+                f"shader={has_shader} hidden={hidden} parent={np_parent_name} "
+                f"first_row={first_row}",
+                flush=True,
+            )
+            print(
+                f"[diag-trees]   state={shader_state_str} {geom_info} bounds={bounds_str}",
+                flush=True,
+            )
 
     def update_buffer(self) -> dict:
         """Re-pack each dirty model's active-only slice into its buffer texture.

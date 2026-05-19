@@ -6545,7 +6545,7 @@
     },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
-        "status": "awaiting_human_gate_dod_partial",
+        "status": "awaiting_human_playtest_wave7",
         "created_utc": "2026-05-18T19:45:00Z",
         "closed_utc": null,
         "plan_doc": ".cursor/plans/Ursina Entities Overload Solution.md",
@@ -7209,6 +7209,106 @@
               "15"
             ],
             "rationale": "Wave 6: 03 (high — bundled 4-fix delivery with per-fix FPS attribution + visual battery + DoD gate validation), 11 (medium — single targeted regression test with explicit assertion contract from Wave 5 findings). Parallel because Agent 03 edits game/ files and Agent 11 edits tests/ — no file collision."
+          }
+        },
+        "wk58_w7_invisible_trees_bug_fix": {
+          "round_meta": {
+            "round_id": "wk58_w7_invisible_trees_bug_fix",
+            "build_target": "Fix P0 regression: trees not visible at runtime after Wave 4 (Phase 4 tree instancing) but peasants still chop them. Sim data intact, render-only bug. Agent 03 to diagnose, fix, screenshot-confirm trees visible. NOT a perf wave — this is a correctness/visual recovery wave.",
+            "created_utc": "2026-05-18T23:15:00Z",
+            "wave": 7,
+            "depends_on": "wk58_w6_real_bottleneck_fixes"
+          },
+          "pm_status_summary": {
+            "status": "done_trees_visible_awaiting_playtest",
+            "summary": "Wave 7 DONE. Agent 03 diagnosed and fixed WK58-BUG-004 (invisible instanced trees). ROOT CAUSE: two Panda3D-level subtleties. (1) Bounding-volume bug: instanced GeomNodes had MODEL-LOCAL bsphere (e.g. center=(0,0.6,0) r=0.7), but per-instance world positions are computed in the shader from a buffer texture. Panda3D's view-frustum cull saw the local-space bsphere as out-of-view and dropped the ENTIRE instanced draw every frame even though set_instance_count(N)>0 and the buffer texture had valid world positions. (2) Material auto-bind bug: custom GLSL fragment shader read p3d_Material.baseColor, but Panda3D only auto-binds p3d_Material via the auto-shader generator — custom shaders see uninitialized struct values (cyan), so trees rendered as cyan teardrops even after bounds fix. FIX: (a) OmniBoundingVolume() + set_final(True) on each per-model NodePath so cull always passes; (b) _bake_per_geom_material_to_vertex_colors() mutates loaded GeomNode at load time, adding vertex-color column populated per-Geom from MaterialAttrib (handles Kenney multi-Geom layouts: trunk+foliage+crown); (c) GLSL shader rewritten to read p3d_Color (baked) and pass to fragment. Env var KINGDOM_URSINA_INSTANCED_TREES default stays '1'. PM confirmed via screenshot inspection: trees visible at full forest density. Agent 03 added regression test TestInstancedTreeVisibility::test_instanced_geom_uses_omni_bounds_post_setup (loads real Kenney GLB offscreen, asserts active_count>=1 and bounds string contains 'infinite'). Pytest 6/6 PASS. qa_smoke PASS in both env modes. Trees honored no-density-cut directive: all 2,083 trees register.",
+            "wave7_perf_post_fix": {
+              "env_instanced_on_after_avg_fps": 28.4,
+              "env_instanced_on_p50": 29.5,
+              "env_instanced_on_p90": 34.9,
+              "env_instanced_off_after_avg_fps": 27.4,
+              "delta_vs_wave6": -2.6,
+              "delta_vs_baseline_13_5": 14.9,
+              "explanation": "Slight FPS regression vs Wave 6 (31.0 -> 28.4) is the cost of correctly rendering trees: OmniBoundingVolume() disables per-GeomNode view-frustum cull on the 16 instanced models (CPU chunk filter still trims per-instance draws to ~341 at default cam, so GPU vertex hit is modest), plus load-time vertex-color bake. Acceptable tradeoff: trees are back at full forest density, baseline is still +14.9 FPS (2.1x improvement)."
+            },
+            "wave7_screenshots": {
+              "post_fix_env_on_revealed": "docs/screenshots/perf_round5_trees_fixed/revealed_20260518_210843_497.png",
+              "post_fix_env_on_fog_active": "docs/screenshots/perf_round5_trees_fixed/fog_active_20260518_210922_566.png",
+              "diagnosis_progression": [
+                "docs/screenshots/perf_round5_trees_fix_v1/* (cyan teardrops, bounds fixed only)",
+                "docs/screenshots/perf_round5_trees_fix_v2/* (white cones, p3d_Color added)",
+                "docs/screenshots/perf_round5_trees_fix_v3/* (single-color per model)",
+                "docs/screenshots/perf_round5_trees_fix_v4/* (baked vertex colors final)"
+              ],
+              "pm_visual_verdict": "Trees visible at full forest density on revealed map. Aesthetic: cyan-tinted foliage + brown trunks (Kenney pack colors after bake). Different palette than pre-WK58. AWAITING JAIMIE PLAYTEST VERDICT for whether the look is acceptable or needs tuning."
+            },
+            "wave7_files_modified": [
+              "game/graphics/instanced_nature_renderer.py (OmniBoundingVolume + vertex-color bake + shader rewrite)",
+              "game/graphics/ursina_terrain_fog_collab.py (Wave 4 wiring touchups)",
+              "tests/test_terrain_perf.py (added TestInstancedTreeVisibility regression test; cross-domain edit explicitly authorized)"
+            ],
+            "wave7_followups": [
+              "Jaimie playtest verdict on tree aesthetics (cyan foliage vs original Kenney render)",
+              "Potential aesthetic polish round: Agent 09 review of the baked tree colors vs the legacy non-instanced render",
+              "FPS gap to 45 DoD target remains 16.6 FPS — original plan + bottleneck fixes shipped, GPU pipeline work still deferred"
+            ]
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK58-BUG-004",
+              "title": "Instanced trees not rendering at runtime (Phase 4 regression)",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector",
+              "reporter": "human_playtest",
+              "repro_steps": [
+                "python main.py --no-llm",
+                "Wait for terrain to load",
+                "Type /revealmap in chat",
+                "Observe: NO trees visible anywhere on the map",
+                "Wait further: peasants will walk to (invisible) tree positions and 'chop' them to build houses"
+              ],
+              "expected": "Trees render correctly with the instanced renderer at full forest density (per the no-density-cuts directive). Peasants chop visible trees.",
+              "actual": "Trees are invisible. Sim-side tree data is intact (peasants find them, chop them, harvest wood from them). Pure render bug.",
+              "evidence": "Wave 6 screenshot docs/screenshots/perf_round4_fix/revealed_20260518_165501_597.png inspected by PM — no visible trees in the captured frame despite full map reveal.",
+              "acceptance_test": [
+                "python main.py --no-llm with KINGDOM_URSINA_INSTANCED_TREES=1 (default) shows trees visible in production runtime",
+                "Screenshot via python tools/run_ursina_capture_once.py --reveal-map shows trees visible",
+                "Test of trees visible: implement runtime smoke test asserting instanced_nature_renderer.active_count > 0 after a few frames of normal /revealmap operation"
+              ],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": "Diagnose and fix WK58-BUG-004. Start by reproducing in production runtime (python main.py). First confirm whether trees show with KINGDOM_URSINA_INSTANCED_TREES=0 — if YES the bug is purely in the instanced path; if NO the bug is more fundamental (broke the legacy tree path too). Investigate: (a) is the buffer texture actually populated post-build_3d_terrain? (b) is set_instance_count being called with a non-zero value? (c) is the GeomNode parented to render? (d) is the custom shader compiling and binding? (e) is the instanced renderer being constructed at all (env var read in the right place)? Capture A/B production screenshots (env=0 and env=1) via tools/run_ursina_capture_once.py --reveal-map AFTER the fix; OPEN both PNGs and verify trees are visible at full forest density in env=1 mode. Honor the no-density-cuts directive — if instancing path is irreparable, fall back to legacy individual entities (accepting the FPS hit) rather than reducing tree count. Pytest/qa_smoke must remain green."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) — Wave 7 of sprint wk58_ursina_entities_overload. P0 visual regression: trees invisible at runtime after Phase 4 tree instancing landed, but peasants still chop them. Sim data intact. Render-only bug. Onboard via .cursor/rules/01-studio-onboarding.mdc + .cursor/rules/agent-03-techdir-onboarding.mdc + .cursor/rules/04-qa-gates.mdc. Read PM hub sprints['wk58_ursina_entities_overload'].rounds['wk58_w7_invisible_trees_bug_fix'] including pm_bug_tickets WK58-BUG-004. Re-read your Wave 4 deliverable: game/graphics/instanced_nature_renderer.py and the Wave 4 wiring in game/graphics/ursina_terrain_fog_collab.py. CRITICAL CONTEXT: your Wave 4 screenshot verdict said 'alignment IDENTICAL both modes' — that was WRONG. Either you tested in the wrong scenario or read the wrong PNG. Recheck with fresh eyes. Diagnosis steps (in order): (1) Reproduce: $env:KINGDOM_URSINA_INSTANCED_TREES=$null; python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round5_trees_bug --stem env_off --no-llm --fps-probe --reveal-map; then $env:KINGDOM_URSINA_INSTANCED_TREES='1'; python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round5_trees_bug --stem env_on --no-llm --fps-probe --reveal-map. Open both PNGs. (2) If env=0 shows trees but env=1 doesn't, bug is in instanced path. Investigate buffer-texture population, set_instance_count value, GeomNode parenting (is it parented to render or to a hidden node?), custom shader compilation status (check Panda3D shader compile errors in stderr), env-var read location (is it being read on the correct code path?). (3) If env=0 ALSO shows no trees, the legacy path is also broken. Find what Wave 4 changed in build_3d_terrain's tree branch and revert that surgically. (4) FIX: prefer fixing the instanced path. If irreparable, fall back to legacy individual entities — DO NOT reduce tree density (Jaimie's standing directive). (5) VALIDATE: A/B screenshot battery in production runtime (perf_round5_trees_bug subdir); both modes (or just one if you eliminated the env var) must show trees at full forest density. OPEN the PNGs and VERIFY visually. Also: pytest tests/test_terrain_perf.py -v must pass; qa_smoke --quick must pass. CONSIDER adding a regression test that catches this (e.g., assert that after build_3d_terrain on a small world with tree tiles, the instanced renderer's active_count > 0 OR the legacy tree entities count > 0). DO NOT COMMIT. DO NOT iterate after done. PowerShell syntax. File lanes: game/graphics/instanced_nature_renderer.py + game/graphics/ursina_terrain_fog_collab.py (and tests/test_terrain_perf.py for regression test cross-domain). Update log at .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json under sprints['wk58_ursina_entities_overload'].rounds['wk58_w7_invisible_trees_bug_fix'] with sprint_id, round_id, status, what_i_changed (root-cause summary + files+lines), commands_run + exit codes, evidence (A/B screenshot paths + visual verdict per mode, pytest, qa_smoke, root_cause_explanation), blockers, follow_ups. Validate JSON. Report to PM with: status, root cause explanation, fix summary, A/B screenshot paths + verdict, qa_smoke result, log validated yes/no, blockers."
+          },
+          "pm_send_list_minimal": {
+            "waves": {
+              "w7_sequential": [
+                "03"
+              ]
+            },
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Wave 7: 03 (high — debugging a render-pipeline visual bug they themselves introduced; needs careful Panda3D-level diagnosis of buffer/shader/instance state at runtime; must recheck their own prior screenshot verdict)."
           }
         }
       }

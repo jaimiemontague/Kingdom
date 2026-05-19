@@ -645,6 +645,17 @@ class UrsinaTerrainFogCollab:
                 self._instanced_nature_renderer.update_buffer()
             except Exception:
                 pass
+            # WK58 Wave 7 diagnostic: dump renderer state on each fog rev change
+            # so we can see post-reveal active_count + per-model state.
+            if os.environ.get("KINGDOM_DIAG_INSTANCED_TREES", "").strip() == "1":
+                rev = int(getattr(self._r, "_terrain_visibility_revision_seen", -1))
+                last_dump = int(getattr(self, "_instanced_trees_last_fog_rev", -1))
+                try:
+                    self._instanced_nature_renderer.diagnostic_dump(
+                        f"fog_rev={rev} last_synced_fog_rev={last_dump}"
+                    )
+                except Exception:
+                    pass
 
     def _ensure_instanced_nature_renderer(self):
         """WK58 Phase 4: lazy-init the hardware-instanced tree renderer.
@@ -1190,6 +1201,17 @@ class UrsinaTerrainFogCollab:
         # individual because ``sync_dynamic_trees`` mutates their scale.
         self._batch_static_terrain_for_chunks(root, tw, th)
         self._build_terrain_chunks()
+        # WK58 Wave 7 diagnostic: dump instanced-tree renderer state once after
+        # build to catch "no trees registered" / "no shader bound" cases.
+        if (
+            self._instanced_trees_on
+            and self._instanced_nature_renderer is not None
+            and os.environ.get("KINGDOM_DIAG_INSTANCED_TREES", "").strip() == "1"
+        ):
+            try:
+                self._instanced_nature_renderer.diagnostic_dump("post-build_3d_terrain")
+            except Exception:
+                pass
 
     def _build_terrain_ground_mesh(
         self, root, world, tw: int, th: int, ts: int,

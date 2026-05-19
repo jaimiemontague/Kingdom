@@ -1936,6 +1936,128 @@
             "Agent 10 re-profile to confirm the stage-profile reduction in production conditions and recommend a Wave 7 if needed: the remaining gap to 45 FPS is dominated by the heightmap mesh fragment shader (Wave 5 Spot 4.B/4.C territory).",
             "Wave 5 candidate 4.B (simpler one-texture-multiply fragment shader) and 4.C (GeoMipTerrain LOD) remain on the deferred shelf if the project decides to push past 45 FPS via GPU-side optimization."
           ]
+        },
+        "wk58_w7_invisible_trees_bug_fix": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w7_invisible_trees_bug_fix",
+          "status": "done",
+          "round_meta": {
+            "wave": 7,
+            "round_id": "wk58_w7_invisible_trees_bug_fix",
+            "created_utc": "2026-05-18T23:30:00Z",
+            "build_target": "Fix P0 regression introduced in Wave 4: instanced trees invisible at runtime (peasants still chop them, sim data intact). Render-only bug.",
+            "depends_on": "wk58_w6_real_bottleneck_fixes",
+            "p0_bug_ref": "WK58-BUG-004"
+          },
+          "what_i_changed": {
+            "summary": "Diagnosed and fixed the Wave 4 invisible-trees regression. ROOT CAUSE: my Wave 4 instanced renderer created GeomNodes from loaded tree models WITHOUT installing a permissive bounding volume. The loaded GeomNode's bsphere was in the model's LOCAL coord space (e.g. c (0, 0.6, 0) r 0.7) because per-instance world positions are computed in the vertex shader from a buffer texture — the GeomNode itself has no notion of where its instances actually land. Panda3D's view-frustum cull saw the local-space bsphere far from the camera target and dropped the entire instanced draw every frame, even though set_instance_count(N) was being called with N>0 and the buffer texture contained valid world positions. Symptom from the player POV: trees totally invisible despite trees being registered, packed into the buffer, GeomNode parented to scene, shader bound, instance_count non-zero, and not hidden. SECONDARY BUG uncovered during fix: my custom GLSL fragment shader read from p3d_Material.baseColor — but Panda3D only auto-binds p3d_Material via the auto-shader-generator path; custom shaders see uninitialized struct values (cyan default). Even after the bounds fix, trees rendered as cyan teardrops. FIX APPLIED: (1) OmniBoundingVolume + set_final(True) on each per-model NodePath so the cull pass always passes, (2) extract per-Geom material color via _resolve_geom_color (walks MaterialAttrib base_color / get_diffuse / ColorAttrib::T_flat), (3) _bake_per_geom_material_to_vertex_colors rewrites each Geom's vertex data with a new color column filled with the Geom's resolved color, (4) updated GLSL fragment shader to read p3d_Color instead of p3d_Material.baseColor. The bake supports the common 'one tree = trunk Geom + foliage Geom' Kenney layout: trunk gets bark color baked into its vertices, foliage gets leaf color, both draw correctly in a single instanced submission. ALSO ADDED: regression test TestInstancedTreeVisibility::test_instanced_geom_uses_omni_bounds_post_setup that builds the renderer offscreen, registers a real tree model, and asserts (a) last_active_count >= 1, (b) the per-model NodePath's bounds string contains 'infinite' (omni bsphere). The test pins WK58-BUG-004 so the bug can never silently regress.",
+            "root_cause": "OmniBoundingVolume was missing from the per-model NodePaths created by InstancedNatureRenderer._ensure_per_model. The loaded GeomNode's default bsphere is in MODEL-LOCAL coordinates (e.g. the trunk-centered ~1m sphere at the origin) regardless of where the shader-driven instances actually land in world space, so Panda3D's pre-draw view-frustum cull dropped the entire instanced GeomNode every frame whenever the camera wasn't pointed at world (0, 0).",
+            "fix_approach": "instanced_repaired",
+            "files_modified": [
+              "game/graphics/instanced_nature_renderer.py",
+              "game/graphics/ursina_terrain_fog_collab.py",
+              "tests/test_terrain_perf.py"
+            ],
+            "files_added": [],
+            "env_var_default_final": "1",
+            "regression_test_added": "tests/test_terrain_perf.py::TestInstancedTreeVisibility::test_instanced_geom_uses_omni_bounds_post_setup",
+            "per_fix_summary": {
+              "fix_a_bounding_volume": "InstancedNatureRenderer._ensure_per_model now installs OmniBoundingVolume + set_final(True) on BOTH the parent NodePath (np) and the child GeomNode (geom_np) so view-frustum culling cannot drop the draw based on local-space bsphere.",
+              "fix_b_material_color_bake": "_bake_per_geom_material_to_vertex_colors mutates the loaded GeomNode's vertex data, adding a color column populated with each Geom's resolved base color (MaterialAttrib.get_base_color / get_diffuse / ColorAttrib flat color, with fallback (1,1,1,1)). Bake runs once at load time inside _load_geom_node_for_model. Idempotent — overwrites an existing color column if present.",
+              "fix_c_shader_uniform_split": "Vertex shader now declares 'in vec4 p3d_Color' and passes it to the fragment via v_vertex_color. Fragment shader replaces uniform p3d_Material struct lookup with a vec4 u_modelColor uniform (bound per NodePath to (1,1,1,1) since the vertex bake already does the per-Geom work). The shader reads v_vertex_color * u_modelColor so future assets that bake vertex tints still modulate correctly. Math: vec3 albedo = v_vertex_color.rgb * u_modelColor.rgb; final = albedo * (ambient 0.55 + 0.55*ndotl).",
+              "fix_d_collab_diagnostic_hook": "UrsinaTerrainFogCollab now calls InstancedNatureRenderer.diagnostic_dump() after build_3d_terrain and per fog-rev change when KINGDOM_DIAG_INSTANCED_TREES=1 is set. Used during diagnosis; left in place gated on env var so future regressions can be inspected by setting the env var. Off by default — zero cost when not in use."
+            },
+            "additional_notes": [
+              "Tested both KINGDOM_URSINA_INSTANCED_TREES=1 (default) and KINGDOM_URSINA_INSTANCED_TREES=0 (legacy fallback). Both render trees correctly; both pass pytest + qa_smoke.",
+              "Honored Jaimie's 'no tree density cuts' directive. The instanced path is fully functional now — no fallback to legacy was needed, and no density reduction was applied. All 2,083 trees register and render.",
+              "Wave 4 verdict 'alignment IDENTICAL both modes' was wrong because I was comparing rocks/doodads positions, not trees themselves. Trees were entirely absent in the env=1 frame (only the bsphere-shaped icosahedra-default placeholders would have shown if anything had rendered, but the cull pass dropped them entirely)."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"0\"; python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round5_trees_bug --stem env_off --no-llm --fps-probe --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"1\"; python tools/run_ursina_capture_once.py --seconds 12 --subdir perf_round5_trees_bug --stem env_on --no-llm --fps-probe --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"1\"; $env:KINGDOM_DIAG_INSTANCED_TREES = \"1\"; $env:KINGDOM_URSINA_AUTO_EXIT_SEC = \"10\"; $env:KINGDOM_URSINA_REVEAL_ON_START = \"1\"; python main.py --renderer ursina --no-llm  # diagnostic dump confirming bsphere local-space bug",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_terrain_perf.py -v  # after bounds + shader fix (existing 5 + new 1)",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick  # env=1 default",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"0\"; python tools/qa_smoke.py --quick  # env=0 legacy fallback",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"1\"; python tools/run_ursina_capture_once.py --seconds 14 --subdir perf_round5_trees_fixed --stem revealed --no-llm --fps-probe --reveal-map",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"1\"; python tools/run_ursina_capture_once.py --seconds 14 --subdir perf_round5_trees_fixed --stem fog_active --no-llm --fps-probe",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/perf_render_benchmark.py  # final post-fix perf, env=1",
+              "exit_code": 0
+            },
+            {
+              "cmd": "$env:KINGDOM_URSINA_INSTANCED_TREES = \"0\"; python tools/perf_render_benchmark.py  # final post-fix perf, env=0 legacy",
+              "exit_code": 0
+            }
+          ],
+          "evidence": {
+            "ab_screenshots_pre_fix": {
+              "env0_path": "docs/screenshots/perf_round5_trees_bug/env_off_20260518_204321_593.png",
+              "env1_path": "docs/screenshots/perf_round5_trees_bug/env_on_20260518_204349_214.png",
+              "verdict_per_mode": {
+                "env_off": "Pre-fix capture wall clock landed BEFORE the auto-reveal had widened the visible rect. The starter island shows trees as expected (legacy path always worked); the actual screenshot-side bug was that the auto-screenshot fires at the 12s mark before the reveal-on-start has time to drag the camera open. Side-by-side with the Wave 4 instanced_off_revealed_v2 (full-map post-reveal) is the canonical proof that env=0 shows trees normally.",
+                "env_on": "Same timing limitation, but the W4 instanced_on_revealed_v2 + the W6 docs/screenshots/perf_round4_fix/revealed_20260518_165501_597.png cited by the PM both confirm the env=1 capture shows NO trees post-reveal. Combined with the diagnostic dump (which proved register_tree succeeded, fog_visible=2083, instance_count>0, shader bound — but the bsphere was at local-space (0, 0.6, 0)) the bug is unambiguous: view-frustum cull dropped the draw."
+              },
+              "diagnostic_evidence": "Diagnostic dump after fog_rev=102 showed: total_registered=2083 total_active=341 models=16 chunk_filter_on=True chunk_visible_count=48 fog_visible_tiles=2083 — all the API surface was correct; trees just weren't drawing because the cull pass killed them. Per-model bounds=bsphere, c (0, 0.6, 0), r 0.7 confirmed local-space bsphere."
+            },
+            "ab_screenshots_post_fix": {
+              "env_on_revealed": "docs/screenshots/perf_round5_trees_fixed/revealed_20260518_210843_497.png",
+              "env_on_fog_active": "docs/screenshots/perf_round5_trees_fixed/fog_active_20260518_210922_566.png",
+              "env_off_compare": "docs/screenshots/perf_round5_trees_fixed/env_off_compare_20260518_210957_976.png",
+              "milestone_screenshots": {
+                "v1_omni_bounds_only": "docs/screenshots/perf_round5_trees_fix_v1/env_on_fixed_20260518_205321_669.png — bounds fix lets trees render but they are cyan teardrops (p3d_Material uninitialized)",
+                "v2_p3d_color_path": "docs/screenshots/perf_round5_trees_fix_v2/env_on_vcolor_20260518_205539_952.png — switched fragment to read p3d_Color; trees render as white cones (GLBs have no vertex colors)",
+                "v3_per_model_uniform": "docs/screenshots/perf_round5_trees_fix_v3/env_on_colored_20260518_205828_526.png — per-model u_modelColor uniform tints each model, but each tree has multiple Geoms with different materials so only ONE color was applied per tree",
+                "v4_baked_vertex_colors": "docs/screenshots/perf_round5_trees_fix_v4/env_on_vcolor_baked_20260518_210318_680.png — per-Geom material colors baked into per-vertex colors; trees render with correct trunk-vs-foliage tints (USER CONFIRMED 'that last one looked pretty good')"
+              },
+              "visual_verdict": "OPENED BOTH FINAL PNGs and verified visually: revealed_20260518_210843_497.png shows trees scattered across the full revealed map at FULL forest density (same tile positions as the env_off baseline). Trunk-vs-foliage tints are correct per Kenney model. fog_active_20260518_210922_566.png shows the starter island with trees in the fog-visible area only and NO trees in the UNSEEN region — fog visibility integration intact. env_off_compare shows the legacy path renders trees with the same density and positions, confirming visual parity. Jaimie confirmed via in-chat message that the v4 baked-vertex-color iteration 'looked pretty good' — checked-in code matches that iteration plus the wired-up safety net of the per-model uniform set to white."
+            },
+            "pytest_full": "tests/test_terrain_perf.py — 6 passed, 0 failed in 2.12s. ALL 6 pass under both KINGDOM_URSINA_INSTANCED_TREES=1 (default) AND =0 (legacy). The new TestInstancedTreeVisibility::test_instanced_geom_uses_omni_bounds_post_setup builds the real renderer offscreen, registers a real Kenney tree GLB, calls update_buffer, and asserts (a) last_active_count >= 1 (the 'actually packed' invariant), (b) the per-model NodePath bounds string contains 'infinite' (the 'cull pass cannot drop us' invariant). Pins WK58-BUG-004 so the regression can't silently come back.",
+            "qa_smoke_result": "PASS exit_code=0 in BOTH modes (env=1 default and env=0 legacy fallback).",
+            "perf_render_benchmark_after_fix": {
+              "env_1_instanced_after_avg_fps": 28.4,
+              "env_1_instanced_after_p50_fps": 29.5,
+              "env_1_instanced_after_p90_fps": 34.9,
+              "env_0_legacy_after_avg_fps": 27.4,
+              "env_0_legacy_after_p50_fps": 28.5,
+              "env_0_legacy_after_p90_fps": 33.2,
+              "wave_6_baseline_after_avg_fps": 31.0,
+              "delta_vs_wave6_fps": -2.6,
+              "delta_vs_pre_wk58_baseline_fps": "+14.9 (28.4 vs ~13.5 starting pt)",
+              "notes": "Slight ~2.6 FPS regression vs Wave 6 attributed to (a) per-Geom vertex-color bake adding a one-time CPU cost at load time and (b) OmniBoundingVolume disables view-frustum culling for the 16 instanced tree GeomNodes, so all 16 NodePaths get walked every frame even when the camera is pointed at an empty corner of the map. The CPU chunk filter still drops per-instance draws to ~341 visible at default cam, so the GPU vertex throughput hit is small. Trade-off accepted: 2-3 FPS is well within the stretch headroom (we are at 28.4 vs the pre-WK58 baseline of ~13.5) AND honors Jaimie's hard directive that perf must NEVER come at the cost of correct rendering."
+            },
+            "root_cause_explanation": "Hardware-instanced rendering in Panda3D 1.10 uses NodePath.set_instance_count(N) plus a custom GLSL shader that reads per-instance state from a buffer texture in the vertex stage. The shader computes per-instance worldPos = instancePos + p3d_Vertex.xyz * scale, then projects to clip space via p3d_ModelViewProjectionMatrix. The CRITICAL detail my Wave 4 missed: Panda3D's view-frustum cull happens BEFORE the GPU sees the instance buffer, and it tests the GeomNode's own RenderState bounding volume — which is in MODEL-LOCAL space (e.g. ~1m bsphere around the model's local origin). The shader-driven per-instance translation is INVISIBLE to the cull pass, so Panda3D was rejecting the entire instanced submission whenever the local bsphere fell outside the camera's view frustum, which happens whenever the camera is pointed anywhere except world (0, 0). The fix is the canonical pattern for shader-driven instancing: replace the GeomNode's bounds with an OmniBoundingVolume (infinite extent) and set_final(True) so Panda3D never tries to auto-compute tighter bounds from the mesh data. This matches the documented approach in Panda3D's hardware instancing samples. SECONDARY BUG: custom GLSL shaders cannot read p3d_Material (only the auto-shader generator binds it), and Kenney GLBs have NO per-vertex color column. The fix was to bake each Geom's MaterialAttrib base color into a new vertex-color column at load time so the shader's p3d_Color input gets the right trunk-vs-foliage tint."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10 (Perf Lead): explore tighter per-chunk GeomNode partitioning so the OmniBoundingVolume doesn't disable cull entirely. Possible approach: bucket trees by 64x64 tile super-chunks and make each super-chunk its own GeomNode with a tile-bounding bsphere. Would restore per-chunk cull at the cost of more draw calls. Only worth pursuing if the ~3 FPS hit shows up as a regression on lower-tier hardware.",
+            "Agent 09 (ArtDirector): the baked vertex colors come from MaterialAttrib.get_base_color which is the PBR 'base color' value. For the Kenney pack on this hardware that produces correct trunk tints but slightly muted/teal foliage compared to legacy rendering. If a richer look is wanted, consider augmenting the bake with the model's diffuse texture (sample the texel center) or switch the shader path to use a real PBR pipeline. Out of scope for W7."
+          ]
         }
       }
     }
