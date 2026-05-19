@@ -5149,6 +5149,1432 @@
           "blockers": []
         }
       }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "master_plan_ref": ".cursor/plans/master_plan_building_nature_sprints.md",
+        "notes": "WK46 Stage 3: BuilderPeasant gathers per-peasant wood by chopping trees (5s) + harvesting log pile (5s) before building; chopping only on tiles with Visibility != UNSEEN; log piles are render-only via snapshot.log_stacks."
+      },
+      "rounds": {
+        "wk46_r0_kickoff": {
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_id": "wk46_r0_kickoff",
+          "status": "done",
+          "summary_bullets": [
+            "SimEngine: added deterministic Stage 3 helpers (find_nearest_choppable_tree_for_builder, chop_tree_at, harvest_log_at) enforcing Visibility != UNSEEN and growth >= 0.50; chop clears TileType.TREE->GRASS and updates growth lookup immediately.",
+            "Snapshot contract: added SimStateSnapshot.log_stacks and wired SimEngine.log_stacks into build_snapshot; game_state now includes sim bridge (game_state['sim']=self) for BuilderPeasant to call helpers without import cycles.",
+            "Ursina: added sync_log_stacks() (log_stackLarge model, scale by growth) and renderer wiring; HUD shows peasant Wood X / required when fields exist."
+          ],
+          "files_changed": [
+            "game/entities/nature.py",
+            "game/entities/builder_peasant.py",
+            "game/sim/snapshot.py",
+            "game/sim_engine.py",
+            "game/graphics/ursina_renderer.py",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/ui/hud.py"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "121 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ],
+          "blockers": [
+            "Plan note: runtime model file assets/models/environment/log_stackLarge.glb is owned by Agent 15; this round assumes it exists so Ursina can load via _environment_model_path('log_stackLarge')."
+          ]
+        },
+        "wk46_r0_followup_construction_stage_prefabs": {
+          "sprint_id": "wk46-stage3-lumberjack-builders",
+          "round_id": "wk46_r0_followup_construction_stage_prefabs",
+          "status": "done",
+          "summary_bullets": [
+            "Fixed Ursina prefab staging for versioned base prefabs (farm_v2/food_stand_v2) so they can still pick existing stage JSONs named farm_build_20_v1 / farm_build_50_v1 and food_stand_build_20_v1 / food_stand_build_50_v1.",
+            "Result: farms/food stands now render plot → 20% → 50% → final prefab during construction instead of jumping from plot to final."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_prefabs.py"
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "125 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "errors=0 warns=46 baseline"
+            }
+          },
+          "how_to_test": [
+            "python -m pytest tests/",
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report",
+            "python main.py --renderer ursina --no-llm"
+          ]
+        }
+      }
+    },
+    "orch_tiny_warrior_red": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json → sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis",
+        "notes": "R3: canonical Agent 03 log + live Ursina blue-shirt proof for orchestrator verifier; pixel source remains tracked warrior PNGs until Agent 09 art pass."
+      },
+      "rounds": {
+        "orch_r2_diagnose_warrior_red_ursina_path": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r2_diagnose_warrior_red_ursina_path",
+          "status": "done",
+          "what_i_changed": [
+            "No code or asset edits. Traced live default Ursina path and verified shirt RGB comes from HeroSpriteLibrary loading assets/sprites/heroes/warrior/*/frame_*.png (shirt sample (70,120,255)), not from TerrainTextureBridge cache bugs or class tint (textured billboards force ent.color=white in sync_billboard_entity)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -c \"from game.graphics.hero_sprites import HeroSpriteLibrary; import config; HeroSpriteLibrary._cache.clear(); c=HeroSpriteLibrary.clips_for('warrior', size=int(config.TILE_SIZE)); print('idle0_shirt_px', c['idle'].frames[0].get_at((16,18)))\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Printed idle0_shirt_px (70, 120, 255, 255) — blue shirt from PNG pipeline"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "default_ursina_argv": {
+              "command_equivalent": "python main.py",
+              "source": "main.py parse_args: --renderer default \"ursina\"; omitted flags use config/env LLM provider",
+              "entry_chain": [
+                "main.py:main() branch args.renderer == \"ursina\"",
+                "game.graphics.ursina_app.UrsinaApp.__init__ → GameEngine(...); UrsinaRenderer(world) attached by app loop",
+                "UrsinaRenderer.update(snapshot) → _sync_snapshot_heroes",
+                "hc_key = str(getattr(h, \"hero_class\", \"warrior\") or \"warrior\").lower()  # sim heroes use string \"warrior\" (e.g. game/engine.py HeroClass.WARRIOR.value)",
+                "HeroSpriteLibrary.clips_for(hc_key, size=config.TILE_SIZE) → _try_load_asset_frames loads assets/sprites/heroes/<class>/<action>/*.png when present, else procedural",
+                "_unit_anim_surface → surface = clip.frames[idx]; cache_key = (\"hero\", \"anim\", class_key, clip_name, idx, TILE_SIZE, hash(HeroSpriteSpec))",
+                "TerrainTextureBridge.surface_to_texture(hsurf, cache_key=…) → GPU texture",
+                "UrsinaEntityRenderCollab.sync_billboard_entity(..., tex=htex, tint_col=col, shader=sprite_unlit_shader): if tex is not None, ent.color forced to color.white unless tint_textured=True (heroes use default False) — shirt color is texture RGB only"
+              ]
+            },
+            "verification": {
+              "png_source": "git ls-files assets/sprites/heroes/warrior/idle/ includes frame_000.png … frame_005.png",
+              "pixel_sample_tile": "(16,18) on idle frame 0 after cache clear",
+              "rgba_observed": "(70, 120, 255, 255)",
+              "target_spec": "HeroSpriteSpec.warrior procedural = (180, 45, 45) — used only when PNG folder has no loadable frames",
+              "contrast_enum_path": "str(HeroClass.WARRIOR) -> 'HeroClass.WARRIOR'; clips_for('heroclass.warrior') misses asset folder and falls back to procedural red — engine uses .value 'warrior' so live path loads PNGs"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 09: Recolor or replace tracked warrior PNGs under assets/sprites/heroes/warrior/ (idle/walk/attack/hurt as needed) so shirt matches dark red target (180,45,45), or remove PNGs to force procedural clips_for('warrior') until art is ready.",
+            "Human gate: Jaimie visual on `python main.py` (default Ursina) after Agent 09 lands art fix."
+          ]
+        },
+        "orch_r3_canonical_log_then_live_blue_diagnosis": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+          "status": "done",
+          "what_i_changed": [
+            "Wrote orchestrator-contract round on canonical `.cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json` (fixes R2 verifier: expected sprint key on this path, not agent_03_AUTO.json).",
+            "Re-verified live default Ursina hero billboard path from `main.py` through `UrsinaRenderer._sync_snapshot_heroes` → `HeroSpriteLibrary.clips_for` → `TerrainTextureBridge.surface_to_texture` → `UrsinaEntityRenderCollab.sync_billboard_entity`; no plumbing/cache/tint bug — shirt RGB is still loaded from PNG frames.",
+            "No code edits (root cause is pixel content under `assets/sprites/heroes/warrior/`, Agent 09 ownership per AGENTS.md)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -c \"from game.graphics.hero_sprites import HeroSpriteLibrary; import config; HeroSpriteLibrary._cache.clear(); c=HeroSpriteLibrary.clips_for('warrior', size=int(config.TILE_SIZE)); print('idle0_shirt_px', c['idle'].frames[0].get_at((16,18)))\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Printed idle0_shirt_px (70, 120, 255, 255) — blue shirt from PNG, not procedural (180,45,45)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete --cwd <repo> --sprint orch_tiny_warrior_red --round orch_r3_canonical_log_then_live_blue_diagnosis --agent 03 --token 20bb24ec-0529-44e4-be72-a2c9818ea091 --status done --summary \"…\" --log-path .cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json --log-round 'sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"]'",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "PowerShell: use single quotes around --log-round so bracket/backslash escapes are not eaten; receipt wrote tools/ai_studio_orchestrator/runs/inbox/20bb24ec-0529-44e4-be72-a2c9818ea091.completion.json"
+            }
+          ],
+          "evidence": {
+            "default_ursina_argv": {
+              "command_equivalent": "python main.py",
+              "argv_notes": "main.py: --renderer default is \"ursina\" (line 47–51); --no-llm omitted uses .env LLM_PROVIDER",
+              "entry_chain": [
+                "main.py: main() → args.renderer == \"ursina\" → game.graphics.ursina_app.UrsinaApp",
+                "UrsinaRenderer.update(snapshot) → _sync_snapshot_heroes",
+                "hc_key = str(getattr(h, \"hero_class\", \"warrior\") or \"warrior\").lower()",
+                "HeroSpriteLibrary.clips_for(hc_key, size=config.TILE_SIZE) in game/graphics/hero_sprites.py — _try_load_asset_frames(hero_class, action) reads assets/sprites/heroes/<class>/<action>/*.png when present",
+                "UrsinaRenderer._unit_anim_surface → TerrainTextureBridge.surface_to_texture(hsurf, cache_key=...)",
+                "ursina_entity_render_collab.py sync_billboard_entity: when tex is not None and tint_textured is False, ent.color is forced to color.white — billboard displays unmultiplied texture RGB (no class tint on warriors)"
+              ]
+            },
+            "verification": {
+              "named_functions": [
+                "HeroSpriteLibrary.clips_for",
+                "HeroSpriteLibrary._try_load_asset_frames",
+                "UrsinaRenderer._sync_snapshot_heroes",
+                "UrsinaEntityRenderCollab.sync_billboard_entity",
+                "TerrainTextureBridge.surface_to_texture"
+              ],
+              "shirt_pixel_probe": {
+                "sample_xy": "(16, 18) on idle frame 0 after HeroSpriteLibrary._cache.clear()",
+                "rgba": "(70, 120, 255, 255)",
+                "interpretation": "Matches perceptual blue shirt on screen; procedural fallback would use HeroSpriteSpec.warrior (180, 45, 45) only if PNG folder had no loadable frames"
+              }
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Agent 09: Recolor/replace warrior PNGs under assets/sprites/heroes/warrior/ (all actions) toward (180,45,45) shirt, or temporarily remove PNGs to force procedural red until art is ready.",
+            "Agent 11: qa_smoke + canonical log for this sprint/round after Agent 09 (per PM hub).",
+            "Human gate: Jaimie default Ursina visual only after engineering proof chain accepted (no commit/push)."
+          ]
+        }
+      }
+    },
+    "wk47_unit_instancing_core": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
+        "notes": "WK47: unit hardware instancing — R2a GPU skeleton + R2b snapshot/animation UV sync + UrsinaRenderer gate."
+      },
+      "rounds": {
+        "wk47_r2a_shader_geomnode": {
+          "sprint_id": "wk47_unit_instancing_core",
+          "round_id": "wk47_r2a_shader_geomnode",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/instanced_unit_shader.py: Ursina GLSL Shader — instanced billboard (camera right/up from ModelView), per-instance pos/scale + UV region via texelFetch(sampler1D instanceData), fragment samples p3d_Texture0 with alpha discard; compiled at import with shader_includes=False.",
+            "game/graphics/instanced_unit_renderer.py: InstancedUnitRenderer — UnitAtlasBuilder + pygame_surface_to_ursina_texture (nearest filter), Panda3D buffer texture RGBA32F (2 texels/instance), GeomNode quad with set_instance_count, set_instances + test_draw (default 10 positions); reparents to ursina.scene; destroy() removes node."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pre-receipt validation"
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete … --log-round \"sprints[\\\"wk47_unit_instancing_core\\\"].rounds[\\\"wk47_r2a_shader_geomnode\\\"]\" (SDK double-quote form)",
+              "exit_code": 1,
+              "cwd": "repo root",
+              "note": "PowerShell: failed with Unknown option — use single-quoted log-round instead"
+            },
+            {
+              "command": "npx tsx tools\\ai_studio_orchestrator\\src\\cli.ts complete --cwd C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom --sprint wk47_unit_instancing_core --round wk47_r2a_shader_geomnode --agent 03 --token c936a1ad-8023-4b01-b68e-df5878962c2d --status done --summary \"Agent 03 delivered R2a instanced_unit_shader + InstancedUnitRenderer (GeomNode, buffer texture, test_draw). UrsinaRenderer unwired per scope.\" --log-path .cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json --log-round 'sprints[\"wk47_unit_instancing_core\"].rounds[\"wk47_r2a_shader_geomnode\"]'",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Receipt: tools/ai_studio_orchestrator/runs/inbox/c936a1ad-8023-4b01-b68e-df5878962c2d.completion.json"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "post-edit validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "WK47 R2b: Wire snapshot sync + animation UV resolution + UrsinaRenderer gate KINGDOM_URSINA_INSTANCING=1 (master plan Wave 2b).",
+            "Optional: headless import check — instanced_unit_shader.compile() runs at import; monitor if any CI path requires lazy compile."
+          ]
+        },
+        "wk47_r2b_sync_integration": {
+          "sprint_id": "wk47_unit_instancing_core",
+          "round_id": "wk47_r2b_sync_integration",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/instanced_unit_renderer.py: InstancedUnitRenderer.update(snapshot) — buffer uploads for heroes, enemies (fog-visible), peasants/guards/tax_collector; UV from UnitAtlasBuilder; _resolve_unit_anim_clip_frame parallels UrsinaRenderer._unit_anim_surface (_hero_base_clip / _enemy_base_clip, triggers, wall-clock _frame_index_for_clip); anim-dict pruning for removed ids; keep set_instances/test_draw for smokes.",
+            "game/graphics/ursina_renderer.py: when KINGDOM_URSINA_INSTANCING=1, after terrain/fog/grid — sync buildings only, InstancedUnitRenderer.update for units, then projectiles, status text, _destroy_removed_entities; legacy unit billboards skipped."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Instanced path draws atlas RGB only — legacy hero class billboard tints/builder pea tint parity if/when Shader or second pass lands (coordinate with Agent 09).",
+            "WK47 Wave 3: Agent 10 perf_stress_compare + Agent 11 QA gates per PM hub."
+          ]
+        }
+      }
+    },
+    "wk48_hd2d_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk48_hd2d_polish.plan.md",
+        "notes": "Wave 1: sub-pixel smoothing + inside-building instancing pass"
+      },
+      "rounds": {
+        "wk48_r1_wave1_smoothing_compositing": {
+          "sprint_id": "wk48_hd2d_polish",
+          "round_id": "wk48_r1_wave1_smoothing_compositing",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/instanced_unit_renderer.py: _visual_pos_by_id + exponential smoothing (SMOOTHING_SPEED=15) with snap past TELEPORT_DIST_SQ; dual RGBA32F buffers and GeomNodes (_geom_node_outside transparent bin 1 / _geom_node_inside depth_test off + bin fixed order 100, MAX_INSIDE_INSTANCES=128); two-pass pack — outside heroes + enemies + workers, then inside-building heroes; prune stale visual positions with anim state.",
+            "set_instances/test_draw: upload outside buffer only; zero inside instance count.",
+            "No edits to game/graphics/ursina_renderer.py — render order handled entirely in InstancedUnitRenderer."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS (~34s)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "npx tsx \"tools\\\\ai_studio_orchestrator\\\\src\\\\cli.ts\" complete --cwd \"C:\\\\Users\\\\Jaimie Montague\\\\OneDrive\\\\Documents\\\\Kingdom\" --sprint \"wk48_hd2d_polish\" --round \"wk48_r1_wave1_smoothing_compositing\" --agent \"03\" --token \"b22512a6-e4a0-4514-9b70-1c8d04df83e9\" --status done --summary \"WK48 Wave 1: exponential visual smoothing + dual-buffer inside/outside instancing; qa_smoke PASS.\" --log-path \".cursor\\\\plans\\\\agent_logs\\\\agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk48_hd2d_polish\\\"].rounds[\\\"wk48_r1_wave1_smoothing_compositing\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Orchestrator receipt: tools/ai_studio_orchestrator/runs/inbox/b22512a6-e4a0-4514-9b70-1c8d04df83e9.completion.json"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "determinism_guard + pytest 126 passed + observe_sync scenarios DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "wk48 Wave 2 (Agent 09): blob shadow GeomNode binds to outside buffer only."
+          ]
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "notes": "WK49: profile contracts (r2) + engine integration (r4)"
+      },
+      "rounds": {
+        "wk49_r2_profile_contracts": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r2_profile_contracts",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/hero_profile.py: frozen/slots dataclasses — HeroIdentitySnapshot, HeroProgressionSnapshot, HeroVitalsSnapshot, HeroInventorySnapshot, KnownPlaceSnapshot, HeroMemoryEntry, HeroCareerSnapshot, HeroNarrativeSeedSnapshot, HeroProfileSnapshot with to_dict() via asdict.",
+            "Helpers: safe_percent, sort_known_places, sort_memory_entries, format_target_label (duck-typed; no pygame/UI/LLM imports).",
+            "tests/test_hero_profile_contract.py: JSON serialization, deterministic sort helpers, optional defaults."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "131 passed (historical)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "PASS"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "131 passed (historical)"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Completed in wk49_r4_profile_integration."
+          ]
+        },
+        "wk49_r4_profile_integration": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r4_profile_integration",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/hero_profile.py: build_hero_profile_snapshot; format_location_compact / compact_target_label; discover_known_buildings_after_fog (deterministic POI scan, first-sight discovered_place memory only); TILE_SIZE-based world fallback; PROFILE_DISCOVERY_BUILDING_TYPES",
+            "game/sim_engine.py: get_game_state exposes hero_profiles_by_id + selected_hero_profile; ranger tile XP unchanged with increment_career_stat(tiles_revealed); fog hook calls discovery helper after ranger XP",
+            "tests/test_hero_profile_integration.py: snapshot JSON, fog dedupe, game_state profiles; tests/test_engine.py: REQUIRED_GAME_STATE_KEYS extended"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "146 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "146 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08 (wk49_r5): consume selected_hero_profile in HeroPanel / HERO_FOCUS."
+          ]
+        },
+        "wk49_r8_bugfix_known_places_ranger_xp": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r8_bugfix_known_places_ranger_xp",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim_engine.py: run discover_known_buildings_after_fog whenever FoW performs a rebuild and hero_revealers is non-empty; pass tile_currently_visible(gx,gy) using world.visibility==Visibility.VISIBLE.",
+            "game/sim/hero_profile.py: discovery supports frontier overlap (newly_revealed) plus first-sight encounter when a footprint tile is under the hero radius and currently visible; skips visibility checks once place_id exists to avoid memory/visit tick spam.",
+            "tests/test_hero_profile_integration.py: encounter fills known places without frontier; no duplicate memory/spam visits; suppressed when predicate says not visible.",
+            "Ranger reveal XP untouched (still keyed only on UNSEEN->VISIBLE frontier + ranger class); invariant remains Agent 05 / grant_tile_exploration_xp."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "153 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "153 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: wk49_r8 verification pass (UI spot-check Known Places > 0 + ranger xp bar coherence per PM prompt)."
+          ]
+        }
+      }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "notes": "WK50 Phase 2B engine: deterministic direct-prompt target resolution"
+      },
+      "rounds": {
+        "wk50_r6_phase2b_engine_ui": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r6_phase2b_engine_ui",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_targets.py: resolve known-place IDs via HeroProfileSnapshot world_pos; parse compass headings; deterministic explore waypoint (map-clamped); strip untrusted coordinate keys from LLM-shaped dicts.",
+            "game/sim/direct_prompt_exec.py: apply_validated_direct_prompt_physical — move_to uses engine resolution first; explore_direction sets llm_move_request from compass + player message (chat text stays on spoken_response path only).",
+            "game/engine.py: store last chat player message for direction parsing; route chat tool actions through direct_prompt_exec instead of raw apply_llm_decision.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: unit coverage for resolution helpers."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "182 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_commit.py: sovereign movement commit (hero.target type direct_prompt, TTL expiry helpers, clear on urgency).",
+            "game/sim/direct_prompt_exec.py: successful move_to and explore_direction now call attach_direct_prompt_move (immediate set_target_position) instead of deferring via llm_move_request only; explore uses MOVING + moving_to_destination intent.",
+            "ai/basic_ai.py: direct_prompt in committed-destination set; expire TTL each tick; clear commit when castle is under attack or damaged defend path takes over.",
+            "ai/behaviors/bounty_pursuit.py: arrival handling for direct_prompt (return_home rest at nearest home/castle/inn; buy_potions -> marketplace brief enter/SHOPPING; other sub_intents idle); treat direct_prompt and bounty as non-interrupt in tail guard.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: commit + exec regression tests."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "193 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06/08: align spoken obey/refusal copy with commit outcomes per same-round PM prompts (UI must not claim accepted without commit)."
+          ]
+        },
+        "wk50_r15_direct_prompt_commitment_duration": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r15_direct_prompt_commitment_duration",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_commit.py: R15 — direct_prompt commitment no longer TTL-expires during active MOVING+routing; TTL only cleans orphan non-MOVING targets. Added DIRECT_PROMPT_STUCK_ABORT_MS escape when stuck_active exceeds dwell threshold (soft-lock safety).",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: regression for long sim-time en-route preservation and stuck abort."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "208 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: WK50 R15 verification round per PM hub."
+          ]
+        },
+        "wk50_r16_direct_prompt_all_commands_commitment": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r16_direct_prompt_all_commands_commitment",
+          "status": "done",
+          "what_i_changed": [
+            "game/sim/direct_prompt_exec.py: R16 — for buy_item and retreat, call apply_llm_decision with normalized action when only tool_action is set, then attach_direct_prompt_move on the resulting target_position so long trips use the same sovereign direct_prompt lock as move_to / explore.",
+            "tests/test_wk50_direct_prompt_engine_resolve.py: test_apply_validated_buy_item_commits_direct_prompt, test_apply_validated_retreat_commits_direct_prompt."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "211 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "211 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 11: wk50_r16 verification per PM hub."
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "what_i_changed": [
+            "Preserved Agent 01 hero_profile known_places LLM priority slice (select_known_places_for_llm); verified deterministic ordering via tuple iteration + stable sorts only.",
+            "tests/test_hero_profile_contract.py: tests that naive [:8] drops newer inn with >8 POIs; priority slice retains inn; short lists unchanged.",
+            "game/engine.py: keyword-only playtest_start; self.playtest_start also when env KINGDOM_PLAYTEST_START=1; after sim.setup_initial_state() call apply_playtest_quick_start(self).",
+            "game/graphics/ursina_app.py: pass playtest_start from KINGDOM_PLAYTEST_START=1 into GameEngine."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py -v",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "determinism_guard PASS; pytest 224 passed inside smoke; observe scenarios PASS; DONE PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_hero_profile_contract": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py -v",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06: PM hub follow-up for known_places_llm / mock inn refusal (WK50-BUG-010).",
+            "Agent 11: sprint verification pytest spot-check after 06."
+          ]
+        }
+      }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "notes": "WK51 Phase 3 Attachment UX; r6 Ursina HUD texture fingerprint + pin dirty upload"
+      },
+      "rounds": {
+        "wk51_r6_pin_visible_fix": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r6_pin_visible_fix",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Ursina HUD GPU skip fingerprint samples every 8 rows (was 16), reducing false negatives for thin chrome (same failure mode as ~12px building-panel bars noted beside _ursina_hud_force_upload).",
+            "game/engine.py: apply_hud_pin_action sets _ursina_hud_force_upload after pin_hero and unpin_hero so the pygame→GPU path always re-uploads when pin state toggles (recall already forced via center_camera_on_world_pos)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/agent_verify_wk51_r6_pin --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "SOP 4b pygame HUD baseline; Ursina composites same pygame buffer."
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pre-receipt validation"
+            },
+            {
+              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"wk51_attachment_ux_phase3\" --round \"wk51_r6_pin_visible_fix\" --agent \"03\" --token \"807298ef-72f4-4bbf-ab57-32211bbf4eb8\" --status done --summary \"Ursina HUD: tighter row fingerprint (stride 8) + force GPU upload on pin/unpin; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json\" --log-round \"sprints[\\\"wk51_attachment_ux_phase3\\\"].rounds[\\\"wk51_r6_pin_visible_fix\\\"]\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Completion receipt: tools/ai_studio_orchestrator/runs/inbox/807298ef-72f4-4bbf-ab57-32211bbf4eb8.completion.json"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "screenshots": {
+              "note": "Pygame capture path; WK51 pin may not appear in ui_panels scenario without hero selection — upload/throttle fix is engine-side.",
+              "out_dir": "docs/screenshots/agent_verify_wk51_r6_pin",
+              "manifest": "docs/screenshots/agent_verify_wk51_r6_pin/manifest.json"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 / human: confirm pin glyph visible under default Ursina after layered HUD fix."
+          ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "game/engine.py: In apply_hud_pin_action → recall_pinned_hero, after center_camera_on_world_pos, mirror try_select_hero HUD behavior — right_panel_visible = True and _micro_view.enter_hero_focus(target). Recall now reopens the right hero panel (HERO_FOCUS). center_camera_on_world_pos already sets _ursina_hud_force_upload."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "After apt install nodejs npm (initial image had no npm)"
+            },
+            {
+              "command": "python3 -m pip install -q -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Cloud image lacked pytest deps for qa_smoke"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "pre-receipt validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "npm_orchestrator_install": {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "Required cloud bootstrap; npm missing until apt install nodejs npm"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 wave 2: gates + optional ui_pensels capture for right panel / pin emoji."
+          ]
+        }
+      }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "notes": "WK52 R1: event plumbing + PinAlertWatcher skeleton for pin alerts / radar / memorial UI wave"
+      },
+      "rounds": {
+        "wk52_r1_plumbing_and_ux": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r1_plumbing_and_ux",
+          "status": "done",
+          "what_i_changed": [
+            "game/events.py: GameEventType.HERO_LEVEL_UP.",
+            "game/entities/hero.py: _event_bus, set_event_bus(), level_up() emits HERO_LEVEL_UP after stat updates.",
+            "game/engine.py: try_hire_hero calls hero.set_event_bus(self.event_bus) after heroes.append.",
+            "game/sim_engine.py: BOUNTY_CLAIMED payloads include hero_id at both emit sites.",
+            "game/entities/buildings/base.py: HERO_ENTERED_BUILDING includes hero_id string.",
+            "game/ui/pin_slot.py: low_health_alerted_ms, pinned_name.",
+            "game/ui/pin_alert_watcher.py: NEW — subscribe(), check_low_health (25% threshold, 30s cooldown; cooldown skipped when low_health_alerted_ms==0 for first alert), _matches, recall_flash_needed on _fire.",
+            "tests/test_wk52_event_plumbing.py: HERO_LEVEL_UP, building enter hero_id, watcher _matches, cooldown, PinSlot fields."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pip install -q -r requirements.txt",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m pytest tests/test_wk52_event_plumbing.py -v",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_wk52": {
+              "command": "python3 -m pytest tests/test_wk52_event_plumbing.py -v",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "determinism_guard": {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08: wire PinAlertWatcher in HUD (add_message + subscribe(event_bus)), consume recall_flash_needed for Recall flash; radar/watch card/memorial per WK52 plan."
+          ],
+          "recommended_next_actions": []
+        }
+      }
+    },
+    "wk53_world_beauty_terrain": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk53_world_beauty_terrain.plan.md",
+        "notes": "WK53: World beauty — blue sky, misty fog, terrain elevation (hills, mountains, cliffs)."
+      },
+      "rounds": {
+        "wk53_r1_sky_fog_architecture": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r1_sky_fog_architecture",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Changed background/clear color from near-black (0.06,0.07,0.09) to sky blue (0.53,0.72,0.88). Added exponential atmospheric distance fog (Panda3D Fog with setExpDensity 0.008) matching sky color — replaces the scene.clearFog() that was needed when linear fog caused banding.",
+            "game/graphics/ursina_terrain_fog_collab.py: Changed UNSEEN fog from black (0,0,0,0xFF) to grey mist (153,153,166,0xFF ~0.6,0.6,0.65). Changed SEEN overlay from semi-transparent black to lighter grey (128,128,140,0x66 ~0.5,0.5,0.55,0.4). Switched fog texture filtering from nearest-neighbor (None) to bilinear (True) for smooth tile-edge transitions.",
+            "config.py: Updated URSINA_FOG_SEEN_ALPHA default from 0xAA to 0x66 (~0.4 alpha) to match the lighter grey mist look.",
+            ".cursor/plans/wk53_terrain_architecture_contract.md: NEW — terrain elevation architecture contract covering heightmap data model (2x sub-tile Perlin noise), mesh approach (custom Ursina Mesh recommended over GeoMipTerrain), public API (get_terrain_height in new terrain_height.py), fog-of-war on terrain (shader-based recommended), atmospheric fog (exponential, tested), and Wave 2 file ownership map."
+          ],
+          "architecture_decisions": [
+            "Heightmap: 2x sub-tile resolution, Perlin noise 3-octave layered, castle-flat radius, stored as list[list[float]] on World.",
+            "Terrain mesh: custom Ursina Mesh with heightmap-displaced vertices (not GeoMipTerrain). 10K-40K vertices at project scale — no LOD needed.",
+            "Public API: get_terrain_height(world_x, world_z) in new game/graphics/terrain_height.py. Bilinear interpolation. Single source of truth for all entity Y-placement.",
+            "Fog-of-war on non-flat terrain: shader-based on terrain mesh (not conforming overlay) to avoid z-fighting.",
+            "Atmospheric fog: Panda3D exponential fog (density 0.008). Avoids linear fog banding. Fragment-shader fallback documented if driver issues arise."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe scenarios passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "268 passed; determinism_guard PASS; all observe_sync scenarios PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review of sky color + fog mist after Wave 1 (launch python main.py --provider mock and pan camera).",
+            "Wave 2: implement terrain elevation (heightmap generation + mesh + entity Y-placement) per architecture contract.",
+            "If exponential fog banding is reported during visual review, switch to fragment-shader distance fade per contract fallback.",
+            "Dependency: noise PyPI package needed for Wave 2 Perlin noise generation (add to requirements.txt)."
+          ]
+        },
+        "wk53_r2_terrain_elevation": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r2_terrain_elevation",
+          "status": "done",
+          "what_i_changed": [
+            "requirements.txt: Added noise>=1.2.2 for Perlin noise generation.",
+            "config.py: Added terrain elevation config constants — TERRAIN_HEIGHT_SCALE (8.0), TERRAIN_HILL_FREQUENCY (0.04), TERRAIN_MOUNTAIN_FREQUENCY (0.10), TERRAIN_DETAIL_FREQUENCY (0.25), TERRAIN_CLIFF_THRESHOLD (45.0), TERRAIN_WATER_LEVEL (1.0), TERRAIN_CASTLE_FLAT_RADIUS (5).",
+            "game/graphics/terrain_height.py: NEW — module-level heightmap reference + init_heightmap(), get_terrain_height() with bilinear interpolation, clear_heightmap(), is_initialized(). Single source of truth for terrain elevation queries.",
+            "game/world.py: Added generate_heightmap() — 3-octave Perlin noise at 2x sub-tile resolution (301x301 grid for 150x150 map), castle flattening with cosine falloff (5-tile radius), water tile clamping to TERRAIN_WATER_LEVEL. Called from __init__ after generate_terrain().",
+            "game/graphics/ursina_terrain_fog_collab.py: Replaced flat ground quad with heightmap-displaced indexed triangle mesh (per architecture contract). Per-vertex normals computed from adjacent height samples. Grass texture UV tiling preserved. All prop placement (trees, grass, doodads, rocks, paths, water) uses get_terrain_height() for Y. Fog quad raised above terrain peak when heightmap present. Dynamic tree saplings and log stacks also wired to terrain height.",
+            "game/graphics/ursina_renderer.py: All unit billboard Y-placement (heroes, enemies, peasants, guards, tax collector, projectiles) now adds get_terrain_height() to base Y. Building Y-placement passes terrain_y to entity render collab methods.",
+            "game/graphics/ursina_entity_render_collab.py: sync_3d_building_entity and sync_prefab_building_entity accept terrain_y parameter (default 0.0) and add it to building Y position."
+          ],
+          "implementation_decisions": [
+            "Heightmap grid: 301x301 (2x sub-tile + fence-post) for 150x150 tile map. ~90K vertices in terrain mesh — well within GPU budget.",
+            "Perlin noise octaves: hills (freq 0.04, amp 1.0), ridges (freq 0.10, amp 0.4), detail (freq 0.25, amp 0.15). Height range [0.72, 7.25] with TERRAIN_HEIGHT_SCALE=8.0.",
+            "Castle plateau: cosine falloff within 5-tile radius. Castle area height delta ~1.1 units vs ~6.5 overall — effectively flat for building placement.",
+            "Water tiles: clamped to TERRAIN_WATER_LEVEL (1.0) in heightmap generation.",
+            "Fog quad: raised to TERRAIN_HEIGHT_SCALE + 0.15 as stepping stone. Full shader-based fog integration deferred to follow-up round per architecture contract.",
+            "Terrain mesh uses unlit_shader matching existing ground plane style. Per-vertex normals computed but shader is unlit — normals will matter when lit shader is applied in polish pass.",
+            "Building Y: sampled at footprint center via get_terrain_height(). No footprint flattening this round — castle area is already flat, and most buildings are placed near castle."
+          ],
+          "commands_run": [
+            {
+              "command": "pip install noise",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "noise-1.2.2 installed successfully"
+            },
+            {
+              "command": "python -c \"from noise import pnoise2; print('OK')\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "noise package imports correctly"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — all pytest + observe_sync scenarios passed"
+            },
+            {
+              "command": "python -c \"<terrain_height verification script>\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Heightmap 301x301, castle height 3.50, castle area delta 1.12, overall range [0.72, 7.25]"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "noise_import": {
+              "command": "python -c \"from noise import pnoise2; print('OK')\"",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "terrain_height_verification": {
+              "heightmap_grid": "301x301",
+              "castle_center_height": 3.501,
+              "castle_area_height_delta": 1.119,
+              "overall_height_range": [
+                0.72,
+                7.249
+              ],
+              "height_scale_config": 8.0,
+              "status": "sensible values — castle flat, hills visible, range within budget"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review — launch python main.py --provider mock, orbit camera to verify hills, entity placement, fog coverage.",
+            "Wave 3 (Agent 09): Art direction review of terrain elevation visuals — color/density tweaks.",
+            "Wave 4 (Agent 10): FPS benchmark with terrain mesh to verify perf budget.",
+            "Follow-up: Replace fog quad with shader-based fog on terrain mesh (architecture contract section 4) to eliminate fog/terrain z-fighting on steep slopes.",
+            "Follow-up: Building footprint flattening for buildings placed on slopes outside castle area."
+          ]
+        },
+        "wk53_r3_terrain_playtest_fixes": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r3_terrain_playtest_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A — Fog of war hovers above terrain: Implemented shader-based fog on the terrain mesh per architecture contract section 4. Created game/graphics/terrain_fog_shader.py — custom GLSL shader that samples both grass albedo and fog-of-war texture in a single draw call. Fog UV coordinates are derived from grass UVs via a scale/offset uniform transform. ensure_fog_overlay() now uploads the fog texture as a shader uniform on the terrain entity (setShaderInput) instead of maintaining a separate floating fog quad. The old raised fog quad is destroyed when shader fog is active. Flat terrain fallback (no heightmap) retains the old fog quad approach.",
+            "BUG B — Terrain too hilly everywhere: Applied a flatness bias to heightmap generation. Raw Perlin noise (remapped to [0,1]) is passed through pow(raw, 2.5) before scaling to height — this compresses low-to-mid values toward zero (flat ground) while preserving peaks. Reduced TERRAIN_HEIGHT_SCALE from 8.0 to 5.0 for less extreme peaks. Added TERRAIN_FLATNESS_EXPONENT config constant (default 2.5). Result: ~58% of terrain is below 1.0 world units (relatively flat), max height ~3.9 vs previous ~7.2, castle area at 0.64.",
+            "BUG C — Camera goes underground: Added camera Y terrain clamp in ursina_app.py update(). After all pan/orbit operations, samples get_terrain_height at camera world XZ and enforces camera.world_position.y >= ground_y + 1.0. Prevents camera from clipping below terrain at any angle.",
+            "game/graphics/ursina_renderer.py: Added _terrain_ground_entity initialization attribute for shader fog texture uploads."
+          ],
+          "files_changed": [
+            "game/graphics/terrain_fog_shader.py (NEW)",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/world.py",
+            "config.py",
+            "game/graphics/ursina_app.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe_sync scenarios passed"
+            },
+            {
+              "command": "python -c \"<heightmap verification>\"",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Grid 301x301, height range [0.012, 3.907], P50=0.885, 57.6% below 1.0 world units, castle center 0.637"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "heightmap_stats": {
+              "grid": "301x301",
+              "height_range": [
+                0.012,
+                3.907
+              ],
+              "p10": 0.312,
+              "p25": 0.536,
+              "p50": 0.885,
+              "p75": 1.312,
+              "p90": 1.832,
+              "flat_below_1unit_pct": 57.6,
+              "castle_center_height": 0.637,
+              "height_scale_config": 5.0,
+              "flatness_exponent": 2.5,
+              "note": "Mostly flat terrain with distinct hill features rising where noise is strongest"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie visual review — orbit camera to verify fog hugs terrain at all angles, terrain is mostly flat with hills as features, camera does not clip below ground.",
+            "Follow-up: Building footprint flattening for buildings placed on slopes outside castle area."
+          ]
+        },
+        "wk53_r4_click_selection_fixes": {
+          "sprint_id": "wk53_world_beauty_terrain",
+          "round_id": "wk53_r4_click_selection_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "BUG A (BLOCKER) — Heroes on terrain cannot be clicked: Root cause was pick_world_xz_on_floor_y0() intersecting the ray with the y=0 plane while heroes sit at terrain height (y>0). The y=0 hit projects to a different XZ than where the hero visually appears on screen, making clicks miss. Fix: modified ursina_pick.py to iteratively refine the ray-plane intersection using terrain height lookup (3 iterations). First intersects at y=0, looks up terrain height at that XZ, re-intersects at that height, repeats. Converges on the correct terrain surface position. Also increased hero click radius from 1.0x to 1.5x hero.size (20 -> 30 sim-pixels effective) and pick the closest hero when multiple overlap.",
+            "BUG B — Buildings hard to click: Inflated building hit-test rect by half a tile (16 sim-pixels) on each side so clicks near building edges register. Added closest-center disambiguation when overlapping inflated rects. Kenney kitbash models have geometry gaps between pieces that caused misses with the exact footprint rect.",
+            "Terrain mesh entity confirmed to have collision=False (no Ursina raycast collider) — terrain geometry is not intercepting mouse picking. The bug was purely the y=0 plane intersection vs terrain height offset."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_pick.py",
+            "game/engine.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS — 268 tests passed, all observe_sync scenarios passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "root_cause_analysis": {
+              "bug_a": "pick_world_xz_on_floor_y0() ray-plane intersection at y=0 misses heroes at terrain height. Camera angle creates parallax offset between where hero visually appears and where y=0 intersection projects. Fix: iterative height refinement (3 iterations, convergent).",
+              "bug_b": "BuildingRect.collidepoint exact footprint (grid_x*32, grid_y*32, size*32, size*32) leaves no margin. Kenney kitbash models have visual gaps. Fix: 0.5-tile margin inflation + closest-center disambiguation.",
+              "terrain_collider": "terrain_ground_entity uses collision=False — NOT blocking Ursina raycasts. Root entity has no collider either."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie playtest — verify hero clicks work on hills and buildings are easier to select. Command: python main.py --provider mock"
+          ]
+        }
+      }
+    },
+    "v16_r5_hud_perf_worldspace_ui": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/hud_ui_performance_issue_resolution.md",
+        "notes": "v1.6 Round 5: HUD texture pipeline PIL bypass + world-space UI native Ursina entities"
+      },
+      "rounds": {
+        "r5_round1_pil_bypass_and_healthbars": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round1_pil_bypass_and_healthbars",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_app.py: Added module-level _flip_surface_bytes_vertical(raw_rgba, width, height) helper that reverses RGBA row order using memoryview slicing — replaces PIL.Image.transpose(FLIP_TOP_BOTTOM).",
+            "game/graphics/ursina_app.py: Replaced entire body of _refresh_ui_overlay_texture() to bypass PIL entirely. New path: pygame.image.tobytes -> _flip_surface_bytes_vertical -> panda3d.core.Texture.setRamImageAs (direct GPU upload). Eliminates PIL.Image.frombytes, PIL.transpose, PIL.tobytes, and Ursina tex.apply() (which internally did another PIL transpose). Fresh textures created via PandaTexture.setup2dTexture + setRamImageAs wrapped in Ursina Texture(panda_tex). Existing texture updates go directly to panda_tex.setRamImageAs. Size-mismatch handling recreates the PandaTexture.",
+            "PIL Image import at line 15 is now unused by this method but retained (other code may reference it; removal is out of scope)."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_app.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "307 passed, 1 warning in 36.23s"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "307 passed"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10: Run Ursina capture with --fps-probe to measure hud_texture_upload P90 after PIL bypass (target: <15ms from 49ms baseline).",
+            "Visual verification: python tools/run_ursina_capture_once.py --seconds 12 --subdir r5_pil_bypass --stem after_bypass --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8"
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 12 --subdir r5_pil_bypass --stem after_bypass --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8"
+          ]
+        },
+        "r5_round2_building_labels_and_hero_labels": {
+          "sprint_id": "v16_r5_hud_perf_worldspace_ui",
+          "round_id": "r5_round2_building_labels_and_hero_labels",
+          "status": "done",
+          "what_i_changed": [
+            "game/graphics/ursina_renderer.py: Added module-level _BUILDING_LABEL_MAP dict (28 entries) mapping building_type strings to display labels (castle->CASTLE, warrior_guild->WARRIORS, etc., plus 7 temple types).",
+            "game/graphics/ursina_renderer.py: Added module-level _sync_building_worldspace_ui(b, bts, ent, is_lair) helper that creates/updates three native Ursina child entities on each building: (1) Text label with building name (white, billboard, y=1.2), (2) HP bar quad (green/red, y=1.5, only shown when damaged), (3) Gold display Text ($amount, gold-yellow HSV, y=0.9, only shown when stash>0).",
+            "game/graphics/ursina_renderer.py: Inserted _sync_building_worldspace_ui() call before active_ids.add(obj_id) in all three building rendering paths: prefab (line ~830), 3D mesh (line ~863), billboard quad (line ~914). POI buildings and lairs are skipped by the helper.",
+            "Uses existing Text import from ursina (already at line 40). No new imports needed. Labels are created once per entity and cached via _ks_label/_ks_hp_bar/_ks_gold_label attributes. HP bar and gold display toggle enabled/disabled as values change."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_renderer.py"
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "307 passed, 1 warning in 35.92s"
+            }
+          ],
+          "evidence": {
+            "pytest": {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS",
+              "note": "307 passed"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Visual verification required: python tools/run_ursina_capture_once.py --seconds 15 --subdir r5_building_labels --stem labels --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8",
+            "Agent 10: confirm building labels are visible in Ursina capture screenshot and ursina_renderer P90 stays below 12ms."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --tb=short",
+            "python tools/run_ursina_capture_once.py --seconds 15 --subdir r5_building_labels --stem labels --no-llm --fps-probe --hero-fps-probe-count 5 --fps-warmup-sec 8",
+            "python main.py --no-llm"
+          ]
+        }
+      }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk57_underground_vertical_stacking.plan.md",
+        "notes": "WK57: Underground vertical stacking. Physical 3D underground below Y=0, shader cave holes, camera layer transitions, underground lighting, layer-aware pathfinding."
+      },
+      "rounds": {
+        "wk57_w1_datamodel_shader": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w1_datamodel_shader",
+          "status": "done",
+          "summary_bullets": [
+            "1A: Extended UndergroundChamber with world_offset_x/z fields. Extended UndergroundArea with total_width, total_height, walkability grid, floor_heightmap. Added compute_layout() method that assigns vertical-stack chamber positions, builds walkability grid (chambers + corridors), generates Perlin noise floor heightmap (fallback to flat -DEPTH if noise lib missing). Called compute_layout() at end of generate_underground_area().",
+            "1B: Added 19 UNDERGROUND_* config constants to config.py after TERRAIN_FLATNESS_EXPONENT (depth, ceiling, noise, hole radius/edge, torch color/intensity/attenuation, ambient, fog density, camera speed, max shader entrances, hero descent speed, chamber spacing, corridor width, rock texture).",
+            "1C: Replaced terrain_fog_shader fragment with cave entrance discard logic: 8 cave_entrance_N vec2 uniforms (default 99.0,99.0), cave_hole_radius/cave_edge_width floats, min-distance check with discard + edge darkening gradient. Default inputs ensure zero visual change with no cave POIs.",
+            "1D: Added update_cave_entrance_shader() method to UrsinaTerrainFogCollab: converts discovered dungeon POI grid positions to fog UV space, sets shader uniforms for up to 8 entrances. Uses existing self._r._terrain_ground_entity reference.",
+            "1E: Added self.layer = 0 to Hero.__init__ and Enemy.__init__ (surface=0, underground=-1)."
+          ],
+          "files_changed": [
+            "game/underground.py",
+            "config.py",
+            "game/graphics/terrain_fog_shader.py",
+            "game/graphics/ursina_terrain_fog_collab.py",
+            "game/entities/hero.py",
+            "game/entities/enemy.py"
+          ],
+          "gate_result": {
+            "qa_smoke_quick": "PASS (307 tests, 0 failures)",
+            "data_model_verify": "PASS (chambers=3, grid=12x31, walkable=136)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 2 (Agent 03): Generate underground terrain mesh + stalactites",
+            "Wave 3 (Agent 03): Camera layer transitions + underground lighting"
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.underground import generate_underground_area; from game.entities.poi import PointOfInterest, POI_DEFINITIONS; poi = PointOfInterest(50, 50, POI_DEFINITIONS['poi_cave_entrance']); area = generate_underground_area(poi); print(f'chambers={len(area.chambers)}, grid={area.total_width}x{area.total_height}, walkable={sum(sum(r) for r in area.walkability)}')\"",
+            "python main.py --provider mock"
+          ]
+        },
+        "wk57_w2_underground_terrain_mesh": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w2_underground_terrain_mesh",
+          "status": "done",
+          "summary_bullets": [
+            "2A: Created game/graphics/underground_terrain.py with UndergroundTerrainManager class. Generates cave floor mesh (Perlin noise heightmap vertices at Y<0, non-walkable tiles pushed to UNDERGROUND_CEILING_Y as walls), triangle indices, per-vertex normals, UVs. Stalactite decorations placed as inverted cone entities at random walkable chamber positions. Includes set_underground_visible() and destroy_all() cleanup.",
+            "2B: Added underground_areas field to SimStateSnapshot (Any, default None). Wired underground_areas into sim_engine.build_snapshot(). Added UndergroundTerrainManager instantiation to UrsinaRenderer.__init__. Added _sync_underground_meshes() method to UrsinaRenderer that iterates discovered dungeon POIs, looks up their underground area by area_id, and creates mesh + stalactites on first encounter. Called from both legacy and instanced render paths.",
+            "2C: Hooked cave entrance shader pipeline into renderer. _sync_underground_meshes() calls self._terrain_fog.update_cave_entrance_shader(pois, map_w, map_h) whenever fog_revision changes, ensuring shader uniforms are updated when POIs are discovered."
+          ],
+          "files_changed": [
+            "game/graphics/underground_terrain.py",
+            "game/sim/snapshot.py",
+            "game/sim_engine.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "gate_result": {
+            "qa_smoke_quick": "PASS (307 tests, 0 failures)",
+            "import_verify": "PASS (from game.graphics.underground_terrain import UndergroundTerrainManager -> OK)",
+            "integration_verify": "PASS (Manager created, area has 3 chambers, floor heightmap 31x12)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 3 (Agent 03): Camera layer transitions + underground lighting",
+            "Visual verification: python main.py --provider mock with KINGDOM_DEBUG_SHOW_ALL_POIS=1"
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.underground_terrain import UndergroundTerrainManager; print('OK')\"",
+            "python -c \"from game.underground import generate_underground_area; from game.entities.poi import PointOfInterest, POI_DEFINITIONS; poi = PointOfInterest(50, 50, POI_DEFINITIONS['poi_cave_entrance']); area = generate_underground_area(poi); from game.graphics.underground_terrain import UndergroundTerrainManager; mgr = UndergroundTerrainManager(); print(f'Manager created, area has {len(area.chambers)} chambers, floor heightmap {len(area.floor_heightmap)}x{len(area.floor_heightmap[0]) if area.floor_heightmap else 0}')\"",
+            "KINGDOM_DEBUG_SHOW_ALL_POIS=1 python main.py --provider mock"
+          ]
+        },
+        "wk57_w3_camera_layer_lighting_visibility": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_w3_camera_layer_lighting_visibility",
+          "status": "done",
+          "summary_bullets": [
+            "3A: Added camera layer awareness to UrsinaApp. Instance vars: _camera_active_layer (0=surface, -1=underground), _camera_transitioning, _camera_transition_target_y, _camera_transition_speed, _camera_surface_y. Public property camera_active_layer and methods begin_camera_underground_transition(target_y)/begin_camera_surface_transition(). Smooth transition lerp in update() using Ursina time.dt. Terrain clamp skipped during underground transitions. Active layer communicated to renderer each frame via renderer._camera_active_layer.",
+            "3B: Added underground torch lighting. UrsinaRenderer._create_underground_lighting(area) creates Panda3D PointLights at center of each chamber (warm torch color/intensity/attenuation from config). _remove_underground_lighting() for cleanup. Lighting creation wired into _sync_underground_meshes() after stalactite creation.",
+            "3C: Layer-aware entity visibility in UrsinaRenderer. Heroes/enemies check entity.layer vs camera_active_layer — mismatched entities hidden with ent.enabled=False. Peasants/guards/tax collector/buildings always surface — hidden when camera underground. Underground cave floor mesh always visible (seen through surface holes); stalactites/decorations only visible when camera is underground (layer -1)."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_app.py",
+            "game/graphics/ursina_renderer.py"
+          ],
+          "gate_result": {
+            "qa_smoke_quick": "PASS",
+            "import_verify_app": "PASS (camera_active_layer property exists, begin_camera_underground_transition exists, begin_camera_surface_transition exists)",
+            "import_verify_renderer": "PASS (UrsinaRenderer imports OK)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 4 (Agent 05): Layer-aware A* pathfinding + underground fog of war",
+            "Wave 5 (Agent 05): Hero descent/ascent state machine + underground spawning",
+            "Visual verification needed: python main.py --provider mock with camera transition trigger"
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_app import UrsinaApp; print('camera_active_layer property:', hasattr(UrsinaApp, 'camera_active_layer'))\"",
+            "python -c \"from game.graphics.ursina_renderer import UrsinaRenderer; print('OK')\"",
+            "KINGDOM_DEBUG_SHOW_ALL_POIS=1 python main.py --provider mock"
+          ]
+        }
+      }
+    },
+    "wk57-wave4-underground-camera-hotfix": {
+      "sprint_meta": {
+        "plan_ref": "hotfix (direct assignment from PM)",
+        "notes": "WK57 Wave 4 hotfix: Underground camera system had no player trigger. Added U key toggle + auto-follow pinned hero layer changes."
+      },
+      "rounds": {
+        "wk57_wave4_r0_hotfix": {
+          "sprint_id": "wk57-wave4-underground-camera-hotfix",
+          "round_id": "wk57_wave4_r0_hotfix",
+          "status": "done",
+          "summary_bullets": [
+            "Task 1: Added U key binding in _handle_ursina_input() to toggle camera between surface (layer 0) and underground (layer -1). Uses begin_camera_underground_transition(target_y=-7.0) and begin_camera_surface_transition(). Follows same pattern as Home/L key handlers. Blocked during chat/command mode.",
+            "Task 2: Verified terrain height clamp bypass already works correctly — line 1423 skips clamp when _camera_active_layer != 0 or _camera_transitioning is True. No changes needed.",
+            "Task 3: Added auto-follow logic in update() that tracks pinned hero layer via _hero_follow_last_layer. When pinned hero's layer changes from 0 to -1, automatically triggers begin_camera_underground_transition(). When layer changes from -1 to 0, triggers begin_camera_surface_transition(). Uses engine._find_hero_by_id() via hud._pin_slot.hero_id.",
+            "Task 4: Verified _sync_underground_meshes() in ursina_renderer.py correctly toggles visibility: cave floor (idx 0) always visible, stalactites/decorations (idx 1+) only when _camera_active_layer == -1. Buildings/heroes/enemies/peasants/guards all check _active_layer for show/hide. No changes needed.",
+            "Added _toggle_underground_camera() method alongside existing _toggle_camera_lock() and _reset_camera_to_default() for consistency."
+          ],
+          "files_changed": [
+            "game/graphics/ursina_app.py"
+          ],
+          "evidence": {
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "import_verify_app": "PASS (python -c 'from game.graphics.ursina_app import UrsinaApp; print(\"OK\")' succeeded)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Manual playtest: press U key in-game to verify camera descends/ascends smoothly",
+            "Manual playtest: pin a hero, send it into a cave entrance, verify camera auto-follows underground",
+            "Consider adding HUD indicator for current camera layer (surface/underground)"
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_app import UrsinaApp; print('OK')\"",
+            "In-game: press U to toggle underground camera view",
+            "In-game: pin a hero and watch it enter underground — camera should auto-follow"
+          ]
+        }
+      }
     }
   }
 }

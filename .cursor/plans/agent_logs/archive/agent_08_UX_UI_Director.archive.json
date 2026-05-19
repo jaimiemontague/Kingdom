@@ -2773,6 +2773,118 @@
           }
         }
       }
+    },
+    "wk20-ui-input-bridge": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk20_ui_input_bridge.plan.md",
+        "notes": "WK20 R2: Ursina mouse → fixed 1080p virtual engine.screen"
+      },
+      "rounds": {
+        "wk20_r2_implementation": {
+          "sprint_id": "wk20-ui-input-bridge",
+          "round_id": "wk20_r2_implementation",
+          "round_meta": {
+            "build_target": "UrsinaInputManager get_mouse_pos",
+            "sent_at_local": "2026-04-05"
+          },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ursina_input_manager.py: Implemented get_mouse_pos() — inverse of Ursina mouse.Mouse (window.aspect_ratio, window.size), then linear scale to virtual framebuffer (default 1920×1080 per PM). Optional constructor virtual_screen_size=(1920,1080).",
+              "Constants: _DEFAULT_VIRTUAL_SCREEN aligned with GameEngine headless_ui surface."
+            ],
+            "how_to_test": [
+              "Run Ursina viewer; move cursor to corners — HUD hit tests should align with stretched camera.ui quad (manual).",
+              "With KINGDOM_URSINA_DEBUG_INPUT=1 (Agent 12), verify printed coords vs expected virtual pixels."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+            },
+            "blockers": []
+          }
+        }
+      }
+    },
+    "wk22-3d-refinement": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk22_3d_refinement.plan.md",
+        "notes": "WK22 R1: SPRINT-BUG-004 hotkeys in Ursina"
+      },
+      "rounds": {
+        "wk22_r1_kickoff": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r1_kickoff",
+          "round_meta": {
+            "build_target": "Ursina keyboard → engine InputEvent queue",
+            "sent_at_local": "2026-04-05"
+          },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ursina_input_manager.py: Added ursina_key_to_input_event() — maps Ursina input() strings to KEYDOWN/WHEEL (matches PygameInputManager generic keys); extended _URSINA_KEY_MAP for esc/space/tab/symbols.",
+              "game/graphics/ursina_app.py: _handle_ursina_input no longer drops all keys after F12/LMB; queues converted events so tick_simulation → process_events → handle_keydown receives hotkeys."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — press 1–8, h, b, esc, tab, f3, mouse wheel zoom — should match pygame behavior."
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+            },
+            "blockers": [
+              "Chat typing in Ursina still expects pygame raw_event on KEYDOWN; not fixed in this ticket."
+            ]
+          }
+        },
+        "wk22_r3_bug_hunt_ui": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_bug_hunt_ui",
+          "round_meta": {
+            "build_target": "WK22 R3 Ursina HUD crisp + bounty click",
+            "sent_at_local": "2026-04-07"
+          },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/graphics/ursina_app.py: _force_nearest_texture_filter on HUD composite Texture (filtering=None); pointer routing treats HUD layout chrome as UI so low-alpha pixels (icons) still get virtual 1920×1080 coords; sync engine._last_ui_cursor_pos from Ursina mouse before render_pygame.",
+              "game/ui/hud.py: _layout_rects_for_screen + virtual_pointer_in_hud_chrome(); CommandBar/SpeedBar use game_state ui_cursor_pos.",
+              "game/ui/command_bar.py: render(..., mouse_pos=) for Ursina (pygame.mouse dummy).",
+              "game/engine.py + game/input_handler.py: _last_ui_cursor_pos + get_game_state ui_cursor_pos; handle_mousemove updates cursor."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — HUD text/icons should look sharp (nearest-neighbor), Bounty command button click should place bounty / match hotkey B.",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+            },
+            "blockers": []
+          }
+        },
+        "wk22_r3_final_polish_dynamic_hud_canvas": {
+          "sprint_id": "wk22-3d-refinement",
+          "round_id": "wk22_r3_final_polish_dynamic_hud_canvas",
+          "round_meta": {
+            "build_target": "WK22 R3 PM: resize pygame HUD to Ursina window — native font raster",
+            "sent_at_local": "2026-04-07"
+          },
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/display_manager.py: DisplayManager.apply_headless_ui_canvas_size(engine,w,h) — recreates engine.screen/_scaled_surface/_pause_overlay, HUD + panels on_resize, building_panel/debug_panel dimensions, clamp_camera; no pygame.display.set_mode (SDL dummy).",
+              "game/graphics/ursina_app.py: _sync_headless_ui_canvas_to_window() each frame from window.size; UrsinaInputManager.set_virtual_screen_size; invalidate HUD GPU texture when dimensions change; _hud_prefers_nearest_pixel_filter always True (1:1 texels).",
+              "game/ursina_input_manager.py: set_virtual_screen_size()."
+            ],
+            "how_to_test": [
+              "python main.py --renderer ursina — drag window corner; HUD should re-layout at new pixel size (not stretched 1080p).",
+              "python tools/qa_smoke.py --quick"
+            ],
+            "evidence": {
+              "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 PASS"
+            },
+            "blockers": []
+          }
+        }
+      }
     }
   }
 }

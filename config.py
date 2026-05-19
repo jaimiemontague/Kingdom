@@ -13,8 +13,8 @@ class WindowConfig:
     width: int = 1920
     height: int = 1080
     fps: int = 60
-    prototype_version: str = "1.5.7"
-    game_title: str = "Kingdom Sim (Prototype v1.5.7) — HUD/UI Pygame to Ursina Issues Fixed for Better FPS"
+    prototype_version: str = "1.5.8"
+    game_title: str = "Kingdom Sim (Prototype v1.5.8) — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching"
     default_borderless: bool = True
 
 

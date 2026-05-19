@@ -5672,6 +5672,1669 @@
           ]
         }
       }
+    },
+    "wk45-stage2_5-sapling-spawning": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
+        "pm_round": "wk45_r0_kickoff",
+        "notes": "Agent 11: qa_smoke --quick + validate_assets --report after Agent 03 integration (sapling spawning; removal-on-build)."
+      },
+      "rounds": {
+        "wk45_r0_kickoff_gates_2026_04_28": {
+          "round_id": "wk45_r0_kickoff_gates_2026_04_28",
+          "status": "complete",
+          "pm_context": "wk45_r0_kickoff — pm_agent_prompts['11']: gates after integration.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran sprint-required gates per PM prompt."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_28_wk45": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "DONE: PASS"
+            },
+            "validate_assets_report_2026_04_28_wk45": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "If WK45 implementation commits land after this run: re-run qa_smoke --quick and validate_assets --report and append a new round entry."
+          ]
+        }
+      }
+    },
+    "wk46-stage3-lumberjack-builders": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk46_stage3-lumberjack-builders_fec1c955.plan.md",
+        "pm_rounds": [
+          "wk46_r0_kickoff",
+          "wk46_r1_bugfix_builder_respawn_and_progress_unblock"
+        ],
+        "notes": "Agent 11 scope: final-round gate validation after Stage 3 integration + follow-up bugfix. Required gates per plan/PM: qa_smoke --quick and validate_assets --report."
+      },
+      "rounds": {
+        "wk46_r_final_gates_2026_04_29": {
+          "round_id": "wk46_r_final_gates_2026_04_29",
+          "status": "complete",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran sprint-required gates for WK46 Stage 3 + bugfix integration."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick",
+            "python tools/validate_assets.py --report"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard PASS.",
+                "pytest: 126 passed (1 warning: pygame pkg_resources deprecation).",
+                "observe_sync profiles: DONE: PASS."
+              ]
+            },
+            "validate_assets_report_2026_04_29": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline warnings)"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "recommended_next_actions": [
+            "If Jaimie is preparing a release candidate: run manual smoke per release checklist (python main.py --no-llm; python main.py --provider mock).",
+            "Optional visual-only sanity: watch builder chop/harvest log pile lifecycle in Ursina (see wk46 plan)."
+          ]
+        }
+      }
+    },
+    "orch_tiny_warrior_red": {
+      "sprint_meta": {
+        "pm_hub": "sprints['orch_tiny_warrior_red'].rounds['orch_r1_bugfix_warrior_red_visual']",
+        "notes": "Orchestrator validation sprint: Agent 09 warrior shirt Ursina cache fix (R1); Agent 11 qa_smoke --quick per pm_agent_prompts['11']."
+      },
+      "rounds": {
+        "orch_r0_impl_then_qa": {
+          "round_id": "orch_r0_impl_then_qa",
+          "status": "complete",
+          "pm_context": "orch_tiny_warrior_red / orch_r0_impl_then_qa — QA after Agent 09 implementer.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root (PowerShell) per PM."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29_orch": {
+              "command": "python tools/qa_smoke.py --quick",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "determinism_guard exit 0; pytest 126 passed (1 pygame pkg_resources deprecation warning).",
+                "observe_sync / qa_smoke profiles: determinism_guard, pytest, base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1x/0.25x/0.5x/1.0x, interior_view, quest_panel, conversation — all exit_code=0.",
+                "Harness: DONE: PASS; elapsed_ms ~32219."
+              ]
+            }
+          },
+          "files_touched_by_agent_11": [],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            }
+          ],
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Remaining gate: human visual approval (warrior shirt dark red in pygame + Ursina). No version bump, commit, or push per sprint automation policy."
+          ]
+        },
+        "orch_r1_bugfix_warrior_red_visual": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r1_bugfix_warrior_red_visual",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r1_bugfix_warrior_red_visual — QA after Agent 09 R1 cache-key fix (HeroSpriteLibrary + Ursina texture keys).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root (PowerShell) after Agent 09 R1; refreshed log evidence for orchestrator verifier (2026-04-29 verification run)."
+          ],
+          "how_to_test": [
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "qa_smoke_quick_2026_04_29_orch_r1": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "exit_code": 0,
+              "elapsed_ms": 32572,
+              "result_line": "[qa_smoke] DONE: PASS",
+              "notes": [
+                "Verification run ended_at ~2026-04-29T17:06:13Z.",
+                "Harness: DONE: PASS.",
+                "determinism_guard exit 0.",
+                "pytest: 126 passed (1 pygame pkg_resources deprecation warning).",
+                "observe_sync profiles through conversation: all exit_code=0 (base, intent_bounty, hero_stuck_repro, no-enemies, mock-LLM, speed_scaling 0.1x–1.0x, interior_view, quest_panel, conversation)."
+              ]
+            }
+          },
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            }
+          ],
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "PASS (automated). Remaining gate: Jaimie visual (Ursina + pygame); confirm warrior shirt reads dark red. No version bump / commit / push per automation policy."
+          ],
+          "recommended_next_actions": []
+        },
+        "orch_r3_canonical_log_then_live_blue_diagnosis": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r3_canonical_log_then_live_blue_diagnosis — QA wave after Agent 09 R3; engineering proof existed before QA sign-off; human Ursina/pygame gate remains with Jaimie.",
+          "what_i_changed": [
+            "No repository game or tools code edits (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root after Agent 03 + Agent 09 R3 completions.",
+            "Appended orchestrator-contract round entry with sprint_id + round_id on canonical .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json per .cursor/rules/10-orchestrator-logging-contract.mdc."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard PASS; pytest 126 passed (1 pygame pkg_resources deprecation); observe_sync profiles through conversation all exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Post-edit JSON validation (orchestrator contract)"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_orch_r3": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "pytest": "126 passed",
+              "harness_close": "[qa_smoke] DONE: PASS"
+            },
+            "engineering_proof_for_blue_shirts_ursina": {
+              "summary": "Accepted from Agent 03 canonical log (+ Agent 09): live default Ursina path loads warrior frames from PNGs; shirt pixel probe on idle frame (16,18) yields RGBA (70,120,255,255); billboard uses texture RGB with white ent.color when tint_textured is false—not a cache-key regression alone.",
+              "reference_logs": [
+                ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json — sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis",
+                ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json — same round"
+              ]
+            },
+            "human_visual_approval": {
+              "marked_by_agent_11": false,
+              "owner": "Jaimie",
+              "reason": "Per PM/orchestrator: automation stops before manual Ursina + pygame visual gate; QA does not pre-approve."
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [
+            "Pending human visual: default Ursina and pygame warrior shirt color after any art/asset follow-up.",
+            "No version bump, commit, or push from Agent 11 per sprint automation policy."
+          ],
+          "recommended_next_actions": [
+            "Jaimie: manual visual check python main.py (default Ursina) and pygame path when ready to close ORCH-WARRIOR-RED-001."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
+          "sprint_id": "orch_tiny_warrior_red",
+          "round_id": "orch_r4_screenshot_proof_dark_red_warrior_shirt",
+          "status": "done",
+          "pm_context": "orch_tiny_warrior_red / orch_r4_screenshot_proof_dark_red_warrior_shirt — QA after Agent 09 R4 (PNG shirt remap + Ursina screenshot proof + their qa_smoke PASS).",
+          "what_i_changed": [
+            "No repository game or tools code edits (Agent 11 gate validation only).",
+            "Ran python tools/qa_smoke.py --quick from repo root after Agent 09 completed R4 (screenshot + PASS in agent_09 log).",
+            "Appended orchestrator-contract round entry on agent_11_QA_TestEngineering_Lead.json."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; pytest 126 passed (1 pygame pkg_resources deprecation warning); observe_sync profiles through conversation all exit_code=0; elapsed_ms ~34082"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "Post-edit JSON validation (orchestrator contract)"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_orch_r4": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result_line": "[qa_smoke] DONE: PASS",
+              "pytest": "126 passed"
+            },
+            "agent_09_visual_proof": {
+              "reference_log": ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "log_path": "sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r4_screenshot_proof_dark_red_warrior_shirt\"]",
+              "screenshot_png": "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png",
+              "shirt_verdict_per_agent_09": "dark_red",
+              "agent_09_qa_smoke": "Agent 09 R4 log: PASS exit_code 0; Agent 11 independently re-ran qa_smoke --quick (see qa_smoke_quick_orch_r4)."
+            },
+            "human_visual_approval": {
+              "marked_by_agent_11": false,
+              "owner": "Jaimie",
+              "reason": "Per PM/orchestrator: Jaimie retains final Ursina + pygame visual sign-off; QA does not pre-approve."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Pending human visual: Jaimie manual check default Ursina and pygame paths when ready.",
+            "No version bump, commit, or push from Agent 11 per sprint automation policy."
+          ],
+          "recommended_next_actions": [
+            "Jaimie: brief playtest to confirm warrior shirt reads dark red in her environment (python main.py / python main.py --renderer pygame --no-llm as per release habits)."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
+    },
+    "wk47_unit_instancing_core": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
+        "pm_hub_round": "wk47_r3_validation",
+        "notes": "WK47 Wave 3: QA gates parallel with Agent 10 perf stress runs."
+      },
+      "rounds": {
+        "wk47_r3_validation": {
+          "sprint_id": "wk47_unit_instancing_core",
+          "round_id": "wk47_r3_validation",
+          "status": "done",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate validation only).",
+            "Ran PM-assigned gates for wk47_r3_validation: python tools/qa_smoke.py --quick; python tools/validate_assets.py --report."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_wk47_r3": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": [
+                "[qa_smoke] DONE: PASS.",
+                "pytest: 126 passed (1 pygame pkg_resources deprecation warning).",
+                "determinism_guard + observe_sync profiles through conversation: all exit_code=0."
+              ]
+            },
+            "validate_assets_wk47_r3": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Perf benchmark (KINGDOM_URSINA_INSTANCING 0 vs 1) is Agent 10 scope this round."
+          ],
+          "recommended_next_actions": [
+            "PM: pair this QA PASS with Agent 10 perf_stress_test results for WK47 validation closeout."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
+    },
+    "wk49_hero_profile_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
+        "pm_hub_round": "wk49_r6_readiness_qa_perf",
+        "notes": "WK49 R6: automated gates + ui_panels screenshot verification for Hero Profile MVP."
+      },
+      "rounds": {
+        "wk49_r6_readiness_qa_perf": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r6_readiness_qa_perf",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 QA verification only).",
+            "Ran pytest, qa_smoke --quick, validate_assets --report; ran python -m tools.capture_screenshots with plan args (ui_panels, seed 3, 1920x1080, 480 ticks, out docs/screenshots/wk49_hero_profile).",
+            "Inspected ui_panels_hero.png: selected-hero profile present with hero_id line, XP/HP, vitals/economy/gear, location/intent/state/last decision, memory/Known places; left panel text readable without obvious overlap with global HUD.",
+            "Regression: duplicate names keep distinct hero_id (test_hero_identity); selected_hero_profile non-null when hero selected (test_hero_profile_integration)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk49_r6": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "148 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick_wk49_r6": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation all exit_code=0"
+            },
+            "validate_assets_wk49_r6": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "screenshot_ui_panels_hero": {
+              "paths": [
+                "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+                "docs/screenshots/wk49_hero_profile/manifest.json"
+              ],
+              "capture_command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "checksum_sha256_manifest": "f9328c35eb3081d83795fe0a8593f7f58fca3ae723e5e55e64055205b5d2ef7a",
+              "visual_notes": "Left panel shows Gareth / Warrior Lv:1 / hero_id, XP bar, HP bar, Vitals ATK/DEF, Economy, Gear, Out|goal, Intent/State/Last decision, Memory none yet, Known places 0; no obvious overlapping labels within panel."
+            },
+            "profile_contract_tests": {
+              "duplicate_name_hero_id": "tests/test_hero_identity.py::test_duplicate_names_remain_distinct_hero_ids",
+              "selected_hero_profile_in_game_state": "tests/test_hero_profile_integration.py::test_get_game_state_exposes_profile_maps"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Sprint human gate: Jaimie 5-minute manual smoke (python main.py --no-llm) per plan — not executed by Agent 11."
+          ],
+          "recommended_next_actions": [
+            "Agent 10: perf consult for wk49_r6 per PM hub.",
+            "Agent 06: LLM readiness review for wk49_r6 per PM hub."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk49_r8_bugfix_known_places_ranger_xp": {
+          "sprint_id": "wk49_hero_profile_foundation",
+          "round_id": "wk49_r8_bugfix_known_places_ranger_xp",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Re-ran pytest, qa_smoke --quick, validate_assets --report; re-captured ui_panels screenshot (seed 3, 480 ticks).",
+            "Evidence: Known places >0 via integration tests plus screenshot Known places: 1 with Discovered Inn; ranger XP capped below next level via tests/test_hero_progression_invariant.py and snapshot field equality."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m tools.capture_screenshots --scenario ui_panels --seed 3 --out docs/screenshots/wk49_hero_profile --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk49_r8": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "153 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            "qa_smoke_quick_wk49_r8": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation exit_code=0"
+            },
+            "validate_assets_wk49_r8": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "known_places_behavior": {
+              "integration_tests": [
+                "tests/test_hero_profile_integration.py::test_fog_discovery_records_place_once_not_spam_memory",
+                "tests/test_hero_profile_integration.py::test_encounter_discovery_when_visible_without_new_reveals_populates_known_places"
+              ],
+              "screenshot_ui_panels_hero": {
+                "path": "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+                "manifest_sha256": "fc53767e3caa6642d35d333d19d7a05a5e6e2f0a4b6fa20316058a1317017782",
+                "visual_check": "Panel shows Known places: 1 and Recent Discovered Inn (Warrior hero Gareth in scenario)."
+              }
+            },
+            "ranger_xp_invariant": {
+              "tests": [
+                "tests/test_hero_progression_invariant.py::test_grant_tile_exploration_xp_many_small_grants_never_exceed_cap",
+                "tests/test_hero_progression_invariant.py::test_grant_tile_exploration_xp_large_burst_matches_single_add_xp",
+                "tests/test_hero_progression_invariant.py::test_profile_snapshot_progression_respects_cap_after_exploration_xp"
+              ],
+              "assertion_summary": "Live Hero.xp stays strictly below xp_to_level after ranger tile exploration grants; HeroProfileSnapshot progression fields mirror hero and obey xp < xp_to_level."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: extended ui_panels scenario selecting a ranger with exploration XP ticks if PM wants pixel proof of ranger bar specifically (automated invariant already covered by unit tests)."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "docs/screenshots/wk49_hero_profile/ui_panels_hero.png",
+            "docs/screenshots/wk49_hero_profile/manifest.json"
+          ]
+        }
+      }
+    },
+    "wk50_llm_context_direct_prompts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk50_llm_context_direct_prompts_396eb5fa.plan.md",
+        "pm_hub_round": "wk50_r7_final_qa",
+        "notes": "WK50 final QA (r7): full pytest + qa_smoke --quick + validate_assets; Phase 2A/2B contract coverage verified; human mock smoke steps for Jaimie."
+      },
+      "rounds": {
+        "wk50_r4_phase2a_qa_perf": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r4_phase2a_qa_perf",
+          "status": "done",
+          "what_i_changed": [
+            "Extended tests/test_wk50_phase2a_decision_contracts.py for Phase 2A verification: system prompt asserts identity/current situation/known places/JSON; user prompt JSON embedding includes moment allowed_actions, hero_profile.identity dict, current_situation.nearby_enemies, known_places with display names; triggers for RESTED_AND_READY and SHOPPING_OPPORTUNITY; consult_suppressed_by_request_state None when cooldown clear and no pending request; _enemy fixture includes hp, max_hp, attack_power for ContextBuilder.",
+            "Ran python -m pytest tests/, python tools/qa_smoke.py --quick, python tools/validate_assets.py --report after changes (all PASS)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "170 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through mock conversation exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r4": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "170 passed; WK50 Phase 2A module tests/test_wk50_phase2a_decision_contracts.py expanded to 17 cases"
+            },
+            "qa_smoke_quick_wk50_r4": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r4": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "phase2a_regression_topics": {
+              "decision_moment_triggers": "LOW_HEALTH_COMBAT, POST_COMBAT_INJURED, RESTED_AND_READY, SHOPPING_OPPORTUNITY, priority ordering",
+              "cooldown_pending": "consult_suppressed_by_request_state; should_consult_llm respects moment cooldown and pending_llm_decision",
+              "prompt_content": "AUTONOMOUS_SYSTEM_PROMPT + build_autonomous_user_prompt serialized context",
+              "mock_llm_autonomous_decision": "test_llm_brain_autonomous_path_validates_against_moment",
+              "invalid_output_fallback": "test_llm_brain_autonomous_invalid_action_falls_back -> use_potion + Fallback reasoning"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 10: parallel perf/cost consult for same round per PM hub.",
+            "Optional Human Gate A: python main.py --provider mock before Phase 2B per WK50 plan."
+          ],
+          "recommended_next_actions": [
+            "Orchestrator: advance to wk50_r5_phase2b_direct_prompt_contracts per PM send order."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_phase2a_decision_contracts.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r7_final_qa": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r7_final_qa",
+          "status": "done",
+          "pm_context": "wk50_r7_final_qa — final QA after Phase 2B engine/UI; no Agent 11 code edits this round (verification + gates + manual checklist for human).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 final QA verification only).",
+            "Verified WK50 regression coverage: Phase 2A decision moments, autonomous prompt content, invalid-output fallback; Phase 2B direct-prompt intents, validator (attack deferred, unknown place, critical HP redirect), mock provider phrases, LLMBrain conversation path; engine resolve helpers; chat panel direct-feedback strings.",
+            "Ran full gate stack: pytest tests/, qa_smoke --quick, validate_assets --report (all PASS)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "187 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation (mock LLM) exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r7": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "wk50_modules": [
+                "tests/test_wk50_phase2a_decision_contracts.py (17 tests)",
+                "tests/test_wk50_phase2b_direct_prompt_contracts.py (7 tests)",
+                "tests/test_wk50_direct_prompt_engine_resolve.py (5 tests)",
+                "tests/test_chat_direct_feedback.py (5 tests)"
+              ]
+            },
+            "qa_smoke_quick_wk50_r7": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r7": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "coverage_topics_verified": {
+              "phase2a": "Decision moment triggers, priority, cooldown/pending suppression, autonomous prompt pack strings, profile context bounds, validator, LLMBrain autonomous validate + invalid fallback",
+              "phase2b": "Supported intents MVP, attack lair deferred, unknown place stripped, critical HP explore redirect, mock provider phrases, LLMBrain conversation through mock",
+              "engine_resolve": "known place xy, explore direction clamp, place id preference",
+              "chat_ui": "accept/redirect/MVP combat-not-carried-out feedback via test_chat_direct_feedback"
+            },
+            "manual_mock_smoke_for_jaimie": {
+              "command": "python main.py --provider mock",
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "duration_minutes": "5-10",
+              "steps_from_wk50_plan": [
+                "Open a hero chat.",
+                "Ask \"how are you doing?\" and verify status response only.",
+                "Ask \"go home\" and verify response plus movement toward home/safety when feasible.",
+                "Ask \"buy potions\" and verify buy/move/refusal depending situation.",
+                "Ask \"explore east\" and verify a safe movement/explore response.",
+                "Ask \"attack the lair\" and verify MVP refuses or says it cannot do that yet, not hallucinating an attack.",
+                "Try a badly wounded hero and verify unsafe requests redirect toward healing."
+              ],
+              "agent_11_execution": "not run (human gate per sprint plan Definition of Done)"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: run manual mock smoke (python main.py --provider mock) per steps above and ticket any issues.",
+            "No commit, push, or version bump from Agent 11 per orchestration policy."
+          ],
+          "recommended_next_actions": [
+            "PM: close WK50 when human mock smoke PASS or issues are filed."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r9_hotfix_llm_bridge_herostate_import": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r9_hotfix_llm_bridge_herostate_import",
+          "status": "done",
+          "what_i_changed": [
+            "No Agent 11 code edits (verification only).",
+            "Confirmed ai/behaviors/llm_bridge.py imports HeroState from game.entities.hero (hotfix present).",
+            "Confirmed regression tests/tests/test_llm_bridge_apply_decision.py exercises fight (HeroState.FIGHTING), leave_building (HeroState.IDLE), and move_to paths that touch apply_llm_decision."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "191 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; conversation profile mock LLM exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r9": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "hero_state_branch_coverage": "tests/test_llm_bridge_apply_decision.py — test_apply_fight_sets_fighting_state (HeroState.FIGHTING); test_apply_leave_building_sets_idle_state (HeroState.IDLE after leave_building); move_to resolved/unresolved branches"
+            },
+            "qa_smoke_quick_wk50_r9": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "mock_provider_conversation": "observe_sync --scenario conversation (mock LLM request/response) exit_code=0"
+            },
+            "validate_assets_wk50_r9": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": []
+        },
+        "wk50_r11_bugfix_direct_prompt_execution": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r11_bugfix_direct_prompt_execution",
+          "status": "done",
+          "pm_context": "wk50_r11_bugfix_direct_prompt_execution — verify direct prompt execution matches committed sim state and chat overlay; gates after Agent 03/06/08 bugfix integration.",
+          "what_i_changed": [
+            "Added two WK50 R11 regression tests in tests/test_wk50_direct_prompt_engine_resolve.py: explore east applies direct_prompt commit (aligned with resolve_explore_direction_target) without llm_move_request; one BasicAI.update_hero tick preserves in-flight direct_prompt explore destination (routine AI does not clobber sovereign target on that tick)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "201 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS — determinism_guard, pytest substep, observe_sync profiles through conversation mock LLM"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r11": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_execution_coverage": {
+                "go_home_and_buy_potions_commit": "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_direct_prompt_uses_commit_not_llm_move_request — buy_potions sets hero.target type direct_prompt, llm_move_request None; bounty_pursuit arrival handles buy_potions at marketplace/blacksmith",
+                "return_home_mock_path": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_llm_brain_conversation_validates_through_mock — return_home plus move_to",
+                "explore_east_commit": "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_explore_east_commits_direct_prompt_without_llm_move_request",
+                "explore_not_overwritten_next_tick": "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_tick_preserves_direct_prompt_explore_destination — complements ai/basic_ai.py committed destination types including direct_prompt and bounty_pursuit handle_moving guard list",
+                "buy_refusals": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_buy_potions_no_potion_listing_at_shop, tests/test_wk50_phase2b_direct_prompt_contracts.py::test_buy_potions_insufficient_gold_at_shop",
+                "ui_feedback_no_false_accept": "tests/test_chat_direct_feedback.py::test_tool_claimed_but_not_committed and ::test_accept_order_with_tool_action — format_direct_prompt_hint gates success copy on physical_committed; engine sets physical_committed from apply_validated_direct_prompt_physical"
+              }
+            },
+            "qa_smoke_quick_wk50_r11": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk50_r11": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46"
+            },
+            "manual_retest_steps_no_entry_path": [
+              "Launch the game with mock LLM enabled (`--provider mock` on your usual launcher or run configuration — do not rely on typing a filesystem path).",
+              "Open a hero chat; send \"go home\" — expect movement toward home or safety when resolvable; success overlay only when a move commits.",
+              "Send \"buy potions\" — expect travel to commerce or accurate refusal (no gold, no potions sold here); no false \"applied\" hint if nothing commits.",
+              "Send \"explore east\" — expect sustained eastbound movement intent across ticks, not immediate replacement by unrelated idle routing.",
+              "Optional: provoke a validated move_to response that fails engine resolution — confirm chat hint stays in the not-applied / refused family, not \"Order applied\"."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Jaimie: run manual retest above on her integrated build if verifying end-to-end feel."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_direct_prompt_engine_resolve.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r13_peasant_void_walk_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r13_peasant_void_walk_hotfix",
+          "status": "done",
+          "pm_context": "wk50_r13_peasant_void_walk_hotfix — verify Agent 05 peasant build-target fix; base observe_sync must exercise construction without peasants marching to map origin.",
+          "what_i_changed": [
+            "No game code edits (Agent 11 verification only).",
+            "Confirmed Agent 05 peasant logic in game/entities/peasant.py: sticky _pick_build_target prioritizes in-progress scaffolds over fresh foundations (avoids void-walk to corner/origin).",
+            "Ran python tools/qa_smoke.py --quick: base profile observe_sync --qa --bounty PASS; peasant positions in run logs remained near job site (e.g. WORKING at new_building center ~2416,2416 px), not (0,0).",
+            "Ran python -m pytest tests/test_peasant_build_target.py (2 passed)."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; base profile exit_code=0 (construction + bounty QA)"
+            },
+            {
+              "command": "python -m pytest tests/test_peasant_build_target.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "2 passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_wk50_r13": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS",
+              "base_observe_sync": "tools/observe_sync.py --seconds 12.0 --heroes 10 --seed 3 --log-every 240 --qa --bounty — peasant reached WORKING adjacent to new_building; sample log lines show pos ~(2603,2367) moving toward site, then WORKING at ~(2416,2416) matching new_building center tile area"
+            },
+            "peasant_regression_tests": {
+              "command": "python -m pytest tests/test_peasant_build_target.py -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "notes": "test_pick_build_prefers_started_site_over_unstarted_when_no_sticky; test_pick_build_sticky_keeps_active_target_when_valid"
+            },
+            "implementer_reference": {
+              "agent": "05",
+              "path": "game/entities/peasant.py",
+              "fix_summary": "_pick_build_target prefers sticky target, then construction_started sites, then placed_time_ms"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r14_go_home_context_hotfix": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r14_go_home_context_hotfix",
+          "status": "done",
+          "what_i_changed": [
+            "No Agent 11 game/AI edits (verification only after Agent 06 WK50 R14 go-home context fix).",
+            "Confirmed regression coverage for hero 'go home' / return_home resolving to hire guild (validator + engine): test_validator_return_home_prefers_hero_guild_over_castle, test_validator_return_home_accepts_synthetic_guild_from_context, test_resolve_move_destination_guild_via_label_when_id_not_memorized; mock conversation path remains green via qa_smoke."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "206 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; determinism_guard + observe_sync profiles through conversation (mock LLM) exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Post-edit orchestrator JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r14": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "go_home_guild_coverage": {
+                "validator_guild_preferred": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_validator_return_home_prefers_hero_guild_over_castle",
+                "validator_no_memory_guild": "tests/test_wk50_phase2b_direct_prompt_contracts.py::test_validator_return_home_accepts_synthetic_guild_from_context",
+                "engine_resolve_guild_label": "tests/test_wk50_direct_prompt_engine_resolve.py::test_resolve_move_destination_guild_via_label_when_id_not_memorized"
+              }
+            },
+            "qa_smoke_quick_wk50_r14": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: Jaimie manual mock smoke 'go home' on a ranger hired from guild if playtest double-check desired."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r15_direct_prompt_commitment_duration": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r15_direct_prompt_commitment_duration",
+          "status": "done",
+          "pm_context": "wk50_r15_direct_prompt_commitment_duration — verify Agent 03 R15 direct_prompt commitment persists for whole journey (TTL skipped while MOVING); stuck abort hatch; routine AI does not clobber sovereign move.",
+          "what_i_changed": [
+            "Verified game/sim/direct_prompt_commit.py R15 behavior: expire_direct_prompt_commit_if_timed_out skips TTL while HeroState.MOVING with target_position; orphan IDLE cleanup still uses DIRECT_PROMPT_COMMIT_TTL_MS; stuck dwell clears routing via DIRECT_PROMPT_STUCK_ABORT_MS.",
+            "Added tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_many_ticks_preserve_direct_prompt_after_long_sim_time — 40 BasicAI ticks with sim time past legacy TTL window plus march progress; bounty list present; sovereign direct_prompt return_home preserved.",
+            "Existing regression retained: test_direct_prompt_commit_survives_past_ttl_while_moving_far, test_direct_prompt_commit_can_abort_when_stuck_too_long, test_basic_ai_tick_preserves_direct_prompt_explore_destination; bounty_pursuit.handle_moving returns early for target type direct_prompt."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "209 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "implementer_reference": {
+              "agent": "03",
+              "module": "game/sim/direct_prompt_commit.py",
+              "r15_summary": "TTL does not expire sovereign commit during active MOVING navigation; stuck_abort clears after prolonged stuck_active"
+            },
+            "pytest_wk50_r15": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_long_journey_coverage": [
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_direct_prompt_commit_survives_past_ttl_while_moving_far",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_many_ticks_preserve_direct_prompt_after_long_sim_time",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_basic_ai_tick_preserves_direct_prompt_explore_destination",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_direct_prompt_commit_can_abort_when_stuck_too_long"
+              ]
+            },
+            "qa_smoke_quick_wk50_r15": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional: Jaimie playtest far 'go home' / long explore east after sovereign accept to confirm feel matches automation."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_wk50_direct_prompt_engine_resolve.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r17_direct_prompt_integration_tests": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r17_direct_prompt_integration_tests",
+          "status": "done",
+          "pm_context": "wk50_r17 — comprehensive direct prompt integration tests (mock + ContextBuilder + validator + exec); catches false refusals e.g. buy potions with gold + known market.",
+          "what_i_changed": [
+            "Added tests/test_direct_prompt_integration.py: LLMBrain mock path for status_report, return_home, buy potions (far + adjacent xfail), explore east + exec, seek healing, go to inn, rest (brain + validator-only rest_until_healed + exec), attack lair deferral; validator promotion test for buy_item when in range.",
+            "Added tools/observe_sync.py scenario direct_prompt_integration — early exit runs pytest on integration file only.",
+            "Added qa_smoke --quick profile direct_prompt_integration (WK50 Phase 2B).",
+            "Adjacent-market affordable case marked xfail(strict=False) until Agent 06 fixes mock/blob validation (WK50-BUG-008)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "10 passed, 1 xfailed (near-market buy potions until mock fix)"
+            },
+            {
+              "command": "python tools/observe_sync.py --scenario direct_prompt_integration --no-enemies",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "delegates to pytest integration module"
+            },
+            {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "221 passed, 1 xfailed, 1 warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "PASS including new direct_prompt_integration profile"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation"
+            }
+          ],
+          "evidence": {
+            "integration_module": "tests/test_direct_prompt_integration.py",
+            "wk50_bug_008_xfail": "test_integration_buy_potions_adjacent_to_market_affordable_llm_brain — succeeds when MockProvider includes shop_items (or full ctx) in pre-validation",
+            "qa_smoke_profile": "direct_prompt_integration (WK50 Phase 2B mock + validator + exec)"
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Agent 06: remove xfail by fixing mock pre-validation / prompt blob shop_items for buy_potions when can_shop.",
+            "Agent 11_verify: after Agent 06, rerun qa_smoke --quick and confirm xfail becomes pass."
+          ],
+          "files_touched_by_agent_11": [
+            "tests/test_direct_prompt_integration.py",
+            "tools/observe_sync.py",
+            "tools/qa_smoke.py",
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r18_direct_prompt_arrival_handlers": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r18_direct_prompt_arrival_handlers",
+          "status": "done",
+          "pm_context": "wk50_r18 — verify Agent 06 arrival handling in ai/behaviors/bounty_pursuit.py:handle_moving after direct prompt fixes (inn entry, rest/healing arrival, explore leg extensions).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 verification only).",
+            "Reviewed WK50 R18 wiring in ai/behaviors/bounty_pursuit.py: direct_prompt arrivals call start_resting_at_building for inn (with pending_task/rest_inn), enter_building_briefly or castle rest for go_to_known_place; rest_until_healed/seek_healing/retreat use _find_safety_building_for_arrival; explore_direction chains up to two resolve_explore_direction_target extensions from seeded bearing.",
+            "Ran full pytest and qa_smoke --quick; direct_prompt_integration profile green."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "222 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; direct_prompt_integration observe_sync exit_code=0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "pytest_wk50_r18": {
+              "command": "python -m pytest tests/ -q --tb=line",
+              "exit_code": 0,
+              "status": "PASS",
+              "direct_prompt_coverage": [
+                "tests/test_direct_prompt_integration.py::test_integration_go_to_inn_llm_brain",
+                "tests/test_direct_prompt_integration.py::test_integration_rest_until_healed_llm_brain",
+                "tests/test_direct_prompt_integration.py::test_validator_rest_until_healed_outdoors_moves_toward_home",
+                "tests/test_direct_prompt_integration.py::test_integration_explore_east_llm_brain_and_exec"
+              ]
+            },
+            "qa_smoke_quick_wk50_r18": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "implementer_reference": {
+              "agent": "06",
+              "module": "ai/behaviors/bounty_pursuit.py",
+              "notes": "handle_moving direct_prompt branch: go_to_known_place inn -> start_resting_at_building + pending_task; explore_direction -> leg extensions _DIRECT_PROMPT_EXPLORE_*"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "WK50-BUG-009 acceptance: Jaimie manual mock playtest inn enter / rest outdoors / long explore east if desired beyond automation."
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r19_partial_llm_places_playtest_wireup": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r19_partial_llm_places_playtest_wireup",
+          "status": "done",
+          "pm_context": "wk50_r19 -- QA after Agents 03/06: hero_profile.select_known_places_for_llm for known_places_llm slice, ai/context_builder + mock, GameEngine/Ursina KINGDOM_PLAYTEST_START wired per PM hub (pm_preexisting_code_changes retained).",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 gate verification only); honored PM directive not to revert Agent 01 pre-lands.",
+            "Confirmed automated coverage for WK50-BUG-010 slice (priority inn in LLM-sized cap) via tests/test_hero_profile_contract.py and mock go-to-inn integration via tests/test_direct_prompt_integration.py.",
+            "Verified merge gate: python tools/qa_smoke.py --quick including direct_prompt_integration profile."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed, 1 pygame pkg_resources warning"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; all observe_sync profiles exit 0"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator log JSON validation post-edit"
+            }
+          ],
+          "evidence": {
+            "pytest_r19_targets": {
+              "command": "python -m pytest tests/test_hero_profile_contract.py tests/test_direct_prompt_integration.py -q --tb=short",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "qa_smoke_quick_wk50_r19": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "pm_reference": {
+              "hub": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json",
+              "round": "wk50_r19_partial_llm_places_playtest_wireup",
+              "preexisting_notes": [
+                "game/sim/hero_profile.py — LLM_PRIORITY_PLACE_TYPES, select_known_places_for_llm()",
+                "ai/context_builder.py — select_known_places_for_llm for known_places_llm rows",
+                "game/sim/playtest_quick_start.py — wired via Agents 03 (GameEngine + Ursina)"
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Optional manual: launch with KINGDOM_PLAYTEST_START=1 dense layout for rapid LLM playtest beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        },
+        "wk50_r16_direct_prompt_all_commands_commitment": {
+          "sprint_id": "wk50_llm_context_direct_prompts",
+          "round_id": "wk50_r16_direct_prompt_all_commands_commitment",
+          "status": "done",
+          "pm_context": "wk50_r16 — verify Agent 03 extended sovereign attach_direct_prompt_move to buy_item and retreat (same long-journey lock as move_to/explore/go home).",
+          "what_i_changed": [
+            "No Agent 11 product code edits; verification only after Agent 03 R16 direct_prompt_exec wiring.",
+            "Confirmed game/sim/direct_prompt_exec.py applies apply_llm_decision then attach_direct_prompt_move when target_position is set for buy_item and retreat.",
+            "Regression: tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_buy_item_commits_direct_prompt and ::test_apply_validated_retreat_commits_direct_prompt assert hero.target type direct_prompt and MOVING state (sovereign commit)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "211 passed, 1 warning (pygame pkg_resources deprecation)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "implementer_reference": {
+              "agent": "03",
+              "module": "game/sim/direct_prompt_exec.py",
+              "r16_summary": "buy_item and retreat branches call attach_direct_prompt_move after LLM path sets target_position; fallback uses _infer_physical_after_llm if tp missing"
+            },
+            "pytest_wk50_r16": {
+              "command": "python -m pytest tests/",
+              "exit_code": 0,
+              "status": "PASS",
+              "sovereign_commit_tests": [
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_buy_item_commits_direct_prompt",
+                "tests/test_wk50_direct_prompt_engine_resolve.py::test_apply_validated_retreat_commits_direct_prompt"
+              ]
+            },
+            "qa_smoke_quick_wk50_r16": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "PM human_gate manual_playtest: far-market 'buy potions' and retreat under mock provider if desired beyond automation."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
+    },
+    "wk51_attachment_ux_phase3": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk51_phase_3_attachment_94c67db4.plan.md",
+        "pm_hub_round": "wk51_r7_recall_right_panel_pin_emoji",
+        "notes": "WK51 R7 wave 2: gates + Phase 4b capture for Recall/right panel + pin emoji (📌)."
+      },
+      "rounds": {
+        "wk51_r6_pin_visible_fix": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r6_pin_visible_fix",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Ran tools/capture_screenshots.py ui_panels per sprint prompt; opened ui_panels_hero.png — Pin shows as white letter P in hero panel header immediately left of the X close control.",
+            "Ran python tools/qa_smoke.py --quick — harness DONE: PASS."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_qa_verify --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "Orchestrator contract validation after log edit"
+            }
+          ],
+          "evidence": {
+            "screenshot_ui_panels_hero_wk51_r6": {
+              "paths": [
+                "docs/screenshots/wk51_r6_qa_verify/ui_panels_hero.png",
+                "docs/screenshots/wk51_r6_qa_verify/manifest.json"
+              ],
+              "visual_verdict": "PASS: P pin control visible at top-right of left Gareth hero panel header, left of X.",
+              "capture_command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r6_qa_verify --size 1920x1080 --ticks 480"
+            },
+            "qa_smoke_quick_wk51_r6": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "docs/screenshots/wk51_r6_qa_verify/ui_panels_hero.png",
+            "docs/screenshots/wk51_r6_qa_verify/manifest.json"
+          ]
+        },
+        "wk51_r7_recall_right_panel_pin_emoji": {
+          "sprint_id": "wk51_attachment_ux_phase3",
+          "round_id": "wk51_r7_recall_right_panel_pin_emoji",
+          "status": "done",
+          "what_i_changed": [
+            "No game or tools source edits (Agent 11 verification only).",
+            "Installed cloud VM deps: apt nodejs/npm; pip install -r requirements.txt (pygame, pytest, etc.) so gates could run under python3.",
+            "Ran python3 tools/qa_smoke.py --quick — PASS.",
+            "Ran python3 tools/validate_assets.py --report — exit 0 (errors=0, warns=46 baseline missing 3D models).",
+            "Ran python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify — exit 0.",
+            "Inspected ui_panels_hero.png: hero Gareth selected; 📌 (red pushpin) visible in left panel header left of X; right-hand HERO_FOCUS column (mini-map strip + detail) visible."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m pip install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "Cloud agent: python symlink absent; used python3 for parity with qa_smoke internal shebang"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "errors=0 warns=46"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "note": "post-edit JSON validation"
+            }
+          ],
+          "evidence": {
+            "qa_smoke_quick_wk51_r7": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk51_r7": {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "screenshot_ui_panels_wk51_r7": {
+              "paths": [
+                "docs/screenshots/wk51_r7_qa_verify/ui_panels_hero.png",
+                "docs/screenshots/wk51_r7_qa_verify/manifest.json"
+              ],
+              "visual_verdict": "ui_panels scenario selects hero Gareth: left hero panel open; 📌 emoji/pushpin visible in header (left of close X); right column shows HERO_FOCUS strip (mini-map + chat area). Recall-specific reopen flow not exercised by headless ticks — see follow_ups.",
+              "capture_command": "python3 tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk51_r7_qa_verify --size 1920x1080 --ticks 480"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie manual: pin hero, dismiss panels, click Recall — confirm right HERO_FOCUS panel opens (WK51-R7-BUG-001). Command from repo root: python main.py --renderer pygame --provider mock"
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
+    },
+    "wk52_attachment_phase3_radar_alerts_memorial": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk52_attachment_ux_phase3_radar_alerts_memorial.plan.md",
+        "pm_hub_round": "wk52_r2_perf_qa",
+        "notes": "WK52 R2 perf/QA wave: full gate stack + wk52_pin_alerts deterministic capture; Jaimie human retest via pm_human_retest_request."
+      },
+      "rounds": {
+        "wk52_r2_perf_qa": {
+          "sprint_id": "wk52_attachment_phase3_radar_alerts_memorial",
+          "round_id": "wk52_r2_perf_qa",
+          "status": "done",
+          "what_i_changed": [
+            "Confirmed WK52 regression tests present: tests/test_wk52_event_plumbing.py, test_wk52_watch_card.py, test_wk52_memorial_card.py (no blocker).",
+            "Cloud env: pip install -r requirements.txt (pytest/pygame); used python3 (python symlink absent).",
+            "Ran gates: pytest tests/, qa_smoke --quick, validate_assets --report, determinism_guard.py — all exit 0.",
+            "Ran tools/capture_screenshots.py --scenario wk52_pin_alerts → docs/screenshots/wk52_phase3/ (4 PNGs + manifest).",
+            "Inspected captures: watch card above minimap (expanded/minimized); radar shows multi-color dots; memorial full-screen overlay with epitaph visible.",
+            "Generated screenshot artifacts under docs/screenshots/wk52_phase3/ (repo gitignores docs/screenshots — not committed; re-run capture command to reproduce)."
+          ],
+          "commands_run": [
+            {
+              "command": "npm --prefix tools/ai_studio_orchestrator install --silent",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m pip install -r requirements.txt -q",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "pytest and missing deps for cloud VM"
+            },
+            {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "summary": "241 passed"
+            },
+            {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "[qa_smoke] DONE: PASS"
+            },
+            {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "errors=0 warns=46"
+            },
+            {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "notes": "PASS: no violations found"
+            },
+            {
+              "command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "/workspace"
+            },
+            {
+              "command": "python3 -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "/workspace",
+              "note": "post-edit JSON validation"
+            }
+          ],
+          "evidence": {
+            "pytest_wk52_r2": {
+              "command": "python3 -m pytest tests/ -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "count": 241
+            },
+            "qa_smoke_quick_wk52_r2": {
+              "command": "python3 tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "result_line": "[qa_smoke] DONE: PASS"
+            },
+            "validate_assets_wk52_r2": {
+              "command": "python3 tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline)"
+            },
+            "determinism_guard_wk52_r2": {
+              "command": "python3 tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "screenshots_wk52_pin_alerts": {
+              "paths": [
+                "docs/screenshots/wk52_phase3/wk52_watch_card_expanded.png",
+                "docs/screenshots/wk52_phase3/wk52_watch_card_minimized.png",
+                "docs/screenshots/wk52_phase3/wk52_pin_radar_minimap.png",
+                "docs/screenshots/wk52_phase3/wk52_memorial_card.png",
+                "docs/screenshots/wk52_phase3/manifest.json"
+              ],
+              "capture_command": "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480",
+              "visual_verdict": "Headless scenario frames watch card (expanded shows HP/level/name Gareth + live radar), minimized variant, radar with colored entity dots and pinned hero emphasis, and memorial overlay (In Memoriam + class/stats/epitaph). Interactive items in pm_human_retest_request (toast timing, Recall flash, 30s cooldown) require Jaimie live play."
+            }
+          },
+          "pm_human_retest_request": [
+            "1. Pin a hero. Confirm watch card appears above minimap.",
+            "2. Deselect. Confirm left menu height adjusts.",
+            "3. Watch card minimized = 14px header peeks above minimap. Click to expand.",
+            "4. Radar shows colored dots: gold=heroes, red=enemies, blue-grey=buildings, dark-red=lairs, cyan=guild.",
+            "5. Pinned hero dot has white outline on radar.",
+            "6. HP drops below 25%: HUD toast + Recall button flashes red 3x.",
+            "7. Wait 30s -- low-health alert must NOT re-fire until HP drops again.",
+            "8. Hero levels up: toast '{name} reached level {N}!'.",
+            "9. Hero enters inn: toast '{name} is resting at the inn.'.",
+            "10. Bounty claimed: toast '{name} collected a bounty!'.",
+            "11. Click Memorial button. Full-screen pause overlay opens.",
+            "12. Heroes stop moving while memorial open.",
+            "13. Overlay shows name, class, level, stats, epitaph.",
+            "14. Click to close. Game resumes.",
+            "15. Recall click auto-expands watch card.",
+            "16. No crashes or console errors."
+          ],
+          "how_to_test": [
+            "python3 -m pip install -r requirements.txt -q",
+            "python3 -m pytest tests/ -v",
+            "python3 tools/qa_smoke.py --quick",
+            "python3 tools/validate_assets.py --report",
+            "python3 tools/determinism_guard.py",
+            "python3 tools/capture_screenshots.py --scenario wk52_pin_alerts --seed 3 --out docs/screenshots/wk52_phase3 --size 1920x1080 --ticks 480"
+          ],
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: run pm_human_retest_request checklist live (pygame recommended: python main.py --renderer pygame --provider mock)."
+          ],
+          "recommended_next_actions": [],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+            "(local only, gitignored) docs/screenshots/wk52_phase3/*.png + manifest.json"
+          ]
+        }
+      }
+    },
+    "wk57_underground_vertical_stacking": {
+      "sprint_meta": {
+        "plan_ref": "wk57_underground_vertical_stacking",
+        "pm_hub_round": "wk57_wave6_final_verification",
+        "notes": "WK57 Wave 6 (final verification): 6-gate QA pass for underground vertical stacking sprint."
+      },
+      "rounds": {
+        "wk57_wave6_final_verification": {
+          "sprint_id": "wk57_underground_vertical_stacking",
+          "round_id": "wk57_wave6_final_verification",
+          "status": "done",
+          "pm_context": "wk57_underground_vertical_stacking Wave 6 — final QA verification of functionally complete sprint. 6 gates executed in order.",
+          "what_i_changed": [
+            "No repository code changes (Agent 11 final QA verification only).",
+            "Executed all 6 gates in sequence: smoke suite, asset validation, underground tests, regression spot checks, import verification, data model integrity."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "[qa_smoke] DONE: PASS; 332 passed, 1 warning; determinism_guard + all observe_sync profiles exit_code=0"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (missing_model_file baseline)"
+            },
+            {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "25 passed, 1 warning"
+            },
+            {
+              "command": "python -m pytest tests/test_hero.py tests/test_combat.py tests/test_poi_interaction.py tests/test_enemy.py -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "hero=11, combat=7, poi_interaction=19, enemy=7 — all passed"
+            },
+            {
+              "command": "python -c import checks (5 one-liners)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "underground OK, underground_terrain OK, LayerPathfinder OK, shader OK, hero.begin_descent exists: True"
+            },
+            {
+              "command": "python -c data model integrity (generate_underground_area + validate)",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "chambers=4 grid=12x34 walkable_cells=158 heightmap_size=34x12 entrance_at=(50,50) all_chambers_connected=True"
+            }
+          ],
+          "evidence": {
+            "gate_1_smoke_suite": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "pytest_count": "332 passed, 1 warning",
+              "result_line": "[qa_smoke] DONE: PASS",
+              "profiles_all_exit_0": true
+            },
+            "gate_2_asset_validation": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "status": "PASS",
+              "summary": "errors=0 warns=46 (missing_model_file baseline — expected and OK)"
+            },
+            "gate_3_underground_tests": {
+              "command": "python -m pytest tests/test_underground.py -v",
+              "exit_code": 0,
+              "status": "PASS",
+              "count": "25 passed",
+              "suites": [
+                "TestUndergroundDataModel (5)",
+                "TestUndergroundFog (4)",
+                "TestLayerPathfinder (4)",
+                "TestHeroTransitions (5)",
+                "TestHeroRetreat (5)",
+                "TestDungeonScoring (2)"
+              ]
+            },
+            "gate_4_regression_spot_checks": {
+              "status": "PASS",
+              "test_hero": "11 passed",
+              "test_combat": "7 passed",
+              "test_poi_interaction": "19 passed",
+              "test_enemy": "7 passed"
+            },
+            "gate_5_import_verification": {
+              "status": "PASS",
+              "checks": {
+                "underground_import": "OK",
+                "underground_terrain_import": "OK",
+                "layer_pathfinder_import": "OK",
+                "terrain_fog_shader_import": "OK",
+                "hero_begin_descent_exists": true
+              }
+            },
+            "gate_6_data_model_integrity": {
+              "status": "PASS",
+              "chambers": 4,
+              "grid": "12x34",
+              "walkable_cells": 158,
+              "heightmap_size": "34x12",
+              "entrance_at": "(50,50)",
+              "all_chambers_connected": true,
+              "notes": "chambers>=3 met; non-zero walkable cells; heightmap matches grid; entrance matches POI position; all non-root chambers connected"
+            }
+          },
+          "blockers": [],
+          "bugs_found": [],
+          "follow_ups": [],
+          "recommended_next_actions": [
+            "Sprint is clear for release. All 6 gates PASS with 0 failures and 0 regressions."
+          ],
+          "files_touched_by_agent_11": [
+            ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json"
+          ]
+        }
+      }
     }
   }
 }

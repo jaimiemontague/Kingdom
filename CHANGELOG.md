@@ -1,5 +1,75 @@
 # Changelog
 
+## Prototype v1.5.8 — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching
+
+### Performance Summary
+| Metric | v1.5.7 | v1.5.8 |
+|---|---|---|
+| `after_avg` FPS post-`/revealmap` | 13.5 | **28.4** (+14.9, 2.1×) |
+| `visible_chunks` at default cam | 225 / 256 (88%) | **48 / 256 (~19%)** |
+| `tracked_props` | 10,504 | **1,017** |
+| `enabled_outside_visible_chunks` | 931 | **0** |
+
+Note: the 13.5 FPS figure is the pre-WK58 baseline measured at the start of this sprint — it is the post-`/revealmap` `after_avg` carried into WK58, not the headline v1.5.7 metric (v1.5.7 focused on HUD/UI texture upload and pre-reveal frame time). For this sprint the meaningful comparison is post-reveal `after_avg`: 13.5 → 28.4 FPS.
+
+### Tree Instancing (Phase 4)
+- **New renderer:** `game/graphics/instanced_nature_renderer.py` — custom GLSL buffer-texture shader replaces ~2,083 individual tree entities with ~16 instanced GeomNodes (one per Kenney tree model).
+- **Per-tree data in a buffer texture:** Each tree's `(world_x, world_y, world_z, scale)` is packed into a buffer texture; per-instance world transform is applied in the vertex shader via `gl_InstanceID`.
+- **`OmniBoundingVolume()` on each instanced model** so Panda3D's view-frustum cull doesn't drop the entire instanced draw. Without this, Panda3D sees a model-local bounding sphere far from any actual world-space instance and culls everything.
+- **Per-Geom material colors baked into vertex colors** at load time (`_bake_per_geom_material_to_vertex_colors`) so the custom shader can render trunk + foliage + crown tints correctly without relying on Panda3D's `p3d_Material` auto-bind (which only works for the auto-shader generator, not custom shaders).
+- **Env flag:** `KINGDOM_URSINA_INSTANCED_TREES` (default `"1"` = ON). Tree density unchanged at the 1,000-sapling cap — forest density preserved.
+
+### Terrain Fog Shading Fix (the big single-win)
+- WK53's heightmap migration broke `ensure_fog_overlay`'s early-out gate. The original check was:
+  ```python
+  if int(fog_revision) == my_rev and _fog_entity is not None:
+      return
+  ```
+  but WK53 replaced the legacy fog-entity quad with a shader-uniform path that leaves `_fog_entity = None` forever — so the early-out never fired and the 62,500-tile fog loop + GPU texture upload was running every frame even when fog hadn't changed.
+- **Fix:** heightmap-aware early-out (`or _terrain_ground_entity is not None`).
+- **Result:** `ensure_fog_overlay` p50 dropped from **19.0ms to 0.001ms** — the single biggest FPS win of the sprint (+11.5 FPS in isolation).
+
+### Static Terrain Batching (Phase 3)
+- `_batch_static_terrain_for_chunks` merges grass / doodads / path stones / water tiles / sparse rocks into 8×8 fog batches via Panda3D `flatten_strong()` (with `flatten_medium` / no-flatten fallback for material safety).
+- **Trees excluded** from batching — they have dynamic growth scaling and stay individual (then get instanced — see Tree Instancing above).
+- **Env flag for tuning:** `KINGDOM_URSINA_STATIC_BATCH_SIZE` (default `"8"`). Lower = more batches, finer fog edges; higher = fewer batches, coarser fog edges.
+
+### Culling + Frustum Fixes (Phase 1 + Phase 2)
+- **Visibility composition:** `_ks_fog_visible` AND `_ks_chunk_visible` bits so chunk-cull correctly re-applies after fog changes. Previously the camera-delta short-circuit left ~931 fog-enabled entities sitting outside the visible rect.
+- **Panda3D `base.camLens` extrusion** replaces the old `cam_y * 1.8` heuristic for `_get_visible_tile_rect` (with a heuristic fallback for headless tests and a 6-tile margin). Visible chunks at default cam dropped from **225 / 256 (88%) to 48 / 256 (~19%)**.
+- **Path stones (+997 entities) registered in visibility tracking for the first time** — previously they bypassed culling entirely and were always rendered.
+
+### Cave-Entrance Shader DCE Guard (small win)
+- WK57 disabled the cave-hole feature CPU-side, but the GLSL fragment shader was still computing 8× `distance()` + `min()` calls per fragment over 1.6M screen fragments. Wrapped in `if (cave_hole_radius > 0.0) { ... }` for GPU dead-code elimination.
+
+### Building & Unit Dirty Checks (small wins)
+- Position and color writes on **buildings** now skip when values haven't changed.
+- HP-bar updates on **heroes / enemies / peasants / guards** now skip when values haven't changed.
+- `_ks_last_position`, `_ks_last_color` patterns mirror the existing `_ks_last_scale` from prior sprints.
+
+### Music Muted by Default
+- `_music_volume` default changed from `1.0` to `0.0` in `game/audio/audio_system.py`. Master and SFX sliders unchanged. Players can re-enable music from the audio settings.
+
+### Test Tooling
+- **New:** `tools/perf_render_benchmark.py` — FPS A/B around `/revealmap`, with `--csv`, `--warmup`, `--measure` flags.
+- **New:** `tests/test_terrain_perf.py` — 7 tests (path tracking, culling reapply, visible rect bounds, static batch reduction, fog overlay early-out, instanced tree visibility, terrain height invariance).
+- **Updated:** `tools/run_ursina_capture_once.py` gained a `--reveal-map` flag.
+
+### Available but OFF — GeoMipTerrain LOD (Wave 8 / Wave 5 candidate 4.C)
+- `game/graphics/terrain_geomipterrain.py` implements a Panda3D `GeoMipTerrain`-based ground mesh with distance-based LOD. Behind env flag `KINGDOM_URSINA_GEOMIPTERRAIN` (default `"0"` = OFF).
+- Tried during this sprint to close the remaining zoom-out FPS gap; Jaimie playtest on 2026-05-19 found **no measurable zoom-out FPS improvement plus a visible elevation regression** caused by the 250-tile → 513×513 heightfield resample (GeoMipTerrain requires a 2^n+1 grid).
+- Code stays in the repo for future research but is **dormant by default**. To re-enable for experimentation:
+  ```powershell
+  $env:KINGDOM_URSINA_GEOMIPTERRAIN = "1"
+  python main.py
+  ```
+  Expect elevation distortion at distance.
+- `get_terrain_height(world_x, world_z)` invariant across env modes is asserted by `TestTerrainHeightInvariance` so props / units / buildings never drift if it's toggled on.
+
+### Docs
+- Master plan: `.cursor/plans/Ursina Entities Overload Solution.md`
+- Wave 5 deep-profile findings: `.cursor/plans/wk58_round5_profile_findings.md`
+
 ## Prototype v1.5.7 — HUD/UI Pygame to Ursina Issues Fixed for Better FPS
 
 ### HUD Texture Pipeline Optimization (Phase 1 + Phase 3)

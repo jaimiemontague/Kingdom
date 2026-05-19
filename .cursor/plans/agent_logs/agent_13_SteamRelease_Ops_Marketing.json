@@ -782,6 +782,78 @@
           ]
         }
       }
+    },
+    "wk58_ursina_entities_overload": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",
+        "version_target": "Prototype v1.5.8",
+        "version_title": "Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching",
+        "notes": "Sprint-close version bump round. Agent 13 produces CHANGELOG entry + README version stamp + config.py version constants; PM bundles into single sprint-close commit."
+      },
+      "rounds": {
+        "wk58_w9_version_bump_v158": {
+          "sprint_id": "wk58_ursina_entities_overload",
+          "round_id": "wk58_w9_version_bump_v158",
+          "round_meta": {
+            "wave": 9,
+            "build_target": "Version bump to v1.5.8 — add CHANGELOG.md top entry, update README.md version stamp, bump config.py prototype_version and game_title.",
+            "received_at_local": "2026-05-19T00:00:00-07:00"
+          },
+          "prompt_text": "Agent 13: ship v1.5.8 release entry. Title 'Prototype v1.5.8 — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching'. CHANGELOG mirror v1.5.7 style with: perf summary table (after_avg 13.5 -> 28.4 FPS, visible_chunks 225 -> 48, tracked_props 10504 -> 1017, enabled_outside_visible_chunks 931 -> 0), Tree Instancing (Phase 4 + OmniBoundingVolume + vertex-color bake), Terrain Fog Shading Fix (heightmap-aware early-out — single biggest win), Static Terrain Batching (Phase 3, 8x8 batches, trees excluded), Culling+Frustum Fixes (Phase 1+2, base.camLens extrusion, path stones tracked), Cave shader DCE guard, Building/Unit dirty checks, music muted by default, test tooling, dormant GeoMipTerrain LOD behind KINGDOM_URSINA_GEOMIPTERRAIN. Update README.md version line. Bump config.py prototype_version + game_title 1.5.7 -> 1.5.8. DO NOT COMMIT.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Shipped CHANGELOG.md v1.5.8 top entry mirroring v1.5.7 formatting (sectioned bullets + perf summary table + dormant-feature paragraph). Updated README.md version stamp from v1.5.5 to v1.5.8 with the WK58 descriptor. Bumped config.py prototype_version 1.5.7 -> 1.5.8 and rewrote game_title to match the v1.5.8 sprint title. Verified main.py and tools/build_executable.py carry no game-version constants (only PyInstaller --version and the unversioned EXE_NAME='KingdomSim').",
+            "files_modified": [
+              "CHANGELOG.md (added v1.5.8 top entry; v1.5.7 entry preserved unchanged below)",
+              "README.md (version line: v1.5.5 -> v1.5.8, descriptor updated)",
+              "config.py (prototype_version '1.5.7' -> '1.5.8'; game_title rewritten)"
+            ],
+            "version_constants_updated": {
+              "config.py:WindowConfig.prototype_version": "1.5.7 -> 1.5.8",
+              "config.py:WindowConfig.game_title": "Kingdom Sim (Prototype v1.5.7) -- HUD/UI Pygame to Ursina Issues Fixed for Better FPS -> Kingdom Sim (Prototype v1.5.8) -- Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching",
+              "config.py:PROTOTYPE_VERSION": "alias of WindowConfig.prototype_version — propagates automatically",
+              "main.py": "no version constant present (no change)",
+              "tools/build_executable.py": "EXE_NAME='KingdomSim' is unversioned; PyInstaller '--version' call is for the packager, not the game (no change)"
+            },
+            "dormant_feature_documented_in_changelog": "Yes — full 'Available but OFF — GeoMipTerrain LOD' paragraph documents KINGDOM_URSINA_GEOMIPTERRAIN env flag (default '0' = OFF), Wave 8 / Wave 5 candidate 4.C origin, files (game/graphics/terrain_geomipterrain.py + collaborator wiring), Jaimie's 2026-05-19 negative-result playtest verdict (no zoom-out FPS gain plus 513x513 heightfield resample elevation regression), re-enable instructions (PowerShell $env: snippet), and the TestTerrainHeightInvariance guarantee that get_terrain_height stays consistent across env modes."
+          },
+          "commands_run": [
+            "Read CHANGELOG.md (top 200 lines) to confirm v1.5.7 entry structure",
+            "Read README.md to find version stamp line",
+            "Read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json offset 6540 limit 300 to extract sprint_meta for wk58_ursina_entities_overload",
+            "Read .cursor/plans/wk58_round5_profile_findings.md (top 100) to confirm fog-overlay early-out story",
+            "Read .cursor/plans/Ursina Entities Overload Solution.md (top 80) to confirm phase ordering",
+            "Grep '(?i)version|1\\.5\\.7|VERSION' config.py main.py tools/build_executable.py to find version constants",
+            "Edit CHANGELOG.md — insert v1.5.8 top entry above v1.5.7",
+            "Edit README.md — bump version stamp v1.5.5 -> v1.5.8",
+            "Edit config.py — prototype_version + game_title -> v1.5.8",
+            "Edit .cursor/plans/agent_logs/agent_13_SteamRelease_Ops_Marketing.json — add wk58 sprint + wk58_w9_version_bump_v158 round",
+            "python -m json.tool .cursor/plans/agent_logs/agent_13_SteamRelease_Ops_Marketing.json (validate)"
+          ],
+          "evidence": {
+            "changelog_top_entry_title": "## Prototype v1.5.8 -- Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching",
+            "readme_updated_yes_no": "yes",
+            "other_version_refs_updated": {
+              "config.py": "yes — WindowConfig.prototype_version and WindowConfig.game_title both bumped to 1.5.8; PROTOTYPE_VERSION module-level alias propagates automatically",
+              "main.py": "no version constant present — no change needed",
+              "tools/build_executable.py": "no game-version constant present (EXE_NAME='KingdomSim' is unversioned) — no change needed"
+            },
+            "changelog_perf_summary_table_included": "yes — v1.5.7 -> v1.5.8 comparison: after_avg post-/revealmap 13.5 -> 28.4 FPS, visible_chunks 225 -> 48, tracked_props 10504 -> 1017, enabled_outside_visible_chunks 931 -> 0, with explanatory note that 13.5 is the pre-WK58 baseline (post-/revealmap after_avg) carried into the sprint",
+            "active_env_flags_documented": [
+              "KINGDOM_URSINA_INSTANCED_TREES (Tree Instancing section; default '1' = ON)",
+              "KINGDOM_URSINA_STATIC_BATCH_SIZE (Static Terrain Batching section; default '8')",
+              "KINGDOM_URSINA_GEOMIPTERRAIN (Dormant feature section; default '0' = OFF)"
+            ],
+            "log_validated": "pending — to be confirmed by python -m json.tool after this edit lands"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM (Agent 01) bundles CHANGELOG.md + README.md + config.py + agent_13 log into a single sprint-close commit per HARD CONSTRAINTS.",
+            "Carryover noted in sprint_meta (PM hub): WK57 underground sprint still human_gate_pending; log-rolling overdue (run python tools/roll_agent_logs.py --keep 7 --write-index at next sprint kickoff/close); optional Agent 09 polish on cyan-ish instanced tree foliage palette; hero rendering perf in frozen .exe still owed an Agent 10 profiling pass (carried from v1.5.6 WK25 packaging spike).",
+            "Steam patch-notes draft (player-facing 3-7 bullet version) can be derived from this CHANGELOG entry on demand; not requested in this round."
+          ]
+        }
+      }
     }
   }
 }

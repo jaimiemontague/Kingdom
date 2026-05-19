@@ -4,7 +4,7 @@ A Majesty-inspired fantasy kingdom simulation game where heroes are controlled b
 
 ## Prototype Version
 
-This repository is currently stamped as **Prototype v1.5.5 — Hero UI Basics** (WK51–WK52: pin/recall, watch card, radar minimap, pin alerts, memorial card, building interior overlay, chat polish; see `config.py` and `CHANGELOG.md`).
+This repository is currently stamped as **Prototype v1.5.8 — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching** (WK58: instanced tree rendering, heightmap-aware fog-overlay early-out, static terrain batching, frustum + culling composition fixes, post-`/revealmap` `after_avg` 13.5 → 28.4 FPS; see `config.py` and `CHANGELOG.md`).
 
 ## Overview
 
