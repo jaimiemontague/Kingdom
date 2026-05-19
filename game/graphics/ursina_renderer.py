@@ -953,14 +953,16 @@ class UrsinaRenderer:
             bts = _building_type_str(bt_raw)
             is_castle = bts == "castle"
             is_lair = hasattr(b, "stash_gold")
-            # Fog-of-war: lairs are hostile world structures and should not be visible through fog.
-            # Match enemy visibility semantics: show only when the lair tile is currently VISIBLE.
+            # Fog-of-war: lairs appear once a hero explores near them (SEEN) and stay
+            # visible permanently.  Previous check required real-time LoS (VISIBLE)
+            # which never triggered because lairs spawn 18+ tiles from the castle
+            # while hero vision radius is only 10 tiles at game start.
             if is_lair:
                 ts = float(config.TILE_SIZE)
                 tx, ty = int(getattr(b, "x", 0.0) / ts), int(getattr(b, "y", 0.0) / ts)
                 lair_visible = True
                 if 0 <= ty < world.height and 0 <= tx < world.width:
-                    lair_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)
+                    lair_visible = (world.visibility[ty][tx] >= Visibility.SEEN)
                 obj_id = id(b)
                 existing = self._entities.get(obj_id)
                 if not lair_visible:

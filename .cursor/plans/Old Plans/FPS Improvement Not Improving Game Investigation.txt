@@ -1,0 +1,173 @@
+ Why Your FPS Improvements Aren't Making Gameplay Feel Smoother
+
+  Problem 1: Round 2's optimization broke Round 1's interpolation (the smoking gun)
+
+  This is the biggest issue. At ursina_renderer.py:422-425, the R2-D "skip unchanged" early-out kills the lerp smoothing
+   from R1:
+
+  sync_key = (pos_xyz, clip_name, frame_idx, scale_xyz)
+  if getattr(ent, '_ks_last_sync_key', None) == sync_key:
+      return  # <-- EXITS before reaching the lerp code at line 435!
+
+  Here's what happens with 20 Hz sim / 60 FPS render:
+
+  ┌───────┬───────────┬─────────┬─────────────────┬────────────┬──────────────────────┐
+  │ Frame │ Sim tick? │ pos_xyz │ sync_key match? │ Lerp runs? │   Visual position    │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 1     │ YES       │ 10.0    │ No (changed)    │ Yes        │ 9.0 → 9.82 (+0.82)   │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 2     │ no        │ 10.0    │ YES             │ NO         │ stuck at 9.82        │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 3     │ no        │ 10.0    │ YES             │ NO         │ stuck at 9.82        │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 4     │ YES       │ 11.0    │ No (changed)    │ Yes        │ 9.82 → 10.79 (+0.97) │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 5     │ no        │ 11.0    │ YES             │ NO         │ stuck at 10.79       │
+  ├───────┼───────────┼─────────┼─────────────────┼────────────┼──────────────────────┤
+  │ 6     │ no        │ 11.0    │ YES             │ NO         │ stuck at 10.79       │
+  └───────┴───────────┴─────────┴─────────────────┴────────────┴──────────────────────┘
+
+  Entities visually lurch every 3 frames then freeze for 2 frames — a clearly perceivable 20 Hz stutter even when the
+  FPS counter shows 60. The lerp was designed to close the remaining gap across frames 2 and 3, but sync_key prevents it
+   from ever running on those frames because pos_xyz hasn't changed.
+
+  Animation frame changes occasionally break the sync_key match and let the lerp sneak in, but typical pixel art runs at
+   6-12 FPS (frame change every 5-10 render frames), so most intermediate frames still get early-returned.
+
+  Problem 2: The FPS counter measures the wrong thing
+
+  render_coordinator.py:232 uses pygame.time.Clock.get_fps() — an internal EMA that smooths over ~1 second. The Ursina
+  path uses prev * 0.92 + inst * 0.08 (line 1165 of ursina_app.py), which takes ~28 frames to represent half of any
+  change.
+
+  Both metrics show average frame rate, which hides the thing humans actually feel: frame time variance. A game at 55
+  FPS with periodic 100ms hitches reads "55 FPS" on the counter but feels terrible. A perfectly steady 30 FPS reads "30
+  FPS" but feels smooth. The FPS counter literally cannot distinguish these scenarios.
+
+  Problem 3: The lerp formula itself creates non-uniform motion
+
+  Even without the sync_key bug, alpha = 0.82 as a constant blend factor creates exponentially decaying movement per
+  frame:
+  - Frame 1 after tick: 82% of distance
+  - Frame 2: 14.8% of distance
+  - Frame 3: 2.7% of distance
+
+  This is a "lurch then crawl" pattern. True interpolation should use sim_accumulator / FIXED_SIM_DT as a linear blend
+  between previous and current sim positions, producing uniform motion between ticks.
+
+  Problem 4: Performance metrics are from headless tests
+
+  The reported improvements ("0.98ms avg tick, P95 2.13ms") come from headless stress tests that only measure sim cost.
+  The actual bottleneck is render-side work (Panda3D traversal, Python sync loops) which the headless tests don't touch.
+   The metrics look great on paper but describe a different workload than what the player experiences.
+
+  ---
+  Proposal: Smoothness Monitor
+
+  I'd suggest replacing the current FPS overlay with a frame-time focused monitor that measures what humans actually
+  perceive. Here's what I'd include:
+
+  1. Frame Time Bar Graph (most valuable)
+
+  A scrolling horizontal bar chart of the last 120 frames. Each bar = one frame's total time in ms, color-coded:
+  - Green: <16.67ms (60+ FPS)
+  - Yellow: 16.67–33ms (30–60 FPS)
+  - Red: >33ms (below 30 FPS)
+
+  This makes spikes, periodic patterns (like the 20 Hz sim tick), and GC pauses immediately visible as tall bars in the
+  graph.
+
+  2. Frame Time Percentiles
+
+  Rolling 5-second window showing:
+  - P50 (median): what most frames look like
+  - P95 (1-in-20): noticeable hitches
+  - P99 (1-in-100): worst-case freezes
+  - 1% Low FPS: industry-standard "perceived smoothness" metric — average of the worst 1% of frames
+
+  The gap between P50 and P95 directly quantifies "jitter."
+
+  3. Sim/Render Split Indicator
+
+  Show per-frame whether a sim tick ran, and the time breakdown:
+  - SIM: 1.2ms | SYNC: 2.4ms | RENDER: 5.1ms | TOTAL: 8.7ms
+
+  This reveals whether the sim/render decoupling is working and which stage is spiking.
+
+  4. Frame Pacing Dot
+
+  A small colored circle: green when the last frame was within ±25% of target frame time, red otherwise. Rapid
+  flickering = inconsistent pacing = perceived stutter.
+
+  ---
+  Recommended Fix Priority
+
+  Before building the monitor, the interpolation bug is worth fixing first since it's the most likely cause of the
+  "nothing feels smoother" perception:
+
+  1. Fix the sync_key vs lerp conflict — either exclude pos_xyz from the sync_key (so the lerp can continue closing the
+  gap on frames without sim ticks), or move the lerp computation before the early-out
+  2. Switch from exponential lerp to linear interpolation — use sim_accumulator / FIXED_SIM_DT to blend linearly between
+   prev_sim_pos and curr_sim_pos
+  3. Build the smoothness monitor — to actually verify that future fixes are improving perceived smoothness, not just
+  average FPS
+
+
+---
+  What Was Fixed
+
+  The twitching/jittering bug was caused by the interpolation window never converging. When _sync_unit_atlas_billboard
+  received the same pos_xyz on consecutive frames (entity not moving), the prev/curr window stayed frozen — prev at the
+  entity's old position, curr at its current position. As the blend fraction cycled (0.2 → 0.9 → 0.2 each sim tick
+  period), the visual position oscillated between prev + 20% of gap and prev + 90% of gap.
+
+  For heroes in buildings: the hero teleports from their walking position to the building center — prev stayed at the
+  walking position forever, creating 100-200px of vertical jitter as blend cycled.
+
+  For peasants/tax collector: entity separation pushes by small amounts each tick, then they stand still. prev stayed at
+   the pre-push position, creating visible twitching.
+
+  The fix adds sim_tick_id — a monotonic counter incremented per sim tick. The renderer now advances prev = curr, curr =
+   new_pos on every tick boundary, regardless of whether position actually changed. When an entity is stationary, prev
+  == curr, and interpolation produces a stable position no matter what blend is.
+
+  Files Changed (cumulative from both rounds)
+
+  ┌───────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────┐
+  │                   File                    │                                Change                                │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/sim/snapshot.py                      │ Added sim_blend_fraction + sim_tick_id fields                        │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/sim_engine.py                        │ Pipes both through build_snapshot()                                  │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/engine.py                            │ Computes blend fraction, increments tick counter, stores per-frame   │
+  │                                           │ timing state                                                         │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/graphics/ursina_renderer.py          │ Tick-counter-driven interpolation window, separated position from    │
+  │                                           │ appearance early-out                                                 │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/graphics/ursina_app.py               │ Stores _last_frame_dt_ms for the Ursina path                         │
+  ├───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────┤
+  │ game/engine_facades/render_coordinator.py │ Smoothness monitor with frame time graph + percentiles               │
+  └───────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────┘
+
+  Performance Analysis Ideas
+
+  Based on the code and your 11-13 FPS 1% Low reading:
+
+  1. The Panda3D scene graph traversal is still the dominant bottleneck. Round 3's frustum culling reduced active nodes
+  from 16k-44k to 2k-4k, but even 2k-4k nodes costs 3-6ms of pure Panda3D traversal. Combined with Python sync loops
+  (1-3ms), fog/tree updates (0-2ms), and sim ticks (0-2ms), you're at 6-13ms best case — which is 77-166 FPS
+  theoretical. But the 1% Low at 11-13 FPS means something is spiking individual frames to 75-90ms.
+  2. Likely spike sources: The smoothness monitor bar graph should reveal the pattern. Things to look for:
+    - Periodic tall red bars every N frames → throttled systems running on their duty frame (tree sync every 4th,
+  separation every 2nd) all aligning on the same frame
+    - Random isolated spikes → Python GC pauses or Panda3D internal reallocation
+    - Sustained blocks of yellow/red → camera panning into dense areas triggering mass entity enable/disable from
+  frustum culling
+  3. The Phase 3 terrain flattening from the Round 3 plan (merging static grass/path/rock entities into chunked meshes
+  via flatten_strong()) was marked as conditional. If the bar graph shows that baseline frame time is consistently >16ms
+   even without spikes, terrain flattening is likely necessary.
+  4. Fog-of-war is 56% of sim cost. The headless stress test shows fog_of_war at 0.585ms/tick average. At 20 Hz sim rate
+   that's only one tick every ~3 frames, but on tick frames it adds measurably. Worth investigating whether fog updates
+  can be throttled further.

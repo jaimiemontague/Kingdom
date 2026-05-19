@@ -104,6 +104,8 @@ class LairSystem(GameSystem):
             created.append(lair)
             used.add(lair_cls)
 
+        print(f"[LairSystem] Placed {len(created)} lairs: "
+              f"{[(l.grid_x, l.grid_y, type(l).__name__) for l in created]}")
         return created
 
     def update(self, ctx: SystemContext, dt: float) -> None:

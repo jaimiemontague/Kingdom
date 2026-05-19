@@ -9,6 +9,164 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk59_lair_diagnostic": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json sprints.wk59_lair_diagnostic",
+        "notes": "WK59: Diagnostic-only sprint. Lairs disappeared since ~WK54 POI updates. Agent 03 read-only code investigation to identify root cause(s)."
+      },
+      "rounds": {
+        "wk59_r1_lair_diagnostic": {
+          "sprint_id": "wk59_lair_diagnostic",
+          "round_id": "wk59_r1_lair_diagnostic",
+          "status": "done",
+          "diagnostic_findings": {
+            "hypothesis_a_fog_visibility_gating": {
+              "verdict": "CONFIRMED — PRIMARY ROOT CAUSE",
+              "evidence": {
+                "smoking_gun_file": "game/graphics/ursina_renderer.py",
+                "smoking_gun_lines": "955-970",
+                "code_snippet": "is_lair = hasattr(b, 'stash_gold')\nif is_lair:\n    ts = float(config.TILE_SIZE)\n    tx, ty = int(getattr(b, 'x', 0.0) / ts), int(getattr(b, 'y', 0.0) / ts)\n    lair_visible = True\n    if 0 <= ty < world.height and 0 <= tx < world.width:\n        lair_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)\n    ...\n    if not lair_visible:\n        if existing is not None:\n            existing.enabled = False\n            active_ids.add(obj_id)\n        continue",
+                "comparison_with_player_buildings": "Regular player buildings (guilds, marketplace, etc.) have NO fog-of-war visibility check whatsoever — they always render. Only lairs get the VISIBLE gate. POIs have a separate discovery-based gate (is_discovered flag). Enemies also use the same VISIBLE check (line 1428).",
+                "visibility_enum_values": "Visibility.UNSEEN=0, Visibility.SEEN=1, Visibility.VISIBLE=2. VISIBLE means real-time line-of-sight from a revealer. SEEN means previously explored but not currently in LoS.",
+                "vision_ranges": "CASTLE_VISION_TILES=10, HERO_VISION_TILES=7, GUARD_VISION_TILES=6 (sim_engine.py lines 1026-1028)",
+                "lair_min_distance": "LAIR_MIN_DISTANCE_FROM_CASTLE_TILES=18 (config.py LairConfig)",
+                "geometric_proof": "Castle center is at tile (124,124) on the 250x250 map. Lairs must be >= 18 tiles from castle. Castle vision is 10 tiles. Therefore the closest possible lair tile is 18 tiles from castle, but castle only reveals 10 tiles — an 8-tile gap of permanent fog between castle vision and the nearest lair. Heroes have 7-tile vision but start at the castle and must WALK to the lair to make it VISIBLE. On the old smaller map, heroes patrolled the whole map quickly. On the 250x250 map with zones (Darkwood, Mountains, Canyon), hero pathfinding is much slower and they may never reach lair tiles at all in early game.",
+                "critical_distinction": "Lairs are functional in the simulation (they exist in self.buildings, spawn enemies correctly, enemies pathfind to heroes/castle). The bug is RENDERING ONLY — lairs are invisible because they require Visibility.VISIBLE (active LoS) but are always outside vision range. If a hero walks near a lair, it would briefly appear while the hero is in range, then disappear again when the hero leaves. Player buildings use no visibility check, so they always show.",
+                "when_introduced": "This fog check was likely already present before WK54 but only became a problem after WK54 expanded the map from ~150x150 to 250x250. On the smaller map, heroes explored the whole map faster and frequently entered lair LoS. On the larger map, the 18-tile minimum distance plus 250x250 scale means heroes almost never reach lair tiles.",
+                "revealmap_test": "The /revealmap console command sets world.fog_disabled=True, which bypasses fog entirely. If lairs appear after /revealmap, this confirms the fog gate is the cause."
+              },
+              "recommended_fix": {
+                "approach": "Change lair rendering from Visibility.VISIBLE to Visibility.SEEN. This means lairs appear once a hero has explored near them (the tile transitions from UNSEEN to SEEN/VISIBLE) and remain visible permanently after that, even when no hero is currently nearby. This matches how player buildings implicitly work (always visible) while preserving some fog-of-war mystery (lairs in totally unexplored territory stay hidden).",
+                "code_change": "game/graphics/ursina_renderer.py line 963: change `world.visibility[ty][tx] == Visibility.VISIBLE` to `world.visibility[ty][tx] >= Visibility.SEEN`",
+                "alternative_approach": "Remove the visibility check entirely for lairs (like player buildings). This would show lairs through fog, which may or may not be desired from a gameplay perspective — PM decision.",
+                "effort": "1-line fix, quick implementation",
+                "pm_decision_needed": "Whether lairs should use SEEN (appear once explored, stay visible) or have no fog check at all (always visible like player buildings). SEEN is recommended as the best middle ground."
+              }
+            },
+            "hypothesis_b_placement_failures": {
+              "verdict": "RULED OUT — placement succeeds with high probability",
+              "evidence": {
+                "file": "game/systems/lairs.py",
+                "max_tries": "LAIR_INITIAL_COUNT * 250 = 4 * 250 = 1000 attempts",
+                "map_area": "250 * 250 = 62,500 tiles",
+                "blocking_tiles_estimate": "Trees: capped at max_starting_trees = max(750, int(62500 * 750 / 22500)) = 2083 tiles (~3.3%). Lake: ~530 tiles. Cross paths: ~1000 tiles. Total blocked: ~3,600 tiles (~5.8%)",
+                "valid_distance_tiles": "Tiles >= 18 tiles from castle center (124,124): ~62,500 - pi*18^2 = ~61,482 tiles (~98.4% of map)",
+                "valid_buildable_at_distance": "Combining buildability + distance: approximately 57,000+ tiles are valid candidates",
+                "probability_per_attempt": "With ~57,000 valid tiles out of ~62,500 total sampling space, each random attempt has ~91% chance of hitting a valid tile. For a 2x2 lair (4 tiles), all 4 tiles need to be buildable, which is still very high on a map with only ~5.8% blocked tiles.",
+                "success_probability": "With 1000 attempts and ~91% per-attempt success for distance + buildability, placing 4 lairs is virtually certain. The probability of ALL 1000 attempts failing is astronomically low.",
+                "logging_gap": "spawn_initial_lairs() has NO logging on failure. It silently returns however many lairs it managed to place. Adding a log line would help diagnose placement issues in the future.",
+                "tree_growth_timing": "tree_growth_lookup is injected into world at sim_engine.py line 100, BEFORE spawn_initial_lairs at line 259. All initial trees have growth_percentage=1.0, so is_buildable correctly rejects tree tiles."
+              },
+              "minor_improvement": "Add logging to spawn_initial_lairs: log how many lairs were placed vs requested, and if fewer than LAIR_INITIAL_COUNT, log the failure count. This is a low-priority improvement, not a bug fix."
+            },
+            "hypothesis_c_spawn_slot_starvation": {
+              "verdict": "RULED OUT — lair spawning has adequate slots",
+              "evidence": {
+                "file": "game/sim_engine.py",
+                "spawn_order_lines": "672-683",
+                "mechanism": "Wave spawning runs first (line 674-677), then alive count is recalculated (line 678), then lair spawning gets remaining_slots (line 679-683). This is INSIDE the same if remaining_slots>0 block.",
+                "wave_spawner_volume": "EnemySpawner (game/systems/spawner.py) spawns 1 enemy per wave initially, with a 5-second warmup + 22,500ms spawn interval (GOBLIN_SPAWN_INTERVAL*3 + extra_spawn_delay_ms = 3500*3 + 12000 = 22500ms). Growth: enemies_per_wave increases by 1 every 3 wave_numbers, capped at 4.",
+                "max_alive_enemies": "MAX_ALIVE_ENEMIES = 32",
+                "steady_state_analysis": "At early game, wave spawner produces 1 enemy every ~22 seconds. Heroes kill enemies. With 32 slots and very slow wave spawning, there are always 20+ slots available for lair enemy spawning.",
+                "lair_spawn_intervals": "GoblinCamp: 8.5s, WolfDen: 7.5s, SpiderNest: 7.0s, SkeletonCrypt: 10.5s, BanditCamp: 10.0s. Each spawn produces 1-3 enemies.",
+                "conclusion": "Even with all 4 lairs actively spawning, the combined output is well within the 32-slot cap. Wave spawning is very slow and never consumes all slots. Lair enemies spawn correctly — the issue is that players never SEE them because lairs are invisible."
+              }
+            },
+            "hypothesis_d_frustum_culling_mismatch": {
+              "verdict": "RULED OUT — coordinate systems match",
+              "evidence": {
+                "frustum_culling_file": "game/graphics/ursina_renderer.py lines 940-947",
+                "frustum_check_timing": "Frustum culling check at line 941 runs BEFORE the fog check at line 958. If a lair is outside the frustum, it gets disabled and skipped via 'continue'. If inside the frustum, it proceeds to the fog check.",
+                "coordinate_system_analysis": "Building.x returns center_x = grid_x * TILE_SIZE + (size[0] * TILE_SIZE) / 2 (game/entities/buildings/base.py line 125-126). _entity_in_view(sim_x, sim_y) at line 775-781 converts sim_x to tile via int(sim_x / tile_size). For a 2x2 lair at grid_x=100: b.x = 100*32 + 32 = 3232, tx = int(3232/32) = 101. This is the correct tile coordinate.",
+                "visible_rect_computation": "_get_visible_tile_rect (lines 597-773) computes the camera's visible tile rect using either Panda3D lens extrusion or an FOV heuristic, with a 6-8 tile margin. Falls back to full map (0,0,249,249) on any error.",
+                "lair_coordinate_format": "Lair entities use the standard Building base class which stores grid_x, grid_y and computes x, y as pixel-space center coordinates. Same format as all other buildings. Frustum culling treats all buildings uniformly via getattr(b, 'x', 0.0).",
+                "note": "While frustum culling is not the ROOT cause of invisible lairs, it does add a secondary filter: a lair that passes the fog check would STILL be culled if the camera isn't pointed at it. But this is expected behavior (same as all other entities) and not a bug."
+              }
+            },
+            "additional_findings": {
+              "poi_placement_interference": {
+                "verdict": "NOT A FACTOR",
+                "evidence": "sim_engine.py lines 259-277: spawn_initial_lairs is called at line 259, POI placement at lines 262-277. Lairs are placed FIRST, then POIs respect existing buildings (including lairs) via the all_structures spacing check in poi_placement.py line 128. POIs cannot overwrite or displace lairs."
+              },
+              "lair_prefab_exists": {
+                "verdict": "NOT A FACTOR",
+                "evidence": "assets/prefabs/buildings/lair_v1.json exists on disk. The prefab resolver in ursina_prefabs.py line 211-212 correctly routes all lair types (via is_lair or stash_gold check) to this file."
+              },
+              "dead_code_in_engine": {
+                "finding": "GameEngine._spawn_enemies (game/engine.py line 1263-1279) is DEAD CODE — never called. self._spawn_enemies is not referenced anywhere in engine.py. All enemy spawning goes through SimEngine.update() (game/sim_engine.py lines 672-683).",
+                "risk": "No risk — the dead code is functionally identical to the live SimEngine path. Could be cleaned up in a future sprint."
+              },
+              "lair_enemies_are_spawning": {
+                "finding": "Lair enemies ARE being spawned correctly into the simulation. The lair.update() method (game/entities/lair.py line 112-133) runs every tick via LairSystem.spawn_enemies() (game/systems/lairs.py line 115-126), which is called from SimEngine.update() (game/sim_engine.py line 681-683). Enemies spawn at adjacent tiles and pathfind to heroes/castle. Players may see enemies appearing 'from nowhere' (from the invisible lair).",
+                "implication": "This confirms the bug is purely a RENDERING issue, not a simulation issue. The game world has lairs and they are active — they just can't be seen."
+              }
+            },
+            "root_cause_summary": "The single root cause is the Visibility.VISIBLE fog-of-war gate on lair rendering (ursina_renderer.py line 963). Lairs require real-time line-of-sight to be rendered, but they are always placed >= 18 tiles from castle while castle vision is only 10 tiles. On the 250x250 map, heroes rarely reach lair positions. This was not a problem on the old smaller map because heroes explored the whole map faster. The WK54 map expansion to 250x250 made this latent bug manifest as 'lairs disappeared'.",
+            "fix_priority": {
+              "must_fix": [
+                {
+                  "file": "game/graphics/ursina_renderer.py",
+                  "line": 963,
+                  "change": "Replace `== Visibility.VISIBLE` with `>= Visibility.SEEN`",
+                  "effort": "1 line, trivial",
+                  "pm_decision": "Whether to use SEEN (appears once explored) or remove the check entirely (always visible). SEEN recommended."
+                }
+              ],
+              "should_fix": [
+                {
+                  "file": "game/systems/lairs.py",
+                  "change": "Add logging to spawn_initial_lairs: print how many lairs placed vs LAIR_INITIAL_COUNT, warn if fewer than expected",
+                  "effort": "3-5 lines, trivial"
+                }
+              ],
+              "could_fix": [
+                {
+                  "file": "game/engine.py",
+                  "change": "Remove dead code GameEngine._spawn_enemies (lines 1263-1279)",
+                  "effort": "Delete 17 lines"
+                }
+              ]
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "PM decision: lair fog visibility level (SEEN vs no check). Recommend SEEN.",
+            "Fix sprint: 1-line change in ursina_renderer.py + optional logging in lairs.py",
+            "QA: after fix, verify lairs appear on the map after hero exploration, verify lair prefab renders correctly, verify lair enemies spawn from visible lair, verify lair can be attacked and cleared"
+          ]
+        },
+        "wk59_r2_lair_visibility_fix": {
+          "sprint_id": "wk59_lair_diagnostic",
+          "round_id": "wk59_r2_lair_visibility_fix",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Two targeted changes: (1) fix lair fog-of-war visibility gate from VISIBLE to SEEN so lairs appear once explored and stay visible permanently; (2) add spawn logging to LairSystem.spawn_initial_lairs().",
+            "files_modified": [
+              {
+                "file": "game/graphics/ursina_renderer.py",
+                "line": 963,
+                "change": "Changed `world.visibility[ty][tx] == Visibility.VISIBLE` to `world.visibility[ty][tx] >= Visibility.SEEN`. Also updated the comment block (lines 956-960) to explain the SEEN rationale."
+              },
+              {
+                "file": "game/systems/lairs.py",
+                "line": 108,
+                "change": "Added print(f\"[LairSystem] Placed {len(created)} lairs: {[(l.grid_x, l.grid_y, type(l).__name__) for l in created]}\") after the placement loop completes, before the return statement."
+              }
+            ]
+          },
+          "verification": {
+            "visibility_enum_confirmed": "Visibility.UNSEEN=0, SEEN=1, VISIBLE=2 (game/world.py lines 38-41). >= Visibility.SEEN matches both SEEN(1) and VISIBLE(2), excluding only UNSEEN(0).",
+            "grid_x_attribute_confirmed": "MonsterLair.__init__ accepts grid_x, grid_y and passes them to Building super().__init__. All lair subclasses (GoblinCamp, WolfDen, etc.) use grid_x, grid_y in their __init__. Logging safely references l.grid_x and l.grid_y.",
+            "logging_pattern_match": "Codebase uses print(f\"[tag] message\") style (e.g. camera_display.py, instanced_nature_renderer.py, ursina_app.py). New log line follows the same convention."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "QA visual verification: run game, send hero toward lair, confirm lair appears when hero vision reaches lair tile and stays visible after hero moves away",
+            "QA console check: confirm [LairSystem] log line prints on game start with correct lair count and positions"
+          ]
+        }
+      }
+    },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",
