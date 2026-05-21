@@ -371,6 +371,7 @@ class InputHandler:
         if micro_view is not None:
             micro_view.exit_hero_focus()
         self.commands.selected_hero = None
+        self.commands.selected_enemy = None
 
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
@@ -430,6 +431,7 @@ class InputHandler:
                         c.building_panel.deselect()
                         c.selected_building = None
                         c.selected_peasant = None
+                        c.selected_enemy = None
                         return
                     if action in ("pin_hero", "unpin_hero", "recall_pinned_hero"):
                         if hasattr(c, "apply_hud_pin_action"):
@@ -625,6 +627,9 @@ class InputHandler:
                     c.selected_peasant = None
                 elif c.try_select_peasant(event.pos):
                     self._clear_hero_selection()
+                elif c.try_select_enemy(event.pos):
+                    self._clear_hero_selection()
+                    c.building_panel.deselect()
                 elif c.try_select_building(event.pos):
                     self._clear_hero_selection()
                     c.selected_peasant = None
@@ -634,6 +639,7 @@ class InputHandler:
                     c.building_panel.deselect()
                     c.selected_building = None
                     c.selected_peasant = None
+                    c.selected_enemy = None
 
         elif event.button == 3:  # Right click
             # Indirect-control game: no direct hero commands.

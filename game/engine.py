@@ -562,6 +562,14 @@ class GameEngine:
         self.sim.selected_hero = v
 
     @property
+    def selected_enemy(self):
+        return getattr(self.sim, "selected_enemy", None)
+
+    @selected_enemy.setter
+    def selected_enemy(self, v):
+        self.sim.selected_enemy = v
+
+    @property
     def ai_controller(self):
         return self.sim.ai_controller
 
@@ -705,6 +713,7 @@ class GameEngine:
         if best is not None:
             self.selected_hero = best
             self.selected_peasant = None
+            self.selected_enemy = None
             return True
 
         return False
@@ -728,6 +737,7 @@ class GameEngine:
         self.selected_hero = best
         self.selected_peasant = None
         self.selected_building = None
+        self.selected_enemy = None
         if hasattr(self, "building_panel"):
             try:
                 self.building_panel.deselect()
@@ -745,6 +755,7 @@ class GameEngine:
             self.selected_hero = tc  # unified selection state for left panel
             self.selected_building = None
             self.selected_peasant = None
+            self.selected_enemy = None
             return True
         return False
 
@@ -764,6 +775,7 @@ class GameEngine:
             self.selected_hero = best
             self.selected_building = None
             self.selected_peasant = None
+            self.selected_enemy = None
             return True
         return False
 
@@ -775,12 +787,33 @@ class GameEngine:
                 self.selected_peasant = peasant
                 self.selected_hero = None
                 self.selected_building = None
+                self.selected_enemy = None
                 if hasattr(self, "building_panel"):
                     try:
                         self.building_panel.deselect()
                     except Exception:
                         pass
                 return True
+        return False
+
+    def try_select_enemy(self, screen_pos: tuple) -> bool:
+        """Try to select an enemy at the given screen position. Returns True if selected (WK61)."""
+        world_x, world_y = self.pointer_world_xy(screen_pos)
+        best = None
+        best_d = float("inf")
+        for enemy in self.enemies:
+            if not enemy.is_alive:
+                continue
+            d = enemy.distance_to(world_x, world_y)
+            if d < enemy.size * 1.5 and d < best_d:
+                best_d = d
+                best = enemy
+        if best is not None:
+            self.selected_enemy = best
+            self.selected_hero = None
+            self.selected_building = None
+            self.selected_peasant = None
+            return True
         return False
 
     def try_select_building(self, screen_pos: tuple) -> bool:
@@ -816,11 +849,12 @@ class GameEngine:
         if best is not None:
             self.selected_building = best
             self.selected_peasant = None
+            self.selected_enemy = None
             self.building_panel.select_building(best, self.heroes)
             return True
 
         return False
-    
+
     def try_hire_hero(self):
         """Try to hire a hero from the selected guild building or auto-locate one."""
         allowed = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild", "temple"})
@@ -1727,6 +1761,8 @@ class GameEngine:
             llm_available=getattr(self.ai_controller, "llm_brain", None) is not None,
             ui_cursor_pos=getattr(self, "_last_ui_cursor_pos", None),
         )
+        # WK61-FEAT-006: enemy selection state for UI
+        gs["selected_enemy"] = getattr(self, "selected_enemy", None)
         # Expose the presentation-layer engine for HUD command mode rendering.
         gs["engine"] = self
         return gs

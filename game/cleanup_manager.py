@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 from config import COLOR_RED, TILE_SIZE
 from game.events import GameEventType
+from game.entities.rubble import RubbleRecord, make_rubble_id
+from game.sim.timebase import now_ms as sim_now_ms
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
@@ -101,6 +103,24 @@ class CleanupManager:
             for bounty in getattr(engine.bounty_system, "bounties", []):
                 if getattr(bounty, "target", None) is building:
                     bounty.target = None
+
+            # WK61-FEAT-004: Spawn rubble record for destroyed building.
+            rubble_size = getattr(building, "size", (1, 1))
+            rubble = RubbleRecord(
+                record_id=make_rubble_id(),
+                center_x=float(building_x),
+                center_y=float(building_y),
+                grid_x=int(getattr(building, "grid_x", 0)),
+                grid_y=int(getattr(building, "grid_y", 0)),
+                width_tiles=int(rubble_size[0]),
+                height_tiles=int(rubble_size[1]),
+                building_type=str(building_type),
+                created_ms=int(sim_now_ms()),
+            )
+            # Append to SimEngine rubble list (engine.sim is the SimEngine).
+            sim = getattr(engine, "sim", None)
+            if sim is not None and hasattr(sim, "rubble_records"):
+                sim.rubble_records.append(rubble)
 
             # Emit building destruction event for debris spawning.
             building_w = getattr(building, "width", 0) or (getattr(building, "size", (1, 1))[0] * TILE_SIZE)

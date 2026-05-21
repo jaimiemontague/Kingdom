@@ -75,6 +75,54 @@ Volume for interior ambients: 0.35 (slightly below outdoor 0.4). All must be CC0
 |------------|-----------|-----------|-------|
 | `interior_building_under_attack` | `building_under_attack_rumble` | `assets/audio/sfx/building_under_attack_rumble.ogg` or `.wav` | Emitted when player is in interior view and the viewed building is under attack. Throttled to once per 3s (sim time). Optional; no crash if file missing. |
 
+## WK61: Enemy-Type-Specific Sounds
+
+Each enemy type has distinct attack, death, and ambient sounds. These are managed by `EnemySoundManager` in `game/audio/enemy_sounds.py` and do NOT use the standard `AUDIO_EVENT_MAP` pipeline -- they are triggered by `AudioSystem._emit_single_event()` inspecting the `target` / `enemy` fields on `hero_attack` and `enemy_killed` events.
+
+### Enemy Attack Sounds (triggered on `hero_attack` events)
+
+| Enemy Type | Sound Key | File Path | Volume | Notes |
+|------------|-----------|-----------|--------|-------|
+| Goblin | `goblin_attack` | `assets/audio/sfx/goblin_attack.ogg` | 0.80 | Battle cry / grunt |
+| Wolf | `wolf_attack` | `assets/audio/sfx/wolf_attack.ogg` | 0.80 | Bark / snarl |
+| Skeleton | `skeleton_attack` | `assets/audio/sfx/skeleton_attack.ogg` | 0.80 | Bone clash / rattle |
+| SkeletonArcher | `skeleton_attack` | (shares skeleton) | 0.80 | Bow twang + bone rattle |
+| Spider | `spider_attack` | `assets/audio/sfx/spider_attack.ogg` | 0.80 | Loud hiss / screech |
+| Bandit | `bandit_attack` | `assets/audio/sfx/bandit_attack.ogg` | 0.80 | Shout / war cry |
+
+### Enemy Death Sounds (triggered on `enemy_killed` events)
+
+| Enemy Type | Sound Key | File Path | Volume | Notes |
+|------------|-----------|-----------|--------|-------|
+| Goblin | `goblin_death` | `assets/audio/sfx/goblin_death.ogg` | 0.75 | Screech |
+| Wolf | `wolf_death` | `assets/audio/sfx/wolf_death.ogg` | 0.75 | Whimper / yelp |
+| Skeleton | `skeleton_death` | `assets/audio/sfx/skeleton_death.ogg` | 0.75 | Bone collapse |
+| SkeletonArcher | `skeleton_death` | (shares skeleton) | 0.75 | Bone collapse |
+| Spider | `spider_death` | `assets/audio/sfx/spider_death.ogg` | 0.75 | Squish |
+| Bandit | `bandit_death` | `assets/audio/sfx/bandit_death.ogg` | 0.75 | Groan |
+
+### Enemy Ambient Sounds (per-enemy random cooldown: 5-15 seconds)
+
+| Enemy Type | Sound Key | File Path | Volume | Cooldown | Notes |
+|------------|-----------|-----------|--------|----------|-------|
+| Goblin | `goblin_ambient` | `assets/audio/sfx/goblin_ambient.ogg` | 0.35 | 5-15s random | Mumbling |
+| Wolf | `wolf_ambient` | `assets/audio/sfx/wolf_ambient.ogg` | 0.35 | 5-15s random | Low growl |
+| Skeleton | `skeleton_ambient` | `assets/audio/sfx/skeleton_ambient.ogg` | 0.35 | 5-15s random | Quiet clatter |
+| SkeletonArcher | `skeleton_ambient` | (shares skeleton) | 0.35 | 5-15s random | Quiet clatter |
+| Spider | `spider_ambient` | `assets/audio/sfx/spider_ambient.ogg` | 0.35 | 5-15s random | Soft chittering |
+| Bandit | `bandit_ambient` | `assets/audio/sfx/bandit_ambient.ogg` | 0.35 | 5-15s random | Grumble |
+
+### Enemy Sound Design Notes
+
+- **Distance attenuation**: Volume scales linearly from 1.0 (at camera center) to 0.0 (at 1200px / ~37 tiles away).
+- **Simultaneous cap**: Max 4 enemy sounds playing at once to prevent wall-of-noise.
+- **SkeletonArcher** and **BanditLord** share sounds with their base types (Skeleton and Bandit respectively).
+- **Ambient cooldowns** are per-enemy-instance with random jitter (5-15s) so enemies don't all vocalize at once.
+- **All files are CC0** (OpenGameArt CC0 Collections, same pack as existing combat SFX).
+- **Non-authoritative**: missing files cause silent no-op; never affects simulation.
+
+---
+
 ## Cooldowns (milliseconds)
 
 Default cooldowns (Build A):

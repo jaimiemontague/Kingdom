@@ -2,7 +2,7 @@
 Shared hiring/tax behavior for hero-recruiting buildings.
 """
 
-from config import GUILD_MAX_HEROES
+from config import GUILD_MAX_HEROES, GUILD_REST_RECOVERY_RATE
 
 
 class HiringBuilding:
@@ -12,6 +12,7 @@ class HiringBuilding:
         self.heroes_hired = 0
         self.max_heroes = GUILD_MAX_HEROES  # WK60 Feature 3: guild hero cap
         self.stored_tax_gold = 0
+        self.rest_recovery_rate = GUILD_REST_RECOVERY_RATE  # WK61-TUNE-003: 5x healing in guilds
 
     def can_hire(self) -> bool:
         """WK60: Returns False when guild has reached its hero cap."""

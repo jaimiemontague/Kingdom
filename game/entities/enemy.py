@@ -10,6 +10,7 @@ from config import (
     SKELETON_ARCHER_HP, SKELETON_ARCHER_ATTACK, SKELETON_ARCHER_SPEED,
     SKELETON_ARCHER_ATTACK_RANGE_TILES, SKELETON_ARCHER_MIN_RANGE_TILES,
     SKELETON_ARCHER_ATTACK_COOLDOWN_MS,
+    ENEMY_BUILDING_PRIORITY_RANGE_TILES,
     COLOR_RED
 )
 from game.sim.timebase import now_ms
@@ -136,6 +137,16 @@ class Enemy:
         best_target = None
         best_dist = float('inf')
 
+        # WK61-FEAT-007: Determine if enemy is near any player building.
+        # When near town, strongly prefer attacking buildings over chasing heroes.
+        building_priority_range = ENEMY_BUILDING_PRIORITY_RANGE_TILES * TILE_SIZE
+        near_town = False
+        for b in buildings:
+            if b.hp > 0 and getattr(b, "is_targetable", False):
+                if self.distance_to(b.center_x, b.center_y) < building_priority_range:
+                    near_town = True
+                    break
+
         # Check peasants that are NOT inside the castle
         for peasant in peasants or []:
             if getattr(peasant, "is_alive", False) and not getattr(peasant, "is_inside_castle", False):
@@ -143,7 +154,7 @@ class Enemy:
                 if dist < best_dist:
                     best_dist = dist
                     best_target = peasant
-        
+
         # Check heroes that are NOT inside buildings (covers resting/shopping/etc).
         for hero in heroes:
             if hero.is_alive and not bool(getattr(hero, "is_inside_building", False)):
@@ -159,27 +170,38 @@ class Enemy:
                 if dist < best_dist:
                     best_dist = dist
                     best_target = guard
-        
-        # Check buildings
+
+        # Check buildings — WK61: use stronger biases when near town
+        if near_town:
+            castle_bias = 0.3
+            neutral_bias = 0.3
+            other_bias = 0.4
+        else:
+            castle_bias = 0.8
+            neutral_bias = 0.9
+            other_bias = 1.0
+
         for building in buildings:
             if building.hp <= 0:
                 continue
             if hasattr(building, "is_targetable") and not building.is_targetable:
                 continue
-            
+
             dist = self.distance_to(building.center_x, building.center_y)
-            
+
             # Castle is always a valid fallback target
-            if building.building_type == "castle" and dist < best_dist * 0.8:
+            if building.building_type == "castle" and dist < best_dist * castle_bias:
                 best_dist = dist
                 best_target = building
-            # Neutral buildings (houses/farms/food stands) can be attacked if they are meaningfully closer
-            # than any currently chosen target. This makes civilian infrastructure a "soft target" without
-            # overriding the normal preference for heroes/peasants/guards.
-            elif getattr(building, "is_neutral", False) and dist < best_dist * 0.9:
+            # Neutral buildings (houses/farms/food stands)
+            elif getattr(building, "is_neutral", False) and dist < best_dist * neutral_bias:
                 best_dist = dist
                 best_target = building
-        
+            # WK61: Other buildings (guilds, markets, etc.) — targetable when near town
+            elif dist < best_dist * other_bias:
+                best_dist = dist
+                best_target = building
+
         self.target = best_target
         return best_target
     

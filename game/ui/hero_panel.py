@@ -59,6 +59,19 @@ class HeroPanel:
         self.menu_scroll_px = 0
         self._menu_scroll_hero_key: str | None = None
         self._menu_max_scroll = 0
+        # WK61-FEAT-005: Chat button state
+        self._chat_button_rect: pygame.Rect | None = None
+        self._current_hero = None
+
+    def handle_click(self, mouse_pos: tuple[int, int]) -> dict | None:
+        """Check for chat button click (WK61-FEAT-005). Returns action dict or None."""
+        if (
+            self._chat_button_rect is not None
+            and self._current_hero is not None
+            and self._chat_button_rect.collidepoint(mouse_pos)
+        ):
+            return {"type": "start_conversation", "hero": self._current_hero}
+        return None
 
     def apply_menu_scroll(self, wheel_y: int) -> bool:
         if wheel_y == 0 or self._menu_max_scroll <= 0:
@@ -848,6 +861,27 @@ class HeroPanel:
                     y += 14
             except Exception:
                 pass
+
+        # WK61-FEAT-005: Chat button at bottom of hero info
+        self._current_hero = hero
+        y += 6
+        chat_btn_w = panel_width - (pad * 2)
+        chat_btn_h = 26
+        chat_btn_rect_raw = pygame.Rect(panel_x + pad, y - scroll_off, chat_btn_w, chat_btn_h)
+        # Store absolute rect (not scroll-adjusted) for hit testing
+        self._chat_button_rect = pygame.Rect(panel_x + pad, y - scroll_off, chat_btn_w, chat_btn_h)
+        # Button background
+        mouse_pos = pygame.mouse.get_pos()
+        hovered = chat_btn_rect_raw.collidepoint(mouse_pos)
+        btn_bg = (80, 150, 240) if hovered else (60, 120, 200)
+        pygame.draw.rect(surface, btn_bg, chat_btn_rect_raw)
+        pygame.draw.rect(surface, self._frame_inner, chat_btn_rect_raw, 1)
+        # Button text
+        chat_txt = self.theme.font_small.render("Chat", True, (255, 255, 255))
+        txt_x = chat_btn_rect_raw.x + (chat_btn_rect_raw.width - chat_txt.get_width()) // 2
+        txt_y = chat_btn_rect_raw.y + (chat_btn_rect_raw.height - chat_txt.get_height()) // 2
+        surface.blit(chat_txt, (txt_x, txt_y))
+        y += chat_btn_h + 8
 
         def _finish_body_scroll() -> None:
             content_h = int(y) - body_start

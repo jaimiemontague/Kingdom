@@ -1331,6 +1331,64 @@
           ]
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 R1: playtest polish — 3 UI items (taxable gold bug, hero chat button, enemy click panel)"
+      },
+      "rounds": {
+        "wk61_r1_ui_polish": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r1_ui_polish",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-BUG-002 game/ui/building_renderers/economic_panel.py: Added taxable gold display line for marketplace and blacksmith building menus (completed in prior session).",
+            "WK61-FEAT-005 game/ui/hero_panel.py: Added 'Chat' button at bottom of _render_standard_hero(); new _chat_button_rect + _current_hero state; handle_click() returns start_conversation action dict. game/ui/hud.py: handle_click routes hero panel chat button clicks to start_conversation action (existing input_handler processing opens ChatPanel).",
+            "WK61-FEAT-006 (A) game/engine.py: Added selected_enemy property forwarding to sim; try_select_enemy() method with distance-based picking (1.5x size radius); all try_select_* methods now clear selected_enemy on success. game/sim_engine.py: Added selected_enemy=None to __init__. game/engine.py get_game_state: exposes selected_enemy in game_state dict.",
+            "WK61-FEAT-006 (B) game/input_handler.py: Added enemy to click cascade after peasant, before building (try_select_enemy); _clear_hero_selection clears selected_enemy; close_selection clears selected_enemy; empty-space click clears selected_enemy.",
+            "WK61-FEAT-006 (C) game/ui/enemy_panel.py (NEW): EnemyPanel class renders enemy info in left column (224px) — enemy type name (camelCase split), HP bar (red), attack damage, speed, state, current target. Follows HeroPanel rendering patterns (TextLabel, HPBar, section dividers, theme fonts).",
+            "WK61-FEAT-006 (D) game/ui/hud.py: Import + instantiate EnemyPanel; render() shows enemy panel in left column when selected_enemy set (mutually exclusive with hero/peasant panels); close button renders for enemy panel; virtual_pointer_in_hud_chrome includes selected_enemy; show_left message offset includes selected_enemy."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q --tb=short",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "339 passed in 36.43s"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            }
+          ],
+          "evidence": {
+            "pytest": "python -m pytest tests/ -x -q --tb=short exit_code=0 (339 passed)",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "files_modified": [
+              "game/engine.py (selected_enemy property, try_select_enemy, clear in all try_select_* methods, get_game_state)",
+              "game/sim_engine.py (selected_enemy init)",
+              "game/input_handler.py (enemy in click cascade, clear in _clear_hero_selection/close_selection/empty click)",
+              "game/ui/hero_panel.py (Chat button rendering + handle_click)",
+              "game/ui/enemy_panel.py (NEW — EnemyPanel class)",
+              "game/ui/hud.py (EnemyPanel import/instantiation/rendering/click routing/chrome checks)"
+            ],
+            "files_not_committed": true
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie manual test: select hero, verify Chat button at bottom of hero panel opens conversation.",
+            "Jaimie manual test: click on enemies to verify info panel appears with HP/attack/target info.",
+            "Jaimie manual test: verify enemy panel close button works, clicking hero replaces enemy panel."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q",
+            "python tools/qa_smoke.py --quick"
+          ]
+        }
+      }
     }
   }
 }

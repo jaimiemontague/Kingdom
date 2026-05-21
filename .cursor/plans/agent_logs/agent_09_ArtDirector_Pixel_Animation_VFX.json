@@ -595,6 +595,112 @@
           ]
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 sprint: playtest polish features (rubble, enemy panel, chat button, gold overlay, label removal)."
+      },
+      "rounds": {
+        "wk61_r2_qa_review": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r2_qa_review",
+          "status": "done",
+          "role": "CONSULT-ONLY visual cohesion review",
+          "what_i_changed": {
+            "summary": "No code changes. Reviewed 5 new visual elements for art cohesion.",
+            "files_touched": [
+              ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
+            ]
+          },
+          "review_findings": {
+            "1_rubble_rendering": {
+              "file": "game/graphics/ursina_renderer.py",
+              "method": "_sync_snapshot_rubble (line 1912)",
+              "verdict": "PASS with minor notes",
+              "details": [
+                "Rock models (rock_smallA-F.glb) are appropriate: all 6 variants exist under assets/models/environment/. Using the same Kenney low-poly rock props that already appear in terrain scatter keeps visual consistency.",
+                "3 rocks per rubble site is a good density: enough to read as debris without cluttering the tile. Comparable to the existing terrain scatter density.",
+                "Scale range 0.8-1.5 is LOWER than terrain scatter rocks (ROCK_SCALE_MULTIPLIER=1.68). This is intentional and correct: rubble should read as broken-down chunks, not landscape boulders. The variance (nearly 2x range) gives organic spread.",
+                "Color rgb(0.6, 0.55, 0.5) — dusty gray-brown — is appropriate for rubble. It desaturates toward stone/dust tones and reads differently from the brown used for tax collector pouches rgb(0.4, 0.25, 0.1). Good differentiation.",
+                "Coordinate system: uses sim_px_to_world_xz() and get_terrain_height() — same pipeline as buildings/units. terrain_y + 0.1 lift prevents Z-fighting with ground plane. Correct.",
+                "Deterministic RNG seeded from record_id — follows the codebase convention (no wall-clock or unseeded random). Good.",
+                "Scatter offset is +/-30% of half-footprint — rocks cluster near center rather than spilling outside the building footprint. Correct for rubble feel."
+              ],
+              "minor_note": "The rock_small*.glb list uses CamelCase stems (rock_smallA) while the filesystem also has snake_case variants (rock_small_a.glb). The code only references CamelCase stems. If _environment_model_path fails to resolve CamelCase, it would silently produce invisible rubble. Recommend verifying the model loader handles both naming conventions, or explicitly listing only the stems that match on-disk filenames."
+            },
+            "2_enemy_info_panel": {
+              "file": "game/ui/enemy_panel.py",
+              "verdict": "PASS — strong cohesion with existing panels",
+              "details": [
+                "Panel structure mirrors hero_panel.py exactly: same __init__ signature (theme, frame_inner, frame_highlight), same _draw_section_divider method, same header_h=28, same header_rect construction (panel_x+6, panel_y+pad-4, panel_width-12, header_h).",
+                "Header background (45,30,30) is a dark warm red, distinct from hero panel's (35,35,45) cool blue-gray. This is a deliberate and correct color shift: enemy = warm/hostile, hero = cool/neutral. Same frame_inner/frame_highlight border treatment.",
+                "Enemy name color (220,80,80) — red-tinted title text — matches the hostile theme. Hero panel uses COLOR_WHITE for names. Appropriate differentiation.",
+                "HP bar uses uniform red (220,50,50) for good/warn/bad states with a dark red background (60,30,30) and dark border (20,10,10). This reads correctly for enemy health: 'all enemy HP is red.' Hero panel uses green->yellow->red gradient. Correct semantic distinction.",
+                "Combat stats section uses consistent text colors: section headers (180,150,150), ATK in warm pinkish (255,200,200), speed in cool blue (200,200,255). These match the muted stat colors used throughout the hero panel.",
+                "State and target display at bottom with appropriate muted colors and the same shadow_color=(25,25,35) used everywhere in the HUD.",
+                "TextLabel.render and HPBar.render widget usage matches hero_panel exactly — shared widget contract.",
+                "Uses _camel_to_display for enemy type name formatting — clean presentation."
+              ],
+              "no_issues": true
+            },
+            "3_chat_button": {
+              "file": "game/ui/hero_panel.py",
+              "location": "lines 865-884 in _render_standard_hero",
+              "verdict": "PASS with minor style note",
+              "details": [
+                "Placement at bottom of hero info (after all stats, memory, career) is correct — it is a secondary action, not primary info. The y += 6 gap before it provides visual separation.",
+                "Button uses full panel width minus padding (chat_btn_w = panel_width - pad*2), matching the HP bar and XP bar width. Consistent with panel layout.",
+                "Height of 26px is compact and proportional to the 28px header height.",
+                "Button bg color (60,120,200) / hover (80,150,240) is a distinctive blue. This is appropriate for an interactive element — stands out from the information-display colors without clashing. The blue accent is consistent with the XP bar blue tones (120,170,230) used in the same panel.",
+                "Uses frame_inner for the 1px border — same border treatment as headers and section dividers throughout the HUD.",
+                "Text is centered both horizontally and vertically within the button rect. White (255,255,255) text on the blue background has strong contrast.",
+                "Scroll-aware: uses y - scroll_off for positioning within the scrollable viewport. The _chat_button_rect stores the actual screen position for hit testing."
+              ],
+              "minor_note": "The button lacks the top-highlight line that headers get (frame_highlight on top edge). Adding a 1px lighter line on the top of the button would match the beveled look of header bars. Not critical — the flat style also works for a button."
+            },
+            "4_gold_overlay_g_key": {
+              "file": "game/graphics/ursina_renderer.py",
+              "location": "_sync_building_worldspace_ui (line 176-192)",
+              "verdict": "PASS",
+              "details": [
+                "Gold text color rgb(1.0, 0.8, 0.2) matches the hero gold label color used at line 1388. Consistent gold color across the game.",
+                "Text scale=12 matches the hero name label scale=12 at line 1370, and the building gold scale is consistent. The building gold sits at y=0.9, between the HP bar (y=1.5) and the building center. Readable separation.",
+                "Billboard=True ensures readability at any camera angle — correct for world-space text.",
+                "The G-key toggle is clean: held_keys.get('g', False) checks every frame. When G is released, the elif branch sets gold_ent.enabled = False. This is the same show/hide pattern used for HP bars (enabled = True/False toggle) — no destroy/recreate, so no visual artifacts on release.",
+                "Text entity is created once and cached as ent._ks_gold_label — subsequent frames just toggle .enabled and update .text if the stash value changed. No per-frame allocation.",
+                "The stash_gold / stored_tax_gold fallback chain is sensible — covers both economic building types."
+              ],
+              "no_issues": true
+            },
+            "5_building_labels_removed": {
+              "file": "game/graphics/ursina_renderer.py",
+              "location": "_sync_building_worldspace_ui (lines 152-155)",
+              "verdict": "PASS — clean removal",
+              "details": [
+                "The label entity is not destroyed, just disabled (label_ent.enabled = False). This is the safest approach: no orphan child entities, no null-pointer crashes from other code that might still reference _ks_label.",
+                "The getattr(ent, '_ks_label', None) check means buildings that were never given a label (new buildings created after this change) will skip gracefully.",
+                "No visual gap: the HP bar and gold display are positioned at absolute y offsets (y=1.5 for HP, y=0.9 for gold) relative to the building entity, not relative to the label. Removing the label does not shift other elements.",
+                "Searched for _ks_label creation — found only this one reference in the renderer. The label entity was likely created in an older version of this function. Since disabled entities remain parented but invisible, there is no artifact risk.",
+                "The comment 'WK61-FEAT-001: disabled' is clear and traceable."
+              ],
+              "no_issues": true
+            }
+          },
+          "overall_verdict": "All 5 visual elements pass art cohesion review. No blocking issues. Two minor notes flagged for follow-up but neither requires immediate action.",
+          "flagged_for_followup": [
+            "Rubble: verify _environment_model_path resolves CamelCase 'rock_smallA' stems to the on-disk .glb files (both CamelCase and snake_case variants exist).",
+            "Chat button: optional bevel highlight could match header style but the flat button is acceptable."
+          ],
+          "blockers": [],
+          "commands_run": [
+            {
+              "command": "agent log update only — CONSULT-ONLY round, no game code changes",
+              "note": "No qa_smoke run required for review-only round"
+            }
+          ]
+        }
+      }
     }
   }
 }

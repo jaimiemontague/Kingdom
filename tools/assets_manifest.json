@@ -156,7 +156,22 @@
       "purchase",
       "ui_click",
       "ui_confirm",
-      "ui_error"
+      "ui_error",
+      "goblin_attack",
+      "goblin_death",
+      "goblin_ambient",
+      "wolf_attack",
+      "wolf_death",
+      "wolf_ambient",
+      "skeleton_attack",
+      "skeleton_death",
+      "skeleton_ambient",
+      "spider_attack",
+      "spider_death",
+      "spider_ambient",
+      "bandit_attack",
+      "bandit_death",
+      "bandit_ambient"
     ],
     "ambient": [
       "ambient_loop"

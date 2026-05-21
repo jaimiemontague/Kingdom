@@ -261,13 +261,13 @@
               "file_sourcing_status": "Requires human action (cannot download programmatically)"
             }
           },
-          "wk6_r3": {
+          "wk6_r3_filecopy": {
             "sprint_id": "wk6-audio-buildmenu-fogbounties-explorexp",
             "sprint_meta": {
               "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",
               "notes": ""
             },
-            "round_id": "wk6_r3",
+            "round_id": "wk6_r3_filecopy",
             "round_meta": {
               "prompt_set_id": "wk6_r3_finalization",
               "build_target": "BuildA_midweek",
@@ -873,10 +873,99 @@
           }
         }
       }
+    },
+    "wk61-playtest-polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 Playtest Feedback: polish, balance, new features. Agent 14 owns Item #3 (enemy-specific sounds)."
+      },
+      "rounds": {
+        "wk61_r1_enemy_sounds": {
+          "sprint_id": "wk61-playtest-polish",
+          "round_id": "wk61_r1_enemy_sounds",
+          "round_meta": {
+            "build_target": "Prototype v1.5.8+",
+            "sent_at_local": "2026-05-20"
+          },
+          "prompt_text": "WK61-FEAT-002: Add enemy-specific sounds so each enemy type is audibly distinct. Wolf: bark/snarl attack, growl ambient. Spider: hiss attack, chittering ambient. Goblin: grunt attack, mumble ambient. Skeleton/SkeletonArcher: bone rattle attack, clatter ambient. Bandit: war cry attack, grumble ambient. Wire into AudioSystem for combat events (attack/death) and per-enemy ambient with 5-15s random cooldown, max 4 simultaneous, distance-based volume.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Created game/audio/enemy_sounds.py: EnemySoundManager with per-enemy-type attack/death/ambient sound mapping, distance-based volume attenuation (linear 0-1200px), 5-15s random ambient cooldowns per enemy instance, and max 4 simultaneous enemy sound cap.",
+              "Copied 15 CC0 sound files from OpenGameArt pack (.cursor/human_provided/open game art/) to assets/audio/sfx/: 5 enemy types x 3 sounds each (attack/death/ambient). SkeletonArcher and BanditLord share base type sounds.",
+              "Integrated into AudioSystem: _emit_single_event() dispatches enemy attack sounds on hero_attack events (using 'target' field) and enemy death sounds on enemy_killed events (using 'enemy' field). New update_enemy_ambient() public method for engine per-frame ambient tick.",
+              "Updated EVENT_CONTRACT.md with full enemy sound tables (attack/death/ambient per type), design notes on distance attenuation, simultaneous cap, and cooldown behavior.",
+              "Updated assets/ATTRIBUTION.md with all 15 new file locations and source file provenance.",
+              "Updated tools/assets_manifest.json with 15 new sfx keys for validator compatibility."
+            ],
+            "proposed_changes": [
+              "game/audio/enemy_sounds.py (NEW): EnemySoundManager class with ENEMY_SOUND_MAP, distance-based volume, ambient cooldowns, simultaneous sound cap.",
+              "game/audio/audio_system.py: Added EnemySoundManager init, enemy sound dispatch in _emit_single_event(), update_enemy_ambient() public method.",
+              "game/audio/EVENT_CONTRACT.md: Added WK61 enemy sound tables and design notes.",
+              "assets/ATTRIBUTION.md: Added 15 new OGG file locations to OpenGameArt CC0 entry.",
+              "tools/assets_manifest.json: Added 15 enemy sfx keys to audio.sfx array.",
+              "assets/audio/sfx/: 15 new .ogg files (goblin/wolf/skeleton/spider/bandit x attack/death/ambient)."
+            ],
+            "acceptance_criteria": [
+              "python -m pytest tests/ -x -q: PASS (339 passed)",
+              "python tools/qa_smoke.py --quick: PASS",
+              "python tools/validate_assets.py --report: 0 errors (warnings are pre-existing model file gaps)",
+              "All 15 enemy sound files present in assets/audio/sfx/",
+              "Enemy attack sounds trigger on hero_attack events with correct type dispatch",
+              "Enemy death sounds trigger on enemy_killed events with correct type dispatch",
+              "Ambient sounds tick per-enemy with 5-15s random cooldown, max 4 simultaneous, distance-attenuated"
+            ],
+            "risks": [
+              "Sound selection: OpenGameArt CC0 sounds are abstract (hits/metals/springs); they approximate the intended wolf bark / spider hiss etc. Better quality can be achieved with dedicated CC0 animal sound packs in a future Build B variant pass.",
+              "Ambient frequency: 5-15s cooldown may feel too frequent or too sparse depending on enemy density; tunable via AMBIENT_COOLDOWN_MIN_S / AMBIENT_COOLDOWN_MAX_S constants."
+            ],
+            "agent_fields": {
+              "files_copied": {
+                "goblin_attack": "goblin_attack.ogg (from open game art/hit_03.ogg)",
+                "goblin_death": "goblin_death.ogg (from open game art/other_01.ogg)",
+                "goblin_ambient": "goblin_ambient.ogg (from open game art/noise_02.ogg)",
+                "wolf_attack": "wolf_attack.ogg (from open game art/hit_02.ogg)",
+                "wolf_death": "wolf_death.ogg (from open game art/other_02.ogg)",
+                "wolf_ambient": "wolf_ambient.ogg (from open game art/noise_01.ogg)",
+                "skeleton_attack": "skeleton_attack.ogg (from open game art/metal_01.ogg)",
+                "skeleton_death": "skeleton_death.ogg (from open game art/wooden_01.ogg)",
+                "skeleton_ambient": "skeleton_ambient.ogg (from open game art/metal_02.ogg)",
+                "spider_attack": "spider_attack.ogg (from open game art/spring_01.ogg)",
+                "spider_death": "spider_death.ogg (from open game art/plop_02.ogg)",
+                "spider_ambient": "spider_ambient.ogg (from open game art/spring_02.ogg)",
+                "bandit_attack": "bandit_attack.ogg (from open game art/hit_04.ogg)",
+                "bandit_death": "bandit_death.ogg (from open game art/other_03.ogg)",
+                "bandit_ambient": "bandit_ambient.ogg (from open game art/other_04.ogg)"
+              },
+              "attribution_updates": {
+                "opengameart": "Added 15 new WK61 file locations to existing OpenGameArt CC0 entry in ATTRIBUTION.md"
+              },
+              "test_results": {
+                "pytest": "339 passed in 35.97s",
+                "qa_smoke_quick": "PASS",
+                "validate_assets_report": "errors=0 warns=46 (all pre-existing model file warnings)"
+              },
+              "sound_design": {
+                "distance_attenuation": "Linear 0.0-1.0 over 1200px (~37 tiles)",
+                "ambient_cooldown": "5-15 seconds random per enemy instance",
+                "max_simultaneous": 4,
+                "volume_tiers": {
+                  "attack": 0.80,
+                  "death": 0.75,
+                  "ambient": 0.35
+                },
+                "shared_sounds": {
+                  "skeleton_archer": "shares skeleton sounds",
+                  "bandit_lord": "shares bandit sounds"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
-
 }
 }
 }

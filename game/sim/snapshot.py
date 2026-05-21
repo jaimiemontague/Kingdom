@@ -76,3 +76,6 @@ class SimStateSnapshot:
     # --- WK57: Underground areas (dict[str, UndergroundArea]) ---
     underground_areas: Any = None
 
+    # --- WK61: Rubble records for destroyed buildings ---
+    rubble_records: tuple = ()
+

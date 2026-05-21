@@ -149,15 +149,10 @@ def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
     if getattr(b, "is_poi", False) or is_lair:
         return
 
-    # --- Building label ---
+    # --- Building label --- (WK61-FEAT-001: disabled — remove name labels from buildings)
     label_ent = getattr(ent, '_ks_label', None)
-    if label_ent is None:
-        label_text = _BUILDING_LABEL_MAP.get(bts, bts.upper())
-        label_ent = Text(
-            text=label_text, parent=ent, origin=(0, 0), scale=15,
-            color=color.white, billboard=True, y=1.2,
-        )
-        ent._ks_label = label_ent
+    if label_ent is not None:
+        label_ent.enabled = False
 
     # --- Building HP bar (show only when damaged) ---
     b_hp = int(getattr(b, 'hp', 0) or 0)
@@ -178,10 +173,12 @@ def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
     elif hp_bar_ent is not None:
         hp_bar_ent.enabled = False
 
-    # --- Gold display (show when building has gold stash) ---
+    # --- Gold display (WK61-FEAT-003: gated on held 'G' key) ---
+    from ursina import held_keys
     stash = int(getattr(b, 'stash_gold', 0) or getattr(b, 'stored_tax_gold', 0) or 0)
+    g_held = held_keys.get('g', False)
     gold_ent = getattr(ent, '_ks_gold_label', None)
-    if stash > 0:
+    if stash > 0 and g_held:
         text = f"${stash}"
         if gold_ent is None:
             gold_ent = Text(text=text, parent=ent, origin=(0, 0), scale=12,
@@ -269,6 +266,8 @@ class UrsinaRenderer:
         self._poi_mystery_markers: dict[int, Entity] = {}
         # WK60 Feature 7: Bounty flag 3D entities, keyed by bounty_id.
         self._bounty_entities: dict[int, list[Entity]] = {}
+        # WK61-FEAT-004: Rubble entity groups, keyed by RubbleRecord.record_id.
+        self._rubble_entities: dict[int, list] = {}
 
         # R4: sim interpolation state for linear position interpolation
         self._frame_blend: float = 0.0
@@ -876,6 +875,8 @@ class UrsinaRenderer:
         if _stage_profile: _rec("17_sync_snapshot_projectiles", _t0); _t0 = time.perf_counter()
         self._sync_snapshot_bounties(snapshot, active_ids)
         if _stage_profile: _rec("17b_sync_snapshot_bounties", _t0); _t0 = time.perf_counter()
+        self._sync_snapshot_rubble(snapshot)
+        if _stage_profile: _rec("17c_sync_snapshot_rubble", _t0); _t0 = time.perf_counter()
         self._update_debug_status_text(snapshot)
         if _stage_profile: _rec("18_update_debug_status_text", _t0); _t0 = time.perf_counter()
         self._destroy_removed_entities(active_ids)
@@ -1410,6 +1411,17 @@ class UrsinaRenderer:
             elif rest_ent is not None:
                 rest_ent.enabled = False
 
+            # WK61-BUG-001: Counter-flip child text entities so they don't mirror
+            # when the parent hero entity faces left (negative scale_x).
+            # Math: rendered_scale = parent.scale_x * child.scale_x
+            # We want rendered_scale > 0 always, so child.scale_x must match
+            # the sign of parent.scale_x (negative * negative = positive).
+            for attr in ('_ks_name_label', '_ks_gold_label', '_ks_rest_label',
+                         '_ks_hp_bg', '_ks_hp_fg'):
+                child = getattr(ent, attr, None)
+                if child is not None:
+                    child.scale_x = abs(child.scale_x) * facing
+
             active_ids.add(obj_id)
 
 
@@ -1515,6 +1527,13 @@ class UrsinaRenderer:
                     _e_hp_bg.enabled = False
                 if _e_hp_fg is not None:
                     _e_hp_fg.enabled = False
+
+            # WK61-BUG-001: Counter-flip enemy child HP bar entities so they
+            # don't mirror when the parent entity faces left (negative scale_x).
+            for attr in ('_ks_hp_bg', '_ks_hp_fg'):
+                child = getattr(ent, attr, None)
+                if child is not None:
+                    child.scale_x = abs(child.scale_x) * facing_e
 
             active_ids.add(obj_id)
 
@@ -1885,6 +1904,67 @@ class UrsinaRenderer:
             parts = self._bounty_entities.pop(bid)
             for part in parts:
                 ursina.destroy(part)
+
+    # ------------------------------------------------------------------
+    # WK61-FEAT-004: Rubble rendering (destroyed building debris)
+    # ------------------------------------------------------------------
+
+    def _sync_snapshot_rubble(self, snapshot: "SimStateSnapshot") -> None:
+        """Create/destroy rubble entity groups from snapshot.rubble_records."""
+        import ursina as _ursina
+        import random as _random
+
+        rubble_records = getattr(snapshot, 'rubble_records', ())
+        active_ids = {r.record_id for r in rubble_records}
+
+        # Remove expired rubble
+        for rid in list(self._rubble_entities.keys()):
+            if rid not in active_ids:
+                for ent in self._rubble_entities[rid]:
+                    _ursina.destroy(ent)
+                del self._rubble_entities[rid]
+
+        # Create new rubble
+        for r in rubble_records:
+            if r.record_id in self._rubble_entities:
+                continue  # already rendered
+
+            entities = []
+            # Convert grid position to world position using the same
+            # coordinate system as buildings (sim pixels -> Ursina X/Z).
+            ts = float(config.TILE_SIZE)
+            center_px_x = r.grid_x * ts + (r.width_tiles * ts) * 0.5
+            center_px_y = r.grid_y * ts + (r.height_tiles * ts) * 0.5
+            wx, wz = sim_px_to_world_xz(center_px_x, center_px_y)
+            terrain_y = get_terrain_height(wx, wz) if _terrain_height_ok() else 0.0
+
+            # Place 3 small rock models scattered within footprint
+            rng = _random.Random(r.record_id)  # deterministic per rubble
+            footprint_world = r.width_tiles * 0.5  # half-extent in world units
+
+            _rock_stems = [
+                'rock_smallA', 'rock_smallB', 'rock_smallC',
+                'rock_smallD', 'rock_smallE', 'rock_smallF',
+            ]
+
+            for _i in range(3):
+                offset_x = rng.uniform(-footprint_world * 0.3, footprint_world * 0.3)
+                offset_z = rng.uniform(-footprint_world * 0.3, footprint_world * 0.3)
+                rock_stem = rng.choice(_rock_stems)
+                rock_model = _environment_model_path(rock_stem)
+                rock_scale = rng.uniform(0.8, 1.5)
+                rock_rot = rng.uniform(0, 360)
+
+                rock = Entity(
+                    model=rock_model,
+                    position=(wx + offset_x, terrain_y + 0.1, wz + offset_z),
+                    scale=rock_scale,
+                    rotation_y=rock_rot,
+                    color=color.rgb(0.6, 0.55, 0.5),  # dusty gray-brown
+                )
+                entities.append(rock)
+
+            self._rubble_entities[r.record_id] = entities
 
     def _update_debug_status_text(self, snapshot: "SimStateSnapshot") -> None:
         heroes_alive = len([h for h in getattr(snapshot, "heroes", ()) if getattr(h, "is_alive", True)])

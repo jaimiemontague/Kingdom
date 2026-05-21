@@ -165,6 +165,153 @@
           ]
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "created_utc": "2026-05-20T00:00:00Z",
+        "notes": "Playtest polish sprint. Agent 11 owns QA review of 13 R1 items."
+      },
+      "rounds": {
+        "wk61_r2_qa_review": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r2_qa_review",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "Full QA verification of the 13 playtest items implemented in R1. Run all gates and verify the changes are correct.",
+            "created_utc": "2026-05-20T00:00:00Z",
+            "depends_on": "wk61_r1_implementation"
+          },
+          "prompt_summary": "Run 3 gate checks (qa_smoke, pytest, validate_assets) and code-review all 13 R1 playtest polish items plus enemy sound system.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "QA review only. No code changes made. All 3 gates pass and all 13 items verified correct.",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS. determinism_guard PASS, 339 tests passed, all 14 observe_sync profiles exit 0."
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "339 passed, 1 warning in 35.25s. Matches expected count."
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46. All 46 warnings are pre-existing missing_model_file warnings (placeholder models). No new asset issues."
+            }
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (rc=0)",
+              "pytest": "339 passed, 1 warning in 35.25s",
+              "validate_assets": "errors=0, warns=46 (all pre-existing model warnings)"
+            },
+            "code_review_checklist": {
+              "item_01_hero_base_hp_60": {
+                "status": "PASS",
+                "file": "config.py",
+                "line": 48,
+                "detail": "HeroConfig.base_hp = 60 with comment 'WK61-TUNE-004: reduced from 100'. Correct."
+              },
+              "item_02_market_visit_durations_halved": {
+                "status": "PASS",
+                "file": "ai/behaviors/task_durations.py",
+                "lines": "9-12",
+                "detail": "buy_potion (2,3) was (3,6), buy_weapon (2,4) was (4,7), buy_armor (3,5) was (5,9), shopping (2,3) was (3,6). All halved. WK61-TUNE-001 tags present."
+              },
+              "item_03_guardhouse_2_arrows": {
+                "status": "PASS",
+                "files": ["config.py:140", "game/entities/buildings/defensive.py:63-90"],
+                "detail": "GUARDHOUSE_ARROWS_PER_SHOT = 2 in config. defensive.py fires loop range(GUARDHOUSE_ARROWS_PER_SHOT) applying damage per arrow and emits per-arrow projectile events with slight offset. Backward compat kept via _last_ranged_event = first event."
+              },
+              "item_04_healing_rates_5x_guild_7x_inn": {
+                "status": "PASS",
+                "files": ["config.py:142-144", "game/entities/buildings/hiring_mixin.py:15", "game/entities/buildings/economic.py:217"],
+                "detail": "GUILD_REST_RECOVERY_RATE=0.05 (was 0.01, 5x). INN_REST_RECOVERY_RATE=0.14 (was 0.02, 7x). hiring_mixin.py line 15 uses GUILD_REST_RECOVERY_RATE. economic.py Inn.__init__ line 217 uses INN_REST_RECOVERY_RATE. WK61-TUNE-003 tags."
+              },
+              "item_05_building_destruction_rubble": {
+                "status": "PASS",
+                "files": ["game/entities/rubble.py", "game/cleanup_manager.py:107-123", "game/sim_engine.py:121,474,767-774", "game/sim/snapshot.py:80"],
+                "detail": "RubbleRecord dataclass with record_id, position, footprint, type, timestamps. cleanup_manager creates rubble on building destruction and appends to sim.rubble_records. sim_engine initializes rubble_records list, includes it in snapshot, and expires records after 2 minutes. snapshot.py has rubble_records: tuple = () field."
+              },
+              "item_06_enemy_building_priority": {
+                "status": "PASS",
+                "files": ["config.py:148", "game/entities/enemy.py:135-206"],
+                "detail": "ENEMY_BUILDING_PRIORITY_RANGE_TILES=10 in config. enemy.py find_target() computes near_town flag by checking if any targetable building is within range. When near_town=True, building bias multipliers are lowered (castle 0.3, neutral 0.3, other 0.4) making buildings preferred targets. When far away, original biases preserved."
+              },
+              "item_07_reversed_names_fixed": {
+                "status": "PASS",
+                "file": "game/graphics/ursina_renderer.py",
+                "lines": "1414-1423 (heroes), 1531-1536 (enemies)",
+                "detail": "Counter-flip logic iterates child attrs (_ks_name_label, _ks_gold_label, _ks_rest_label, _ks_hp_bg, _ks_hp_fg for heroes; _ks_hp_bg, _ks_hp_fg for enemies) and sets child.scale_x = abs(child.scale_x) * facing. This ensures child text/bars always render correctly regardless of parent facing direction."
+              },
+              "item_08_building_name_labels_removed": {
+                "status": "PASS",
+                "file": "game/graphics/ursina_renderer.py",
+                "lines": "152-155",
+                "detail": "_sync_building_worldspace_ui() disables label_ent (label_ent.enabled = False) with comment 'WK61-FEAT-001: disabled'. Building names no longer rendered."
+              },
+              "item_09_taxable_gold_g_key_toggle": {
+                "status": "PASS",
+                "file": "game/graphics/ursina_renderer.py",
+                "lines": "176-192",
+                "detail": "Gold display section reads held_keys.get('g', False). Gold text only shown when stash > 0 AND g_held is True. Otherwise gold_ent.enabled = False. WK61-FEAT-003 tag."
+              },
+              "item_10_rubble_rendering": {
+                "status": "PASS",
+                "file": "game/graphics/ursina_renderer.py",
+                "lines": "270 (init), 878 (call), 1912-1967 (method)",
+                "detail": "_rubble_entities dict initialized in __init__. _sync_snapshot_rubble() called during sync. Method removes expired rubble, creates 3 scattered rock models per rubble record with deterministic RNG, uses sim_px_to_world_xz, terrain height, and dusty gray-brown color."
+              },
+              "item_11_taxable_gold_marketplace_blacksmith": {
+                "status": "PASS",
+                "file": "game/ui/building_renderers/economic_panel.py",
+                "lines": "311-322 (method), 340, 343, 346, 349 (calls)",
+                "detail": "_render_taxable_gold() method shows 'Taxable Gold: $X' when stored_tax_gold > 0. Called after rendering marketplace, blacksmith, inn, and trading_post panels. Same pattern as guild_panel."
+              },
+              "item_12_chat_button_hero_menu": {
+                "status": "PASS",
+                "file": "game/ui/hero_panel.py",
+                "lines": "62-74 (handle_click), 865-884 (rendering)",
+                "detail": "Chat button state tracked via _chat_button_rect and _current_hero. handle_click() returns {type: 'start_conversation', hero: hero} on click. Button rendered at bottom of hero info panel with hover highlight. WK61-FEAT-005 tags."
+              },
+              "item_13_enemy_click_info_panel": {
+                "status": "PASS",
+                "files": ["game/ui/enemy_panel.py", "game/engine.py:565-570,799-817,1765", "game/input_handler.py:630-631", "game/sim_engine.py:127"],
+                "detail": "EnemyPanel class renders enemy type, HP bar, combat stats, state, and current target. engine.py has selected_enemy property, try_select_enemy() method with distance hit test, and includes selected_enemy in game state dict. input_handler.py cascades enemy selection after peasant selection attempt. sim_engine.py initializes selected_enemy = None."
+              },
+              "bonus_enemy_sound_system": {
+                "status": "PASS",
+                "file": "game/audio/enemy_sounds.py",
+                "detail": "EnemySoundManager with per-type sound map (goblin, wolf, skeleton, spider, bandit, plus shared sounds for skeleton_archer and bandit_lord). Distance-based volume attenuation, ambient cooldowns per enemy, simultaneous sound cap of 4. Three event hooks: on_enemy_attack, on_enemy_death, update_ambient. Clean design, fails silently on missing files."
+              }
+            },
+            "issues_found": "NONE. All 13 items and the bonus enemy sound system are correctly implemented.",
+            "qa_smoke_profiles_passed": 14,
+            "total_tests": 339,
+            "notes": [
+              "All 3 gate checks pass cleanly. No regressions detected.",
+              "Code review of all 13 items shows correct implementation with proper feature tags (WK61-TUNE-*, WK61-FEAT-*, WK61-BUG-*).",
+              "validate_assets warns=46 are all pre-existing missing_model_file placeholders — no new asset issues from R1.",
+              "The enemy building priority logic in enemy.py uses a bias multiplier approach rather than hard override, which preserves emergent behavior while still making enemies prefer buildings when near town. Good design.",
+              "The guardhouse multi-arrow implementation correctly applies damage per arrow AND emits separate projectile events for visual rendering. Backward compat maintained via _last_ranged_event alias.",
+              "Rubble lifecycle is clean: created on destruction, stored in sim_engine, serialized in snapshot, rendered in 3D, expired after 2 minutes.",
+              "Counter-flip fix uses abs(child.scale_x) * facing which correctly handles both directions without accumulating sign errors over multiple frames."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
     }
   }
 }

@@ -999,6 +999,58 @@
           "follow_ups": []
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61: Playtest feedback polish. Agent 03 owns 4 renderer items: reversed names fix, building label removal, taxable gold G key toggle, and rubble rendering."
+      },
+      "rounds": {
+        "wk61_r1_renderer_polish": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r1_renderer_polish",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Completed all 4 Agent 03 renderer items: (1) WK61-BUG-001 counter-flip child text entities on heroes and enemies so names/HP bars never appear mirrored when facing left, (2) WK61-FEAT-001 disabled building name label creation in _sync_building_worldspace_ui, (3) WK61-FEAT-003 gated building gold labels on held_keys['g'] so taxable gold only shows while holding G key, (4) WK61-FEAT-004 added _sync_snapshot_rubble method to render 3 scattered rock models at destroyed building locations using deterministic Random(record_id) for scatter positions.",
+            "files_modified": ["game/graphics/ursina_renderer.py"],
+            "per_item": {
+              "item_1_reversed_names": {
+                "ticket": "WK61-BUG-001",
+                "status": "done",
+                "fix": "After hero entity scale is set with facing direction, counter-flip all child text/UI entities (_ks_name_label, _ks_gold_label, _ks_rest_label, _ks_hp_bg, _ks_hp_fg) via child.scale_x = abs(child.scale_x) * facing. Same pattern applied to enemy HP bar children using facing_e."
+              },
+              "item_2_remove_building_labels": {
+                "ticket": "WK61-FEAT-001",
+                "status": "done",
+                "fix": "In _sync_building_worldspace_ui, disabled label creation. Existing labels (ent._ks_label) are set to enabled=False. Gold label code left intact for G key feature."
+              },
+              "item_5_gold_g_key_toggle": {
+                "ticket": "WK61-FEAT-003",
+                "status": "done",
+                "fix": "In _sync_building_worldspace_ui, gold label section gated on held_keys.get('g', False). Label created/shown only when stash > 0 AND g_held. Hidden via enabled=False when G released. Hero gold labels unchanged."
+              },
+              "item_7_rubble_rendering": {
+                "ticket": "WK61-FEAT-004",
+                "status": "done",
+                "fix": "Added self._rubble_entities dict in __init__. New _sync_snapshot_rubble method reads getattr(snapshot, 'rubble_records', ()) to handle Agent 05's data not being merged yet. Creates 3 scattered rock entities per rubble record using rock_smallA-F.glb models. Uses deterministic Random(record_id) for positions, scale (0.8-1.5), rotation (0-360). Positions converted from grid coords using same sim_px_to_world_xz as buildings. Expired rubble destroyed when record_id leaves active set. Called from update() after _sync_snapshot_bounties."
+              }
+            }
+          },
+          "gate_results": {
+            "pytest": "321 passed (excluding 2 pre-existing failures from Agent 05 concurrent changes: test_enemy.py building priority targeting, test_hero.py inn healing rate)",
+            "qa_smoke": "DONE: PASS",
+            "pre_existing_failures_not_mine": [
+              "tests/test_enemy.py::test_find_target_does_not_prioritize_building_for_inside_heroes (Agent 05 WK61-FEAT-007 enemy building priority)",
+              "tests/test_hero.py::test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate (Agent 05 WK61-TUNE-003 inn recovery rate)"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 05 needs to update test_enemy.py and test_hero.py to match their new tuning values",
+            "Visual verification of rubble rendering requires Agent 05's rubble_records data to be present in the snapshot"
+          ]
+        }
+      }
     }
   }
 }

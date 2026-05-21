@@ -5,11 +5,12 @@ WK6: AudioSystem consumes events from simulation and plays sounds.
 Never affects simulation state; safe to disable or fail.
 
 WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen and in explored area.
+WK61: Enemy-type-specific sounds (attack, death, ambient) via EnemySoundManager.
 """
 from __future__ import annotations
 
 import os
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import pygame
 
 from game.paths import ASSETS_DIR
@@ -115,7 +116,15 @@ class AudioSystem:
         
         # Preload SFX from assets/audio/sfx/
         self._load_sfx()
-    
+
+        # WK61: Enemy-type-specific sound manager
+        self._enemy_sounds: Optional["EnemySoundManager"] = None
+        try:
+            from game.audio.enemy_sounds import EnemySoundManager
+            self._enemy_sounds = EnemySoundManager(self)
+        except Exception:
+            pass  # Graceful degradation if enemy sounds module fails
+
     def _load_sfx(self):
         """Preload all SFX files from assets/audio/sfx/ (flat structure, supports .wav and .ogg).
 
@@ -277,6 +286,28 @@ class AudioSystem:
         # Play sound
         self.play_sfx(sound_key, volume=1.0)
         self._cooldowns[sound_key] = now_ms
+
+        # WK61: Dispatch enemy-type-specific sounds for combat events
+        if self._enemy_sounds is not None:
+            try:
+                ex = float(event.get("x", 0.0) or 0.0)
+                ey = float(event.get("y", 0.0) or 0.0)
+                cam_x = self._camera_x
+                cam_y = self._camera_y
+                if event_type == "hero_attack":
+                    enemy_type = event.get("target", "")
+                    if enemy_type:
+                        self._enemy_sounds.on_enemy_attack(
+                            enemy_type, ex, ey, cam_x, cam_y
+                        )
+                elif event_type == "enemy_killed":
+                    enemy_type = event.get("enemy", "")
+                    if enemy_type:
+                        self._enemy_sounds.on_enemy_death(
+                            enemy_type, ex, ey, cam_x, cam_y
+                        )
+            except Exception:
+                pass  # Never crash sim for audio
     
     def play_sfx(self, sound_key: str, volume: float = 1.0):
         """
@@ -466,4 +497,37 @@ class AudioSystem:
     def get_sfx_volume(self) -> float:
         """Get current SFX volume."""
         return self._sfx_volume
+
+    # WK61: Enemy ambient sound tick ------------------------------------------
+
+    def update_enemy_ambient(self, enemies: List) -> None:
+        """
+        Tick ambient sounds for living enemies. Called once per frame.
+
+        Each enemy type plays a distinct ambient sound on a random cooldown
+        (5-15s per enemy) to avoid cacophony. Distance-based volume
+        attenuation and a simultaneous sound cap (4) are applied.
+
+        Non-authoritative: safe to skip or call with an empty list.
+
+        Args:
+            enemies: list of enemy objects (with .x, .y, .enemy_type, .is_alive attrs)
+        """
+        if not self.enabled or self._enemy_sounds is None:
+            return
+        if not enemies:
+            return
+
+        try:
+            from game.sim.timebase import now_ms as sim_now_ms
+            now = float(sim_now_ms())
+            self._enemy_sounds.update_ambient(
+                enemies, now,
+                self._camera_x, self._camera_y,
+            )
+            # Periodically clean up cooldowns for dead/despawned enemies
+            alive_ids = {id(e) for e in enemies if getattr(e, "is_alive", True)}
+            self._enemy_sounds.cleanup_dead_cooldowns(alive_ids)
+        except Exception:
+            pass  # Non-authoritative: never crash sim
 

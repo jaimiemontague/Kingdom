@@ -1270,6 +1270,48 @@
           "pm_universal_prompt": "You are being activated for the wk60_v159_gameplay_fun sprint — the 'Make It Fun' update.\n\nRead your assignment in the PM hub:\n.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json\n-> sprints[\"wk60_v159_gameplay_fun\"].rounds[\"wk60_r1_core_gameplay\"]\n\nYour specific prompt is under pm_agent_prompts[YOUR_AGENT_NUMBER].\nFull plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md\nBug tickets: pm_bug_tickets. Feature specs: pm_feature_requests.\n\nAfter completing your work:\n1. Update your agent log\n2. Run: python tools/qa_smoke.py --quick (must PASS)\n3. Run: python -m pytest tests/ -x -q\n4. Report status back\n5. DO NOT COMMIT"
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "status": "complete",
+        "created_utc": "2026-05-20T12:00:00Z",
+        "plan_doc": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "Phase 2 playtest feedback. 13 items from Jaimie's WK60 playtest: reversed names, building destruction+rubble, enemy AI building priority, hero HP/healing/market rebalance, enemy sounds, UI panels.",
+        "closeout_notes": "All 13 items implemented + bonus enemy sounds. R1 (4 agents parallel) + R2 (QA + Art review) both passed. 339 tests, 0 failures, QA smoke PASS. Agent 09 art review: no blocking issues.",
+        "version_target": "Prototype v1.5.9"
+      },
+      "rounds": {
+        "wk61_r1_playtest_polish": {
+          "round_meta": {
+            "round_id": "wk61_r1_playtest_polish",
+            "build_target": "All 13 playtest items across 4 agents in parallel",
+            "created_utc": "2026-05-20T12:00:00Z",
+            "wave": 1
+          },
+          "pm_status_summary": {
+            "status": "complete",
+            "summary": "All 13 items + bonus enemy sounds implemented. R1: Agent 05 (6 gameplay items), Agent 03 (4 renderer items), Agent 08 (3 UI items), Agent 14 (enemy sounds). R2: Agent 11 QA (all verified), Agent 09 Art (no blocking issues). 339 tests pass, QA smoke PASS."
+          },
+          "pm_next_actions_by_agent": {
+            "05": "HP 100->60, market halved, 2 guardhouse arrows, 5x/7x healing, building destruction+rubble, enemy AI buildings",
+            "03": "Fix reversed names, remove building labels, G key gold toggle, rubble 3D rendering",
+            "08": "Marketplace/blacksmith tax gold in menus, hero chat button, enemy click+info panel",
+            "14": "Per-enemy-type combat/ambient sounds (wolf/spider/goblin/skeleton/bandit)"
+          },
+          "pm_agent_prompts": {
+            "05": "Full instructions: .cursor/plans/wk61_playtest_polish.plan.md -> Agent 05 section. 6 items: HP 60, market halved, 2 arrows, 5x/7x healing, building destruction+rubble, enemy AI. Files: config.py, ai/behaviors/task_durations.py, game/entities/buildings/*, game/entities/enemy.py, game/entities/hero.py, game/cleanup_manager.py, game/sim_engine.py, game/sim/snapshot.py, game/entities/rubble.py (new). DO NOT edit game/graphics/*, game/ui/*, game/audio/*.",
+            "03": "Full instructions: .cursor/plans/wk61_playtest_polish.plan.md -> Agent 03 section. 4 items: reversed names fix (counter-flip child text), remove building labels, G key gold toggle, rubble rendering. Files: game/graphics/ursina_renderer.py only. DO NOT edit config.py, game/entities/*, game/ui/*.",
+            "08": "Full instructions: .cursor/plans/wk61_playtest_polish.plan.md -> Agent 08 section. 3 items: tax gold in marketplace/blacksmith menus, chat button in hero panel, enemy click+info panel. Files: game/ui/*, game/input_handler.py, game/engine.py. DO NOT edit game/graphics/ursina_renderer.py, game/entities/*, config.py.",
+            "14": "Full instructions: .cursor/plans/wk61_playtest_polish.plan.md -> Agent 14 section. 1 item: enemy sounds (wolf bark, spider hiss, goblin grunt, skeleton rattle, bandit shout). Files: game/audio/*, assets/audio/*. DO NOT edit game/entities/*, game/graphics/*, game/ui/*."
+          },
+          "pm_send_list_minimal": {
+            "waves": {"w1_parallel": ["05", "03", "08", "14"]},
+            "intelligence_by_agent": {"05": "high", "03": "high", "08": "medium", "14": "medium"},
+            "do_not_send": ["02", "04", "06", "07", "09", "10", "11", "12", "13", "15"],
+            "rationale": "R1 all parallel, no file collisions. 05 high (6 items incl. cross-agent destruction + novel AI). 03 high (4 renderer items incl. root-cause name bug). 08 medium (3 UI items, enemy panel new but follows patterns). 14 medium (sound design for 6 enemy types)."
+          }
+        }
+      }
     }
   }
 }

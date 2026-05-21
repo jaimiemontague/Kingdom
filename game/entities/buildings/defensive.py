@@ -6,6 +6,7 @@ from config import (
     GUARDHOUSE_ARROW_RANGE_TILES,
     GUARDHOUSE_ARROW_DAMAGE,
     GUARDHOUSE_ARROW_COOLDOWN,
+    GUARDHOUSE_ARROWS_PER_SHOT,
     TILE_SIZE,
 )
 from .base import Building, is_research_unlocked
@@ -59,26 +60,34 @@ class Guardhouse(Building):
                         best_target = enemy
 
                 if best_target is not None:
-                    best_target.take_damage(self.arrow_damage)
+                    # WK61-TUNE-002: fire GUARDHOUSE_ARROWS_PER_SHOT arrows per volley
+                    for _arrow_i in range(GUARDHOUSE_ARROWS_PER_SHOT):
+                        best_target.take_damage(self.arrow_damage)
                     self._arrow_timer = self.arrow_cooldown_sec
                     self.target = best_target
 
-                    # Store ranged projectile event for engine collection
+                    # Store ranged projectile events for engine collection
                     if hasattr(best_target, "x") and hasattr(best_target, "y"):
                         to_x, to_y = float(best_target.x), float(best_target.y)
                     else:
                         to_x = float(getattr(best_target, "center_x", 0.0))
                         to_y = float(getattr(best_target, "center_y", 0.0))
-                    self._last_ranged_event = {
-                        "type": "ranged_projectile",
-                        "from_x": float(self.center_x),
-                        "from_y": float(self.center_y),
-                        "to_x": to_x,
-                        "to_y": to_y,
-                        "projectile_kind": "arrow",
-                        "color": (180, 140, 80),
-                        "size_px": 2,
-                    }
+                    # WK61: emit one projectile event per arrow with slight visual offset
+                    self._last_ranged_events = []
+                    for i in range(GUARDHOUSE_ARROWS_PER_SHOT):
+                        offset_x = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 8
+                        self._last_ranged_events.append({
+                            "type": "ranged_projectile",
+                            "from_x": float(self.center_x) + offset_x,
+                            "from_y": float(self.center_y),
+                            "to_x": to_x,
+                            "to_y": to_y,
+                            "projectile_kind": "arrow",
+                            "color": (180, 140, 80),
+                            "size_px": 2,
+                        })
+                    # Keep backward compat: _last_ranged_event is the first arrow
+                    self._last_ranged_event = self._last_ranged_events[0] if self._last_ranged_events else None
                 else:
                     self.target = None
                     self._last_ranged_event = None

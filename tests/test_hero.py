@@ -112,7 +112,7 @@ def test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate() -> None:
 
     still_resting = hero.update_resting(1.0)
     assert still_resting is True
-    assert hero.hp == 91  # Inn rate: 1 HP per second.
+    assert hero.hp == 97  # WK61: Inn rate 0.14 -> ~7 HP/sec (0.14 * 50 * 1.0 = 7).
 
     hero.pop_out_of_building()
     assert hero not in inn.heroes_resting

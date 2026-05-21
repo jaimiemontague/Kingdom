@@ -208,8 +208,8 @@ Use this exact bullet structure (one bullet per pack):
 - **License**: CC0 1.0 Universal
 - **Source**: `https://opengameart.org/content/100-cc0-sfx` (and related RPG Sound Pack collections)
 - **Retrieved**: 2026-01-27
-- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement, combat sounds, celebration sounds); normalized volume levels
-- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement/claim, combat sounds (melee hit, enemy death), celebration sounds (lair cleared), hero hire/purchase confirmations
+- **Modifications**: Curated subset (ranged weapon sounds, building destruction, bounty placement, combat sounds, celebration sounds, enemy-type-specific sounds); normalized volume levels
+- **Used for**: Ranged weapon attack sounds (bow release), building destruction, bounty placement/claim, combat sounds (melee hit, enemy death), celebration sounds (lair cleared), hero hire/purchase confirmations, enemy-type-specific attack/death/ambient sounds (WK61)
 - **File locations**:
   - `assets/audio/sfx/bow_release.ogg`
   - `assets/audio/sfx/building_destroy.ogg`
@@ -220,6 +220,21 @@ Use this exact bullet structure (one bullet per pack):
   - `assets/audio/sfx/enemy_death.ogg`
   - `assets/audio/sfx/lair_cleared.ogg`
   - `assets/audio/sfx/purchase.ogg`
+  - `assets/audio/sfx/goblin_attack.ogg` (WK61: from hit_03.ogg)
+  - `assets/audio/sfx/goblin_death.ogg` (WK61: from other_01.ogg)
+  - `assets/audio/sfx/goblin_ambient.ogg` (WK61: from noise_02.ogg)
+  - `assets/audio/sfx/wolf_attack.ogg` (WK61: from hit_02.ogg)
+  - `assets/audio/sfx/wolf_death.ogg` (WK61: from other_02.ogg)
+  - `assets/audio/sfx/wolf_ambient.ogg` (WK61: from noise_01.ogg)
+  - `assets/audio/sfx/skeleton_attack.ogg` (WK61: from metal_01.ogg)
+  - `assets/audio/sfx/skeleton_death.ogg` (WK61: from wooden_01.ogg)
+  - `assets/audio/sfx/skeleton_ambient.ogg` (WK61: from metal_02.ogg)
+  - `assets/audio/sfx/spider_attack.ogg` (WK61: from spring_01.ogg)
+  - `assets/audio/sfx/spider_death.ogg` (WK61: from plop_02.ogg)
+  - `assets/audio/sfx/spider_ambient.ogg` (WK61: from spring_02.ogg)
+  - `assets/audio/sfx/bandit_attack.ogg` (WK61: from hit_04.ogg)
+  - `assets/audio/sfx/bandit_death.ogg` (WK61: from other_03.ogg)
+  - `assets/audio/sfx/bandit_ambient.ogg` (WK61: from other_04.ogg)
 
 ### Pack: Freesound.org CC0 Ambient Loops
 - **Author / publisher**: neartheatmoshphere (Freesound.org user)

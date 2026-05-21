@@ -8,6 +8,7 @@ from config import COLOR_GOLD, COLOR_UI_BG, COLOR_UI_BORDER, COLOR_WHITE
 from game.sim.timebase import now_ms as sim_now_ms
 from game.ui.command_bar import CommandBar
 from game.ui.hero_panel import HeroPanel
+from game.ui.enemy_panel import EnemyPanel
 from game.ui.chat_panel import ChatPanel
 from game.ui.interior_view_panel import InteriorViewPanel
 from game.ui.micro_view_manager import MicroViewManager, ViewMode
@@ -207,6 +208,11 @@ class HUD:
             frame_highlight=self._frame_highlight,
         )
         self._hero_panel = HeroPanel(
+            self.theme,
+            frame_inner=self._frame_inner,
+            frame_highlight=self._frame_highlight,
+        )
+        self._enemy_panel = EnemyPanel(
             self.theme,
             frame_inner=self._frame_inner,
             frame_highlight=self._frame_highlight,
@@ -786,6 +792,7 @@ class HUD:
             game_state.get("selected_hero") is not None
             or game_state.get("selected_peasant") is not None
             or game_state.get("selected_building") is not None
+            or game_state.get("selected_enemy") is not None
         ):
             regions.append(left)
         for r in regions:
@@ -1778,6 +1785,7 @@ class HUD:
 
         selected_hero = game_state.get("selected_hero")
         selected_peasant = game_state.get("selected_peasant")
+        selected_enemy = game_state.get("selected_enemy")
         self.left_close_rect = None
         self._last_left_rect = pygame.Rect(left)
         sel_building = game_state.get("selected_building")
@@ -1793,6 +1801,10 @@ class HUD:
             )
             # Pin + close must render after HeroPanel header fill or they are painted over (WK51 r6).
             self._render_pin_button(surface, left, game_state)
+            self._render_left_close_button(surface, left)
+        elif selected_enemy is not None and sel_building is None:
+            self._panel_left.render(surface)
+            self._enemy_panel.render(surface, selected_enemy, left)
             self._render_left_close_button(surface, left)
         elif selected_peasant is not None:
             self._panel_left.render(surface)
@@ -1845,7 +1857,7 @@ class HUD:
         except Exception:
             pass
 
-        show_left = selected_hero is not None or selected_peasant is not None
+        show_left = selected_hero is not None or selected_peasant is not None or selected_enemy is not None
         self.render_messages(surface, left if show_left else None)
 
         # POI discovery + interaction toasts (WK58/WK59)
@@ -2121,6 +2133,14 @@ class HUD:
         ):
             self.memorial_card.show(self._pending_memorial)
             return "open_memorial"
+        # WK61-FEAT-005: Check hero panel chat button before close button
+        if (
+            game_state.get("selected_hero") is not None
+            and game_state.get("selected_building") is None
+        ):
+            hero_click = self._hero_panel.handle_click((x, y))
+            if hero_click is not None:
+                return hero_click
         if self.left_close_rect is not None and self.left_close_rect.collidepoint((x, y)):
             return "close_selection"
         if getattr(self, "recall_rect", None) is not None and self.recall_rect.collidepoint((x, y)):

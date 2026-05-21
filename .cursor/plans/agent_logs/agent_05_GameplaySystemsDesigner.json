@@ -529,6 +529,78 @@
           }
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61: Playtest Polish sprint. Agent 05 owns 6 items: hero HP -40%, market time halved, guardhouse 2 arrows, guild/inn healing boost, enemy building AI priority, building destruction + rubble system."
+      },
+      "rounds": {
+        "wk61_r1_gameplay_tuning_and_rubble": {
+          "round_id": "wk61_r1_gameplay_tuning_and_rubble",
+          "sprint_id": "wk61_playtest_polish",
+          "round_meta": {
+            "prompt_set_id": "wk61_r1_all_agent05_items",
+            "build_target": "6 gameplay items from playtest feedback",
+            "created_utc": "2026-05-20T00:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "agent_fields": {
+              "scope_guardrails_followed": [
+                "Did not edit: game/graphics/* (Agent 03), game/ui/* (Agent 08), game/audio/* (Agent 14)."
+              ],
+              "what_i_changed": [
+                "Item #13 (HERO HP -40%): config.py base_hp 100->60.",
+                "Item #4 (MARKET HALVED): ai/behaviors/task_durations.py halved buy_potion/buy_weapon/buy_armor/shopping ranges.",
+                "Item #9 (GUARDHOUSE 2 ARROWS): config.py GUARDHOUSE_ARROWS_PER_SHOT=2; game/entities/buildings/defensive.py fires arrow loop.",
+                "Item #11 (HEALING 5x/7x): config.py GUILD_REST_RECOVERY_RATE=0.05, INN_REST_RECOVERY_RATE=0.14; game/entities/buildings/hiring_mixin.py guild rate; game/entities/buildings/economic.py inn rate.",
+                "Item #12 (ENEMY BUILDING AI): config.py ENEMY_BUILDING_PRIORITY_RANGE_TILES=10; game/entities/enemy.py near-town building priority with 0.3/0.4 bias multipliers.",
+                "Item #7 Part A (BUILDING DESTRUCTION FIX): game/entities/buildings/base.py added is_alive property.",
+                "Item #7 Part B (RUBBLE SYSTEM): game/entities/rubble.py created RubbleRecord dataclass + make_rubble_id(); game/cleanup_manager.py spawns RubbleRecord on building destruction; game/sim_engine.py added rubble_records list + expiry tick; game/sim/snapshot.py added rubble_records field to SimStateSnapshot.",
+                "Test fix: tests/test_enemy.py updated test_find_target_does_not_prioritize_building_for_inside_heroes to expect inn as target (matches new near-town building priority behavior).",
+                "Test fix: tests/test_hero.py updated test_inn_resting_tracks_hero_entry_exit_and_fast_heal_rate to expect HP=97 (matches new inn recovery rate 0.14)."
+              ],
+              "files_created": [
+                "game/entities/rubble.py"
+              ],
+              "files_changed": [
+                "config.py",
+                "ai/behaviors/task_durations.py",
+                "game/entities/buildings/defensive.py",
+                "game/entities/buildings/hiring_mixin.py",
+                "game/entities/buildings/economic.py",
+                "game/entities/buildings/base.py",
+                "game/entities/enemy.py",
+                "game/cleanup_manager.py",
+                "game/sim_engine.py",
+                "game/sim/snapshot.py",
+                "tests/test_enemy.py",
+                "tests/test_hero.py"
+              ],
+              "evidence": {
+                "pytest": {
+                  "command": "python -m pytest tests/ -x -q",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "339 passed"
+                },
+                "qa_smoke_quick": {
+                  "command": "python tools/qa_smoke.py --quick",
+                  "status": "PASS",
+                  "exit_code": 0,
+                  "summary": "DONE: PASS"
+                }
+              },
+              "blockers": [],
+              "follow_ups": [
+                "Agent 03 (R1): Rubble rendering — reads snapshot.rubble_records to place rock meshes in 3D.",
+                "Agent 11 (R2): Full QA gate pass including rubble lifecycle, healing rates, guardhouse arrows, enemy building priority."
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

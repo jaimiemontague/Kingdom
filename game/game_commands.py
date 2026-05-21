@@ -84,6 +84,10 @@ class GameCommands(Protocol):
     def selected_peasant(self) -> Any: ...
     @selected_peasant.setter
     def selected_peasant(self, v: Any) -> None: ...
+    @property
+    def selected_enemy(self) -> Any: ...
+    @selected_enemy.setter
+    def selected_enemy(self, v: Any) -> None: ...
 
     # Engine-private hooks used from input
     @property
@@ -134,6 +138,7 @@ class GameCommands(Protocol):
     def try_select_tax_collector(self, pos: Any) -> bool: ...
     def try_select_guard(self, pos: Any) -> bool: ...
     def try_select_peasant(self, pos: Any) -> bool: ...
+    def try_select_enemy(self, pos: Any) -> bool: ...
     def try_select_building(self, pos: Any) -> bool: ...
 
 
@@ -273,6 +278,14 @@ class EngineBackedGameCommands:
         self._engine.selected_peasant = v
 
     @property
+    def selected_enemy(self) -> Any:
+        return getattr(self._engine, "selected_enemy", None)
+
+    @selected_enemy.setter
+    def selected_enemy(self, v: Any) -> None:
+        self._engine.selected_enemy = v
+
+    @property
     def _skip_event_processing_frames(self) -> int:
         return int(getattr(self._engine, "_skip_event_processing_frames", 0) or 0)
 
@@ -378,6 +391,9 @@ class EngineBackedGameCommands:
 
     def try_select_peasant(self, pos: Any) -> bool:
         return self._engine.try_select_peasant(pos)
+
+    def try_select_enemy(self, pos: Any) -> bool:
+        return self._engine.try_select_enemy(pos)
 
     def try_select_building(self, pos: Any) -> bool:
         return self._engine.try_select_building(pos)

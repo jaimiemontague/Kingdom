@@ -117,10 +117,14 @@ class SimEngine:
         self.bounty_system = BountySystem()
         self.poi_interaction_system = POIInteractionSystem()
 
+        # WK61-FEAT-004: Rubble records for destroyed buildings.
+        self.rubble_records: list = []
+
         # Selection (sim-owned: used by coordinate queries + gameplay)
         self.selected_building = None
         self.selected_peasant = None
         self.selected_hero = None
+        self.selected_enemy = None  # WK61-FEAT-006
 
         # WK57: Underground areas keyed by area_id
         self.underground_areas = {}
@@ -467,6 +471,7 @@ class SimEngine:
             sim_blend_fraction=float(sim_blend_fraction),
             sim_tick_id=int(sim_tick_id),
             underground_areas=getattr(self, 'underground_areas', None),
+            rubble_records=tuple(getattr(self, 'rubble_records', ())),
         )
 
     # ---------------------------------------------------------------------
@@ -758,6 +763,15 @@ class SimEngine:
 
         # Buildings
         self._update_buildings(dt)
+
+        # WK61-FEAT-004: Expire old rubble records (2-minute lifetime).
+        if self.rubble_records:
+            from game.sim.timebase import now_ms as _rubble_now_ms
+            _rub_now = int(_rubble_now_ms())
+            self.rubble_records = [
+                r for r in self.rubble_records
+                if _rub_now - r.created_ms < r.duration_ms
+            ]
 
         # WK55: POI discovery — check if any hero is within discovery range of undiscovered POIs
         self._check_poi_discovery()

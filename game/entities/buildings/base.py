@@ -161,6 +161,11 @@ class Building:
         return self.hp <= 0
 
     @property
+    def is_alive(self) -> bool:
+        """WK61-BUG-003: Whether this building has HP remaining. Used by enemy retargeting."""
+        return self.hp > 0
+
+    @property
     def is_targetable(self) -> bool:
         """Whether enemies can attack this building."""
         if self.hp <= 0:

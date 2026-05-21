@@ -66,7 +66,7 @@ def test_find_target_does_not_prioritize_building_for_inside_heroes() -> None:
 
     target = enemy.find_target(heroes=[resting_hero], peasants=[], buildings=[inn], guards=[])
 
-    assert target is None
+    assert target is inn  # WK61: enemies near town now prioritize buildings
 
 
 def test_do_attack_skips_hero_inside_building() -> None:

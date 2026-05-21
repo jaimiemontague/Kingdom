@@ -45,7 +45,7 @@ class CameraConfig:
 @dataclass(frozen=True)
 class HeroConfig:
     hire_cost: int = 100  # WK60: doubled from 50 (Feature 4 — Make It Fun)
-    base_hp: int = 100
+    base_hp: int = 60  # WK61-TUNE-004: reduced from 100 (heroes fragile early, tough with levels)
     base_attack: int = 10
     base_defense: int = 5
     speed: float = 120.0  # px/sec (baked: old 2 * 60)
@@ -137,6 +137,15 @@ GUILD_MAX_HEROES = 8
 GUARDHOUSE_ARROW_RANGE_TILES = 8.0
 GUARDHOUSE_ARROW_DAMAGE = 12
 GUARDHOUSE_ARROW_COOLDOWN = 2.0
+GUARDHOUSE_ARROWS_PER_SHOT = 2  # WK61-TUNE-002: fire 2 arrows per volley
+
+# WK61-TUNE-003: Hero rest recovery rates (5x guild, 7x inn from WK60 baseline)
+GUILD_REST_RECOVERY_RATE = 0.05   # was 0.01 default (~2.5 HP/sec)
+INN_REST_RECOVERY_RATE = 0.14     # was 0.02 (~7.0 HP/sec)
+
+# WK61-FEAT-007: Enemy building priority range (enemies within this many tiles of a
+# building strongly prefer attacking buildings over chasing heroes)
+ENEMY_BUILDING_PRIORITY_RANGE_TILES = 10
 
 
 @dataclass(frozen=True)

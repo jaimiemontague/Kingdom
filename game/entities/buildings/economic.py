@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from config import (
     INN_ENTRY_FEE,
+    INN_REST_RECOVERY_RATE,
     RESEARCH_POTIONS_DURATION_MS,
     RESEARCH_DURATION_MS_PER_100_GOLD,
 )
@@ -213,7 +214,7 @@ class Inn(Building):
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.INN)
-        self.rest_recovery_rate = 0.02  # Faster than guilds (0.01)
+        self.rest_recovery_rate = INN_REST_RECOVERY_RATE  # WK61-TUNE-003: 7x healing in inns (was 0.02)
         self.drink_income_gold = 0
 
     @property
