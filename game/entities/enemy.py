@@ -172,10 +172,13 @@ class Enemy:
                     best_target = guard
 
         # Check buildings — WK61: use stronger biases when near town
+        # WK61-FIX: loosen other_bias so guilds/marketplace/blacksmith actually get attacked.
+        # At 0.4 they almost never won against a nearby hero; 0.7 lets buildings within
+        # ~70% of the hero distance be preferred.
         if near_town:
             castle_bias = 0.3
             neutral_bias = 0.3
-            other_bias = 0.4
+            other_bias = 0.7
         else:
             castle_bias = 0.8
             neutral_bias = 0.9

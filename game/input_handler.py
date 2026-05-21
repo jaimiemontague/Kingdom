@@ -363,7 +363,11 @@ class InputHandler:
             set_time_multiplier(SPEED_TIERS[idx])
 
     def _clear_hero_selection(self):
-        """Helper to clear hero selection and close chat/focus panels."""
+        """Helper to clear hero selection and close chat/focus panels.
+
+        NOTE: Does NOT clear selected_enemy — call sites that also need
+        enemy cleared should do so explicitly (e.g. empty-space deselect).
+        """
         chat_panel = getattr(self.commands.hud, "_chat_panel", None)
         if chat_panel is not None:
             chat_panel.end_conversation()
@@ -371,7 +375,6 @@ class InputHandler:
         if micro_view is not None:
             micro_view.exit_hero_focus()
         self.commands.selected_hero = None
-        self.commands.selected_enemy = None
 
     def handle_mousedown(self, event):
         """Handle mouse clicks."""
@@ -471,6 +474,18 @@ class InputHandler:
                             c.selected_hero = hero
                             c.building_panel.deselect()
                             c.selected_building = None
+                            # WK61-FIX: Auto-pin the hero and open the chat band
+                            # so the chat button on the left panel actually shows
+                            # the conversation (chat renders in the pinned watch card).
+                            hid = str(getattr(hero, "hero_id", "") or "").strip()
+                            if hid:
+                                from game.sim.timebase import now_ms as sim_now_ms
+                                pin_slot = getattr(c.hud, "_pin_slot", None)
+                                if pin_slot is not None:
+                                    if pin_slot.hero_id != hid:
+                                        pin_slot.pin(hid, int(sim_now_ms()))
+                                    c.hud._watch_card_expanded = True
+                                    c.hud._chat_visible = True
                         chat_panel = getattr(c.hud, "_chat_panel", None)
                         if chat_panel is not None:
                             chat_panel.start_conversation(action["hero"])

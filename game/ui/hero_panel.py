@@ -61,12 +61,14 @@ class HeroPanel:
         self._menu_max_scroll = 0
         # WK61-FEAT-005: Chat button state
         self._chat_button_rect: pygame.Rect | None = None
+        self._chat_button_visible: bool = False
         self._current_hero = None
 
     def handle_click(self, mouse_pos: tuple[int, int]) -> dict | None:
         """Check for chat button click (WK61-FEAT-005). Returns action dict or None."""
         if (
             self._chat_button_rect is not None
+            and self._chat_button_visible
             and self._current_hero is not None
             and self._chat_button_rect.collidepoint(mouse_pos)
         ):
@@ -867,12 +869,17 @@ class HeroPanel:
         y += 6
         chat_btn_w = panel_width - (pad * 2)
         chat_btn_h = 26
-        chat_btn_rect_raw = pygame.Rect(panel_x + pad, y - scroll_off, chat_btn_w, chat_btn_h)
-        # Store absolute rect (not scroll-adjusted) for hit testing
-        self._chat_button_rect = pygame.Rect(panel_x + pad, y - scroll_off, chat_btn_w, chat_btn_h)
+        chat_btn_screen_y = y - scroll_off
+        chat_btn_rect_raw = pygame.Rect(panel_x + pad, chat_btn_screen_y, chat_btn_w, chat_btn_h)
+        # Store the on-screen rect for hit testing; also track whether the button
+        # is actually inside the visible viewport (scroll may push it off-screen).
+        self._chat_button_rect = pygame.Rect(chat_btn_rect_raw)
+        btn_bottom = chat_btn_screen_y + chat_btn_h
+        btn_visible = (chat_btn_screen_y < viewport.bottom and btn_bottom > viewport.top)
+        self._chat_button_visible = btn_visible
         # Button background
         mouse_pos = pygame.mouse.get_pos()
-        hovered = chat_btn_rect_raw.collidepoint(mouse_pos)
+        hovered = btn_visible and chat_btn_rect_raw.collidepoint(mouse_pos)
         btn_bg = (80, 150, 240) if hovered else (60, 120, 200)
         pygame.draw.rect(surface, btn_bg, chat_btn_rect_raw)
         pygame.draw.rect(surface, self._frame_inner, chat_btn_rect_raw, 1)

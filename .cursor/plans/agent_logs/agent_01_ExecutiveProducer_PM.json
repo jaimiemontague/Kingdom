@@ -1310,6 +1310,36 @@
             "do_not_send": ["02", "04", "06", "07", "09", "10", "11", "12", "13", "15"],
             "rationale": "R1 all parallel, no file collisions. 05 high (6 items incl. cross-agent destruction + novel AI). 03 high (4 renderer items incl. root-cause name bug). 08 medium (3 UI items, enemy panel new but follows patterns). 14 medium (sound design for 6 enemy types)."
           }
+        },
+        "wk61_r3_playtest2_fixes": {
+          "round_meta": {
+            "round_id": "wk61_r3_playtest2_fixes",
+            "build_target": "Fix 10 issues from Jaimie's second playtest of WK61",
+            "created_utc": "2026-05-21T00:00:00Z",
+            "wave": 3
+          },
+          "pm_status_summary": {
+            "status": "in_progress",
+            "summary": "R3 fix round dispatched. 10 items from second playtest: hero idle regression (CRITICAL), building model stays on destruction, gold G key only food stands, chat button broken, guard HP halve, building HP/targetability, arrow visual offset, enemy sounds wiring, enemy click menu verify, marketplace/blacksmith menus."
+          },
+          "pm_bug_tickets": [
+            {"id": "WK61-R3-BUG-001", "title": "Heroes stand around idle — regression from is_alive property on Building", "severity": "blocker", "owner_agent": "05", "status": "assigned"},
+            {"id": "WK61-R3-BUG-002", "title": "Building 3D model stays visible after destruction", "severity": "major", "owner_agent": "03", "status": "assigned"},
+            {"id": "WK61-R3-BUG-003", "title": "Taxable gold G key only works for food stands", "severity": "major", "owner_agent": "03", "status": "assigned"},
+            {"id": "WK61-R3-BUG-004", "title": "Chat button on hero menu doesn't work", "severity": "major", "owner_agent": "08", "status": "assigned"},
+            {"id": "WK61-R3-BUG-005", "title": "Guardhouse arrows fire from same spot (not visually distinct)", "severity": "minor", "owner_agent": "05", "status": "assigned"}
+          ],
+          "pm_next_actions_by_agent": {
+            "05": "CRITICAL: Fix hero idle regression, guard HP halved, verify building HP/targetability, arrow visual offset, wire enemy ambient sounds",
+            "03": "Fix gold G key for all building types, fix building model not removed on destruction, verify rubble renders",
+            "08": "Fix chat button, verify enemy click menu, verify/fix marketplace/blacksmith tax gold display"
+          },
+          "pm_send_list_minimal": {
+            "waves": {"w1_parallel": ["05", "03", "08"]},
+            "intelligence_by_agent": {"05": "high", "03": "high", "08": "medium"},
+            "do_not_send": ["02", "04", "06", "07", "09", "10", "11", "12", "13", "14", "15"],
+            "rationale": "R3 fix round: 05 high (hero idle regression is blocker-level investigation). 03 high (building destruction rendering is complex). 08 medium (UI fixes are targeted)."
+          }
         }
       }
     }

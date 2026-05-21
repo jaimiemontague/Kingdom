@@ -26,7 +26,7 @@ class Guard:
         self.home_y = y
 
         # Stats
-        self.max_hp = 80
+        self.max_hp = 40  # WK61-TUNE: halved from 80 (guards are expendable sentries)
         self.hp = self.max_hp
         self.attack_power = 8
         self.speed = 120.0  # px/sec (baked: old 2.0 * 60)

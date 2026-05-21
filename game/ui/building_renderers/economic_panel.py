@@ -309,16 +309,29 @@ class EconomicPanelRenderer:
         return y
 
     def _render_taxable_gold(self, panel, surface: pygame.Surface, building, y: int) -> int:
-        """Show taxable gold line — same pattern as guild_panel.py lines 28-33."""
-        tax_gold = int(getattr(building, 'stored_tax_gold', 0))
-        if tax_gold > 0:
-            tax_text = panel.font_normal.render(
-                f"Taxable Gold: ${tax_gold}",
-                True,
-                COLOR_GOLD,
-            )
-            surface.blit(tax_text, (10, y))
-            y += 25
+        """Show taxable gold line — same pattern as guild_panel.py lines 28-33.
+
+        WK61-FIX: Always display the line (even when $0) so the player can see
+        the field exists and know that gold will appear once heroes deposit taxes.
+        Economic buildings may not have the attribute at all (they don't inherit
+        HiringBuilding), so fall back to stash_gold as well.
+        """
+        tax_gold = int(
+            getattr(building, 'stored_tax_gold', 0)
+            or getattr(building, 'stash_gold', 0)
+            or 0
+        )
+        font = getattr(panel, 'font_normal', None)
+        if font is None or surface is None:
+            return y
+        color = COLOR_GOLD if tax_gold > 0 else (150, 150, 150)
+        tax_text = font.render(
+            f"Taxable Gold: ${tax_gold}",
+            True,
+            color,
+        )
+        surface.blit(tax_text, (10, y))
+        y += 25
         return y
 
     def render(

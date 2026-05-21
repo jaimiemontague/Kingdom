@@ -72,14 +72,16 @@ class Guardhouse(Building):
                     else:
                         to_x = float(getattr(best_target, "center_x", 0.0))
                         to_y = float(getattr(best_target, "center_y", 0.0))
-                    # WK61: emit one projectile event per arrow with slight visual offset
+                    # WK61: emit one projectile event per arrow with distinct origin offsets
+                    # Arrows originate from different spots on the guardhouse (+/-12px X, +/-4px Y)
                     self._last_ranged_events = []
                     for i in range(GUARDHOUSE_ARROWS_PER_SHOT):
-                        offset_x = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 8
+                        offset_x = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 24
+                        offset_y = (i - (GUARDHOUSE_ARROWS_PER_SHOT - 1) / 2.0) * 8
                         self._last_ranged_events.append({
                             "type": "ranged_projectile",
                             "from_x": float(self.center_x) + offset_x,
-                            "from_y": float(self.center_y),
+                            "from_y": float(self.center_y) + offset_y,
                             "to_x": to_x,
                             "to_y": to_y,
                             "projectile_kind": "arrow",

@@ -361,7 +361,14 @@ class BasicAI:
             self._debug_log(f"{hero.name} -> using potion in combat (health={hero.health_percent:.1%})")
 
         # Check if target is still valid.
+        # WK61-FIX: Buildings now have is_alive (WK61-BUG-003). Only fight enemies
+        # or lairs; if target is a non-lair building, drop it immediately.
         if hero.target and hasattr(hero.target, "is_alive"):
+            if hasattr(hero.target, "building_type") and not getattr(hero.target, "is_lair", False):
+                # Non-lair building target in FIGHTING state is invalid — go idle.
+                hero.target = None
+                hero.state = HeroState.IDLE
+                return
             if not hero.target.is_alive:
                 hero.target = None
                 hero.state = HeroState.IDLE

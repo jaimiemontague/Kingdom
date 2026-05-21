@@ -1092,6 +1092,13 @@ class GameEngine:
         # Stage 2: sim update loop lives in SimEngine.
         self.sim.update(dt, game_state)
 
+        # WK61-BUG-003: Building destruction cleanup after sim tick.
+        # _cleanup_after_combat() became dead code when the update loop
+        # was refactored into SimEngine; call cleanup directly so that
+        # buildings at hp <= 0 are removed, references are cleared,
+        # and rubble records are spawned before the next snapshot.
+        self._cleanup_destroyed_buildings()
+
         # Presentation chores stay here for now.
         self._update_render_animations(dt)
         self._finalize_update(dt)
@@ -1602,6 +1609,12 @@ class GameEngine:
                 win_w, win_h, self.world
             )
         self.event_bus.flush()
+        # WK61-FEAT-002: Tick enemy ambient sounds (per-type growls/hisses/clatters).
+        if self.audio_system is not None:
+            try:
+                self.audio_system.update_enemy_ambient(self.enemies)
+            except Exception:
+                pass  # Non-authoritative: never crash sim for audio
     
     def _cleanup_destroyed_buildings(self, emit_messages: bool = True):
         """Remove buildings at hp <= 0 (except castle) and clear references."""

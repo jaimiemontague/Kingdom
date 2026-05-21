@@ -1049,6 +1049,39 @@
             "Agent 05 needs to update test_enemy.py and test_hero.py to match their new tuning values",
             "Visual verification of rubble rendering requires Agent 05's rubble_records data to be present in the snapshot"
           ]
+        },
+        "wk61_r2_playtest2_renderer_fixes": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r2_playtest2_renderer_fixes",
+          "status": "done",
+          "summary": "Fix 3 renderer regressions from Jaimie's second WK61 playtest: G key gold display only showing food stands, building models persisting after destruction, rubble verification.",
+          "items": {
+            "item_1_gold_g_key_all_buildings": {
+              "ticket": "WK61-BUG-002",
+              "status": "done",
+              "root_cause": "Gold stash calculation in _sync_building_worldspace_ui used short-circuit `or` operator: `int(getattr(b, 'stash_gold', 0) or getattr(b, 'stored_tax_gold', 0) or 0)`. While technically functional for reading values, this couldn't return a sum of both attributes if both existed. More importantly, Jaimie only saw food stands because guild buildings hadn't accumulated stored_tax_gold yet (heroes not depositing taxes). However the `or` idiom was fragile.",
+              "fix": "Changed to explicit additive sum: `int(getattr(b, 'stash_gold', 0) or 0) + int(getattr(b, 'stored_tax_gold', 0) or 0)`. Each attribute is independently coerced to int with a falsy-to-zero fallback, then summed. Works correctly for all building types: guilds (stored_tax_gold via HiringMixin), neutrals (stored_tax_gold via NeutralBuilding), lairs (stash_gold). Note: lairs are still skipped by the is_lair early-return in _sync_building_worldspace_ui, which is correct behavior.",
+              "file": "game/graphics/ursina_renderer.py"
+            },
+            "item_2_building_model_persists_after_destruction": {
+              "ticket": "WK61-BUG-003",
+              "status": "done",
+              "root_cause": "engine.py's _cleanup_after_combat() method (which calls _cleanup_destroyed_buildings()) became dead code during the SimEngine refactoring. The method was defined at line 1412 but never called from engine.update() or sim_engine.update(). This meant buildings with hp<=0 were never removed from engine.buildings, never cleared from snapshots, and their Ursina entities were never destroyed. Only player-initiated demolish (confirm_demolish action at line 1685) called _cleanup_destroyed_buildings().",
+              "fix": "Two-pronged fix: (1) In game/engine.py update(), added self._cleanup_destroyed_buildings() call after self.sim.update() so buildings at hp<=0 are removed from engine.buildings and rubble records are created before the next snapshot. (2) In game/graphics/ursina_renderer.py _sync_snapshot_buildings(), added defensive hp<=0 check that skips and destroys entities for destroyed buildings still in the snapshot (belt-and-suspenders for the frame between destruction and cleanup).",
+              "files": ["game/engine.py", "game/graphics/ursina_renderer.py"]
+            },
+            "item_3_rubble_rendering_verification": {
+              "ticket": "WK61-FEAT-004",
+              "status": "done",
+              "verification": "With Item 2 fixed, cleanup_manager.cleanup_destroyed_buildings() now runs every tick. It creates RubbleRecord entries (via game/entities/rubble.py) and appends to sim.rubble_records. SimEngine.build_snapshot() includes rubble_records=tuple(self.rubble_records). The _sync_snapshot_rubble() method from R1 reads these records and creates 3 scattered rock entities per rubble footprint. Rubble auto-expires after 2 minutes (duration_ms=120000) via sim_engine line 771-773. Pipeline is now complete: building destroyed -> cleanup_manager creates rubble -> snapshot includes rubble_records -> renderer shows rocks at former building location."
+            }
+          },
+          "gate_results": {
+            "pytest": "339 passed",
+            "qa_smoke": "DONE: PASS"
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }

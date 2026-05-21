@@ -555,7 +555,9 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             return
 
     # If chasing an enemy, check if we've gone too far from our zone (8 tiles max).
-    if hero.target and hasattr(hero.target, "is_alive"):
+    # WK61-FIX: exclude lair/building targets — only zone-limit enemy chases.
+    # Buildings now have is_alive (WK61-BUG-003), so hasattr alone is too broad.
+    if hero.target and hasattr(hero.target, "is_alive") and not getattr(hero.target, "is_lair", False) and not hasattr(hero.target, "building_type"):
         zone_x, zone_y = ai.exploration_behavior.assign_patrol_zone(ai, hero, game_state)
         dist_to_zone = math.sqrt((hero.x - zone_x) ** 2 + (hero.y - zone_y) ** 2)
         max_chase_dist = TILE_SIZE * 8
@@ -568,7 +570,8 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             return
 
     # If we have an enemy target, check if we're in range to fight.
-    if hero.target and hasattr(hero.target, "is_alive") and hero.target.is_alive:
+    # WK61-FIX: also enter FIGHTING for lair targets (is_lair) so heroes attack lairs.
+    if hero.target and hasattr(hero.target, "is_alive") and hero.target.is_alive and (not hasattr(hero.target, "building_type") or getattr(hero.target, "is_lair", False)):
         dist = hero.distance_to(hero.target.x, hero.target.y)
         if dist <= hero.attack_range:
             hero.state = HeroState.FIGHTING

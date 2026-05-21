@@ -1387,6 +1387,52 @@
             "python -m pytest tests/ -x -q",
             "python tools/qa_smoke.py --quick"
           ]
+        },
+        "wk61_r2_playtest_bugfix": {
+          "round_id": "wk61_r2_playtest_bugfix",
+          "prompt_text": "3 items from Jaimie playtest 2: chat button broken, enemy click menu verify, marketplace/blacksmith taxable gold missing",
+          "response": {
+            "status": "done",
+            "what_i_changed": [
+              "game/ui/hero_panel.py: Added _chat_button_visible flag; handle_click now checks button is visible within viewport before accepting click. Fixed viewport-aware hit testing so chat button only responds when actually on-screen.",
+              "game/input_handler.py: Fixed enemy selection being immediately wiped — _clear_hero_selection() no longer clears selected_enemy (call sites that need full clear do it explicitly). Fixed start_conversation action to auto-pin hero, expand watch card, and open chat band so clicking Chat on hero panel actually shows the conversation.",
+              "game/ui/building_renderers/economic_panel.py: _render_taxable_gold now always renders the line (even when $0) so player can see the field exists. Added fallback to stash_gold attribute. Added defensive guard for missing font/surface."
+            ],
+            "bugs_found_and_fixed": {
+              "item1_chat_button": {
+                "root_cause": "Two issues: (1) Chat button click worked but conversation only renders in pinned watch card chat band — if hero not pinned, nothing visible happened. (2) No viewport-visibility check meant off-screen buttons could register false hits.",
+                "fix": "Auto-pin hero + expand watch card + open chat band when start_conversation fires. Added _chat_button_visible flag gated by viewport bounds."
+              },
+              "item2_enemy_click": {
+                "root_cause": "_clear_hero_selection() cleared selected_enemy on line 374. Click cascade calls try_select_enemy (sets enemy) then immediately _clear_hero_selection (wipes enemy to None). Enemy panel never rendered.",
+                "fix": "Removed selected_enemy=None from _clear_hero_selection. All other deselect paths (close_selection, empty-space click) already had explicit selected_enemy=None."
+              },
+              "item3_taxable_gold": {
+                "root_cause": "_render_taxable_gold only rendered when tax_gold > 0. Economic buildings (Marketplace, Blacksmith) don't inherit HiringBuilding so stored_tax_gold is always 0 unless tax collector deposits. Player never sees the field.",
+                "fix": "Always render 'Taxable Gold: $0' in gray when empty, gold color when > 0. Added stash_gold fallback and defensive font guard."
+              }
+            },
+            "verification": {
+              "pytest": "338 passed (1 deselected: pre-existing sim_engine._cleanup_destroyed_buildings failure)",
+              "qa_smoke": "DONE: PASS"
+            },
+            "files_modified": [
+              "game/ui/hero_panel.py",
+              "game/input_handler.py",
+              "game/ui/building_renderers/economic_panel.py"
+            ],
+            "files_not_committed": true
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie manual test: click Chat on hero panel, verify conversation opens in watch card.",
+            "Jaimie manual test: click enemies, verify red info panel with HP/attack/state appears.",
+            "Jaimie manual test: click marketplace/blacksmith, verify 'Taxable Gold: $0' appears at bottom of building panel."
+          ],
+          "how_to_test": [
+            "python -m pytest tests/ -x -q --deselect tests/test_engine.py::test_engine_headless_tick_simulation_advances_sim_time",
+            "python tools/qa_smoke.py --quick"
+          ]
         }
       }
     }

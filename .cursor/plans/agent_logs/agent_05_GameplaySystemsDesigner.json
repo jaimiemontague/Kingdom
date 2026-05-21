@@ -601,6 +601,56 @@
           }
         }
       }
+    },
+    "wk61-playtest2-regressions": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 playtest 2: fix 6 regressions/requests found in Jaimie's second playtest."
+      },
+      "rounds": {
+        "wk61_r1_playtest2_fixes": {
+          "round_id": "wk61_r1_playtest2_fixes",
+          "sprint_id": "wk61-playtest2-regressions",
+          "round_meta": {
+            "prompt_set_id": "wk61_playtest2_regression_fixes",
+            "build_target": "6_playtest_regressions",
+            "created_utc": "2026-05-21T00:00:00Z"
+          },
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "ITEM 1 (CRITICAL) — Hero idle regression: Buildings now have is_alive (WK61-BUG-003), causing hasattr checks in bounty_pursuit.py and basic_ai.py to incorrectly treat building/lair targets as enemy targets. Fixed by excluding building_type targets from zone-distance chase abort (bounty_pursuit.py L558) and from range-to-fight checks (L571), and by ejecting non-lair building targets from FIGHTING state (basic_ai.py L364).",
+              "ITEM 2 — Guard HP halved: guard.py max_hp reduced from 80 to 40.",
+              "ITEM 3 — Buildings attackable: Enemy near-town other_bias loosened from 0.4 to 0.7 so guilds/marketplace/blacksmith are attacked when enemies are nearby (enemy.py find_target).",
+              "ITEM 4 — Guardhouse arrow offsets: Arrow origin spread increased from +/-4px to +/-12px horizontal and +/-4px vertical for visually distinct dual arrows (defensive.py).",
+              "ITEM 5 — Enemy ambient sounds wired: AudioSystem.update_enemy_ambient(enemies) now called each frame from _flush_event_bus in engine.py.",
+              "ITEM 6 — Building destruction cleanup: Added _cleanup_destroyed_buildings() to SimEngine.update() — was missing after architecture refactor. Buildings at 0 HP now get removed from sim.buildings, references cleared, rubble spawned, and BUILDING_DESTROYED events emitted. Also ported guild hero-death tracking to SimEngine cleanup path."
+            ],
+            "files_changed": [
+              "ai/basic_ai.py",
+              "ai/behaviors/bounty_pursuit.py",
+              "game/entities/guard.py",
+              "game/entities/enemy.py",
+              "game/entities/buildings/defensive.py",
+              "game/engine.py",
+              "game/sim_engine.py"
+            ],
+            "verification": {
+              "pytest": {
+                "status": "PASS",
+                "count": "339 passed",
+                "summary": "All 339 tests pass"
+              },
+              "qa_smoke": {
+                "status": "PASS",
+                "summary": "qa_smoke.py --quick passes, observe_sync shows heroes patrolling/fighting/shopping normally"
+              }
+            },
+            "blockers": [],
+            "follow_ups": []
+          }
+        }
+      }
     }
   }
 }

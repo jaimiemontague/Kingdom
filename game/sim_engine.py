@@ -733,9 +733,20 @@ class SimEngine:
         cleanup_tick = getattr(self, '_cleanup_tick', 0)
         self._cleanup_tick = cleanup_tick + 1
         if getattr(self, '_dead_entity_dirty', False) or cleanup_tick % 60 == 0:
+            # WK60 Feature 3: decrement guild hero count for newly dead heroes
+            for hero in self.heroes:
+                if not getattr(hero, "is_alive", True) and not getattr(hero, "_guild_death_processed", False):
+                    hero._guild_death_processed = True
+                    home = getattr(hero, "home_building", None)
+                    if home is not None and hasattr(home, "on_hero_death"):
+                        home.on_hero_death()
             self.enemies = [e for e in self.enemies if getattr(e, "is_alive", False)]
             self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
             self._dead_entity_dirty = False
+
+        # WK61-FIX: Destroyed-building cleanup (was missing from SimEngine — only ran
+        # in the old presentation-layer path via CleanupManager).
+        self._cleanup_destroyed_buildings()
 
         # Bounties
         claimed = self.bounty_system.check_claims(self.heroes)
@@ -823,6 +834,102 @@ class SimEngine:
                             "display_name": getattr(poi_def, 'display_name', ''),
                         })
                     break  # Only need one hero to discover
+
+    def _cleanup_destroyed_buildings(self) -> None:
+        """WK61-FIX: Remove buildings at 0 HP and clear stale references.
+
+        The full CleanupManager on the presentation layer handles rubble + HUD messages
+        and is wired via GameEngine. This lightweight sim-side pass ensures the
+        authoritative buildings list never keeps dead buildings across ticks.
+        """
+        destroyed = [
+            b for b in self.buildings
+            if b.hp <= 0 and getattr(b, "building_type", None) != "castle"
+        ]
+        if not destroyed:
+            return
+
+        from game.entities.rubble import RubbleRecord, make_rubble_id
+        from game.sim.timebase import now_ms as _now_ms_fn
+
+        _now = int(_now_ms_fn())
+        destruction_events: list[dict] = []
+
+        for building in destroyed:
+            bx = float(getattr(building, "center_x", getattr(building, "x", 0.0)))
+            by = float(getattr(building, "center_y", getattr(building, "y", 0.0)))
+            btype = str(getattr(building, "building_type", "unknown"))
+
+            # Eject occupants
+            for occ in list(getattr(building, "occupants", [])):
+                if hasattr(occ, "pop_out_of_building"):
+                    occ.pop_out_of_building()
+
+            # Remove from primary lists
+            if building in self.buildings:
+                self.buildings.remove(building)
+            if getattr(building, "is_lair", False) and building in getattr(self.lair_system, "lairs", []):
+                self.lair_system.lairs.remove(building)
+
+            # Clear entity references
+            for hero in self.heroes:
+                if getattr(hero, "target", None) is building:
+                    hero.target = None
+                if getattr(hero, "home_building", None) is building:
+                    hero.home_building = None
+            for enemy in self.enemies:
+                if getattr(enemy, "target", None) is building:
+                    enemy.target = None
+            for peasant in self.peasants:
+                if getattr(peasant, "target_building", None) is building:
+                    peasant.target_building = None
+            if self.tax_collector and getattr(self.tax_collector, "target_guild", None) is building:
+                self.tax_collector.target_guild = None
+            for guard in self.guards:
+                if getattr(guard, "target", None) is building:
+                    guard.target = None
+                if getattr(guard, "home_building", None) is building:
+                    guard.home_building = None
+            for bounty in getattr(self.bounty_system, "bounties", []):
+                if getattr(bounty, "target", None) is building:
+                    bounty.target = None
+
+            # Selection
+            if getattr(self, "selected_building", None) is building:
+                self.selected_building = None
+
+            # Rubble record
+            rubble_size = getattr(building, "size", (1, 1))
+            rubble = RubbleRecord(
+                record_id=make_rubble_id(),
+                center_x=float(bx),
+                center_y=float(by),
+                grid_x=int(getattr(building, "grid_x", 0)),
+                grid_y=int(getattr(building, "grid_y", 0)),
+                width_tiles=int(rubble_size[0]),
+                height_tiles=int(rubble_size[1]),
+                building_type=btype,
+                created_ms=_now,
+            )
+            self.rubble_records.append(rubble)
+
+            building_w = getattr(building, "width", 0) or (rubble_size[0] * TILE_SIZE)
+            building_h = getattr(building, "height", 0) or (rubble_size[1] * TILE_SIZE)
+            destruction_events.append({
+                "type": GameEventType.BUILDING_DESTROYED.value,
+                "x": float(bx),
+                "y": float(by),
+                "building_type": btype,
+                "w": int(building_w),
+                "h": int(building_h),
+            })
+
+            # HUD message via event bus
+            building_name = btype.replace("_", " ").title()
+            self._emit_hud_message(f"{building_name} destroyed", (220, 20, 60))
+
+        if destruction_events:
+            self.event_bus.emit_batch(destruction_events)
 
     def _update_buildings(self, dt: float) -> None:
         from game.sim.timebase import now_ms as sim_now_ms

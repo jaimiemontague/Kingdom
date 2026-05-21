@@ -175,7 +175,9 @@ def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
 
     # --- Gold display (WK61-FEAT-003: gated on held 'G' key) ---
     from ursina import held_keys
-    stash = int(getattr(b, 'stash_gold', 0) or getattr(b, 'stored_tax_gold', 0) or 0)
+    # WK61-BUG-002: Use additive sum instead of short-circuit `or` so all
+    # building types report correctly (guilds, neutrals, lairs).
+    stash = int(getattr(b, 'stash_gold', 0) or 0) + int(getattr(b, 'stored_tax_gold', 0) or 0)
     g_held = held_keys.get('g', False)
     gold_ent = getattr(ent, '_ks_gold_label', None)
     if stash > 0 and g_held:
@@ -902,6 +904,19 @@ class UrsinaRenderer:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         _active_layer = self._camera_active_layer
         for b in getattr(snapshot, "buildings", ()):
+            # WK61-BUG-003: Skip destroyed buildings that haven't been cleaned
+            # from the snapshot yet. The engine's _cleanup_destroyed_buildings
+            # removes them, but if a building reaches hp<=0 mid-tick it may
+            # still appear in this frame's snapshot. Destroy its entity so the
+            # model disappears immediately (rubble replaces it next frame).
+            if getattr(b, 'hp', 1) <= 0 and getattr(b, 'building_type', '') != 'castle':
+                _dead_obj_id = id(b)
+                _dead_ent = self._entities.get(_dead_obj_id)
+                if _dead_ent is not None:
+                    import ursina as _u
+                    self._unit_anim_state.pop(_dead_obj_id, None)
+                    _u.destroy(self._entities.pop(_dead_obj_id))
+                continue
             # WK57 Wave 3: Buildings are always surface (layer 0) — hide when camera underground
             if _active_layer != 0:
                 _bld_obj_id = id(b)
