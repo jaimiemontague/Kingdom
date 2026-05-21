@@ -50,7 +50,7 @@ Each sprint round may include an optional `automation` object:
       "on_failure": "stop_for_pm"
     },
     "model_policy": {
-      "required_model": "composer-2",
+      "required_model": "composer-2.5",
       "allow_overrides": false
     }
   }
@@ -67,14 +67,15 @@ If `automation` is absent, the orchestrator derives a v1 DAG from
 
 ## Model Policy
 
-All automated agents and subagents must use Composer 2 unless Jaimie explicitly
-approves a one-run exception in the PM hub.
+All automated agents and subagents must use **Composer 2.5** (`composer-2.5`,
+normal mode — not `composer-2.5-fast`) unless Jaimie explicitly approves a
+one-run exception in the PM hub.
 
-- SDK agents are created with `model: { id: "composer-2" }`.
+- SDK agents are created with `model: { id: "composer-2.5" }`.
 - Per-run model overrides are rejected unless `automation.model_policy` allows
   them and includes human approval.
-- Inline SDK subagents must inherit from a Composer 2 parent or explicitly use
-  Composer 2.
+- Inline SDK subagents must inherit from a Composer 2.5 parent or explicitly use
+  Composer 2.5 (never `composer-2.5-fast`).
 - File-based subagents created for automation must use `model: inherit` and
   must not request higher-cost model changes.
 - The run ledger records the resolved model for each run.
@@ -102,7 +103,7 @@ A worker wave is complete only when:
 
 - every required SDK run finishes with status `finished`
 - each required worker writes a token-checked completion receipt
-- the Composer 2 log-reader/verifier writes a verification receipt with status
+- the Composer 2.5 log-reader/verifier writes a verification receipt with status
   `verified`
 - required gates mentioned in the prompt are reported by the worker or are run
   later by Agent 11
@@ -125,7 +126,7 @@ Old receipts cannot advance a new wave.
 
 ## Verifier Receipts
 
-After a completion receipt appears, the orchestrator launches a Composer 2
+After a completion receipt appears, the orchestrator launches a Composer 2.5
 log-reader/verifier agent. The verifier reads the receipt and claimed log, then
 writes a verification receipt:
 

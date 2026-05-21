@@ -68,11 +68,11 @@ Agent 01 and Agent 12 should define a small automation contract in markdown firs
 
 ## Required Model Policy
 
-All automated studio agents must use **Composer 2** unless Jaimie explicitly approves an exception for a specific run.
+All automated studio agents must use **Composer 2.5** (`composer-2.5`, normal mode — not `composer-2.5-fast`) unless Jaimie explicitly approves an exception for a specific run.
 
-- The orchestrator should create every SDK agent with `model: { id: "composer-2" }`.
+- The orchestrator should create every SDK agent with `model: { id: "composer-2.5" }`.
 - Per-run `agent.send(..., { model })` overrides should be blocked unless an allowlisted override is present in the PM hub and marked as human-approved.
-- Any inline SDK subagents defined through `agents: { ... }` should use `model: "inherit"` only when the parent is already Composer 2, or explicitly `model: { id: "composer-2" }` if the SDK path supports it.
+- Any inline SDK subagents defined through `agents: { ... }` should use `model: "inherit"` only when the parent is already Composer 2.5, or explicitly `model: { id: "composer-2.5" }` if the SDK path supports it.
 - Any file-based subagents under `.cursor/agents/*.md` created for this workflow should set `model: inherit` and include prompt text saying they must not request or spawn higher-cost models.
 - Agent 01's generated prompts should continue to include intelligence levels for planning purposes, but the automation layer should map those to scope/care/retry policy, not to more expensive model selection by default.
 - The run ledger should record the resolved model for each agent/run, and the orchestrator should stop if the SDK reports a non-Composer model without approval.
@@ -95,7 +95,7 @@ The MVP should:
 
 - Read `agent_01_ExecutiveProducer_PM.json` and resolve the sprint/round.
 - Validate that all selected agents have `pm_agent_prompts[agentId]` and an intelligence recommendation.
-- Create one durable Cursor SDK agent per studio agent, named like `Kingdom Agent 05 - wk46_r0`, with `model: { id: "composer-2" }`.
+- Create one durable Cursor SDK agent per studio agent, named like `Kingdom Agent 05 - wk46_r0`, with `model: { id: "composer-2.5" }`.
 - Send each agent a composed prompt: role identity, universal prompt, its numbered prompt, ownership constraints, and reporting requirements.
 - Stream status/tool events to a small run ledger, while treating tool payloads defensively because SDK tool schemas are not stable.
 - Wait for runs with `run.wait()` and mark each wave complete only when all required agents finish and their logs contain a matching sprint/round entry.
@@ -121,7 +121,7 @@ Before `auto_until_human_gate`, add explicit guardrails:
 - File ownership guard: parse intended files from prompts/logs and block obvious ownership violations before launching.
 - Dirty tree guard: record `git status` before a wave; never auto-commit or push without Jaimie approval.
 - Gate guard: QA agents can run gates automatically, but the orchestrator stops if `qa_smoke --quick` or `validate_assets --report` fails.
-- Cost guard: hard Composer 2 model policy, max active agents, max retries, max runtime, and required intelligence levels.
+- Cost guard: hard Composer 2.5 model policy (reject fast tier), max active agents, max retries, max runtime, and required intelligence levels.
 - Human gate guard: always pause for visual asset approval, manual smoke, release/version bump, and commit/push.
 
 ## Phase 5: Cloud and Dashboard Layer

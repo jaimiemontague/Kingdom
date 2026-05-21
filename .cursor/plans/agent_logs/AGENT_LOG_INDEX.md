@@ -13,6 +13,8 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 
 **Rolling sprints (most recent kept):**
 - `wk58_ursina_entities_overload`
+- `wk59_lair_diagnostic`
+- `wk60_v159_gameplay_fun`
 
 **Archived sprints:** 51
 - `wk7-ui-polish`
@@ -49,7 +51,9 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
+- `wk59_lair_diagnostic`
 - `wk58_ursina_entities_overload`
+- `wk60_v159_gameplay_fun`
 
 **Archived sprints:** 47
 - `wk33-terrain-lair-economy-prefabs`
@@ -88,26 +92,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk44-stage2-dynamic-trees`
 - `wk45-stage2_5-sapling-spawning`
 - `wk46-stage3-lumberjack-builders`
 - `wk49_hero_profile_foundation`
 - `wk50_llm_context_direct_prompts`
 - `wk53_world_beauty_terrain`
 - `wk57_underground_vertical_stacking` — game/entities/hero.py: Added underground_area_id, underground_local_x, underground_local_z fields to Hero.__init__. Added begin_descent(area_id, entrance_x, entrance_y) and begin_ascent() transition methods.; game/systems/poi_interaction.py: Added _underground_areas and _sim_engine references to POIInteractionSystem.__init__. Replaced _handle_dungeon from flavor-text-only to full cave entry: triggers hero.begin_descent(), marks entrance chamber explored, reveals underground fog, spawns underground enemies. Added module-level _spawn_underground_enemies() function that instantiates enemies from chamber data at layer=-1.
+- `wk60_v159_gameplay_fun`
 
-**Archived sprints:** 17
+**Archived sprints:** 18
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk31-kingdom-perf-economy`
 - `wk32-camera-construction-nature-polish`
 - `wk33-terrain-lair-economy-prefabs`
 - `wk34-3d-final-model-pass`
 - `wk43-building-nature-stage1`
+- `wk44-stage2-dynamic-trees`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -146,26 +150,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_08_UX_UI_Director.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk24-ui-and-renderer-polish`
 - `wk38-refactor-stage3-gamecommands`
 - `wk49_hero_profile_foundation` — game/ui/hero_panel.py: profile-first HeroPanel (_render_standard_hero); truncate_panel_line + intent_label_from_slug; XP/progression bar; compact career/memory/known-places lines; fallback to hero fields when profile missing; render_focus_top for HERO_FOCUS upper region.; game/ui/hud.py: HeroPanel.render receives selected_hero_profile from game_state; _render_hero_focus_profile forwards to HeroPanel.render_focus_top.
 - `wk50_llm_context_direct_prompts` — game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines — Order applied, Redirected — safer option/path, Refused — …, Not applied — no action committed; chat-only remains no hint.; game/engine.py: _poll_conversation_response runs apply_validated_direct_prompt_physical before receive_response; passes physical_committed in direct_feedback.
 - `wk51_attachment_ux_phase3` — game/ui/hud.py: _render_pin_button now uses cached pygame.font.SysFont chain (segoeuiemoji / Segoe UI / Noto Color Emoji / arial) to render U+1F4CC pushpin emoji; pinned = full-alpha blit centered in pin_button_rect, unpinned = copy with alpha 128; fallback to existing circle+P if font missing or glyph width<=4.; Phase 4b screenshots: docs/screenshots/wk51_r7_pin_before (baseline from main hud) and docs/screenshots/wk51_r7_pin_after.
 - `wk52_attachment_phase3_radar_alerts_memorial` — BUG A+B game/ui/building_panel.py: render() accepts left_rect matching HUD `_layout_rects_for_screen`; panel_x/y/width/layout height from rect (no floating over map); `_fallback_left_rect` for callers without HUD.; game/engine_facades/render_coordinator.py: pass hud._last_left_rect into BuildingPanel.render.
 - `v16_r5_hud_perf_worldspace_ui` — game/graphics/ursina_renderer.py _sync_snapshot_heroes(): Added hero name label (UrsinaText, billboard, y=-0.6), hero gold display ($X or $X(+Y) when total_gold>0, gold-yellow HSV, y=-0.8), hero rest indicator ('Zzz' when state==RESTING, light blue, y=0.7 x=0.3). All three blocks placed AFTER Agent 09 health bar code (line ~1017) and BEFORE active_ids.add(obj_id) (line ~1067).; game/graphics/ursina_renderer.py _sync_snapshot_tax_collector(): Added tax collector carried_gold display ($N when carried>0, gold-yellow HSV, y=0.5). Placed AFTER billboard sync and BEFORE active_ids.add(obj_id).
+- `wk60_v159_gameplay_fun` — TASK 1 — WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) — prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.; TASK 2 — GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.
 
-**Archived sprints:** 19
+**Archived sprints:** 20
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `…`
-- `wk16-ux-interactions`
 - `wk17-quality-logic-immersion`
 - `wk18-llm-merger-and-mechanics`
 - `wk20-ui-input-bridge`
 - `wk22-3d-refinement`
+- `wk24-ui-and-renderer-polish`
 
 ### 09 — ArtDirector_Pixel_Animation_VFX
 

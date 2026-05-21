@@ -146,7 +146,7 @@ Some sprints may be routed by the Cursor SDK orchestrator instead of manual copy
 
 - Keep `pm_send_list_minimal` machine-readable: include `waves` or `batch_1_parallel` / `then_in_order`, `intelligence_by_agent`, and `do_not_send`.
 - Add an `automation` block when the sprint should run in `assist` or `auto_until_human_gate` mode. Follow `.cursor/plans/ai_studio_automation_contract.md`.
-- Treat all automated agents and subagents as **Composer 2 only**. Intelligence tags still mean risk/care level, not automatic model upgrades.
+- Treat all automated agents and subagents as **Composer 2.5 only** (`composer-2.5`, normal mode — not `composer-2.5-fast`). Intelligence tags still mean risk/care level, not automatic model upgrades.
 - List human gates explicitly: manual playtest, visual approval, version bump, git commit, and git push must stop for Jaimie.
 - Worker agents write their own logs only. The orchestrator may prompt Agent 01 after a wave to synthesize logs and update the PM hub.
 

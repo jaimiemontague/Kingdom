@@ -13,12 +13,13 @@ npm install
 $env:CURSOR_API_KEY = "crsr_..."
 ```
 
-All orchestrated agents use Composer 2. The CLI rejects model overrides unless a
-future human-approved exception path is added.
+All orchestrated agents use **Composer 2.5** (`composer-2.5`, normal mode — not
+`composer-2.5-fast`). The CLI rejects model overrides unless a future human-approved
+exception path is added.
 
 Every launched agent is instructed to onboard first, write a valid JSON log entry,
 and then run a tokenized `complete` command. The completion receipt triggers the
-orchestrator to launch a Composer 2 log-reader/verifier agent. The required log
+orchestrator to launch a Composer 2.5 log-reader/verifier agent. The required log
 entry is:
 
 ```text

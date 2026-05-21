@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  DISALLOWED_MODEL_IDS,
   REQUIRED_MODEL_ID,
   type AutomationConfig,
   type RoundContext,
@@ -54,9 +55,25 @@ export function enforceModelPolicy(config: AutomationConfig): void {
 }
 
 export function assertResolvedModel(modelId: string | undefined): void {
-  if (modelId && modelId !== REQUIRED_MODEL_ID) {
-    throw new Error(`SDK resolved non-Composer model ${modelId}; stopping for cost safety.`);
+  if (!modelId) {
+    return;
   }
+  if (modelId === REQUIRED_MODEL_ID) {
+    return;
+  }
+  if ((DISALLOWED_MODEL_IDS as readonly string[]).includes(modelId)) {
+    throw new Error(
+      `SDK resolved disallowed model ${modelId}; automated studio runs must use ${REQUIRED_MODEL_ID} (normal mode, not fast).`,
+    );
+  }
+  if (modelId.includes("fast")) {
+    throw new Error(
+      `SDK resolved fast-tier model ${modelId}; automated studio runs must use ${REQUIRED_MODEL_ID} (normal mode, not fast).`,
+    );
+  }
+  throw new Error(
+    `SDK resolved unexpected model ${modelId}; automated studio runs must use ${REQUIRED_MODEL_ID}.`,
+  );
 }
 
 export function findHumanGateStops(context: RoundContext, waves: WaveSpec[]): string[] {

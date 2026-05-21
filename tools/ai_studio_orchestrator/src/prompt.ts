@@ -52,7 +52,7 @@ export function buildWorkerPrompt(context: RoundContext, agent: AgentRunSpec, co
     "ORCHESTRATOR POLICY:",
     `- You are running under Cursor SDK automation and must use ${REQUIRED_MODEL_ID}.`,
     `- Do not request, select, or spawn a non-${REQUIRED_MODEL_ID} model.`,
-    "- If you create subagents, they must inherit this Composer 2 parent or explicitly use Composer 2.",
+    `- If you create subagents, they must inherit this ${REQUIRED_MODEL_ID} parent or explicitly use ${REQUIRED_MODEL_ID} (normal mode — not composer-2.5-fast).`,
     "- Follow your role boundaries from AGENTS.md and .cursor/rules.",
     "- Write only to files you own unless your assignment explicitly allows a cross-domain change.",
     "- Update your own agent log exactly as required by `.cursor/rules/10-orchestrator-logging-contract.mdc`.",

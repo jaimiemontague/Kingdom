@@ -1,4 +1,12 @@
-export const REQUIRED_MODEL_ID = "composer-2" as const;
+/** Normal Composer 2.5 — not composer-2.5-fast. */
+export const REQUIRED_MODEL_ID = "composer-2.5" as const;
+
+/** Rejected by assertResolvedModel (fast tier / legacy ids). */
+export const DISALLOWED_MODEL_IDS = [
+  "composer-2",
+  "composer-2.5-fast",
+  "composer-2-fast",
+] as const;
 
 export type AutomationMode = "manual" | "assist" | "auto_until_human_gate";
 export type RuntimeMode = "local" | "cloud";

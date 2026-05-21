@@ -1122,10 +1122,11 @@
     },
     "wk60_v159_gameplay_fun": {
       "sprint_meta": {
-        "status": "planning_complete",
+        "status": "closed_successful",
         "created_utc": "2026-05-19T18:00:00Z",
         "plan_doc": ".cursor/plans/v1.6_gameplay_fun_roadmap.plan.md",
         "notes": "The 'Make It Fun' sprint. 9 features across 2-3 rounds to make v1.5.9 a genuinely challenging and fun game. Features 8-9 (difficulty system + dev mode) added after initial planning. After playtest tuning, ships as v1.6.0. Assumes WK59 lair fix is merged before R1 lair tuning work.",
+        "closeout_notes": "R1 complete (commit bd252ef) — all 9 features landed. R2 (HUD toasts, difficulty menu UI, dev mode label, horn SFX) not executed, deferred to WK61. Jaimie playtest 2026-05-20 produced 13 feedback items driving WK61 planning. Sprint closed as successful.",
         "version_target": "Prototype v1.5.9 (then v1.6.0 after playtest tuning)",
         "definition_of_done": [
           "Wave events fire on schedule with HUD warnings",
@@ -1152,8 +1153,8 @@
             "depends_on": "wk59_r2_lair_visibility_fix"
           },
           "pm_status_summary": {
-            "status": "ready_to_kick_off",
-            "summary": "Plan complete. 9 features designed. Agent 05 owns gameplay systems (features 1-5, 8-9), Agent 03 owns architecture/rendering (features 6-7). Ready for Jaimie to activate agents."
+            "status": "complete",
+            "summary": "All 9 features implemented and committed (bd252ef). Agent 05: Features 1-5, 8-9 (wave events, lair tuning, guild cap, hero cost, guardhouse arrows, difficulty system, dev mode). Agent 03: Features 6-7 (starting buildings, bounty flags in 3D). 339 tests pass, QA smoke PASS. R2 deferred to WK61."
           },
           "pm_bug_tickets": [
             {

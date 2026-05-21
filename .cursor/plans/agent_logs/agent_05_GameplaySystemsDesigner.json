@@ -9,53 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk44-stage2-dynamic-trees": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk44_stage2_dynamic_trees_9ff94576.plan.md",
-        "notes": "WK44 Stage 2: dynamic tree growth sim components (Tree + NatureSystem + unit tests). Integration owned by Agent 03."
-      },
-      "rounds": {
-        "wk44_r0_nature_system_tree_entity": {
-          "round_id": "wk44_r0_nature_system_tree_entity",
-          "sprint_id": "wk44-stage2-dynamic-trees",
-          "round_meta": {
-            "prompt_set_id": "wk44_r0_kickoff",
-            "build_target": "stage2_sim_only_new_files",
-            "created_utc": "2026-04-28T16:25:00Z"
-          },
-          "response": {
-            "status": "complete",
-            "agent_fields": {
-              "scope_guardrails_followed": [
-                "Did not edit: game/sim_engine.py, game/sim/snapshot.py, game/world.py, or any game/graphics files (Agent 03 owns integration)."
-              ],
-              "what_i_changed": [
-                "game/entities/nature.py (new): Tree dataclass with grid_x/grid_y, growth_percentage (default 0.25), growth_ms_accum and stable (tx,ty) key.",
-                "game/systems/nature.py (new): NatureSystem.tick(dt, trees) advances growth deterministically in discrete steps 0.25->0.5->0.75->1.0, with 2 minutes per transition (~6 minutes total).",
-                "tests/test_nature_growth.py (new): verifies growth hits 0.25/0.5/0.75/1.0 at 0/2/4/6 minutes."
-              ],
-              "how_to_test": [
-                "python tools/determinism_guard.py",
-                "python -m pytest tests/test_nature_growth.py"
-              ],
-              "evidence": {
-                "determinism_guard": {
-                  "command": "python tools/determinism_guard.py",
-                  "status": "PASS",
-                  "exit_code": 0
-                },
-                "pytest": {
-                  "command": "python -m pytest tests/test_nature_growth.py",
-                  "status": "PASS",
-                  "exit_code": 0
-                }
-              },
-              "blockers": []
-            }
-          }
-        }
-      }
-    },
     "wk45-stage2_5-sapling-spawning": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk45_stage2_5_sapling_spawning.plan.md",
