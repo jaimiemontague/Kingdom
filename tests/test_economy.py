@@ -46,8 +46,9 @@ def test_hero_purchase_applies_tax_and_updates_totals(make_economy) -> None:
     tax = economy.hero_purchase("Aria", "Potion", 40)
 
     assert tax == int(40 * TAX_RATE)
-    assert economy.player_gold == tax
-    assert economy.total_tax_collected == tax
+    # Tax is stashed on shops via Hero.buy_item; player gold credited when TaxCollector returns.
+    assert economy.player_gold == 0
+    assert economy.total_tax_collected == 0
     assert economy.total_spent_by_heroes == 40
     assert economy.transaction_log[-1]["type"] == "hero_purchase"
 

@@ -474,21 +474,16 @@ class InputHandler:
                             c.selected_hero = hero
                             c.building_panel.deselect()
                             c.selected_building = None
-                            # WK61-FIX: Auto-pin the hero and open the chat band
-                            # so the chat button on the left panel actually shows
-                            # the conversation (chat renders in the pinned watch card).
+                            # WK61-R4-BUG-007: Chat opens conversation only — never pin.
+                            # If this hero is already pinned, expand the watch-card chat band.
                             hid = str(getattr(hero, "hero_id", "") or "").strip()
-                            if hid:
-                                from game.sim.timebase import now_ms as sim_now_ms
-                                pin_slot = getattr(c.hud, "_pin_slot", None)
-                                if pin_slot is not None:
-                                    if pin_slot.hero_id != hid:
-                                        pin_slot.pin(hid, int(sim_now_ms()))
-                                    c.hud._watch_card_expanded = True
-                                    c.hud._chat_visible = True
+                            pin_slot = getattr(c.hud, "_pin_slot", None)
+                            if hid and pin_slot is not None and pin_slot.hero_id == hid:
+                                c.hud._watch_card_expanded = True
+                                c.hud._chat_visible = True
                         chat_panel = getattr(c.hud, "_chat_panel", None)
-                        if chat_panel is not None:
-                            chat_panel.start_conversation(action["hero"])
+                        if chat_panel is not None and hero is not None:
+                            chat_panel.start_conversation(hero)
                         return
                     if isinstance(action, dict) and action.get("type") == "select_hero":
                         hero = action.get("hero")
@@ -627,8 +622,11 @@ class InputHandler:
                 if pos:
                     c.place_building(pos[0], pos[1])
             else:
-                # Try to select hero, then tax collector, then guard, then building
-                if c.try_select_hero(event.pos):
+                # WK61-R4-BUG-002: Ursina screen-space pick before floor-ray distance checks.
+                if getattr(c, "_ursina_viewer", False) and c.try_ursina_select_unit_at_screen(event.pos):
+                    c.building_panel.deselect()
+                    c.selected_building = None
+                elif c.try_select_hero(event.pos):
                     c.building_panel.deselect()
                     c.selected_building = None
                     c.selected_peasant = None

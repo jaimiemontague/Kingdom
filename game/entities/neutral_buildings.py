@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from config import BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS
 from game.entities.building import Building
+from game.entities.buildings.hiring_mixin import TaxStashMixin
 
 
-class NeutralBuilding(Building):
+class NeutralBuilding(TaxStashMixin, Building):
     """Base for neutral buildings that generate tax passively."""
 
     is_neutral = True
@@ -34,7 +35,7 @@ class NeutralBuilding(Building):
         self.cost = BUILDING_COSTS.get(building_type, 0)
 
         # Tax storage/collection mirrors guild buildings so TaxCollector can pick it up.
-        self.stored_tax_gold = 0
+        self._init_tax_stash()
         self._tax_accum = 0.0
         self.tax_per_minute = float(tax_per_minute)
 
@@ -52,11 +53,6 @@ class NeutralBuilding(Building):
             self.hp = 1
             self._work_accum = 0.0
             self.requires_builder_peasant = True
-
-    def collect_taxes(self) -> int:
-        amount = int(self.stored_tax_gold)
-        self.stored_tax_gold = 0
-        return amount
 
     def update(self, dt: float):
         """

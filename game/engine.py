@@ -816,6 +816,63 @@ class GameEngine:
             return True
         return False
 
+    def try_ursina_select_unit_at_screen(self, screen_pos: tuple) -> bool:
+        """Ursina-only screen-space unit pick (WK61-R4-BUG-002). Returns True if selected."""
+        if not getattr(self, "_ursina_viewer", False):
+            return False
+        try:
+            from game.graphics.ursina_pick import pick_unit_at_screen
+        except Exception:
+            return False
+
+        hit = pick_unit_at_screen(
+            screen_pos,
+            heroes=self.heroes,
+            enemies=self.enemies,
+            peasants=self.peasants,
+            guards=self.guards,
+            tax_collector=self.tax_collector,
+            virtual_w=int(getattr(self, "window_width", 1920) or 1920),
+            virtual_h=int(getattr(self, "window_height", 1080) or 1080),
+        )
+        if hit is None:
+            return False
+
+        kind, entity = hit
+        if kind == "hero":
+            self.selected_hero = entity
+            self.selected_peasant = None
+            self.selected_enemy = None
+            self.selected_building = None
+        elif kind == "tax_collector":
+            self.selected_hero = entity
+            self.selected_building = None
+            self.selected_peasant = None
+            self.selected_enemy = None
+        elif kind == "guard":
+            self.selected_hero = entity
+            self.selected_building = None
+            self.selected_peasant = None
+            self.selected_enemy = None
+        elif kind == "peasant":
+            self.selected_peasant = entity
+            self.selected_hero = None
+            self.selected_building = None
+            self.selected_enemy = None
+            if hasattr(self, "building_panel"):
+                try:
+                    self.building_panel.deselect()
+                except Exception:
+                    pass
+        elif kind == "enemy":
+            self.selected_enemy = entity
+            self.selected_hero = None
+            self.selected_building = None
+            self.selected_peasant = None
+        else:
+            return False
+        return True
+
     def try_select_building(self, screen_pos: tuple) -> bool:
         """Try to select a building at the given screen position. Returns True if selected.
 
@@ -1859,6 +1916,20 @@ class GameEngine:
         # Handle events ONCE per render frame (before sim ticks).
         t0 = time.perf_counter()
         self.handle_events()
+        if getattr(self, "_ursina_viewer", False):
+            try:
+                from game.graphics.ursina_renderer import set_tax_gold_overlay_held
+
+                g_held = False
+                if getattr(self, "input_manager", None) is not None:
+                    g_held = self.input_manager.is_key_pressed("g")
+                else:
+                    from ursina import held_keys
+
+                    g_held = bool(held_keys.get("g", 0))
+                set_tax_gold_overlay_held(g_held)
+            except Exception:
+                pass
         t1 = time.perf_counter()
 
         # Accumulate scaled sim time.

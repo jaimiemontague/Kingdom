@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "42fc70cf-f58a-4a00-9eb5-d83a1e9bfee1",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r5_guardhouse_hp_panel",
+  "agent_id": "11",
+  "status": "done",
+  "summary": "R5 QA sign-off: qa_smoke PASS, pytest 355 passed, Agent 08 screenshot confirms Guardhouse panel HP 200/200 + bar above Demolish.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_11_QA_TestEngineering_Lead.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r5_guardhouse_hp_panel]",
+  "timestamp": "2026-05-22T02:42:34.870Z"
+}

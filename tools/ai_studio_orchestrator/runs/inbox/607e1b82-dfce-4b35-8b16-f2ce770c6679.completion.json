@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "607e1b82-dfce-4b35-8b16-f2ce770c6679",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r8_marketplace_potion_tax",
+  "agent_id": "05",
+  "status": "done",
+  "summary": "Fixed WK61-R8-BUG-001: deferred marketplace potion purchases now deposit tax to pending_task_building after pop-out; added do_shopping regression tests.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_05_GameplaySystemsDesigner.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r8_marketplace_potion_tax]",
+  "timestamp": "2026-05-22T03:28:21.778Z"
+}

@@ -1433,6 +1433,182 @@
             "python -m pytest tests/ -x -q --deselect tests/test_engine.py::test_engine_headless_tick_simulation_advances_sim_time",
             "python tools/qa_smoke.py --quick"
           ]
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R4-BUG-004 game/ui/building_renderers/economic_panel.py: Taxable gold reads stored_tax_gold only; positive values render in COLOR_GOLD; $0 uses white label plus grey hint 'Deposited when heroes shop or upgrade here' so empty state is truthful not stale grey zero.",
+            "WK61-R4-BUG-007 game/input_handler.py: Removed auto-pin on start_conversation from hero panel Chat; only expands pinned watch-card chat when hero is already pinned.",
+            "WK61-R4-BUG-007 game/ui/hud.py: Added hero-menu chat popup below left panel (_hero_menu_chat_rect, render + click routing) so conversation opens without pin path.",
+            "tests/test_wk61_r4_ui_regressions.py: Coverage for chat button action, no-pin start_conversation, taxable gold styling, and popup rect helpers."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r4_ui_regressions.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "5 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "353 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk61_r4_agent08",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "5 PNGs + manifest.json"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": "353 passed; test_wk61_r4_ui_regressions.py 5 passed",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots": "docs/screenshots/wk61_r4_agent08/ui_panels_hero.png (hero panel with Chat button); manifest at docs/screenshots/wk61_r4_agent08/manifest.json",
+            "ui_behavior_notes": "Hero Chat: opens ChatPanel popup below left hero menu without calling pin_slot.pin; Pin button remains separate path via apply_hud_pin_action. Taxable gold: marketplace/blacksmith show gold $N when stored_tax_gold>0; $0 shows white label + deposit hint.",
+            "files_modified": [
+              "game/ui/building_renderers/economic_panel.py",
+              "game/input_handler.py",
+              "game/ui/hud.py",
+              "tests/test_wk61_r4_ui_regressions.py"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 05 data fix (TaxStashMixin on marketplace/blacksmith) required for non-zero taxable gold in live play; UI now reads stored_tax_gold correctly.",
+            "Jaimie manual: select hero, click Chat — verify popup opens and hero is NOT pinned unless Pin was clicked separately."
+          ],
+          "recommended_next_actions": []
+        },
+        "wk61_r5_guardhouse_hp_panel": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r5_guardhouse_hp_panel",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R5-BUG-001 game/ui/building_renderers/defensive_panel.py: Added _render_hp_block (HP label + HPBar) above defensive building stats for guardhouse/ballista/wizard tower; normalized building_type enum lookup to match economic renderer.",
+            "tools/screenshot_scenarios.py: Added wk61_guardhouse_hp_panel scenario selecting Guardhouse with left building panel visible.",
+            "tests/test_wk61_r5_guardhouse_hp_panel.py: Focused tests that defensive renderer and BuildingPanel show HP pixels and keep Demolish button rect."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r5_guardhouse_hp_panel.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "2 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "355 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario wk61_guardhouse_hp_panel --seed 3 --out docs/screenshots/wk61_r5_agent08 --size 1920x1080 --ticks 120",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "wk61_guardhouse_hp_panel.png + manifest.json"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": "355 passed; test_wk61_r5_guardhouse_hp_panel.py 2 passed",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots": "docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png shows Guardhouse left panel with HP: 200/200, green HP bar, Guards Spawned stats, and Demolish button below",
+            "files_modified": [
+              "game/ui/building_renderers/defensive_panel.py",
+              "tools/screenshot_scenarios.py",
+              "tests/test_wk61_r5_guardhouse_hp_panel.py"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: verify screenshot and gates for R5 sign-off."
+          ],
+          "recommended_next_actions": []
+        },
+        "wk61_r9_hero_chat_readable_layout": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r9_hero_chat_readable_layout",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R9-BUG-001 game/ui/hud.py: Replaced cramped below-minimap chat popup with in-column split layout — hero sheet shrinks to scrollable top band (min 120px) and chat reserves 152–220px with divider; wheel scroll routes to hero band only when pointer over hero rect.",
+            "tools/screenshot_scenarios.py: Added wk61_hero_menu_chat scenario with sample conversation at 1024x576 and 1920x1080; Shot width/height optional fields for per-shot capture size.",
+            "tools/capture_screenshots.py: Apply per-shot width/height overrides and HUD resize hook before each capture.",
+            "tests/test_wk61_r9_hero_chat_readable_layout.py: Split rect sizing at 576p/1080p and render integration test.",
+            "tests/test_wk61_r4_ui_regressions.py: Updated popup test to split-layout helper assertions."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r4_ui_regressions.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "8 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "424 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS (first run flaky on speed_scaling 0.25x bounty responders; rerun passed)"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --size 1920x1080 --out docs/screenshots/wk61_r9",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png + manifest.json"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": "424 passed; test_wk61_r9_hero_chat_readable_layout.py 4 passed",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots": "docs/screenshots/wk61_r9/wk61_hero_menu_chat_1024.png and wk61_hero_menu_chat_1920.png show split left column: shrunk scrollable hero sheet above readable chat with history, input row, and End Conversation; no bottom-bar overlap",
+            "files_modified": [
+              "game/ui/hud.py",
+              "tools/screenshot_scenarios.py",
+              "tools/capture_screenshots.py",
+              "tests/test_wk61_r9_hero_chat_readable_layout.py",
+              "tests/test_wk61_r4_ui_regressions.py"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: verify gates and screenshot evidence for R9 sign-off."
+          ],
+          "recommended_next_actions": []
         }
       }
     }

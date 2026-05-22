@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "6ef4ad1d-dd55-40a8-b8d7-8af26537e3db",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r4_playtest3_regression_cleanup",
+  "agent_id": "03",
+  "status": "done",
+  "summary": "Fixed R4-BUG-001/002/003: unit labels+HP overlays, screen-space Ursina picking, G-key taxable gold overlay via engine-polled flag and depth-off building labels.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r4_playtest3_regression_cleanup]",
+  "timestamp": "2026-05-22T02:23:48.749Z"
+}

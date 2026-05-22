@@ -310,6 +310,473 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R4 playtest regression fixes after Wave 1 implementers (Agents 03/05/06/08)",
+            "created_utc": "2026-05-21T00:00:00Z",
+            "depends_on": "wk61_r4_wave1_implementers"
+          },
+          "prompt_summary": "Run qa_smoke, pytest, validate_assets; verify R4 ticket fixes and implementer screenshot/capture evidence; no code changes unless small QA assertion clearly needed.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "QA verification only — no code changes. All three gates pass on final verification run; R4 regressions covered by 353 pytest items including test_wk61_r4_ursina_regressions.py (4) and test_wk61_r4_ui_regressions.py (5). Documented one flaky qa_smoke failure on speed_scaling 0.25x bounty_responder (passed on immediate retry).",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "First run FAIL: speed_scaling 0.25x profile — [qa] FAIL expected at least one bounty responder after warmup. determinism_guard PASS, pytest PASS, base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed_scaling 0.1x PASS before failure."
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "353 passed in 15.15s"
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (all pre-existing missing_model_file placeholders)"
+            },
+            {
+              "cmd": "python tools/observe_sync.py --seconds 48.0 --heroes 10 --seed 3 --log-every 240 --qa --bounty --speed-multiplier 0.25",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Isolated repro of flaky profile — PASS: bounty_has_responder=True"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Second full run DONE: PASS — all profiles exit 0 including speed_scaling 0.25x"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r4_ursina_regressions.py tests/test_wk61_r4_ui_regressions.py tests/test_ai_exploration.py tests/test_building.py tests/test_economy.py -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "33 passed — R4 targeted regression bundle"
+            }
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke_final": "PASS (rc=0) on second full run",
+              "qa_smoke_first_run": "FAIL (rc=1) — flaky bounty_responder at speed_multiplier=0.25; passed on isolated repro and second full run",
+              "pytest": "353 passed",
+              "validate_assets": "errors=0 warns=46 pre-existing"
+            },
+            "r4_ticket_verification": {
+              "WK61-R4-BUG-001_labels_hp_bars": {
+                "status": "PASS_unit_tests",
+                "owner": "Agent 03",
+                "tests": "tests/test_wk61_r4_ursina_regressions.py (overlay flag, billboard offsets)",
+                "screenshot": "MISSING — Agent 03 deferred Ursina capture to Agent 11/09"
+              },
+              "WK61-R4-BUG-002_unit_picking": {
+                "status": "PASS_unit_tests",
+                "owner": "Agent 03",
+                "tests": "test_pick_unit_at_screen_uses_projection, test_pick_unit_at_screen_respects_radius",
+                "screenshot": "MISSING — Agent 09 visual consult pending"
+              },
+              "WK61-R4-BUG-003_g_key_gold_overlay": {
+                "status": "PASS_unit_tests",
+                "owner": "Agent 03",
+                "tests": "test_tax_gold_overlay_flag_without_ursina",
+                "screenshot": "MISSING — requires Ursina window capture with G held"
+              },
+              "WK61-R4-BUG-004_taxable_gold_panels": {
+                "status": "PASS_unit_tests",
+                "owners": ["Agent 05", "Agent 08"],
+                "tests": "test_economic_panel_taxable_gold_* , test_marketplace_accumulates_shop_tax_in_stored_tax_gold (economy.py)",
+                "screenshot": "PARTIAL — Agent 08 ui_panels capture set does not include marketplace/blacksmith economic panel"
+              },
+              "WK61-R4-BUG-005_hero_idle_regression": {
+                "status": "PASS_unit_tests",
+                "owners": ["Agent 06", "Agent 05"],
+                "tests": "tests/test_ai_exploration.py (commit-gate + explore), test_wk50_phase2a_decision_contracts idle moment",
+                "headless_note": "qa_smoke base profile shows heroes MOVING toward enemies/patrol, not long IDLE stretches"
+              },
+              "WK61-R4-BUG-006_guardhouse_hp": {
+                "status": "PASS_unit_tests",
+                "owner": "Agent 05",
+                "tests": "test_guardhouse_has_hp_targetable_and_exposes_state"
+              },
+              "WK61-R4-BUG-007_chat_no_pin": {
+                "status": "PASS_unit_tests_and_screenshot",
+                "owner": "Agent 08",
+                "tests": "test_hero_panel_chat_button_returns_start_conversation, test_start_conversation_does_not_pin_unpinned_hero, test_hud_renders_hero_menu_chat_popup_without_pin",
+                "screenshot": "docs/screenshots/wk61_r4_agent08/ui_panels_hero.png — Chat button visible at bottom of hero panel; manifest at docs/screenshots/wk61_r4_agent08/manifest.json"
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_03": "Log done; scoped pytest 15 passed; no Ursina screenshot — follow-up to Agent 09",
+              "agent_05": "Log done; qa_smoke PASS; new tests marketplace tax + guardhouse HP",
+              "agent_06": "Log done; qa_smoke PASS; AI exploration + idle moment tests",
+              "agent_08": "Log done; qa_smoke PASS; capture_screenshots ui_panels scenario (5 PNGs + manifest)"
+            },
+            "notes": [
+              "No Agent 11 code changes — existing R4 regression tests from implementers provide adequate automated coverage.",
+              "Known fragile area: bounty_has_responder assertion at speed_multiplier=0.25 failed once then passed on retry (same seed 3). Documented in agent-11 onboarding as bounty tuning sensitivity.",
+              "Ursina-visible fixes (labels, G overlay, unit pick feedback) lack PNG evidence from implementers; Agent 09 visual consult wave should capture before human playtest gate.",
+              "Human playtest gate (Jaimie 10-15 min) still required per PM automation human_gates."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 09: capture Ursina screenshots for R4-BUG-001/002/003 (unit labels/HP bars, G-held gold overlay, selection feedback).",
+            "Agent 12/11 (optional): tighten bounty_responder qa assertion at speed_multiplier=0.25 if flake recurs in CI.",
+            "Human gate: Jaimie manual playtest to confirm R4 Definition of Done before version bump."
+          ]
+        },
+        "wk61_r5_guardhouse_hp_panel": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r5_guardhouse_hp_panel",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R5 Guardhouse HP panel fix after Agent 08",
+            "created_utc": "2026-05-21T20:36:00-06:00",
+            "depends_on": "wk61_r5_agent08_fix"
+          },
+          "prompt_summary": "Verify R5 after Agent 08: qa_smoke, pytest, inspect screenshot evidence; do not sign off if selected Guardhouse panel lacks HP.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "QA verification only — no code changes. Gates pass; Agent 08 screenshot confirms selected Guardhouse left panel shows HP: 200/200, green HP bar, guard stats, and Demolish button below.",
+            "files_touched": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS — all profiles exit 0"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "355 passed in 13.86s"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validation before orchestrator receipt"
+            }
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (rc=0)",
+              "pytest": "355 passed including tests/test_wk61_r5_guardhouse_hp_panel.py (2)"
+            },
+            "r5_ticket_verification": {
+              "WK61-R5-BUG-001_guardhouse_hp_panel": {
+                "status": "PASS_gates_and_screenshot",
+                "owner": "Agent 08",
+                "tests": "tests/test_wk61_r5_guardhouse_hp_panel.py — defensive renderer HP pixels + BuildingPanel HP colors and demolish_button_rect",
+                "screenshot": "docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png — Guardhouse panel shows HP: 200/200, green HP bar, Guards Spawned stats, Demolish button visible below HP block",
+                "manifest": "docs/screenshots/wk61_r5_agent08/manifest.json — scenario wk61_guardhouse_hp_panel seed 3 ticket WK61-R5-BUG-001"
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_08": "Log done; qa_smoke PASS; pytest 355 passed; capture_screenshots wk61_guardhouse_hp_panel scenario — PNG inspected by Agent 11, HP visible above Demolish"
+            },
+            "notes": [
+              "No Agent 11 code changes — verification-only per assignment.",
+              "R5 Definition of Done satisfied for automated gates and screenshot evidence; human playtest gate still pending per PM automation."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie manual playtest to confirm Guardhouse HP panel in live Ursina session.",
+            "PM: mark WK61-R5-BUG-001 resolved after human gate if no regressions."
+          ]
+        },
+        "wk61_r6_tax_gold_overlay_models": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r6_tax_gold_overlay_models",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R6 hold-G tax gold overlay after Agents 05/03",
+            "created_utc": "2026-05-21T20:43:00-06:00",
+            "depends_on": "wk61_r6_wave1_fix"
+          },
+          "prompt_summary": "Verify gates, R6 regression tests, and multi-building hold-G overlay evidence; do not sign off on single-building special case only.",
+          "status": "blocked",
+          "what_i_changed": {
+            "summary": "Re-verified R6 after Agents 05/03 (verification-only). Agent 05 data layer PASS (14 tax-stash types, zero-vs-missing). Agent 03 tax-stash snapshot PASS (14 parametrized) but non-tax snapshot still crashes int(None) at ursina_renderer.py:166 — qa_smoke FAIL. No Ursina screenshot evidence. Cannot sign off R6 Definition of Done.",
+            "files_created": ["tests/test_wk61_r6_qa_renderer_tax_coverage.py"],
+            "files_modified": []
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: FAIL — pytest rc=1 (6 failed in test_wk61_r6_qa_renderer_tax_coverage.py non-tax snapshot tests); determinism_guard PASS"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "404 passed, 6 failed — same non-tax TypeError at building_tax_overlay_snapshot"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r6_tax_gold_overlay_data.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=no -q",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "49 passed, 6 failed — 14 tax-stash renderer PASS; 27 data PASS; 8 ursina unit PASS; 6 non-tax renderer FAIL"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated after update"
+            }
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "FAIL (rc=1) — pytest step fails on 6 non-tax snapshot regressions",
+              "pytest_full": "404 passed, 6 failed",
+              "pytest_r6_scoped": "49 passed, 6 failed (14 tax-stash renderer + 27 data + 8 ursina unit)"
+            },
+            "r6_ticket_verification": {
+              "WK61-R6-BUG-001_data_coverage": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "tests/test_wk61_r6_tax_gold_overlay_data.py — marketplace, blacksmith, 4 guilds, temples, dwellings, neutrals parametrized; shop/tax deposit paths",
+                "building_types_covered": 14,
+                "note": "TAX_STASH_BUILDING_TYPES + NON_TAX_STASH documented in config.py; zero gold distinguishable from None"
+              },
+              "WK61-R6-BUG-001_renderer_tax_stash_types": {
+                "status": "PASS",
+                "owner": "Agent 03",
+                "tests": "tests/test_wk61_r6_qa_renderer_tax_coverage.py tax-stash parametrized (14/14) + test_wk61_r6_ursina_tax_gold_overlay.py hold-release/prefab Y",
+                "note": "building_tax_overlay_snapshot returns (True, amount) for all 14 tax-stash classes when gold > 0 — not marketplace-only"
+              },
+              "WK61-R6-BUG-001_renderer_non_tax_snapshot": {
+                "status": "FAIL",
+                "owner": "Agent 03",
+                "repro": "building_tax_overlay_snapshot(Castle(), is_lair=False) raises TypeError: int(None) at ursina_renderer.py:166 — has_data=False but int(b.get_overlay_tax_gold()) still called when get_overlay_tax_gold() returns None",
+                "affected_types": ["castle", "guardhouse", "inn", "trading_post", "fairgrounds", "library"],
+                "impact": "Holding G while non-tax buildings exist in sync path may crash each frame",
+                "fix_hint": "If not has_data or get_overlay_tax_gold() is None, return (False, 0) before int()"
+              },
+              "WK61-R6-BUG-001_ursina_screenshot": {
+                "status": "MISSING",
+                "note": "No docs/screenshots/wk61_r6_* PNGs; pygame capture_screenshots does not render Ursina hold-G overlay; headless CI cannot prove 3D $ labels over prefabs"
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_05": "Log done; 27/27 R6 data tests PASS; multi-building data contract satisfied",
+              "agent_03": "Log done; 8 ursina unit tests PASS but stub-only; non-tax None guard missing at line 166; deferred Ursina PNG to verification wave"
+            },
+            "notes": [
+              "Multi-building model coverage proven at data layer (14 types) and tax-stash renderer snapshot layer (14/14) — not a single marketplace special case.",
+              "R6 Definition of Done NOT satisfied: qa_smoke FAIL, non-tax snapshot crash open, no Ursina hold-G PNG evidence.",
+              "Agent 03 must fix None guard; Agent 09 or human playtest needed for Ursina visual proof."
+            ]
+          },
+          "blockers": [
+            {
+              "owner": "Agent 03",
+              "issue": "building_tax_overlay_snapshot raises TypeError on non-tax buildings (castle, guardhouse, inn, trading_post, fairgrounds, library) when get_overlay_tax_gold() returns None",
+              "file": "game/graphics/ursina_renderer.py",
+              "line": 166
+            },
+            {
+              "owner": "Agent 09 or human",
+              "issue": "Ursina screenshot evidence of hold-G $ overlay over multiple 3D prefab models (marketplace, blacksmith, guild) not captured"
+            }
+          ],
+          "follow_ups": [
+            "Agent 03: guard None from get_overlay_tax_gold before int(); re-run pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py",
+            "Agent 09: Ursina PNG capture with G held and stored_tax_gold>0 on marketplace + blacksmith + guild in one frame",
+            "After Agent 03 fix: Agent 11 re-verify full pytest + optional Ursina capture"
+          ]
+        },
+        "wk61_r7_tax_overlay_none_guard": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r7_tax_overlay_none_guard",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R7 None guard + multi-building hold-G overlay evidence after Agent 03",
+            "created_utc": "2026-05-21T21:20:00-06:00",
+            "depends_on": "wk61_r7_wave1_fix"
+          },
+          "prompt_summary": "Verify R7 after Agent 03: full gates pass, non-tax crash gone, Ursina capture proves hold-G $ overlay over multiple building models.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R7 sign-off after Agent 03 None guard. Gates green (qa_smoke + 419 pytest). R6/R7 scoped tax overlay regressions 37/37 PASS including 6 non-tax types and 14 tax-stash snapshots. Fixed and ran Ursina capture harness (tests/wk61_r7_capture_tax_overlay.py + patch) — PNG shows simultaneous $42 labels on house, inn, and guild prefabs with G held.",
+            "files_created": [
+              "tests/wk61_r7_capture_patch.py"
+            ],
+            "files_modified": [
+              "tests/wk61_r7_capture_tax_overlay.py"
+            ]
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "419 passed"},
+            {"cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=short -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "37 passed — 14 tax-stash + 6 non-tax + 8 ursina unit + R7 None guard"},
+            {"cmd": "python tests/wk61_r7_capture_tax_overlay.py", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Ursina auto-screenshot saved after root runner + patch; inspected PNG"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (exit 0)",
+              "pytest_full": "419 passed",
+              "pytest_r6_r7_scoped": "37 passed (non-tax castle/guardhouse/inn/trading_post/fairgrounds/library no longer crash; tax-stash 14/14)"
+            },
+            "r7_ticket_verification": {
+              "WK61-R7-BUG-001_non_tax_none_guard": {
+                "status": "PASS",
+                "owner": "Agent 03",
+                "tests": "tests/test_wk61_r7_tax_overlay_none_guard.py + parametrized non-tax in test_wk61_r6_qa_renderer_tax_coverage.py",
+                "note": "building_tax_overlay_snapshot returns (False, 0) when has_tax_stash_data is False or get_overlay_tax_gold() is None — no int(None) TypeError"
+              },
+              "WK61-R7-BUG-001_tax_stash_regression": {
+                "status": "PASS",
+                "tests": "14/14 tax-stash renderer snapshots + test_tax_stash_snapshot_still_returns_amount",
+                "note": "Tax-stash buildings still return (True, amount); release-G flag tests pass"
+              },
+              "WK61-R7_ursina_screenshot": {
+                "status": "PASS",
+                "path": "docs/screenshots/wk61_r7_tax_overlay/hold_g_multi_building_20260521_211932_302.png",
+                "seeded_types": ["house", "marketplace", "ranger_guild", "rogue_guild", "warrior_guild", "wizard_guild"],
+                "visual_check": "Inspected PNG: yellow $42 billboards visible simultaneously above house (left), inn (center row), and guild tower (right) with prefab test layout + G held",
+                "capture_harness": "tests/wk61_r7_capture_tax_overlay.py seeds tax gold, forces G-held, uses KINGDOM_URSINA_PREFAB_TEST_LAYOUT + EDITORCAMERA=0"
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_03": "Log done; None guard at ursina_renderer.py building_tax_overlay_snapshot; deferred Ursina PNG to verification wave — now captured"
+            },
+            "notes": [
+              "R6 blocker (int(None) on 6 non-tax types) cleared — qa_smoke no longer fails on renderer tax coverage.",
+              "R7 Definition of Done satisfied: gates pass, crash gone, multi-building hold-G overlay PNG evidence on file."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk61_r8_marketplace_potion_tax": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r8_marketplace_potion_tax",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R8 marketplace potion purchase tax accrual after Agent 05",
+            "created_utc": "2026-05-21T22:30:00-06:00",
+            "depends_on": "wk61_r8_wave1_fix"
+          },
+          "prompt_summary": "Verify R8 after Agent 05: gates pass; targeted regression proves marketplace stored/taxable gold increases after hero potion purchase on real deferred shopping path.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R8 sign-off after Agent 05 fix. Gates green on confirmatory re-run (421 pytest). R8 targeted regression 2/2 PASS: do_shopping deferred path and buy_item after pop-out both deposit tax to Marketplace.stored_tax_gold (int(price * TAX_RATE)).",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "First run FAIL — flaky speed_scaling 0.25x bounty responder assertion (unrelated to R8)"},
+            {"cmd": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "2 passed"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "421 passed"},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Confirmatory re-run PASS"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS on confirmatory re-run (exit 0); first run exit 1 on speed_scaling 0.25x bounty_responder flake",
+              "pytest_full": "421 passed",
+              "pytest_r8_targeted": "2 passed (test_wk61_r8_marketplace_potion_tax.py)"
+            },
+            "r8_ticket_verification": {
+              "WK61-R8-BUG-001_deferred_shopping_tax": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "test_marketplace_potion_purchase_via_do_shopping_deposits_tax",
+                "note": "Real Marketplace + shopping.do_shopping after pop-out; stored_tax_gold=5 and get_overlay_tax_gold()=5 for potion_price=20 at TAX_RATE=0.25"
+              },
+              "WK61-R8-BUG-001_buy_item_pending_shop": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "test_marketplace_potion_buy_item_after_pop_out_uses_pending_shop",
+                "note": "Hero.buy_item with pending_task=shopping and pending_task_building=marketplace deposits tax when inside_building is cleared"
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_05": "Log done; Hero._shop_for_tax_deposit resolves pending_task_building when inside_building cleared after pop_out; root cause matches deferred shopping finalize path"
+            },
+            "notes": [
+              "R8 Definition of Done satisfied: targeted regression covers real potion-buy path (not helper-only); marketplace stored/taxable gold increases by correct tax amount.",
+              "Panel/overlay read same stored_tax_gold via get_overlay_tax_gold() asserted in deferred-shopping test.",
+              "First qa_smoke run hit known bounty-responder flake on speed_scaling 0.25x profile; confirmatory re-run PASS."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Optional: stabilize speed_scaling 0.25x bounty_responder assertion in observe_sync if flake recurs (Agent 11/12)"
+          ]
+        },
+        "wk61_r9_hero_chat_readable_layout": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r9_hero_chat_readable_layout",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "QA verification of R9 hero menu chat readable split layout after Agent 08",
+            "created_utc": "2026-05-21T23:00:00-06:00",
+            "depends_on": "wk61_r9_wave1_fix"
+          },
+          "prompt_summary": "Verify R9 after Agent 08: gates pass; screenshot evidence shows readable hero menu chat without control overlap.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R9 sign-off after Agent 08 split-layout fix. Gates green (qa_smoke + 424 pytest). R9 targeted regression 8/8 PASS. Re-captured and inspected wk61_hero_menu_chat PNGs at 1024x576 and 1920x1080 — split left column reserves readable chat band with history, input row, and End Conversation; no overlap with bottom Build/Hire/Bounty bar.",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "424 passed"},
+            {"cmd": "python -m pytest tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r4_ui_regressions.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "8 passed"},
+            {"cmd": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --size 1920x1080 --out docs/screenshots/wk61_r9", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png + manifest.json"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (exit 0)",
+              "pytest_full": "424 passed",
+              "pytest_r9_targeted": "8 passed (test_wk61_r9_hero_chat_readable_layout.py 4 + test_wk61_r4_ui_regressions.py 4)"
+            },
+            "r9_ticket_verification": {
+              "WK61-R9-BUG-001_split_layout": {
+                "status": "PASS",
+                "owner": "Agent 08",
+                "tests": "tests/test_wk61_r9_hero_chat_readable_layout.py — split rects at 1024x576 and 1920x1080 reserve hero_rect >= 120px and chat_rect >= 152px; render integration asserts chat band above bottom bar",
+                "note": "In-column split replaces cramped below-minimap popup; hero sheet scrollable in top band when chat open"
+              },
+              "WK61-R9-BUG-001_screenshot": {
+                "status": "PASS",
+                "paths": [
+                  "docs/screenshots/wk61_r9/wk61_hero_menu_chat_1024.png",
+                  "docs/screenshots/wk61_r9/wk61_hero_menu_chat_1920.png"
+                ],
+                "visual_check": "Inspected PNGs: readable two-line chat history, visible input placeholder, End Conversation button, divider between shrunk hero sheet and chat band; bottom HUD action bar not overlapped by chat panel. Frame-time debug overlay in capture corner is tooling artifact, not hero-menu chrome overlap."
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_08": "Log done; hud.py split layout HERO_MENU_CHAT_MIN_H=152; scenario wk61_hero_menu_chat; 424 pytest + qa_smoke PASS"
+            },
+            "notes": [
+              "R9 Definition of Done satisfied: readable chat without pinning, split reserves vertical space, gates pass, screenshot evidence on file.",
+              "Implementer PNGs were not in repo at verify time; QA re-captured to docs/screenshots/wk61_r9 for sign-off audit trail."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }

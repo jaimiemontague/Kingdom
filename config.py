@@ -138,6 +138,10 @@ GUARDHOUSE_ARROW_RANGE_TILES = 8.0
 GUARDHOUSE_ARROW_DAMAGE = 12
 GUARDHOUSE_ARROW_COOLDOWN = 2.0
 GUARDHOUSE_ARROWS_PER_SHOT = 2  # WK61-TUNE-002: fire 2 arrows per volley
+GUARDHOUSE_MAX_HP = 250  # WK61-R4-BUG-006: defensive structure HP for combat/UI state
+
+# WK61-R4-BUG-005: heroes shop when mostly healthy (not only at 100% after WK61 HP tuning).
+SHOP_MIN_HEALTH_FRACTION = 0.85
 
 # WK61-TUNE-003: Hero rest recovery rates (5x guild, 7x inn from WK60 baseline)
 GUILD_REST_RECOVERY_RATE = 0.05   # was 0.01 default (~2.5 HP/sec)
@@ -630,6 +634,42 @@ BOUNTY_REWARD_HIGH = BOUNTY.reward_high
 STARTING_GOLD = ECONOMY.starting_gold
 TAX_RATE = ECONOMY.tax_rate
 TAX_COLLECTION_INTERVAL_SEC = ECONOMY.tax_collection_interval_sec
+# WK61-R6: building types with ``stored_tax_gold`` / ``has_tax_stash_data`` for hold-G overlay.
+TAX_STASH_BUILDING_TYPES = frozenset({
+    "marketplace",
+    "blacksmith",
+    "warrior_guild",
+    "ranger_guild",
+    "rogue_guild",
+    "wizard_guild",
+    "temple",
+    "temple_agrela",
+    "temple_dauros",
+    "temple_fervus",
+    "temple_krypta",
+    "temple_krolm",
+    "temple_helia",
+    "temple_lunord",
+    "gnome_hovel",
+    "elven_bungalow",
+    "dwarven_settlement",
+    "house",
+    "farm",
+    "food_stand",
+})
+# WK61-R6: player buildings without tax stash (overlay should skip / return None).
+NON_TAX_STASH_BUILDING_TYPES = frozenset({
+    "castle",
+    "palace",
+    "inn",
+    "trading_post",
+    "guardhouse",
+    "ballista_tower",
+    "wizard_tower",
+    "fairgrounds",
+    "library",
+    "royal_gardens",
+})
 TAX_COLLECTOR_REST_AFTER_RETURN_SEC = ECONOMY.tax_collector_rest_after_return_sec
 TAX_COLLECTOR_NICE_HAUL_GOLD = ECONOMY.tax_collector_nice_haul_gold
 

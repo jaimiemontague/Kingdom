@@ -37,6 +37,10 @@ WATCH_CARD_FULL_H_NO_CHAT = WATCH_CARD_HEADER_H + WATCH_CARD_MAP_H + WATCH_CARD_
 WATCH_CARD_FULL_H = WATCH_CARD_FULL_H_WITH_CHAT
 LEFT_COL_W = 224
 HERO_LEFT_MIN_H = 80
+HERO_MENU_CHAT_GAP = 4
+HERO_MENU_CHAT_MIN_H = 152
+HERO_MENU_CHAT_PREFERRED_H = 220
+HERO_MENU_HERO_MIN_H = 120
 RADAR_MINIMAP_H = 180
 RADAR_MINIMAP_W = LEFT_COL_W
 WATCH_MINIMAP_SIZE = LEFT_COL_W
@@ -303,6 +307,8 @@ class HUD:
         self._chat_visible: bool = False
         self._chat_close_rect: pygame.Rect | None = None
         self._chat_open_rect: pygame.Rect | None = None
+        self._hero_menu_chat_rect: pygame.Rect | None = None
+        self._hero_menu_hero_rect: pygame.Rect | None = None
         self._info_card = InfoCard()
         self._card_slot_kind: str | None = None
         self._last_left_rect: pygame.Rect | None = None
@@ -1695,6 +1701,57 @@ class HUD:
         """Legacy Tab hook — right HUD column removed (WK52 R4)."""
         pass
 
+    def _uses_pinned_watch_card_chat(self, hero_id: str) -> bool:
+        if not hero_id or self._pin_slot.hero_id != hero_id:
+            return False
+        return bool(self._chat_visible and self._watch_card_expanded)
+
+    def _should_render_hero_menu_chat_popup(self, game_state: dict) -> bool:
+        cp = self._chat_panel
+        sel = game_state.get("selected_hero")
+        if cp is None or not cp.is_active() or sel is None:
+            return False
+        if game_state.get("selected_building") is not None:
+            return False
+        hid = str(getattr(sel, "hero_id", "") or "")
+        chat_hid = str(getattr(cp.hero_target, "hero_id", "") or "")
+        if hid != chat_hid:
+            return False
+        return not self._uses_pinned_watch_card_chat(hid)
+
+    def _hero_menu_chat_desired_h(self, left_h: int) -> int:
+        """Vertical space to reserve for in-column hero-menu chat (WK61-R9)."""
+        if left_h <= 0:
+            return 0
+        pref = min(
+            HERO_MENU_CHAT_PREFERRED_H,
+            max(HERO_MENU_CHAT_MIN_H, int(left_h * 0.38)),
+        )
+        max_chat = max(HERO_MENU_CHAT_MIN_H, left_h - HERO_MENU_HERO_MIN_H - HERO_MENU_CHAT_GAP)
+        return max(HERO_MENU_CHAT_MIN_H, min(pref, max_chat))
+
+    def _hero_menu_chat_split_rects(
+        self, left: pygame.Rect
+    ) -> tuple[pygame.Rect, pygame.Rect] | None:
+        """Split left column: shrunk scrollable hero sheet + readable chat band."""
+        if left.width <= 0 or left.height <= 0:
+            return None
+        chat_h = self._hero_menu_chat_desired_h(left.height)
+        hero_h = left.height - chat_h - HERO_MENU_CHAT_GAP
+        if hero_h < HERO_MENU_HERO_MIN_H:
+            hero_h = max(HERO_MENU_HERO_MIN_H, left.height - HERO_MENU_CHAT_MIN_H - HERO_MENU_CHAT_GAP)
+            chat_h = left.height - hero_h - HERO_MENU_CHAT_GAP
+        if chat_h < HERO_MENU_CHAT_MIN_H or hero_h < HERO_LEFT_MIN_H:
+            return None
+        hero_rect = pygame.Rect(left.x, left.y, left.width, hero_h)
+        chat_rect = pygame.Rect(
+            left.x + 4,
+            left.y + hero_h + HERO_MENU_CHAT_GAP,
+            left.width - 8,
+            chat_h,
+        )
+        return hero_rect, chat_rect
+
     def _render_hero_focus_profile(self, surface: pygame.Surface, rect: pygame.Rect, game_state: dict) -> None:
         """Top half of HERO_FOCUS mode: condensed profile/memory (WK49)."""
         hero = game_state.get("selected_hero")
@@ -1789,16 +1846,34 @@ class HUD:
         self.left_close_rect = None
         self._last_left_rect = pygame.Rect(left)
         sel_building = game_state.get("selected_building")
+        hero_panel_rect = left
+        self._hero_menu_hero_rect = pygame.Rect(left)
+        self._hero_menu_chat_rect = None
         if selected_hero is not None and sel_building is None:
+            if self._should_render_hero_menu_chat_popup(game_state):
+                split = self._hero_menu_chat_split_rects(left)
+                if split is not None:
+                    hero_panel_rect, chat_rect = split
+                    self._hero_menu_hero_rect = hero_panel_rect
+                    self._hero_menu_chat_rect = chat_rect
             self._panel_left.render(surface)
             self._hero_panel.render(
                 surface,
                 selected_hero,
-                left,
+                hero_panel_rect,
                 right_close_rect=None,
                 debug_ui=bool(game_state.get("debug_ui", False)),
                 hero_profile=game_state.get("selected_hero_profile"),
             )
+            if self._hero_menu_chat_rect is not None:
+                divider_y = self._hero_menu_chat_rect.top - 2
+                pygame.draw.line(
+                    surface,
+                    self._frame_outer,
+                    (left.x + 4, divider_y),
+                    (left.right - 4, divider_y),
+                    1,
+                )
             # Pin + close must render after HeroPanel header fill or they are painted over (WK51 r6).
             self._render_pin_button(surface, left, game_state)
             self._render_left_close_button(surface, left)
@@ -1891,11 +1966,12 @@ class HUD:
             self.building_interior_overlay.render(surface)
             left = self._last_left_rect
             if left is not None and selected_hero is not None and selected_building is None:
+                hero_panel_rect = getattr(self, "_hero_menu_hero_rect", None) or left
                 self._panel_left.render(surface)
                 self._hero_panel.render(
                     surface,
                     selected_hero,
-                    left,
+                    hero_panel_rect,
                     right_close_rect=None,
                     debug_ui=bool(game_state.get("debug_ui", False)),
                     hero_profile=game_state.get("selected_hero_profile"),
@@ -1904,6 +1980,10 @@ class HUD:
                 self._render_left_close_button(surface, left)
         if getattr(self, "demolish_confirm_overlay", None) is not None and self.demolish_confirm_overlay.visible:
             self.demolish_confirm_overlay.render(surface)
+
+        # WK61-R9: Hero-menu chat split inside left column (shrunk hero sheet + chat band).
+        if self._hero_menu_chat_rect is not None and self._should_render_hero_menu_chat_popup(game_state):
+            self._chat_panel.render(surface, self._hero_menu_chat_rect, game_state)
 
         # Command mode input display (universal Enter-key command bar)
         eng = game_state.get('engine')
@@ -2000,14 +2080,18 @@ class HUD:
                 return True
         if (
             lr is not None
-            and lr.collidepoint(x, y)
             and game_state.get("selected_hero") is not None
             and game_state.get("selected_peasant") is None
             and game_state.get("selected_building") is None
         ):
-            if self._hero_panel.apply_menu_scroll(int(wheel_y)):
+            hmcr = getattr(self, "_hero_menu_chat_rect", None)
+            if hmcr is not None and hmcr.collidepoint(x, y):
                 return True
-            return True
+            hero_rect = getattr(self, "_hero_menu_hero_rect", None) or lr
+            if hero_rect.collidepoint(x, y):
+                if self._hero_panel.apply_menu_scroll(int(wheel_y)):
+                    return True
+                return True
         return False
 
     def handle_click(self, mouse_pos: tuple[int, int], game_state: dict) -> str | None:
@@ -2044,6 +2128,18 @@ class HUD:
             elif result == "cancel":
                 dco.hide()
             return None
+
+        cp = getattr(self, "_chat_panel", None)
+        hmcr = getattr(self, "_hero_menu_chat_rect", None)
+        if (
+            cp is not None
+            and cp.is_active()
+            and hmcr is not None
+            and hmcr.collidepoint((x, y))
+        ):
+            chat_click = cp.handle_click((x, y), hmcr)
+            if chat_click is not None:
+                return chat_click
 
         if (
             getattr(self, "_chat_close_rect", None) is not None

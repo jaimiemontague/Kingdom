@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "982bb185-44fb-4391-8a59-705237442224",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r6_tax_gold_overlay_models",
+  "agent_id": "03",
+  "status": "done",
+  "summary": "Agent 03 fixed WK61-R6-BUG-001 Ursina hold-G tax gold overlay: TaxStashMixin data selection, prefab-aware Y placement, overlay depth/render_queue; 390 pytest + qa_smoke pass.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r6_tax_gold_overlay_models]",
+  "timestamp": "2026-05-22T02:48:41.522Z"
+}

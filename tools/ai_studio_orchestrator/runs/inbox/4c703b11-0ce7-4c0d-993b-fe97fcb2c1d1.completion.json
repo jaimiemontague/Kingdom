@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "4c703b11-0ce7-4c0d-993b-fe97fcb2c1d1",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r8_marketplace_potion_tax",
+  "agent_id": "11",
+  "status": "done",
+  "summary": "R8 QA sign-off: 421 pytest PASS, R8 targeted 2/2 PASS (marketplace stored_tax_gold accrues on deferred potion purchase), qa_smoke PASS on confirmatory re-run.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_11_QA_TestEngineering_Lead.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r8_marketplace_potion_tax]",
+  "timestamp": "2026-05-22T03:31:43.647Z"
+}

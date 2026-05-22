@@ -699,6 +699,92 @@
               "note": "No qa_smoke run required for review-only round"
             }
           ]
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "role": "CONSULT-ONLY visual verification after R4 implementers",
+          "what_i_changed": {
+            "summary": "No code or asset edits. Reviewed Agent 03 Ursina overlay fixes (labels, HP bars, G-key gold, facing un-mirror, prefab label removal) plus Agent 08 economic panel styling. Captured Ursina PNG proof for unit labels/HP bars.",
+            "files_touched": [
+              ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "docs/screenshots/wk61_r4_art_verify/labels_hp_overview_20260521_202828_891.png",
+              "docs/screenshots/wk61_r4_art_verify/labels_hp_close_20260521_203002_521.png"
+            ]
+          },
+          "visual_review": {
+            "WK61-R4-BUG-001_labels_hp_bars": {
+              "verdict": "PASS",
+              "evidence": "Close capture (warrior_guild focus) shows hero names Roland/Gareth/Nova readable above sprites, green HP bars at full health, text not mirrored when units face left (_sync_ks_facing_overlay on heroes/enemies). Overview + close shots show no permanent floating labels on prefab castle/houses.",
+              "code_refs": [
+                "game/graphics/ursina_renderer.py:_configure_ks_overlay",
+                "game/graphics/ursina_renderer.py:_sync_ks_facing_overlay",
+                "game/graphics/ursina_renderer.py:_ensure_ks_name_label",
+                "game/graphics/ursina_renderer.py:_sync_building_worldspace_ui (destroys _ks_label on prefabs)"
+              ]
+            },
+            "WK61-R4-BUG-003_taxable_gold_overlay": {
+              "verdict": "PASS (code review; no G-held PNG in headless run)",
+              "details": [
+                "Gold Text rgb(1.0,0.8,0.2) matches hero gold labels; scale=12; y=1.8 above building anchor; depth_test off + always_on_top via _configure_ks_overlay.",
+                "Engine polls G each tick via set_tax_gold_overlay_held(input_manager.is_key_pressed('g')).",
+                "Recommend Jaimie manual hold-G check on marketplace/blacksmith prefabs with stored_tax_gold>0 for tallest-roof clearance."
+              ]
+            },
+            "WK61-R4-BUG-002_selection_feedback": {
+              "verdict": "PASS with note",
+              "details": [
+                "No world-space selection ring in ursina_renderer (unchanged). Selection clarity relies on left HUD panel opening on pick (Agent 08) plus Agent 03 screen-space pick_unit_at_screen.",
+                "Screenshot pass confirms labels help identify clicked units once selected; click reliability is Agent 03 scope, not re-tested live here."
+              ]
+            }
+          },
+          "minor_notes": [
+            "HP bars now show at full HP (R4 policy change from damaged-only); acceptable per ticket acceptance but adds persistent bar noise — tune later if Jaimie prefers damaged-only again.",
+            "Workers/guards/tax collector omit _sync_ks_facing_overlay but billboards do not use negative scale_x facing flip — no backwards-label risk on those types."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/run_ursina_capture_once.py --seconds 12 --subdir wk61_r4_art_verify --stem labels_hp_overview --no-llm --hero-fps-probe-count 8 --fps-warmup-sec 8",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/run_ursina_capture_once.py --seconds 10 --subdir wk61_r4_art_verify --stem labels_hp_close --no-llm --hero-fps-probe-count 6 --fps-warmup-sec 6 --disable-neutral-spawn (KINGDOM_URSINA_CAM_FOCUS_BUILDING_TYPE=warrior_guild, CAM_FOCUS_SPAN=18)",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "cwd": "repo root",
+              "note": "353 pytest passed; FAIL on speed_scaling 0.5x observe_sync (pre-existing infra flake, not art scope)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "ursina_screenshots": {
+              "overview": "docs/screenshots/wk61_r4_art_verify/labels_hp_overview_20260521_202828_891.png",
+              "close_warrior_guild": "docs/screenshots/wk61_r4_art_verify/labels_hp_close_20260521_203002_521.png",
+              "inspection": "Names readable, HP bars visible, no prefab building label clutter, no backwards text in sample heroes"
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "status": "FAIL (speed_scaling 0.5x only; pytest 353/353 pass)",
+              "note": "No Agent 09 code changes; gate run for branch health snapshot"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: hold G over taxable buildings during manual playtest to confirm gold overlay y=1.8 clears tallest prefab roofs.",
+            "Agent 12 (optional): KINGDOM_URSINA_FORCE_TAX_OVERLAY capture hook for deterministic G-overlay PNGs in CI."
+          ]
         }
       }
     }

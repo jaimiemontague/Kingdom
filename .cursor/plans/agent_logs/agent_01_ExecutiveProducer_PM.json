@@ -1273,11 +1273,11 @@
     },
     "wk61_playtest_polish": {
       "sprint_meta": {
-        "status": "complete",
+        "status": "in_progress",
         "created_utc": "2026-05-20T12:00:00Z",
         "plan_doc": ".cursor/plans/wk61_playtest_polish.plan.md",
         "notes": "Phase 2 playtest feedback. 13 items from Jaimie's WK60 playtest: reversed names, building destruction+rubble, enemy AI building priority, hero HP/healing/market rebalance, enemy sounds, UI panels.",
-        "closeout_notes": "All 13 items implemented + bonus enemy sounds. R1 (4 agents parallel) + R2 (QA + Art review) both passed. 339 tests, 0 failures, QA smoke PASS. Agent 09 art review: no blocking issues.",
+        "closeout_notes": "R1/R2 completed and R3 committed, but Jaimie's 2026-05-21 playtest found remaining regressions. Sprint reopened for R4 regression cleanup before close.",
         "version_target": "Prototype v1.5.9"
       },
       "rounds": {
@@ -1340,6 +1340,532 @@
             "do_not_send": ["02", "04", "06", "07", "09", "10", "11", "12", "13", "14", "15"],
             "rationale": "R3 fix round: 05 high (hero idle regression is blocker-level investigation). 03 high (building destruction rendering is complex). 08 medium (UI fixes are targeted)."
           }
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "round_meta": {
+            "round_id": "wk61_r4_playtest3_regression_cleanup",
+            "build_target": "Fix remaining WK61 regressions from Jaimie's 2026-05-21 playtest",
+            "created_utc": "2026-05-21T20:08:00-06:00",
+            "wave": 4,
+            "source": "human_playtest"
+          },
+          "pm_status_summary": {
+            "status": "failed_human_gate_followup_opened",
+            "summary": "R4 local orchestrator run completed successfully, but Jaimie's manual playtest found Guardhouse selected panel still lacks HP. This fails WK61-R4-BUG-006 presentation acceptance. Opened targeted R5 for Agent 08 to add Guardhouse/defensive panel HP display, then Agent 11 verifies."
+          },
+          "pm_round_review": {
+            "ledger": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r4_playtest3_regression_cleanup__1779416425911.json",
+            "orchestrator_result": "all_waves_finished",
+            "agents_finished": ["03", "05", "06", "08", "11", "09"],
+            "verified_receipts": true,
+            "gate_evidence": {
+              "pytest": "353 passed",
+              "qa_smoke": "PASS on final Agent 11 retry; first failure was speed_scaling 0.25x bounty responder flake and isolated repro passed",
+              "validate_assets": "errors=0 warns=46 pre-existing missing model placeholders"
+            },
+            "screenshot_evidence": {
+              "labels_hp_overview": "docs/screenshots/wk61_r4_art_verify/labels_hp_overview_20260521_202828_891.png",
+              "labels_hp_close": "docs/screenshots/wk61_r4_art_verify/labels_hp_close_20260521_203002_521.png",
+              "hero_chat_button": "docs/screenshots/wk61_r4_agent08/ui_panels_hero.png",
+              "hold_g_tax_overlay": "manual_playtest_required"
+            },
+            "pm_decision": "Human playtest failed Guardhouse HP panel acceptance. Open targeted R5 UI fix before close/version bump/commit."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R4-BUG-001",
+              "title": "Labels and health bars missing from selectable non-prefab dynamic models",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Observe heroes/enemies/workers/guards/tax collectors and prefab buildings", "Check floating labels and health bars"],
+              "expected": "Dynamic selectable models have readable labels/health bars where appropriate; prefab building models do not regain permanent floating labels.",
+              "actual": "Labels/health bars are missing from models that should have them.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "Capture or screenshot evidence showing labels/health bars and no prefab building label clutter"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-002",
+              "title": "Clicking directly on visible units often fails to select them",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Click directly on visible heroes/enemies/workers several times"],
+              "expected": "Clicking directly on a visible unit selects it reliably.",
+              "actual": "Selection often fails even when the cursor is on the sprite/model.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "Manual or capture note confirming reliable unit selection"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-003",
+              "title": "Holding G taxable gold overlay does not work",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Hold G over taxable buildings", "Release G"],
+              "expected": "Holding G shows taxable gold overlays; releasing G hides them.",
+              "actual": "Overlay is not working at all.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "Capture or screenshot evidence of overlay visible while G is held"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-004",
+              "title": "Marketplace and blacksmith taxable gold display is grey 0",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner + 08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Open marketplace and blacksmith info panels after the economy has run", "Inspect taxable gold value and styling"],
+              "expected": "Panels show accurate taxable gold values in readable styling, or truthful 0 when no tax exists.",
+              "actual": "Panels show grey 0 the whole time, suggesting stale UI or broken tax generation.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-005",
+              "title": "Heroes stand around idle much more than v1.5.6",
+              "severity": "blocker",
+              "owner_agent": "06_AIBehaviorDirector_LLM + 05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch current game", "Observe heroes after startup and around town", "Compare behavior expectations to v1.5.6 active behavior"],
+              "expected": "Heroes seek useful activities instead of idling for long stretches.",
+              "actual": "Heroes still stand around idle a lot more; regression persists after R3.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "Agent notes describe root cause and comparison to v1.5.6 behavior"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-006",
+              "title": "Guardhouse does not seem to have HP",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Select or observe guardhouse under attack"],
+              "expected": "Guardhouse has HP, can be damaged/targeted, and exposes HP to selection/UI state.",
+              "actual": "Guardhouse HP is not apparent.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"],
+              "status": "assigned"
+            },
+            {
+              "id": "WK61-R4-BUG-007",
+              "title": "Hero menu Chat button pins hero instead of opening chat",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Open hero menu", "Click Chat button"],
+              "expected": "Chat button opens the conversation popup without pinning the hero.",
+              "actual": "Chat button behaves like the Pin button.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "Manual/capture note confirming Chat opens chat and does not pin"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": "Fix R4-BUG-001/002/003: dynamic labels+health bars, reliable Ursina unit picking, and hold-G taxable gold overlay. Use screenshots/captures for visible evidence.",
+            "05": "Fix gameplay/data side of R4-BUG-004/005/006: taxable gold generation for marketplace/blacksmith, guardhouse HP/targetability, and entity-side causes of hero idle regression.",
+            "06": "Fix AI side of R4-BUG-005: compare current hero activity to v1.5.6 expectations and remove any AI gating/regression causing long idle stretches.",
+            "08": "Fix UI side of R4-BUG-004/007: taxable gold panel display styling/value and Chat button opening chat without pinning.",
+            "11": "After implementers, run QA gates and targeted R4 verification. Confirm screenshot/capture evidence exists for visible items.",
+            "09": "After implementers, review visible labels/health bars, taxable gold overlay readability, and selection feedback."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-03-techdir-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: fix R4-BUG-001/002/003. Files you MAY edit: game/graphics/ursina_renderer.py, game/graphics/ursina_pick.py, game/engine.py, game/input_handler.py, tests/. Stay within your allowed files and do not edit other agent domains. Acceptance: dynamic selectable models have labels/health bars where appropriate; prefab buildings do not regain permanent floating labels; clicking directly on visible units selects reliably; holding G shows taxable gold overlays and release hides them. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q if practical. Provide capture/screenshot evidence or exact notes for visible behavior. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "05": "You are Agent 05. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-05-gameplay-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: fix gameplay/data side of R4-BUG-004/005/006. Files you MAY edit: game/entities/, game/systems/, config.py, tests/. Stay within your allowed files and do not edit other agent domains. Acceptance: marketplace and blacksmith taxable gold generation is correct; guardhouse has HP, is targetable/damageable, and exposes HP to state; investigate entity/gameplay-side causes of hero idle regression and coordinate via log if AI owns root cause. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q if practical. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "06": "You are Agent 06. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-06-aibehavior-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: fix AI side of R4-BUG-005. Files you MAY edit: ai/, tests/. Stay within your allowed files and do not edit other agent domains. Acceptance: heroes no longer idle for long stretches compared with v1.5.6-style active behavior; AI decision gating sends heroes toward useful activities such as shopping, healing, exploration, bounties, or combat; deterministic rules remain intact. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q if practical. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "08": "You are Agent 08. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-08-ux-ui-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: fix UI side of R4-BUG-004/007. Files you MAY edit: game/ui/, game/engine.py, game/input_handler.py, tests/. Stay within your allowed files and do not edit other agent domains. Acceptance: marketplace and blacksmith panels show accurate taxable gold in readable styling; grey 0 is not stale/misleading; hero menu Chat opens the chat/conversation popup without pinning and does not share the Pin action path. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q if practical. Provide capture/screenshot evidence or exact notes for the UI behavior. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: verify R4 after implementers. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tools/capture_screenshots.py, tests/. Prefer no code changes unless a small QA assertion is clearly needed. Run python tools/qa_smoke.py --quick, python -m pytest tests/ -x -q, and python tools/validate_assets.py --report. Verify implementers recorded capture/screenshot evidence for visible fixes. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "09": "You are Agent 09. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-09-artdirector-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and .cursor/plans/wk61_playtest_polish.plan.md R4. Task: visual consult after implementers. Files you MAY edit only if needed: game/graphics/, assets/sprites/, assets/ui/, docs/art/. Prefer review/log-only unless a small owned visual adjustment is required. Acceptance: labels and health bars are readable, not backwards, and not cluttering prefab buildings; taxable gold overlay is readable and positioned correctly; selection feedback is clear. Run python tools/qa_smoke.py --quick if you changed code/assets. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "implementers", "parallel": true, "agents": ["03", "05", "06", "08"]},
+              {"wave": "verification", "parallel": true, "agents": ["11", "09"], "depends_on": ["implementers"]}
+            ],
+            "intelligence_by_agent": {"03": "high", "05": "high", "06": "high", "08": "medium", "11": "low", "09": "medium"},
+            "do_not_send": ["02", "04", "07", "10", "12", "13", "14", "15"],
+            "rationale": "R4 implementers: 03 high (Ursina labels, health bars, picking, G overlay), 05 high (tax generation/guardhouse HP/entity-side idle), 06 high (AI idle regression), 08 medium (targeted UI fixes). Verification: 11 low (known gates) and 09 medium (visual judgement on overlays/labels/selection feedback)."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["03", "05", "06", "08", "11", "09"],
+            "dependencies": [
+              {"id": "implementers", "agents": ["03", "05", "06", "08"], "parallel": true},
+              {"id": "verification", "after": ["implementers"], "agents": ["11", "09"], "parallel": true}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r4_playtest3_regression_cleanup. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R4. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r4_playtest3_regression_cleanup\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
+        },
+        "wk61_r5_guardhouse_hp_panel": {
+          "round_meta": {
+            "round_id": "wk61_r5_guardhouse_hp_panel",
+            "build_target": "Show Guardhouse HP in selected building info panel",
+            "created_utc": "2026-05-21T20:36:00-06:00",
+            "wave": 5,
+            "source": "human_playtest_screenshot"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_passed_for_guardhouse_hp_followup_opened",
+            "summary": "R5 local orchestrator run completed successfully. Agent 08 added Guardhouse/defensive panel HP display; Agent 11 verified gates and screenshot evidence. Final QA: qa_smoke PASS, pytest 355 passed. Screenshot docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png shows selected Guardhouse panel with HP: 200/200, green HP bar, guard stats, and Demolish button. Jaimie's next playtest reported a separate hold-G taxable gold overlay coverage failure, now opened as R6."
+          },
+          "pm_round_review": {
+            "ledger": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r5_guardhouse_hp_panel__1779417495778.json",
+            "orchestrator_result": "all_waves_finished",
+            "agents_finished": ["08", "11"],
+            "verified_receipts": true,
+            "gate_evidence": {
+              "qa_smoke": "PASS",
+              "pytest": "355 passed"
+            },
+            "screenshot_evidence": {
+              "guardhouse_hp_panel": "docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png"
+            },
+            "pm_decision": "Stop at human manual playtest gate before close/version bump/commit. Ask Jaimie to reselect Guardhouse in live Ursina and confirm HP appears."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R5-BUG-001",
+              "title": "Selected Guardhouse panel still does not show HP",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "evidence": "User screenshot: selected Guardhouse left panel shows only title and Demolish button; no HP text/bar.",
+              "repro_steps": ["Launch Ursina", "Select a Guardhouse", "Inspect the left building info panel"],
+              "expected": "Selected Guardhouse panel shows readable current/max HP while keeping Demolish visible.",
+              "actual": "Panel shows Guardhouse title and Demolish button, but no HP.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q", "Screenshot/capture evidence of selected Guardhouse panel with HP visible"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": "Fix WK61-R5-BUG-001: selected Guardhouse/defensive building panel must show current/max HP using existing UI style. Add focused test and screenshot evidence.",
+            "11": "Verify R5 after Agent 08: gates pass and screenshot proves selected Guardhouse panel has HP visible."
+          },
+          "pm_agent_prompts": {
+            "08": "You are Agent 08. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-08-ux-ui-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r5_guardhouse_hp_panel\"] and .cursor/plans/wk61_playtest_polish.plan.md R5. Task: fix WK61-R5-BUG-001. Files you MAY edit: game/ui/, game/engine.py, game/input_handler.py, tools/screenshot_scenarios.py, tools/capture_screenshots.py, tests/. Stay within your allowed files. Acceptance: selecting a Guardhouse in Ursina shows current/max HP in the left building info panel, styled consistently and readable above Demolish; Demolish remains visible/clickable; do not change HP values or gameplay damage rules. Add/adjust focused tests. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Produce screenshot/capture evidence proving selected Guardhouse panel has HP visible; inspect the PNG before completion. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r5_guardhouse_hp_panel\"] and .cursor/plans/wk61_playtest_polish.plan.md R5. Task: verify R5 after Agent 08. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tools/capture_screenshots.py, tests/. Prefer verification-only. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Inspect Agent 08 screenshot evidence; do not mark done if selected Guardhouse panel lacks HP. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "fix", "parallel": false, "agents": ["08"]},
+              {"wave": "verification", "parallel": false, "agents": ["11"], "depends_on": ["fix"]}
+            ],
+            "intelligence_by_agent": {"08": "medium", "11": "low"},
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "09", "10", "12", "13", "14", "15"],
+            "rationale": "R5 is a narrow UI presentation fix. Agent 08 medium (selected building panel layout + screenshot proof), then Agent 11 low (known gates and visual verification)."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08", "11"],
+            "dependencies": [
+              {"id": "fix", "agents": ["08"], "parallel": false},
+              {"id": "verification", "after": ["fix"], "agents": ["11"], "parallel": false}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r5_guardhouse_hp_panel. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r5_guardhouse_hp_panel\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R5. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r5_guardhouse_hp_panel\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
+        },
+        "wk61_r6_tax_gold_overlay_models": {
+          "round_meta": {
+            "round_id": "wk61_r6_tax_gold_overlay_models",
+            "build_target": "Make hold-G taxable gold overlay work over all relevant building models",
+            "created_utc": "2026-05-21T20:43:00-06:00",
+            "wave": 6,
+            "source": "human_playtest"
+          },
+          "pm_status_summary": {
+            "status": "failed_verification_followup_opened",
+            "summary": "R6 fix wave completed, but Agent 11 verification blocked sign-off. Data coverage PASS for 14 tax-stash building types and renderer tax-stash snapshots PASS, but non-tax buildings crash the overlay path with int(None), causing qa_smoke/pytest failure. No Ursina hold-G screenshot proof yet. Opened R7 for Agent 03 None guard fix, then Agent 11 verification."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R6-BUG-001",
+              "title": "Hold-G taxable gold overlay does not appear over most building models",
+              "severity": "major",
+              "owner_agent": "03_TechnicalDirector_Architecture + 05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Let the economy run long enough for buildings to store taxable gold", "Hold G", "Inspect multiple building models including marketplace, blacksmith, guilds, and other town buildings"],
+              "expected": "Holding G shows taxable/stored gold overlays over all relevant building models; releasing G hides them.",
+              "actual": "Overlay does not work for most buildings.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q", "Screenshot/capture evidence showing hold-G overlay over multiple building models"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": "Fix/verify data-side taxable/stored gold coverage for all relevant building classes. Provide consistent numeric field for renderer to read and tests covering marketplace/blacksmith/guilds/other taxable classes.",
+            "03": "Fix/verify Ursina hold-G overlay coverage so every relevant building model with taxable/stored gold data shows gold while G is held and hides on release. Add focused tests and screenshot evidence.",
+            "11": "Verify R6 gates and screenshot proof showing hold-G overlay over multiple building models, not just one special case."
+          },
+          "pm_agent_prompts": {
+            "05": "You are Agent 05. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-05-gameplay-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r6_tax_gold_overlay_models\"] and .cursor/plans/wk61_playtest_polish.plan.md R6. Task: fix data-side coverage for WK61-R6-BUG-001. Files you MAY edit: game/entities/, game/systems/, config.py, tests/. Stay within your allowed files. Acceptance: every building class that should expose taxable/stored gold has a consistent numeric field; zero gold is distinguishable from missing data; marketplace, blacksmith, guilds, and other relevant classes are covered by tests or explicitly documented as non-taxable in your log. Do not implement renderer placement. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "03": "You are Agent 03. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-03-techdir-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r6_tax_gold_overlay_models\"] and .cursor/plans/wk61_playtest_polish.plan.md R6. Task: fix Ursina renderer/input coverage for WK61-R6-BUG-001. Files you MAY edit: game/graphics/ursina_renderer.py, game/engine.py, game/input_handler.py, tests/. Stay within your allowed files. Acceptance: holding G shows taxable/stored gold over every relevant building model with numeric data, not just one or two types; releasing G hides all overlays; placement is readable over prefab models. Add focused tests for data selection and hold/release behavior. Produce screenshot/capture evidence if possible and inspect it before completion. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r6_tax_gold_overlay_models\"] and .cursor/plans/wk61_playtest_polish.plan.md R6. Task: verify R6 after Agents 05/03. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tools/capture_screenshots.py, tests/. Prefer verification-only. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Inspect screenshot/capture evidence; do not sign off unless hold-G taxable/stored gold overlay is proven over multiple building models, not just one special case. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "fix", "parallel": true, "agents": ["05", "03"]},
+              {"wave": "verification", "parallel": false, "agents": ["11"], "depends_on": ["fix"]}
+            ],
+            "intelligence_by_agent": {"05": "medium", "03": "high", "11": "low"},
+            "do_not_send": ["02", "04", "06", "07", "08", "09", "10", "12", "13", "14", "15"],
+            "rationale": "R6 fix wave: 05 medium (data coverage for taxable/stored gold fields follows existing building/economy patterns), 03 high (Ursina overlay coverage across prefab models and G input behavior). Verification: 11 low (known gate and screenshot verification)."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["05", "03", "11"],
+            "dependencies": [
+              {"id": "fix", "agents": ["05", "03"], "parallel": true},
+              {"id": "verification", "after": ["fix"], "agents": ["11"], "parallel": false}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r6_tax_gold_overlay_models. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r6_tax_gold_overlay_models\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R6. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r6_tax_gold_overlay_models\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
+        },
+        "wk61_r7_tax_overlay_none_guard": {
+          "round_meta": {
+            "round_id": "wk61_r7_tax_overlay_none_guard",
+            "build_target": "Fix hold-G overlay None crash on non-tax buildings and prove multi-building overlay",
+            "created_utc": "2026-05-21T20:53:00-06:00",
+            "wave": 7,
+            "source": "qa_verification_blocker"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_failed_followup_opened",
+            "summary": "R7 completed successfully after rerunning Agent 11 verification. Agent 03 fixed the hold-G overlay None crash for non-tax buildings; Agent 11 verified qa_smoke PASS, pytest 419 passed, R6/R7 scoped overlay tests 37 passed, and screenshot evidence shows simultaneous yellow $42 overlays over multiple building models while G is held. Jaimie's follow-up playtest found marketplace still shows $0 taxable gold after potion purchases, now opened as R8."
+          },
+          "pm_round_review": {
+            "ledger_fix": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r7_tax_overlay_none_guard__1779418547191.json",
+            "ledger_agent11_rerun": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r7_tax_overlay_none_guard__1779419146077.json",
+            "orchestrator_result": "Agent 03 fix verified; Agent 11 rerun verified after first Agent 11 receipt failure",
+            "agents_finished": ["03", "11"],
+            "verified_receipts": true,
+            "gate_evidence": {
+              "qa_smoke": "PASS",
+              "pytest": "419 passed",
+              "scoped_overlay_tests": "37 passed"
+            },
+            "screenshot_evidence": {
+              "hold_g_multi_building_overlay": "docs/screenshots/wk61_r7_tax_overlay/hold_g_multi_building_20260521_211932_302.png"
+            },
+            "pm_decision": "Stop at human manual playtest gate before close/version bump/commit. Ask Jaimie to hold G in live Ursina and confirm taxable gold appears over multiple relevant building models without crashes."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R7-BUG-001",
+              "title": "Non-tax buildings crash hold-G taxable gold overlay path",
+              "severity": "blocker",
+              "owner_agent": "03_TechnicalDirector_Architecture",
+              "reporter": "11_QA_TestEngineering_Lead",
+              "repro_steps": ["Run R6 QA renderer tax coverage tests", "Evaluate overlay snapshot for non-tax building types such as castle, guardhouse, inn, trading post, fairgrounds, and library"],
+              "expected": "Non-tax buildings return no overlay without crashing; tax-stash buildings still show overlay while G is held.",
+              "actual": "Renderer overlay snapshot converts None with int(), causing TypeError and failing qa_smoke/pytest.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q", "Screenshot/capture evidence showing hold-G overlay over multiple building models"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "03": "Fix WK61-R7-BUG-001: guard None from non-tax buildings in hold-G overlay snapshot; preserve tax-stash overlay behavior; add focused test and screenshot/capture proof if possible.",
+            "11": "Verify R7: full gates pass, non-tax crash gone, screenshot/capture evidence proves hold-G overlay over multiple building models."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-03-techdir-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r7_tax_overlay_none_guard\"] and .cursor/plans/wk61_playtest_polish.plan.md R7. Task: fix WK61-R7-BUG-001. Files you MAY edit: game/graphics/ursina_renderer.py, game/engine.py, tests/. Stay within your allowed files. Acceptance: non-tax buildings do not crash the hold-G overlay path when overlay data is None; tax-stash building overlays still show consistently; releasing G hides overlays; focused regression test covers the None case; produce screenshot/capture evidence if possible and inspect it before completion. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r7_tax_overlay_none_guard\"] and .cursor/plans/wk61_playtest_polish.plan.md R7. Task: verify R7 after Agent 03. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tools/capture_screenshots.py, tests/. Prefer verification-only. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Do not sign off unless the non-tax crash is gone and screenshot/capture evidence proves hold-G overlay over multiple building models. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "fix", "parallel": false, "agents": ["03"]},
+              {"wave": "verification", "parallel": false, "agents": ["11"], "depends_on": ["fix"]}
+            ],
+            "intelligence_by_agent": {"03": "high", "11": "low"},
+            "do_not_send": ["02", "04", "05", "06", "07", "08", "09", "10", "12", "13", "14", "15"],
+            "rationale": "R7 is a focused renderer regression from QA: 03 high because it is in the Ursina overlay path and must preserve R6 behavior; 11 low for gates and screenshot verification."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["03", "11"],
+            "dependencies": [
+              {"id": "fix", "agents": ["03"], "parallel": false},
+              {"id": "verification", "after": ["fix"], "agents": ["11"], "parallel": false}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r7_tax_overlay_none_guard. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r7_tax_overlay_none_guard\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R7. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r7_tax_overlay_none_guard\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
+        },
+        "wk61_r8_marketplace_potion_tax": {
+          "round_meta": {
+            "round_id": "wk61_r8_marketplace_potion_tax",
+            "build_target": "Make marketplace taxable gold accrue when heroes buy potions",
+            "created_utc": "2026-05-21T21:23:00-06:00",
+            "wave": 8,
+            "source": "human_playtest"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_failed_followup_opened",
+            "summary": "R8 completed successfully. Agent 05 fixed marketplace potion-purchase tax accrual for the real deferred shopping path; Agent 11 verified targeted regressions, pytest 421 passed, and qa_smoke PASS on confirmatory rerun after one known speed-scaling bounty responder flake. Marketplace stored_tax_gold now increases by int(price * TAX_RATE) after hero potion purchases. Jaimie's next playtest reported the hero menu chat area is too small to read, now opened as R9."
+          },
+          "pm_round_review": {
+            "ledger": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r8_marketplace_potion_tax__1779420342011.json",
+            "orchestrator_result": "all_waves_finished",
+            "agents_finished": ["05", "11"],
+            "verified_receipts": true,
+            "gate_evidence": {
+              "qa_smoke": "PASS on confirmatory rerun; first run hit known speed_scaling 0.25x bounty responder flake",
+              "pytest": "421 passed",
+              "targeted": "2 passed in tests/test_wk61_r8_marketplace_potion_tax.py"
+            },
+            "root_cause": "Deferred shopping finalizes purchase after pop_out clears inside_building; tax deposit only used inside_building. Fix resolves pending_task_building as the shop for tax deposit.",
+            "pm_decision": "Stop at human manual playtest gate before close/version bump/commit. Ask Jaimie to let heroes buy potions, then confirm marketplace taxable gold becomes non-zero in panel and hold-G overlay."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R8-BUG-001",
+              "title": "Marketplace taxable gold stays $0 after heroes buy potions",
+              "severity": "major",
+              "owner_agent": "05_GameplaySystemsDesigner",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Let heroes buy potions at the marketplace", "Select marketplace or hold G", "Observe taxable gold value"],
+              "expected": "Marketplace taxable/stored gold increases after potion purchases and is readable by panel/hold-G overlay.",
+              "actual": "Marketplace stays $0 taxable gold even after potion purchases.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q", "Targeted test simulating actual hero potion purchase increments marketplace stored_tax_gold"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "05": "Fix WK61-R8-BUG-001: actual marketplace potion purchase path must deposit taxable/stored gold. Add targeted regression simulating real hero potion purchase.",
+            "11": "Verify R8: gates pass and marketplace stored tax increases after simulated potion purchase."
+          },
+          "pm_agent_prompts": {
+            "05": "You are Agent 05. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-05-gameplay-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r8_marketplace_potion_tax\"] and .cursor/plans/wk61_playtest_polish.plan.md R8. Task: fix WK61-R8-BUG-001. Files you MAY edit: game/entities/, game/systems/, config.py, tests/. Stay within your allowed files. Acceptance: when a hero buys a potion at a marketplace via the real live-play purchase path, marketplace stored/taxable gold increases by the correct tax amount; panel/hold-G overlay can read the same stored value; targeted regression test covers an actual marketplace instance and hero potion purchase, not only a helper path. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r8_marketplace_potion_tax\"] and .cursor/plans/wk61_playtest_polish.plan.md R8. Task: verify R8 after Agent 05. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tests/. Prefer verification-only. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Do not sign off unless targeted regression proves marketplace stored/taxable gold increases after a hero potion purchase. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "fix", "parallel": false, "agents": ["05"]},
+              {"wave": "verification", "parallel": false, "agents": ["11"], "depends_on": ["fix"]}
+            ],
+            "intelligence_by_agent": {"05": "high", "11": "low"},
+            "do_not_send": ["02", "03", "04", "06", "07", "08", "09", "10", "12", "13", "14", "15"],
+            "rationale": "R8 is a gameplay/economy data-path bug. Agent 05 high because the live potion purchase flow may differ from the earlier helper tests; Agent 11 low for gates and targeted regression verification."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["05", "11"],
+            "dependencies": [
+              {"id": "fix", "agents": ["05"], "parallel": false},
+              {"id": "verification", "after": ["fix"], "agents": ["11"], "parallel": false}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r8_marketplace_potion_tax. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r8_marketplace_potion_tax\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R8. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r8_marketplace_potion_tax\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
+        },
+        "wk61_r9_hero_chat_readable_layout": {
+          "round_meta": {
+            "round_id": "wk61_r9_hero_chat_readable_layout",
+            "build_target": "Make hero menu chat readable by shrinking/reserving hero panel space",
+            "created_utc": "2026-05-21T21:33:00-06:00",
+            "wave": 9,
+            "source": "human_playtest"
+          },
+          "pm_status_summary": {
+            "status": "human_gate_pending",
+            "summary": "R9 completed successfully. Agent 08 replaced the cramped hero-menu chat popup with an in-column split layout: hero sheet shrinks/scrolls in the top band and chat reserves readable space below. Agent 11 verified qa_smoke PASS, pytest 424 passed, R9 targeted tests 8 passed, and screenshots at 1024x576 and 1920x1080 show readable chat history/input with no bottom HUD overlap."
+          },
+          "pm_round_review": {
+            "ledger": "tools/ai_studio_orchestrator/runs/wk61_playtest_polish__wk61_r9_hero_chat_readable_layout__1779420930528.json",
+            "orchestrator_result": "all_waves_finished",
+            "agents_finished": ["08", "11"],
+            "verified_receipts": true,
+            "gate_evidence": {
+              "qa_smoke": "PASS",
+              "pytest": "424 passed",
+              "targeted": "8 passed in R9/R4 chat UI tests"
+            },
+            "screenshot_evidence": {
+              "hero_chat_1024": "docs/screenshots/wk61_r9/wk61_hero_menu_chat_1024.png",
+              "hero_chat_1920": "docs/screenshots/wk61_r9/wk61_hero_menu_chat_1920.png"
+            },
+            "pm_decision": "Stop at human manual playtest gate before close/version bump/commit. Ask Jaimie to select a hero, click Chat, and confirm the chat history/input are readable without pinning."
+          },
+          "pm_bug_tickets": [
+            {
+              "id": "WK61-R9-BUG-001",
+              "title": "Hero menu chat opens but has too little readable space",
+              "severity": "major",
+              "owner_agent": "08_UX_UI_Director",
+              "reporter": "human_playtest",
+              "repro_steps": ["Launch Ursina", "Select a hero", "Click Chat in the hero menu", "Try to read the chat area"],
+              "expected": "Hero menu shrinks/scrolls/splits to make room for readable chat history and input without pinning the hero.",
+              "actual": "Chat opens but there is not enough space to read it.",
+              "acceptance_test": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q", "Screenshot/capture evidence showing readable hero menu chat layout"],
+              "status": "assigned"
+            }
+          ],
+          "pm_next_actions_by_agent": {
+            "08": "Fix WK61-R9-BUG-001: hero menu chat should be readable by shrinking/reserving hero panel space when Chat opens. Add tests and screenshot proof.",
+            "11": "Verify R9: gates pass and screenshot proves readable hero menu chat layout."
+          },
+          "pm_agent_prompts": {
+            "08": "You are Agent 08. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-08-ux-ui-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r9_hero_chat_readable_layout\"] and .cursor/plans/wk61_playtest_polish.plan.md R9. Task: fix WK61-R9-BUG-001. Files you MAY edit: game/ui/, game/engine.py, game/input_handler.py, tools/screenshot_scenarios.py, tools/capture_screenshots.py, tests/. Stay within your allowed files. Acceptance: clicking Chat from the hero menu opens a readable conversation area without pinning; hero menu shrinks, scrolls, or splits to reserve enough vertical space for chat history and input; core hero info remains accessible; no severe clipping/overlap at 1024x576 or 1920x1080 if supported by tooling. Add/adjust focused tests and screenshot scenario/capture evidence. Do not change hero AI/chat behavior. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Inspect the output PNG before completion. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command.",
+            "11": "You are Agent 11. Onboard first via AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and .cursor/rules/agent-11-qa-onboarding.mdc. Then read .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r9_hero_chat_readable_layout\"] and .cursor/plans/wk61_playtest_polish.plan.md R9. Task: verify R9 after Agent 08. Files you MAY edit: tools/qa_smoke.py, tools/observe_sync.py, tools/capture_screenshots.py, tests/. Prefer verification-only. Run python tools/qa_smoke.py --quick and python -m pytest tests/ -x -q. Inspect screenshot evidence; do not sign off if chat is too small to read, overlaps controls, or hides input. Update your own agent log with orchestrator-required fields, validate JSON, then run the completion receipt command."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {"wave": "fix", "parallel": false, "agents": ["08"]},
+              {"wave": "verification", "parallel": false, "agents": ["11"], "depends_on": ["fix"]}
+            ],
+            "intelligence_by_agent": {"08": "high", "11": "low"},
+            "do_not_send": ["02", "03", "04", "05", "06", "07", "09", "10", "12", "13", "14", "15"],
+            "rationale": "R9 is a visible layout/taste fix. Agent 08 high because it needs judgement around constrained panel space and chat readability; Agent 11 low for known gates and screenshot verification."
+          },
+          "automation": {
+            "mode": "auto_until_human_gate",
+            "runnable_agents": ["08", "11"],
+            "dependencies": [
+              {"id": "fix", "agents": ["08"], "parallel": false},
+              {"id": "verification", "after": ["fix"], "agents": ["11"], "parallel": false}
+            ],
+            "human_gates": ["manual_playtest_after_round", "version_bump", "commit", "push"],
+            "success_signals": {
+              "required_log_entries": true,
+              "required_exit_codes": [0],
+              "required_gates": ["python tools/qa_smoke.py --quick", "python -m pytest tests/ -x -q"]
+            },
+            "failure_policy": {"retry_limit": 1, "on_failure": "stop_for_pm"},
+            "model_policy": {"required_model": "composer-2.5", "allow_overrides": false}
+          },
+          "pm_universal_prompt": "You are being activated for the wk61_playtest_polish sprint, round wk61_r9_hero_chat_readable_layout. First onboard as your assigned Agent number by reading AGENTS.md, .cursor/rules/01-studio-onboarding.mdc, .cursor/rules/10-orchestrator-logging-contract.mdc, and your role-specific .cursor/rules/agent-NN-...-onboarding.mdc. Then read the PM hub round at .cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json -> sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r9_hero_chat_readable_layout\"] and follow pm_agent_prompts[YOUR_AGENT_NUMBER]. Also read .cursor/plans/wk61_playtest_polish.plan.md R9. After work: update only your own agent log at sprints[\"wk61_playtest_polish\"].rounds[\"wk61_r9_hero_chat_readable_layout\"] with orchestrator-required fields; run required gates; validate your log JSON; run the orchestrator completion receipt command. Do not bump versions."
         }
       }
     }

@@ -29,6 +29,7 @@ class DecisionMomentType(str, Enum):
     POST_COMBAT_INJURED = "post_combat_injured"
     RESTED_AND_READY = "rested_and_ready"
     SHOPPING_OPPORTUNITY = "shopping_opportunity"
+    IDLE_SEEKING_ACTIVITY = "idle_seeking_activity"
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,6 +214,35 @@ def moment_rested_and_ready(hero: Any) -> DecisionMoment | None:
     )
 
 
+def moment_idle_seeking_activity(hero: Any, game_state: dict) -> DecisionMoment | None:
+    """Healthy idle heroes with no immediate task should pick useful activity (WK61-R4-BUG-005)."""
+    if _hero_state(hero) != HeroState.IDLE:
+        return None
+    if getattr(hero, "is_inside_building", False):
+        return None
+    if _health_fraction(hero) < 0.65:
+        return None
+    if getattr(hero, "target_position", None) is not None:
+        return None
+    awareness_radius = TILE_SIZE * 5
+    for enemy in game_state.get("enemies", []) or []:
+        if not getattr(enemy, "is_alive", False):
+            continue
+        try:
+            if hero.distance_to(enemy.x, enemy.y) <= awareness_radius:
+                return None
+        except Exception:
+            continue
+    return DecisionMoment(
+        moment_type=DecisionMomentType.IDLE_SEEKING_ACTIVITY,
+        urgency=0,
+        reason="idle with no immediate task; choose useful activity",
+        allowed_actions=("explore", "move_to", "accept_bounty", "buy_item"),
+        context_focus=("bounties", "known_places", "shops", "personality"),
+        cooldown_ms=6_000,
+    )
+
+
 def moment_shopping_opportunity(hero: Any, game_state: dict) -> DecisionMoment | None:
     if _hero_state(hero) == HeroState.FIGHTING:
         return None
@@ -241,7 +271,7 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     """
     Return the highest-priority decision moment for this hero, or None.
 
-    Ordering: low-health combat > post-combat injured > rested-and-ready > shopping.
+    Ordering: low-health combat > post-combat injured > rested-and-ready > shopping > idle activity.
     """
     m = moment_low_health_combat(hero)
     if m is not None:
@@ -252,7 +282,10 @@ def determine_decision_moment(hero: Any, game_state: dict, *, now_ms: int) -> De
     m = moment_rested_and_ready(hero)
     if m is not None:
         return m
-    return moment_shopping_opportunity(hero, game_state)
+    m = moment_shopping_opportunity(hero, game_state)
+    if m is not None:
+        return m
+    return moment_idle_seeking_activity(hero, game_state)
 
 
 def consult_suppressed_by_request_state(hero: Any, now_ms: int, cooldown_ms: int) -> str | None:

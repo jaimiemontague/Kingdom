@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "32c11672-d886-4c0a-8fcc-f4af6ee97df7",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r4_playtest3_regression_cleanup",
+  "agent_id": "06",
+  "status": "done",
+  "summary": "Fixed WK61-R4-BUG-005 AI idle regression: enemy-only commit gate after building is_alive, proactive in-zone explore for all classes, IDLE_SEEKING_ACTIVITY decision moment; tests and qa_smoke pass.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r4_playtest3_regression_cleanup]",
+  "timestamp": "2026-05-22T02:24:14.503Z"
+}

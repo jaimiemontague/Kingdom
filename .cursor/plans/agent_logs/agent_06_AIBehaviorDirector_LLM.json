@@ -1267,6 +1267,50 @@
           "recommended_next_actions": []
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 playtest polish — R4 hero idle regression cleanup (Agent 06 AI side)."
+      },
+      "rounds": {
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R4-BUG-005 root cause: WK61 building is_alive made handle_idle target-commit early return treat marketplace/lair objects as live combat targets, freezing heroes when enemies were nearby; fixed with _is_live_enemy_target() enemy-only commit gate in ai/behaviors/exploration.py.",
+            "Restored v1.5.6-style idle activity: non-rangers now call explore() immediately when in-zone without a destination (was 2% wander roll); added IDLE_SEEKING_ACTIVITY decision moment (6s cooldown) so no-LLM fallback explore fires for healthy idle heroes outside buildings.",
+            "Tests: tests/test_ai_exploration.py (commit-gate + warrior explore), tests/test_wk50_phase2a_decision_contracts.py (idle moment)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_ai_exploration.py tests/test_wk50_phase2a_decision_contracts.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "root_cause": "Building is_alive + broad hasattr(hero.target, is_alive) commit gate in handle_idle blocked bounty/shopping/patrol when hero.target referenced a building; WK50 decision moments removed fallback explore for healthy idle heroes.",
+            "qa_smoke_quick": "DONE: PASS (348 pytest items inside gate, exit 0)",
+            "targeted_pytest": "23 passed (test_ai_exploration + test_wk50_phase2a_decision_contracts)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 05: confirm gameplay-side idle contributors (rest thresholds at 60 HP base, bounty availability) if playtest still feels slow after R4 AI fix."
+          ]
+        }
+      }
     }
   }
 }

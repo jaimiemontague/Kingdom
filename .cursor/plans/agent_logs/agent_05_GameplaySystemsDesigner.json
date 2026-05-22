@@ -599,6 +599,99 @@
               ]
             }
           }
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R4-BUG-004: Added TaxStashMixin; Marketplace/Blacksmith accumulate stored_tax_gold. Hero.buy_item deposits shop-sale tax to inside_building; EconomySystem.hero_purchase logs only (no immediate player credit).",
+            "WK61-R4-BUG-006: Guardhouse sets GUARDHOUSE_MAX_HP=250 with explicit hp/max_hp; Building.get_hp_state() exposes HP for UI/renderer.",
+            "WK61-R4-BUG-005 (entity-side): Relaxed wants_to_shop health gate to SHOP_MIN_HEALTH_FRACTION=0.85 after WK61 base HP reduction blocked shopping. AI policy fixes remain Agent 06."
+          ],
+          "commands_run": [
+            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "pytest": "341 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "new_tests": [
+              "test_marketplace_accumulates_shop_tax_in_stored_tax_gold",
+              "test_guardhouse_has_hp_targetable_and_exposes_state"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: Continue R4-BUG-005 AI-side idle regression (exploration/bounty gating in ai/).",
+            "Agent 08: Defensive panel HP line for guardhouse selection UI (game/ui/building_renderers/defensive_panel.py)."
+          ]
+        },
+        "wk61_r6_tax_gold_overlay_models": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r6_tax_gold_overlay_models",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R6-BUG-001 (data): Added has_tax_stash_data / get_overlay_tax_gold contract on Building (None = no stash) and TaxStashMixin (int, 0 when empty).",
+            "NeutralBuilding now inherits TaxStashMixin for consistent stored_tax_gold + collect_taxes.",
+            "config.py: TAX_STASH_BUILDING_TYPES and NON_TAX_STASH_BUILDING_TYPES document taxable vs non-taxable player building types.",
+            "tests/test_wk61_r6_tax_gold_overlay_data.py: parametrized coverage for marketplace, blacksmith, all guilds, temples, dwellings, neutrals; zero-vs-missing distinction; shop/tax deposit paths."
+          ],
+          "commands_run": [
+            {"command": "python -m pytest tests/test_wk61_r6_tax_gold_overlay_data.py -x -q", "exit_code": 0},
+            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "pytest_r6": "27 passed (test_wk61_r6_tax_gold_overlay_data.py)",
+            "pytest_full": "382 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "non_taxable_documented": [
+              "castle",
+              "palace",
+              "inn (drink_income_gold only; not TaxCollector stash)",
+              "trading_post (passive income credits player directly)",
+              "guardhouse",
+              "ballista_tower",
+              "wizard_tower",
+              "fairgrounds",
+              "library",
+              "royal_gardens"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03: Ursina hold-G overlay should read has_tax_stash_data / get_overlay_tax_gold (or stored_tax_gold) for all prefab models; show $0 consistently when has_tax_stash_data and amount is 0.",
+            "Agent 11: Verify hold-G overlay screenshot evidence across multiple building models after Agent 03 renderer fix."
+          ]
+        },
+        "wk61_r8_marketplace_potion_tax": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r8_marketplace_potion_tax",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R8-BUG-001: Hero.buy_item now resolves tax deposit shop via _shop_for_tax_deposit — uses inside_building when set, else pending_task_building when pending_task is shopping (WK11 deferred purchase runs after pop_out).",
+            "game/entities/hero.py: optional shop_building kwarg on buy_item for explicit shop routing.",
+            "tests/test_wk61_r8_marketplace_potion_tax.py: regression via real Marketplace + do_shopping deferred path and direct buy_item after pop-out."
+          ],
+          "commands_run": [
+            {"command": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0},
+            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "pytest_r8": "2 passed (test_wk61_r8_marketplace_potion_tax.py)",
+            "pytest_full": "421 passed",
+            "qa_smoke_quick": "PASS (exit 0)",
+            "root_cause": "Deferred shopping finalizes purchase after pop_out_of_building clears inside_building; tax was only stashed when inside_building was set."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Verify R8 gates and targeted marketplace potion tax regression after Agent 05 fix."
+          ]
         }
       }
     },

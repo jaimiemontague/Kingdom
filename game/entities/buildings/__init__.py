@@ -10,7 +10,7 @@ from .defensive import BallistaTower, Guardhouse, WizardTower
 from .dwellings import DwarvenSettlement, ElvenBungalow, GnomeHovel
 from .economic import Blacksmith, Inn, Marketplace, TradingPost
 from .guilds import RangerGuild, RogueGuild, WarriorGuild, WizardGuild
-from .hiring_mixin import HiringBuilding
+from .hiring_mixin import HiringBuilding, TaxStashMixin
 from .special import Fairgrounds, Library, Palace, RoyalGardens
 from .temples import (
     Temple,
@@ -31,6 +31,7 @@ __all__ = [
     "unlock_research",
     "Building",
     "HiringBuilding",
+    "TaxStashMixin",
     "Castle",
     "WarriorGuild",
     "RangerGuild",

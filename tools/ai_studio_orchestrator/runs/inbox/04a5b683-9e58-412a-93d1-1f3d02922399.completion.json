@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "04a5b683-9e58-412a-93d1-1f3d02922399",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r9_hero_chat_readable_layout",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "WK61-R9-BUG-001 fixed: hero menu uses in-column split layout so chat has 152-220px readable band at 576p/1080p; pytest 424 pass; qa_smoke PASS; screenshots in docs/screenshots/wk61_r9.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r9_hero_chat_readable_layout]",
+  "timestamp": "2026-05-22T03:39:56.133Z"
+}

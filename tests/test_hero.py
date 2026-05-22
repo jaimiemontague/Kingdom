@@ -63,8 +63,9 @@ def test_take_damage_applies_minimum_damage_even_with_high_defense() -> None:
 
 def test_wants_to_shop_requires_health_and_gold_thresholds() -> None:
     hero = Hero(0, 0, hero_class="warrior")
-    hero.hp = hero.max_hp - 1
+    hero.hp = max(1, int(hero.max_hp * 0.5))
     hero.gold = 100
+    hero.potions = 0
     assert hero.wants_to_shop(marketplace_has_potions=True) is False
 
     hero.hp = hero.max_hp

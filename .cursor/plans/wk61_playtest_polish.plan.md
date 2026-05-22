@@ -1088,6 +1088,382 @@ Visual cohesion review of:
 
 ---
 
+## R4 — Playtest 3 Regression Cleanup
+
+**Created:** 2026-05-21 | **Source:** Jaimie live playtest after WK61 R3 commit
+
+R3 fixed and committed several items, but Jaimie's latest playtest shows WK61 is not done. Treat this as a follow-up fix round, not a new feature sprint.
+
+### Raw Notes → R4 Tickets
+
+| # | Jaimie's Note | Ticket ID | Owner |
+|---|---------------|-----------|-------|
+| 1 | Name labels and health bars should float above all selectable/non-prefab dynamic models, but not prefab building models | WK61-R4-BUG-001 | Agent 03 |
+| 2 | Clicking units often fails even when cursor is directly on the sprite | WK61-R4-BUG-002 | Agent 03 |
+| 3 | Holding G should show taxable gold overlays and releasing G should hide them, but it is not working at all | WK61-R4-BUG-003 | Agent 03 |
+| 4 | Marketplace and blacksmith info panels show grey `0` taxable gold; either tax generation is broken or UI is reading the wrong field | WK61-R4-BUG-004 | Agent 05 + Agent 08 |
+| 5 | Heroes still stand around idle much more than v1.5.6; compare behavior and fix the regression | WK61-R4-BUG-005 | Agent 06 + Agent 05 |
+| 6 | Guardhouse does not seem to have HP | WK61-R4-BUG-006 | Agent 05 |
+| 7 | Hero menu Chat button opens/pins the hero like the Pin button; it should open the conversation popup without pinning | WK61-R4-BUG-007 | Agent 08 |
+
+### R4 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 03, Agent 05, Agent 06, Agent 08 in parallel | Separate renderer/input, gameplay data, AI behavior, and UI fixes with minimal file collision |
+| Wave 2 | Agent 11 + Agent 09 in parallel after Wave 1 | QA gates plus visible screenshot/art verification |
+
+### Agent 03 — TechnicalDirector_Architecture (HIGH Intelligence)
+
+Owns R4-BUG-001, R4-BUG-002, and R4-BUG-003.
+
+Acceptance:
+- Name labels and health bars appear above selectable dynamic models such as heroes, enemies, peasants, guards, and tax collectors.
+- Prefab building models do not regain permanent floating name labels.
+- Unit selection in Ursina is reliable when clicking directly on the visible sprite/model.
+- Holding G shows taxable gold overlays above taxable buildings; releasing G hides the overlays.
+- Evidence includes a deterministic capture or Ursina capture note showing labels/health bars and gold overlay behavior.
+
+### Agent 05 — GameplaySystemsDesigner (HIGH Intelligence)
+
+Owns gameplay-side data for R4-BUG-004, R4-BUG-005, and R4-BUG-006.
+
+Acceptance:
+- Marketplace and blacksmith taxable gold values are non-zero when they should be collecting tax.
+- If taxable gold generation is broken, fix it in the economy/building data layer.
+- Guardhouse has HP, is targetable/damageable like other defensive buildings, and exposes HP to selection/UI state.
+- Hero idle regression is investigated from the gameplay/entity side; if root cause is AI policy, coordinate with Agent 06 rather than duplicating ownership.
+
+### Agent 06 — AIBehaviorDirector_LLM (HIGH Intelligence)
+
+Owns AI-side investigation/fix for R4-BUG-005.
+
+Acceptance:
+- Compare current hero behavior to the expected v1.5.6-style active behavior: heroes should seek useful activities, shopping, healing, exploration, bounties, or combat instead of idling for long stretches.
+- Fix AI decision gating/regression in the AI layer if the issue lives there.
+- Keep deterministic behavior intact; no wall-clock time or unseeded randomness in AI decisions.
+
+### Agent 08 — UX_UI_Director (MEDIUM Intelligence)
+
+Owns UI-side fixes for R4-BUG-004 and R4-BUG-007.
+
+Acceptance:
+- Marketplace and blacksmith panels show accurate taxable gold in readable styling; grey `0` must not mask real collected tax.
+- If taxable gold is genuinely 0, UI should make that truthful rather than stale.
+- Hero menu Chat button opens the conversation/chat popup.
+- Chat button must not pin the hero and must not share the Pin button action path.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Run the gates and add targeted verification notes for all R4 tickets:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Also verify that visible R4 changes have screenshot or capture evidence from the implementing agents.
+
+### Agent 09 — ArtDirector_Pixel_Animation_VFX (MEDIUM Intelligence)
+
+Visual consult on R4's visible fixes:
+- Labels and health bars are readable, not backwards, and not cluttering prefab buildings.
+- Taxable gold overlay while holding G is readable and positioned above the correct buildings.
+- Selection feedback is visually clear enough that Jaimie can tell what was clicked.
+
+### R4 Definition of Done
+
+- [ ] Dynamic selectable models have readable labels/health bars where appropriate.
+- [ ] Prefab buildings do not have permanent floating name labels.
+- [ ] Clicking directly on units reliably selects them in Ursina.
+- [ ] Holding G shows taxable gold overlays; releasing G hides them.
+- [ ] Marketplace and blacksmith taxable gold values are accurate in their info panels.
+- [ ] Heroes no longer stand around idle for long stretches compared with v1.5.6 behavior.
+- [ ] Guardhouse has HP and exposes it to targeting/selection/UI state.
+- [ ] Hero menu Chat button opens chat without pinning the hero.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+- [ ] Screenshot/capture evidence exists for visible fixes.
+- [ ] Jaimie can complete a 10-15 minute playtest without seeing the listed R4 regressions.
+
+---
+
+## R5 — Guardhouse HP Panel Hotfix
+
+**Created:** 2026-05-21 | **Source:** Jaimie screenshot playtest after R4 local orchestrator run
+
+R4 made Guardhouse expose HP in gameplay state, but the selected Guardhouse info panel still only shows the title and Demolish button. This is a UI presentation miss, not a new gameplay-system request.
+
+### Raw Note → R5 Ticket
+
+| # | Jaimie's Note | Ticket ID | Owner |
+|---|---------------|-----------|-------|
+| 1 | No HP showing when selecting guardhouse still | WK61-R5-BUG-001 | Agent 08 |
+
+### R5 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 08 | Add HP display to Guardhouse/defensive building panel |
+| Wave 2 | Agent 11 | Verify gate pass and screenshot proof |
+
+### Agent 08 — UX_UI_Director (MEDIUM Intelligence)
+
+Owns R5-BUG-001.
+
+Acceptance:
+- Selecting a Guardhouse in Ursina shows current/max HP in the left building info panel.
+- HP display uses existing building/defensive panel styling and is readable above the Demolish button.
+- Defensive buildings with HP use a consistent HP row/bar if the panel pattern already exists.
+- Do not change Guardhouse HP values or gameplay damage rules; Agent 05 already exposed HP state.
+- Add/adjust focused UI test coverage.
+- Capture screenshot evidence showing a selected Guardhouse panel with HP visible.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Verify R5 after Agent 08:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Also inspect Agent 08 screenshot evidence. Do not mark R5 complete if the selected Guardhouse panel still lacks HP.
+
+### R5 Definition of Done
+
+- [ ] Selecting Guardhouse shows HP in its info panel.
+- [ ] Demolish button remains visible and clickable.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+- [ ] Screenshot/capture evidence exists for selected Guardhouse with HP visible.
+
+---
+
+## R6 — Hold-G Taxable Gold Overlay Coverage
+
+**Created:** 2026-05-21 | **Source:** Jaimie live playtest after R5
+
+The hold-G taxable gold overlay still does not meet the player-facing requirement. Jaimie expects holding G to show gold over all relevant building models, and reports it does not work for most buildings.
+
+### Raw Note → R6 Tickets
+
+| # | Jaimie's Note | Ticket ID | Owner |
+|---|---------------|-----------|-------|
+| 1 | Gold when holding G should show over all models; does not seem to work for most buildings | WK61-R6-BUG-001 | Agent 03 + Agent 05 |
+
+### R6 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 05, Agent 03 in parallel | Agent 05 verifies/builds taxable-gold data coverage; Agent 03 fixes renderer/input overlay coverage |
+| Wave 2 | Agent 11 | Verify gates plus screenshot proof of hold-G overlay over multiple building models |
+
+### Agent 05 — GameplaySystemsDesigner (MEDIUM Intelligence)
+
+Owns data-side coverage for R6-BUG-001.
+
+Acceptance:
+- Every building model that should expose taxable/stored gold has a consistent numeric field the renderer can read.
+- Buildings with zero taxable gold still behave consistently; the renderer can distinguish "0" from missing data.
+- Marketplace, blacksmith, guilds, and any other taxable/stored-gold building classes are covered by tests.
+- Do not implement renderer/UI placement; coordinate through snapshot/entity fields only.
+
+### Agent 03 — TechnicalDirector_Architecture (HIGH Intelligence)
+
+Owns Ursina renderer/input-side coverage for R6-BUG-001.
+
+Acceptance:
+- Holding G shows a gold amount over every relevant building model that has taxable/stored gold data, not just one or two building types.
+- Releasing G hides all taxable gold overlays.
+- Overlay placement is readable over prefab building models and not hidden behind roofs/panels.
+- If a relevant model has zero gold, behavior is consistent with PM intent: either show `$0` while G is held or intentionally suppress zeroes everywhere, but not silently fail for most buildings.
+- Add/adjust focused tests for overlay data selection and hold/release behavior.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Verify R6 after Agents 03/05:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Also inspect screenshot evidence. Do not sign off unless the evidence shows hold-G taxable gold over multiple building models, not just one special case.
+
+### R6 Definition of Done
+
+- [ ] Holding G shows taxable/stored gold overlays over all relevant building models.
+- [ ] Releasing G hides those overlays.
+- [ ] Marketplace and blacksmith are covered.
+- [ ] Guilds and other taxable/stored-gold building classes are covered or explicitly documented as non-taxable.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+- [ ] Screenshot/capture evidence exists for multiple building models with hold-G overlay visible.
+
+---
+
+## R7 — Tax Overlay None Guard + Proof
+
+**Created:** 2026-05-21 | **Source:** R6 Agent 11 verification blocker
+
+R6 data coverage passed for 14 tax-stash building types, and renderer tax-stash snapshots passed for those types. Verification failed because non-tax buildings still pass through the overlay snapshot path and crash when `get_overlay_tax_gold()` returns `None`.
+
+### R6 Verification Failure → R7 Ticket
+
+| # | Failure | Ticket ID | Owner |
+|---|---------|-----------|-------|
+| 1 | Non-tax buildings crash hold-G overlay snapshot with `int(None)`; no Ursina hold-G screenshot evidence yet | WK61-R7-BUG-001 | Agent 03 |
+
+### R7 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 03 | Fix renderer None guard and add focused regression test |
+| Wave 2 | Agent 11 | Re-run gates and verify screenshot/capture proof |
+
+### Agent 03 — TechnicalDirector_Architecture (HIGH Intelligence)
+
+Owns R7-BUG-001.
+
+Acceptance:
+- Non-tax buildings such as castle, guardhouse, inn, trading post, fairgrounds, and library do not crash the hold-G overlay path.
+- Tax-stash buildings still show `$0` or `$N` consistently according to the R6 data contract.
+- Releasing G still hides overlays.
+- Focused regression test covers `None` from non-tax buildings.
+- Screenshot/capture evidence exists for hold-G overlay over multiple tax-stash building models after the crash fix.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Verify R7 after Agent 03:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Do not sign off unless:
+- the R6 non-tax crash is gone,
+- full gates pass,
+- screenshot/capture evidence proves hold-G overlay over multiple building models.
+
+### R7 Definition of Done
+
+- [ ] Non-tax buildings do not crash hold-G overlay path.
+- [ ] Tax-stash building overlays still work for multiple building models.
+- [ ] Releasing G hides overlays.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+- [ ] Screenshot/capture evidence exists for multiple building models with hold-G overlay visible.
+
+---
+
+## R8 — Marketplace Potion Purchase Tax Accrual
+
+**Created:** 2026-05-21 | **Source:** Jaimie live playtest after R7
+
+The hold-G overlay now renders over multiple building models, but the marketplace still shows `$0` taxable gold after heroes buy potions. This means the purchase-to-tax-stash data path is still broken or not covering the actual potion-buying flow.
+
+### Raw Note → R8 Ticket
+
+| # | Jaimie's Note | Ticket ID | Owner |
+|---|---------------|-----------|-------|
+| 1 | Market is showing `$0` taxable gold after heroes buy potions, so that is probably just broken | WK61-R8-BUG-001 | Agent 05 |
+
+### R8 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 05 | Fix actual marketplace potion-purchase tax accrual path |
+| Wave 2 | Agent 11 | Verify gates and targeted purchase/tax tests |
+
+### Agent 05 — GameplaySystemsDesigner (HIGH Intelligence)
+
+Owns R8-BUG-001.
+
+Acceptance:
+- When a hero buys a potion at a marketplace, the marketplace's taxable/stored gold value increases.
+- The fix covers the real AI/shop path used during live play, not only a unit-test helper path.
+- Tax accrual amount follows the existing tax-rate/economy rule.
+- Marketplace panel and hold-G overlay can read the same stored value.
+- Add/adjust tests that simulate a hero buying a potion from an actual marketplace instance.
+- Do not change renderer/UI display code unless a small test fixture needs a public field.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Verify R8 after Agent 05:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Also run the new targeted marketplace potion tax regression. Do not sign off if a marketplace remains `$0` after a simulated hero potion purchase.
+
+### R8 Definition of Done
+
+- [ ] Marketplace taxable/stored gold increases after hero potion purchases.
+- [ ] Targeted regression test covers the real potion-buying path.
+- [ ] Marketplace panel and hold-G overlay read the same non-zero value.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+
+---
+
+## R9 — Hero Menu Chat Readability Layout
+
+**Created:** 2026-05-21 | **Source:** Jaimie live playtest after R8
+
+The hero menu Chat button now opens a chat area without pinning, but there is not enough readable room for the chat. The hero menu should shrink or otherwise reserve space when chat opens so the conversation history and input are usable.
+
+### Raw Note → R9 Ticket
+
+| # | Jaimie's Note | Ticket ID | Owner |
+|---|---------------|-----------|-------|
+| 1 | Hero chat works in hero menu but there isn't space to read the chat; the hero menu should shrink to make room for it | WK61-R9-BUG-001 | Agent 08 |
+
+### R9 Agent Waves
+
+| Wave | Agents | Why |
+|------|--------|-----|
+| Wave 1 | Agent 08 | Fix hero panel/chat layout and add screenshot proof |
+| Wave 2 | Agent 11 | Verify gates and visual evidence |
+
+### Agent 08 — UX_UI_Director (HIGH Intelligence)
+
+Owns R9-BUG-001.
+
+Acceptance:
+- Clicking Chat from the hero menu opens a readable conversation area without pinning the hero.
+- The hero menu shrinks, scrolls, or uses a split layout so chat history and input have enough vertical space to read.
+- Core hero info remains accessible and not clipped in an ugly way.
+- The layout works at 1024x576 and the normal 1920x1080 capture size if tools support both.
+- Add/adjust UI layout tests and screenshot scenario/capture evidence.
+- Do not change hero AI/chat behavior; this is a layout/presentation fix.
+
+### Agent 11 — QA_TestEngineering_Lead (LOW Intelligence)
+
+Verify R9 after Agent 08:
+
+```powershell
+python tools/qa_smoke.py --quick
+python -m pytest tests/ -x -q
+```
+
+Inspect screenshot evidence. Do not sign off if the chat area is too small to read, overlaps controls, or hides the input row.
+
+### R9 Definition of Done
+
+- [ ] Hero menu Chat opens readable chat without pinning.
+- [ ] Hero menu yields enough space via shrink/scroll/split layout.
+- [ ] Chat history and input row are visible and usable.
+- [ ] No severe clipping/overlap with HUD bottom bar or left panel chrome.
+- [ ] `python tools/qa_smoke.py --quick` PASS.
+- [ ] `python -m pytest tests/ -x -q` PASS.
+- [ ] Screenshot/capture evidence shows the readable chat layout.
+
+---
+
 ## Deferred Items (from WK60 R2 — pick up in WK62 if not done here)
 
 These were planned for WK60 R2 but never executed. They're NOT required for WK61 but can be added if time allows:
@@ -1104,13 +1480,16 @@ These were planned for WK60 R2 but never executed. They're NOT required for WK61
 
 - [ ] Hero names never appear backwards regardless of facing direction
 - [ ] No name labels float above buildings
+- [ ] Name labels and health bars appear above dynamic selectable models where appropriate
 - [ ] Holding G shows taxable gold amounts over buildings; releasing hides them
 - [ ] Marketplace and blacksmith show taxable gold in their info panels
 - [ ] Buildings at 0 HP are destroyed and replaced with stone rubble
 - [ ] Rubble persists ~2 minutes then disappears
 - [ ] Hero menu has a working Chat button that opens conversation popup
 - [ ] Clicking enemies opens an info panel with type, HP, attack, and target
+- [ ] Clicking directly on visible units reliably selects them in Ursina
 - [ ] Guardhouse fires 2 arrows per volley
+- [ ] Guardhouse has HP and exposes it to targeting/selection/UI state
 - [ ] Heroes heal ~5x faster in guilds, ~7x faster in inns
 - [ ] Enemies near town prioritize attacking buildings over chasing heroes
 - [ ] Hero base HP is 60 (was 100)

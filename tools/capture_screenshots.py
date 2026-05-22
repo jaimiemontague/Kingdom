@@ -125,6 +125,15 @@ def main() -> int:
 
     outputs = []
     for idx, shot in enumerate(shots):
+        shot_w = int(getattr(shot, "width", None) or width)
+        shot_h = int(getattr(shot, "height", None) or height)
+        if shot_w != width or shot_h != height:
+            _configure_engine_surface(engine, shot_w, shot_h)
+            if hasattr(engine, "hud") and hasattr(engine.hud, "on_resize"):
+                engine.hud.on_resize(shot_w, shot_h)
+            if hasattr(engine, "pause_menu") and hasattr(engine.pause_menu, "on_resize"):
+                engine.pause_menu.on_resize(shot_w, shot_h)
+
         # Advance sim time deterministically so timers/animations/VFX can settle.
         #
         # IMPORTANT: We must NOT rely on engine.paused updates here, because `GameEngine.update()`
@@ -189,7 +198,7 @@ def main() -> int:
                 "label": str(getattr(shot, "label", filename)),
                 "scenario": str(ns.scenario),
                 "seed": int(ns.seed),
-                "size": {"w": int(width), "h": int(height)},
+                "size": {"w": int(shot_w), "h": int(shot_h)},
                 "camera": {"center_x": float(shot.center_x), "center_y": float(shot.center_y), "zoom": float(engine.zoom)},
                 "sha256": _sha256_file(path),
                 "meta": {} if getattr(shot, "meta", None) is None else dict(getattr(shot, "meta")),

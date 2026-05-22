@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-22T02:45:34.352Z",
+  "updated_at": "2026-05-22T02:53:55.808Z",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r6_tax_gold_overlay_models",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2.5",
+  "pm_hub_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "fix",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "05",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "d0808045-cb82-423a-93b7-520eb7edddc6",
+          "started_at": "2026-05-22T02:45:34.381Z",
+          "sdk_agent_id": "agent-fbb3e17e3c0bf0517f50442d265df52d3517a999",
+          "run_id": "run-e0b2b180-7115-4171-bb50-5d8d756f75d2",
+          "finished_at": "2026-05-22T02:47:57.070Z",
+          "completion_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\d0808045-cb82-423a-93b7-520eb7edddc6.completion.json",
+          "verification_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\efe1dc75-e458-4364-a7ce-aca6cf8e2b03.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "982bb185-44fb-4391-8a59-705237442224",
+          "started_at": "2026-05-22T02:45:34.381Z",
+          "sdk_agent_id": "agent-60c8c793d835a3ba87865869d44ccb876f8066d5",
+          "run_id": "run-f40d59aa-f6d7-4127-82dc-b1b32a972ec6",
+          "finished_at": "2026-05-22T02:48:47.422Z",
+          "completion_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\982bb185-44fb-4391-8a59-705237442224.completion.json",
+          "verification_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a1de736b-e02a-44b8-82ee-b4e881858923.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "verification",
+      "parallel": false,
+      "status": "error",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "needs_pm_decision",
+          "model": "composer-2.5",
+          "completion_token": "df621cae-31ca-4bd9-8f83-0959a1f12e97",
+          "started_at": "2026-05-22T02:49:01.146Z",
+          "error": "Verifier requested PM decision: Worker reported blocked: R6 verification BLOCKED: qa_smoke FAIL (6 pytest failures). Agent 05 data PASS (14 tax-stash types). Agent 03 tax-stash snapshot PASS (14/14) but non-tax buildings crash int(None) at ursina_renderer.py:166. No Ursina hold-G screenshot evidence. Route fix to Agent 03; visual proof to Agent 09 or human playtest.",
+          "sdk_agent_id": "agent-81fa7adc33e58053b22e82066f15cbd3da316631",
+          "run_id": "run-2344e0ca-e133-4066-91fd-a6cfac6afac4",
+          "finished_at": "2026-05-22T02:53:37.018Z",
+          "completion_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\df621cae-31ca-4bd9-8f83-0959a1f12e97.completion.json",
+          "verification_receipt_path": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\87f4266c-1147-4155-9b6d-f19a27fd0543.verification.json",
+          "verification_status": "needs_pm",
+          "verification_reason": "Worker reported blocked: R6 verification BLOCKED: qa_smoke FAIL (6 pytest failures). Agent 05 data PASS (14 tax-stash types). Agent 03 tax-stash snapshot PASS (14/14) but non-tax buildings crash int(None) at ursina_renderer.py:166. No Ursina hold-G screenshot evidence. Route fix to Agent 03; visual proof to Agent 09 or human playtest.",
+          "log_check": "skipped"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest_after_round",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 05 prompt mentions a human gate",
+    "Agent 03 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate",
+    "Stopped after verification: Agent 11 status=needs_pm_decision"
+  ]
+}

@@ -15,17 +15,19 @@ from config import (
 from game.sim.timebase import now_ms as sim_now_ms
 
 from .base import Building, is_research_unlocked, unlock_research
+from .hiring_mixin import TaxStashMixin
 from .types import BuildingType
 
 if TYPE_CHECKING:
     from game.entities.hero import Hero
 
 
-class Marketplace(Building):
+class Marketplace(TaxStashMixin, Building):
     """Building where heroes can buy items."""
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.MARKETPLACE)
+        self._init_tax_stash()
         self.potions_researched = False  # Must research before heroes can buy potions
         self.potion_price = 20
 
@@ -91,11 +93,12 @@ class Marketplace(Building):
         return max(0.0, min(1.0, float(elapsed) / float(duration)))
 
 
-class Blacksmith(Building):
+class Blacksmith(TaxStashMixin, Building):
     """Building where heroes can upgrade weapons and armor."""
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.BLACKSMITH)
+        self._init_tax_stash()
         self.upgrades_sold = 0
         self.researched_items = []
 

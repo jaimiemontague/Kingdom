@@ -165,6 +165,22 @@ class Building:
         """WK61-BUG-003: Whether this building has HP remaining. Used by enemy retargeting."""
         return self.hp > 0
 
+    def get_hp_state(self) -> dict[str, int]:
+        """Expose HP for selection/UI/renderer state (WK61-R4-BUG-006)."""
+        return {
+            "hp": int(getattr(self, "hp", 0) or 0),
+            "max_hp": int(getattr(self, "max_hp", 0) or 0),
+        }
+
+    @property
+    def has_tax_stash_data(self) -> bool:
+        """WK61-R6: False when building does not participate in hold-G tax overlay."""
+        return False
+
+    def get_overlay_tax_gold(self) -> int | None:
+        """Taxable gold for hold-G overlay; None when this building has no tax stash field."""
+        return None
+
     @property
     def is_targetable(self) -> bool:
         """Whether enemies can attack this building."""

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "token": "86b9ad91-5445-4458-8259-8d0a13be4f2e",
+  "completion_token": "df621cae-31ca-4bd9-8f83-0959a1f12e97",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r6_tax_gold_overlay_models",
+  "agent_id": "11",
+  "status": "needs_pm",
+  "reason": "Worker reported blocked: Agent 11 blocked: building_tax_overlay_snapshot TypeError on 6 non-tax buildings when G held; tax-stash 14-type coverage PASS; Ursina PNG missing.",
+  "log_check": "skipped",
+  "timestamp": "2026-05-22T02:51:39.396Z"
+}

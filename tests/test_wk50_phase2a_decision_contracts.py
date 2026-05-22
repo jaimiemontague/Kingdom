@@ -203,6 +203,18 @@ def test_shopping_opportunity_when_idle_near_market_with_gold_need():
     assert "buy_item" in m.allowed_actions
 
 
+def test_idle_seeking_activity_when_healthy_idle_outside():
+    h = Hero(100.0, 100.0, name="IdleHero", hero_id="idle1")
+    h.state = HeroState.IDLE
+    h.hp = int(h.max_hp)
+    h.gold = 50
+    gs = {"buildings": [], "enemies": [], "heroes": [h], "bounties": []}
+    m = determine_decision_moment(h, gs, now_ms=10_000)
+    assert m is not None
+    assert m.moment_type == DecisionMomentType.IDLE_SEEKING_ACTIVITY
+    assert "explore" in m.allowed_actions
+
+
 def test_consult_suppression_cleared_when_ready():
     h = Hero(0.0, 0.0, name="Clr", hero_id="cclr")
     h.last_llm_decision_time = 0

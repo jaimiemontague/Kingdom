@@ -47,12 +47,10 @@ class EconomySystem:
         return False
     
     def hero_purchase(self, hero_name: str, item_name: str, price: int):
-        """Process a hero purchasing an item (applies tax)."""
+        """Log a hero shop purchase. Tax gold is stashed on the shop via Hero.buy_item."""
         self.total_spent_by_heroes += price
         tax = int(price * TAX_RATE)
-        self.player_gold += tax
-        self.total_tax_collected += tax
-        
+
         self.transaction_log.append({
             "type": "hero_purchase",
             "hero": hero_name,
@@ -60,7 +58,7 @@ class EconomySystem:
             "price": price,
             "tax": tax,
         })
-        
+
         return tax
     
     def add_bounty(self, amount: int) -> bool:

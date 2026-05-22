@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "token": "87f4266c-1147-4155-9b6d-f19a27fd0543",
+  "completion_token": "df621cae-31ca-4bd9-8f83-0959a1f12e97",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r6_tax_gold_overlay_models",
+  "agent_id": "11",
+  "status": "needs_pm",
+  "reason": "Worker reported blocked: R6 verification BLOCKED: qa_smoke FAIL (6 pytest failures). Agent 05 data PASS (14 tax-stash types). Agent 03 tax-stash snapshot PASS (14/14) but non-tax buildings crash int(None) at ursina_renderer.py:166. No Ursina hold-G screenshot evidence. Route fix to Agent 03; visual proof to Agent 09 or human playtest.",
+  "log_check": "skipped",
+  "timestamp": "2026-05-22T02:53:43.860Z"
+}

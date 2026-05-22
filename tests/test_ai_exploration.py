@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import math
+from types import SimpleNamespace
+
 from ai.behaviors import exploration
 from config import TILE_SIZE
+from game.entities.hero import HeroState
 from game.world import Visibility
 
 
@@ -31,9 +35,17 @@ class _Hero:
         self.target = None
         self.target_position = None
         self._frontier_commit_until_ms = 0
+        self.hp = 60
+        self.max_hp = 60
+        self.gold = 0
+        self.potions = 0
 
     def set_target_position(self, x: float, y: float) -> None:
         self.target_position = (float(x), float(y))
+        self.state = HeroState.MOVING
+
+    def distance_to(self, x: float, y: float) -> float:
+        return math.hypot(self.x - float(x), self.y - float(y))
 
 
 class _World:
@@ -49,6 +61,11 @@ class _AI:
         self.hero_zones = {}
         self._ai_rng = _FixedRNG(random_value=0.0, uniform_value=0.0)
         self._debug_log = lambda *_args, **_kwargs: None
+        self.bounty_behavior = SimpleNamespace(maybe_take_bounty=lambda *_a, **_k: False)
+        self.shopping_behavior = SimpleNamespace(
+            find_marketplace_with_potions=lambda *_a, **_k: None,
+            find_blacksmith=lambda *_a, **_k: None,
+        )
 
 
 def test_find_black_fog_frontier_tiles_returns_sorted_deterministic_candidates() -> None:
@@ -91,3 +108,52 @@ def test_explore_ranger_uses_frontier_bias_and_sets_commit(monkeypatch) -> None:
     assert hero.target.get("type") == "explore_frontier"
     assert hero.target_position is not None
     assert hero._frontier_commit_until_ms > 1_000
+
+
+def test_handle_idle_does_not_freeze_on_building_target_commit(monkeypatch) -> None:
+    """WK61-R4-BUG-005: building is_alive must not block idle activity during enemy commit."""
+    monkeypatch.setattr("ai.behaviors.exploration.sim_now_ms", lambda: 10_000)
+    ai = _AI()
+    hero = _Hero(name="Warrior", hero_class="warrior", tile_x=5, tile_y=5)
+    hero.state = HeroState.IDLE
+    hero._target_commit_until_ms = 20_000
+    hero.target = type(
+        "Building",
+        (),
+        {"is_alive": True, "building_type": "marketplace", "center_x": hero.x, "center_y": hero.y},
+    )()
+    castle = type("Castle", (), {"center_x": float(5 * TILE_SIZE), "center_y": float(5 * TILE_SIZE)})()
+    enemy = type("Enemy", (), {"is_alive": True, "x": hero.x + TILE_SIZE, "y": hero.y})()
+
+    exploration.handle_idle(
+        ai,
+        hero,
+        {
+            "world": None,
+            "castle": castle,
+            "heroes": [hero],
+            "buildings": [],
+            "enemies": [enemy],
+            "bounties": [],
+        },
+    )
+
+    assert hero.state == HeroState.MOVING
+    assert hero.target is enemy
+
+
+def test_handle_idle_warrior_explores_when_in_zone_without_target(monkeypatch) -> None:
+    monkeypatch.setattr("ai.behaviors.exploration.sim_now_ms", lambda: 1_000)
+    ai = _AI()
+    hero = _Hero(name="Warrior", hero_class="warrior", tile_x=5, tile_y=5)
+    hero.state = HeroState.IDLE
+    castle = type("Castle", (), {"center_x": float(5 * TILE_SIZE), "center_y": float(5 * TILE_SIZE)})()
+
+    exploration.handle_idle(
+        ai,
+        hero,
+        {"world": None, "castle": castle, "heroes": [hero], "buildings": [], "enemies": [], "bounties": []},
+    )
+
+    assert hero.target_position is not None
+    assert hero.state == HeroState.MOVING

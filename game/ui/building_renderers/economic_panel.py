@@ -309,29 +309,28 @@ class EconomicPanelRenderer:
         return y
 
     def _render_taxable_gold(self, panel, surface: pygame.Surface, building, y: int) -> int:
-        """Show taxable gold line — same pattern as guild_panel.py lines 28-33.
-
-        WK61-FIX: Always display the line (even when $0) so the player can see
-        the field exists and know that gold will appear once heroes deposit taxes.
-        Economic buildings may not have the attribute at all (they don't inherit
-        HiringBuilding), so fall back to stash_gold as well.
-        """
-        tax_gold = int(
-            getattr(building, 'stored_tax_gold', 0)
-            or getattr(building, 'stash_gold', 0)
-            or 0
-        )
-        font = getattr(panel, 'font_normal', None)
+        """Show taxable gold from ``stored_tax_gold`` with readable styling (WK61-R4-BUG-004)."""
+        tax_gold = int(getattr(building, "stored_tax_gold", 0) or 0)
+        font = getattr(panel, "font_normal", None)
+        font_small = getattr(panel, "font_small", None)
         if font is None or surface is None:
             return y
-        color = COLOR_GOLD if tax_gold > 0 else (150, 150, 150)
-        tax_text = font.render(
-            f"Taxable Gold: ${tax_gold}",
-            True,
-            color,
-        )
+        if tax_gold > 0:
+            tax_text = font.render(f"Taxable Gold: ${tax_gold}", True, COLOR_GOLD)
+            surface.blit(tax_text, (10, y))
+            y += 25
+            return y
+        tax_text = font.render("Taxable Gold: $0", True, COLOR_WHITE)
         surface.blit(tax_text, (10, y))
-        y += 25
+        y += 22
+        if font_small is not None:
+            hint = font_small.render(
+                "Deposited when heroes shop or upgrade here",
+                True,
+                (150, 150, 150),
+            )
+            surface.blit(hint, (10, y))
+            y += 18
         return y
 
     def render(

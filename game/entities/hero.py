@@ -675,7 +675,21 @@ class Hero:
             except Exception:
                 pass
     
-    def buy_item(self, item: dict) -> bool:
+    def _shop_for_tax_deposit(self, shop_building: "Building | None" = None) -> "Building | None":
+        """Resolve the shop that should receive sale tax (WK61-R8-BUG-001)."""
+        if shop_building is not None and hasattr(shop_building, "add_tax_gold"):
+            return shop_building
+        shop = getattr(self, "inside_building", None)
+        if shop is not None and hasattr(shop, "add_tax_gold"):
+            return shop
+        # WK11 deferred shopping: purchase runs after pop_out, so inside_building is cleared.
+        if getattr(self, "pending_task", None) == "shopping":
+            pending_shop = getattr(self, "pending_task_building", None)
+            if pending_shop is not None and hasattr(pending_shop, "add_tax_gold"):
+                return pending_shop
+        return None
+
+    def buy_item(self, item: dict, *, shop_building: "Building | None" = None) -> bool:
         """Attempt to buy an item using spendable (non-taxed) gold. Returns True if successful."""
         if self.gold < item["price"]:
             return False
@@ -702,12 +716,24 @@ class Hero:
             self.last_purchase_ms = None
         self.last_purchase_type = str(item.get("type", "")) if item else ""
         self.increment_career_stat("purchases_made", 1)
+        # WK61-R4-BUG-004: route shop-sale tax to the building stash (TaxCollector collects later).
+        price = int(item.get("price", 0))
+        if price > 0:
+            from config import TAX_RATE
+
+            tax_amount = int(price * TAX_RATE)
+            if tax_amount > 0:
+                shop = self._shop_for_tax_deposit(shop_building)
+                if shop is not None:
+                    shop.add_tax_gold(tax_amount)
         return True
     
     def wants_to_shop(self, marketplace_has_potions: bool) -> bool:
         """Check if hero wants to go shopping."""
-        # Only shop when at full health and idle
-        if self.hp < self.max_hp:
+        # WK61-R4-BUG-005: shop when mostly healthy (WK61 lowered base HP; strict full-HP blocked shopping).
+        from config import SHOP_MIN_HEALTH_FRACTION
+
+        if self.health_percent < float(SHOP_MIN_HEALTH_FRACTION):
             return False
         
         # Need at least 30 gold to feel the need to shop

@@ -6,8 +6,11 @@ import pytest
 
 from config import BUILDING_SIZES
 from game.entities.buildings.base import Building, RESEARCH_UNLOCKS
+from config import GUARDHOUSE_MAX_HP, TAX_RATE
+from game.entities.buildings.defensive import Guardhouse
 from game.entities.buildings.economic import Blacksmith, Marketplace
 from game.entities.buildings.guilds import WarriorGuild
+from game.entities.hero import Hero
 
 
 @pytest.fixture(autouse=True)
@@ -127,6 +130,32 @@ def test_blacksmith_research_unlocks_upgraded_items() -> None:
     item_names = {item["name"] for item in blacksmith.get_available_items()}
     assert "Steel Sword" in item_names
     assert "Mithril Blade" in item_names
+
+
+def test_marketplace_accumulates_shop_tax_in_stored_tax_gold() -> None:
+    marketplace = Marketplace(0, 0)
+    hero = Hero(0.0, 0.0, name="Buyer")
+    hero.gold = 100
+    hero.inside_building = marketplace
+    hero.is_inside_building = True
+
+    ok = hero.buy_item({"name": "Healing Potion", "type": "potion", "price": 20, "effect": 50})
+
+    assert ok is True
+    assert marketplace.stored_tax_gold == int(20 * TAX_RATE)
+
+
+def test_guardhouse_has_hp_targetable_and_exposes_state() -> None:
+    guardhouse = Guardhouse(4, 5)
+
+    assert guardhouse.hp == GUARDHOUSE_MAX_HP
+    assert guardhouse.max_hp == GUARDHOUSE_MAX_HP
+    assert guardhouse.is_targetable is True
+    assert guardhouse.get_hp_state() == {"hp": GUARDHOUSE_MAX_HP, "max_hp": GUARDHOUSE_MAX_HP}
+
+    guardhouse.take_damage(40)
+    assert guardhouse.hp == GUARDHOUSE_MAX_HP - 40
+    assert guardhouse.is_alive is True
 
 
 def test_marketplace_reads_global_advanced_healing_unlock() -> None:

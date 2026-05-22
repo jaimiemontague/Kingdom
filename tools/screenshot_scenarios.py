@@ -37,6 +37,9 @@ class Shot:
     meta: dict[str, Any] | None = None
     # Optional per-shot mutator hook (selection/UI toggles/etc)
     apply: Callable[[Any], None] | None = None
+    # Optional override for capture surface (defaults to CLI --size)
+    width: int | None = None
+    height: int | None = None
 
 
 def _load_asset_manifest(path: Path) -> dict[str, Any]:
@@ -1289,6 +1292,124 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def scenario_wk61_guardhouse_hp_panel(engine, *, seed: int) -> list[Shot]:
+    """WK61 R5: selected Guardhouse left panel shows HP above Demolish."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    guardhouse = _place_building(engine, "guardhouse", cgx - 7, cgy + 3)
+    guardhouse.is_constructed = True
+
+    cx = float(getattr(guardhouse, "center_x", getattr(guardhouse, "x", 0.0)))
+    cy = float(getattr(guardhouse, "center_y", getattr(guardhouse, "y", 0.0)))
+
+    def _apply_select_guardhouse(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = None
+        eng.selected_peasant = None
+        eng.selected_building = guardhouse
+        if hasattr(eng, "building_panel"):
+            eng.building_panel.select_building(guardhouse, eng.heroes)
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+
+    return [
+        Shot(
+            filename="wk61_guardhouse_hp_panel.png",
+            label="WK61 R5: Guardhouse selected with HP in left panel",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.6,
+            ticks=0,
+            apply=_apply_select_guardhouse,
+            meta={"scenario": "wk61_guardhouse_hp_panel", "seed": int(seed), "ticket": "WK61-R5-BUG-001"},
+        ),
+    ]
+
+
+def scenario_wk61_hero_menu_chat(engine, *, seed: int) -> list[Shot]:
+    """WK61 R9: Hero menu chat split layout — readable chat without pin."""
+    _clear_dynamic_entities(engine)
+    _clear_non_castle_buildings(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    cgx = int(getattr(castle, "grid_x", MAP_WIDTH // 2))
+    cgy = int(getattr(castle, "grid_y", MAP_HEIGHT // 2))
+    hx, hy = _tile_center_px(cgx + 3, cgy + 1)
+    hero = _place_hero(engine, "warrior", hx, hy)
+    hero.name = "Sir Aldric"
+
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+
+    def _apply_hero_menu_chat(eng: Any) -> None:
+        eng.screenshot_hide_ui = False
+        eng.selected_building = None
+        eng.selected_peasant = None
+        eng.selected_hero = hero
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+        hud = getattr(eng, "hud", None)
+        if hud is not None:
+            hud._pin_slot.unpin()
+            cp = hud._chat_panel
+            cp.start_conversation(hero)
+            cp.conversation_history.clear()
+            cp.conversation_history.extend(
+                [
+                    {"role": "player", "text": "Scout the eastern woods for threats."},
+                    {
+                        "role": "hero",
+                        "text": "I'll range ahead and report anything that moves in the treeline.",
+                    },
+                    {"role": "player", "text": "Stay within sight of the castle walls."},
+                    {"role": "hero", "text": "Understood, my liege."},
+                ]
+            )
+
+    return [
+        Shot(
+            filename="wk61_hero_menu_chat_1024.png",
+            label="WK61 R9: Hero menu chat readable split (1024x576)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            ticks=0,
+            width=1024,
+            height=576,
+            apply=_apply_hero_menu_chat,
+            meta={"scenario": "wk61_hero_menu_chat", "seed": int(seed), "ticket": "WK61-R9-BUG-001"},
+        ),
+        Shot(
+            filename="wk61_hero_menu_chat_1920.png",
+            label="WK61 R9: Hero menu chat readable split (1920x1080)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            ticks=0,
+            width=1920,
+            height=1080,
+            apply=_apply_hero_menu_chat,
+            meta={"scenario": "wk61_hero_menu_chat", "seed": int(seed), "ticket": "WK61-R9-BUG-001"},
+        ),
+    ]
+
+
 def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
     scenario_name = str(scenario_name).strip()
     if scenario_name == "building_catalog":
@@ -1321,6 +1442,10 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_building_menu_open(engine, seed=int(seed))
     if scenario_name == "wk52_pin_alerts":
         return scenario_wk52_pin_alerts(engine, seed=int(seed))
+    if scenario_name == "wk61_guardhouse_hp_panel":
+        return scenario_wk61_guardhouse_hp_panel(engine, seed=int(seed))
+    if scenario_name == "wk61_hero_menu_chat":
+        return scenario_wk61_hero_menu_chat(engine, seed=int(seed))
     raise ValueError(f"Unknown scenario: {scenario_name}")
 
 

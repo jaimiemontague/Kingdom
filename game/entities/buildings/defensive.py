@@ -7,6 +7,7 @@ from config import (
     GUARDHOUSE_ARROW_DAMAGE,
     GUARDHOUSE_ARROW_COOLDOWN,
     GUARDHOUSE_ARROWS_PER_SHOT,
+    GUARDHOUSE_MAX_HP,
     TILE_SIZE,
 )
 from .base import Building, is_research_unlocked
@@ -18,6 +19,9 @@ class Guardhouse(Building):
 
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.GUARDHOUSE)
+        # WK61-R4-BUG-006: explicit combat HP so targeting/UI state always expose values.
+        self.max_hp = int(GUARDHOUSE_MAX_HP)
+        self.hp = self.max_hp
         self.guards_spawned = 0
         self.max_guards = 3
         self.spawn_timer = 0.0

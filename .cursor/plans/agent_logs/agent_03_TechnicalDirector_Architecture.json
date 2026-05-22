@@ -1082,6 +1082,108 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk61_r4_playtest3_regression_cleanup": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r4_playtest3_regression_cleanup",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Fixed WK61-R4-BUG-001/002/003: restored readable unit name labels and always-on HP bars above dynamic billboards (heroes/enemies/peasants/guards/tax collector) with depth-off overlays and rotation_y un-mirror; destroyed legacy prefab building _ks_label entities; improved taxable gold G overlay via engine-polled flag + depth-off labels at y=1.8; added Ursina screen-space unit picking before floor-ray selection cascade.",
+            "files_modified": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_pick.py",
+              "game/engine.py",
+              "game/input_handler.py",
+              "tests/test_wk61_r4_ursina_regressions.py"
+            ],
+            "tickets": {
+              "WK61-R4-BUG-001": "Unit overlays: _configure_ks_overlay (depth test off, always_on_top), _ensure_ks_name_label for all dynamic unit types, HP bars shown at full HP, labels positioned above sprite center, _sync_ks_facing_overlay replaces negative scale_x counter-flip; prefab building labels destroyed once.",
+              "WK61-R4-BUG-002": "pick_unit_at_screen + sim_xy_to_virtual_screen in ursina_pick.py; engine.try_ursina_select_unit_at_screen; input_handler prefers screen pick in Ursina before legacy distance cascade.",
+              "WK61-R4-BUG-003": "set_tax_gold_overlay_held polled from engine tick via input_manager.is_key_pressed('g'); is_tax_gold_overlay_held used in _sync_building_worldspace_ui; gold Text uses overlay config and higher Y."
+            }
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1, "note": "346 passed / 2 failed — pre-existing Agent 06 tests/test_ai_exploration.py stub _AI missing bounty_behavior (WK61-R4-BUG-005 scope)"},
+            {"cmd": "python -m pytest tests/test_wk61_r4_ursina_regressions.py tests/test_engine.py tests/test_input_handler_gamecommands.py -x -q", "exit_code": 0},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "qa_smoke": "determinism_guard PASS; full pytest 346/348 pass (2 Agent 06 exploration failures unrelated to renderer/input changes)",
+            "scoped_pytest": "15 passed in tests/test_wk61_r4_ursina_regressions.py + engine/input handler",
+            "visible_behavior_notes": "Hold G over guild/marketplace with stored_tax_gold>0 shows $N gold Text above prefab (depth-off, y=1.8); release G hides. Heroes/enemies/guards/peasants/tax collector show name label + HP bar above billboard. Clicking sprite center uses screen-space pick within 42px. Prefab buildings no permanent _ks_label.",
+            "screenshot": "Not captured in CI headless run; Agent 11/09 verification wave should capture Ursina window with labels + G overlay."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11/09: capture Ursina screenshots showing unit labels/HP bars and G-held gold overlay on taxable buildings.",
+            "Agent 06: fix test_ai_exploration.py _AI stub to restore qa_smoke full pass."
+          ]
+        },
+        "wk61_r6_tax_gold_overlay_models": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r6_tax_gold_overlay_models",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Fixed WK61-R6-BUG-001 renderer/input coverage: hold-G taxable gold overlay now reads TaxStashMixin.get_overlay_tax_gold() for all tax-eligible building types (guilds, marketplace, blacksmith, neutrals), skips lairs/POIs, uses prefab-aware Y placement above model roofs, and strengthens overlay depth/render_queue so labels stay readable over prefab meshes. Engine polls G via input_manager or Ursina held_keys fallback each frame.",
+            "files_modified": [
+              "game/graphics/ursina_renderer.py",
+              "game/engine.py",
+              "tests/test_wk61_r6_ursina_tax_gold_overlay.py"
+            ],
+            "tickets": {
+              "WK61-R6-BUG-001": "building_tax_overlay_snapshot() centralizes data selection; _prefab_local_top_y/_building_gold_overlay_y place gold Text above prefab roofs; _configure_ks_overlay adds render_queue=2 and z=-0.02; release G hides overlays via per-frame sync when g_held false."
+            }
+          },
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r4_ursina_regressions.py -x -q", "exit_code": 0},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "qa_smoke": "DONE: PASS (exit 0)",
+            "pytest": "390 passed",
+            "scoped_tests": "12 passed in test_wk61_r6_ursina_tax_gold_overlay.py + test_wk61_r4_ursina_regressions.py",
+            "visible_behavior_notes": "Hold G shows $N above any building with has_tax_stash_data and stored_tax_gold>0 (guild/marketplace/blacksmith/neutral prefabs); release G disables _ks_gold_label on all buildings. Prefab overlay Y derived from child mesh bounds + 0.35 margin.",
+            "screenshot": "Headless CI cannot render Ursina hold-G overlay; Agent 11 verification wave should capture multi-building Ursina screenshot evidence."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Ursina screenshot proof of hold-G overlay over marketplace, blacksmith, and guild prefabs with stored tax gold.",
+            "Agent 05: data-side TaxStashMixin coverage for all taxable building classes (parallel R6 wave)."
+          ]
+        },
+        "wk61_r7_tax_overlay_none_guard": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r7_tax_overlay_none_guard",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Fixed WK61-R7-BUG-001: building_tax_overlay_snapshot() now returns (False, 0) when has_tax_stash_data is False or get_overlay_tax_gold() returns None, preventing int(None) crash on non-tax buildings (castle, guardhouse, inn, etc.) while preserving tax-stash snapshot amounts. Added focused R7 regression tests.",
+            "files_modified": [
+              "game/graphics/ursina_renderer.py",
+              "tests/test_wk61_r7_tax_overlay_none_guard.py"
+            ],
+            "tickets": {
+              "WK61-R7-BUG-001": "Early return before int() when has_tax_stash_data is False or overlay gold is None; tax-stash buildings still return (True, amount); release-G flag behavior unchanged via engine polling."
+            }
+          },
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -x -q", "exit_code": 0},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "qa_smoke": "DONE: PASS (exit 0)",
+            "pytest": "419 passed",
+            "scoped_tests": "28 passed in R6/R7 tax overlay renderer regression tests; non-tax castle/guardhouse/inn/trading_post/fairgrounds/library no longer crash snapshot path",
+            "visible_behavior_notes": "Non-tax buildings skip hold-G overlay without TypeError; tax-stash buildings still snapshot stored gold; set_tax_gold_overlay_held(False) hides overlays when Ursina held_keys has no g.",
+            "screenshot": "Headless CI uses SDL dummy driver (capture_screenshots.py); Ursina hold-G overlay screenshot deferred to Agent 11 verification wave."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Ursina screenshot proof of hold-G overlay over multiple tax-stash building models after R7 None guard fix."
+          ]
         }
       }
     }

@@ -19,6 +19,15 @@ from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
 
 
+def _is_live_enemy_target(target: Any) -> bool:
+    """True only for living enemy entities (not buildings/lairs with ``is_alive``)."""
+    if target is None or not hasattr(target, "is_alive"):
+        return False
+    if hasattr(target, "building_type"):
+        return False
+    return bool(getattr(target, "is_alive", False))
+
+
 def assign_patrol_zone(ai: Any, hero: Any, game_state: dict) -> tuple[float, float]:
     """Assign a unique patrol zone to a hero based on their index."""
     if hero.name in ai.hero_zones:
@@ -257,7 +266,8 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         now_ms = int(sim_now_ms())
         if now_ms < int(getattr(hero, "_target_commit_until_ms", 0) or 0):
             cur = getattr(hero, "target", None)
-            if cur is not None and hasattr(cur, "is_alive") and getattr(cur, "is_alive", False):
+            # WK61-R4-BUG-005: buildings now expose is_alive; only honor enemy commit windows.
+            if _is_live_enemy_target(cur):
                 return
         enemies_nearby.sort(key=lambda x: x[1])
         target_enemy, target_dist = enemies_nearby[0]
@@ -323,21 +333,13 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
         hero.state = HeroState.MOVING
         hero.target = {"type": "patrol"}
     else:
-        # WK6: rangers use exploration module which has black-fog frontier bias.
+        # WK61-R4-BUG-005: keep heroes active in-zone (v1.5.6-style patrol/explore cadence).
+        now_ms = sim_now_ms()
+        frontier_commit_until = int(getattr(hero, "_frontier_commit_until_ms", 0) or 0)
         if getattr(hero, "hero_class", None) == "ranger":
-            # Check commitment window (prevent rapid re-targeting).
-            now_ms = sim_now_ms()
-            frontier_commit_until = int(getattr(hero, "_frontier_commit_until_ms", 0) or 0)
             if now_ms >= frontier_commit_until or not hero.target_position:
                 explore(ai, hero, game_state)
-        else:
-            # Non-rangers: random wander (original behavior).
-            if ai._ai_rng.random() < 0.02:  # 2% chance per frame
-                angle = ai._ai_rng.uniform(0, 2 * math.pi)
-                wander_dist = TILE_SIZE * ai._ai_rng.uniform(1, 3)
-                target_x = zone_x + math.cos(angle) * wander_dist
-                target_y = zone_y + math.sin(angle) * wander_dist
-                ai._debug_log(f"{hero.name} -> wandering to ({target_x:.0f}, {target_y:.0f})")
-                hero.target_position = (target_x, target_y)
-                hero.state = HeroState.MOVING
-                hero.target = {"type": "patrol"}
+        elif not hero.target_position:
+            explore(ai, hero, game_state)
+        elif ai._ai_rng.random() < 0.15:
+            explore(ai, hero, game_state)
