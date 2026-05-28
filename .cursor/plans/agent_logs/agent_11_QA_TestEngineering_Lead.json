@@ -1859,6 +1859,103 @@
             "Wave 2 owner (Agent 06): contracts.py is verified stable (13 TargetTypes, round-trip works); build arrival_handlers.py against it. Keep the one-way import (bounty_pursuit -> arrival_handlers).",
             "Gate 2 (me, post-Wave-2): re-run full gate stack + validate_assets + base_overview screenshots; grep that hero.target is never assigned a HeroTask object (only via assign_hero_task)."
           ]
+        },
+        "wk64_pb_g2_gate": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_g2_gate",
+          "round_meta": {
+            "wave": "Phase B Gate 2 (final)",
+            "build_target": "Final regression + visual verification of the whole WK64 sprint after Wave 2 (Agent 06 arrival-handler extraction + hunger/shopping HeroTask conversion). Verification only; no production edits.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": "wk64_phaseB_w2 (Agent 06 arrival_handlers.py + hunger/shopping conversion)"
+          },
+          "prompt_summary": "Gate 2 (Agent 11 part): run full pytest + determinism_guard + qa_smoke --quick + validate_assets --report (all PASS, call out speed_scaling 0.25x). Capture base_overview seed 3 600 ticks, VIEW every PNG, give visual verdict vs checklist (heroes path to/enter shops+food stands; none frozen at entrances; intent/HP labels normal; coherent scene). Structural greps: arrival_handlers.py registry+dispatch_arrival; bounty_pursuit calls dispatch_arrival & is much shorter; hunger.py+shopping.py use assign_hero_task; CRITICAL: NO ai/behaviors/** file stores a HeroTask object on .target (only ai/contracts.py assign_hero_task storing to_dict()). Verdict PASS/FAIL. DO NOT COMMIT.",
+          "status": "done",
+          "verdict": "GATE 2 (Agent 11) = PASS",
+          "what_i_changed": {
+            "summary": "Verification only. No production code changed. GATE 2 (Agent 11 part) = PASS: all four regression gates green, screenshot capture clean (4 PNGs viewed, no visible hero-behavior regression), and every Wave-2 structural deliverable + the CRITICAL design rule confirmed. The CRITICAL rule grep (no HeroTask object stored on .target outside ai/contracts.py) PASSES: the only ai/ matches are ai/contracts.py (a docstring + the assign_hero_task body storing task.to_dict(), i.e. a dict); zero matches in game/ and zero in ai/behaviors/**. Determinism (Agent 04 part of Gate 2) is out of my scope but determinism_guard PASSES here too.",
+            "files_created": [],
+            "files_modified": [
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (log only)"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "513 passed, 4 skipped, 1 warning in 63.67s. The 4 skips are the honest characterization skips (default headless world lacks certain buildings). The 1 warning is the pre-existing pygame pkg_resources deprecation (not WK64)."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found. Wave-2 arrival registry is keyed by TargetType (deterministic); no wall-clock or id()-ordering introduced."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "DONE: PASS. determinism_guard exit 0; pytest exit 0; base, intent_bounty preset, hero_stuck_repro, no-enemies, mock-LLM all exit 0. ALL FOUR speed_scaling profiles exit 0 INCLUDING speed_scaling 0.25x (exit_code=0) -- the original WK63 regression stays fixed through Wave 2. interior_view, quest_panel, conversation, direct_prompt_integration all exit 0."
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "SUMMARY errors=0 warns=46. All 46 warns are pre-existing missing_model_file warnings for optional 3D .glb/.gltf/.obj building+worker models (procedural/2D fallbacks used); unrelated to WK64. 0 errors -> gate PASS."
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk64_ai_contracts_after --size 1920x1080 --ticks 600",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "Wrote 4 PNG(s) + manifest.json to docs/screenshots/wk64_ai_contracts_after. 5 lairs placed (GoblinCamp/SkeletonCrypt/WolfDen/SpiderNest/BanditCamp)."
+            }
+          ],
+          "evidence": {
+            "gate_counts": {
+              "pytest": "513 passed, 4 skipped, 1 warning (exit 0)",
+              "determinism_guard": "PASS: no violations found (exit 0)",
+              "qa_smoke_quick": "DONE: PASS (exit 0)",
+              "qa_smoke_speed_scaling_0_25x": "exit_code=0 (original WK63 regression remains fixed)",
+              "qa_smoke_all_speed_scaling": "0.1x / 0.25x / 0.5x / 1.0x all exit 0",
+              "validate_assets": "errors=0 warns=46 (exit 0); all warns pre-existing missing optional 3D models"
+            },
+            "screenshot_verdict": {
+              "out_dir": "docs/screenshots/wk64_ai_contracts_after",
+              "pngs_viewed": [
+                "docs/screenshots/wk64_ai_contracts_after/base_overview__Z1__ui_default.png",
+                "docs/screenshots/wk64_ai_contracts_after/base_overview__Z1__world_clean.png",
+                "docs/screenshots/wk64_ai_contracts_after/base_overview__Z2__ui_default.png",
+                "docs/screenshots/wk64_ai_contracts_after/base_overview__Z2__world_clean.png"
+              ],
+              "viewed_count": "4 of 4 (all variants/zoom levels: Z1=1.0x, Z2=1.6x; world_clean + ui_default each)",
+              "verdict": "PASS -- no visible hero-behavior regression.",
+              "observations": {
+                "checklist_1_heroes_reach_buildings": "PASS. Z2 shots show hero 'Gareth' standing adjacent to the MARKET building; other heroes (Nova x2, Cedric, warriors) distributed near guild halls (RANGERS/WARRIORS/ROGUES/WIZARDS/GUARDS/SMITH/INN) along roads. No hero pinned/unresolved at an entrance.",
+                "checklist_2_none_frozen_or_vibrating": "PASS. Heroes occupy natural spread positions; micro-positions differ between the Z1 and Z2 captures (e.g. Gareth and the GUARDS-area Nova shifted), indicating active movement, not frozen units. No vibrating cluster at any doorway; no hero stuck MOVING with no destination visible.",
+                "checklist_3_labels_render": "PASS. Hero name labels (Nova, Gareth, Cedric) and green HP bars render cleanly above units; one enemy near WARRIORS shows a red HP bar (in combat). No label corruption or misalignment.",
+                "checklist_4_coherent_scene": "PASS. Castle + crossroads, all guild buildings + houses + market + inn, forest, HUD (Gold 2100, Heroes 4, Enemies 52, Wave 1), bottom action bar (Build/Hire/Bounty), speed controls, and frame-time/perf overlay (H=4 P=5 G=0 E=52, PF/s 82 calls 16 fails) all render with correct layering and flush alignment. No texture/layering corruption."
+              },
+              "honest_caveat": "base_overview runs only 4 heroes, so a live shopping/eating action may not be frozen into a single still. The headless behavior + characterization tests (513 passed) are the PRIMARY proof the arrival handlers + HeroTask conversion preserve behavior; the screenshots confirm there is NO visible breakage in hero pathing, labels, or rendering after the Wave-2 extraction."
+            },
+            "structural_greps": {
+              "arrival_handlers_registry_and_dispatch": "PASS. ai/arrival_handlers.py defines ARRIVAL_HANDLERS (line 310) mapping all 7 task types (DIRECT_PROMPT, VISIT_POI, GOING_HOME, SHOPPING, REST_INN, BUY_MEAL, GET_DRINK) and def dispatch_arrival (line 321) which coerce_task(hero.target) -> ARRIVAL_HANDLERS.get(task.type).",
+              "bounty_pursuit_calls_dispatch_and_shrank": "PASS. ai/behaviors/bounty_pursuit.py imports & calls dispatch_arrival (lines 313/315). Line count 585 -> 363 (-222 lines, ~38% shorter) vs committed HEAD; arrival_handlers.py is 337 lines.",
+              "hunger_uses_assign_hero_task": "PASS. ai/behaviors/hunger.py imports HeroTask/TargetType/assign_hero_task (line 11) and constructs HeroTask(type=BUY_MEAL,...)+assign_hero_task(hero, task) (lines 99-104).",
+              "shopping_uses_assign_hero_task": "PASS. ai/behaviors/shopping.py imports them (line 11) and constructs HeroTask(type=SHOPPING,...)+assign_hero_task(hero, task) (lines 68-78).",
+              "CRITICAL_no_herotask_object_on_target": "PASS. grep '.target = HeroTask|.target = task\\b' over ai/ returns ONLY ai/contracts.py:8 (docstring) and ai/contracts.py:129 (assign_hero_task body: hero.target = task.to_dict() -> stores a DICT). grep over game/ returns NO matches. Zero ai/behaviors/** matches -> the critical design rule (hero.target stays a dict) holds."
+            },
+            "git_state": {
+              "head": "2857493 Sprint wk64 Phase B Waves 0-1: characterization + contracts + SystemRunner",
+              "working_tree_diff": "Wave-2 set only: M ai/behaviors/bounty_pursuit.py, M ai/behaviors/hunger.py, M ai/behaviors/shopping.py, ?? ai/arrival_handlers.py, + M agent_06 log. No game/** or out-of-scope edits in the AI Wave-2 diff."
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "PM (Agent 01): GATE 2 (Agent 11 part) is PASS. Collect Agent 04's determinism verdict (the second half of Gate 2), then commit the Wave-2 deliverables (ai/arrival_handlers.py NEW + bounty_pursuit/hunger/shopping MOD) as the WK64 Phase B Wave-2 close.",
+            "No production fixes required from QA. All sprint success criteria in my scope are met."
+          ],
+          "do_not_commit_ack": "Acknowledged. Verification only; I did not commit, push, branch, or edit production code."
         }
       }
     }

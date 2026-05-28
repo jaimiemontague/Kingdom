@@ -1476,6 +1476,103 @@
             "Gate 1 (Agent 11): re-run full suite + determinism_guard + qa_smoke; grep-verify ai/contracts.py has TargetType(13)/HeroTask/coerce_task/assign_hero_task and no Wave-1 behavior file changed.",
             "Wave 2 (Agent 06): build ai/arrival_handlers.py (TargetType-keyed registry) and convert hunger + shopping to author via HeroTask + assign_hero_task, consuming via coerce_task(hero.target)."
           ]
+        },
+        "wk64_pb_w2_arrival": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w2_arrival",
+          "status": "done",
+          "round_meta": {
+            "wave": "Phase B Wave 2",
+            "intelligence": "HIGH",
+            "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md (section 'Wave 2 -- Extract arrival handlers + convert hunger & shopping')"
+          },
+          "prompt_text": "Phase B Wave 2 (AI). Round wk64_pb_w2_arrival. (1) Create ai/arrival_handlers.py with handlers + ARRIVAL_HANDLERS registry + dispatch_arrival, moving the reached-destination dispatch (and its private helpers) out of bounty_pursuit.py; (2) replace that dispatch block in bounty_pursuit.handle_moving with a call to dispatch_arrival (keep en-route bounty claim + combat-gating); (3) convert hunger.go_to_food_stand and shopping.go_shopping to build a HeroTask and store via assign_hero_task. hero.target STAYS a dict. One-way import only: bounty_pursuit -> arrival_handlers. Behavior-preserving.",
+          "what_i_changed": {
+            "files_created": [
+              "ai/arrival_handlers.py (NEW) -- TargetType-keyed arrival registry + dispatch_arrival"
+            ],
+            "files_edited": [
+              "ai/behaviors/bounty_pursuit.py -- slimmed handle_moving reached-destination block (~182 lines -> ~13) to delegate to dispatch_arrival; removed moved helpers + now-unused imports",
+              "ai/behaviors/hunger.py -- go_to_food_stand authors HeroTask(BUY_MEAL) via assign_hero_task; added top-level `from ai.contracts import HeroTask, TargetType, assign_hero_task`",
+              "ai/behaviors/shopping.py -- go_shopping authors HeroTask(SHOPPING) via assign_hero_task; added top-level contracts import"
+            ],
+            "files_not_touched": [
+              "ai/basic_ai.py NOT edited -- handle_moving already delegates (basic_ai.py:365 -> bounty_behavior.handle_moving). No delegation line needed updating.",
+              "ai/contracts.py, tests/, game/** untouched per scope"
+            ],
+            "handlers_moved_into_arrival_handlers": [
+              "handle_direct_prompt_arrival (all sub_intents: return_home, buy_potions, rest_until_healed/seek_healing/retreat, go_to_known_place, explore_direction, default-fallthrough)",
+              "handle_visit_poi_arrival",
+              "handle_going_home_arrival",
+              "handle_shopping_arrival (reads task.payload marketplace/blacksmith)",
+              "handle_rest_inn_arrival",
+              "handle_buy_meal_arrival (delegates to ai.hunger_behavior.handle_meal_arrival; returns its bool so caller falls through to default IDLE on False, preserving pre-extraction behavior)",
+              "handle_get_drink_arrival"
+            ],
+            "private_helpers_moved_into_arrival_handlers": [
+              "_find_safety_building_for_arrival",
+              "_pick_building_at_arrival",
+              "_clear_direct_prompt_explore_meta",
+              "_compass_from_vec",
+              "constants _DIRECT_PROMPT_EXPLORE_EXTENSION_TILES (12), _DIRECT_PROMPT_EXPLORE_MAX_EXTENSIONS (2)"
+            ],
+            "helpers_kept_in_bounty_pursuit": [
+              "_seed_direct_prompt_explore_bearing (uses DIRECT_PROMPT_TARGET_TYPE + TILE_SIZE)",
+              "_resolve_bounty_from_target (used by en-route bounty claim)"
+            ],
+            "import_direction": "ONE-WAY: bounty_pursuit lazily imports dispatch_arrival from ai.arrival_handlers inside handle_moving; arrival_handlers imports only ai.contracts, ai.behaviors.task_durations, config, game.*. No reverse import. Verified no circular import at runtime.",
+            "critical_design_rule_preserved": "hero.target STAYS a dict. grep for `\\.target = HeroTask` / `\\.target = task\b` across ai/ finds ONLY contracts.py:129 (assign_hero_task storing task.to_dict()). hunger+shopping author via HeroTask then assign_hero_task serializes to the identical legacy dict shape."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -c \"import ai.arrival_handlers; import ai.behaviors.bounty_pursuit; import ai.behaviors.hunger; import ai.behaviors.shopping\" (import smoke + registry keys)",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk64_ai_contracts.py -v",
+              "exit_code": 0,
+              "result": "3 passed (buy_meal arrival, shopping arrival, contracts round-trip), 4 skipped (rest_inn/get_drink/going_home/visit_poi -- default headless world lacks inn/blacksmith/home, documented skips)"
+            },
+            {
+              "cmd": "python (scratch) directly exercising rest_inn/get_drink/going_home/visit_poi/bounty-fallthrough arrivals via handle_moving with fabricated targets",
+              "exit_code": 0,
+              "result": "ALL ARRIVAL HANDLERS VERIFIED OK"
+            },
+            {
+              "cmd": "python -m pytest tests/test_ai_shopping.py tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_ai_poi_awareness.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r11_hunger_live_path.py tests/test_bounty.py tests/test_combat.py -v",
+              "exit_code": 0,
+              "result": "61 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "result": "513 passed, 4 skipped"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS (incl speed_scaling 0.25x and direct_prompt_integration)"
+            }
+          ],
+          "evidence": {
+            "characterization_buy_meal_shopping": "tests/test_wk64_ai_contracts.py -> test_buy_meal_arrival_purchases_and_returns_idle PASSED, test_shopping_arrival_enters_shop_and_sets_pending_task PASSED, test_contracts_module_round_trips_when_present PASSED. The two live-conversion arrivals are the behavior-preserving net and stayed green.",
+            "ai_suite": "61 passed (test_ai_shopping, test_ai_bounty, test_ai_exploration, test_ai_poi_awareness, test_wk61_r10_hunger_ai, test_wk61_r11_hunger_live_path, test_bounty, test_combat).",
+            "full_suite": "513 passed, 4 skipped in ~63s.",
+            "determinism": "[determinism_guard] PASS: no violations found. Dispatch is keyed by TargetType (stable str enum); no wall-clock/id() ordering; randomness via get_rng('ai_basic'), timestamps via sim_now_ms -- all carried over verbatim.",
+            "qa_smoke": "[qa_smoke] DONE: PASS -- every scenario exit_code=0 including speed_scaling 0.1x/0.25x/0.5x/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration.",
+            "line_counts": "bounty_pursuit.py 586 -> 363 lines; arrival_handlers.py 337 lines. handle_moving reached-destination block ~182 lines -> ~13 lines (delegates to dispatch_arrival)."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Gate 2 (Agent 11 + Agent 04): full suite + determinism + qa_smoke + base_overview screenshots (heroes shop/eat) before PM commit.",
+            "Follow-up backlog item 18 (task router) is now unblocked by HeroTask + arrival registry.",
+            "Follow-up: convert remaining behaviors (bounty/direct_prompt/POI/defense/journey + exploration.py shopping dicts) to HeroTask incrementally; coerce_task already bridges both forms."
+          ]
         }
       }
     }

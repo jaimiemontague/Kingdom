@@ -8,6 +8,8 @@ from config import TILE_SIZE
 from game.entities.hero import HeroState
 from game.systems.navigation import best_adjacent_tile
 
+from ai.contracts import HeroTask, TargetType, assign_hero_task
+
 
 def find_marketplace_with_potions(buildings: list[Any]) -> Any | None:
     """Find a marketplace that can sell potions."""
@@ -59,13 +61,21 @@ def go_shopping(ai: Any, hero: Any, item_name: str, game_state: dict) -> None:
         else:
             hero.target_position = (target_building.center_x, target_building.center_y)
         hero.state = HeroState.MOVING
-        hero.target = {
-            "type": "shopping",
-            "item": item_name,
-            "marketplace": target_building if target_building.building_type == "marketplace" else None,
-            "blacksmith": target_building if target_building.building_type == "blacksmith" else None,
-            "shop_building": target_building,
-        }
+        # WK64 (audit item 15): author the task via the typed HeroTask API.
+        # assign_hero_task serializes to the identical legacy dict shape so
+        # hero.target stays a dict and handle_shopping_arrival (which reads
+        # marketplace/blacksmith) is unaffected.
+        task = HeroTask(
+            type=TargetType.SHOPPING,
+            target_ref=target_building,
+            payload={
+                "item": item_name,
+                "marketplace": target_building if target_building.building_type == "marketplace" else None,
+                "blacksmith": target_building if target_building.building_type == "blacksmith" else None,
+                "shop_building": target_building,
+            },
+        )
+        assign_hero_task(hero, task)
 
 
 def do_shopping(ai: Any, hero: Any, building: Any, game_state: dict) -> bool:

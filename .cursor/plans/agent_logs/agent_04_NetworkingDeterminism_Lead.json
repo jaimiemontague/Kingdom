@@ -967,6 +967,53 @@
             "PM Step A4: 30-hero stuck_events=2 (<=30) and qa_smoke PASS (incl 0.25x). Phase A acceptance met -- commit WK63 + Phase-A (A2 + A2.1) as the WK64 baseline.",
             "PM/Agent 11: re-run 'python tools/observe_sync.py --seconds 48.0 --heroes 30 --seed 3 --log-every 9999 --qa --bounty' and 'python tools/qa_smoke.py --quick' to independently confirm before commit (both verified green here)."
           ]
+        },
+        "wk64_pb_g2_determinism": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_g2_determinism",
+          "status": "done",
+          "role": "Agent 04 NetworkingDeterminism_Lead — determinism half of Phase B Gate 2",
+          "verdict": "GATE 2 (Agent 04 determinism) PASS",
+          "scope": "Review only. No code edited. No commit. Reviewed WK64 Phase B Wave 1+2: SystemRunner/SystemContext (game/sim/system_runner.py, game/sim_engine.py), arrival registry (ai/arrival_handlers.py), typed contracts (ai/contracts.py), and the Wave-2 producer/consumer wiring (ai/behaviors/bounty_pursuit.py, hunger.py, shopping.py).",
+          "what_i_reviewed": {
+            "system_runner": "game/sim/system_runner.py is a pure ordered iterator (for system in self.systems: system.update(ctx, dt)); no wall-clock, RNG, hashing, or unordered iteration. SimEngine constructs SystemRunner((self.buff_system, self.wave_event_system)) at sim_engine.py:130 but DOES NOT collapse the call sites: buff_system.update(system_ctx, dt) stays at its original position (after _update_fog_of_war, before early-pacing nudge) and wave_event_system.update(system_ctx, dt) stays at its original position (after the spawn/lair slot-cap block, before separation). Confirmed by reading SimEngine.update(): buff @ line 691, wave_event @ line 743 — same relative order and same surrounding code as before. No side-effect reordering. The runner is seeded for future adjacency-driven consolidation only.",
+            "runner_membership_vs_agent05_table": "Cross-checked Agent 05's equivalence-audit table (agent_05 log, sprints.wk64_ai_contracts_and_system_runner.rounds.wk64_pb_w1_runner). Runner membership = {buff_system, wave_event_system} in that order, matching the two systems Agent 05 proved are pure fire-and-forget update(ctx,dt) with zero surrounding post-processing. The 6 documented exceptions (combat=event routing drain; spawner/lair=MAX_ALIVE_ENEMIES slot-cap bypass; bounty=no-op update + HUD side effects in check_claims/cleanup; neutral_buildings=differing castle source; nature=no update(ctx,dt)+tile bookkeeping; poi=two bespoke methods) correctly remain bespoke. Membership is consistent with the table.",
+            "arrival_registry": "ai/arrival_handlers.py ARRIVAL_HANDLERS is a dict keyed by TargetType (a stable str Enum); dispatch_arrival looks up the handler via coerce_task(hero.target).type and ARRIVAL_HANDLERS.get(task.type). Deterministic dispatch: NO time.time()/perf_counter/datetime.now/get_ticks, NO random.random/choice/etc (the only randomness is rng=get_rng('ai_basic') feeding roll_duration_seconds — seeded, unchanged from pre-extraction), NO id(obj) ordering, NO set/unordered-dict iteration that affects outcomes (the only loops iterate the caller-provided buildings list in order). Behavior moved verbatim from bounty_pursuit.handle_moving; bounty/live-entity/None targets return False and fall through to the identical default IDLE branch.",
+            "contracts": "ai/contracts.py TargetType.from_str uses cls(value) (deterministic); HeroTask.from_dict/to_dict use insertion-ordered dict comprehensions/updates; no nondeterministic constructs. assign_hero_task always stores hero.target = task.to_dict() (a dict), so the critical design rule holds and no isinstance(dict) reader breaks.",
+            "wave2_wiring": "bounty_pursuit.handle_moving delegates the reached-destination block to dispatch_arrival (one-way import, no cycle). hunger.go_to_food_stand and shopping.go_shopping author via HeroTask + assign_hero_task; grep confirms the ONLY `hero.target = task...` assignment in ai/ is contracts.py:129 (`hero.target = task.to_dict()`) — no HeroTask OBJECT is ever stored on hero.target.",
+            "guard_coverage_note": "tools/determinism_guard.py DEFAULT_SCAN_DIRS = game/entities, game/systems, ai — so it statically scans the new/changed AI files (arrival_handlers.py, contracts.py, hunger.py, shopping.py, bounty_pursuit.py) where any arrival-registry nondeterminism would live. game/sim/** (system_runner.py) and game/sim_engine.py are outside the guard's scan scope (pre-existing scope, not a WK64 change); both were manually read in full and contain no RNG/wall-clock/hash/unordered-iteration in the WK64 changes."
+          },
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "[determinism_guard] PASS: no violations found"
+            },
+            {
+              "command": "python tools/observe_sync.py --seconds 24.0 --heroes 10 --seed 3 --log-every 9999 --qa --bounty (run #1)",
+              "exit_code": 0,
+              "result": "[qa] PASS: bounty_exists=True bounty_has_responder=True ... ; [scenario] counters: scenario=default stuck_events=1 unstuck_attempts=1 inside_attack_blocks=0 max_stuck_ms=2116"
+            },
+            {
+              "command": "python tools/observe_sync.py --seconds 24.0 --heroes 10 --seed 3 --log-every 9999 --qa --bounty (run #2)",
+              "exit_code": 0,
+              "result": "BYTE-IDENTICAL to run #1: same t=0000 snapshot, same per-hero end positions, [qa] PASS, identical [scenario] counters: stuck_events=1 unstuck_attempts=1 inside_attack_blocks=0 max_stuck_ms=2116"
+            }
+          ],
+          "evidence": {
+            "determinism_guard": "PASS (exit 0, no violations) — scans ai/ (incl. arrival_handlers.py, contracts.py, converted hunger.py/shopping.py, bounty_pursuit.py) + game/entities + game/systems.",
+            "runner_order_confirmation": "SystemRunner constructed (members buff_system, wave_event_system) but call sites NOT collapsed — buff.update @ sim_engine.py:691 and wave_event.update @ sim_engine.py:743 keep their original positions and relative order. No side-effect reorder. Matches Agent 05's call_sites_collapsed=false rationale.",
+            "runner_membership_match": "Runner membership = {buff_system, wave_event_system} exactly matches Agent 05's equivalence_conclusion (only these two are pure fire-and-forget update(ctx,dt)); 6 documented exceptions correctly stay bespoke.",
+            "arrival_registry_review": "dispatch keyed by TargetType (stable str Enum). No time.time/perf_counter/datetime.now/get_ticks, no random.*, no id() ordering, no outcome-affecting set/unordered-dict iteration. Randomness limited to seeded get_rng('ai_basic'); timestamps via sim_now_ms() — both unchanged from pre-extraction.",
+            "twice_run_match": "Two identical headless runs (24s, 10 heroes, seed 3) produced byte-identical end-state + identical [scenario] counters (stuck_events=1). Confirms deterministic reproducibility of the Wave 1+2 code.",
+            "critical_design_rule": "Only `hero.target = task.to_dict()` (dict) is ever assigned in ai/ (contracts.py:129). No HeroTask object stored on hero.target."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "PM (Agent 01): determinism half of Gate 2 is PASS — proceed to close/commit WK64 Phase B once Agent 11's regression+visual verdict (wk64_pb_g2_gate) is also green.",
+            "Future sprint: when buff/wave_event ever become adjacent (or a no-op-between proof is established), collapse their two call sites into one _ordered_systems.update_all(ctx, dt) — determinism-safe only if order is preserved.",
+            "Future sprint (optional, low priority): consider extending determinism_guard DEFAULT_SCAN_DIRS to include game/sim_engine.py so the SimEngine orchestration is statically covered too (currently outside scan scope; manually verified clean this round)."
+          ]
         }
       }
     }

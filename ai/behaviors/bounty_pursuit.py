@@ -8,36 +8,16 @@ from typing import Any
 from config import BOUNTY_BLACK_FOG_DISTANCE_PENALTY, TILE_SIZE
 from game.entities.hero import HeroState
 from game.sim.direct_prompt_commit import DIRECT_PROMPT_TARGET_TYPE
-from game.sim.direct_prompt_targets import resolve_explore_direction_target
-from game.sim.determinism import get_rng
 from game.sim.hero_guardrails_tunables import BOUNTY_COMMIT_WINDOW_S
 from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 from game.world import Visibility
 
-from ai.behaviors.task_durations import roll_duration_seconds
-
-# WK50 R18: sovereign explore legs chained from the initial compass commit (tiles per extension).
-_DIRECT_PROMPT_EXPLORE_EXTENSION_TILES = 12
-_DIRECT_PROMPT_EXPLORE_MAX_EXTENSIONS = 2
-
-
-def _clear_direct_prompt_explore_meta(hero: Any) -> None:
-    for attr in (
-        "_dp_explore_bearing_ready",
-        "_dp_explore_leg_vec",
-        "_dp_explore_extensions",
-    ):
-        if hasattr(hero, attr):
-            delattr(hero, attr)
-
-
-def _compass_from_vec(dx: float, dy: float) -> str | None:
-    if abs(dx) < 1e-3 and abs(dy) < 1e-3:
-        return None
-    if abs(dx) >= abs(dy):
-        return "east" if dx > 0 else "west"
-    return "south" if dy > 0 else "north"
+# WK64 (audit item 17): the reached-destination arrival dispatch (and its private
+# helpers _clear_direct_prompt_explore_meta / _compass_from_vec /
+# _pick_building_at_arrival / _find_safety_building_for_arrival, plus the
+# explore-extension constants) moved to ai/arrival_handlers.py. Import direction
+# is one-way: this module imports dispatch_arrival from there, never the reverse.
 
 
 def _seed_direct_prompt_explore_bearing(hero: Any) -> None:
@@ -54,44 +34,6 @@ def _seed_direct_prompt_explore_bearing(hero: Any) -> None:
     if dx * dx + dy * dy > (TILE_SIZE * 0.2) ** 2:
         hero._dp_explore_leg_vec = (dx, dy)
         hero._dp_explore_bearing_ready = True
-
-
-def _pick_building_at_arrival(
-    hero: Any,
-    buildings: list[Any],
-    dest_x: float,
-    dest_y: float,
-    *,
-    reach_mult: float = 2.5,
-) -> Any | None:
-    """Prefer the building whose center best matches the sovereign waypoint among those in reach."""
-    reach = TILE_SIZE * reach_mult
-    best = None
-    best_d = 1e18
-    for building in buildings:
-        if hero.distance_to(building.center_x, building.center_y) > reach:
-            continue
-        d = (building.center_x - dest_x) ** 2 + (building.center_y - dest_y) ** 2
-        if d < best_d:
-            best_d = d
-            best = building
-    return best
-
-
-def _find_safety_building_for_arrival(hero: Any, buildings: list[Any]) -> Any | None:
-    """Inn/castle/home within short range (same window as ``return_home`` direct prompt)."""
-    rest_b = None
-    if hero.home_building and hero.distance_to(
-        hero.home_building.center_x, hero.home_building.center_y
-    ) <= TILE_SIZE * 2:
-        rest_b = hero.home_building
-    if rest_b is None:
-        for building in buildings:
-            if getattr(building, "building_type", None) in ("castle", "inn"):
-                if hero.distance_to(building.center_x, building.center_y) <= TILE_SIZE * 2:
-                    rest_b = building
-                    break
-    return rest_b
 
 
 def _resolve_bounty_from_target(target_dict: dict[str, Any], bounties: list[Any]) -> Any | None:
@@ -362,181 +304,17 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
     if hero.target_position:
         dist = hero.distance_to(hero.target_position[0], hero.target_position[1])
         if dist <= TILE_SIZE * 1.5:
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == DIRECT_PROMPT_TARGET_TYPE:
-                sub = str(hero.target.get("sub_intent") or "")
-                if sub == "return_home":
-                    rest_b = _find_safety_building_for_arrival(hero, buildings)
-                    if rest_b is not None:
-                        hero.transfer_taxes_to_home()
-                        hero.start_resting_at_building(rest_b)
-                    hero.target = None
-                    hero.target_position = None
-                    _clear_direct_prompt_explore_meta(hero)
-                    return
-                if sub == "buy_potions":
-                    shop = None
-                    for building in game_state.get("buildings", []):
-                        if building.building_type in ("marketplace", "blacksmith"):
-                            if hero.distance_to(building.center_x, building.center_y) < TILE_SIZE * 2:
-                                shop = building
-                                break
-                    if shop:
-                        rng = get_rng("ai_basic")
-                        duration_sec = roll_duration_seconds("buy_potion", rng)
-                        setattr(hero, "pending_task", "shopping")
-                        setattr(hero, "pending_task_building", shop)
-                        hero.enter_building_briefly(shop, duration_sec=float(duration_sec))
-                        hero.target = None
-                        hero.target_position = None
-                        hero.state = HeroState.SHOPPING
-                        _clear_direct_prompt_explore_meta(hero)
-                        return
-                if sub in ("rest_until_healed", "seek_healing", "retreat"):
-                    rest_b = _find_safety_building_for_arrival(hero, buildings)
-                    if rest_b is not None:
-                        if getattr(rest_b, "building_type", None) == "castle" or rest_b is getattr(
-                            hero, "home_building", None
-                        ):
-                            hero.transfer_taxes_to_home()
-                        hero.start_resting_at_building(rest_b)
-                    hero.target = None
-                    hero.target_position = None
-                    _clear_direct_prompt_explore_meta(hero)
-                    return
-                if sub == "go_to_known_place":
-                    tp = hero.target_position
-                    if tp:
-                        b = _pick_building_at_arrival(hero, buildings, float(tp[0]), float(tp[1]))
-                        if b is not None:
-                            bt = getattr(b, "building_type", None)
-                            rng = get_rng("ai_basic")
-                            if bt == "inn":
-                                duration_sec = roll_duration_seconds("rest_inn", rng)
-                                setattr(hero, "pending_task", "rest_inn")
-                                setattr(hero, "pending_task_building", b)
-                                hero.start_resting_at_building(b, duration_sec=float(duration_sec))
-                            elif bt == "castle":
-                                hero.transfer_taxes_to_home()
-                                hero.start_resting_at_building(b)
-                            elif bt in ("marketplace", "blacksmith"):
-                                task_key = "buy_potion" if bt == "marketplace" else "shopping"
-                                duration_sec = roll_duration_seconds(task_key, rng)
-                                setattr(hero, "pending_task", "shopping")
-                                setattr(hero, "pending_task_building", b)
-                                hero.enter_building_briefly(b, duration_sec=float(duration_sec))
-                                hero.state = HeroState.SHOPPING
-                            else:
-                                duration_sec = roll_duration_seconds("shopping", rng)
-                                hero.enter_building_briefly(b, duration_sec=float(duration_sec))
-                                hero.state = HeroState.IDLE
-                    hero.target = None
-                    hero.target_position = None
-                    if hero.state == HeroState.MOVING:
-                        hero.state = HeroState.IDLE
-                    _clear_direct_prompt_explore_meta(hero)
-                    return
-                if sub == "explore_direction":
-                    cont = int(getattr(hero, "_dp_explore_extensions", 0))
-                    vec = getattr(hero, "_dp_explore_leg_vec", None)
-                    world = game_state.get("world")
-                    if (
-                        cont < _DIRECT_PROMPT_EXPLORE_MAX_EXTENSIONS
-                        and vec is not None
-                        and world is not None
-                    ):
-                        dirn = _compass_from_vec(float(vec[0]), float(vec[1]))
-                        if dirn:
-                            dest = resolve_explore_direction_target(
-                                hero,
-                                game_state,
-                                dirn,
-                                tiles_ahead=_DIRECT_PROMPT_EXPLORE_EXTENSION_TILES,
-                            )
-                            if dest is not None:
-                                hero._dp_explore_extensions = cont + 1
-                                hero.set_target_position(float(dest[0]), float(dest[1]))
-                                hero.target["started_ms"] = int(sim_now_ms())
-                                return
-                    hero.target = None
-                    hero.target_position = None
-                    hero.state = HeroState.IDLE
-                    _clear_direct_prompt_explore_meta(hero)
-                    return
+            # WK64 (audit item 17): the reached-destination arrival dispatch was
+            # extracted to ai/arrival_handlers.py (a TargetType-keyed registry).
+            # dispatch_arrival consumes hero.target via coerce_task; it returns
+            # True when a handler fully handled the arrival, and False for
+            # bounty/live-entity/None targets so we fall through to the default
+            # "arrived -> go IDLE" branch below (identical to pre-extraction).
+            from ai.arrival_handlers import dispatch_arrival
 
-                hero.target = None
-                hero.target_position = None
-                hero.state = HeroState.IDLE
-                _clear_direct_prompt_explore_meta(hero)
+            if dispatch_arrival(ai, hero, game_state):
                 return
-
-            # WK55: Arrived at POI — hero naturally discovers/interacts via proximity system.
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "visit_poi":
-                hero.target = None
-                hero.target_position = None
-                hero.state = HeroState.IDLE
-                return
-
-            # Check if we were going home.
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "going_home":
-                hero.transfer_taxes_to_home()
-                hero.start_resting()
-                hero.target = None
-                hero.target_position = None
-                return
-
-            # Check if we were going shopping (WK11: deferred — purchase on exit).
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "shopping":
-                shop_building = hero.target.get("marketplace") or hero.target.get("blacksmith")
-                if shop_building:
-                    rng = get_rng("ai_basic")
-                    # WK24: marketplace (potion) trips use shorter buy_potion band; blacksmith uses generic shopping.
-                    task_key = (
-                        "buy_potion"
-                        if hero.target.get("marketplace") is not None
-                        else "shopping"
-                    )
-                    duration_sec = roll_duration_seconds(task_key, rng)
-                    setattr(hero, "pending_task", "shopping")
-                    setattr(hero, "pending_task_building", shop_building)
-                    hero.enter_building_briefly(shop_building, duration_sec=float(duration_sec))
-                hero.target = None
-                hero.target_position = None
-                hero.state = HeroState.SHOPPING
-                return
-
-            # Rest at Inn (WK11): enter and heal inside; finalize on exit.
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "rest_inn":
-                inn = hero.target.get("inn")
-                if inn:
-                    rng = get_rng("ai_basic")
-                    duration_sec = roll_duration_seconds("rest_inn", rng)
-                    setattr(hero, "pending_task", "rest_inn")
-                    setattr(hero, "pending_task_building", inn)
-                    hero.start_resting_at_building(inn, duration_sec=float(duration_sec))
-                hero.target = None
-                hero.target_position = None
-                return
-
-            # WK61-R10: buy meal at food stand when arrival waypoint reached.
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "buy_meal":
-                hunger_behavior = getattr(ai, "hunger_behavior", None)
-                if hunger_behavior is not None and hunger_behavior.handle_meal_arrival(ai, hero, game_state):
-                    return
-
-            # Get a drink at Inn (WK11): enter, pay on exit.
-            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "get_drink":
-                inn = hero.target.get("inn")
-                if inn:
-                    rng = get_rng("ai_basic")
-                    duration_sec = roll_duration_seconds("get_drink", rng)
-                    setattr(hero, "pending_task", "get_drink")
-                    setattr(hero, "pending_task_building", inn)
-                    hero.enter_building_briefly(inn, duration_sec=float(duration_sec))
-                hero.target = None
-                hero.target_position = None
-                hero.state = HeroState.IDLE
-                return
-
+            # Default: arrived with no special handler -> go idle.
             hero.target_position = None
             hero.state = HeroState.IDLE
             return

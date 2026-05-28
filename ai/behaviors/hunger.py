@@ -8,6 +8,8 @@ from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
 from game.entities.hero import HeroState
 from game.systems.navigation import best_adjacent_tile
 
+from ai.contracts import HeroTask, TargetType, assign_hero_task
+
 # Target types hunger may interrupt (discretionary movement only).
 _INTERRUPTIBLE_TARGET_TYPES = frozenset({
     "patrol",
@@ -89,7 +91,17 @@ def go_to_food_stand(ai: Any, hero: Any, food_stand: Any, game_state: dict) -> N
         hero.target_position = (food_stand.center_x, food_stand.center_y)
 
     hero.state = HeroState.MOVING
-    hero.target = {"type": "buy_meal", "food_stand": food_stand}
+    # WK64 (audit item 15): author the task via the typed HeroTask API.
+    # assign_hero_task serializes to the legacy dict shape
+    # ({"type": "buy_meal", "food_stand": food_stand}) so hero.target stays a
+    # dict and every existing reader (handle_meal_arrival, maybe_redirect_for_meal)
+    # keeps working unchanged.
+    task = HeroTask(
+        type=TargetType.BUY_MEAL,
+        target_ref=food_stand,
+        payload={"food_stand": food_stand},
+    )
+    assign_hero_task(hero, task)
     ai.set_intent(hero, "shopping")
     ai.record_decision(
         hero,
