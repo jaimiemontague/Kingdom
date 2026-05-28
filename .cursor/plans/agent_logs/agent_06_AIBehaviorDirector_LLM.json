@@ -1417,6 +1417,67 @@
           "follow_ups": []
         }
       }
+    },
+    "wk64_ai_contracts_and_system_runner": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md",
+        "notes": "WK64 Phase B Wave 1A (AI) - create typed AI task contracts (ai/contracts.py). Zero behavior change; new file only."
+      },
+      "rounds": {
+        "wk64_pb_w1_contracts": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "Phase B, Wave 1A",
+            "launched_by": "tools/ai_studio_orchestrator (parent Agent 01 PM)"
+          },
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w1_contracts",
+          "status": "done",
+          "prompt_text": "PHASE B Wave 1A (AI). Round wk64_pb_w1_contracts. Create ai/contracts.py EXACTLY as in plan section 'Wave 1A' (TargetType with 13 members; HeroTask dataclass; to_dict/from_dict/coerce_task/assign_hero_task). NEW FILE ONLY - edit nothing else. Verify import + len(list(TargetType))==13; test_contracts_module_round_trips_when_present now PASSES; full suite green. Update log; validate JSON. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created ai/contracts.py exactly as written in the Wave 1A plan section. Introduces the typed TargetType(str, Enum) (13 members whose values equal the legacy hero.target[\"type\"] strings, plus from_str), the HeroTask @dataclass(slots=True) (type/target_id/target_ref/started_ms/payload + to_dict/from_dict), and the module functions coerce_task() and assign_hero_task(). Deterministic: no wall-clock, no hash()-ordered iteration. Zero behavior change - new file only.",
+            "files_created": [
+              "ai/contracts.py"
+            ],
+            "files_edited": [],
+            "behavior_files_touched": "NONE - did not touch hero.py, sim_engine.py, any ai/behaviors/**, tests, or anything else."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -c \"from ai.contracts import TargetType, HeroTask, coerce_task, assign_hero_task; print(len(list(TargetType)))\"",
+              "exit_code": 0,
+              "result": "prints 13"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk64_ai_contracts.py -v",
+              "exit_code": 0,
+              "result": "3 passed, 4 skipped - test_contracts_module_round_trips_when_present now PASSED (was SKIPPED pre-Wave-1); 4 skips are unrelated inn/home arrival tests"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "513 passed, 4 skipped, 1 warning"
+            },
+            {
+              "cmd": "git status --porcelain",
+              "exit_code": 0,
+              "result": "only ai/contracts.py new from my work; no behavior/test files modified by me"
+            }
+          ],
+          "evidence": {
+            "import_ok": true,
+            "target_type_member_count": 13,
+            "round_trip_test": "tests/test_wk64_ai_contracts.py::test_contracts_module_round_trips_when_present PASSED (no longer SKIPS - this is the key acceptance signal)",
+            "full_suite": "513 passed, 4 skipped, 1 warning in ~62s (up from WK63 baseline 503; Wave 0 added new tests + round-trip flipped skip->pass)",
+            "determinism_note": "enum/dataclass are deterministic: TargetType.from_str uses cls(value) (no hash ordering); to_dict/from_dict use insertion-ordered dict comprehension; no time.time()/pygame ticks; payload preserves legacy keys verbatim."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Gate 1 (Agent 11): re-run full suite + determinism_guard + qa_smoke; grep-verify ai/contracts.py has TargetType(13)/HeroTask/coerce_task/assign_hero_task and no Wave-1 behavior file changed.",
+            "Wave 2 (Agent 06): build ai/arrival_handlers.py (TargetType-keyed registry) and convert hunger + shopping to author via HeroTask + assign_hero_task, consuming via coerce_task(hero.target)."
+          ]
+        }
+      }
     }
   }
 }

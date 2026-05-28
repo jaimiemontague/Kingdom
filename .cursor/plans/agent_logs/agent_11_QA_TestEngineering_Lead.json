@@ -1630,6 +1630,235 @@
             "After Agent 04 iterates, Agent 11 re-runs ONLY the 30-hero check (python tools/observe_sync.py --seconds 48.0 --heroes 30 --seed 3 --log-every 9999 --qa --bounty) plus a full-suite + qa_smoke re-green; if stuck_events <= 5 and all gates pass, Phase A is GO for the Step A4 baseline commit.",
             "The single test reconciliation in tests/test_wk63_engine_boundary.py is correct and can stay regardless of Agent 04's next iteration (it pins the corrected None-on-defer contract)."
           ]
+        },
+        "wk64_pb_w0_characterization": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w0_characterization",
+          "status": "done",
+          "round_meta": {
+            "wave": "Phase B Wave 0",
+            "role": "QA_TestEngineering_Lead",
+            "build_target": "Characterization tests snapshotting current AI arrival behavior + current system-update behavior BEFORE Wave 1/2 changes. Must PASS/SKIP on post-Phase-A code; zero failures.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": "wk64_pa_a3_gate (Phase A committed baseline)"
+          },
+          "what_i_changed": {
+            "summary": "Created two NEW characterization test files per plan section 'Wave 0 - Characterization Tests'. No production code touched.",
+            "files_created": [
+              "tests/test_wk64_ai_contracts.py",
+              "tests/test_wk64_system_runner.py"
+            ],
+            "files_edited": [
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (this log)"
+            ],
+            "notes": [
+              "tests/test_wk64_ai_contracts.py: arrival-behavior characterization for buy_meal, shopping, rest_inn, get_drink, going_home, visit_poi via real BasicAI/bounty_pursuit.handle_moving, plus test_contracts_module_round_trips_when_present (pytest.importorskip('ai.contracts'), SKIPS until Wave 1 - expected).",
+              "Arrival post-conditions verified against ai/behaviors/bounty_pursuit.py handle_moving (~lines 361-542) and ai/behaviors/hunger.py handle_meal_arrival (~lines 219-238): visit_poi->target None+IDLE; going_home->target None; shopping->target None+SHOPPING+pending_task==shopping+pending_task_building; rest_inn->target None+pending_task==rest_inn; buy_meal->target None+IDLE; get_drink->target None+IDLE+pending_task==get_drink.",
+              "Default GameEngine(headless=True) world has ZERO heroes and no inn/blacksmith, so all 6 arrival tests SKIP via the plan-scaffolded 'if not heroes: pytest.skip(...)' guard rather than fabricating heroes/buildings (faithful-snapshot rule). Validated separately via a throwaway BasicAI probe that shopping/buy_meal/visit_poi assertions match real behavior when a hero IS placed - so the skips are due to missing world entities, not assertion drift.",
+              "tests/test_wk64_system_runner.py: test_sim_update_runs_without_error_and_advances (==50ms), test_system_context_has_core_fields_today, test_combat_buff_waveevent_systems_expose_update_ctx, test_engine_stable_over_120_ticks.",
+              "DEVIATION (documented in the test file header AND here): config.DETERMINISTIC_SIM defaults to 0/False, so SimEngine.update does NOT advance _sim_now_ms in the default config (sim_engine.py ~line 607 is gated on DETERMINISTIC_SIM). The plan scaffold for test_sim_update_runs_without_error_and_advances asserts +50ms but omits enabling determinism, so the LITERAL scaffold yields delta=0 and FAILS on current code. To honor the non-negotiable 'must PASS on current code' gate, I followed the existing project convention in tests/test_engine_sim_boundary.py and wrapped the test in unittest.mock.patch forcing DETERMINISTIC_SIM=True in BOTH game.engine and game.sim_engine. This preserves the plan intent (one update advances sim time by exactly 50ms) and the test PASSES. Every other test is verbatim."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_ai_contracts.py tests/test_wk64_system_runner.py -v -rs",
+              "exit_code": 0,
+              "result": "4 passed, 7 skipped, 0 failed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "510 passed, 7 skipped, 0 failed in ~64s"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q --ignore=tests/test_wk64_ai_contracts.py --ignore=tests/test_wk64_system_runner.py",
+              "exit_code": 0,
+              "result": "506 passed (baseline without my two files; 506+4 new passes = 510; the 7 skips are all mine)"
+            }
+          ],
+          "evidence": {
+            "new_files_per_test": {
+              "tests/test_wk64_ai_contracts.py::test_buy_meal_arrival_purchases_and_returns_idle": "SKIP (no heroes in headless engine)",
+              "tests/test_wk64_ai_contracts.py::test_shopping_arrival_enters_shop_and_sets_pending_task": "SKIP (no heroes in headless engine)",
+              "tests/test_wk64_ai_contracts.py::test_rest_inn_arrival_sets_pending_rest_inn": "SKIP (no heroes in headless engine; also no inn in default world)",
+              "tests/test_wk64_ai_contracts.py::test_get_drink_arrival_sets_pending_get_drink_and_idle": "SKIP (no heroes in headless engine; also no inn in default world)",
+              "tests/test_wk64_ai_contracts.py::test_going_home_arrival_clears_target": "SKIP (no heroes in headless engine; also no hero.home_building)",
+              "tests/test_wk64_ai_contracts.py::test_visit_poi_arrival_clears_target_and_idles": "SKIP (no heroes in headless engine)",
+              "tests/test_wk64_ai_contracts.py::test_contracts_module_round_trips_when_present": "SKIP (ai.contracts not present until Wave 1 - expected)",
+              "tests/test_wk64_system_runner.py::test_sim_update_runs_without_error_and_advances": "PASS (+50ms with DETERMINISTIC_SIM patched on)",
+              "tests/test_wk64_system_runner.py::test_system_context_has_core_fields_today": "PASS",
+              "tests/test_wk64_system_runner.py::test_combat_buff_waveevent_systems_expose_update_ctx": "PASS",
+              "tests/test_wk64_system_runner.py::test_engine_stable_over_120_ticks": "PASS"
+            },
+            "new_files_totals": "4 passed, 7 skipped, 0 failed",
+            "full_suite": "510 passed, 7 skipped, 0 failed (the 7 skips are exactly the 7 from my two new files)",
+            "arrival_coverage": {
+              "covered_assertions_validated_via_probe": [
+                "buy_meal",
+                "shopping",
+                "visit_poi"
+              ],
+              "authored_but_skip_on_default_world": [
+                "buy_meal",
+                "shopping",
+                "rest_inn",
+                "get_drink",
+                "going_home",
+                "visit_poi"
+              ],
+              "skip_reason": "default headless world has 0 heroes (and no inn/blacksmith/home_building); plan mandates pytest.skip over fabrication."
+            }
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Wave 1A (Agent 06): land ai/contracts.py -> test_contracts_module_round_trips_when_present should flip SKIP -> PASS (len(TargetType)==13).",
+            "Wave 1B (Agent 05): widen SystemContext + add SystemRunner -> test_system_context_has_core_fields_today must stay green.",
+            "PM note: the ONLY deviation from the literal plan scaffold is the DETERMINISTIC_SIM mock-patch on test_sim_update_runs_without_error_and_advances, required because DETERMINISTIC_SIM defaults off (delta would be 0, not 50). Matches the existing tests/test_engine_sim_boundary.py convention. If the PM prefers the literal scaffold, that test FAILS on current config - flag for decision, but the current form PASSES per the zero-failures gate.",
+            "Optional future: a hero-populated headless fixture would let the 6 arrival tests run assertions instead of skipping (they are validated-correct today via probe)."
+          ]
+        },
+        "wk64_pb_w0_strengthen": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w0_strengthen",
+          "status": "done",
+          "round_meta": {
+            "wave": "Phase B Wave 0",
+            "role": "QA_TestEngineering_Lead",
+            "build_target": "Make the two arrival tests Wave 2 actually converts (buy_meal, shopping) genuinely EXECUTE the real arrival dispatch instead of skipping, so they protect the Wave 2 extraction. Edit ONLY tests/test_wk64_ai_contracts.py.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": "wk64_pb_w0_characterization (this same file, prior round)"
+          },
+          "what_i_changed": {
+            "summary": "Converted test_buy_meal_arrival_purchases_and_returns_idle and test_shopping_arrival_enters_shop_and_sets_pending_task from SKIP-on-no-heroes to genuinely RUNNING: each now constructs a Hero placed AT the relevant building (food_stand / marketplace) and a BasicAI controller, drives the real BasicAI.handle_moving -> bounty_pursuit.handle_moving dispatch, and asserts the true post-conditions. The other arrival tests (rest_inn, get_drink, going_home, visit_poi) and the contracts round-trip test are unchanged (still skip, as the plan allows). No production code or other tests touched.",
+            "files_created": [],
+            "files_edited": [
+              "tests/test_wk64_ai_contracts.py",
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (this log)"
+            ],
+            "notes": [
+              "ROOT CAUSE the prior tests skipped (and were latently broken): the default GameEngine(headless=True) sets sim.ai_controller=None (game/sim_engine.py:134; it is only wired externally via game/engine.py:619 setter / ursina_app.py:181 factory). The prior tests bound ai = engine.sim.ai_controller (None) and skipped earlier on 'if not heroes', so they never called ai.handle_moving -> the None controller was never exercised. Fix: ai = engine.sim.ai_controller or BasicAI(). BasicAI() takes no required args, sets hunger_behavior=hunger in __init__, and BasicAI.handle_moving delegates to bounty_pursuit.handle_moving (ai/basic_ai.py:364-365).",
+              "buy_meal: locate the default-world food_stand via ai.behaviors.hunger.find_nearest_food_stand(probe_hero, engine.sim.buildings); construct Hero(stand.center_x, stand.center_y, hero_class=warrior, hero_id=h_test_buy_meal); append to engine.sim.heroes; gold=999; state=MOVING; target={type:buy_meal,food_stand:stand}; target_position=(hero.x,hero.y); drive ai.handle_moving. Asserts hero.target is None and state==IDLE. Drives the real buy_meal branch (bounty_pursuit ~521-524) -> hunger.handle_meal_arrival (~219-238).",
+              "shopping: locate the default-world marketplace by building_type; construct Hero at it (hero_id=h_test_shopping); append; state=MOVING; target={type:shopping,marketplace:shop,blacksmith:None}; target_position=(hero.x,hero.y); drive ai.handle_moving. Asserts hero.target is None, state==SHOPPING, pending_task==shopping, pending_task_building is shop (bounty_pursuit ~488-505).",
+              "pytest.skip kept ONLY as a last-resort guard if the default world ever stops spawning the food_stand / marketplace (it spawns both today). No buildings are fabricated; Hero construction matches tests/test_wk64_pathfinding_defer.py and tests/test_wk63_engine_boundary.py::_make_headless_engine_with_hero.",
+              "Arrival gate confirmed at bounty_pursuit.handle_moving ~362-364 (if hero.target_position and dist<=TILE_SIZE*1.5); placing the hero exactly at target_position makes dist=0 so the arrival branch fires deterministically.",
+              "Updated the module docstring Honesty note to reflect that buy_meal+shopping now RUN (no longer claim every test skips on the default world); the remaining skips are documented as building/home/contracts-dependent."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_ai_contracts.py -v",
+              "exit_code": 0,
+              "result": "2 passed, 5 skipped, 0 failed. buy_meal PASSED, shopping PASSED; rest_inn/get_drink/going_home/visit_poi/contracts SKIPPED."
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "512 passed, 5 skipped, 0 failed in ~63s. (Was 510 passed / 7 skipped last round; the 2 newly-running tests moved from skip to pass: skips 7->5, passes 510->512.)"
+            }
+          ],
+          "evidence": {
+            "target_file_per_test": {
+              "tests/test_wk64_ai_contracts.py::test_buy_meal_arrival_purchases_and_returns_idle": "PASS (RUNS real BasicAI.handle_moving -> bounty_pursuit buy_meal -> hunger.handle_meal_arrival; asserts target None + IDLE)",
+              "tests/test_wk64_ai_contracts.py::test_shopping_arrival_enters_shop_and_sets_pending_task": "PASS (RUNS real bounty_pursuit shopping branch; asserts target None + SHOPPING + pending_task==shopping + pending_task_building is shop)",
+              "tests/test_wk64_ai_contracts.py::test_rest_inn_arrival_sets_pending_rest_inn": "SKIP (no inn in default world - unchanged, allowed)",
+              "tests/test_wk64_ai_contracts.py::test_get_drink_arrival_sets_pending_get_drink_and_idle": "SKIP (no inn in default world - unchanged, allowed)",
+              "tests/test_wk64_ai_contracts.py::test_going_home_arrival_clears_target": "SKIP (no hero.home_building in default world - unchanged, allowed)",
+              "tests/test_wk64_ai_contracts.py::test_visit_poi_arrival_clears_target_and_idles": "SKIP (unchanged, allowed; existing AI suite covers it)",
+              "tests/test_wk64_ai_contracts.py::test_contracts_module_round_trips_when_present": "SKIP (ai.contracts not present until Wave 1 - unchanged, expected)"
+            },
+            "target_file_totals": "2 passed, 5 skipped, 0 failed",
+            "full_suite": "512 passed, 5 skipped, 0 failed (the 5 skips are exactly the 5 remaining skips in this file)",
+            "real_dispatch_confirmation": "Both tests now go through BasicAI.handle_moving -> bounty_pursuit.handle_moving with a real Hero at a real default-world building; they will FAIL if Wave 2 extraction of arrival dispatch / HeroTask conversion changes the observable buy_meal or shopping post-conditions. Verified independently via a throwaway BasicAI probe before editing (buy_meal -> target None+IDLE; shopping -> target None+SHOPPING+pending_task==shopping+pending_task_building is shop)."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Wave 2 (arrival_handlers.py extraction + hunger/shopping -> HeroTask): these two tests are now the live regression net - keep them green. Their post-conditions (target None / IDLE for buy_meal; target None + SHOPPING + pending_task==shopping + pending_task_building for shopping) are the contract to preserve.",
+            "Optional: a hero+inn+home populated headless fixture would let rest_inn/get_drink/going_home/visit_poi also run instead of skip; deferred (existing AI suite covers them)."
+          ]
+        },
+        "wk64_pb_g1_gate": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_g1_gate",
+          "round_meta": {
+            "wave": "Phase B Gate 1",
+            "build_target": "Independently verify Wave 1 (Agent 06 ai/contracts.py + Agent 05 SystemContext/SystemRunner) before Wave 2 proceeds. Verification only; no production edits.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": "wk64_phaseB_w1 (Agent 06 + Agent 05 Wave 1 deliverables)"
+          },
+          "prompt_summary": "Gate 1: run full pytest + determinism_guard + qa_smoke --quick (all PASS, call out speed_scaling 0.25x). Structural greps: ai/contracts.py with TargetType(13)+HeroTask+coerce_task+assign_hero_task; SystemContext has 7 new fields; game/sim/system_runner.py + SystemRunner referenced in sim_engine.py; confirm NO ai/behaviors/** or bounty_pursuit.py changed in Wave 1. Verdict PASS/FAIL. DO NOT COMMIT.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification only. No production code changed. GATE 1 = PASS: all three gates green and every Wave-1 structural deliverable confirmed. Diff since the Phase A baseline (19823b9) is exactly the allowed Wave-1 set (ai/contracts.py NEW, game/sim/system_runner.py NEW, game/sim_engine.py MOD, game/systems/protocol.py MOD) + Wave-0 tests + agent logs. No ai/behaviors/** file and no bounty_pursuit.py was touched.",
+            "files_created": [],
+            "files_modified": [
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (log only)"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "513 passed, 4 skipped, 1 warning in 63.93s."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "[determinism_guard] PASS: no violations found. Confirms Agent 05's SystemRunner/context change introduced no wall-clock or unseeded-RNG ordering."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "DONE: PASS. All headless profiles exit 0. speed_scaling 0.25x = [qa] PASS bounty_exists=True bounty_has_responder=True (the original WK63 regression stays fixed under Wave 1). base + bounty preset both PASS with bounty_has_responder=True; all four speed-scaling profiles, hero_stuck_repro, no-enemies, mock-LLM, interior/quest/conversation/direct_prompt all exit 0."
+            },
+            {
+              "cmd": "python -c \"from ai.contracts import TargetType; print(len(list(TargetType)))\"",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "Prints 13. Values exactly: bounty, direct_prompt, visit_poi, going_home, shopping, rest_inn, get_drink, buy_meal, patrol, explore_frontier, defend_castle, defend_neutral, journey_explore."
+            },
+            {
+              "cmd": "git diff --name-only 19823b9 -- ai/ ; git ls-files --others --exclude-standard -- ai/",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "Tracked ai/ diff is EMPTY; only untracked ai/ file is ai/contracts.py. Confirms no ai/behaviors/** and no bounty_pursuit.py modified in Wave 1."
+            },
+            {
+              "cmd": "git diff --stat 19823b9 ; git ls-files --others --exclude-standard",
+              "exit_code": 0,
+              "cwd": "C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom",
+              "notes": "Tracked changes since baseline: game/sim_engine.py (+23), game/systems/protocol.py (net +12), and 3 agent log files. Untracked: ai/contracts.py, game/sim/system_runner.py, tests/test_wk64_ai_contracts.py, tests/test_wk64_system_runner.py = exactly Wave-1 allowed set + Wave-0 tests + logs."
+            }
+          ],
+          "evidence": {
+            "gate_results": {
+              "pytest": "513 passed, 4 skipped, 1 warning in 63.93s (exit 0)",
+              "determinism_guard": "PASS: no violations found (exit 0)",
+              "qa_smoke_quick": "DONE: PASS (exit 0)",
+              "qa_smoke_speed_scaling_0_25x": "[qa] PASS - bounty_exists=True, bounty_has_responder=True (WK63 regression remains fixed under Wave 1)"
+            },
+            "structural_greps": {
+              "ai_contracts_exists": "YES (untracked new file ai/contracts.py)",
+              "TargetType_member_count": "13 (PASS - matches spec exactly)",
+              "HeroTask_present": "YES (with to_dict + from_dict)",
+              "coerce_task_present": "YES",
+              "assign_hero_task_present": "YES",
+              "SystemContext_new_fields": "ALL 7 PRESENT: peasants, guards, bounties, pois, rubble_records, lairs, castle (each defaulted; positional-6 construction still works). Core 6 (heroes, enemies, buildings, world, economy, event_bus) intact.",
+              "system_runner_file_exists": "YES (game/sim/system_runner.py, SystemRunner class with update_all)",
+              "SystemRunner_referenced_in_sim_engine": "YES - imported at sim_engine.py:39; constructed at sim_engine.py:130 as SystemRunner((self.buff_system, self.wave_event_system))",
+              "no_wave2_files_modified": "CONFIRMED - no ai/behaviors/** file and no bounty_pursuit.py changed; only ai/ change is the new ai/contracts.py. Full change set since baseline 19823b9 = allowed Wave-1 files (contracts.py, system_runner.py, sim_engine.py, protocol.py) + Wave-0 tests + agent logs."
+            },
+            "baseline_commit": "19823b9 (Sprint wk64 Phase A: land wk63 + fix pathfinding-budget starvation)",
+            "verdict": "GATE 1 PASS"
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "PM: GATE 1 is PASS - clear Wave 2 (Agent 06: ai/arrival_handlers.py + convert hunger & shopping to HeroTask) to proceed.",
+            "Wave 2 owner (Agent 06): contracts.py is verified stable (13 TargetTypes, round-trip works); build arrival_handlers.py against it. Keep the one-way import (bounty_pursuit -> arrival_handlers).",
+            "Gate 2 (me, post-Wave-2): re-run full gate stack + validate_assets + base_overview screenshots; grep that hero.target is never assigned a HeroTask object (only via assign_hero_task)."
+          ]
         }
       }
     }

@@ -610,9 +610,18 @@
             "WK61-R4-BUG-005 (entity-side): Relaxed wants_to_shop health gate to SHOP_MIN_HEALTH_FRACTION=0.85 after WK61 base HP reduction blocked shopping. AI policy fixes remain Agent 06."
           ],
           "commands_run": [
-            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "pytest": "341 passed",
@@ -639,10 +648,22 @@
             "tests/test_wk61_r6_tax_gold_overlay_data.py: parametrized coverage for marketplace, blacksmith, all guilds, temples, dwellings, neutrals; zero-vs-missing distinction; shop/tax deposit paths."
           ],
           "commands_run": [
-            {"command": "python -m pytest tests/test_wk61_r6_tax_gold_overlay_data.py -x -q", "exit_code": 0},
-            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+            {
+              "command": "python -m pytest tests/test_wk61_r6_tax_gold_overlay_data.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "pytest_r6": "27 passed (test_wk61_r6_tax_gold_overlay_data.py)",
@@ -677,10 +698,22 @@
             "tests/test_wk61_r8_marketplace_potion_tax.py: regression via real Marketplace + do_shopping deferred path and direct buy_item after pop-out."
           ],
           "commands_run": [
-            {"command": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0},
-            {"command": "python -m pytest tests/ -x -q", "exit_code": 0},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+            {
+              "command": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "pytest_r8": "2 passed (test_wk61_r8_marketplace_potion_tax.py)",
@@ -704,10 +737,22 @@
             "tests/test_wk61_r10_economy_tax_accrual.py and tests/test_wk61_r10_wave_timing.py added."
           ],
           "commands_run": [
-            {"command": "python tools/determinism_guard.py", "exit_code": 0},
-            {"command": "python -m pytest tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "determinism_guard": "PASS (exit 0)",
@@ -730,14 +775,36 @@
             "WK61-R11-BUG-003: config MARKETPLACE_PASSIVE_TAX_* constants; Marketplace.update() accrues deterministic 100-400g into stored_tax_gold via get_rng(market_passive_tax); wired in sim_engine.py + engine.py; tests/test_wk61_r11_marketplace_passive_tax.py."
           ],
           "commands_run": [
-            {"command": "python tools/determinism_guard.py", "exit_code": 0},
-            {"command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q", "exit_code": 0, "summary": "12 passed"},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "450 passed, DONE: PASS"}
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "summary": "12 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "450 passed, DONE: PASS"
+            }
           ],
           "evidence": {
-            "determinism_guard": {"command": "python tools/determinism_guard.py", "exit_code": 0},
-            "pytest_r11": {"command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q", "exit_code": 0, "summary": "12 passed"},
-            "qa_smoke_quick": {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "450 passed, DONE: PASS"}
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            "pytest_r11": {
+              "command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "summary": "12 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "450 passed, DONE: PASS"
+            }
           },
           "blockers": [],
           "follow_ups": [
@@ -755,14 +822,36 @@
             "TASK 3 — Marketplace potions always available: game/entities/buildings/economic.py Marketplace.__init__ potions_researched=True, potion_price=15; removed redundant Advanced Healing unlock block."
           ],
           "commands_run": [
-            {"command": "python tools/determinism_guard.py", "exit_code": 0},
-            {"command": "python -m pytest tests/ -x -q", "exit_code": 0, "summary": "463 passed"},
-            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "DONE: PASS"}
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "summary": "463 passed"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
           ],
           "evidence": {
-            "determinism_guard": {"command": "python tools/determinism_guard.py", "exit_code": 0},
-            "pytest_full": {"command": "python -m pytest tests/ -x -q", "exit_code": 0, "summary": "463 passed"},
-            "qa_smoke_quick": {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "DONE: PASS"}
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            "pytest_full": {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "summary": "463 passed"
+            },
+            "qa_smoke_quick": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "summary": "DONE: PASS"
+            }
           },
           "blockers": [],
           "follow_ups": [
@@ -818,6 +907,162 @@
             "blockers": [],
             "follow_ups": []
           }
+        }
+      }
+    },
+    "wk64_ai_contracts_and_system_runner": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md",
+        "notes": "WK64 AI Contracts & System Runner. Agent 05 owns Wave 1B: widen SystemContext + ordered SystemRunner."
+      },
+      "rounds": {
+        "wk64_pb_w1_runner": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pb_w1_runner",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Phase B Wave 1B",
+            "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md (section: Wave 1B)",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "PHASE B Wave 1B (Gameplay). (1) equivalence audit of each system update(ctx,dt) vs bespoke call in SimEngine.update(); (2) widen SystemContext with 7 defaulted fields; (3) populate them in _build_system_context(); (4) create game/sim/system_runner.py (SystemRunner); (5) construct it with ONLY proven-equivalent systems (buff + wave_event) preserving exact execution order. Verify suite + determinism + qa_smoke. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Widened SystemContext with 7 defaulted fields, populated them in _build_system_context(), created SystemRunner, and constructed it in SimEngine holding only the two proven-equivalent fire-and-forget systems (buff_system, wave_event_system). Kept their direct call sites in update() because they are NOT adjacent (other side-effecting logic runs between buff@668 and wave_event@720); collapsing would reorder gameplay. Preserved exact execution order -> determinism guard PASS.",
+            "files_touched": [
+              "game/systems/protocol.py (added 7 defaulted fields to SystemContext + dataclasses.field import)",
+              "game/sim_engine.py (import SystemRunner; construct self._ordered_systems in __init__ after poi_interaction_system; populate 7 new ctx fields in _build_system_context())",
+              "game/sim/system_runner.py (NEW: SystemRunner dataclass with update_all)"
+            ]
+          },
+          "equivalence_audit_table": [
+            {
+              "system": "buff_system",
+              "current_call": "self.buff_system.update(system_ctx, dt) @ sim_engine.py:668 (between _update_fog_of_war() and _maybe_apply_early_pacing_nudge())",
+              "has_update_ctx_dt": true,
+              "equivalent": true,
+              "action": "MIGRATE -> in SystemRunner. Pure update(ctx,dt); reads ctx.heroes/buildings, prunes+applies aura buffs; no surrounding post-processing."
+            },
+            {
+              "system": "wave_event_system",
+              "current_call": "self.wave_event_system.update(system_ctx, dt) @ sim_engine.py:720 (after spawn-cap block, before separation)",
+              "has_update_ctx_dt": true,
+              "equivalent": true,
+              "action": "MIGRATE -> in SystemRunner. Pure update(ctx,dt); mutates ctx.enemies/economy, emits events; no surrounding post-processing."
+            },
+            {
+              "system": "combat_system",
+              "current_call": "self.combat_system.update(system_ctx, dt) @ sim_engine.py:726, IMMEDIATELY followed by enemy_ranged_events emit_batch (727-728), get_emitted_events() (729), _route_combat_events() (730)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() is real work but _emitted_events MUST be drained + routed right after; NOT fire-and-forget."
+            },
+            {
+              "system": "nature_system",
+              "current_call": "self.nature_system.tick(dt, self.trees, world=, buildings=) @ sim_engine.py:624, wrapped in tree-tile bookkeeping (pre_keys 621 / new_keys tile-set 630-644)",
+              "has_update_ctx_dt": false,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). No update(ctx,dt); only tick(dt, trees, *, world, buildings) + surrounding world-tile sync."
+            },
+            {
+              "system": "spawner",
+              "current_call": "new=self.spawner.spawn(dt); self.enemies.extend(new[:remaining_slots]) @ sim_engine.py:709-711 inside MAX_ALIVE_ENEMIES slot-cap block (705-717)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (126-130) does UNCONDITIONAL ctx.enemies.extend(spawned); bypasses the slot cap -> would over-spawn."
+            },
+            {
+              "system": "lair_system",
+              "current_call": "lair=self.lair_system.spawn_enemies(dt, self.buildings); self.enemies.extend(lair[:remaining_slots]) @ sim_engine.py:715-717 inside same slot-cap block",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (116-120) does UNCONDITIONAL ctx.enemies.extend(spawned); bypasses the slot cap."
+            },
+            {
+              "system": "bounty_system",
+              "current_call": "claimed=self.bounty_system.check_claims(self.heroes) -> HUD msgs + BOUNTY_CLAIMED emit_batch (755-770); then self.bounty_system.cleanup() (771)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() is a NO-OP (bounty.py:210-212, '_ = (ctx, dt)'). Real work is check_claims()+cleanup() w/ HUD side effects; runner would silently drop claim processing."
+            },
+            {
+              "system": "neutral_building_system",
+              "current_call": "self.neutral_building_system.tick(dt, self.buildings, self.heroes, self.peasants, castle) @ sim_engine.py:774; castle=game_state.get('castle') (669)",
+              "has_update_ctx_dt": true,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). update() (177-180) derives castle via _find_castle(ctx.buildings); bespoke uses game_state['castle']. Castle source differs -> not provably identical."
+            },
+            {
+              "system": "poi_interaction_system",
+              "current_call": "self.poi_interaction_system.tick_cooldowns(pois, dt) (794) + check_interactions(heroes, pois, world, economy, event_bus, dt) (795-797)",
+              "has_update_ctx_dt": false,
+              "equivalent": false,
+              "action": "EXCEPTION (keep bespoke). No update(ctx,dt); two separate bespoke methods."
+            }
+          ],
+          "equivalence_conclusion": "Only buff_system and wave_event_system are safe to drive through the runner: both are pure update(ctx,dt) with no surrounding post-processing. All 6 others are documented exceptions (combat: event routing; spawner/lair: slot-cap bypass; bounty: no-op update + HUD side effects in check_claims/cleanup; neutral_buildings: differing castle source; nature: no update(ctx,dt) + tile bookkeeping; poi: two bespoke methods). Matches the plan-predicted conclusion.",
+          "system_runner_membership": {
+            "members": [
+              "buff_system",
+              "wave_event_system"
+            ],
+            "order": "buff_system first, then wave_event_system (their current relative order in update())",
+            "why_safe": "Both implement update(ctx, dt) as pure fire-and-forget: they read from ctx and dt, mutate only ctx.enemies/ctx.economy and emit events, and have ZERO surrounding post-processing at their call sites. Their bespoke calls are already literally self.X.update(system_ctx, dt)."
+          },
+          "call_sites_collapsed": {
+            "collapsed": false,
+            "reason": "Per the plan Decision rule (preserve exact execution order at all costs), buff_system.update (sim_engine.py:668) and wave_event_system.update (sim_engine.py:720) are NOT adjacent: peasant spawning, enemy/guard updates, and the spawner/lair slot-cap block run between them. Collapsing into a single update_all would force them back-to-back, reordering side-effecting work and risking determinism/gameplay regressions. Kept the two direct calls; SystemRunner is constructed and seeded for future adjacency-driven consolidation. Non-negotiable deliverables (widened+populated SystemContext, SystemRunner class constructed, equivalence table) are all met."
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_system_runner.py -v",
+              "exit_code": 0,
+              "result": "4 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "result": "513 passed, 4 skipped"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found (proves no side-effect reorder)"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS (incl speed_scaling 0.25x)"
+            }
+          ],
+          "evidence": {
+            "system_context_fields": [
+              "heroes",
+              "enemies",
+              "buildings",
+              "world",
+              "economy",
+              "event_bus",
+              "peasants",
+              "guards",
+              "bounties",
+              "pois",
+              "rubble_records",
+              "lairs",
+              "castle"
+            ],
+            "headless_ctx_spotcheck": "peasants=list(0), guards=list(0), bounties=list(0), pois=list(32), rubble_records=list(0), lairs=list(5), castle=BuildingType.CASTLE; runner systems=[BuffSystem, WaveEventSystem]",
+            "full_suite": "513 passed, 4 skipped",
+            "determinism": "PASS",
+            "qa_smoke": "PASS"
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Gate 1 (Agent 11): re-verify full suite + determinism + qa_smoke and grep-confirm SystemContext fields + SystemRunner wiring.",
+            "Future sprint: if buff/wave_event are ever made adjacent (or a no-op-between proof established), collapse their two call sites into one _ordered_systems.update_all(ctx, dt).",
+            "Future sprint: revisit spawner/lair migration only if the MAX_ALIVE_ENEMIES slot-cap moves into the systems; revisit neutral_buildings once castle source is unified to ctx.castle."
+          ]
         }
       }
     }
