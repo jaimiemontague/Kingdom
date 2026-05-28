@@ -3820,6 +3820,61 @@
             "model": "claude-opus-4-8[1m]",
             "effort": "max"
           }
+        },
+        "wk64_close": {
+          "round_meta": {
+            "title": "WK64 sprint close — Phase A + Phase B shipped",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max",
+            "execution": "Agent 1 orchestrated subagents directly (Agent tool, Opus). Each subagent onboarded via .cursor/rules, followed its pm_agent_prompt, updated its own log."
+          },
+          "pm_status_summary": "WK64 COMPLETE — all Definition-of-Done gates green; 3 commits on main. Phase A landed wk63 (entity IDs, presentation SelectionState, GameCommands ports, deterministic pathfinding budget) and fixed the budget-starvation regression it introduced (compute_path_worldpoints now DEFERS with None on exhaustion instead of returning [] that callers wiped; path-less heroes direct-steer on defer). Phase B added ai/contracts.py (typed TargetType/HeroTask), expanded SystemContext + an ordered SystemRunner (buff+wave_event only; order preserved), and extracted the arrival dispatch from bounty_pursuit (585->363 lines) into ai/arrival_handlers.py with hunger+shopping now authoring via HeroTask. hero.target stays a dict (critical rule upheld).",
+          "pm_evidence": {
+            "pytest": "513 passed, 4 skipped, 0 failed",
+            "determinism_guard": "PASS (byte-identical twice-run cross-check on observe_sync seed 3)",
+            "qa_smoke_quick": "PASS incl speed_scaling 0.25x (the original WK63 regression)",
+            "validate_assets": "errors=0 (46 pre-existing optional-model warns)",
+            "pathfinding_30hero_stuck_events": "2 (broken WK63=37, keep-path-only=34, crowding baseline=27, acceptance<=30)",
+            "screenshot": "base_overview seed3 ticks600 -> docs/screenshots/wk64_ai_contracts_after; heroes reach buildings, none frozen, scene coherent (no visible regression)",
+            "critical_rule": "grep confirms hero.target only ever assigned a dict (assign_hero_task -> to_dict); no HeroTask object stored on hero.target"
+          },
+          "pm_commits": [
+            "19823b9 Sprint wk64 Phase A: land wk63 + fix pathfinding-budget starvation",
+            "2857493 Sprint wk64 Phase B Waves 0-1: characterization + contracts + SystemRunner",
+            "a5b0b93 Sprint wk64 Phase B Wave 2: extract arrival handlers + convert hunger/shopping to HeroTask"
+          ],
+          "pm_round_outcomes": {
+            "wk64_pa_a1_tests": "Agent 11 DONE — failing-first defer tests (2 fail/1 pass as designed).",
+            "wk64_pa_a2_fix": "Agent 04 DONE — compute_path_worldpoints returns None on exhaustion; 8 callers keep path on defer; cap 12->24.",
+            "wk64_pa_a2_directsteer": "Agent 04 DONE (A2.1) — path-less heroes direct-steer on defer; 30-hero stuck 34->2.",
+            "wk64_pa_a3_gate": "Agent 11 — gate (found 30-hero starvation -> A2.1); reconciled obsolete wk63 test to None contract.",
+            "wk64_pb_w0_characterization": "Agent 11 DONE — characterization tests; buy_meal+shopping strengthened to run live (real Wave-2 net).",
+            "wk64_pb_w1_contracts": "Agent 06 DONE — ai/contracts.py (TargetType x13 + HeroTask + bridges).",
+            "wk64_pb_w1_runner": "Agent 05 DONE — SystemContext +7 fields; SystemRunner(buff,wave_event); equivalence table delivered; order preserved.",
+            "wk64_pb_g1_gate": "Agent 11 — GATE 1 PASS.",
+            "wk64_pb_w2_arrival": "Agent 06 DONE — ai/arrival_handlers.py + dispatch_arrival; hunger+shopping -> HeroTask.",
+            "wk64_pb_g2_gate": "Agent 11 — GATE 2 PASS (regression + screenshot).",
+            "wk64_pb_g2_determinism": "Agent 04 — GATE 2 determinism PASS (twice-run identical)."
+          },
+          "pm_next_actions_by_agent": {
+            "human": "Optional manual playtest. Then choose next sprint from the WK64 follow-up backlog."
+          },
+          "pm_followups": [
+            "Item 18: replace BasicAI priority ladder with a TaskRouter (now unblocked by HeroTask + arrival handlers).",
+            "Item 15+: convert remaining behaviors (bounty, direct_prompt, POI, defense, journey) to HeroTask (coerce_task already bridges).",
+            "Item 22+: migrate more systems into SystemRunner as their update(ctx) is proven equivalent (combat needs event-routing redesign first; spawner/lair need slot-cap handling; bounty.update is a no-op).",
+            "Tooling: consider adding game/sim_engine.py to determinism_guard DEFAULT_SCAN_DIRS for static coverage (Agent 04 note).",
+            "Log rolling at sprint boundary: python tools/roll_agent_logs.py --keep 7 --write-index (deferred; optional)."
+          ],
+          "pm_send_list_minimal": {
+            "waves": [],
+            "rationale": "Sprint closed; no agents active.",
+            "do_not_send": [
+              "all"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
         }
       }
     }
