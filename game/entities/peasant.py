@@ -13,6 +13,15 @@ import math
 from enum import Enum, auto
 from config import TILE_SIZE
 
+# Monotonic entity ID allocation (deterministic: follows spawn order).
+_next_peasant_id = 0
+
+
+def _allocate_peasant_id() -> str:
+    global _next_peasant_id
+    _next_peasant_id += 1
+    return f"p{_next_peasant_id:08d}"
+
 
 class PeasantState(Enum):
     IN_CASTLE = auto()
@@ -35,6 +44,7 @@ class Peasant:
     ]
 
     def __init__(self, x: float, y: float):
+        self.entity_id: str = _allocate_peasant_id()
         self.x = x
         self.y = y
 

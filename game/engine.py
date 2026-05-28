@@ -36,7 +36,8 @@ from game.ui import HUD, BuildingMenu, DebugPanel, BuildingPanel, DevToolsPanel
 from game.ui.building_list_panel import BuildingListPanel
 from game.ui.pause_menu import PauseMenu
 from game.ui.build_catalog_panel import BuildCatalogPanel
-from game.game_commands import EngineBackedGameCommands
+from game.game_commands import EngineCommandHub
+from game.presentation.selection_state import SelectionState
 from game.input_handler import InputHandler
 from game.display_manager import DisplayManager
 from game.building_factory import BuildingFactory
@@ -82,6 +83,9 @@ class GameEngine:
 
         # Stage 2: simulation core moved into SimEngine.
         self.sim = SimEngine(early_nudge_mode=early_nudge_mode)
+
+        # WK63: Presentation-owned selection state (stores entity IDs, not object refs).
+        self.selection = SelectionState()
 
         # Camera dt is presentation-owned (camera moves independently of sim tick rate).
         self._camera_dt = 0.0
@@ -215,7 +219,7 @@ class GameEngine:
             )
             self.pause_menu = PauseMenu(self.window_width, self.window_height, engine=self, audio_system=self.audio_system, difficulty_system=self.difficulty_system)
             self.build_catalog_panel = BuildCatalogPanel(self.window_width, self.window_height)
-            self.input_handler = InputHandler(EngineBackedGameCommands(self))
+            self.input_handler = InputHandler(EngineCommandHub(self))
             self.cleanup_manager = CleanupManager(self)
             self.vfx_system = VFXSystem()
             self.event_bus.subscribe("*", self.audio_system.on_event)
@@ -536,37 +540,75 @@ class GameEngine:
     def bounty_system(self):
         return self.sim.bounty_system
 
-    @property
-    def selected_building(self):
-        return self.sim.selected_building
-
-    @selected_building.setter
-    def selected_building(self, v):
-        self.sim.selected_building = v
-
-    @property
-    def selected_peasant(self):
-        return self.sim.selected_peasant
-
-    @selected_peasant.setter
-    def selected_peasant(self, v):
-        self.sim.selected_peasant = v
+    # --- WK63: Selection properties backed by SelectionState (ID-based lookup) ---
 
     @property
     def selected_hero(self):
-        return self.sim.selected_hero
+        if self.selection.selected_hero_id is None:
+            return None
+        for h in self.sim.heroes:
+            if h.hero_id == self.selection.selected_hero_id:
+                return h
+        self.selection.selected_hero_id = None  # stale reference
+        return None
 
     @selected_hero.setter
     def selected_hero(self, v):
-        self.sim.selected_hero = v
+        if v is None:
+            self.selection.clear_hero()
+        else:
+            self.selection.select_hero(v.hero_id)
+
+    @property
+    def selected_building(self):
+        if self.selection.selected_building_id is None:
+            return None
+        for b in self.sim.buildings:
+            if getattr(b, "entity_id", None) == self.selection.selected_building_id:
+                return b
+        self.selection.selected_building_id = None
+        return None
+
+    @selected_building.setter
+    def selected_building(self, v):
+        if v is None:
+            self.selection.clear_building()
+        else:
+            self.selection.select_building(v.entity_id)
 
     @property
     def selected_enemy(self):
-        return getattr(self.sim, "selected_enemy", None)
+        if self.selection.selected_enemy_id is None:
+            return None
+        for e in self.sim.enemies:
+            if getattr(e, "entity_id", None) == self.selection.selected_enemy_id:
+                return e
+        self.selection.selected_enemy_id = None
+        return None
 
     @selected_enemy.setter
     def selected_enemy(self, v):
-        self.sim.selected_enemy = v
+        if v is None:
+            self.selection.clear_enemy()
+        else:
+            self.selection.select_enemy(v.entity_id)
+
+    @property
+    def selected_peasant(self):
+        if self.selection.selected_peasant_id is None:
+            return None
+        for p in self.sim.peasants:
+            if getattr(p, "entity_id", None) == self.selection.selected_peasant_id:
+                return p
+        self.selection.selected_peasant_id = None
+        return None
+
+    @selected_peasant.setter
+    def selected_peasant(self, v):
+        if v is None:
+            self.selection.clear_peasant()
+        else:
+            self.selection.select_peasant(v.entity_id)
 
     @property
     def ai_controller(self):
@@ -1516,8 +1558,18 @@ class GameEngine:
             llm_available=getattr(self.ai_controller, "llm_brain", None) is not None,
             ui_cursor_pos=getattr(self, "_last_ui_cursor_pos", None),
         )
-        # WK61-FEAT-006: enemy selection state for UI
-        gs["selected_enemy"] = getattr(self, "selected_enemy", None)
+        # WK63: Override selection state from presentation-owned SelectionState.
+        gs["selected_hero"] = self.selected_hero
+        gs["selected_building"] = self.selected_building
+        gs["selected_peasant"] = self.selected_peasant
+        gs["selected_enemy"] = self.selected_enemy
+        # Recompute selected_hero_profile from updated selected_hero.
+        _sel = gs["selected_hero"]
+        if _sel is not None:
+            _sel_id = str(getattr(_sel, "hero_id", "") or "")
+            gs["selected_hero_profile"] = gs.get("hero_profiles_by_id", {}).get(_sel_id)
+        else:
+            gs["selected_hero_profile"] = None
         # Expose the presentation-layer engine for HUD command mode rendering.
         gs["engine"] = self
         return gs
@@ -1551,6 +1603,8 @@ class GameEngine:
             pause_menu_visible=bool(getattr(getattr(self, "pause_menu", None), "visible", False)),
             sim_blend_fraction=blend,
             sim_tick_id=self._sim_tick_counter,
+            selected_hero=self.selected_hero,
+            selected_building=self.selected_building,
         )
     
     def render(self):

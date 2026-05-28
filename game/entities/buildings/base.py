@@ -4,6 +4,16 @@ Core building primitives and shared research state.
 
 from dataclasses import dataclass
 
+# Monotonic entity ID allocation (deterministic: follows construction order).
+_next_building_id = 0
+
+
+def _allocate_building_id() -> str:
+    global _next_building_id
+    _next_building_id += 1
+    return f"b{_next_building_id:08d}"
+
+
 from config import (
     BUILDING_COLORS,
     BUILDING_COSTS,
@@ -59,6 +69,7 @@ class Building:
     """Base class for all buildings."""
 
     def __init__(self, grid_x: int, grid_y: int, building_type: BuildingType | str):
+        self.entity_id: str = _allocate_building_id()
         self.grid_x = grid_x
         self.grid_y = grid_y
         self.building_type = building_type

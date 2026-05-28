@@ -7,6 +7,15 @@ from enum import Enum, auto
 from config import TILE_SIZE
 from game.sim.timebase import now_ms
 
+# Monotonic entity ID allocation (deterministic: follows spawn order).
+_next_guard_id = 0
+
+
+def _allocate_guard_id() -> str:
+    global _next_guard_id
+    _next_guard_id += 1
+    return f"g{_next_guard_id:08d}"
+
 
 class GuardState(Enum):
     IDLE = auto()
@@ -19,6 +28,7 @@ class Guard:
     """Simple defensive unit: patrols around home, engages nearby enemies."""
 
     def __init__(self, x: float, y: float, home_building=None):
+        self.entity_id: str = _allocate_guard_id()
         self.x = x
         self.y = y
         self.home_building = home_building
@@ -159,9 +169,12 @@ class Guard:
                     getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit
                 )
                 if want_replan:
-                    self.path = compute_path_worldpoints(world, buildings or [], self.x, self.y, self.target_position[0], self.target_position[1])
-                    self._path_goal = goal_key
-                    self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
+                    _new_path = compute_path_worldpoints(world, buildings or [], self.x, self.y, self.target_position[0], self.target_position[1])
+                    if _new_path is not None:
+                        self.path = _new_path
+                        self._path_goal = goal_key
+                        self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
+                    # else: deferred -- keep existing path, retry next frame
                 follow_path(self, dt)
             else:
                 self.move_towards(self.target_position[0], self.target_position[1], dt)

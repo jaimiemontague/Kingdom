@@ -144,8 +144,11 @@ class TaxCollector:
                         self._path_goal = None
                     goal_key = (int(tx), int(ty))
                     if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
-                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
-                        self._path_goal = goal_key
+                        _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
+                        if _new_path is not None:
+                            self.path = _new_path
+                            self._path_goal = goal_key
+                        # else: deferred -- keep existing path, retry next frame
                     if self.path:
                         follow_path(self, dt)
                         reached = self.distance_to(tx, ty) < 5
@@ -196,8 +199,11 @@ class TaxCollector:
                     self._path_goal = None
                 goal_key = (int(tx), int(ty))
                 if (not self.path) or (getattr(self, "_path_goal", None) != goal_key):
-                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
-                    self._path_goal = goal_key
+                    _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, tx, ty)
+                    if _new_path is not None:
+                        self.path = _new_path
+                        self._path_goal = goal_key
+                    # else: deferred -- keep existing path, retry next frame
                 if self.path:
                     follow_path(self, dt)
                     reached = self.distance_to(tx, ty) < 5

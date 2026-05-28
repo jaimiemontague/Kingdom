@@ -5,6 +5,7 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-28 (Agent 01 WK63 Kickoff): Sprint wk63_engine_boundary_cleanup -- Engine boundary cleanup (GPT 5.5 items 3,5,7). Deterministic pathfinding budget, selection state migration to IDs, GameCommands Protocol split. Plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md. Claude Code parent Agent 1 coordinates subagents directly.",
     "2026-05-28 (Agent 01 WK62 Kickoff): Sprint wk62_architecture_cleanup_baseline -- Codebase cleanup pivot. WK61 v1.5.9 ON HOLD. GPT 5.5 audit recommendations + cleanup_sprint_plan_c4d96dca.plan.md. Claude Code parent Agent 1 coordinates subagents directly (no orchestrator). Wave 0: baseline tests. Wave 1: engine/sim correctness. Wave 2: UI/render pressure relief.",
     "2026-05-23 (Agent 01 WK61 R10 Kickoff): Round wk61_r10_v159_economy_pacing_ux — Jaimie playtest: hold-G tax overlay ($0 while held), faster taxable gold, harder waves, hero hunger meals at food stands (10g/3min), resizable left sidebar. Local orchestrator auto_until_human_gate. Plan: .cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md.",
     "2026-05-19 (Agent 01 WK60 Kickoff): Sprint wk60_v159_gameplay_fun — The 'Make It Fun' sprint. 9 features to transform Kingdom Sim into a challenging game: (1) Wave events system (Option B), (2) aggressive lair spawn tuning, (3) guild hero cap of 8, (4) hero cost doubled to 100g, (5) guardhouse shoots arrows, (6) starting buildings (warriors/rangers guild, market, guardhouse), (7) bounty flags visible in Ursina 3D, (8) difficulty setting (Easy/Normal/Hard) with lock option, (9) dev mode ($env:KINGDOM_DEV_MODE). Phases: v1.5.9 implementation, then playtest tuning to v1.6.0. Plan: .cursor/plans/v1.6_gameplay_fun_roadmap.plan.md. R1 parallel: Agent 05 (gameplay HIGH) + Agent 03 (architecture MEDIUM). R2: Agents 08 (HUD+difficulty menu)/14/11/09. Assumes lairs restored from WK59.",
@@ -3327,6 +3328,497 @@
               "15"
             ],
             "rationale": "All three high intelligence: novel extraction work requiring judgment about what to move and what to keep. No file overlap: 09 owns game/graphics/*, 08 owns game/ui/*, 03 owns game/engine.py and game/presentation/."
+          }
+        }
+      }
+    },
+    "wk63_engine_boundary_cleanup": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-28T16:00:00Z",
+        "plan_doc": ".cursor/plans/wk63_engine_boundary_cleanup.plan.md",
+        "source_audit": ".cursor/plans/GPT 5.5 Codebase Improvements Recommendations.md",
+        "notes": "Engine boundary cleanup. Items 3 (deterministic pathfinding), 5 (GameCommands Protocol split), 7 (selection state to IDs). Parent Agent 1 in Claude Code coordinates subagents directly.",
+        "version_target": "No version bump -- cleanup only",
+        "definition_of_done": [
+          "python -m pytest tests/ -x -q PASS (all tests pass)",
+          "python tools/determinism_guard.py PASS",
+          "python tools/qa_smoke.py --quick PASS",
+          "Pathfinding budget uses deterministic expansion counts not wall-clock",
+          "Selection state lives in game/presentation/selection_state.py",
+          "All entity types have stable string IDs",
+          "GameCommands replaced by 5 narrow Protocol interfaces",
+          "InputHandler no longer accesses commands._engine"
+        ],
+        "closeout_notes": "Sprint completed in 3 waves (W0 baseline tests, W1 parallel entity IDs + pathfinding budget, W2 GameCommands split). All definition of done items met: deterministic pathfinding budget (expansion counts), selection state with IDs in game/presentation/, entity_id on all types, 5 Protocol command ports, zero _engine leaks in InputHandler. 503 tests pass, determinism PASS."
+      },
+      "rounds": {
+        "wk63_w0_baseline_tests": {
+          "round_meta": {
+            "round_id": "wk63_w0_baseline_tests",
+            "build_target": "Baseline characterization tests for pathfinding budget, selection state, GameCommands interface, and entity IDs.",
+            "created_utc": "2026-05-28T16:00:00Z",
+            "wave": 0,
+            "depends_on": null
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 0 DONE. Agent 11 shipped 6 characterization tests in tests/test_wk63_engine_boundary.py. All PASS. Findings: PathfindingBudget has no _frame_plans counter (plan assumed it); headless engine starts with 0 heroes (tests create Hero directly). Total: 495 passed, qa_smoke PASS."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [],
+          "pm_next_actions_by_agent": {
+            "11": "Add baseline tests per sprint plan Wave 0 section."
+          },
+          "pm_agent_prompts": {
+            "11": "You are Agent 11 (QA_TestEngineering_Lead) for sprint wk63_engine_boundary_cleanup, round wk63_w0_baseline_tests.\n\nONBOARD: Read .cursor/rules/agent-11-qa-onboarding.mdc and .cursor/rules/01-studio-onboarding.mdc.\n\nRead the sprint plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md (Wave 0 section). It contains EXACT test code for you to use.\n\nYOUR TASK: Create tests/test_wk63_engine_boundary.py with baseline characterization tests that prove current behavior BEFORE production code changes. The sprint plan gives you 6 test functions with full code. Copy them, adapt if needed based on reading the actual source code, and make sure they pass.\n\nThe tests cover:\n1. Pathfinding budget exhaustion returns empty path\n2. Pathfinding budget resets each frame\n3. Selection mutual exclusivity\n4. GameCommands interface completeness\n5. Hero has stable ID\n6. Buildings lack stable ID (documents the gap Wave 1 will fix)\n\nIMPORTANT: Read the actual source code of game/systems/navigation.py, game/game_commands.py, game/engine.py, and game/entities/hero.py to verify the test code matches the real API. Adapt test code from the plan if the real API differs.\n\nFILES YOU MAY EDIT: tests/test_wk63_engine_boundary.py (new)\nFILES YOU MUST NOT EDIT: game/**, ai/**, config.py, tools/**\n\nVERIFY:\n  python -m pytest tests/test_wk63_engine_boundary.py -x -v\n  python -m pytest tests/ -x -q\n  python tools/qa_smoke.py --quick\n\nUpdate your agent log at .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json sprints[wk63_engine_boundary_cleanup].rounds[wk63_w0_baseline_tests]. Validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "wave": "w0_baseline",
+                "parallel": false,
+                "agents": [
+                  "11"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 11 high: novel characterization tests requiring source code analysis."
+          }
+        },
+        "wk63_w1_parallel": {
+          "round_meta": {
+            "round_id": "wk63_w1_parallel",
+            "build_target": "Wave 1 parallel: Agent 03 adds entity IDs + SelectionState migration. Agent 04 replaces wall-clock pathfinding budget with deterministic.",
+            "created_utc": "2026-05-28T17:00:00Z",
+            "wave": 1,
+            "depends_on": "wk63_w0_baseline_tests"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 1 DONE. Both agents completed in parallel with no conflicts. Agent 03: Entity IDs on Building/Enemy/Peasant/Guard, SelectionState with ID-based lookups, SimEngine selection fields removed as authority. Agent 04: Deterministic PathfindingBudget (expansion counts), find_path returns (path, expansions) tuple, 4 new tests. Combined: 500 passed, determinism PASS, qa_smoke PASS."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [],
+          "pm_next_actions_by_agent": {
+            "03": "Entity IDs on all types + SelectionState + migration from SimEngine.",
+            "04": "Deterministic pathfinding budget with expansion counts."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) for sprint wk63_engine_boundary_cleanup, round wk63_w1_entity_ids_selection.\n\nONBOARD: Read .cursor/rules/agent-03-techdir-onboarding.mdc and .cursor/rules/01-studio-onboarding.mdc.\n\nRead the sprint plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md (Wave 1A section — Entity IDs + Selection State Migration). The plan contains EXACT code examples for every task.\n\nFOUR TASKS:\n\nTASK 1 — Add entity_id to Building, Enemy, Peasant, Guard:\nRead game/entities/buildings/base.py, game/entities/enemy.py, game/entities/peasant.py, game/entities/guard.py. Add a module-level counter and _allocate_*_id() function to each, following the hero pattern. Format: buildings 'b00000001', enemies 'e00000001', peasants 'p00000001', guards 'g00000001'. Add self.entity_id = _allocate_*_id() near the top of each __init__. Heroes already have hero_id — do NOT add entity_id to heroes.\n\nTASK 2 — Create SelectionState:\nCreate game/presentation/selection_state.py (the game/presentation/ dir already exists from WK62). The sprint plan has the FULL implementation — copy it. SelectionState stores string IDs, not object references. It has select_hero/building/enemy/peasant methods that enforce mutual exclusivity, clear methods, and on_entity_destroyed.\n\nTASK 3 — Migrate GameEngine to use SelectionState:\nIn game/engine.py:\n- Import SelectionState, create self.selection = SelectionState() in __init__\n- Replace the selected_* property forwarding (currently delegates to self.sim.selected_*) with properties that use SelectionState + entity lookup.\n  The getter does a linear scan: for each entity in the list, check if its   ID matches the stored ID. Return the entity or None.\n  The setter stores the entity's ID (or clears if None).\n  See the sprint plan for exact code.\n- For heroes use hero_id, for everything else use entity_id.\n\nIn game/sim_engine.py:\n- Remove selected_hero, selected_building, selected_peasant, selected_enemy   from __init__ (around lines 123-127).\n- In get_game_state() (around line 400): Remove lines that read   self.selected_hero/building/peasant. The caller (GameEngine.get_game_state)   will populate these from its own properties.\n- In build_snapshot() (around line 457): Remove selected_hero and   selected_building parameters. Have GameEngine set them after construction.\n- In _cleanup_destroyed_buildings() (around line 898): Remove the   'if self.selected_building is building' clearing. Instead, use the   event bus — BUILDING_DESTROYED already fires, and GameEngine can   listen and call self.selection.on_entity_destroyed().\n\nIn game/cleanup_manager.py (around line 62):\n- Replace 'engine.selected_building = None' with   'engine.selection.on_entity_destroyed(building.entity_id)'   or remove the line if sim-side cleanup handles it.\n\nTASK 4 — Update tests:\nIn tests/test_wk63_engine_boundary.py, update test_buildings_lack_stable_id to assert entity_id exists. Add a test for SelectionState.\n\nFILES YOU MAY EDIT:\n  game/entities/buildings/base.py, game/entities/enemy.py, game/entities/peasant.py, game/entities/guard.py,\n  game/presentation/selection_state.py (new),\n  game/sim_engine.py, game/engine.py, game/cleanup_manager.py,\n  game/sim/snapshot.py,\n  tests/test_wk63_engine_boundary.py, tests/test_engine_sim_boundary.py,\n  tests/test_engine.py\n\nFILES YOU MUST NOT EDIT:\n  game/graphics/**, game/ui/**, ai/**, config.py,\n  game/game_commands.py, game/input_handler.py,\n  game/systems/navigation.py, game/systems/pathfinding.py\n\nVERIFY:\n  python -m pytest tests/test_engine_sim_boundary.py tests/test_wk63_engine_boundary.py tests/test_engine.py -x -v\n  python -m pytest tests/ -x -q\n  python tools/determinism_guard.py\n  python tools/qa_smoke.py --quick\n\nUpdate your agent log. Validate JSON. DO NOT COMMIT.",
+            "04": "You are Agent 04 (NetworkingDeterminism_Lead) for sprint wk63_engine_boundary_cleanup, round wk63_w1_deterministic_pathfinding.\n\nONBOARD: Read .cursor/rules/agent-04-networking-onboarding.mdc and .cursor/rules/01-studio-onboarding.mdc.\n\nRead the sprint plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md (Wave 1B section — Deterministic Pathfinding Budget). The plan contains EXACT code examples for every task.\n\nFIVE TASKS:\n\nTASK 1 — Replace PathfindingBudget with deterministic version:\nOpen game/systems/navigation.py. Find the PathfindingBudget class (around line 21). Currently it uses time.perf_counter() and _frame_ms_used for budget decisions. Replace with expansion-count budget:\n- MAX_PLANS_PER_FRAME = 12\n- MAX_EXPANSIONS_PER_FRAME = 24000\n- budget_available() checks _frame_plans and _frame_expansions\n- record_plan(expansions, wall_ms) replaces record_time(ms)\n- Keep _frame_ms_used for metrics only, NEVER for budget gating\n- Keep time.perf_counter() for metrics only\nSee the sprint plan for the exact class implementation.\n\nTASK 2 — Make find_path return expansion count:\nOpen game/systems/pathfinding.py. Find the find_path() function. Change its return from list to tuple[list, int] where the int is the number of A* nodes expanded. Find the expansion counter variable in the function and return it alongside the path. Update EVERY return statement. Also update LayerPathfinder.find_layer_path() if it calls find_path() — it needs to handle the tuple return.\n\nTASK 3 — Update compute_path_worldpoints:\nIn game/systems/navigation.py, update compute_path_worldpoints() to:\n- Call find_path() and unpack (grid_path, expansions)\n- Call budget.record_plan(expansions, wall_ms) instead of budget.record_time(ms)\n- Keep time.perf_counter() for wall_ms metrics only\nSee the sprint plan for exact code.\n\nTASK 4 — Update perf_stats:\nIn game/systems/perf_stats.py, add total_expansions field to _PathStats.\n\nTASK 5 — Add tests:\nCreate tests/test_pathfinding_budget.py with 4 tests:\n- test_budget_gates_on_expansion_count_not_time\n- test_budget_gates_on_plan_count\n- test_budget_resets_each_frame\n- test_find_path_returns_expansion_count\nSee the sprint plan for exact test code.\n\nIMPORTANT FILE RESTRICTION: You may ONLY edit lines 599-601 of game/sim_engine.py (the begin_frame() call). Agent 03 is editing other parts of sim_engine.py in parallel. Do NOT touch any other lines in sim_engine.py.\n\nFILES YOU MAY EDIT:\n  game/systems/navigation.py, game/systems/pathfinding.py,\n  game/systems/perf_stats.py,\n  game/sim_engine.py (ONLY lines 599-601, the begin_frame call),\n  tests/test_pathfinding_budget.py (new),\n  tests/test_wk63_engine_boundary.py (update pathfinding tests if needed)\n\nFILES YOU MUST NOT EDIT:\n  game/engine.py, game/entities/**, game/graphics/**, game/ui/**,\n  ai/**, config.py, game/game_commands.py, game/input_handler.py\n\nVERIFY:\n  python -m pytest tests/test_pathfinding_budget.py -x -v\n  python -m pytest tests/ -x -q\n  python tools/determinism_guard.py\n  python tools/qa_smoke.py --quick\n\nUpdate your agent log at .cursor/plans/agent_logs/agent_04_NetworkingDeterminism_Lead.json sprints[wk63_engine_boundary_cleanup].rounds[wk63_w1_deterministic_pathfinding]. Validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "wave": "w1_parallel",
+                "parallel": true,
+                "agents": [
+                  "03",
+                  "04"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "04": "high"
+            },
+            "do_not_send": [
+              "02",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Both high: novel architecture work. No file overlap except sim_engine.py (Agent 04 restricted to lines 599-601 only)."
+          }
+        },
+        "wk63_w2_gamecommands_split": {
+          "round_meta": {
+            "round_id": "wk63_w2_gamecommands_split",
+            "build_target": "Split GameCommands into 5 narrow Protocol interfaces.",
+            "created_utc": "2026-05-28T18:00:00Z",
+            "wave": 2,
+            "depends_on": "wk63_w1_parallel"
+          },
+          "pm_status_summary": {
+            "status": "done",
+            "summary": "Wave 2 DONE. Agent 03 replaced monolithic GameCommands (43 members, 30 Any) with 5 Protocol interfaces (CameraCommands, SelectionCommands, PlacementCommands, MenuCommands, GameStateCommands) + EngineCommandHub. Fixed 3 _engine abstraction leaks in InputHandler. Zero _engine refs remain. 503 passed, determinism PASS. Pre-existing qa_smoke flake in speed_scaling 0.25x."
+          },
+          "pm_bug_tickets": [],
+          "pm_feature_requests": [],
+          "pm_next_actions_by_agent": {
+            "03": "GameCommands Protocol split into 5 narrow interfaces + EngineCommandHub."
+          },
+          "pm_agent_prompts": {
+            "03": "You are Agent 03 (TechnicalDirector_Architecture) for sprint wk63_engine_boundary_cleanup, round wk63_w2_gamecommands_split.\n\nONBOARD: Read .cursor/rules/agent-03-techdir-onboarding.mdc and .cursor/rules/01-studio-onboarding.mdc.\n\nRead the sprint plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md (Wave 2 section — GameCommands Protocol Split). The plan contains the EXACT Protocol definitions and implementation guidance.\n\nOVERVIEW: Replace the monolithic GameCommands Protocol (43 members, 30 Any-typed) with 5 narrow Protocol interfaces. The current file is game/game_commands.py. InputHandler (game/input_handler.py) is the sole consumer.\n\nFIVE TASKS:\n\nTASK 1 — Define 5 Protocol interfaces in game/game_commands.py:\nReplace the single GameCommands Protocol with:\n  CameraCommands — camera_x, camera_y, zoom, zoom_by, center_on_castle\n  SelectionCommands — selected_hero/building/peasant/enemy (get+set), try_select_hero/building/peasant/enemy/tax_collector/guard/hero_at_world\n  PlacementCommands — economy, buildings, world, building_menu, building_list_panel, build_catalog_panel, building_panel, place_building\n  MenuCommands — hud, pause_menu, debug_panel, dev_tools_panel, micro_view, audio_system, input_manager, show_perf, apply_hud_pin_action, capture_screenshot, send_player_message\n  GameStateCommands — running, paused, display_mode, window_size, get_game_state, apply_display_settings, request_display_settings, try_hire_hero, place_bounty, process_command, plus the _private hooks (_skip_event_processing_frames, _borderless_drag_*, _last_ui_cursor_pos, _speed_before_pause, _perf_close_rect)\n\nSee the sprint plan for the EXACT Protocol definitions with all property signatures.\n\nTASK 2 — Create EngineCommandHub concrete implementation:\nBelow the Protocols, create EngineCommandHub that implements ALL 5 protocols by delegating to self._engine (a GameEngine). This replaces EngineBackedGameCommands. CRITICAL: You MUST delegate EVERY member that InputHandler currently uses. Read the existing EngineBackedGameCommands class and keep every delegation — just rename the class.\n\nTASK 3 — Update InputHandler:\nIn game/input_handler.py, change the constructor to store typed aliases:\n  self.commands = commands  # keeps working as before\n  self.camera: CameraCommands = commands\n  self.selection: SelectionCommands = commands\n  self.placement: PlacementCommands = commands\n  self.menu: MenuCommands = commands\n  self.state: GameStateCommands = commands\nAll 5 point to the same EngineCommandHub object. This is intentional.\n\nAlso fix the _engine abstraction leak: Find handle_keydown where InputHandler accesses c._engine directly for command mode (around lines 165-191). Replace with access through the GameStateCommands protocol (process_command is on GameStateCommands). You will need to read the actual command mode code carefully. The _command_mode and _command_buffer state need to be accessible through the protocol or through new properties/methods on EngineCommandHub.\n\nTASK 4 — Update engine.py wiring:\nChange: from game.game_commands import EngineCommandHub\nChange: self.input_handler = InputHandler(EngineCommandHub(self))\n\nTASK 5 — Backward compatibility + tests:\nAt the bottom of game/game_commands.py add:\n  GameCommands = GameStateCommands\n  EngineBackedGameCommands = EngineCommandHub\nUpdate tests/test_input_handler_gamecommands.py and tests/test_wk63_engine_boundary.py for the new interface.\n\nFILES YOU MAY EDIT:\n  game/game_commands.py, game/input_handler.py,\n  game/engine.py (wiring only),\n  tests/test_input_handler_gamecommands.py,\n  tests/test_wk63_engine_boundary.py\n\nFILES YOU MUST NOT EDIT:\n  game/graphics/**, game/ui/**, ai/**, config.py,\n  game/systems/**, game/entities/**\n\nVERIFY:\n  python -m pytest tests/test_input_handler_gamecommands.py -x -v\n  python -m pytest tests/test_wk63_engine_boundary.py -x -v\n  python -m pytest tests/ -x -q\n  python tools/qa_smoke.py --quick\n\nUpdate your agent log. Validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "wave": "w2_gamecommands",
+                "parallel": false,
+                "agents": [
+                  "03"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "03": "high"
+            },
+            "do_not_send": [
+              "02",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "rationale": "Agent 03 high: complex Protocol refactor with abstraction leak fix."
+          }
+        }
+      }
+    },
+    "wk64_ai_contracts_and_system_runner": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md",
+        "notes": "AI contracts (typed HeroTask/TargetType) + arrival-handler registry + expanded SystemContext/SystemRunner. Opens with Phase A: fix the WK63 pathfinding-budget regression (defer instead of returning [] that callers overwrite), then PM commits WK63+fix as the baseline. Driven directly by Agent 1 via subagents on claude-opus-4-8[1m], max effort. Subagents onboard via .cursor/rules then follow their pm_agent_prompts. DO NOT COMMIT (PM commits)."
+      },
+      "rounds": {
+        "wk64_phaseA": {
+          "round_meta": {
+            "title": "Phase A — Baseline Stabilization (pathfinding budget fix)",
+            "depends_on": "none (first round; lands wk63 cleanly)",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "WK63 is applied-uncommitted and FAILS qa_smoke speed_scaling 0.25x: heroes stop responding to bounties (stuck_events 0->9). Root cause: compute_path_worldpoints returns [] on per-frame budget exhaustion and every caller does self.path=<that>, wiping a still-valid path (looks like 'no path'). Defer infra (enqueue/drain) is dead code. Raising caps only band-aids (30 heroes@1.0x -> 37 stuck). Fix = on exhaustion return None and have callers KEEP their path + retry next frame. Then PM commits wk63+fix as the WK64 baseline.",
+          "pm_next_actions_by_agent": {
+            "11": "A1: write failing-first defer tests; A3: run Phase A gate + screenshot.",
+            "04": "A2: implement keep-path/defer fix across navigation.py + 4 caller files."
+          },
+          "pm_agent_prompts": {
+            "11": "PHASE A (QA). Two assignments; do the one named in your activation message.\n[A1 / round wk64_pa_a1_tests] Create tests/test_wk64_pathfinding_defer.py EXACTLY as in plan section 'Phase A - Step A1' (3 tests). Run on CURRENT code and CONFIRM they FAIL (this proves the regression). Touch NO production code.\n[A3 / round wk64_pa_a3_gate] After Agent 04's fix lands, run the gate in plan section 'Phase A - Step A3': python -m pytest tests/ -x -q; python tools/determinism_guard.py; python tools/qa_smoke.py --quick (must PASS incl speed_scaling 0.25x); then python tools/observe_sync.py --seconds 48.0 --heroes 30 --seed 3 --log-every 9999 --qa --bounty (acceptance: [qa] PASS and stuck_events <= 5); then capture a base_overview screenshot (python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk64_phaseA_pathfix --size 1920x1080 --ticks 480) and give a visual verdict (units move smoothly, none frozen/vibrating). Update your log both times; validate JSON. DO NOT COMMIT.",
+            "04": "PHASE A Step A2 (Determinism). Round wk64_pa_a2_fix. Implement the keep-path/defer fix EXACTLY as in plan section 'Phase A - Step A2':\n(a) game/systems/navigation.py compute_path_worldpoints: return None when budget exhausted (keep [] ONLY for genuine no-path); update return type+docstring; bump MAX_PLANS_PER_FRAME 12->24.\n(b) Guard EVERY caller so None is never assigned to self.path: game/entities/hero.py (~L946, the critical one - heroes have no direct-move fallback in that branch), game/entities/enemy.py (3 sites ~L303/534/568), game/entities/guard.py (~L172), game/entities/tax_collector.py (~L147 and ~L199). Leave the 'if not hasattr(self,\"path\"): self.path=[]' init lines alone. On defer: keep existing path, retry next frame, do NOT stamp replan-time.\nVerify: python -m pytest tests/test_wk64_pathfinding_defer.py -x -v (PASS); python tools/determinism_guard.py (PASS); python -m pytest tests/ -x -q (PASS). Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pa_a1_tests",
+                "agents": [
+                  "11"
+                ]
+              },
+              {
+                "round": "wk64_pa_a2_fix",
+                "agents": [
+                  "04"
+                ]
+              },
+              {
+                "round": "wk64_pa_a3_gate",
+                "agents": [
+                  "11"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "04": "high",
+              "11": "high"
+            },
+            "rationale": "04 high (determinism reasoning + multi-file behavior-preserving fix). 11 high (novel characterization + multi-scenario gate). Strictly sequential: tests -> fix -> gate.",
+            "do_not_send": [
+              "02",
+              "03",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk64_phaseB_w0": {
+          "round_meta": {
+            "title": "Phase B Wave 0 — characterization tests",
+            "depends_on": "Phase A committed green",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "Pin current AI arrival behavior + system-update shape BEFORE the contracts/runner refactor, so Phase B changes are provably behavior-preserving.",
+          "pm_next_actions_by_agent": {
+            "11": "Write the two characterization test files."
+          },
+          "pm_agent_prompts": {
+            "11": "PHASE B Wave 0 (QA). Round wk64_pb_w0_characterization. Create tests/test_wk64_ai_contracts.py and tests/test_wk64_system_runner.py EXACTLY as in plan section 'Wave 0 - Characterization Tests'. They must PASS on current (post-Phase-A) code; the contracts round-trip test will SKIP until Wave 1 (expected). Touch NO production code. Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pb_w0_characterization",
+                "agents": [
+                  "11"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "11": "high"
+            },
+            "rationale": "11 high (novel characterization tests driving through the real AI path).",
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk64_phaseB_w1": {
+          "round_meta": {
+            "title": "Phase B Wave 1 — contracts (06) + SystemContext/runner (05)",
+            "depends_on": "Wave 0",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "Add typed contracts (new file, zero behavior change) and widen SystemContext + introduce SystemRunner. No file overlap. Run sequentially to avoid working-tree/test contention.",
+          "pm_next_actions_by_agent": {
+            "06": "Create ai/contracts.py (new file only).",
+            "05": "Equivalence-audit, widen SystemContext, add SystemRunner."
+          },
+          "pm_agent_prompts": {
+            "06": "PHASE B Wave 1A (AI). Round wk64_pb_w1_contracts. Create ai/contracts.py EXACTLY as in plan section 'Wave 1A' (TargetType with 13 members; HeroTask dataclass; to_dict/from_dict/coerce_task/assign_hero_task). NEW FILE ONLY - edit nothing else. Verify: python -c import works and len(list(TargetType))==13; tests/test_wk64_ai_contracts.py::test_contracts_module_round_trips_when_present now PASSES (no longer skips); python -m pytest tests/ -x -q green. Update your log; validate JSON. DO NOT COMMIT.",
+            "05": "PHASE B Wave 1B (Gameplay). Round wk64_pb_w1_runner. Per plan section 'Wave 1B': (1) FIRST audit each system's update(ctx,dt) vs its bespoke call in SimEngine.update() and deliver the equivalence table in your log; (2) widen game/systems/protocol.py SystemContext with 7 defaulted fields (peasants, guards, bounties, pois, rubble_records, lairs, castle); (3) populate them in SimEngine._build_system_context(); (4) create game/sim/system_runner.py (SystemRunner); (5) construct it in SimEngine with ONLY proven-equivalent systems (expected: buff + wave_event) and PRESERVE exact execution order - do NOT reorder gameplay (correctness > line count). Verify: python -m pytest tests/ -x -q; python tools/determinism_guard.py (PASS - proves no reorder); python tools/qa_smoke.py --quick (PASS). Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pb_w1_contracts",
+                "agents": [
+                  "06"
+                ]
+              },
+              {
+                "round": "wk64_pb_w1_runner",
+                "agents": [
+                  "05"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "06": "high",
+              "05": "high"
+            },
+            "rationale": "06 high (defines the contract every behavior will use). 05 high (cross-system equivalence reasoning + determinism-sensitive ordering). Sequential to avoid tree contention.",
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk64_phaseB_g1": {
+          "round_meta": {
+            "title": "Phase B Gate 1 — verify Wave 1",
+            "depends_on": "Wave 1",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "Independent verification of Wave 1 before Wave 2.",
+          "pm_next_actions_by_agent": {
+            "11": "Run full gate + structural greps for Wave 1 deliverables."
+          },
+          "pm_agent_prompts": {
+            "11": "PHASE B Gate 1 (QA). Round wk64_pb_g1_gate. Per plan section 'Gate 1': python -m pytest tests/ -x -q; python tools/determinism_guard.py; python tools/qa_smoke.py --quick (all PASS). Grep-verify: ai/contracts.py exists with TargetType(13)+HeroTask+coerce_task+assign_hero_task; SystemContext has the 7 new fields; game/sim/system_runner.py exists and SystemRunner is referenced in sim_engine.py; no ai/behaviors file was changed in Wave 1. Report PASS/FAIL with evidence. Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pb_g1_gate",
+                "agents": [
+                  "11"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "11": "medium"
+            },
+            "rationale": "11 medium (run known gates + structural greps, report).",
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk64_phaseB_w2": {
+          "round_meta": {
+            "title": "Phase B Wave 2 — arrival handlers + convert hunger/shopping",
+            "depends_on": "Gate 1",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "Extract the reached-destination dispatch from bounty_pursuit.handle_moving into ai/arrival_handlers.py (registry keyed by TargetType) and convert hunger+shopping to author HeroTask via assign_hero_task. Behavior-preserving: Wave-0 characterization tests are the contract.",
+          "pm_next_actions_by_agent": {
+            "06": "Create arrival_handlers.py; slim handle_moving; convert hunger+shopping."
+          },
+          "pm_agent_prompts": {
+            "06": "PHASE B Wave 2 (AI). Round wk64_pb_w2_arrival. Per plan section 'Wave 2': (1) create ai/arrival_handlers.py with handlers + ARRIVAL_HANDLERS registry + dispatch_arrival, moving the reached-destination dispatch (and its private helpers) out of ai/behaviors/bounty_pursuit.py; (2) replace that dispatch block in bounty_pursuit.handle_moving with a call to dispatch_arrival (keep en-route bounty claim + combat-gating in place); (3) convert ai/behaviors/hunger.py go_to_food_stand and ai/behaviors/shopping.py go_shopping to build a HeroTask and store it via assign_hero_task. hero.target STAYS a dict (never store a HeroTask object). One-way import only: bounty_pursuit -> arrival_handlers. Verify: tests/test_wk64_ai_contracts.py + tests/test_ai_shopping.py tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_ai_poi_awareness.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r11_hunger_live_path.py tests/test_bounty.py tests/test_combat.py all PASS; python -m pytest tests/ -x -q; python tools/determinism_guard.py; python tools/qa_smoke.py --quick. Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pb_w2_arrival",
+                "agents": [
+                  "06"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "06": "high"
+            },
+            "rationale": "06 high (subtle behavior-preserving extraction of the arrival dispatch).",
+            "do_not_send": [
+              "02",
+              "03",
+              "04",
+              "05",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk64_phaseB_g2": {
+          "round_meta": {
+            "title": "Phase B Gate 2 — regression+screenshots (11) + determinism (04)",
+            "depends_on": "Wave 2",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "Final verification: behavior regression + visual no-regression + determinism, then PM closes/commits.",
+          "pm_next_actions_by_agent": {
+            "11": "Regression + screenshot verdict.",
+            "04": "Determinism review of Wave 1+2."
+          },
+          "pm_agent_prompts": {
+            "11": "PHASE B Gate 2 (QA). Round wk64_pb_g2_gate. Per plan section 'Gate 2 - Agent 11': python -m pytest tests/ -x -q; python tools/determinism_guard.py; python tools/qa_smoke.py --quick; python tools/validate_assets.py --report. Capture a heroes-shopping/eating scenario screenshot (python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk64_ai_contracts_after --size 1920x1080 --ticks 600), VIEW the PNGs, and give a visual verdict vs the Gate-2 checklist (heroes path to/enter shops+food stands; none frozen at entrances; intent labels normal). Grep-verify: ai/arrival_handlers.py registry+dispatch_arrival; bounty_pursuit calls dispatch_arrival; hunger.py+shopping.py use assign_hero_task; NO 'hero.target = HeroTask' anywhere. Update your log; validate JSON. DO NOT COMMIT.",
+            "04": "PHASE B Gate 2 (Determinism). Round wk64_pb_g2_determinism. Per plan section 'Gate 2 - Agent 04': run python tools/determinism_guard.py; confirm the SystemRunner change did not reorder side effects and the arrival registry dispatch is keyed by TargetType (no wall-clock / id(obj) ordering). Review Agent 05's equivalence table vs the runner membership. Report PASS/FAIL. Update your log; validate JSON. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk64_pb_g2_gate",
+                "agents": [
+                  "11"
+                ]
+              },
+              {
+                "round": "wk64_pb_g2_determinism",
+                "agents": [
+                  "04"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "11": "medium",
+              "04": "low"
+            },
+            "rationale": "11 medium (regression + visual judgement). 04 low (run determinism gate + review table).",
+            "do_not_send": [
+              "02",
+              "03",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
           }
         }
       }

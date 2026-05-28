@@ -230,22 +230,37 @@
               },
               "item_03_guardhouse_2_arrows": {
                 "status": "PASS",
-                "files": ["config.py:140", "game/entities/buildings/defensive.py:63-90"],
+                "files": [
+                  "config.py:140",
+                  "game/entities/buildings/defensive.py:63-90"
+                ],
                 "detail": "GUARDHOUSE_ARROWS_PER_SHOT = 2 in config. defensive.py fires loop range(GUARDHOUSE_ARROWS_PER_SHOT) applying damage per arrow and emits per-arrow projectile events with slight offset. Backward compat kept via _last_ranged_event = first event."
               },
               "item_04_healing_rates_5x_guild_7x_inn": {
                 "status": "PASS",
-                "files": ["config.py:142-144", "game/entities/buildings/hiring_mixin.py:15", "game/entities/buildings/economic.py:217"],
+                "files": [
+                  "config.py:142-144",
+                  "game/entities/buildings/hiring_mixin.py:15",
+                  "game/entities/buildings/economic.py:217"
+                ],
                 "detail": "GUILD_REST_RECOVERY_RATE=0.05 (was 0.01, 5x). INN_REST_RECOVERY_RATE=0.14 (was 0.02, 7x). hiring_mixin.py line 15 uses GUILD_REST_RECOVERY_RATE. economic.py Inn.__init__ line 217 uses INN_REST_RECOVERY_RATE. WK61-TUNE-003 tags."
               },
               "item_05_building_destruction_rubble": {
                 "status": "PASS",
-                "files": ["game/entities/rubble.py", "game/cleanup_manager.py:107-123", "game/sim_engine.py:121,474,767-774", "game/sim/snapshot.py:80"],
+                "files": [
+                  "game/entities/rubble.py",
+                  "game/cleanup_manager.py:107-123",
+                  "game/sim_engine.py:121,474,767-774",
+                  "game/sim/snapshot.py:80"
+                ],
                 "detail": "RubbleRecord dataclass with record_id, position, footprint, type, timestamps. cleanup_manager creates rubble on building destruction and appends to sim.rubble_records. sim_engine initializes rubble_records list, includes it in snapshot, and expires records after 2 minutes. snapshot.py has rubble_records: tuple = () field."
               },
               "item_06_enemy_building_priority": {
                 "status": "PASS",
-                "files": ["config.py:148", "game/entities/enemy.py:135-206"],
+                "files": [
+                  "config.py:148",
+                  "game/entities/enemy.py:135-206"
+                ],
                 "detail": "ENEMY_BUILDING_PRIORITY_RANGE_TILES=10 in config. enemy.py find_target() computes near_town flag by checking if any targetable building is within range. When near_town=True, building bias multipliers are lowered (castle 0.3, neutral 0.3, other 0.4) making buildings preferred targets. When far away, original biases preserved."
               },
               "item_07_reversed_names_fixed": {
@@ -286,7 +301,12 @@
               },
               "item_13_enemy_click_info_panel": {
                 "status": "PASS",
-                "files": ["game/ui/enemy_panel.py", "game/engine.py:565-570,799-817,1765", "game/input_handler.py:630-631", "game/sim_engine.py:127"],
+                "files": [
+                  "game/ui/enemy_panel.py",
+                  "game/engine.py:565-570,799-817,1765",
+                  "game/input_handler.py:630-631",
+                  "game/sim_engine.py:127"
+                ],
                 "detail": "EnemyPanel class renders enemy type, HP bar, combat stats, state, and current target. engine.py has selected_enemy property, try_select_enemy() method with distance hit test, and includes selected_enemy in game state dict. input_handler.py cascades enemy selection after peasant selection attempt. sim_engine.py initializes selected_enemy = None."
               },
               "bonus_enemy_sound_system": {
@@ -393,13 +413,19 @@
               },
               "WK61-R4-BUG-004_taxable_gold_panels": {
                 "status": "PASS_unit_tests",
-                "owners": ["Agent 05", "Agent 08"],
+                "owners": [
+                  "Agent 05",
+                  "Agent 08"
+                ],
                 "tests": "test_economic_panel_taxable_gold_* , test_marketplace_accumulates_shop_tax_in_stored_tax_gold (economy.py)",
                 "screenshot": "PARTIAL — Agent 08 ui_panels capture set does not include marketplace/blacksmith economic panel"
               },
               "WK61-R4-BUG-005_hero_idle_regression": {
                 "status": "PASS_unit_tests",
-                "owners": ["Agent 06", "Agent 05"],
+                "owners": [
+                  "Agent 06",
+                  "Agent 05"
+                ],
                 "tests": "tests/test_ai_exploration.py (commit-gate + explore), test_wk50_phase2a_decision_contracts idle moment",
                 "headless_note": "qa_smoke base profile shows heroes MOVING toward enemies/patrol, not long IDLE stretches"
               },
@@ -511,7 +537,9 @@
           "status": "blocked",
           "what_i_changed": {
             "summary": "Re-verified R6 after Agents 05/03 (verification-only). Agent 05 data layer PASS (14 tax-stash types, zero-vs-missing). Agent 03 tax-stash snapshot PASS (14 parametrized) but non-tax snapshot still crashes int(None) at ursina_renderer.py:166 — qa_smoke FAIL. No Ursina screenshot evidence. Cannot sign off R6 Definition of Done.",
-            "files_created": ["tests/test_wk61_r6_qa_renderer_tax_coverage.py"],
+            "files_created": [
+              "tests/test_wk61_r6_qa_renderer_tax_coverage.py"
+            ],
             "files_modified": []
           },
           "commands_run": [
@@ -564,7 +592,14 @@
                 "status": "FAIL",
                 "owner": "Agent 03",
                 "repro": "building_tax_overlay_snapshot(Castle(), is_lair=False) raises TypeError: int(None) at ursina_renderer.py:166 — has_data=False but int(b.get_overlay_tax_gold()) still called when get_overlay_tax_gold() returns None",
-                "affected_types": ["castle", "guardhouse", "inn", "trading_post", "fairgrounds", "library"],
+                "affected_types": [
+                  "castle",
+                  "guardhouse",
+                  "inn",
+                  "trading_post",
+                  "fairgrounds",
+                  "library"
+                ],
                 "impact": "Holding G while non-tax buildings exist in sync path may crash each frame",
                 "fix_hint": "If not has_data or get_overlay_tax_gold() is None, return (False, 0) before int()"
               },
@@ -622,11 +657,36 @@
             ]
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "419 passed"},
-            {"cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=short -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "37 passed — 14 tax-stash + 6 non-tax + 8 ursina unit + R7 None guard"},
-            {"cmd": "python tests/wk61_r7_capture_tax_overlay.py", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Ursina auto-screenshot saved after root runner + patch; inspected PNG"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "419 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=short -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "37 passed — 14 tax-stash + 6 non-tax + 8 ursina unit + R7 None guard"
+            },
+            {
+              "cmd": "python tests/wk61_r7_capture_tax_overlay.py",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Ursina auto-screenshot saved after root runner + patch; inspected PNG"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -649,7 +709,14 @@
               "WK61-R7_ursina_screenshot": {
                 "status": "PASS",
                 "path": "docs/screenshots/wk61_r7_tax_overlay/hold_g_multi_building_20260521_211932_302.png",
-                "seeded_types": ["house", "marketplace", "ranger_guild", "rogue_guild", "warrior_guild", "wizard_guild"],
+                "seeded_types": [
+                  "house",
+                  "marketplace",
+                  "ranger_guild",
+                  "rogue_guild",
+                  "warrior_guild",
+                  "wizard_guild"
+                ],
                 "visual_check": "Inspected PNG: yellow $42 billboards visible simultaneously above house (left), inn (center row), and guild tower (right) with prefab test layout + G held",
                 "capture_harness": "tests/wk61_r7_capture_tax_overlay.py seeds tax gold, forces G-held, uses KINGDOM_URSINA_PREFAB_TEST_LAYOUT + EDITORCAMERA=0"
               }
@@ -682,11 +749,36 @@
             "files_modified": []
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "First run FAIL — flaky speed_scaling 0.25x bounty responder assertion (unrelated to R8)"},
-            {"cmd": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "2 passed"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "421 passed"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Confirmatory re-run PASS"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "First run FAIL — flaky speed_scaling 0.25x bounty responder assertion (unrelated to R8)"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "2 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "421 passed"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Confirmatory re-run PASS"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -739,11 +831,36 @@
             "files_modified": []
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "424 passed"},
-            {"cmd": "python -m pytest tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r4_ui_regressions.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "8 passed"},
-            {"cmd": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --size 1920x1080 --out docs/screenshots/wk61_r9", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png + manifest.json"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "424 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r4_ui_regressions.py -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "8 passed"
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario wk61_hero_menu_chat --seed 42 --size 1920x1080 --out docs/screenshots/wk61_r9",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "wk61_hero_menu_chat_1024.png + wk61_hero_menu_chat_1920.png + manifest.json"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -795,11 +912,36 @@
             "files_modified": []
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS first run — determinism_guard PASS, 445 pytest passed, all observe_sync profiles exit 0 including speed_scaling 0.25x"},
-            {"cmd": "python tools/validate_assets.py --report", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "445 passed in 13.76s"},
-            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "23 passed — R10 targeted regression bundle"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS first run — determinism_guard PASS, 445 pytest passed, all observe_sync profiles exit 0 including speed_scaling 0.25x"
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "445 passed in 13.76s"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "23 passed — R10 targeted regression bundle"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated before orchestrator receipt"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -828,7 +970,10 @@
               },
               "WK61-R10-FEAT-003_hunger_meals": {
                 "status": "PASS",
-                "owners": ["Agent 05", "Agent 06"],
+                "owners": [
+                  "Agent 05",
+                  "Agent 06"
+                ],
                 "tests": "tests/test_wk61_r10_hunger_ai.py (8 tests in bundle)"
               },
               "WK61-R10-FEAT-004_sidebar_resize": {
@@ -879,12 +1024,42 @@
             "files_modified": []
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"},
-            {"cmd": "python tools/validate_assets.py --report", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "463 passed in 13.35s"},
-            {"cmd": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r11_tax_overlay_world_y.py tests/test_wk61_r11_sidebar_main_solo_handle.py tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r11_starting_food_stand.py -v --tb=short -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "18 passed — R11 targeted regression bundle"},
-            {"cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r11_hold_g --no-llm", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Ursina hold-G capture for R11 visual sign-off; PNG inspected"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
+            },
+            {
+              "cmd": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "463 passed in 13.35s"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r11_tax_overlay_world_y.py tests/test_wk61_r11_sidebar_main_solo_handle.py tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r11_starting_food_stand.py -v --tb=short -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "18 passed — R11 targeted regression bundle"
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r11_hold_g --no-llm",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Ursina hold-G capture for R11 visual sign-off; PNG inspected"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated before orchestrator receipt"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -901,7 +1076,10 @@
               },
               "WK61-R11-BUG-002_hunger_food_stand": {
                 "status": "PASS",
-                "owners": ["Agent 05", "Agent 06"],
+                "owners": [
+                  "Agent 05",
+                  "Agent 06"
+                ],
                 "tests": "tests/test_wk61_r11_starting_food_stand.py + tests/test_wk61_r11_hunger_live_path.py — starter food_stand + hero redirect/movement toward stand"
               },
               "WK61-R11-BUG-003_marketplace_passive_tax": {
@@ -917,7 +1095,10 @@
               },
               "WK61-R11-BUG-005_sidebar_drag": {
                 "status": "PASS_gates_and_screenshot",
-                "owners": ["Agent 08", "Agent 03"],
+                "owners": [
+                  "Agent 08",
+                  "Agent 03"
+                ],
                 "tests": "tests/test_wk61_r11_sidebar_main_solo_handle.py — test_drag_main_solo_updates_fraction asserts taller main column after simulated drag",
                 "screenshots": {
                   "solo_handle": "docs/screenshots/wk61_r11_sidebar/ui_panels_hero.png — unpinned Gareth column with thin resize handle bar above minimap gap",
@@ -963,9 +1144,24 @@
             "files_modified": []
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "463 passed in 14.11s"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "463 passed in 14.11s"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+              "notes": "Log JSON validated before orchestrator receipt"
+            }
           ],
           "evidence": {
             "gate_results": {
@@ -1115,7 +1311,10 @@
                 "id": "WK62-BUG-001",
                 "title": "Double sim time advance per engine.update()",
                 "severity": "HIGH",
-                "files": ["game/engine.py:1228", "game/sim_engine.py:605"],
+                "files": [
+                  "game/engine.py:1228",
+                  "game/sim_engine.py:605"
+                ],
                 "test": "test_game_engine_update_advances_sim_time_once",
                 "fix_owner": "Agent 03 Wave 1 Task A"
               },
@@ -1123,7 +1322,9 @@
                 "id": "WK62-BUG-002",
                 "title": "Sim time leaks through pause via _prepare_sim_and_camera()",
                 "severity": "MEDIUM",
-                "files": ["game/engine.py:1228-1234"],
+                "files": [
+                  "game/engine.py:1228-1234"
+                ],
                 "test": "test_paused_does_not_advance_sim_time",
                 "fix_owner": "Agent 03 Wave 1 Task A"
               }
@@ -1138,6 +1339,296 @@
             "Agent 03 Wave 1 Task A: Fix double sim time advance by removing _sim_now_ms mutation from _prepare_sim_and_camera(). After fix, both xfail tests should become PASS (remove xfail markers).",
             "Agent 03 Wave 1 Task B: Consider removing redundant _cleanup_destroyed_buildings() call at engine.py:1157 since sim already handles it. The rubble/event tests will guard against double-count regressions.",
             "After Wave 1 fixes: re-run python -m pytest tests/test_engine_sim_boundary.py -v to confirm xfails flip to PASS."
+          ]
+        }
+      }
+    },
+    "wk63_engine_boundary_cleanup": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk63_engine_boundary_cleanup.plan.md",
+        "created_utc": "2026-05-28T00:00:00Z",
+        "notes": "Engine boundary cleanup sprint. Agent 11 owns Wave 0 baseline characterization tests, Gate 1 verification, and Gate 2 final QA."
+      },
+      "rounds": {
+        "wk63_w0_baseline_tests": {
+          "sprint_id": "wk63_engine_boundary_cleanup",
+          "round_id": "wk63_w0_baseline_tests",
+          "round_meta": {
+            "wave": 0,
+            "build_target": "Baseline characterization tests proving current pathfinding budget, selection, GameCommands, hero ID, and building ID gap behavior BEFORE production code changes.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": null
+          },
+          "prompt_summary": "Read game/systems/navigation.py, game/game_commands.py, game/engine.py, game/entities/hero.py, game/entities/buildings/base.py. Create tests/test_wk63_engine_boundary.py with 6 baseline tests adapted from sprint plan templates to match actual APIs.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk63_engine_boundary.py with 6 baseline characterization tests. All 6 pass against current codebase. Tests document current behavior for pathfinding budget (wall-clock ms-based), selection (manual clearing pattern via try_select_* methods), GameCommands Protocol (monolithic 43-member interface), hero stable IDs (hero_id attribute), and building entity_id gap.",
+            "files_created": [
+              "tests/test_wk63_engine_boundary.py"
+            ],
+            "files_modified": [],
+            "test_details": {
+              "test_pathfinding_budget_exhaustion_returns_empty_path": {
+                "status": "PASS",
+                "what_it_proves": "When _frame_ms_used exceeds MAX_MS_PER_FRAME (3.0ms), compute_path_worldpoints returns []. Wave 1B will replace ms budget with expansion-count budget but must preserve this short-circuit contract."
+              },
+              "test_pathfinding_budget_resets_each_frame": {
+                "status": "PASS",
+                "what_it_proves": "begin_frame() resets _frame_ms_used to 0.0 and sets _frame_start to current perf_counter. Note: plan assumed _frame_plans counter existed but actual API only has _frame_ms_used and _frame_start. Test adapted accordingly."
+              },
+              "test_selection_is_mutually_exclusive": {
+                "status": "PASS",
+                "what_it_proves": "Direct property assignment (engine.selected_building = b) does NOT auto-clear engine.selected_hero. Clearing is only done manually inside try_select_* methods. Documents the gap Wave 1A SelectionState will formalize. Also verifies all 4 selected_* properties and 4 try_select_* methods exist."
+              },
+              "test_game_commands_has_all_expected_members": {
+                "status": "PASS",
+                "what_it_proves": "GameCommands Protocol has all 25+ required members that InputHandler depends on (zoom_by, camera_x/y, selected_hero/building/peasant/enemy, try_select_*, place_building, get_game_state, running, paused, display_mode, hud, pause_menu, building_menu). Wave 2 will split into 5 narrow Protocols."
+              },
+              "test_hero_has_stable_id": {
+                "status": "PASS",
+                "what_it_proves": "Hero accepts explicit hero_id kwarg and auto-allocates via _allocate_fallback_hero_id() when not provided. IDs are strings starting with 'h', non-empty, and distinct across instances. Wave 1A will use hero_id as entity ID for SelectionState."
+              },
+              "test_buildings_lack_stable_id": {
+                "status": "PASS",
+                "what_it_proves": "Building base class does NOT assign entity_id. Test checks both direct Building() construction and headless engine buildings (castle + starting buildings). When Wave 1A adds entity_id, the test's conditional branch will assert it's a non-empty string."
+              }
+            },
+            "api_adaptations_from_plan": [
+              "PathfindingBudget: plan assumed _frame_plans counter exists; actual code only has _frame_ms_used and _frame_start. Test 2 adapted to test only the real attributes.",
+              "Hero tests: headless engine starts with 0 heroes. Tests create Hero instances directly or use _make_headless_engine_with_hero() helper instead of relying on engine.sim.heroes being populated.",
+              "Building test: uses both direct Building() construction and headless engine buildings for coverage.",
+              "Selection test: creates hero via helper since headless engine has none; documents the property-vs-method clearing asymmetry."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk63_engine_boundary.py -x -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "6 passed, 1 warning in 3.97s. All 6 tests pass."
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "495 passed, 1 warning in 48.24s. Full suite clean; no regressions from new tests."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS. determinism_guard PASS, 495 pytest passed, all observe_sync profiles exit 0."
+            }
+          ],
+          "evidence": {
+            "tests_added_count": 6,
+            "all_passing": true,
+            "pytest_summary": "6 passed, 1 warning in 3.97s",
+            "full_suite_summary": "495 passed, 1 warning in 48.24s",
+            "qa_smoke_result": "PASS (exit 0)",
+            "current_behavior_documented": [
+              "PathfindingBudget: wall-clock ms budget (MAX_MS_PER_FRAME=3.0ms), begin_frame resets _frame_ms_used to 0.0",
+              "Selection: property setters do NOT enforce mutual exclusivity; try_select_* methods manually clear other slots",
+              "GameCommands: monolithic Protocol with 43+ members including _game_commands_impl, _cleanup_destroyed_buildings, and all InputHandler-facing members",
+              "Hero: hero_id is a stable string assigned at construction (explicit or auto-allocated 'hNNNNNNNN')",
+              "Building: no entity_id attribute on Building base class or any subclass"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Wave 1A (Agent 03): After adding entity_id to buildings, update test_buildings_lack_stable_id to assert entity_id exists and is a non-empty string.",
+            "Wave 1B (Agent 04): After replacing ms budget with expansion-count budget, update test_pathfinding_budget_exhaustion_returns_empty_path and test_pathfinding_budget_resets_each_frame to use the new counter names (_frame_expansions, _frame_plans).",
+            "Wave 2 (Agent 03): After splitting GameCommands into 5 Protocols, update test_game_commands_has_all_expected_members to verify the new interfaces.",
+            "Gate 1: Agent 11 re-runs all 6 tests plus full suite to confirm Wave 1 changes preserved the contracts."
+          ]
+        }
+      }
+    },
+    "wk64_ai_contracts_and_system_runner": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk64_ai_contracts_and_system_runner.plan.md",
+        "created_utc": "2026-05-28T00:00:00Z",
+        "notes": "AI Contracts & System Runner. Phase A stabilizes the WK63 pathfinding-budget regression (defer instead of wiping path) before Phase B. Agent 11 owns A1 (failing-first defer tests), A3 (gate), and Wave 0 characterization tests."
+      },
+      "rounds": {
+        "wk64_pa_a1_tests": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pa_a1_tests",
+          "round_meta": {
+            "phase": "A",
+            "step": "A1",
+            "role": "failing-first regression tests",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": null
+          },
+          "prompt_text": "PHASE A (QA) [A1 / round wk64_pa_a1_tests]: Create tests/test_wk64_pathfinding_defer.py EXACTLY as in plan section 'Phase A - Step A1' (3 tests). Run on CURRENT (unmodified) code and CONFIRM the two defer-semantics tests FAIL (this proves the WK63 regression Agent 04 will fix); test_available_budget_returns_list should PASS. Touch NO production code. DO NOT COMMIT.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk64_pathfinding_defer.py with the three Step-A1 failing-first tests. Tests 1 and 2 (test_exhausted_budget_returns_none_not_empty, test_available_budget_returns_list) are verbatim from the plan. For test 3 (test_hero_keeps_existing_path_when_budget_deferred) the SETUP was adjusted (as the plan explicitly authorizes) so it genuinely exercises a deferred replan on the current code, while the final assertion (hero.path stays non-empty) is kept intact. No production code touched.",
+            "files_created": [
+              "tests/test_wk64_pathfinding_defer.py"
+            ],
+            "files_modified": [],
+            "test3_setup_adjustments": [
+              "A default headless GameEngine spawns NO heroes, so construct Hero(400,400,warrior,h_defer_001) and append to engine.sim.heroes (same pattern as tests/test_wk63_engine_boundary.py _make_headless_engine_with_hero).",
+              "Reveal a corridor (set world.visibility to VISIBLE around hero->goal) so the goal tile is NOT black fog; a black-fog goal triggers the direct-steering early return in Hero.update() (~line 918) and never reaches the budget branch.",
+              "Use a 320px (10-tile) goal so dist <= TILE_SIZE*20 (=640) and the A* replan branch is taken (not far-target direct steering).",
+              "Set hero._path_last_replan_ms = -100000 to defeat the PATH_REPLAN_MIN_INTERVAL_MS (400ms) rate limit, since the headless sim clock starts at 0 and would otherwise suppress the replan (need_replan would be set False)."
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_pathfinding_defer.py -v",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "2 failed, 1 passed, 1 warning in 5.10s. EXPECTED failing-first result: the two defer-semantics tests fail on current code; test_available_budget_returns_list passes."
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk64_pathfinding_defer.py -x -v",
+              "exit_code": 1,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "Plan-specified command. With -x, pytest stops after the first failure (test_exhausted_budget_returns_none_not_empty). Ran the full -v variant (above) separately to capture all three verdicts."
+            }
+          ],
+          "evidence": {
+            "failing_first": true,
+            "per_test": {
+              "test_exhausted_budget_returns_none_not_empty": {
+                "result": "FAILED (expected)",
+                "assertion": "exhausted budget must return None (deferred), not [] (no-path). got []",
+                "why": "Current compute_path_worldpoints (game/systems/navigation.py:149-151) returns [] on budget exhaustion, not None. Documents defect #1 (ambiguous deferral)."
+              },
+              "test_available_budget_returns_list": {
+                "result": "PASSED (expected)",
+                "why": "With fresh budget, compute_path_worldpoints returns a list. This invariant already holds and must keep holding after the fix."
+              },
+              "test_hero_keeps_existing_path_when_budget_deferred": {
+                "result": "FAILED (expected)",
+                "assertion": "deferred budget wiped the hero's existing path (regression) -- assert [] (hero.path)",
+                "why": "Current Hero.update() (game/entities/hero.py:945-950) does self.path = compute_path_worldpoints(...) unconditionally; on exhaustion that assigns [], wiping a valid path. Documents defect #2 (caller blindly overwrites path on defer). Verified the hero genuinely entered the replan/budget branch (not an early-return) before the wipe."
+              }
+            },
+            "matches_expected_regression": true,
+            "budget_exhaustion_mechanism": "budget.begin_frame() then budget._frame_plans = budget.MAX_PLANS_PER_FRAME (=12); budget_available() returns _frame_plans < 12, so this exhausts the per-frame plan budget.",
+            "production_code_touched": false,
+            "git_status_tests_dir": "tests/test_wk64_pathfinding_defer.py is the only NEW file in tests/ from this task; no game/ai/config edits by Agent 11."
+          },
+          "blockers": [],
+          "recommended_next_actions": [
+            "Step A2: Agent 04 implements the keep-path/defer fix in game/systems/navigation.py (return None on exhaustion) + the five caller sites (hero.py, enemy.py x3, guard.py, tax_collector.py) gating the self.path assignment behind 'if _new_path is not None'.",
+            "After A2, re-run python -m pytest tests/test_wk64_pathfinding_defer.py -x -v: all three must PASS (this is the verification of Agent 04's fix).",
+            "Then Agent 11 runs Step A3 gate (full suite + determinism_guard + qa_smoke incl speed_scaling 0.25x + 30-hero/1.0x stuck_events <= 5 + base_overview screenshot verdict) under round wk64_pa_a3_gate."
+          ]
+        },
+        "wk64_pa_a3_gate": {
+          "sprint_id": "wk64_ai_contracts_and_system_runner",
+          "round_id": "wk64_pa_a3_gate",
+          "round_meta": {
+            "phase": "A",
+            "step": "A3",
+            "role": "Phase A gate (verify Agent 04 defer fix end-to-end + reconcile one obsolete test)",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": "wk64_pa_a2_fix (Agent 04 keep-path/defer fix)"
+          },
+          "prompt_text": "PHASE A (QA) [A3 / round wk64_pa_a3_gate]: After Agent 04's fix lands, reconcile the one obsolete WK63 test (tests/test_wk63_engine_boundary.py::test_pathfinding_budget_exhaustion_returns_empty_path -> _defers, assert result is None), then run the Phase A gate: pytest tests/ -x -q (fully green); determinism_guard.py PASS; qa_smoke.py --quick PASS incl speed_scaling 0.25x; observe_sync 30 heroes seed 3 48s --qa --bounty (acceptance [qa] PASS AND stuck_events <= 5); capture base_overview screenshot and give a visual verdict. Edit ONLY that one test. DO NOT COMMIT.",
+          "status": "blocked",
+          "verdict": "FAIL (Phase A NOT ready to commit) -- one acceptance criterion fails: 30-hero/1.0x stuck_events=34 (acceptance requires <= 5). All other gates PASS. Returned to Agent 04 to revisit the defer fix at scale.",
+          "what_i_changed": {
+            "summary": "Reconciled exactly one obsolete WK63 test that encoded the OLD buggy []-on-exhaustion contract. No other test or any production code touched.",
+            "files_modified": [
+              "tests/test_wk63_engine_boundary.py"
+            ],
+            "files_created": [],
+            "test_reconciliation": {
+              "file": "tests/test_wk63_engine_boundary.py",
+              "function_renamed_from": "test_pathfinding_budget_exhaustion_returns_empty_path",
+              "function_renamed_to": "test_pathfinding_budget_exhaustion_defers",
+              "docstring_updated_to": "When budget is exhausted, compute_path_worldpoints now DEFERS (returns None) so callers keep their existing path; WK64 Phase A corrected the prior []-on-exhaustion behavior that wiped paths.",
+              "assertion_changed_from": "assert result == [], f\"Expected empty path when budget exhausted, got {result}\"",
+              "assertion_changed_to": "assert result is None, f\"Expected None (deferred) when budget exhausted, got {result}\"",
+              "note": "Only these 3 edits in that file (name, docstring, assertion). The exhaustion mechanism (budget._frame_expansions = MAX_EXPANSIONS_PER_FRAME + 1) and the rest of the file were left untouched, as instructed. Reconciled test PASSES after Agent 04's fix."
+            }
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk64_pathfinding_defer.py tests/test_wk63_engine_boundary.py -q",
+              "exit_code": 0,
+              "notes": "10 passed (3 WK64 defer tests now green after the fix + 7 reconciled WK63 boundary tests)."
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "notes": "506 passed, 0 failed. Fully green. (Clean-HEAD baseline was 503; +3 = the WK64 defer tests from A1.) No OTHER test regressed -- the only changed-contract test was the single reconciliation above."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "notes": "[determinism_guard] PASS: no violations found. The defer decision is gated by budget_available() (deterministic expansion/plan counts), no wall-clock."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "notes": "[qa_smoke] DONE: PASS. ALL sub-scenarios exit_code=0, INCLUDING the speed_scaling 0.25x scenario (the original WK63 failure) and 0.1x/0.5x/1.0x."
+            },
+            {
+              "cmd": "python tools/observe_sync.py --seconds 48.0 --heroes 30 --seed 3 --log-every 9999 --qa --bounty",
+              "exit_code": 0,
+              "notes": "STARVATION-SCALING CHECK -- FAIL on stuck_events. [qa] PASS (bounty_exists/has_responder/attr_present all True) BUT counters: stuck_events=34 unstuck_attempts=108 max_stuck_ms=4983. Acceptance requires stuck_events <= 5. Ran twice (deterministic): 34 both times. exit_code is 0 because observe_sync exits 0 on [qa] PASS; the stuck_events gate is a separate manual acceptance the plan defines for A3."
+            },
+            {
+              "cmd": "python tools/observe_sync.py --seconds 48.0 --heroes 10 --seed 3 --log-every 9999 --qa --bounty",
+              "exit_code": 0,
+              "notes": "Contrast run (diagnostic): 10 heroes/1.0x -> [qa] PASS, stuck_events=2 (would pass <=5). Shows the defer fix is adequate at 10-hero scale but does NOT scale to 30 heroes."
+            },
+            {
+              "cmd": "python -c \"from game.systems.navigation import PathfindingBudget as B; print(B.MAX_PLANS_PER_FRAME, B.MAX_EXPANSIONS_PER_FRAME)\"",
+              "exit_code": 0,
+              "notes": "Confirmed Agent 04's cap bump: MAX_PLANS_PER_FRAME=24 (was 12), MAX_EXPANSIONS_PER_FRAME=24000."
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk64_phaseA_pathfix --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "notes": "Wrote 4 PNGs (Z1/Z2 x world_clean/ui_default) + manifest.json. Capture succeeded, no errors."
+            }
+          ],
+          "evidence": {
+            "full_suite": "506 passed, 0 failed (python -m pytest tests/ -x -q). Fully green. No regression outside the single reconciled test.",
+            "determinism": "PASS ([determinism_guard] PASS: no violations found).",
+            "qa_smoke": "PASS ([qa_smoke] DONE: PASS, exit 0). speed_scaling 0.25x scenario PASSED (exit_code=0) -- this was the original WK63 failure and is now fixed. 0.1x/0.5x/1.0x all PASS too.",
+            "starvation_scaling_30_heroes": {
+              "result": "FAIL",
+              "qa_assertions": "[qa] PASS (bounty_exists=True, bounty_has_responder=True, bounty_responder_attr_present=True, intent_attr_present=True)",
+              "stuck_events": 34,
+              "acceptance_threshold": 5,
+              "clean_HEAD_reference": 0,
+              "broken_WK63_reference": 37,
+              "unstuck_attempts": 108,
+              "max_stuck_ms": 4983,
+              "reproducible": "Yes -- 34 on both runs (same seed, deterministic).",
+              "interpretation": "The keep-path/defer fix is correctly applied to ALL 7 caller sites (verified by grep: hero.py:949, enemy.py:304/538/575, guard.py:173, tax_collector.py:148/203 all guard with 'if _new_path is not None'), and the cap was bumped 12->24. It is effective at 10-hero scale (stuck_events=2) but does NOT hold at 30 heroes (34 ~= broken-WK63's 37). The keep-path guard only helps a unit that ALREADY HAS a path; under 30-hero contention many heroes still cannot acquire their FIRST path within the per-frame budget, so they sit with an empty path (nothing for follow_path to follow), do not advance toward goal, and trip stuck-recovery (max_stuck_ms~=4983 ~ 5s, near the stuck threshold). The 12->24 cap bump was insufficient to clear 30-hero first-path contention."
+            },
+            "screenshot_verdict": {
+              "pngs_viewed": [
+                "docs/screenshots/wk64_phaseA_pathfix/base_overview__Z1__ui_default.png",
+                "docs/screenshots/wk64_phaseA_pathfix/base_overview__Z2__ui_default.png",
+                "docs/screenshots/wk64_phaseA_pathfix/base_overview__Z1__world_clean.png",
+                "docs/screenshots/wk64_phaseA_pathfix/base_overview__Z2__world_clean.png"
+              ],
+              "scene_integrity": "HEALTHY -- normal base-overview: CASTLE centered, all guild buildings render and are labeled (RANGERS, WARRIORS, SMITH, MARKET, INN, ROGUES, WIZARDS), HOUSEs, cross-shaped road network, grass/trees, fog edges. No corruption or artifacts.",
+              "units": "Heroes are spread across DISTINCT map locations (Nova bottom-left near GUARDS, Gareth right near MARKET, heroes between the two HOUSEs, at WARRIORS guild, near WIZARDS) -- not clustered at a single spawn, consistent with navigation working. Enemies present on the north road. Several units show green health bars mid-field. HUD: Gold 2100, Heroes 4, Enemies 43, Wave 1; perf overlay 'PF/s: 71 calls 16 fails 6.3ms'.",
+              "verdict": "PASS (visual) but NON-DECISIVE for the failing gate. The base_overview scenario uses only ~4 heroes (HUD), NOT the 30-hero stress condition. The static frame looks correct and shows units distributed (not frozen at spawn), and does not contradict the defect; but a single static image cannot confirm smooth motion under the 30-hero contention that fails, and a 4-hero scene would not exhibit it. The authoritative motion-quality signal is the headless 30-hero stuck_events=34.",
+              "capture_errors": "none -- 4 PNGs + manifest written cleanly."
+            },
+            "production_code_touched": false,
+            "only_test_edited": "tests/test_wk63_engine_boundary.py (the single authorized reconciliation)."
+          },
+          "blockers": [
+            "BLOCKER for Phase A baseline commit (Step A4): 30-hero/1.0x stuck_events=34 fails the plan's acceptance (<= 5). Agent 04 must revisit the defer fix so it scales. Do NOT commit the Phase A baseline until this is <= 5. All other gates (full suite 506, determinism, qa_smoke incl 0.25x) are green."
+          ],
+          "recommended_next_actions": [
+            "RETURN TO AGENT 04 (re-open Step A2): The keep-path guard alone does not fix 30-hero starvation because it only preserves an EXISTING path; heroes awaiting their FIRST path under contention still starve with an empty path. Candidate directions for Agent 04 (their call -- QA does not edit production code): (a) give heroes with NO path a deterministic same-frame fallback (e.g. move_towards/direct-steer toward goal) when the budget defers, so a path-less hero still advances instead of standing still; (b) prioritize first-path requests over re-plans within the budget; or (c) raise/retune the per-frame budget specifically for first-path acquisition. The 12->24 cap bump is necessary but not sufficient.",
+            "After Agent 04 iterates, Agent 11 re-runs ONLY the 30-hero check (python tools/observe_sync.py --seconds 48.0 --heroes 30 --seed 3 --log-every 9999 --qa --bounty) plus a full-suite + qa_smoke re-green; if stuck_events <= 5 and all gates pass, Phase A is GO for the Step A4 baseline commit.",
+            "The single test reconciliation in tests/test_wk63_engine_boundary.py is correct and can stay regardless of Agent 04's next iteration (it pins the corrected None-on-defer contract)."
           ]
         }
       }

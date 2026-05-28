@@ -1,5 +1,9 @@
 """
 Input handling extracted from GameEngine.
+
+WK63 Wave 2: InputHandler now types its command aliases as narrow Protocols
+(CameraCommands, SelectionCommands, PlacementCommands, MenuCommands,
+GameStateCommands) instead of the old monolithic GameCommands.
 """
 from typing import TYPE_CHECKING
 
@@ -11,14 +15,26 @@ from game.ui.micro_view_manager import ViewMode
 from game.ui.speed_control import SPEED_TIERS
 
 if TYPE_CHECKING:
-    from game.game_commands import GameCommands
+    from game.game_commands import (
+        CameraCommands,
+        SelectionCommands,
+        PlacementCommands,
+        MenuCommands,
+        GameStateCommands,
+    )
 
 
 class InputHandler:
-    """Centralized input event routing for the game via a GameCommands surface (WK38)."""
+    """Centralized input event routing for the game via narrow command protocols (WK63)."""
 
-    def __init__(self, commands: "GameCommands"):
+    def __init__(self, commands) -> None:
+        # commands implements all five protocols (EngineCommandHub)
         self.commands = commands
+        self.camera: "CameraCommands" = commands
+        self.selection: "SelectionCommands" = commands
+        self.placement: "PlacementCommands" = commands
+        self.menu: "MenuCommands" = commands
+        self.state: "GameStateCommands" = commands
 
     def process_events(self):
         """Process input events."""
@@ -161,22 +177,21 @@ class InputHandler:
         c = self.commands
 
         # --- Universal command mode input (Enter to open, typed text captured) ---
-        eng = getattr(c, '_engine', None)
-        if eng and getattr(eng, '_command_mode', False):
+        if getattr(c, '_command_mode', False):
             # Command mode active: consume all keystrokes for typing
             if event.key in ('enter', '13'):
-                cmd = getattr(eng, '_command_buffer', '')
+                cmd = getattr(c, '_command_buffer', '')
                 if cmd:
-                    eng.process_command(cmd)
-                eng._command_mode = False
-                eng._command_buffer = ''
+                    c.process_command(cmd)
+                c._command_mode = False
+                c._command_buffer = ''
                 return
             elif event.key == 'esc':
-                eng._command_mode = False
-                eng._command_buffer = ''
+                c._command_mode = False
+                c._command_buffer = ''
                 return
             elif event.key in ('backspace', '8'):
-                eng._command_buffer = eng._command_buffer[:-1]
+                c._command_buffer = c._command_buffer[:-1]
                 return
             else:
                 # Try to extract the typed character from the raw pygame event
@@ -185,9 +200,9 @@ class InputHandler:
                 if raw is not None:
                     ch = getattr(raw, 'unicode', None)
                 if ch and ch.isprintable():
-                    eng._command_buffer += ch
+                    c._command_buffer += ch
                 elif event.key and len(event.key) == 1 and event.key.isprintable():
-                    eng._command_buffer += event.key
+                    c._command_buffer += event.key
                 return
 
         # ESC menu takes priority
@@ -270,9 +285,8 @@ class InputHandler:
 
         # Enter key opens universal command mode (when no chat panel is active)
         if event.key in ('enter', '13'):
-            if eng:
-                eng._command_mode = True
-                eng._command_buffer = ''
+            c._command_mode = True
+            c._command_buffer = ''
             return
 
         if event.key == 'tab':
@@ -723,8 +737,7 @@ class InputHandler:
                     c._borderless_drag_window_offset = None
 
         if c.building_menu.selected_building:
-            engine = getattr(c, "_engine", None)
-            wptr = getattr(engine, "_ursina_pointer_world_sim", None) if engine is not None else None
+            wptr = getattr(c, "_ursina_pointer_world_sim", None)
             if wptr is not None:
                 c.building_menu.update_preview_world_pixels(
                     wptr[0], wptr[1], c.world, c.buildings

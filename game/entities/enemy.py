@@ -3,6 +3,17 @@ Enemy entities.
 """
 import math
 from enum import Enum, auto
+
+# Monotonic entity ID allocation (deterministic: follows spawn order).
+_next_enemy_id = 0
+
+
+def _allocate_enemy_id() -> str:
+    global _next_enemy_id
+    _next_enemy_id += 1
+    return f"e{_next_enemy_id:08d}"
+
+
 from config import (
     TILE_SIZE, GOBLIN_HP, GOBLIN_ATTACK, GOBLIN_SPEED,
     WOLF_HP, WOLF_ATTACK, WOLF_SPEED,
@@ -27,6 +38,7 @@ class Enemy:
     """Base enemy class."""
     
     def __init__(self, x: float, y: float, enemy_type: str = "goblin"):
+        self.entity_id: str = _allocate_enemy_id()
         self.x = x
         self.y = y
         self.enemy_type = enemy_type
@@ -288,13 +300,16 @@ class Enemy:
                     (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
                 ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
                 if want_replan:
-                    self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
-                    self._path_goal = goal_key
-                    self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
-                    if not self.path:
-                        self._next_replan_ms = now_ms_val + 800
-                    else:
-                        self._next_replan_ms = now_ms_val + 150
+                    _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
+                    if _new_path is not None:
+                        self.path = _new_path
+                        self._path_goal = goal_key
+                        self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
+                        if not self.path:
+                            self._next_replan_ms = now_ms_val + 800
+                        else:
+                            self._next_replan_ms = now_ms_val + 150
+                    # else: deferred -- keep existing path, retry next frame
 
                 if self.path:
                     follow_path(self, dt)
@@ -519,8 +534,11 @@ class SkeletonArcher(Enemy):
                         self._path_goal = None
                     goal_key = (int(kite_x), int(kite_y))
                     if getattr(self, "_path_goal", None) != goal_key:
-                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, kite_x, kite_y)
-                        self._path_goal = goal_key
+                        _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, kite_x, kite_y)
+                        if _new_path is not None:
+                            self.path = _new_path
+                            self._path_goal = goal_key
+                        # else: deferred -- keep existing path, retry next frame
                     if self.path:
                         follow_path(self, dt)
                     else:
@@ -553,13 +571,16 @@ class SkeletonArcher(Enemy):
                         (not has_path) or (getattr(self, "_path_goal", None) != goal_key and now_ms_val >= path_commit)
                     ) and now_ms_val >= int(getattr(self, "_next_replan_ms", 0) or 0)
                     if want_replan:
-                        self.path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
-                        self._path_goal = goal_key
-                        self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
-                        if not self.path:
-                            self._next_replan_ms = now_ms_val + 800
-                        else:
-                            self._next_replan_ms = now_ms_val + 150
+                        _new_path = compute_path_worldpoints(world, buildings, self.x, self.y, target_x, target_y)
+                        if _new_path is not None:
+                            self.path = _new_path
+                            self._path_goal = goal_key
+                            self._path_commit_until_ms = now_ms_val + getattr(self, "_path_commit_duration_ms", 500)
+                            if not self.path:
+                                self._next_replan_ms = now_ms_val + 800
+                            else:
+                                self._next_replan_ms = now_ms_val + 150
+                        # else: deferred -- keep existing path, retry next frame
                     if self.path:
                         follow_path(self, dt)
                     else:

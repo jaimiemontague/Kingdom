@@ -120,11 +120,12 @@ class SimEngine:
         # WK61-FEAT-004: Rubble records for destroyed buildings.
         self.rubble_records: list = []
 
-        # Selection (sim-owned: used by coordinate queries + gameplay)
+        # Selection: WK63 moved to GameEngine.selection (SelectionState).
+        # Kept as None stubs so any remaining sim-side reads don't crash.
         self.selected_building = None
         self.selected_peasant = None
         self.selected_hero = None
-        self.selected_enemy = None  # WK61-FEAT-006
+        self.selected_enemy = None
 
         # WK57: Underground areas keyed by area_id
         self.underground_areas = {}
@@ -433,6 +434,8 @@ class SimEngine:
         pause_menu_visible: bool,
         sim_blend_fraction: float = 0.0,
         sim_tick_id: int = 0,
+        selected_hero=None,
+        selected_building=None,
     ):
         from game.sim.snapshot import SimStateSnapshot
 
@@ -454,8 +457,8 @@ class SimEngine:
             buildings_construction_progress=tuple(
                 float(getattr(b, "construction_progress", 1.0)) for b in self.buildings
             ),
-            selected_hero=self.selected_hero,
-            selected_building=getattr(self, "selected_building", None),
+            selected_hero=selected_hero,
+            selected_building=selected_building,
             castle=castle,
             tax_collector=getattr(self, "tax_collector", None),
             vfx_projectiles=tuple(vfx_projectiles or ()),
@@ -894,9 +897,8 @@ class SimEngine:
                 if getattr(bounty, "target", None) is building:
                     bounty.target = None
 
-            # Selection
-            if getattr(self, "selected_building", None) is building:
-                self.selected_building = None
+            # Selection: WK63 — moved to presentation-layer SelectionState.
+            # on_entity_destroyed() is called by CleanupManager or GameEngine event handler.
 
             # Rubble record
             rubble_size = getattr(building, "size", (1, 1))

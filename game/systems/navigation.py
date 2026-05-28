@@ -19,27 +19,47 @@ from game.systems import perf_stats
 
 
 class PathfindingBudget:
-    """Global per-frame budget for A* pathfinding. Prevents frame stalls from simultaneous replans."""
+    """Deterministic per-frame pathfinding budget.
 
-    MAX_MS_PER_FRAME = 3.0
+    Budget is measured in A* node expansions, not wall-clock time.
+    This ensures identical gameplay regardless of hardware speed.
+    Wall-clock timing is still collected for perf metrics but does
+    not gate whether a path request is served.
+    """
 
-    def __init__(self):
-        self._frame_start: float = 0.0
+    MAX_PLANS_PER_FRAME: int = 24          # was 12 (WK64 Phase A latency tweak)
+    MAX_EXPANSIONS_PER_FRAME: int = 24_000  # unchanged
+
+    def __init__(self) -> None:
+        self._frame_plans: int = 0
+        self._frame_expansions: int = 0
+        # Metrics only (not used for budget decisions):
         self._frame_ms_used: float = 0.0
         self._pending_queue: list = []  # [(entity_id, world, buildings, sx, sy, gx, gy)]
 
-    def begin_frame(self):
+    def begin_frame(self) -> None:
         """Call at start of each simulation frame to reset budget."""
-        self._frame_start = _time.perf_counter()
+        self._frame_plans = 0
+        self._frame_expansions = 0
         self._frame_ms_used = 0.0
 
     def budget_available(self) -> bool:
         """Check if there's budget remaining this frame."""
-        return self._frame_ms_used < self.MAX_MS_PER_FRAME
+        return (
+            self._frame_plans < self.MAX_PLANS_PER_FRAME
+            and self._frame_expansions < self.MAX_EXPANSIONS_PER_FRAME
+        )
 
-    def record_time(self, ms: float):
-        """Record time spent on a pathfinding call."""
-        self._frame_ms_used += ms
+    def record_plan(self, expansions: int, wall_ms: float = 0.0) -> None:
+        """Record one completed path plan.
+
+        Args:
+            expansions: Number of A* nodes expanded (from find_path return).
+            wall_ms: Wall-clock time for metrics only.
+        """
+        self._frame_plans += 1
+        self._frame_expansions += expansions
+        self._frame_ms_used += wall_ms
 
     def enqueue(self, entity_id, world, buildings, sx, sy, gx, gy):
         """Queue a replan request for next frame when budget is exhausted."""
@@ -122,26 +142,42 @@ def compute_path_worldpoints(
     start_y: float,
     goal_x: float,
     goal_y: float,
-) -> list[tuple[float, float]]:
-    """Compute an A* path (as world-space waypoints) avoiding solid buildings."""
+) -> list[tuple[float, float]] | None:
+    """Compute an A* path (world-space waypoints) avoiding solid buildings.
+
+    Returns:
+        list: the path, or [] when there is genuinely no path to the goal.
+        None: DEFERRED -- the per-frame budget is exhausted. The caller MUST
+              keep its existing ``path`` and retry next frame. Do NOT treat
+              None as failure and do NOT assign it to ``entity.path``.
+    """
     budget = get_pathfinding_budget()
 
-    # If budget exhausted, return empty (caller keeps existing path)
+    # Budget exhausted -> defer (do NOT return [], which callers would assign,
+    # wiping a still-valid path and looking like 'no path found').
     if not budget.budget_available():
-        return []
+        return None
 
-    t0 = time.perf_counter()
     start = world.world_to_grid(start_x, start_y)
     goal = world.world_to_grid(goal_x, goal_y)
-    # Cap expansions to keep worst-case pathfinding bounded on large maps.
-    grid_path = find_path(world, start, goal, buildings=buildings, max_expansions=8000)
-    dt_ms = (time.perf_counter() - t0) * 1000.0
 
-    budget.record_time(dt_ms)
+    # Wall-clock timing for metrics only (does NOT gate budget)
+    t0 = time.perf_counter()
+    grid_path, expansions = find_path(world, start, goal, buildings=buildings, max_expansions=8000)
+    t1 = time.perf_counter()
+    wall_ms = (t1 - t0) * 1000.0
+
+    # Record using deterministic expansion count
+    budget.record_plan(expansions, wall_ms)
+
+    # Update perf stats (observability)
     perf_stats.pathfinding.calls += 1
-    perf_stats.pathfinding.total_ms += dt_ms
+    perf_stats.pathfinding.total_ms += wall_ms
+    perf_stats.pathfinding.total_expansions += expansions
     if not grid_path:
         perf_stats.pathfinding.failures += 1
+        return []
+
     return grid_to_world_path(grid_path)
 
 

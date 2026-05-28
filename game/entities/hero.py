@@ -943,11 +943,26 @@ class Hero:
                         need_replan = False
 
                 if need_replan:
-                    self.path = compute_path_worldpoints(
+                    _new_path = compute_path_worldpoints(
                         world, buildings, self.x, self.y, goal_x, goal_y
                     )
-                    self._path_goal = goal_key
-                    self._path_last_replan_ms = int(sim_now_ms())
+                    if _new_path is not None:
+                        self.path = _new_path
+                        self._path_goal = goal_key
+                        self._path_last_replan_ms = int(sim_now_ms())
+                    elif not self.path:
+                        # WK64 A2.1: budget DEFERRED and we have NO path to follow.
+                        # Do NOT stall -- direct-steer toward the goal this frame (the
+                        # same fallback the far-target/black-fog branch above uses, and
+                        # that guard.py/tax_collector.py already use). A precise A* path
+                        # is acquired on a later frame once budget frees up. This prevents
+                        # first-path starvation under heavy entity load (30+ heroes) from
+                        # registering as a stuck unit. Do NOT stamp _path_last_replan_ms.
+                        self.move_towards(goal_x, goal_y, dt)
+                        return
+                    # else: budget DEFERRED but we still have a path -- keep following it
+                    # and retry the replan next frame. Do NOT stamp _path_last_replan_ms
+                    # (so the replan is re-attempted ASAP rather than rate-limited 200ms+).
 
                 follow_path(self, dt)
             else:

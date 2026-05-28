@@ -58,10 +58,20 @@ class CleanupManager:
             if getattr(building, "is_lair", False) and building in getattr(engine.lair_system, "lairs", []):
                 engine.lair_system.lairs.remove(building)
 
-            # 2. Clear selection
-            if engine.selected_building is building:
-                engine.selected_building = None
-                engine.building_panel.deselect()
+            # 2. Clear selection via presentation-layer SelectionState (WK63)
+            building_eid = getattr(building, "entity_id", None)
+            was_selected = (
+                building_eid
+                and hasattr(engine, "selection")
+                and engine.selection.selected_building_id == building_eid
+            )
+            if building_eid and hasattr(engine, "selection"):
+                engine.selection.on_entity_destroyed(building_eid)
+            if was_selected and hasattr(engine, "building_panel"):
+                try:
+                    engine.building_panel.deselect()
+                except Exception:
+                    pass
 
             # 3. Clear entity target references
             for hero in engine.heroes:
