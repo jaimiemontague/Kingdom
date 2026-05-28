@@ -692,6 +692,82 @@
           "follow_ups": [
             "Agent 11: Verify R8 gates and targeted marketplace potion tax regression after Agent 05 fix."
           ]
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R10-FEAT-001: config.py NEUTRAL_TAX_PER_MINUTE house 9 / farm 12 / food_stand 10; wired neutral_buildings.py constructors; ECONOMY_TAX_RATE_MULT=1.4 documented (shop path unchanged for R8).",
+            "WK61-R10-FEAT-002: Moved spawner timings to config (initial_no_spawn_ms 1500, first_wave_interval_ms 3500, extra_spawn_delay_ms 5000, GOBLIN*2+extra); wave_events.py derives schedule from WAVE_EVENT first_event_minute 2.0 / interval 1.75.",
+            "WK61-R10-FEAT-003: Hero hunger sim contract — next_meal_due_ms, hunger_urgent, buy_meal_at_food_stand() with add_tax_gold + hero_ate event; HUNGER_INTERVAL_MS 180000, FOOD_MEAL_COST_GOLD 10.",
+            "tests/test_wk61_r10_economy_tax_accrual.py and tests/test_wk61_r10_wave_timing.py added."
+          ],
+          "commands_run": [
+            {"command": "python tools/determinism_guard.py", "exit_code": 0},
+            {"command": "python -m pytest tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"command": "python -m json.tool .cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "determinism_guard": "PASS (exit 0)",
+            "pytest_r10_r8": "6 passed (R10 economy + wave timing + R8 marketplace tax)",
+            "qa_smoke_quick": "PASS (exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: Wire hunger_urgent / buy_meal_at_food_stand into basic_ai (tests/test_wk61_r10_hunger_ai.py).",
+            "Agent 08: Optional HUD hunger display (hunger_seconds_until_meal from snapshot) — not added this round."
+          ]
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R11-BUG-001: game/systems/wave_events.py _reserve_wave_spawn_slots trims oldest alive enemies when wave_cap full so Wolf Pack composition (Wolf class) is not dropped; tests/test_wk61_r11_wolf_pack_spawn.py headless Wolf Pack spawn + cap regression.",
+            "WK61-R11-BUG-002: config.py STARTING_BUILDINGS adds food_stand at (127,128) near marketplace; HUNGER_INTERVAL_MS 120000; game/building_factory.py registers FoodStand.",
+            "WK61-R11-BUG-003: config MARKETPLACE_PASSIVE_TAX_* constants; Marketplace.update() accrues deterministic 100-400g into stored_tax_gold via get_rng(market_passive_tax); wired in sim_engine.py + engine.py; tests/test_wk61_r11_marketplace_passive_tax.py."
+          ],
+          "commands_run": [
+            {"command": "python tools/determinism_guard.py", "exit_code": 0},
+            {"command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q", "exit_code": 0, "summary": "12 passed"},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "450 passed, DONE: PASS"}
+          ],
+          "evidence": {
+            "determinism_guard": {"command": "python tools/determinism_guard.py", "exit_code": 0},
+            "pytest_r11": {"command": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r10_hunger_ai.py -x -q", "exit_code": 0, "summary": "12 passed"},
+            "qa_smoke_quick": {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "450 passed, DONE: PASS"}
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 06: BUG-002 hunger live path — heroes must path to starter food_stand on no-LLM playtest.",
+            "Agent 11: Verify wolf pack + marketplace passive tax + hold-G after Agent 03/08 R11 fixes."
+          ]
+        },
+        "wk61_r12_live_gameplay_fixes": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r12_live_gameplay_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "TASK 1 — Wave counts 2x: game/systems/wave_events.py _WAVE_TABLE doubled all enemy counts (Goblin Raid 8, Wolf Pack 6+4, Skeleton Patrol 6+4, Spider Swarm 12+4, Bandit Ambush 6+4, Goblin Horde 16+4, Boss Wave 2+8); config.py EnemyConfig.max_alive_enemies 48→80.",
+            "TASK 2 — Food stand pacing: config.py HUNGER_INTERVAL_MS 120_000→60_000, FOOD_MEAL_COST_GOLD 10→5.",
+            "TASK 3 — Marketplace potions always available: game/entities/buildings/economic.py Marketplace.__init__ potions_researched=True, potion_price=15; removed redundant Advanced Healing unlock block."
+          ],
+          "commands_run": [
+            {"command": "python tools/determinism_guard.py", "exit_code": 0},
+            {"command": "python -m pytest tests/ -x -q", "exit_code": 0, "summary": "463 passed"},
+            {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "DONE: PASS"}
+          ],
+          "evidence": {
+            "determinism_guard": {"command": "python tools/determinism_guard.py", "exit_code": 0},
+            "pytest_full": {"command": "python -m pytest tests/ -x -q", "exit_code": 0, "summary": "463 passed"},
+            "qa_smoke_quick": {"command": "python tools/qa_smoke.py --quick", "exit_code": 0, "summary": "DONE: PASS"}
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: Verify doubled wave counts via grep, config tuning values, and marketplace potions_researched=True."
+          ]
         }
       }
     },

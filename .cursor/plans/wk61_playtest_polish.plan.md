@@ -1498,3 +1498,19 @@ These were planned for WK60 R2 but never executed. They're NOT required for WK61
 - [ ] `python tools/qa_smoke.py --quick` PASS
 - [ ] `python -m pytest tests/ -x -q` PASS
 - [ ] Game playable for 15+ minutes without crashes
+
+---
+
+## R10 — Economy Pacing, Hold-G $0, Hunger, Sidebar Resize (v1.5.9)
+
+**Created:** 2026-05-23 | **Plan:** `.cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md` | **Round:** `wk61_r10_v159_economy_pacing_ux`
+
+| Ticket | Summary | Owner |
+|--------|---------|-------|
+| WK61-R10-BUG-001 | Hold-G shows $N including $0 on tax-stash buildings | 03 |
+| WK61-R10-FEAT-001 | Faster taxable gold (neutrals + shop tax) | 05 |
+| WK61-R10-FEAT-002 | Sooner waves, shorter gaps | 05 |
+| WK61-R10-FEAT-003 | Hero hunger 10g / ~3 min at food stands | 05 + 06 |
+| WK61-R10-FEAT-004 | Draggable left sidebar panel heights | 08 |
+
+**Waves:** 05+03 → 06 → 08+12 → 11. Local orchestrator `auto_until_human_gate`.

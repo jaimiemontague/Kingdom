@@ -9,9 +9,13 @@ from typing import TYPE_CHECKING
 from config import (
     INN_ENTRY_FEE,
     INN_REST_RECOVERY_RATE,
+    MARKETPLACE_PASSIVE_TAX_INTERVAL_MS,
+    MARKETPLACE_PASSIVE_TAX_MAX,
+    MARKETPLACE_PASSIVE_TAX_MIN,
     RESEARCH_POTIONS_DURATION_MS,
     RESEARCH_DURATION_MS_PER_100_GOLD,
 )
+from game.sim.determinism import get_rng
 from game.sim.timebase import now_ms as sim_now_ms
 
 from .base import Building, is_research_unlocked, unlock_research
@@ -28,14 +32,9 @@ class Marketplace(TaxStashMixin, Building):
     def __init__(self, grid_x: int, grid_y: int):
         super().__init__(grid_x, grid_y, BuildingType.MARKETPLACE)
         self._init_tax_stash()
-        self.potions_researched = False  # Must research before heroes can buy potions
-        self.potion_price = 20
-
-        # Research synergy: if Advanced Healing is unlocked, marketplaces can sell potions
-        # immediately and at a reduced price.
-        if is_research_unlocked("Advanced Healing"):
-            self.potions_researched = True
-            self.potion_price = 15
+        self._passive_tax_next_ms = int(sim_now_ms()) + int(MARKETPLACE_PASSIVE_TAX_INTERVAL_MS)
+        self.potions_researched = True
+        self.potion_price = 15
         self.items = [
             {"name": "Dagger", "type": "weapon", "style": "melee", "price": 60, "attack": 4},
             {"name": "Short Bow", "type": "weapon", "style": "ranged", "price": 70, "attack": 4},
@@ -91,6 +90,21 @@ class Marketplace(TaxStashMixin, Building):
         elapsed = sim_now_ms() - getattr(self, "research_started_ms", 0)
         duration = getattr(self, "research_duration_ms", 1)
         return max(0.0, min(1.0, float(elapsed) / float(duration)))
+
+    def update(self, dt: float, economy=None) -> None:
+        """WK61-R11: passive taxable income accrues into stored_tax_gold."""
+        _ = (dt, economy)
+        if not getattr(self, "is_constructed", True):
+            return
+        if self.hp <= 0:
+            return
+        now_ms = int(sim_now_ms())
+        if now_ms < self._passive_tax_next_ms:
+            return
+        rng = get_rng("market_passive_tax")
+        amount = rng.randint(MARKETPLACE_PASSIVE_TAX_MIN, MARKETPLACE_PASSIVE_TAX_MAX)
+        self.add_tax_gold(amount)
+        self._passive_tax_next_ms = now_ms + int(MARKETPLACE_PASSIVE_TAX_INTERVAL_MS)
 
 
 class Blacksmith(TaxStashMixin, Building):

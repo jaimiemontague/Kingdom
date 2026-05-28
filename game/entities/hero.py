@@ -13,7 +13,7 @@ from game.systems import hero_memory
 from game.systems.hero_memory import stable_place_id
 from config import (
     TILE_SIZE, HERO_BASE_HP, HERO_BASE_ATTACK, HERO_BASE_DEFENSE,
-    HERO_SPEED, COLOR_BLUE, TAX_RATE
+    HERO_SPEED, COLOR_BLUE, TAX_RATE, HUNGER_INTERVAL_MS,
 )
 from game.sim.hero_guardrails_tunables import PATH_REPLAN_MIN_INTERVAL_MS
 
@@ -172,6 +172,9 @@ class Hero:
         self.pending_task: str | None = None
         self.pending_task_building: Building | None = None
         self._rest_heal_progress = 0.0
+
+        # WK61-R10: hero hunger — meal cadence for food-stand economy loop (Agent 06 drives AI).
+        self.next_meal_due_ms: int = int(sim_now_ms()) + int(HUNGER_INTERVAL_MS)
 
         # -----------------------------
         # WK2 contracts: combat gating + stuck signals (Hero-owned, UI-readable)
@@ -675,6 +678,52 @@ class Hero:
             except Exception:
                 pass
     
+    @property
+    def hunger_urgent(self) -> bool:
+        """True when sim time has reached the next meal deadline."""
+        return int(sim_now_ms()) >= int(self.next_meal_due_ms)
+
+    def _is_at_food_stand(self, food_stand: "Building | None") -> bool:
+        """Inside the stand or within ~1 tile (matches shop proximity pattern)."""
+        if food_stand is None:
+            return False
+        if self.is_inside_building and self.inside_building is food_stand:
+            return True
+        dist = self.distance_to(float(food_stand.center_x), float(food_stand.center_y))
+        return dist <= TILE_SIZE * 1.0
+
+    def buy_meal_at_food_stand(self, food_stand: "Building | None") -> bool:
+        """Buy a meal at a food stand; deposits sale tax to the stand stash."""
+        from config import FOOD_MEAL_COST_GOLD, FOOD_MEAL_HUNGER_RESET, HUNGER_INTERVAL_MS
+
+        if food_stand is None:
+            return False
+        if getattr(food_stand, "building_type", None) != "food_stand":
+            return False
+        if not self._is_at_food_stand(food_stand):
+            return False
+        if self.gold < FOOD_MEAL_COST_GOLD:
+            return False
+
+        self.gold -= FOOD_MEAL_COST_GOLD
+        tax_amount = int(FOOD_MEAL_COST_GOLD * TAX_RATE)
+        if tax_amount > 0 and hasattr(food_stand, "add_tax_gold"):
+            food_stand.add_tax_gold(tax_amount)
+        if FOOD_MEAL_HUNGER_RESET:
+            self.next_meal_due_ms = int(sim_now_ms()) + int(HUNGER_INTERVAL_MS)
+        if self._event_bus is not None:
+            try:
+                self._event_bus.emit({
+                    "type": "hero_ate",
+                    "hero_id": str(self.hero_id),
+                    "hero_name": str(self.name),
+                    "building_type": "food_stand",
+                    "cost_gold": FOOD_MEAL_COST_GOLD,
+                })
+            except Exception:
+                pass
+        return True
+
     def _shop_for_tax_deposit(self, shop_building: "Building | None" = None) -> "Building | None":
         """Resolve the shop that should receive sale tax (WK61-R8-BUG-001)."""
         if shop_building is not None and hasattr(shop_building, "add_tax_gold"):

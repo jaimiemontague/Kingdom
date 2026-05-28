@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "de436b62-6c82-4461-a78d-cde0e2243468",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r12_live_gameplay_fixes",
+  "agent_id": "06",
+  "status": "done",
+  "summary": "Hunger fires for FIGHTING/RESTING heroes; critical HP gate lowered to 15%. 13 pytest + qa_smoke PASS.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r12_live_gameplay_fixes]",
+  "timestamp": "2026-05-23T20:44:21.259Z"
+}

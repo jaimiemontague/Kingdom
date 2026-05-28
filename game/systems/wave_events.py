@@ -57,13 +57,13 @@ class WaveEventDef:
 
 # Starting wave table (values from the plan -- will be tuned in Phase 2)
 _WAVE_TABLE: list[WaveEventDef] = [
-    WaveEventDef("Goblin Raid",       3.0,  [(Goblin, 4)],                              "random_edge",  40),
-    WaveEventDef("Wolf Pack",         5.5,  [(Wolf, 3), (Goblin, 2)],                   "random_edge",  55),
-    WaveEventDef("Skeleton Patrol",   8.0,  [(Skeleton, 3), (SkeletonArcher, 2)],       "random_edge",  70),
-    WaveEventDef("Spider Swarm",     11.0,  [(Spider, 6), (Goblin, 2)],                 "random_edge",  60),
-    WaveEventDef("Bandit Ambush",    14.0,  [(Bandit, 3), (SkeletonArcher, 2)],         "random_edge",  80),
-    WaveEventDef("Goblin Horde",     17.0,  [(Goblin, 8), (Wolf, 2)],                   "all_edges",   100),
-    WaveEventDef("Boss Wave",        20.0,  [(BanditLord, 1), (Bandit, 4)],             "random_edge", 150),
+    WaveEventDef("Goblin Raid",       3.0,  [(Goblin, 8)],                              "random_edge",  40),
+    WaveEventDef("Wolf Pack",         5.5,  [(Wolf, 6), (Goblin, 4)],                   "random_edge",  55),
+    WaveEventDef("Skeleton Patrol",   8.0,  [(Skeleton, 6), (SkeletonArcher, 4)],       "random_edge",  70),
+    WaveEventDef("Spider Swarm",     11.0,  [(Spider, 12), (Goblin, 4)],                 "random_edge",  60),
+    WaveEventDef("Bandit Ambush",    14.0,  [(Bandit, 6), (SkeletonArcher, 4)],         "random_edge",  80),
+    WaveEventDef("Goblin Horde",     17.0,  [(Goblin, 16), (Wolf, 4)],                   "all_edges",   100),
+    WaveEventDef("Boss Wave",        20.0,  [(BanditLord, 2), (Bandit, 8)],             "random_edge", 150),
     WaveEventDef("Demon Siege",      25.0,  [(DemonOverlord, 1), (Skeleton, 6)],        "all_edges",   250),
 ]
 
@@ -170,7 +170,15 @@ class WaveEventSystem(GameSystem):
     def _current_event_def(self) -> WaveEventDef | None:
         """Return the next wave event definition, cycling with escalation after the table ends."""
         if self._next_table_index < len(_WAVE_TABLE):
-            return _WAVE_TABLE[self._next_table_index]
+            base = _WAVE_TABLE[self._next_table_index]
+            minute = _wave_cfg.first_event_minute + self._next_table_index * _wave_cfg.interval_minutes
+            return WaveEventDef(
+                name=base.name,
+                minute=minute,
+                composition=base.composition,
+                direction=base.direction,
+                reward_gold=base.reward_gold,
+            )
         # Cycle: replay the table with increasing count multipliers
         cycle_idx = (self._next_table_index - len(_WAVE_TABLE)) % len(_WAVE_TABLE)
         base = _WAVE_TABLE[cycle_idx]
@@ -178,7 +186,7 @@ class WaveEventSystem(GameSystem):
         cycle_num = 1 + (self._next_table_index - len(_WAVE_TABLE)) // len(_WAVE_TABLE)
         count_mult = 1.0 + cycle_num * 0.5
         # Compute the minute for this cycling event
-        last_minute = _WAVE_TABLE[-1].minute
+        last_minute = _wave_cfg.first_event_minute + (len(_WAVE_TABLE) - 1) * _wave_cfg.interval_minutes
         extra_minutes = (self._next_table_index - len(_WAVE_TABLE) + 1) * _wave_cfg.interval_minutes
         new_minute = last_minute + extra_minutes
         new_comp = [(cls, max(1, int(round(count * count_mult)))) for cls, count in base.composition]
@@ -189,6 +197,24 @@ class WaveEventSystem(GameSystem):
             direction=base.direction,
             reward_gold=int(base.reward_gold * (1.0 + cycle_num * 0.25)),
         )
+
+    def _reserve_wave_spawn_slots(self, ctx: SystemContext, needed: int, wave_cap: int) -> None:
+        """Free enemy slots deterministically so wave spawns are not truncated to zero."""
+        if needed <= 0:
+            return
+        alive_count = len([e for e in ctx.enemies if getattr(e, "is_alive", False)])
+        room = max(0, wave_cap - alive_count)
+        if room >= needed:
+            return
+        slots_to_free = needed - room
+        freed = 0
+        trimmed: list = []
+        for enemy in ctx.enemies:
+            if freed < slots_to_free and getattr(enemy, "is_alive", False):
+                freed += 1
+                continue
+            trimmed.append(enemy)
+        ctx.enemies[:] = trimmed
 
     def _spawn_wave(self, event_def: WaveEventDef, ctx: SystemContext) -> None:
         """Instantiate and register enemies for a wave event."""
@@ -233,9 +259,12 @@ class WaveEventSystem(GameSystem):
                     enemy.attack_power = max(1, int(round(enemy.attack_power * dmg_mult)))
                 spawned.append(enemy)
 
-        # Add to shared enemy list (wave events can exceed normal cap by overflow factor)
-        alive_count = len([e for e in ctx.enemies if getattr(e, "is_alive", False)])
+        # Add to shared enemy list (wave events can exceed normal cap by overflow factor).
+        # WK61-R11: reserve slots so themed compositions (e.g. Wolf Pack) are not dropped.
         wave_cap = int(MAX_ALIVE_ENEMIES * _wave_cfg.max_enemy_cap_overflow)
+        needed = len(spawned)
+        self._reserve_wave_spawn_slots(ctx, needed, wave_cap)
+        alive_count = len([e for e in ctx.enemies if getattr(e, "is_alive", False)])
         remaining = max(0, wave_cap - alive_count)
         added = spawned[:remaining] if remaining < len(spawned) else spawned
         ctx.enemies.extend(added)

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "abaff67d-ffb1-4fa2-b815-dade6bb3f487",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r10_v159_economy_pacing_ux",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "FEAT-004: resizable left sidebar split (main/watch fracs + 4px drag handles), Ursina pointer wired via input_handler; marketplace taxable gold confirmed in panel + screenshots.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r10_v159_economy_pacing_ux]",
+  "timestamp": "2026-05-23T19:44:44.084Z"
+}

@@ -1309,6 +1309,112 @@
           "follow_ups": [
             "Agent 05: confirm gameplay-side idle contributors (rest thresholds at 60 HP base, bounty availability) if playtest still feels slow after R4 AI fix."
           ]
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "status": "done",
+          "what_i_changed": [
+            "ai/behaviors/hunger.py: deterministic hunger module — find_nearest_food_stand, should_seek_meal (<25% HP gate), go_to_food_stand, try_buy_meal, idle seek + patrol interrupt + arrival purchase.",
+            "ai/basic_ai.py: wired hunger_behavior; buy_meal committed destination; maybe_redirect_for_meal before rest/LLM dispatch.",
+            "ai/behaviors/exploration.py: hunger check after bounty, before shopping/explore in handle_idle.",
+            "ai/behaviors/bounty_pursuit.py: buy_meal arrival handler + non-interrupt list entry.",
+            "tests/test_wk61_r10_hunger_ai.py: 8 tests for stand selection, gating, idle pathing, immediate purchase, arrival, patrol interrupt, no-stand fallback."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "hunger_ai_pytest": "8 passed",
+            "qa_smoke_quick": "DONE: PASS (exit code 0)"
+          },
+          "blockers": [],
+          "follow_ups": []
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R11-BUG-002: ai/behaviors/hunger.py — tick_meal_hunger runs idle/moving/shopping paths; per-hero no-stand logging; shopping target + SHOPPING state interrupt when urgent and gold>=10.",
+            "ai/basic_ai.py: tick_meal_hunger for all non-critical-combat heroes before rest/LLM; early return when buy_meal target set.",
+            "ai/behaviors/llm_bridge.py + ai/prompt_templates.py + ai/context_builder.py: fallback seek_meal + LLM apply guard before explore/buy_item.",
+            "tests/test_wk61_r11_hunger_live_path.py: update_hero redirect, movement toward stand, shopping interrupt, fallback meal, per-hero logging."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "cwd": "repo root",
+              "note": "457 passed; 2 failures in unrelated Agent 03/08 tests (test_wk61_r10_hold_g_shows_zero, test_wk61_r9_hero_chat_readable_layout). Agent 06 scoped hunger pytest: 13 passed."
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "hunger_live_path_pytest": "13 passed (5 new R11 + 8 R10 regression)",
+            "qa_smoke_quick": "FAIL exit 1 — pre-existing unrelated UI/renderer test failures; Agent 06 assignment gates green on scoped pytest"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 05: starter food_stand in STARTING_BUILDINGS (parallel R11 ticket) required for live playtest map presence.",
+            "Agent 11: full qa_smoke after 03/08 fix hold-G parent and hero chat split regressions."
+          ]
+        },
+        "wk61_r12_live_gameplay_fixes": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r12_live_gameplay_fixes",
+          "status": "done",
+          "what_i_changed": [
+            "ai/basic_ai.py: hunger tick now runs for all heroes except RETREATING/DEAD (FIGHTING and RESTING included); healthy fighters can disengage to eat.",
+            "ai/behaviors/hunger.py: _CRITICAL_HP_FRACTION 0.25 -> 0.15 so heroes seek meals down to 15% HP.",
+            "tests/test_wk61_r10_hunger_ai.py: critical-HP gate assertion updated for 15% threshold (hp=14 blocks, hp=20 allows)."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r10_hunger_ai.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "hunger_pytest": "13 passed",
+            "qa_smoke_quick": "DONE: PASS (exit code 0)"
+          },
+          "blockers": [],
+          "follow_ups": []
         }
       }
     }

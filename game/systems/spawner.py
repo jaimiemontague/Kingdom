@@ -5,7 +5,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, GOBLIN_SPAWN_INTERVAL
+from config import (
+    TILE_SIZE,
+    MAP_WIDTH,
+    MAP_HEIGHT,
+    GOBLIN_SPAWN_INTERVAL,
+    SPAWNER_INITIAL_NO_SPAWN_MS,
+    SPAWNER_FIRST_WAVE_INTERVAL_MS,
+    SPAWNER_EXTRA_SPAWN_DELAY_MS,
+    SPAWNER_GOBLIN_INTERVAL_MULT,
+)
 from game.entities.enemy import Goblin, Wolf, Skeleton, SkeletonArcher, Spider, Bandit
 from game.sim.determinism import get_rng
 from game.systems.protocol import GameSystem, SystemContext
@@ -47,15 +56,15 @@ class EnemySpawner(GameSystem):
         # Deterministic stream for wave spawns.
         self.rng = get_rng("enemy_spawner")
         self.spawn_timer = 0
-        # WK4 testing/UX: get something interesting on screen quickly.
-        # First wave uses a shorter interval so players can validate new enemies without waiting.
-        self.first_wave_interval_ms = 6000
+        # WK61-R10: faster first wave and shorter gaps between trickle waves.
+        self.first_wave_interval_ms = SPAWNER_FIRST_WAVE_INTERVAL_MS
         self._spawned_first_wave_archer = False
-        # Release tuning: fewer monsters overall.
-        self.extra_spawn_delay_ms = 12000  # additional gap between waves
-        self.spawn_interval = GOBLIN_SPAWN_INTERVAL * 3 + self.extra_spawn_delay_ms
+        self.extra_spawn_delay_ms = SPAWNER_EXTRA_SPAWN_DELAY_MS
+        self.spawn_interval = (
+            GOBLIN_SPAWN_INTERVAL * SPAWNER_GOBLIN_INTERVAL_MULT + self.extra_spawn_delay_ms
+        )
         self.elapsed_ms = 0
-        self.initial_no_spawn_ms = 5000  # First wave comes 25 seconds sooner than the original 30s
+        self.initial_no_spawn_ms = SPAWNER_INITIAL_NO_SPAWN_MS
         self.wave_number = 1
         # WK60: raised cap from 4 to 6
         self.enemies_per_wave = 1
@@ -212,5 +221,7 @@ class EnemySpawner(GameSystem):
         self.enemies_per_wave = 1
         self.total_spawned = 0
         self._spawned_first_wave_archer = False
-        self.spawn_interval = GOBLIN_SPAWN_INTERVAL * 3 + self.extra_spawn_delay_ms
+        self.spawn_interval = (
+            GOBLIN_SPAWN_INTERVAL * SPAWNER_GOBLIN_INTERVAL_MULT + SPAWNER_EXTRA_SPAWN_DELAY_MS
+        )
 

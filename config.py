@@ -57,7 +57,7 @@ class EnemyConfig:
     goblin_attack: int = 5
     goblin_speed: float = 90.0  # px/sec (baked: old 1.5 * 60)
     goblin_spawn_interval: int = 3500   # wk15: lower = more frequent waves (was 5000)
-    max_alive_enemies: int = 48         # WK60: raised from 32 for wave events + lair pressure
+    max_alive_enemies: int = 80         # WK61-R12: raised from 48 for doubled wave counts
     wolf_hp: int = 22
     wolf_attack: int = 4
     wolf_speed: float = 138.0  # px/sec (baked: old 2.3 * 60)
@@ -127,6 +127,7 @@ STARTING_BUILDINGS = [
     ("warrior_guild", 128, 124),   # East of castle
     ("ranger_guild", 119, 124),    # West of castle (2 tiles gap)
     ("marketplace", 124, 128),     # South of castle
+    ("food_stand", 127, 128),      # WK61-R11: east of marketplace (>=2 tile gap)
     ("guardhouse", 124, 131),      # Further south
 ]
 
@@ -169,14 +170,34 @@ class DifficultyConfig:
 @dataclass(frozen=True)
 class WaveEventConfig:
     """WK60: Wave events system tuning knobs (Feature 1 — Make It Fun)."""
-    first_event_minute: float = 3.0
-    interval_minutes: float = 2.5
+    first_event_minute: float = 2.0   # WK61-R10: was 3.0
+    interval_minutes: float = 1.75    # WK61-R10: was 2.5
     warning_seconds: float = 10.0
     max_enemy_cap_overflow: float = 1.5  # wave events can temporarily exceed MAX_ALIVE_ENEMIES by this factor
 
 
 DIFFICULTY = DifficultyConfig()
 WAVE_EVENT = WaveEventConfig()
+
+# WK61-R10: economy pacing (playtest polish)
+NEUTRAL_TAX_PER_MINUTE = {"house": 9.0, "farm": 12.0, "food_stand": 10.0}
+ECONOMY_TAX_RATE_MULT = 1.4  # optional shop-sale multiplier; not applied to global TAX_RATE
+
+# WK61-R10: spawner pacing
+SPAWNER_INITIAL_NO_SPAWN_MS = 1500
+SPAWNER_FIRST_WAVE_INTERVAL_MS = 3500
+SPAWNER_EXTRA_SPAWN_DELAY_MS = 5000
+SPAWNER_GOBLIN_INTERVAL_MULT = 2
+
+# WK61-R10: hero hunger meals at food stands
+HUNGER_INTERVAL_MS = 60_000  # WK61-R12: 1 min for faster playtest feedback
+FOOD_MEAL_COST_GOLD = 5
+FOOD_MEAL_HUNGER_RESET = True
+
+# WK61-R11: marketplace passive taxable income (hold-G stash, not player treasury)
+MARKETPLACE_PASSIVE_TAX_INTERVAL_MS = 120_000
+MARKETPLACE_PASSIVE_TAX_MIN = 100
+MARKETPLACE_PASSIVE_TAX_MAX = 400
 
 
 # Speed tiers (wk12 Chronos: 5-tier player-facing speed control)

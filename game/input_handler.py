@@ -57,6 +57,12 @@ class InputHandler:
                 # Menu slider drag end
                 if c.pause_menu.visible and event.button == 1:
                     c.pause_menu.handle_mouseup(event.pos)
+                if event.button == 1 and hasattr(c.hud, "handle_sidebar_split_pointer_up"):
+                    if c.hud.handle_sidebar_split_pointer_up() is True:
+                        bp = getattr(c, "building_panel", None)
+                        fn = getattr(bp, "on_request_ursina_hud_upload", None) if bp else None
+                        if callable(fn):
+                            fn()
                 # End borderless drag
                 if event.button == 1 and getattr(c, "_borderless_drag_active", False):
                     c._borderless_drag_active = False
@@ -424,6 +430,10 @@ class InputHandler:
             action = None
             try:
                 gs = c.get_game_state()
+                if hasattr(c.hud, "handle_sidebar_split_pointer_down"):
+                    down_fn = c.hud.handle_sidebar_split_pointer_down
+                    if down_fn(event.pos, gs) is True:
+                        return
                 if hasattr(c.hud, "handle_click"):
                     action = c.hud.handle_click(event.pos, gs)
                     if action == "quit":
@@ -452,6 +462,8 @@ class InputHandler:
                             c.apply_hud_pin_action(action)
                         return
                     if action == "watch_card_chevron_toggle":
+                        return
+                    if action == "sidebar_split_drag":
                         return
                     if action in ("chat_band_close", "chat_band_open"):
                         return
@@ -621,6 +633,9 @@ class InputHandler:
                 pos = c.building_menu.get_placement()
                 if pos:
                     c.place_building(pos[0], pos[1])
+            elif getattr(c.hud, "_left_split_drag_kind", None) is not None:
+                # WK61-R11 BUG-005: block world pick/placement while sidebar split drag is active.
+                return
             else:
                 # WK61-R4-BUG-002: Ursina screen-space pick before floor-ray distance checks.
                 if getattr(c, "_ursina_viewer", False) and c.try_ursina_select_unit_at_screen(event.pos):
@@ -722,6 +737,15 @@ class InputHandler:
                     (c.camera_x, c.camera_y),
                     zoom=c.zoom,
                 )
+
+        move_fn = getattr(c.hud, "handle_sidebar_split_pointer_move", None)
+        if callable(move_fn):
+            gs = c.get_game_state()
+            if move_fn(event.pos, gs) is True:
+                bp = getattr(c, "building_panel", None)
+                fn = getattr(bp, "on_request_ursina_hud_upload", None) if bp else None
+                if callable(fn):
+                    fn()
 
         # Update building list panel hover state
         if c.building_list_panel.visible:

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "token": "7c510f05-3712-4bae-843a-1f698f3bef58",
+  "completion_token": "a90b2543-30b4-41cc-845b-c07975630eb6",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r12_live_gameplay_fixes",
+  "agent_id": "11",
+  "status": "verified",
+  "reason": "Completion receipt and claimed agent log verified.",
+  "log_check": "passed",
+  "timestamp": "2026-05-23T20:46:05.784Z"
+}

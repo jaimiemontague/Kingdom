@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from config import LLM_DECISION_COOLDOWN, TILE_SIZE
+from ai.behaviors import hunger
 from ai.context_builder import ContextBuilder
 from ai.decision_moments import (
     consult_suppressed_by_request_state,
@@ -106,6 +107,9 @@ def apply_llm_decision(
     reason = decision.get("reasoning", "")
     if not isinstance(reason, str):
         reason = ""
+
+    if hunger.maybe_apply_meal_before_llm_action(ai, hero, game_state, action):
+        return
 
     if action == "retreat":
         ai.set_intent(hero, "returning_to_safety")

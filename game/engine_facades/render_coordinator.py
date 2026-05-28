@@ -10,6 +10,7 @@ import pygame
 
 from config import COLOR_BLACK, MAX_ALIVE_ENEMIES
 from game.graphics.font_cache import get_font
+from game.presentation.frame_context import FrameContext
 from game.systems import perf_stats
 
 if TYPE_CHECKING:
@@ -35,7 +36,13 @@ class EngineRenderCoordinator:
         else:
             e.screen.fill(COLOR_BLACK)
 
-        snapshot = e.build_snapshot()
+        # WK62 Task D: build FrameContext ONCE and reuse across the entire
+        # render pass.  Previously get_game_state() was called up to 3 times
+        # per frame (HUD, debug panel, pause menu) and build_snapshot() once.
+        ctx = FrameContext.build(e)
+        snapshot = ctx.snapshot
+        game_state = ctx.game_state
+
         pr = getattr(e, "pygame_renderer", None)
         if pr is not None and e.screen is not None and e._scaled_surface is not None:
             pr.render_world(
@@ -48,7 +55,7 @@ class EngineRenderCoordinator:
             )
 
         if not bool(getattr(e, "screenshot_hide_ui", False)):
-            e.hud.render(e.screen, e.get_game_state())
+            e.hud.render(e.screen, game_state)
 
             watch_map_rect = getattr(e.hud, "watch_card_map_rect", None)
             if watch_map_rect is not None:
@@ -88,7 +95,7 @@ class EngineRenderCoordinator:
                         snapshot,
                     )
 
-            e.debug_panel.render(e.screen, e.get_game_state())
+            e.debug_panel.render(e.screen, game_state)
             e.dev_tools_panel.render(e.screen)
             lr_bp = getattr(e.hud, "_last_left_rect", None)
             if lr_bp is not None:
@@ -116,8 +123,7 @@ class EngineRenderCoordinator:
                     e._last_ui_cursor_pos = (int(mp[0]), int(mp[1]))
                     e.pause_menu.render(e.screen, mouse_pos=(int(mp[0]), int(mp[1])))
                 else:
-                    gs_pm = e.get_game_state()
-                    ucp = gs_pm.get("ui_cursor_pos")
+                    ucp = game_state.get("ui_cursor_pos")
                     if ucp is not None and len(ucp) >= 2:
                         e.pause_menu.render(e.screen, mouse_pos=(int(ucp[0]), int(ucp[1])))
                     else:

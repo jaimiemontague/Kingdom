@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-23T20:06:52.876Z",
+  "updated_at": "2026-05-23T20:18:27.926Z",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r11_playtest_fix_round",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2.5",
+  "pm_hub_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "gameplay",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "05",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "f094c6c4-6984-4441-a902-54eb2d8f1d64",
+          "started_at": "2026-05-23T20:06:52.900Z",
+          "sdk_agent_id": "agent-e78a3b6b4c2b6f4609ef870bf84dd8f528fa71aa",
+          "run_id": "run-a1678dba-4cc8-44ff-8eb2-bba3d7747bfe",
+          "finished_at": "2026-05-23T20:09:49.850Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\f094c6c4-6984-4441-a902-54eb2d8f1d64.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\15dd362b-4bf8-485d-997a-41bc3b9943ba.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "ai_render_ux",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "06",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "6732dfb9-5df3-41ec-ad71-d04139813c5b",
+          "started_at": "2026-05-23T20:10:04.368Z",
+          "sdk_agent_id": "agent-bfbc4eb4d90af58aab176089bcefdebce8e39b3b",
+          "run_id": "run-f3ae7b4d-2d0e-44d9-8507-9c819f42671b",
+          "finished_at": "2026-05-23T20:12:03.036Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\6732dfb9-5df3-41ec-ad71-d04139813c5b.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\4b00d59f-d35a-44df-a02d-1980e7b056e6.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "03",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "80988017-8be5-425c-ae22-b93ef964d9b0",
+          "started_at": "2026-05-23T20:10:04.368Z",
+          "sdk_agent_id": "agent-975fd51b27297c2591036582a3221236460acaf7",
+          "run_id": "run-61e06d49-631c-4a67-9b94-7b589fccb0b4",
+          "finished_at": "2026-05-23T20:12:25.245Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\80988017-8be5-425c-ae22-b93ef964d9b0.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\1eea619a-8d1c-4003-8d88-767efe3290a9.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "08",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "e389b578-ae5e-4837-8724-1d687264e9d6",
+          "started_at": "2026-05-23T20:10:04.368Z",
+          "sdk_agent_id": "agent-1eb5b4c7f4c9b66f359bf9f87772a5450a8b5a5f",
+          "run_id": "run-4d9eb246-2ac2-45a5-9842-9e63ae03c81f",
+          "finished_at": "2026-05-23T20:13:13.239Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\e389b578-ae5e-4837-8724-1d687264e9d6.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\b509b5b5-c956-4ebf-8e5e-21b907b7a424.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "a876f372-af2b-4bb9-ac63-00e9a2eb8ecc",
+          "started_at": "2026-05-23T20:13:27.735Z",
+          "sdk_agent_id": "agent-07ef2b72ad224b6ea53d68add8036057348514f5",
+          "run_id": "run-af76b5fa-b2ec-49cb-ab9a-2de879238001",
+          "finished_at": "2026-05-23T20:18:13.486Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a876f372-af2b-4bb9-ac63-00e9a2eb8ecc.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\75c71212-f0a2-47f6-938a-653431ca86cc.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest_after_round",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 05 prompt mentions a human gate",
+    "Agent 03 prompt mentions a human gate",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

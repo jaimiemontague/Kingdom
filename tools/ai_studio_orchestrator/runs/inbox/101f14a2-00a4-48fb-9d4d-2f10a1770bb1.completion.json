@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "101f14a2-00a4-48fb-9d4d-2f10a1770bb1",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r12_live_gameplay_fixes",
+  "agent_id": "05",
+  "status": "done",
+  "summary": "Doubled wave counts + raised enemy cap; hunger 60s/5g meals; marketplace potions always 15g. All gates green.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_05_GameplaySystemsDesigner.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r12_live_gameplay_fixes]",
+  "timestamp": "2026-05-23T20:44:10.910Z"
+}

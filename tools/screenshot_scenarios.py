@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
+from config import STARTING_BUILDINGS, TAX_STASH_BUILDING_TYPES, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT
 from game.entities.building import Building
 from game.entities.hero import Hero
 from game.entities.enemy import Enemy
@@ -491,6 +491,8 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             pass
         if hasattr(engine2, "debug_panel"):
             engine2.debug_panel.visible = False
+        if hasattr(engine2, "building_panel"):
+            engine2.building_panel.deselect()
 
     def _apply_select_hero(engine2):
         _apply_clear(engine2)
@@ -503,6 +505,35 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
         if hasattr(engine2, "hud"):
             engine2.hud.right_panel_visible = True
         engine2.selected_building = inn
+        if hasattr(engine2, "building_panel"):
+            engine2.building_panel.select_building(inn, getattr(engine2, "heroes", []))
+
+    def _apply_marketplace_taxable_gold(engine2):
+        from game.entities.buildings.economic import Marketplace
+
+        _apply_clear(engine2)
+        if hasattr(engine2, "hud"):
+            engine2.hud.right_panel_visible = True
+        mp = Marketplace(cgx + 4, cgy - 2)
+        mp.is_constructed = True
+        mp.potions_researched = True
+        mp.stored_tax_gold = 42
+        engine2.buildings.append(mp)
+        engine2.selected_building = mp
+        if hasattr(engine2, "building_panel"):
+            engine2.building_panel.select_building(mp, getattr(engine2, "heroes", []))
+
+    def _apply_sidebar_pin_split(engine2):
+        from game.sim.timebase import now_ms as sim_now_ms
+
+        _apply_select_hero(engine2)
+        hid = str(getattr(hero, "hero_id", "") or "")
+        if hasattr(engine2, "hud"):
+            engine2.hud._pin_slot.pin(hid, int(sim_now_ms()))
+            engine2.hud._pin_slot.pinned_name = str(getattr(hero, "name", "Hero"))
+            engine2.hud._pin_slot._just_pinned = False
+            engine2.hud._watch_card_expanded = True
+            engine2.hud._left_split_fracs = {"main": 0.32, "watch": 0.68}
 
     def _apply_debug_open(engine2):
         _apply_select_hero(engine2)
@@ -570,6 +601,24 @@ def scenario_ui_panels(engine, *, seed: int) -> list[Shot]:
             zoom=1.4,
             meta={"scenario": "ui_panels", "mode": "tax_collector"},
             apply=_apply_select_tax_collector,
+        ),
+        Shot(
+            filename="ui_panels_sidebar_split.png",
+            label="UI Panels: Pinned Watch + Hero Split (WK61-R10)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            meta={"scenario": "ui_panels", "mode": "sidebar_split"},
+            apply=_apply_sidebar_pin_split,
+        ),
+        Shot(
+            filename="ui_panels_marketplace_tax.png",
+            label="UI Panels: Marketplace Taxable Gold $42 (WK61-R10)",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.4,
+            meta={"scenario": "ui_panels", "mode": "marketplace_tax"},
+            apply=_apply_marketplace_taxable_gold,
         ),
     ]
 
@@ -1292,6 +1341,107 @@ def scenario_wk52_pin_alerts(engine, *, seed: int) -> list[Shot]:
     ]
 
 
+def _building_type_key(building) -> str:
+    bt = getattr(building, "building_type", "")
+    return str(getattr(bt, "value", bt) or "").strip().lower()
+
+
+def _seed_tax_gold_for_capture(engine) -> list[str]:
+    """Seed deterministic tax gold on every tax-stash building (WK61 hold-G capture)."""
+    seeded: list[str] = []
+    for building in list(getattr(engine, "buildings", []) or []):
+        bts = _building_type_key(building)
+        if bts not in TAX_STASH_BUILDING_TYPES:
+            continue
+        if hasattr(building, "add_tax_gold"):
+            building.add_tax_gold(42)
+        else:
+            building.stored_tax_gold = 42
+        seeded.append(bts)
+    return seeded
+
+
+URSINA_CAPTURE_SCENARIOS: dict[str, dict[str, object]] = {
+    "wk61_hold_g_tax_overlay": {
+        "patch_path": "tools/wk61_r10_capture_patch.py",
+        "default_ticks": 5400,
+        "default_out_subdir": "wk61_r10_hold_g",
+        "stem": "hold_g_tax_overlay",
+        "env": {
+            "KINGDOM_URSINA_PREFAB_TEST_LAYOUT": "1",
+            "KINGDOM_URSINA_REVEAL_ON_START": "1",
+            "KINGDOM_URSINA_EDITORCAMERA": "0",
+            "KINGDOM_URSINA_CAM_FOCUS_SPAN": "32",
+        },
+    },
+}
+
+
+def get_ursina_capture_scenario(scenario_name: str) -> dict[str, object]:
+    """Return Ursina one-shot capture config for ``tools/run_ursina_capture_once.py --scenario``."""
+    key = str(scenario_name).strip()
+    cfg = URSINA_CAPTURE_SCENARIOS.get(key)
+    if cfg is None:
+        known = ", ".join(sorted(URSINA_CAPTURE_SCENARIOS))
+        raise ValueError(f"Unknown Ursina capture scenario: {key!r} (known: {known})")
+    return dict(cfg)
+
+
+def scenario_wk61_hold_g_tax_overlay(engine, *, seed: int) -> list[Shot]:
+    """WK61 R10: WK60 starting buildings + hold-G tax overlay (seed tax, force G held)."""
+    _clear_dynamic_entities(engine)
+    _reveal_all(engine.world)
+
+    castle = next((b for b in engine.buildings if getattr(b, "building_type", "") == "castle"), None)
+    if castle is None:
+        gx = MAP_WIDTH // 2 - 1
+        gy = MAP_HEIGHT // 2 - 1
+        castle = _place_building(engine, "castle", gx, gy)
+
+    for btype, gx, gy in STARTING_BUILDINGS:
+        existing = next(
+            (b for b in engine.buildings if _building_type_key(b) == str(btype).strip().lower()),
+            None,
+        )
+        if existing is None:
+            placed = _place_building(engine, str(btype), int(gx), int(gy))
+            placed.is_constructed = True
+
+    seeded = _seed_tax_gold_for_capture(engine)
+    cx = float(getattr(castle, "center_x", getattr(castle, "x", 0.0)))
+    cy = float(getattr(castle, "center_y", getattr(castle, "y", 0.0)))
+
+    def _apply_hold_g(eng: Any) -> None:
+        from game.graphics.ursina_renderer import set_tax_gold_overlay_held
+
+        _seed_tax_gold_for_capture(eng)
+        set_tax_gold_overlay_held(True)
+        eng.screenshot_hide_ui = False
+        eng.selected_hero = None
+        eng.selected_peasant = None
+        eng.selected_building = None
+        if hasattr(eng, "debug_panel"):
+            eng.debug_panel.visible = False
+
+    return [
+        Shot(
+            filename="wk61_hold_g_tax_overlay.png",
+            label="WK61 R10: hold-G tax overlay on starting buildings",
+            center_x=cx,
+            center_y=cy,
+            zoom=1.2,
+            ticks=0,
+            apply=_apply_hold_g,
+            meta={
+                "scenario": "wk61_hold_g_tax_overlay",
+                "seed": int(seed),
+                "seeded_tax_types": sorted(set(seeded)),
+                "starting_buildings": list(STARTING_BUILDINGS),
+            },
+        ),
+    ]
+
+
 def scenario_wk61_guardhouse_hp_panel(engine, *, seed: int) -> list[Shot]:
     """WK61 R5: selected Guardhouse left panel shows HP above Demolish."""
     _clear_dynamic_entities(engine)
@@ -1442,6 +1592,8 @@ def get_scenario(engine, scenario_name: str, *, seed: int) -> list[Shot]:
         return scenario_building_menu_open(engine, seed=int(seed))
     if scenario_name == "wk52_pin_alerts":
         return scenario_wk52_pin_alerts(engine, seed=int(seed))
+    if scenario_name == "wk61_hold_g_tax_overlay":
+        return scenario_wk61_hold_g_tax_overlay(engine, seed=int(seed))
     if scenario_name == "wk61_guardhouse_hp_panel":
         return scenario_wk61_guardhouse_hp_panel(engine, seed=int(seed))
     if scenario_name == "wk61_hero_menu_chat":

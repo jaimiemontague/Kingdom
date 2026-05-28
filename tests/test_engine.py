@@ -165,3 +165,41 @@ def test_try_select_hero_at_world_picks_closest_within_radius():
         assert engine.selected_hero is b
     finally:
         pygame.quit()
+
+
+# ---------- WK62 Wave 2 Task D: FrameContext ----------
+
+def test_frame_context_build_returns_snapshot_and_game_state():
+    """FrameContext.build() produces a snapshot and game_state from a headless engine."""
+    from game.presentation.frame_context import FrameContext
+    from game.sim.snapshot import SimStateSnapshot
+
+    engine = GameEngine(headless=True)
+    try:
+        ctx = FrameContext.build(engine)
+        assert isinstance(ctx.snapshot, SimStateSnapshot)
+        assert isinstance(ctx.game_state, dict)
+        # game_state must contain the canonical required keys
+        missing = REQUIRED_GAME_STATE_KEYS - set(ctx.game_state.keys())
+        assert not missing, f"FrameContext game_state missing keys: {missing}"
+        # snapshot must carry entity tuples
+        assert isinstance(ctx.snapshot.heroes, tuple)
+        assert isinstance(ctx.snapshot.buildings, tuple)
+    finally:
+        pygame.quit()
+
+
+def test_frame_context_shares_single_build():
+    """Two reads of FrameContext fields return the same objects (no rebuild)."""
+    from game.presentation.frame_context import FrameContext
+
+    engine = GameEngine(headless=True)
+    try:
+        ctx = FrameContext.build(engine)
+        # Accessing .snapshot and .game_state multiple times must return the
+        # exact same objects (identity, not equality) — proving there is no
+        # hidden per-access rebuild.
+        assert ctx.snapshot is ctx.snapshot
+        assert ctx.game_state is ctx.game_state
+    finally:
+        pygame.quit()

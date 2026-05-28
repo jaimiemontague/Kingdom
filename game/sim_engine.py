@@ -945,6 +945,8 @@ class SimEngine:
         for building in self.buildings:
             if building.building_type == "trading_post" and hasattr(building, "update"):
                 building.update(dt, self.economy)
+            elif building.building_type == "marketplace" and hasattr(building, "update"):
+                building.update(dt, self.economy)
             elif building.building_type == "ballista_tower" and hasattr(building, "update"):
                 building.update(dt, self.enemies)
             elif building.building_type == "wizard_tower" and hasattr(building, "update"):

@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-23T19:33:19.592Z",
+  "updated_at": "2026-05-23T19:33:19.610Z",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r10_v159_economy_pacing_ux",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2.5",
+  "pm_hub_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "implementers_a",
+      "parallel": true,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "05",
+          "status": "pending",
+          "model": "composer-2.5"
+        },
+        {
+          "agent_id": "03",
+          "status": "pending",
+          "model": "composer-2.5"
+        }
+      ]
+    },
+    {
+      "id": "implementers_b",
+      "parallel": false,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "06",
+          "status": "pending",
+          "model": "composer-2.5"
+        }
+      ]
+    },
+    {
+      "id": "ux_tools",
+      "parallel": true,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "08",
+          "status": "pending",
+          "model": "composer-2.5"
+        },
+        {
+          "agent_id": "12",
+          "status": "pending",
+          "model": "composer-2.5"
+        }
+      ]
+    },
+    {
+      "id": "verification",
+      "parallel": false,
+      "status": "pending",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "pending",
+          "model": "composer-2.5"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest_after_round",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 05 prompt mentions a human gate",
+    "Agent 03 prompt mentions a human gate",
+    "Agent 06 prompt mentions a human gate",
+    "Agent 08 prompt mentions a human gate",
+    "Agent 12 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate",
+    "Agent 05 prompt references non-owned path: game/sim/snapshot.py",
+    "Agent 03 prompt references non-owned path: game/ursina_input_manager.py",
+    "Agent 03 prompt references non-owned path: config.py",
+    "Agent 03 prompt references non-owned path: game/entities/"
+  ]
+}

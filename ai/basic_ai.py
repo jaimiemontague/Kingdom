@@ -11,6 +11,7 @@ from ai.behaviors import (
     bounty_pursuit,
     defense,
     exploration,
+    hunger,
     journey,
     llm_bridge,
     shopping,
@@ -81,6 +82,7 @@ _COMMITTED_DESTINATION_TYPES = frozenset({
     "defend_castle",
     "direct_prompt",
     "visit_poi",  # WK55: personality-driven POI visit
+    "buy_meal",  # WK61-R10: hunger meal at food stand
 })
 
 # Debug logging (set to True to see AI decision logs).
@@ -131,7 +133,9 @@ class BasicAI:
         self.stuck_recovery_behavior = stuck_recovery
         self.exploration_behavior = exploration
         self.shopping_behavior = shopping
+        self.hunger_behavior = hunger
         self.llm_bridge_behavior = llm_bridge
+        self._hunger_no_stand_logged_heroes: set[str] = set()
 
     # -----------------------
     # Intent + decision helpers
@@ -279,6 +283,13 @@ class BasicAI:
         if hero.state != HeroState.FIGHTING:
             if self.defense_behavior.defend_neutral_building_if_visible(self, hero, game_state):
                 return
+
+        # WK61-R12: hunger meals for all non-retreating heroes (including FIGHTING when HP > critical).
+        if hero.state not in (HeroState.RETREATING, HeroState.DEAD):
+            if self.hunger_behavior.tick_meal_hunger(self, hero, game_state):
+                target = getattr(hero, "target", None)
+                if isinstance(target, dict) and target.get("type") == "buy_meal":
+                    return
 
         # Check if hero should go home to rest (priority check, only if home is safe).
         if hero.state == HeroState.IDLE and hero.should_go_home_to_rest():

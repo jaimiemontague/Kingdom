@@ -7,7 +7,7 @@ slowly generate taxable income over time.
 
 from __future__ import annotations
 
-from config import BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS
+from config import BUILDING_SIZES, BUILDING_COLORS, BUILDING_COSTS, NEUTRAL_TAX_PER_MINUTE
 from game.entities.building import Building
 from game.entities.buildings.hiring_mixin import TaxStashMixin
 
@@ -74,12 +74,24 @@ class NeutralBuilding(TaxStashMixin, Building):
 
 class House(NeutralBuilding):
     def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
-        super().__init__(grid_x, grid_y, "house", tax_per_minute=3.0, is_constructed=is_constructed)
+        super().__init__(
+            grid_x,
+            grid_y,
+            "house",
+            tax_per_minute=NEUTRAL_TAX_PER_MINUTE["house"],
+            is_constructed=is_constructed,
+        )
 
 
 class Farm(NeutralBuilding):
     def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
-        super().__init__(grid_x, grid_y, "farm", tax_per_minute=4.0, is_constructed=is_constructed)
+        super().__init__(
+            grid_x,
+            grid_y,
+            "farm",
+            tax_per_minute=NEUTRAL_TAX_PER_MINUTE["farm"],
+            is_constructed=is_constructed,
+        )
         # Farms are larger targets.
         self.max_hp = 220
         if getattr(self, "is_constructed", True):
@@ -88,7 +100,13 @@ class Farm(NeutralBuilding):
 
 class FoodStand(NeutralBuilding):
     def __init__(self, grid_x: int, grid_y: int, *, is_constructed: bool = True):
-        super().__init__(grid_x, grid_y, "food_stand", tax_per_minute=3.5, is_constructed=is_constructed)
+        super().__init__(
+            grid_x,
+            grid_y,
+            "food_stand",
+            tax_per_minute=NEUTRAL_TAX_PER_MINUTE["food_stand"],
+            is_constructed=is_constructed,
+        )
 
 
 

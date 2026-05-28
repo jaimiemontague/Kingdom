@@ -517,6 +517,12 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
                 hero.target_position = None
                 return
 
+            # WK61-R10: buy meal at food stand when arrival waypoint reached.
+            if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "buy_meal":
+                hunger_behavior = getattr(ai, "hunger_behavior", None)
+                if hunger_behavior is not None and hunger_behavior.handle_meal_arrival(ai, hero, game_state):
+                    return
+
             # Get a drink at Inn (WK11): enter, pay on exit.
             if hero.target and isinstance(hero.target, dict) and hero.target.get("type") == "get_drink":
                 inn = hero.target.get("inn")
@@ -551,6 +557,7 @@ def handle_moving(ai: Any, hero: Any, game_state: dict) -> None:
             "direct_prompt",
             "bounty",
             "visit_poi",  # WK55: personality-driven POI visit
+            "buy_meal",  # WK61-R10: hunger meal at food stand
         ]:
             return
 

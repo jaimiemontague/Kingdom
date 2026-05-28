@@ -1934,6 +1934,77 @@
           ]
         }
       }
+    },
+    "wk61_playtest_polish": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk61_playtest_polish.plan.md",
+        "notes": "WK61 playtest polish — Agent 12 owns Ursina capture scenarios for hold-G tax overlay evidence."
+      },
+      "rounds": {
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "round_meta": {
+            "wave": 2,
+            "build_target": "hold-G tax overlay Ursina capture scenario for Agent 11 sign-off",
+            "plan_ref": ".cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md"
+          },
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Added WK61 R10 hold-G Ursina capture tooling: patch seeds tax gold + forces G held (clone of R7), screenshot_scenarios entry wk61_hold_g_tax_overlay with WK60 starting buildings, and run_ursina_capture_once.py --scenario/--ticks/--out wiring.",
+            "files_created": [
+              "tools/wk61_r10_capture_patch.py"
+            ],
+            "files_modified": [
+              "tools/screenshot_scenarios.py",
+              "tools/run_ursina_capture_once.py"
+            ]
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "notes": "PASS"
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
+              "exit_code": 0,
+              "notes": "PNG saved; patch seeded tax on house, marketplace, ranger_guild, rogue_guild, warrior_guild, wizard_guild"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_12_ToolsDevEx_Lead.json",
+              "exit_code": 0,
+              "notes": "Log JSON validated"
+            }
+          ],
+          "evidence": {
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS"
+            },
+            "ursina_capture": {
+              "command": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r10_hold_g",
+              "exit_code": 0,
+              "png": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png",
+              "seeded_tax_types": [
+                "house",
+                "marketplace",
+                "ranger_guild",
+                "rogue_guild",
+                "warrior_guild",
+                "wizard_guild"
+              ],
+              "visual_note": "Wide overview capture; Agent 11 should confirm multiple building dollar labels visible (Agent 03 overlay may need zoom or camera framing if absent)."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: inspect docs/screenshots/wk61_r10_hold_g/ for multiple building dollar labels (including dollar-zero acceptable per R10 spec)",
+            "If labels not visible in capture PNG, consult Agent 03 on overlay sync timing or camera zoom for scenario"
+          ]
+        }
+      }
     }
   },
   "wk18-llm-merger-and-mechanics": {

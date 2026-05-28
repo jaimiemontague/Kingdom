@@ -29,6 +29,7 @@ from game.entities import (
     RoyalGardens,
     Palace,
 )
+from game.entities.neutral_buildings import FoodStand
 
 # WK54: POI type registration
 try:
@@ -47,6 +48,7 @@ class BuildingFactory:
         "rogue_guild": RogueGuild,
         "wizard_guild": WizardGuild,
         "marketplace": Marketplace,
+        "food_stand": FoodStand,
         "blacksmith": Blacksmith,
         "inn": Inn,
         "trading_post": TradingPost,

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "80988017-8be5-425c-ae22-b93ef964d9b0",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r11_playtest_fix_round",
+  "agent_id": "03",
+  "status": "done",
+  "summary": "BUG-004 world-space hold-G gold labels above roofs; BUG-005 Ursina sidebar split pointer routing. Scoped pytest 9/9 pass; qa_smoke fail on unrelated r9 HUD test.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_03_TechnicalDirector_Architecture.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r11_playtest_fix_round]",
+  "timestamp": "2026-05-23T20:12:09.968Z"
+}

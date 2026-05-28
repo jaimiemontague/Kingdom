@@ -1184,6 +1184,156 @@
           "follow_ups": [
             "Agent 11: Ursina screenshot proof of hold-G overlay over multiple tax-stash building models after R7 None guard fix."
           ]
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Fixed WK61-R10-BUG-001: hold-G taxable gold overlay now shows f\"${stash}\" on all tax-stash buildings while G is held, including $0 with dim grey (0.55,0.55,0.55); positive stash uses bright gold (1.0,0.8,0.2). Release G disables _ks_gold_label without rebuilding entity. Prefab overlay Y bumped +0.15 (0.35->0.50 above roof). Optional KINGDOM_DEBUG_TAX_OVERLAY=1 once/sec debug log.",
+            "files_modified": [
+              "game/graphics/ursina_renderer.py",
+              "tests/test_wk61_r10_hold_g_shows_zero.py",
+              "tests/test_wk61_r6_ursina_tax_gold_overlay.py"
+            ],
+            "tickets": {
+              "WK61-R10-BUG-001": "Changed _sync_building_worldspace_ui gate from has_tax and stash>0 and g_held to has_tax and g_held; color by stash amount; gold Text parent remains prefab root ent from get_or_create_prefab_building_entity; _maybe_log_tax_overlay_debug at end of _sync_snapshot_buildings."
+            }
+          },
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r7_tax_overlay_none_guard.py -x -q", "exit_code": 0},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "qa_smoke": "DONE: PASS (exit 0)",
+            "scoped_pytest": "22 passed in WK61 R10/R6/R7 hold-G overlay regression tests",
+            "automated_behavior": "Marketplace stored_tax_gold=0 with G held creates $0 label on prefab parent; release G sets gold_ent.enabled=False without new Text; positive stash keeps gold tint",
+            "manual_playtest": "Not run in this SDK session (requires interactive Ursina window). Jaimie gate: python main.py --no-llm — hold G 5s on marketplace/guilds/food stands, confirm $0+ visible; release G hides all labels."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Jaimie: manual Ursina playtest hold-G $0 overlay on marketplace, warrior guild, food stand per R10 human gate.",
+            "Agent 11: screenshot sign-off with multiple building $ labels including $0 after Wave 3."
+          ]
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "WK61-R11 BUG-004: hold-G gold labels are world-space billboards parented to scene at terrain_y + prefab roof + 1.2 clearance (not mesh children). WK61-R11 BUG-005: Ursina pointer routes sidebar split handle down/move/up on virtual HUD pixels; blocks world MOUSEDOWN while split drag active.",
+            "files_modified": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/ursina_app.py",
+              "game/input_handler.py",
+              "tests/test_wk61_r11_tax_overlay_world_y.py",
+              "tests/test_wk61_r10_hold_g_shows_zero.py"
+            ],
+            "tickets": {
+              "WK61-R11-BUG-004": "_building_gold_overlay_world_y(); _sync_building_worldspace_ui gold Text parent=scene with world_position; destroy scene-parented labels in _destroy_removed_entities.",
+              "WK61-R11-BUG-005": "UrsinaApp _pointer_event_pos/_virtual_screen_pos; handle_sidebar_split_pointer_down on LMB before deferred MOUSEDOWN; skip MOUSEDOWN during drag; input_handler blocks world pick while _left_split_drag_kind active."
+            }
+          },
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r11_tax_overlay_world_y.py -x -q", "exit_code": 0},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "scoped_pytest": "9 passed (R10 hold-G + R11 world-Y overlay tests)",
+            "qa_smoke": "FAIL exit 1 — unrelated pre-existing failure tests/test_wk61_r9_hero_chat_readable_layout.py::test_hero_menu_chat_split_at_576p_leaves_scrollable_hero (Agent 08 HUD layout); Agent 03 scoped gates green",
+            "manual_playtest": "Not run in SDK session. Jaimie: python main.py --no-llm hold G on marketplace — labels above roof; LMB-drag sidebar split handle with hero panel only open."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 08/11: resolve test_wk61_r9_hero_chat_readable_layout 576p failure for full qa_smoke green.",
+            "Jaimie: manual Ursina hold-G marketplace label depth check per R11 human gate."
+          ]
+        }
+      }
+    },
+    "wk62_architecture_cleanup_baseline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/cleanup_sprint_plan_c4d96dca.plan.md",
+        "notes": "WK62: Architecture cleanup baseline sprint. GPT 5.5 audit-driven. Wave 1: engine/sim correctness. Wave 2: UI/render pressure relief."
+      },
+      "rounds": {
+        "wk62_w1_engine_sim_correctness": {
+          "sprint_id": "wk62_architecture_cleanup_baseline",
+          "round_id": "wk62_w1_engine_sim_correctness",
+          "status": "done",
+          "what_i_changed": [
+            "Task A — Fixed single sim time owner (BUG-001 + BUG-002): Removed sim time advancement (_sim_now_ms increment + set_sim_now_ms call) from GameEngine._prepare_sim_and_camera(). SimEngine.update() is now the sole authoritative sim time owner. This fixes both the double-advance bug (100ms per tick instead of 50ms) and the pause-leak bug (sim time advancing before pause check). Removed unused set_sim_now_ms import from engine.py. Removed xfail markers from tests 1 and 2 in test_engine_sim_boundary.py.",
+            "Task B — Consolidated destroyed-building cleanup: Removed the redundant self._cleanup_destroyed_buildings() call from GameEngine.update(). SimEngine.update() already performs authoritative cleanup (rubble creation, reference clearing, event emission). GameEngine._cleanup_destroyed_buildings() method retained for on-demand demolish actions (confirm_demolish UI, GameCommands).",
+            "Task C — Deleted 13 dead GameEngine sim helpers: _update_ai_and_heroes, _apply_entity_separation, _update_world_systems, _update_peasants, _update_enemies, _update_guards, _spawn_enemies, _process_combat, _route_combat_events, _cleanup_after_combat, _process_bounties, _update_neutral_systems, _update_buildings. All had zero live call sites; authoritative logic lives in SimEngine. Removed unused MAX_ALIVE_ENEMIES import."
+          ],
+          "files_touched": [
+            "game/engine.py",
+            "tests/test_engine_sim_boundary.py"
+          ],
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_engine_sim_boundary.py -x -v", "exit_code": 0, "detail": "4 passed (tests 1+2 now PASS, not xfail)"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "467 passed"},
+            {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "detail": "PASS: no violations found"},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "detail": "PASS (all scenarios + 467 tests)"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+          ],
+          "evidence": {
+            "test_engine_sim_boundary": "4/4 PASS — tests 1+2 now pass without xfail (sim time single-owner fix verified), tests 3+4 still pass (building cleanup still produces exactly 1 rubble + 1 event)",
+            "full_test_suite": "467 passed, 0 failures",
+            "determinism_guard": "PASS",
+            "qa_smoke": "PASS (all scenarios exit 0)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "tools/ursina_frame_profiler.py wraps deleted GameEngine methods and will crash if run. Agent 10/12 should update it to wrap SimEngine methods instead.",
+            "game/cleanup_manager.py (CleanupManager) is now only reachable from on-demand demolish paths. Consider whether it should be inlined or simplified in a future sprint."
+          ]
+        },
+        "wk62_w2_ui_render_pressure_relief": {
+          "sprint_id": "wk62_architecture_cleanup_baseline",
+          "round_id": "wk62_w2_ui_render_pressure_relief",
+          "status": "done",
+          "what_i_changed": [
+            "Task D — FrameContext design + minimal implementation: Created game/presentation/frame_context.py with a @dataclass(slots=True) FrameContext holding snapshot (SimStateSnapshot) and game_state (dict). Static factory FrameContext.build(engine) constructs both once.",
+            "Modified EngineRenderCoordinator.render() to build FrameContext once at the top of the render pass and reuse ctx.snapshot / ctx.game_state throughout. Eliminated 2 redundant e.get_game_state() calls per frame (HUD render, debug panel render) and 1 conditional call (pause menu fallback). Previously the pygame render path called get_game_state() up to 3 times per frame; now it calls it exactly once via FrameContext.build().",
+            "Added 2 regression tests to tests/test_engine.py: test_frame_context_build_returns_snapshot_and_game_state (verifies types and required keys) and test_frame_context_shares_single_build (verifies identity — no hidden per-access rebuild)."
+          ],
+          "files_touched": [
+            "game/presentation/__init__.py (new)",
+            "game/presentation/frame_context.py (new)",
+            "game/engine_facades/render_coordinator.py",
+            "tests/test_engine.py"
+          ],
+          "redundancy_eliminated": {
+            "before": "render_coordinator.render() called e.build_snapshot() 1x + e.get_game_state() up to 3x per frame (HUD line 51, debug_panel line 91, pause_menu fallback line 119)",
+            "after": "FrameContext.build(e) called once; ctx.snapshot and ctx.game_state reused by all consumers in the render pass",
+            "calls_saved_per_frame": "2 guaranteed (HUD + debug_panel) + 1 conditional (pause_menu cursor fallback) = 2-3 get_game_state() calls eliminated"
+          },
+          "future_plug_in_points": [
+            "game/graphics/ursina_app.py line 726 (gs = eng.get_game_state()) — Ursina HUD overlay path calls get_game_state() separately; could accept FrameContext when the Ursina render loop is refactored",
+            "game/graphics/ursina_app.py line 1397 (snapshot = self.engine.build_snapshot()) — Ursina 3D render path; could share FrameContext with the HUD path",
+            "game/engine.py update() line 1146 (game_state = self.get_game_state()) — sim update path; separate from render, but if update+render were batched, FrameContext could span both",
+            "game/input_handler.py multiple get_game_state() calls — input handling is event-driven, not per-frame; FrameContext may not apply directly but could be cached on the engine for the current frame"
+          ],
+          "commands_run": [
+            {"cmd": "python -m pytest tests/test_engine.py tests/test_renderer_snapshot_contract.py -x -q", "exit_code": 0, "detail": "16 passed (includes 2 new FrameContext tests)"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "469 passed"},
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "detail": "PASS (all scenarios exit 0, 469 tests)"}
+          ],
+          "evidence": {
+            "test_engine": "10/10 PASS (8 existing + 2 new FrameContext tests)",
+            "test_renderer_snapshot_contract": "6/6 PASS",
+            "full_test_suite": "469 passed, 0 failures",
+            "qa_smoke": "PASS (determinism guard + all scenarios)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Extend FrameContext usage to the Ursina render path (ursina_app.py) where get_game_state() and build_snapshot() are called independently — requires coordinating with the Ursina task loop which runs on a different cadence than the pygame path.",
+            "Consider caching FrameContext on the engine instance (e.g. engine._current_frame_ctx) for input_handler and other per-frame consumers that currently call get_game_state() independently. Must be invalidated each frame.",
+            "Measure per-frame savings via KINGDOM_URSINA_STAGE_PROFILE=1 in a follow-up Agent 10 perf pass."
+          ]
         }
       }
     }

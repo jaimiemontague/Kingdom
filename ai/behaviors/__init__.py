@@ -3,6 +3,7 @@
 from . import bounty_pursuit
 from . import defense
 from . import exploration
+from . import hunger
 from . import journey
 from . import llm_bridge
 from . import shopping
@@ -12,6 +13,7 @@ __all__ = [
     "bounty_pursuit",
     "defense",
     "exploration",
+    "hunger",
     "journey",
     "llm_bridge",
     "shopping",

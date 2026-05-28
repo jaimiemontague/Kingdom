@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "e389b578-ae5e-4837-8724-1d687264e9d6",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r11_playtest_fix_round",
+  "agent_id": "08",
+  "status": "done",
+  "summary": "BUG-005: main_solo sidebar split handle for unpinned panels; 8 tests pass; screenshots at docs/screenshots/wk61_r11_sidebar.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_08_UX_UI_Director.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r11_playtest_fix_round]",
+  "timestamp": "2026-05-23T20:13:06.021Z"
+}

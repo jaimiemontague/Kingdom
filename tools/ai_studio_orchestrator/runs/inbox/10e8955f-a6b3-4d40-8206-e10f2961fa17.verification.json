@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "token": "10e8955f-a6b3-4d40-8206-e10f2961fa17",
+  "completion_token": "50e9a05b-af31-43f4-a671-55b370690bc6",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r10_v159_economy_pacing_ux",
+  "agent_id": "12",
+  "status": "needs_log_repair",
+  "reason": "agent_12_ToolsDevEx_Lead.json missing sprints[\"wk61_playtest_polish\"]",
+  "log_check": "failed",
+  "log_check_reason": "agent_12_ToolsDevEx_Lead.json missing sprints[\"wk61_playtest_polish\"]",
+  "timestamp": "2026-05-23T19:43:57.956Z"
+}

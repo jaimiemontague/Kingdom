@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "a876f372-af2b-4bb9-ac63-00e9a2eb8ecc",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r11_playtest_fix_round",
+  "agent_id": "11",
+  "status": "done",
+  "summary": "Agent 11 R11 QA sign-off: qa_smoke/validate_assets/pytest 463 PASS; R11 bundle 18/18; hold-G labels above roofs + sidebar split evidence captured.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_11_QA_TestEngineering_Lead.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r11_playtest_fix_round]",
+  "timestamp": "2026-05-23T20:18:07.103Z"
+}

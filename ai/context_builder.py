@@ -3,7 +3,7 @@ Builds context dictionaries for LLM decision making.
 """
 import math
 
-from config import TILE_SIZE
+from config import FOOD_MEAL_COST_GOLD, TILE_SIZE
 from game.sim.timebase import now_ms as sim_now_ms
 
 
@@ -181,6 +181,8 @@ class ContextBuilder:
             "near_safety": context["distances"].get("castle", 999) < 5 or context["distances"].get("marketplace", 999) < 5,
             "enemies_nearby": len(context["nearby_enemies"]) > 0,
             "outnumbered": len(context["nearby_enemies"]) > len(context["nearby_allies"]) + 1,
+            "hunger_urgent": bool(getattr(hero, "hunger_urgent", False)),
+            "can_afford_meal": int(getattr(hero, "gold", 0) or 0) >= int(FOOD_MEAL_COST_GOLD),
         }
 
         # 3A: Location context (wk14 Persona and Presence)

@@ -787,6 +787,53 @@
           ]
         }
       }
+    },
+    "wk62_architecture_cleanup_baseline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/cleanup_sprint_plan_c4d96dca.plan.md",
+        "notes": "WK62 architecture cleanup sprint: Wave 2 UI/render pressure relief."
+      },
+      "rounds": {
+        "wk62_w2_ui_render_pressure_relief": {
+          "sprint_id": "wk62_architecture_cleanup_baseline",
+          "round_id": "wk62_w2_ui_render_pressure_relief",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Task A: Created game/graphics/visual_specs.py with UnitVisualSpec frozen dataclass and unit_visual_spec() lookup. Specs for hero, enemy, peasant, guard, tax_collector with exact values from ursina_renderer.py. Updated ursina_renderer.py to use HERO_SPEC/ENEMY_SPEC/PEASANT_SPEC/GUARD_SPEC/TAX_COLLECTOR_SPEC for all _ensure_ks_name_label calls (label_y, label_scale). Task B: Created game/graphics/ursina_unit_overlays.py extracting configure_ks_overlay, sync_ks_facing_overlay, ensure_ks_name_label, sync_hp_bar, sync_hero_gold_label, sync_hero_rest_label, sync_hero_overlays_facing, sync_unit_overlays_facing. Updated ursina_renderer.py: original functions now delegate to helpers; all 4 HP bar inline blocks (hero/enemy/peasant/guard) replaced with sync_hp_bar(ent, hp, max_hp, SPEC); hero gold/rest/facing blocks replaced with helper calls.",
+            "files": [
+              "game/graphics/visual_specs.py (new: 178 lines)",
+              "game/graphics/ursina_unit_overlays.py (new: 209 lines)",
+              "game/graphics/ursina_renderer.py (import + delegate rewiring, net ~-120 lines)"
+            ]
+          },
+          "how_to_test": [
+            "python -m pytest tests/ -x -q",
+            "python tools/qa_smoke.py --quick"
+          ],
+          "evidence": {
+            "pytest": {
+              "status": "PASS",
+              "command": "python -m pytest tests/ -x -q",
+              "result": "469 passed in 49.57s",
+              "exit_code": 0
+            },
+            "qa_smoke": {
+              "status": "PASS",
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            "value_verification": {
+              "note": "visual_specs values cross-checked against ursina_renderer constants: HERO scale=0.9300, ENEMY=0.7500, PEASANT=(0.6300,0.3465), GUARD=(0.7500,1.0500) — all match originals exactly."
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "instanced_unit_renderer.py and ursina_pick.py still have their own copy of scale constants — future round can point them at visual_specs too.",
+            "Building HP bar in _sync_building_worldspace_ui uses different constants (not unit overlays); separate extraction if needed.",
+            "Per-class hero spec overrides (e.g., wizard label colour) can be added to unit_visual_spec() when needed."
+          ]
+        }
+      }
     }
   }
 }

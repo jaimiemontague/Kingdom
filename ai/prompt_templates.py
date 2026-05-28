@@ -243,7 +243,12 @@ FALLBACK_DECISIONS = {
         "action": "fight",
         "target": "",
         "reasoning": "Fallback: Enemies nearby, engaging"
-    }
+    },
+    "hunger_seek_meal": {
+        "action": "seek_meal",
+        "target": "food_stand",
+        "reasoning": "Fallback: Hunger urgent, seeking meal at food stand",
+    },
 }
 
 
@@ -269,6 +274,10 @@ def get_fallback_decision(context: dict) -> dict:
         else:
             return FALLBACK_DECISIONS["low_health_in_combat"]
     
+    # WK61-R11: hungry heroes seek food before discretionary shop/explore.
+    if sit.get("hunger_urgent") and sit.get("can_afford_meal") and not sit["critical_health"]:
+        return FALLBACK_DECISIONS["hunger_seek_meal"]
+
     # V1.3 Extension: More aggressive potion buying
     # Can shop and needs potions (lowered threshold from <2 to <3, and removed low_health requirement)
     if sit["can_shop"] and inv["potions"] < 3:

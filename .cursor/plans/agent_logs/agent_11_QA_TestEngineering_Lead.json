@@ -777,6 +777,368 @@
           },
           "blockers": [],
           "follow_ups": []
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "round_meta": {
+            "wave": 3,
+            "build_target": "QA verification of R10 economy pacing, hold-G $0 overlay, hunger, wave tuning, sidebar resize",
+            "created_utc": "2026-05-23T14:00:00-06:00",
+            "depends_on": "wk61_r10_wave2_ux_tools"
+          },
+          "prompt_summary": "Verify-only wave 3: run qa_smoke, validate_assets, full pytest; inspect hold-G and sidebar PNGs; do not sign off hold-G without multi-building $ labels.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R10 sign-off. All gates green (445 pytest, qa_smoke PASS first run). Inspected hold-G Ursina capture and sidebar pygame captures — multiple building $ labels confirmed ($0 acceptable); sidebar split handle and marketplace Taxable Gold $42 in gold color confirmed.",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS first run — determinism_guard PASS, 445 pytest passed, all observe_sync profiles exit 0 including speed_scaling 0.25x"},
+            {"cmd": "python tools/validate_assets.py --report", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "445 passed in 13.76s"},
+            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "23 passed — R10 targeted regression bundle"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (exit 0) first run — no speed_scaling 0.25x flake this session",
+              "validate_assets": "errors=0 warns=46 pre-existing",
+              "pytest_full": "445 passed",
+              "pytest_r10_targeted": "23 passed (hold_g_shows_zero, economy_tax_accrual, wave_timing, hunger_ai, sidebar_layout, marketplace_potion_tax)"
+            },
+            "r10_ticket_verification": {
+              "WK61-R10-BUG-001_hold_g_zero_overlay": {
+                "status": "PASS_gates_and_screenshot",
+                "owner": "Agent 03",
+                "tests": "tests/test_wk61_r10_hold_g_shows_zero.py + R6/R7 overlay regressions in full suite",
+                "screenshot": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png — inspected: simultaneous $0 labels above castle, long house, hut, gabled house, tower, blue-roof house (6+ buildings) with G held",
+                "capture_owner": "Agent 12 wk61_hold_g_tax_overlay scenario"
+              },
+              "WK61-R10-FEAT-001_economy_tax_accrual": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "tests/test_wk61_r10_economy_tax_accrual.py + test_wk61_r8_marketplace_potion_tax.py"
+              },
+              "WK61-R10-FEAT-002_wave_timing": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "tests/test_wk61_r10_wave_timing.py"
+              },
+              "WK61-R10-FEAT-003_hunger_meals": {
+                "status": "PASS",
+                "owners": ["Agent 05", "Agent 06"],
+                "tests": "tests/test_wk61_r10_hunger_ai.py (8 tests in bundle)"
+              },
+              "WK61-R10-FEAT-004_sidebar_resize": {
+                "status": "PASS_gates_and_screenshot",
+                "owner": "Agent 08",
+                "tests": "tests/test_wk61_r10_sidebar_layout.py (4 passed)",
+                "screenshots": {
+                  "sidebar_split": "docs/screenshots/wk61_r10_sidebar/ui_panels_sidebar_split.png — compact hero main band + taller pinned watch card; thin divider/handle visible between sections",
+                  "marketplace_tax": "docs/screenshots/wk61_r10_sidebar/ui_panels_marketplace_tax.png — Taxable Gold: $42 rendered in gold (not stale grey $0)"
+                }
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_03": "Log done; hold-G $0 overlay + scoped pytest PASS",
+              "agent_05": "Log done; economy/wave/hunger sim API + tests PASS",
+              "agent_06": "Log done; hunger AI tests PASS",
+              "agent_08": "Log done; sidebar split + marketplace tax PNGs on file",
+              "agent_12": "Log done; Ursina hold-G capture PNG on file"
+            },
+            "notes": [
+              "R10 Definition of Done satisfied for automated gates and screenshot evidence.",
+              "Hold-G sign-off criterion met: multiple simultaneous building $ labels visible in Ursina capture ($0 dim style acceptable per Jaimie preference).",
+              "Human playtest gate (Jaimie 8-10 min Ursina) still required per PM automation before version bump to v1.5.9.",
+              "No Agent 11 code changes — verification-only per assignment."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie manual playtest per plan (hold G, economy, waves, hunger, sidebar drag).",
+            "Agent 02: 5-point acceptance checklist consult after human gate.",
+            "Agent 13: v1.5.9 patch notes draft after human pass only."
+          ]
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "round_meta": {
+            "wave": 3,
+            "build_target": "QA verification of R11 playtest fixes after Agents 05/06/03/08",
+            "created_utc": "2026-05-23T20:45:00Z",
+            "depends_on": "wk61_r11_ai_render_ux"
+          },
+          "prompt_summary": "Verify gates, R11 regression tests, hold-G Ursina PNG (labels above roofs), sidebar split/drag evidence; sign off only if wolf pack + passive tax tests pass and screenshots satisfy criteria.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R11 sign-off after Agents 05/06/03/08. All gates green (463 pytest, qa_smoke PASS first run). R11 targeted bundle 18/18 PASS including wolf pack spawn and marketplace passive tax. Captured and inspected Ursina hold-G PNG at docs/screenshots/wk61_r11_hold_g/ ($0 labels above rooflines on 4+ prefabs). Inspected wk61_r11_sidebar captures: solo handle on unpinned hero panel + asymmetric main/watch split heights; drag fraction change proven by test_drag_main_solo_updates_fraction.",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"},
+            {"cmd": "python tools/validate_assets.py --report", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "SUMMARY errors=0 warns=46 (pre-existing missing_model_file placeholders)"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "463 passed in 13.35s"},
+            {"cmd": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r11_tax_overlay_world_y.py tests/test_wk61_r11_sidebar_main_solo_handle.py tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r11_starting_food_stand.py -v --tb=short -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "18 passed — R11 targeted regression bundle"},
+            {"cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r11_hold_g --no-llm", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Ursina hold-G capture for R11 visual sign-off; PNG inspected"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (exit 0) first run",
+              "validate_assets": "errors=0 warns=46 pre-existing",
+              "pytest_full": "463 passed",
+              "pytest_r11_targeted": "18 passed (wolf_pack_spawn 2, marketplace_passive_tax 2, tax_overlay_world_y 4, sidebar_main_solo_handle 4, hunger_live_path 5, starting_food_stand 1)"
+            },
+            "r11_ticket_verification": {
+              "WK61-R11-BUG-001_wolf_pack_spawn": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "tests/test_wk61_r11_wolf_pack_spawn.py — Wolf Pack wave spawns Wolf instances; cap reservation does not drop wave composition"
+              },
+              "WK61-R11-BUG-002_hunger_food_stand": {
+                "status": "PASS",
+                "owners": ["Agent 05", "Agent 06"],
+                "tests": "tests/test_wk61_r11_starting_food_stand.py + tests/test_wk61_r11_hunger_live_path.py — starter food_stand + hero redirect/movement toward stand"
+              },
+              "WK61-R11-BUG-003_marketplace_passive_tax": {
+                "status": "PASS",
+                "owner": "Agent 05",
+                "tests": "tests/test_wk61_r11_marketplace_passive_tax.py — deterministic 100-400g accrual into stored_tax_gold every ~2 min interval"
+              },
+              "WK61-R11-BUG-004_hold_g_labels_above_roofs": {
+                "status": "PASS_gates_and_screenshot",
+                "owner": "Agent 03",
+                "tests": "tests/test_wk61_r11_tax_overlay_world_y.py — scene-parented gold Text at terrain_y + prefab_top + 1.2 clearance",
+                "screenshot": "docs/screenshots/wk61_r11_hold_g/hold_g_tax_overlay_20260523_141538_439.png — inspected: simultaneous $0 billboards floating above rooflines on long house, hut, gabled house, tower (not occluded by meshes)"
+              },
+              "WK61-R11-BUG-005_sidebar_drag": {
+                "status": "PASS_gates_and_screenshot",
+                "owners": ["Agent 08", "Agent 03"],
+                "tests": "tests/test_wk61_r11_sidebar_main_solo_handle.py — test_drag_main_solo_updates_fraction asserts taller main column after simulated drag",
+                "screenshots": {
+                  "solo_handle": "docs/screenshots/wk61_r11_sidebar/ui_panels_hero.png — unpinned Gareth column with thin resize handle bar above minimap gap",
+                  "split_heights": "docs/screenshots/wk61_r11_sidebar/ui_panels_sidebar_split.png — pinned main/watch asymmetric split (main 32% / watch 68%) showing different panel heights"
+                }
+              }
+            },
+            "implementer_evidence_review": {
+              "agent_05": "Log done; wolf pack + passive tax + starting food_stand tests PASS",
+              "agent_06": "Log done; hunger live path tests PASS",
+              "agent_03": "Log done; world-Y overlay + Ursina pointer wiring; scoped pytest PASS",
+              "agent_08": "Log done; main_solo handle + ui_panels capture at wk61_r11_sidebar"
+            },
+            "notes": [
+              "R11 Definition of Done satisfied for automated gates, targeted regressions, and screenshot evidence.",
+              "wk61_r11_hold_g/ was missing at verify start; QA captured Ursina hold-G PNG using existing wk61_hold_g_tax_overlay scenario + wk61_r10_capture_patch.",
+              "Sidebar drag before/after PNG pair not scripted in ui_panels scenario; programmatic drag height change verified via test_drag_main_solo_updates_fraction + asymmetric split capture.",
+              "No Agent 11 code changes — verification-only per assignment.",
+              "Human playtest gate (Jaimie Ursina: wolves visible, heroes eat, passive tax in panel, hold-G readability, LMB sidebar drag) still required per PM automation before version bump."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Human gate: Jaimie manual Ursina playtest per R11 tickets (wolves, hunger meals, passive tax growth, hold-G depth, sidebar LMB drag).",
+            "Agent 02: acceptance consult after human gate.",
+            "Agent 13: patch notes only after human pass."
+          ]
+        },
+        "wk61_r12_live_gameplay_fixes": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r12_live_gameplay_fixes",
+          "round_meta": {
+            "wave": 4,
+            "build_target": "QA verification of R12 live gameplay fixes after Agents 05/06",
+            "created_utc": "2026-05-23T22:00:00Z",
+            "depends_on": "wk61_r12_wave2_implementers"
+          },
+          "prompt_summary": "Verify qa_smoke + full pytest PASS; confirm Agent 05/06 logs done; grep wave counts 2x, config tuning, marketplace potions_researched=True.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Verification-only R12 sign-off. All gates green (463 pytest, qa_smoke DONE: PASS). Agent 05 and Agent 06 logs report status done. Source grep confirms doubled Wolf Pack composition (Wolf 6 + Goblin 4), max_alive_enemies=80, HUNGER_INTERVAL_MS=60_000, FOOD_MEAL_COST_GOLD=5, and Marketplace.potions_researched=True.",
+            "files_created": [],
+            "files_modified": []
+          },
+          "commands_run": [
+            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"},
+            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "463 passed in 14.11s"},
+            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json", "exit_code": 0, "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom", "notes": "Log JSON validated before orchestrator receipt"}
+          ],
+          "evidence": {
+            "gate_results": {
+              "qa_smoke": "PASS (exit 0) — DONE: PASS",
+              "pytest_full": "463 passed in 14.11s (exit 0)"
+            },
+            "implementer_log_review": {
+              "agent_05": {
+                "status": "done",
+                "log_path": ".cursor/plans/agent_logs/agent_05_GameplaySystemsDesigner.json",
+                "summary": "Wave counts 2x, max_alive_enemies 80, HUNGER_INTERVAL_MS 60_000, FOOD_MEAL_COST_GOLD 5, Marketplace potions_researched=True"
+              },
+              "agent_06": {
+                "status": "done",
+                "log_path": ".cursor/plans/agent_logs/agent_06_AIBehaviorDirector_LLM.json",
+                "summary": "Hunger tick for FIGHTING heroes; _CRITICAL_HP_FRACTION 0.15; hunger pytest + qa_smoke PASS"
+              }
+            },
+            "source_grep_verification": {
+              "wolf_pack_wave": {
+                "file": "game/systems/wave_events.py",
+                "expected": "Wolf Pack: [(Wolf, 6), (Goblin, 4)] (doubled from 3,2)",
+                "actual": "WaveEventDef(\"Wolf Pack\", 5.5, [(Wolf, 6), (Goblin, 4)], ...)",
+                "status": "PASS"
+              },
+              "max_alive_enemies": {
+                "file": "config.py",
+                "expected": 80,
+                "actual": "max_alive_enemies: int = 80",
+                "status": "PASS"
+              },
+              "HUNGER_INTERVAL_MS": {
+                "file": "config.py",
+                "expected": 60000,
+                "actual": "HUNGER_INTERVAL_MS = 60_000",
+                "status": "PASS"
+              },
+              "FOOD_MEAL_COST_GOLD": {
+                "file": "config.py",
+                "expected": 5,
+                "actual": "FOOD_MEAL_COST_GOLD = 5",
+                "status": "PASS"
+              },
+              "potions_researched": {
+                "file": "game/entities/buildings/economic.py",
+                "expected": "Marketplace.__init__ sets potions_researched = True",
+                "actual": "self.potions_researched = True (line 36)",
+                "status": "PASS"
+              }
+            },
+            "notes": [
+              "No Agent 11 code changes — verification-only per assignment.",
+              "All six PM-assigned checks PASS; R12 automated gates green."
+            ]
+          },
+          "blockers": [],
+          "follow_ups": []
+        }
+      }
+    },
+    "wk62_architecture_cleanup_baseline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/cleanup_sprint_plan_c4d96dca.plan.md",
+        "created_utc": "2026-05-28T00:00:00Z",
+        "notes": "Architecture cleanup sprint. Agent 11 owns Wave 0 baseline characterization tests and Wave 2 final QA."
+      },
+      "rounds": {
+        "wk62_w0_baseline_tests": {
+          "sprint_id": "wk62_architecture_cleanup_baseline",
+          "round_id": "wk62_w0_baseline_tests",
+          "round_meta": {
+            "wave": 0,
+            "build_target": "Add baseline characterization tests proving current engine/sim behavior BEFORE production code changes. Document double sim-time advance and pause-leak bugs via xfail tests; guard rubble/event single-count invariants.",
+            "created_utc": "2026-05-28T00:00:00Z",
+            "depends_on": null
+          },
+          "prompt_summary": "Read game/engine.py, game/sim_engine.py, game/sim/timebase.py, game/cleanup_manager.py, game/entities/rubble.py to understand engine/sim boundary. Create tests/test_engine_sim_boundary.py with 4 tests: (1) sim time advances once per update, (2) pause does not advance sim time, (3) destroying building creates one rubble, (4) destroying building emits one event. Mark known bugs with xfail.",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Created tests/test_engine_sim_boundary.py with 4 baseline characterization tests. Two tests expose real bugs and are marked xfail(strict=True). Two tests verify correct current behavior and pass normally. Uses unittest.mock.patch to force DETERMINISTIC_SIM=True for sim-time tests so they run without env var.",
+            "files_created": [
+              "tests/test_engine_sim_boundary.py"
+            ],
+            "files_modified": [],
+            "test_details": {
+              "test_game_engine_update_advances_sim_time_once": {
+                "marker": "xfail(strict=True)",
+                "status": "XFAIL (bug confirmed)",
+                "bug": "Double advance: _prepare_sim_and_camera() advances _sim_now_ms by 50ms, then SimEngine.update() advances it again by 50ms. Actual delta=100ms for dt=0.05, expected 50ms.",
+                "root_cause": "game/engine.py line 1228 and game/sim_engine.py line 605 both increment _sim_now_ms",
+                "fix_target": "Wave 1 Task A (single sim time owner)"
+              },
+              "test_paused_does_not_advance_sim_time": {
+                "marker": "xfail(strict=True)",
+                "status": "XFAIL (bug confirmed)",
+                "bug": "Pause leak: _prepare_sim_and_camera() advances _sim_now_ms BEFORE checking self.paused at line 1234. Paused ticks leak 50ms of sim time.",
+                "root_cause": "game/engine.py lines 1228-1229 run unconditionally before line 1234 pause check",
+                "fix_target": "Wave 1 Task A (single sim time owner)"
+              },
+              "test_destroying_building_creates_one_rubble": {
+                "marker": "none",
+                "status": "PASS",
+                "note": "SimEngine._cleanup_destroyed_buildings() runs first inside sim.update() and removes the building from the list. CleanupManager (engine-side) then finds no destroyed buildings, so rubble count is exactly 1. Guards the single-rubble invariant against ordering regressions."
+              },
+              "test_destroying_building_emits_one_event": {
+                "marker": "none",
+                "status": "PASS",
+                "note": "Same ordering: sim-side cleanup emits 1 BUILDING_DESTROYED event; CleanupManager finds nothing. Guards the single-event invariant."
+              }
+            },
+            "architecture_findings": {
+              "double_sim_time": "CONFIRMED. Both GameEngine._prepare_sim_and_camera() and SimEngine.update() advance _sim_now_ms. In deterministic mode, each engine.update(dt) increments by 2*int(round(dt*1000)).",
+              "pause_leak": "CONFIRMED. _prepare_sim_and_camera() advances sim time before checking pause, then returns False. SimEngine.update() does not run, so only one of the two advances leaks — but it should be zero.",
+              "redundant_cleanup": "GameEngine._cleanup_destroyed_buildings() at engine.py:1157 is effectively dead code because SimEngine._cleanup_destroyed_buildings() at sim_engine.py:749 already removes all destroyed buildings. CleanupManager never finds anything to clean. The redundant call is safe (idempotent) but wastes cycles and creates maintenance risk.",
+              "cleanup_ordering_fragility": "If cleanup ordering changes (e.g., engine-side cleanup runs before sim-side), double rubble and double events would occur. The new tests guard against this."
+            }
+          },
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_engine_sim_boundary.py -x -v",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "2 passed, 2 xfailed, 1 warning in 5.63s. All 4 tests behave as expected."
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "465 passed, 2 xfailed, 1 warning in 42.81s. Full suite clean; no regressions."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
+              "notes": "DONE: PASS. determinism_guard PASS, all observe_sync profiles exit 0."
+            }
+          ],
+          "evidence": {
+            "tests_added_count": 4,
+            "xfail_count": 2,
+            "passing_count": 2,
+            "pytest_summary": "2 passed, 2 xfailed, 1 warning in 5.63s",
+            "full_suite_summary": "465 passed, 2 xfailed, 1 warning in 42.81s",
+            "qa_smoke_result": "PASS (exit 0)",
+            "bugs_documented": [
+              {
+                "id": "WK62-BUG-001",
+                "title": "Double sim time advance per engine.update()",
+                "severity": "HIGH",
+                "files": ["game/engine.py:1228", "game/sim_engine.py:605"],
+                "test": "test_game_engine_update_advances_sim_time_once",
+                "fix_owner": "Agent 03 Wave 1 Task A"
+              },
+              {
+                "id": "WK62-BUG-002",
+                "title": "Sim time leaks through pause via _prepare_sim_and_camera()",
+                "severity": "MEDIUM",
+                "files": ["game/engine.py:1228-1234"],
+                "test": "test_paused_does_not_advance_sim_time",
+                "fix_owner": "Agent 03 Wave 1 Task A"
+              }
+            ],
+            "invariants_guarded": [
+              "Single rubble record per destroyed building (test_destroying_building_creates_one_rubble)",
+              "Single BUILDING_DESTROYED event per destroyed building (test_destroying_building_emits_one_event)"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03 Wave 1 Task A: Fix double sim time advance by removing _sim_now_ms mutation from _prepare_sim_and_camera(). After fix, both xfail tests should become PASS (remove xfail markers).",
+            "Agent 03 Wave 1 Task B: Consider removing redundant _cleanup_destroyed_buildings() call at engine.py:1157 since sim already handles it. The rubble/event tests will guard against double-count regressions.",
+            "After Wave 1 fixes: re-run python -m pytest tests/test_engine_sim_boundary.py -v to confirm xfails flip to PASS."
+          ]
         }
       }
     }

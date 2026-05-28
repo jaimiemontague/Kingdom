@@ -81,7 +81,7 @@ def test_prefab_local_top_y_uses_child_bounds() -> None:
 
 def test_building_gold_overlay_y_prefers_prefab_roof() -> None:
     ent = SimpleNamespace(_ks_prefab_container=True, _ks_prefab_top_y=2.4, children=[])
-    assert _building_gold_overlay_y(ent) == pytest.approx(2.75)
+    assert _building_gold_overlay_y(ent) == pytest.approx(2.9)
 
 
 def test_building_gold_overlay_y_billboard_uses_height() -> None:

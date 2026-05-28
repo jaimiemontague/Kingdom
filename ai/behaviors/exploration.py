@@ -203,6 +203,11 @@ def handle_idle(ai: Any, hero: Any, game_state: dict) -> None:
     if ai.bounty_behavior.maybe_take_bounty(ai, hero, game_state):
         return
 
+    # WK61-R10: hungry heroes seek food stands before discretionary explore/shopping.
+    hunger_behavior = getattr(ai, "hunger_behavior", None)
+    if hunger_behavior is not None and hunger_behavior.maybe_seek_meal_idle(ai, hero, game_state):
+        return
+
     # Check if hero wants to go shopping (full health, has gold, needs potions).
     if hero.hp >= hero.max_hp:
         # V1.3 extension: check marketplace first, then blacksmith.

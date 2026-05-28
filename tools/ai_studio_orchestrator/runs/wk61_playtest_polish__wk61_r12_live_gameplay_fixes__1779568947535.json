@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "created_at": "2026-05-23T20:42:27.534Z",
+  "updated_at": "2026-05-23T20:46:11.097Z",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r12_live_gameplay_fixes",
+  "runtime": "local",
+  "mode": "auto_until_human_gate",
+  "required_model": "composer-2.5",
+  "pm_hub_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\.cursor\\plans\\agent_logs\\agent_01_ExecutiveProducer_PM.json",
+  "cwd": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
+  "dry_run": false,
+  "waves": [
+    {
+      "id": "gameplay_ai",
+      "parallel": true,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "05",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "101f14a2-00a4-48fb-9d4d-2f10a1770bb1",
+          "started_at": "2026-05-23T20:42:27.584Z",
+          "sdk_agent_id": "agent-883fb705feb2107dc4256d8596687a5b4fb85e2b",
+          "run_id": "run-5f9a8294-5935-45b6-8663-dfc591ce7141",
+          "finished_at": "2026-05-23T20:44:15.768Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\101f14a2-00a4-48fb-9d4d-2f10a1770bb1.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\5904ab5c-a56c-4531-abae-a3743052ff68.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        },
+        {
+          "agent_id": "06",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "de436b62-6c82-4461-a78d-cde0e2243468",
+          "started_at": "2026-05-23T20:42:27.585Z",
+          "sdk_agent_id": "agent-ccb5a6e9128f4fc48ca1df36f1a8addc4215acb1",
+          "run_id": "run-cb77f4af-181e-4b7b-8658-373d0108f6cf",
+          "finished_at": "2026-05-23T20:44:26.788Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\de436b62-6c82-4461-a78d-cde0e2243468.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\547c707e-5602-4e0f-960d-3e2d1bf006f1.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "parallel": false,
+      "status": "finished",
+      "agents": [
+        {
+          "agent_id": "11",
+          "status": "finished",
+          "model": "composer-2.5",
+          "completion_token": "a90b2543-30b4-41cc-845b-c07975630eb6",
+          "started_at": "2026-05-23T20:44:39.496Z",
+          "sdk_agent_id": "agent-0e132a91d16067f13711679b4724d20a0e84609c",
+          "run_id": "run-0bed5a1f-35d7-49a7-b12d-23857870cc1e",
+          "finished_at": "2026-05-23T20:45:59.845Z",
+          "completion_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\a90b2543-30b4-41cc-845b-c07975630eb6.completion.json",
+          "verification_receipt_path": "c:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom\\tools\\ai_studio_orchestrator\\runs\\inbox\\7c510f05-3712-4bae-843a-1f698f3bef58.verification.json",
+          "verification_status": "verified",
+          "verification_reason": "Completion receipt and claimed agent log verified.",
+          "log_check": "passed"
+        }
+      ]
+    }
+  ],
+  "stops": [
+    "human gate declared in PM hub: manual_playtest_after_round",
+    "human gate declared in PM hub: version_bump",
+    "human gate declared in PM hub: commit",
+    "human gate declared in PM hub: push",
+    "Agent 05 prompt mentions a human gate",
+    "Agent 06 prompt mentions a human gate",
+    "Agent 11 prompt mentions a human gate"
+  ]
+}

@@ -1609,6 +1609,179 @@
             "Agent 11: verify gates and screenshot evidence for R9 sign-off."
           ],
           "recommended_next_actions": []
+        },
+        "wk61_r10_v159_economy_pacing_ux": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r10_v159_economy_pacing_ux",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R10-FEAT-004 game/ui/hud.py: Session _left_split_fracs for main/watch segments; _layout_left_column_segments splits vertical space above fixed minimap; 4px drag handles on main bottom and watch top/bottom; pointer drag updates fractions with min heights; visible handle chrome.",
+            "game/input_handler.py: Route sidebar split pointer down/move/up through virtual-screen coords; refresh Ursina HUD upload on drag; strict is True checks to avoid MagicMock regression.",
+            "tools/screenshot_scenarios.py: ui_panels sidebar_split shot (32/68 fracs) + marketplace_tax shot with stored_tax_gold=42; building select wires building_panel.",
+            "tests/test_wk61_r10_sidebar_layout.py: Split fraction layout, drag updates, handle pixels, marketplace taxable gold gold-color regression."
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk61_r10_sidebar --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 PNGs including ui_panels_sidebar_split.png and ui_panels_marketplace_tax.png"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS (445 passed)"
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r10_sidebar_layout.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "4 passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest": "test_wk61_r10_sidebar_layout.py 4 passed; qa_smoke full suite 445 passed",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots": "docs/screenshots/wk61_r10_sidebar/ui_panels_sidebar_split.png shows compact hero main band + taller pinned watch card with visible divider handle; ui_panels_marketplace_tax.png shows Taxable Gold: $42 in gold (not grey $0)",
+            "economic_panel": "Confirmed _render_taxable_gold uses COLOR_GOLD when stored_tax_gold>0; marketplace capture + unit test",
+            "files_modified": [
+              "game/ui/hud.py",
+              "game/input_handler.py",
+              "tools/screenshot_scenarios.py",
+              "tests/test_wk61_r10_sidebar_layout.py"
+            ]
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: verify sidebar drag in live Ursina playtest + screenshot sign-off.",
+            "Jaimie: drag thin bars between hero menu and watch card during 10-min playtest."
+          ],
+          "recommended_next_actions": []
+        },
+        "wk61_r11_playtest_fix_round": {
+          "sprint_id": "wk61_playtest_polish",
+          "round_id": "wk61_r11_playtest_fix_round",
+          "status": "done",
+          "what_i_changed": [
+            "WK61-R11-BUG-005 game/ui/hud.py: main_solo split handle (8px hit) at bottom of unpinned hero/enemy/building column above minimap; _left_split_fracs['main_solo']; pointer down/move/up for main_solo drag; handle_click returns sidebar_split_drag on handle hit; chat-popup path keeps full column height (R9 regression guard).",
+            "tests/test_wk61_r11_sidebar_main_solo_handle.py: solo handle layout, drag fraction update, handle_click action, visible handle pixels."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r11_sidebar_main_solo_handle.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "8 passed"
+            },
+            {
+              "command": "python -m pytest tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r11_sidebar_main_solo_handle.py -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "10 passed (R9 regression re-check after chat full-height guard)"
+            },
+            {
+              "command": "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk61_r11_sidebar --size 1920x1080 --ticks 480",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "7 PNGs + manifest.json"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS (463 passed)"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_sidebar": "test_wk61_r10_sidebar_layout.py 4 passed; test_wk61_r11_sidebar_main_solo_handle.py 4 passed",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "screenshots": "docs/screenshots/wk61_r11_sidebar/ — ui_panels_hero.png shows unpinned Gareth column with resize handle bar above minimap gap; ui_panels_sidebar_split.png pinned split unchanged",
+            "handle_probe": "main_solo handle rect (0,653,224,8) at default 0.72 frac; handle pixel sum=330 (visible chrome)",
+            "ursina_note": "Agent 03 wires Ursina LMB pointer routing to handle_sidebar_split_pointer_*; HUD layout + handle_click contract complete."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 03: Ursina pointer down/move/up on main_solo handle (BUG-005 input path).",
+            "Agent 11: verify wk61_r11_sidebar captures + live Ursina drag."
+          ],
+          "recommended_next_actions": []
+        }
+      }
+    },
+    "wk62_architecture_cleanup_baseline": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/cleanup_sprint_plan_c4d96dca.plan.md",
+        "notes": "WK62 architecture cleanup: Wave 2 UI/render pressure relief"
+      },
+      "rounds": {
+        "wk62_w2_ui_render_pressure_relief": {
+          "sprint_id": "wk62_architecture_cleanup_baseline",
+          "round_id": "wk62_w2_ui_render_pressure_relief",
+          "status": "done",
+          "what_i_changed": [
+            "NEW game/ui/ui_actions.py: Typed UIAction(frozen dataclass, slots=True) with kind:str and payload:object|None; normalize_ui_action() converts legacy str/dict/None returns to UIAction or None.",
+            "NEW game/ui/hud_layout.py: HUDLayout(dataclass, slots=True) holding top_bar, bottom_bar, left_panel, right_panel, minimap, command_bar, speed_control, recall_button, memorial_button rects; HUDLayoutManager.compute() pure-geometry function from screen_w/h and theme metrics; authoritative LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W, RECALL_BTN_W, MEMORIAL_BTN_W constants.",
+            "MODIFIED game/ui/hud.py: Imports UIAction, normalize_ui_action, HUDLayout, HUDLayoutManager, and layout constants from new modules; removed duplicate constant definitions (LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W); HUD.__init__ creates _layout_mgr = HUDLayoutManager(); _layout_rects_for_screen delegates core rectangle math to HUDLayoutManager.compute() then overlays left-column segment allocation.",
+            "NEW tests/test_wk62_hud_layout_ui_actions.py: 20 tests — UIAction construction/frozen/equality, normalize_ui_action 7 cases, HUDLayoutManager geometry for 1920x1080/800x600/custom theme, rect non-overlap, button adjacency, speed control position, backward-compat imports from hud.py."
+          ],
+          "commands_run": [
+            {
+              "command": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "489 passed (467 pre-existing + 20 new + 2 module discovery)"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "DONE: PASS"
+            },
+            {
+              "command": "python -m pytest tests/test_wk62_hud_layout_ui_actions.py -v",
+              "exit_code": 0,
+              "cwd": "repo root",
+              "note": "20 passed"
+            },
+            {
+              "command": "python -m json.tool .cursor/plans/agent_logs/agent_08_UX_UI_Director.json",
+              "exit_code": 0,
+              "cwd": "repo root"
+            }
+          ],
+          "evidence": {
+            "pytest_full": "python -m pytest tests/ -x -q exit_code=0 (489 passed)",
+            "qa_smoke": "python tools/qa_smoke.py --quick exit_code=0 DONE: PASS",
+            "pytest_new": "python -m pytest tests/test_wk62_hud_layout_ui_actions.py -v exit_code=0 (20 passed)",
+            "backward_compat": "from game.ui.hud import LEFT_COL_W, RADAR_MINIMAP_H, RECALL_BTN_W, MEMORIAL_BTN_W all resolve to correct values (224, 180, 180, 90); existing callers in game/ui/building_panel.py, tests/test_wk61_r9*, tests/test_wk52_r10* unaffected.",
+            "files_created": [
+              "game/ui/ui_actions.py",
+              "game/ui/hud_layout.py",
+              "tests/test_wk62_hud_layout_ui_actions.py"
+            ],
+            "files_modified": [
+              "game/ui/hud.py"
+            ],
+            "visual_regression": "No rendering code changed; layout rectangles produced by HUDLayoutManager.compute() are numerically identical to prior inline geometry in _layout_rects_for_screen. Screenshot verification deferred to Agent 11 QA wave."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11: run screenshot capture for wk62 HUD layout verification.",
+            "Future: migrate handle_click to return UIAction instead of str/dict; update InputHandler to use normalize_ui_action at the boundary.",
+            "Future: extract left-column segment logic (_layout_left_column_segments, split handles) into HUDLayoutManager."
+          ],
+          "recommended_next_actions": []
         }
       }
     }

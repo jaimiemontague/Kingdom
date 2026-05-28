@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "token": "6732dfb9-5df3-41ec-ad71-d04139813c5b",
+  "sprint_id": "wk61_playtest_polish",
+  "round_id": "wk61_r11_playtest_fix_round",
+  "agent_id": "06",
+  "status": "done",
+  "summary": "BUG-002: tick_meal_hunger on all non-critical heroes; shopping interrupt; LLM fallback seek_meal; 13 hunger pytest pass.",
+  "files_touched": [],
+  "commands_run": [],
+  "claimed_log_path": ".cursor\\plans\\agent_logs\\agent_06_AIBehaviorDirector_LLM.json",
+  "claimed_log_round": "sprints[wk61_playtest_polish].rounds[wk61_r11_playtest_fix_round]",
+  "timestamp": "2026-05-23T20:11:54.605Z"
+}

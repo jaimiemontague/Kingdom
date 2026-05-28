@@ -12,7 +12,6 @@ import pygame
 from typing import TYPE_CHECKING
 from config import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TILE_SIZE,
-    MAX_ALIVE_ENEMIES,
     LAIR_BOUNTY_COST,
     BOUNTY_REWARD_LOW,
     BOUNTY_REWARD_MED,
@@ -47,7 +46,7 @@ from game.systems.protocol import SystemContext
 from game.types import BountyType, HeroClass
 from game.graphics.pygame_renderer import PygameRenderer, PygameWorldRenderContext
 from game.graphics.renderers import RendererRegistry
-from game.sim.timebase import set_sim_now_ms, get_time_multiplier, set_time_multiplier
+from game.sim.timebase import get_time_multiplier, set_time_multiplier
 from ai.context_builder import ContextBuilder
 
 from game.input_manager import InputManager
@@ -1149,12 +1148,11 @@ class GameEngine:
         # Stage 2: sim update loop lives in SimEngine.
         self.sim.update(dt, game_state)
 
-        # WK61-BUG-003: Building destruction cleanup after sim tick.
-        # _cleanup_after_combat() became dead code when the update loop
-        # was refactored into SimEngine; call cleanup directly so that
-        # buildings at hp <= 0 are removed, references are cleared,
-        # and rubble records are spawned before the next snapshot.
-        self._cleanup_destroyed_buildings()
+        # WK62 Task B: Redundant _cleanup_destroyed_buildings() call removed.
+        # SimEngine.update() already performs authoritative destroyed-building
+        # cleanup (rubble creation, reference clearing, event emission).
+        # GameEngine._cleanup_destroyed_buildings() remains available for
+        # on-demand demolish actions (confirm_demolish, GameCommands).
 
         # Presentation chores stay here for now.
         self._update_render_animations(dt)
@@ -1222,14 +1220,12 @@ class GameEngine:
             chat_panel.receive_response(spoken, direct_feedback=direct_feedback)
 
     def _prepare_sim_and_camera(self, dt: float) -> bool:
-        """Apply deterministic timing and update camera when world input is allowed."""
-        if DETERMINISTIC_SIM:
-            # Drive gameplay timing off simulation time (not wall-clock).
-            self._sim_now_ms += int(round(float(dt) * 1000.0))
-            set_sim_now_ms(self._sim_now_ms)
-        else:
-            set_sim_now_ms(None)
+        """Check pause/menu state and update camera. Returns True if sim should tick.
 
+        WK62 Task A: Sim time advancement removed from here. SimEngine.update()
+        is the single authoritative owner of _sim_now_ms. GameEngine decides
+        WHETHER to tick the sim, but never mutates sim time.
+        """
         # wk12 Chronos: speed-tier pause (multiplier 0) or menu pause → no sim (return False). Camera still pans when paused (not when menu open).
         if get_time_multiplier() == 0.0 or self.paused:
             if not getattr(self.pause_menu, "visible", False):
@@ -1255,329 +1251,18 @@ class GameEngine:
             event_bus=self.event_bus,
         )
 
-    def _update_ai_and_heroes(self, dt: float, game_state: dict):
-        """Run AI controller and hero updates."""
-        if self.ai_controller:
-            self.ai_controller.update(dt, self.heroes, game_state)
-
-        # WK18: Drain LLM move_to requests into physical state so hero executes immediately.
-        from game.entities.hero import HeroState
-        for hero in self.heroes:
-            if getattr(hero, "llm_move_request", None) is not None:
-                wx, wy = hero.llm_move_request
-                hero.set_target_position(wx, wy)
-                hero.llm_move_request = None
-
-        for hero in self.heroes:
-            hero.update(dt, game_state)
-
-    def _apply_entity_separation(self, dt: float) -> None:
-        """WK18 / WK22-Agent10: Soft collision / flocking separation for all mobile entities.
-
-        Optimised from O(N²) brute-force to grid-based O(N) by binning
-        entities into cells whose side equals ``min_dist_px``.  Each entity
-        only inspects its own cell + the 8 adjacent cells, keeping the inner
-        loop bounded by a small constant.
-        """
-        import math
-        # Tunables: min distance (px), nudge strength (px/s when overlapping).
-        min_dist_px = 16.0
-        strength_per_sec = 250.0
-        max_step = 120.0 * dt  # cap displacement per frame
-        cell = min_dist_px  # grid cell size
-
-        alive = []
-        for lst in (self.heroes, self.enemies, self.peasants, self.guards):
-            alive.extend(e for e in lst if getattr(e, "is_alive", True))
-        if self.tax_collector and getattr(self.tax_collector, "is_alive", True):
-            alive.append(self.tax_collector)
-
-        if len(alive) < 2:
-            return
-
-        # Build spatial grid: cell key -> list of entity indices.
-        grid: dict[tuple[int, int], list[int]] = {}
-        for idx, ent in enumerate(alive):
-            if getattr(ent, "is_inside_building", False):
-                continue
-            cx = int(ent.x // cell)
-            cy = int(ent.y // cell)
-            key = (cx, cy)
-            bucket = grid.get(key)
-            if bucket is None:
-                grid[key] = [idx]
-            else:
-                bucket.append(idx)
-
-        # For each entity, only check neighbours in the same + adjacent cells.
-        for key, indices in grid.items():
-            kx, ky = key
-            # Gather candidate indices from the 3×3 neighbourhood.
-            neighbours: list[int] = []
-            for ox in range(kx - 1, kx + 2):
-                for oy in range(ky - 1, ky + 2):
-                    nb = grid.get((ox, oy))
-                    if nb is not None:
-                        neighbours.extend(nb)
-
-            for i in indices:
-                ent = alive[i]
-                dx_sum, dy_sum = 0.0, 0.0
-                ex, ey = ent.x, ent.y
-                for j in neighbours:
-                    if j == i:
-                        continue
-                    other = alive[j]
-                    dx = ex - other.x
-                    dy = ey - other.y
-                    d2 = dx * dx + dy * dy
-                    if d2 < min_dist_px * min_dist_px and d2 > 1e-12:
-                        dist = math.sqrt(d2)
-                        push = (min_dist_px - dist) * strength_per_sec * dt / dist
-                        dx_sum += dx * push
-                        dy_sum += dy * push
-                if dx_sum != 0 or dy_sum != 0:
-                    step = math.sqrt(dx_sum * dx_sum + dy_sum * dy_sum)
-                    if step > max_step:
-                        scale = max_step / step
-                        dx_sum *= scale
-                        dy_sum *= scale
-                    ent.x += dx_sum
-                    ent.y += dy_sum
-
-    def _update_world_systems(self, system_ctx: SystemContext, dt: float, game_state: dict):
-        """Update fog, buffs, and early pacing logic."""
-        # Fog-of-war reveal (castle + heroes).
-        self._update_fog_of_war()
-
-        # Apply/refresh buffs (auras) once per tick so ATK/DEF stays dynamic and stable.
-        self.buff_system.update(system_ctx, dt)
-
-        castle = game_state.get("castle")
-
-        # Content pacing guardrail: nudge player toward a clear early decision.
-        self._maybe_apply_early_pacing_nudge(dt, castle)
-        return castle
-
-    def _update_peasants(self, dt: float, game_state: dict, castle):
-        """Spawn and update peasant workers."""
-        # Spawn peasants from the castle (1 every 5s) until there are 2 alive.
-        self.peasant_spawn_timer += dt
-        alive_peasants = [p for p in self.peasants if p.is_alive]
-        if castle and len(alive_peasants) < 2 and self.peasant_spawn_timer >= 5.0:
-            self.peasant_spawn_timer = 0.0
-            self.peasants.append(Peasant(castle.center_x, castle.center_y))
-
-        for peasant in self.peasants:
-            peasant.update(dt, game_state)
-
-    def _update_enemies(self, dt: float) -> list:
-        """Update enemies and collect ranged projectile events."""
-        # Update enemies and collect ranged projectile events
-        enemy_ranged_events = []
-        for enemy in self.enemies:
-            enemy.update(dt, self.heroes, self.peasants, self.buildings, guards=self.guards, world=self.world)
-
-        # WK5: Collect ranged projectile events from enemies that just attacked
-        # (do_attack() stores event in _last_ranged_event during update())
-        for enemy in self.enemies:
-            if hasattr(enemy, "_last_ranged_event") and enemy._last_ranged_event is not None:
-                enemy_ranged_events.append(enemy._last_ranged_event)
-                enemy._last_ranged_event = None  # Clear after collection
-        return enemy_ranged_events
-
-    def _update_guards(self, dt: float):
-        """Update existing guard units."""
-        # Update guards
-        for guard in self.guards:
-            guard.update(dt, self.enemies, world=self.world, buildings=self.buildings)
-
-    def _spawn_enemies(self, dt: float):
-        """Spawn enemies from waves and lairs with global cap enforcement."""
-        # Spawn new enemies (with a safety cap to prevent runaway slowdown if enemies accumulate)
-        alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
-        remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
-        if remaining_slots > 0:
-            new_enemies = self.spawner.spawn(dt)
-            if new_enemies:
-                self.enemies.extend(new_enemies[:remaining_slots])
-
-            # Spawn enemies from lairs (in addition to wave spawns)
-            alive_enemy_count = len([e for e in self.enemies if getattr(e, "is_alive", False)])
-            remaining_slots = max(0, int(MAX_ALIVE_ENEMIES) - alive_enemy_count)
-            if remaining_slots > 0:
-                lair_enemies = self.lair_system.spawn_enemies(dt, self.buildings)
-                if lair_enemies:
-                    self.enemies.extend(lair_enemies[:remaining_slots])
-
-    def _process_combat(self, system_ctx: SystemContext, dt: float, enemy_ranged_events: list) -> list:
-        """Run combat and queue downstream events in EventBus."""
-        self.combat_system.update(system_ctx, dt)
-        if enemy_ranged_events:
-            # Enemy ranged attacks are emitted outside CombatSystem in enemy.update().
-            self.event_bus.emit_batch(enemy_ranged_events)
-        return self.combat_system.get_emitted_events()
-
-    def _route_combat_events(self, events: list):
-        """Handle user-facing combat outcomes and lair-clear follow-up effects."""
-        # Handle combat events
-        for event in events:
-            if event["type"] == GameEventType.ENEMY_KILLED.value:
-                self.hud.add_message(
-                    f"{event['hero']} slew a {event['enemy']}! (+{event['gold']}g, +{event['xp']}xp)",
-                    (255, 215, 0)
-                )
-            elif event["type"] == GameEventType.CASTLE_DESTROYED.value:
-                self.hud.add_message("GAME OVER - Castle Destroyed!", (255, 0, 0))
-                self.paused = True
-            elif event["type"] == GameEventType.LAIR_CLEARED.value:
-                lair_name = event.get("lair_type", "lair").replace("_", " ").title()
-                gold = event.get("gold", 0)
-                hero_name = event.get("hero", "A hero")
-                self.hud.add_message(
-                    f"{hero_name} cleared {lair_name}! (+{gold}g)",
-                    (255, 215, 0),
-                )
-                lair_obj = event.get("lair_obj")
-
-                # Completion-based lair bounty payout (do NOT allow proximity-claim).
-                # If there is an active attack_lair bounty targeting this lair, pay it to the clearing hero now.
-                bounty_claimed_events = []
-                try:
-                    hero_obj = next((h for h in self.heroes if getattr(h, "name", None) == hero_name), None)
-                    if hero_obj is not None and lair_obj is not None:
-                        for b in list(getattr(self.bounty_system, "bounties", []) or []):
-                            if getattr(b, "claimed", False):
-                                continue
-                            if getattr(b, "bounty_type", None) != BountyType.ATTACK_LAIR.value:
-                                continue
-                            if getattr(b, "target", None) is lair_obj:
-                                if b.claim(hero_obj):
-                                    # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
-                                    bounty_claimed_events.append({
-                                        "type": GameEventType.BOUNTY_CLAIMED.value,
-                                        "x": float(b.x),
-                                        "y": float(b.y),
-                                        "reward": b.reward,
-                                        "hero": hero_name,
-                                    })
-                except Exception:
-                    # Bounty payout should never crash the sim.
-                    pass
-                
-                if bounty_claimed_events:
-                    self.event_bus.emit_batch(bounty_claimed_events)
-
-                if lair_obj in self.buildings:
-                    self.buildings.remove(lair_obj)
-                if lair_obj in getattr(self.lair_system, "lairs", []):
-                    self.lair_system.lairs.remove(lair_obj)
-
-    def _cleanup_after_combat(self):
-        """Remove dead entities and destroyed buildings after combat resolution."""
-        # WK60 Feature 3: decrement guild hero count for newly dead heroes
-        for hero in self.heroes:
-            if not getattr(hero, "is_alive", True) and not getattr(hero, "_guild_death_processed", False):
-                hero._guild_death_processed = True
-                home = getattr(hero, "home_building", None)
-                if home is not None and hasattr(home, "on_hero_death"):
-                    home.on_hero_death()
-
-        # Clean up dead enemies
-        self.enemies = [e for e in self.enemies if e.is_alive]
-
-        # Clean up dead guards
-        self.guards = [g for g in self.guards if getattr(g, "is_alive", False)]
-        
-        # Clean up destroyed buildings (WK5: auto-demolish at 0 HP + reference cleanup)
-        self._cleanup_destroyed_buildings()
-
-    def _process_bounties(self):
-        """Resolve bounty claims and route claim events."""
-        # Process bounties
-        claimed = self.bounty_system.check_claims(self.heroes)
-        bounty_claimed_events = []
-        for bounty, hero in claimed:
-            self.hud.add_message(
-                f"{hero.name} claimed bounty: +${bounty.reward}!",
-                (255, 215, 0)
-            )
-            # WK6 Mid-Sprint: Emit bounty_claimed event with position for visibility-gated audio
-            bounty_claimed_events.append({
-                "type": GameEventType.BOUNTY_CLAIMED.value,
-                "x": float(bounty.x),
-                "y": float(bounty.y),
-                "reward": bounty.reward,
-                "hero": hero.name,
-            })
-
-        if bounty_claimed_events:
-            self.event_bus.emit_batch(bounty_claimed_events)
-
-        self.bounty_system.cleanup()
-
-    def _update_neutral_systems(self, dt: float, castle):
-        """Update neutral/economic support systems outside direct combat."""
-        # Neutral buildings: auto-spawn + passive tax
-        self.neutral_building_system.tick(dt, self.buildings, self.heroes, castle)
-
-        # Update tax collector
-        if self.tax_collector:
-            self.tax_collector.update(dt, self.buildings, self.economy, world=self.world)
-
-    def _update_buildings(self, dt: float):
-        """Update buildings and collect building-driven projectile events."""
-        # WK15: Advance timed research (sim-time based, deterministic).
-        from game.sim.timebase import now_ms as sim_now_ms
-        now_ms = int(sim_now_ms())
-        for building in self.buildings:
-            if getattr(building, "research_in_progress", None):
-                advance = getattr(building, "advance_research", None)
-                if callable(advance):
-                    advance(now_ms)
-
-        # Update buildings that need periodic updates and collect ranged projectile events
-        building_ranged_events = []
-        for building in self.buildings:
-            if building.building_type == "trading_post" and hasattr(building, "update"):
-                building.update(dt, self.economy)
-            # WK34: These buildings are temporarily removed from the build menu.
-            # Keep update logic in case they appear in legacy save data.
-            elif building.building_type == "ballista_tower" and hasattr(building, "update"):
-                building.update(dt, self.enemies)
-            elif building.building_type == "wizard_tower" and hasattr(building, "update"):
-                building.update(dt, self.enemies)
-            elif building.building_type == "fairgrounds" and hasattr(building, "update"):
-                building.update(dt, self.economy, self.heroes)
-            elif building.building_type == "guardhouse" and hasattr(building, "update"):
-                # Guard spawning handled here so guards become real entities.
-                # WK60: pass enemies list for arrow attacks (Feature 5)
-                should_spawn = building.update(dt, [g for g in self.guards if g.home_building == building], enemies=self.enemies)
-                if should_spawn:
-                    # Spawn a guard near the guardhouse.
-                    g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
-                    self.guards.append(g)
-                    if hasattr(building, "guards_spawned"):
-                        building.guards_spawned += 1
-
-            # Palace guards (if palace building exists)
-            elif building.building_type == "palace":
-                max_guards = getattr(building, "max_palace_guards", 0)
-                if max_guards > 0 and getattr(building, "is_constructed", True):
-                    current = len([g for g in self.guards if g.home_building == building])
-                    if current < max_guards:
-                        g = Guard(building.center_x + TILE_SIZE, building.center_y, home_building=building)
-                        self.guards.append(g)
-        
-        # WK5: Collect ranged projectile events from buildings that just attacked
-        # (update() stores event in _last_ranged_event during building updates)
-        for building in self.buildings:
-            if hasattr(building, "_last_ranged_event") and building._last_ranged_event is not None:
-                building_ranged_events.append(building._last_ranged_event)
-                building._last_ranged_event = None  # Clear after collection
-
-        if building_ranged_events:
-            self.event_bus.emit_batch(building_ranged_events)
+    # -----------------------------------------------------------------------
+    # WK62 Task C: Dead sim-era helpers removed.
+    # The following methods were deleted because all authoritative sim logic
+    # now lives in SimEngine.update():
+    #   _update_ai_and_heroes, _apply_entity_separation,
+    #   _update_world_systems, _update_peasants, _update_enemies,
+    #   _update_guards, _spawn_enemies, _process_combat,
+    #   _route_combat_events, _cleanup_after_combat, _process_bounties,
+    #   _update_neutral_systems, _update_buildings
+    # tools/ursina_frame_profiler.py references some of these and will need
+    # updating to wrap SimEngine methods instead (follow-up ticket).
+    # -----------------------------------------------------------------------
 
     def _update_render_animations(self, dt: float):
         """Advance render-only entity animation state."""

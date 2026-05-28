@@ -48,6 +48,19 @@ from game.graphics.hero_sprites import HeroSpriteLibrary, HeroSpriteSpec
 from game.graphics.terrain_texture_bridge import TerrainTextureBridge
 from game.graphics.ursina_sprite_unlit_shader import sprite_unlit_shader
 from game.graphics.vfx import get_projectile_billboard_surface
+from game.graphics.visual_specs import (
+    HERO_SPEC, ENEMY_SPEC, PEASANT_SPEC, GUARD_SPEC, TAX_COLLECTOR_SPEC,
+)
+from game.graphics.ursina_unit_overlays import (
+    configure_ks_overlay as _configure_ks_overlay_impl,
+    sync_ks_facing_overlay as _sync_ks_facing_overlay_impl,
+    ensure_ks_name_label as _ensure_ks_name_label_impl,
+    sync_hp_bar,
+    sync_hero_gold_label,
+    sync_hero_rest_label,
+    sync_hero_overlays_facing,
+    sync_unit_overlays_facing,
+)
 from game.graphics.worker_sprites import WorkerSpriteLibrary
 from game.world import TileType, Visibility
 
@@ -102,6 +115,8 @@ PROJECTILE_BILLBOARD_Y = ENEMY_SCALE * 0.5
 
 # Debug toggle: render all POIs regardless of discovery state (dev/testing aid).
 _debug_show_pois = os.environ.get("KINGDOM_DEBUG_SHOW_ALL_POIS", "").strip().lower() in ("1", "true", "yes")
+_debug_tax_overlay = os.environ.get("KINGDOM_DEBUG_TAX_OVERLAY", "").strip().lower() in ("1", "true", "yes")
+_tax_overlay_debug_last_print: float = 0.0
 
 # ---------------------------------------------------------------------------
 # R5 Phase 2 (Agent 03): Building label display names for native Ursina text
@@ -192,49 +207,38 @@ def _prefab_local_top_y(ent) -> float:
 
 
 def _building_gold_overlay_y(ent, *, hy: float = 1.0) -> float:
-    """Readable Y offset for taxable gold Text above prefab or billboard buildings."""
+    """Readable local Y offset for taxable gold Text above prefab or billboard buildings."""
     if getattr(ent, "_ks_prefab_container", False) or getattr(ent, "_ks_building_mode", None) == "prefab":
-        return _prefab_local_top_y(ent) + 0.35
+        return _prefab_local_top_y(ent) + 0.50
     if getattr(ent, "_ks_billboard_configured", False):
         return max(float(hy) * 0.75, 0.9)
     return max(float(hy) * 0.55, 1.8)
 
 
+def _building_gold_overlay_world_y(ent, *, terrain_y: float, hy: float = 1.0) -> float:
+    """World-space Y for hold-G gold billboards: terrain + roof + clearance (WK61-R11 BUG-004)."""
+    roof_local = _building_gold_overlay_y(ent, hy=hy)
+    if getattr(ent, "_ks_prefab_container", False) or getattr(ent, "_ks_building_mode", None) == "prefab":
+        return float(terrain_y) + roof_local + 1.2
+    if getattr(ent, "_ks_billboard_configured", False):
+        return float(terrain_y) + roof_local + 1.2
+    return float(terrain_y) + roof_local + 1.2
+
+
 def _configure_ks_overlay(ent) -> None:
-    """Depth-off + on-top so labels/HP/gold overlays are not hidden by terrain or prefabs."""
-    if ent is None or getattr(ent, "_ks_overlay_cfg", False):
-        return
-    ent.billboard = True
-    try:
-        ent.set_depth_test(False)
-    except Exception:
-        pass
-    try:
-        ent.always_on_top = True
-    except Exception:
-        pass
-    try:
-        ent.render_queue = 2
-    except Exception:
-        pass
-    try:
-        if getattr(ent, "z", 0) >= 0:
-            ent.z = -0.02
-    except Exception:
-        pass
-    ent._ks_overlay_cfg = True
+    """Depth-off + on-top so labels/HP/gold overlays are not hidden by terrain or prefabs.
+
+    WK62: delegates to ``ursina_unit_overlays.configure_ks_overlay``.
+    """
+    _configure_ks_overlay_impl(ent)
 
 
 def _sync_ks_facing_overlay(child, facing: float) -> None:
-    """Keep overlay readable when the parent billboard uses negative scale_x for facing."""
-    if child is None:
-        return
-    sx = getattr(child, "scale_x", None)
-    if sx is None:
-        sc = getattr(child, "scale", None)
-        sx = getattr(sc, "x", 12) if sc is not None else 12
-    child.scale_x = abs(float(sx or 12))
-    child.rotation_y = 180 if float(facing) < 0 else 0
+    """Keep overlay readable when the parent billboard uses negative scale_x for facing.
+
+    WK62: delegates to ``ursina_unit_overlays.sync_ks_facing_overlay``.
+    """
+    _sync_ks_facing_overlay_impl(child, facing)
 
 
 def _ensure_ks_name_label(
@@ -246,33 +250,21 @@ def _ensure_ks_name_label(
     scale: float = 10,
     label_color=None,
 ) -> None:
-    if not text:
-        lab = getattr(ent, attr, None)
-        if lab is not None:
-            lab.enabled = False
-        return
-    lab = getattr(ent, attr, None)
-    tint = label_color or color.white
-    if lab is None:
-        lab = Text(
-            text=text,
-            parent=ent,
-            origin=(0, 0),
-            scale=scale,
-            color=tint,
-            billboard=True,
-            y=y,
-        )
-        _configure_ks_overlay(lab)
-        setattr(ent, attr, lab)
-    else:
-        if lab.text != text:
-            lab.text = text
-        lab.enabled = True
-        _configure_ks_overlay(lab)
+    """WK62: delegates to ``ursina_unit_overlays.ensure_ks_name_label``."""
+    _ensure_ks_name_label_impl(ent, attr, text, y=y, scale=scale, label_color=label_color)
 
 
-def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
+def _sync_building_worldspace_ui(
+    b,
+    bts: str,
+    ent,
+    is_lair: bool,
+    *,
+    wx: float = 0.0,
+    wz: float = 0.0,
+    terrain_y: float = 0.0,
+    hy: float = 1.0,
+) -> None:
     """R5 Phase 2 (Agent 03): Attach/update label, HP bar, and gold display
     as native Ursina child entities on a building entity.
 
@@ -315,35 +307,64 @@ def _sync_building_worldspace_ui(b, bts: str, ent, is_lair: bool) -> None:
     elif hp_bar_ent is not None:
         hp_bar_ent.enabled = False
 
-    # --- Gold display (WK61-FEAT-003 / R6-BUG-001: gated on held G key) ---
+    # --- Gold display (WK61-R10/R11: show $0 while G held; world-space billboard above roof) ---
     has_tax, stash = building_tax_overlay_snapshot(b, is_lair=is_lair)
     g_held = is_tax_gold_overlay_held()
     gold_ent = getattr(ent, "_ks_gold_label", None)
-    overlay_y = _building_gold_overlay_y(ent)
-    if has_tax and stash > 0 and g_held:
+    overlay_world_y = _building_gold_overlay_world_y(ent, terrain_y=terrain_y, hy=hy)
+    if has_tax and g_held:
         text = f"${stash}"
+        label_color = (
+            color.rgb(1.0, 0.8, 0.2) if stash > 0 else color.rgb(0.55, 0.55, 0.55)
+        )
         if gold_ent is None:
             gold_ent = Text(
                 text=text,
-                parent=ent,
+                parent=scene,
                 origin=(0, 0),
                 scale=12,
-                color=color.rgb(1.0, 0.8, 0.2),
+                color=label_color,
                 billboard=True,
-                y=overlay_y,
-                z=-0.02,
             )
             _configure_ks_overlay(gold_ent)
             ent._ks_gold_label = gold_ent
         else:
+            if getattr(gold_ent, "parent", None) is not scene:
+                gold_ent.parent = scene
             if gold_ent.text != text:
                 gold_ent.text = text
-            if getattr(gold_ent, "y", None) != overlay_y:
-                gold_ent.y = overlay_y
+            gold_ent.color = label_color
             gold_ent.enabled = True
             _configure_ks_overlay(gold_ent)
+        gold_ent.world_position = Vec3(float(wx), overlay_world_y, float(wz))
     elif gold_ent is not None:
         gold_ent.enabled = False
+
+
+def _maybe_log_tax_overlay_debug(buildings) -> None:
+    """Optional once/sec debug when KINGDOM_DEBUG_TAX_OVERLAY=1 (WK61-R10)."""
+    global _tax_overlay_debug_last_print
+    if not _debug_tax_overlay:
+        return
+    import time
+
+    now = time.time()
+    if now - _tax_overlay_debug_last_print < 1.0:
+        return
+    _tax_overlay_debug_last_print = now
+    g_held = is_tax_gold_overlay_held()
+    tax_count = 0
+    stash_sum = 0
+    for b in buildings or ():
+        is_lair = hasattr(b, "stash_gold")
+        has_tax, stash = building_tax_overlay_snapshot(b, is_lair=is_lair)
+        if has_tax:
+            tax_count += 1
+            stash_sum += int(stash)
+    print(
+        f"[KINGDOM_DEBUG_TAX_OVERLAY] g_held={g_held} "
+        f"tax_buildings={tax_count} sum_stash={stash_sum}"
+    )
 
 
 def _unit_raster_px() -> int:
@@ -1197,7 +1218,9 @@ class UrsinaRenderer:
                 # WK55: POI 3-state visibility post-processing
                 self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 # R5 Phase 2 (Agent 03): native building label / HP bar / gold
-                _sync_building_worldspace_ui(b, bts, ent, is_lair)
+                _sync_building_worldspace_ui(
+                    b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
+                )
                 active_ids.add(obj_id)
                 continue
 
@@ -1230,7 +1253,9 @@ class UrsinaRenderer:
                 # WK55: POI 3-state visibility post-processing
                 self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 # R5 Phase 2 (Agent 03): native building label / HP bar / gold
-                _sync_building_worldspace_ui(b, bts, ent, is_lair)
+                _sync_building_worldspace_ui(
+                    b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
+                )
                 active_ids.add(obj_id)
                 continue
 
@@ -1281,9 +1306,12 @@ class UrsinaRenderer:
             # WK55: POI 3-state visibility post-processing
             self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
             # R5 Phase 2 (Agent 03): native building label / HP bar / gold
-            _sync_building_worldspace_ui(b, bts, ent, is_lair)
+            _sync_building_worldspace_ui(
+                b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
+            )
             active_ids.add(obj_id)
 
+        _maybe_log_tax_overlay_debug(getattr(snapshot, "buildings", ()))
 
     # ------------------------------------------------------------------
     # WK57 Wave 3: Underground lighting (torch PointLights per chamber)
@@ -1477,108 +1505,29 @@ class UrsinaRenderer:
             self._entity_render.sync_inside_hero_draw_layer(ent, bool(getattr(h, "is_inside_building", False)))
 
             # --- R5: Native Ursina health bar (Agent 09) ---
-            # WK58 W6 Fix 3.A (Agent 03): gate HP-bar writes on the (hp, max_hp)
-            # tuple. Previously the fg scale_x / x / color were stomped every
-            # frame even when HP was unchanged, which dirties Panda3D NodePath
-            # transforms for two child entities per unit. With 5-10 heroes this
-            # was ~0.2-0.5ms / frame; the trend extrapolates with unit count.
+            # WK62: delegates to ursina_unit_overlays.sync_hp_bar
             _h_hp = int(getattr(h, 'hp', 0) or 0)
             _h_max_hp = int(getattr(h, 'max_hp', 1) or 1)
-            _h_hp_bg = getattr(ent, '_ks_hp_bg', None)
-            _h_hp_fg = getattr(ent, '_ks_hp_fg', None)
-            _h_hp_key = (_h_hp, _h_max_hp)
-
-            if _h_max_hp > 0 and _h_hp > 0:
-                _h_ratio = _h_hp / _h_max_hp
-                _h_bar_w = 0.8
-                _h_bar_h = 0.04
-                _h_bar_y = 0.42
-
-                if _h_hp_bg is None:
-                    _h_hp_bg = Entity(
-                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
-                        scale=(_h_bar_w, _h_bar_h, 1), position=(0, _h_bar_y, -0.01),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_h_hp_bg)
-                    ent._ks_hp_bg = _h_hp_bg
-
-                if _h_hp_fg is None:
-                    _h_hp_fg = Entity(
-                        parent=ent, model='quad',
-                        color=color.green if _h_ratio > 0.5 else color.red,
-                        scale=(_h_bar_w * _h_ratio, _h_bar_h, 1),
-                        position=(-(_h_bar_w * (1 - _h_ratio) / 2), _h_bar_y, -0.02),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_h_hp_fg)
-                    ent._ks_hp_fg = _h_hp_fg
-                    ent._ks_last_hp_key = _h_hp_key
-                elif getattr(ent, '_ks_last_hp_key', None) != _h_hp_key:
-                    _h_hp_fg.scale_x = _h_bar_w * _h_ratio
-                    _h_hp_fg.x = -(_h_bar_w * (1 - _h_ratio) / 2)
-                    _h_hp_fg.color = color.green if _h_ratio > 0.5 else color.red
-                    ent._ks_last_hp_key = _h_hp_key
-
-                _h_hp_bg.enabled = True
-                _h_hp_fg.enabled = True
-                _configure_ks_overlay(_h_hp_bg)
-                _configure_ks_overlay(_h_hp_fg)
-            else:
-                if _h_hp_bg is not None:
-                    _h_hp_bg.enabled = False
-                if _h_hp_fg is not None:
-                    _h_hp_fg.enabled = False
+            sync_hp_bar(ent, _h_hp, _h_max_hp, HERO_SPEC)
 
             # --- R5: Hero name label (Agent 08) ---
             hero_name = getattr(h, 'name', '') or ''
-            _ensure_ks_name_label(ent, '_ks_name_label', hero_name, y=0.58, scale=10)
+            _ensure_ks_name_label(ent, '_ks_name_label', hero_name, y=HERO_SPEC.label_y, scale=HERO_SPEC.label_scale)
 
             # --- R5: Hero gold display (Agent 08) ---
+            # WK62: delegates to ursina_unit_overlays.sync_hero_gold_label
             hero_gold = int(getattr(h, 'gold', 0) or 0)
             hero_taxed = int(getattr(h, 'taxed_gold', 0) or 0)
-            total_gold = hero_gold + hero_taxed
-            gold_ent = getattr(ent, '_ks_gold_label', None)
-            if total_gold > 0:
-                gold_text = f"${hero_gold}(+{hero_taxed})" if hero_taxed > 0 else f"${hero_gold}"
-                if gold_ent is None:
-                    from ursina import Text as UrsinaText
-                    gold_ent = UrsinaText(
-                        text=gold_text, parent=ent, origin=(0, 0), scale=10,
-                        color=color.rgb(1.0, 0.8, 0.2), billboard=True, y=-0.35,
-                    )
-                    _configure_ks_overlay(gold_ent)
-                    ent._ks_gold_label = gold_ent
-                else:
-                    if gold_ent.text != gold_text:
-                        gold_ent.text = gold_text
-                    gold_ent.enabled = True
-                    _configure_ks_overlay(gold_ent)
-            elif gold_ent is not None:
-                gold_ent.enabled = False
+            sync_hero_gold_label(ent, hero_gold, hero_taxed)
 
             # --- R5: Hero rest indicator (Agent 08) ---
+            # WK62: delegates to ursina_unit_overlays.sync_hero_rest_label
             is_resting = (getattr(h, 'state', '') == 'RESTING')
-            rest_ent = getattr(ent, '_ks_rest_label', None)
-            if is_resting:
-                if rest_ent is None:
-                    from ursina import Text as UrsinaText
-                    rest_ent = UrsinaText(
-                        text='Zzz', parent=ent, origin=(0, 0), scale=12,
-                        color=color.rgb(0.7, 0.85, 1.0), billboard=True, y=0.72, x=0.3,
-                    )
-                    _configure_ks_overlay(rest_ent)
-                    ent._ks_rest_label = rest_ent
-                else:
-                    rest_ent.enabled = True
-                    _configure_ks_overlay(rest_ent)
-            elif rest_ent is not None:
-                rest_ent.enabled = False
+            sync_hero_rest_label(ent, is_resting)
 
             # WK61-R4-BUG-001: un-mirror overlay children when parent faces left.
-            for attr in ('_ks_name_label', '_ks_gold_label', '_ks_rest_label',
-                         '_ks_hp_bg', '_ks_hp_fg'):
-                _sync_ks_facing_overlay(getattr(ent, attr, None), facing)
+            # WK62: delegates to ursina_unit_overlays.sync_hero_overlays_facing
+            sync_hero_overlays_facing(ent, facing)
 
             active_ids.add(obj_id)
 
@@ -1639,60 +1588,16 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
-            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
+            # WK62: delegates to ursina_unit_overlays.sync_hp_bar
             _e_hp = int(getattr(e, 'hp', 0) or 0)
             _e_max_hp = int(getattr(e, 'max_hp', 1) or 1)
-            _e_hp_bg = getattr(ent, '_ks_hp_bg', None)
-            _e_hp_fg = getattr(ent, '_ks_hp_fg', None)
-            _e_hp_key = (_e_hp, _e_max_hp)
-
-            if _e_max_hp > 0 and _e_hp > 0:
-                _e_ratio = _e_hp / _e_max_hp
-                _e_bar_w = 0.6
-                _e_bar_h = 0.03
-                _e_bar_y = 0.38
-
-                if _e_hp_bg is None:
-                    _e_hp_bg = Entity(
-                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
-                        scale=(_e_bar_w, _e_bar_h, 1), position=(0, _e_bar_y, -0.01),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_e_hp_bg)
-                    ent._ks_hp_bg = _e_hp_bg
-
-                if _e_hp_fg is None:
-                    _e_hp_fg = Entity(
-                        parent=ent, model='quad',
-                        color=color.green if _e_ratio > 0.5 else color.red,
-                        scale=(_e_bar_w * _e_ratio, _e_bar_h, 1),
-                        position=(-(_e_bar_w * (1 - _e_ratio) / 2), _e_bar_y, -0.02),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_e_hp_fg)
-                    ent._ks_hp_fg = _e_hp_fg
-                    ent._ks_last_hp_key = _e_hp_key
-                elif getattr(ent, '_ks_last_hp_key', None) != _e_hp_key:
-                    _e_hp_fg.scale_x = _e_bar_w * _e_ratio
-                    _e_hp_fg.x = -(_e_bar_w * (1 - _e_ratio) / 2)
-                    _e_hp_fg.color = color.green if _e_ratio > 0.5 else color.red
-                    ent._ks_last_hp_key = _e_hp_key
-
-                _e_hp_bg.enabled = True
-                _e_hp_fg.enabled = True
-                _configure_ks_overlay(_e_hp_bg)
-                _configure_ks_overlay(_e_hp_fg)
-            else:
-                if _e_hp_bg is not None:
-                    _e_hp_bg.enabled = False
-                if _e_hp_fg is not None:
-                    _e_hp_fg.enabled = False
+            sync_hp_bar(ent, _e_hp, _e_max_hp, ENEMY_SPEC)
 
             enemy_label = str(getattr(e, "enemy_type", "enemy") or "enemy").replace("_", " ").title()
-            _ensure_ks_name_label(ent, "_ks_name_label", enemy_label, y=0.52, scale=8)
+            _ensure_ks_name_label(ent, "_ks_name_label", enemy_label, y=ENEMY_SPEC.label_y, scale=ENEMY_SPEC.label_scale)
 
-            for attr in ('_ks_name_label', '_ks_hp_bg', '_ks_hp_fg'):
-                _sync_ks_facing_overlay(getattr(ent, attr, None), facing_e)
+            # WK62: delegates to ursina_unit_overlays.sync_unit_overlays_facing
+            sync_unit_overlays_facing(ent, facing_e)
 
             active_ids.add(obj_id)
 
@@ -1746,57 +1651,13 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
-            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
+            # WK62: delegates to ursina_unit_overlays.sync_hp_bar
             _p_hp = int(getattr(p, 'hp', 0) or 0)
             _p_max_hp = int(getattr(p, 'max_hp', 1) or 1)
-            _p_hp_bg = getattr(ent, '_ks_hp_bg', None)
-            _p_hp_fg = getattr(ent, '_ks_hp_fg', None)
-            _p_hp_key = (_p_hp, _p_max_hp)
-
-            if _p_max_hp > 0 and _p_hp > 0:
-                _p_ratio = _p_hp / _p_max_hp
-                _p_bar_w = 0.5
-                _p_bar_h = 0.03
-                _p_bar_y = 0.34
-
-                if _p_hp_bg is None:
-                    _p_hp_bg = Entity(
-                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
-                        scale=(_p_bar_w, _p_bar_h, 1), position=(0, _p_bar_y, -0.01),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_p_hp_bg)
-                    ent._ks_hp_bg = _p_hp_bg
-
-                if _p_hp_fg is None:
-                    _p_hp_fg = Entity(
-                        parent=ent, model='quad',
-                        color=color.green if _p_ratio > 0.5 else color.red,
-                        scale=(_p_bar_w * _p_ratio, _p_bar_h, 1),
-                        position=(-(_p_bar_w * (1 - _p_ratio) / 2), _p_bar_y, -0.02),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_p_hp_fg)
-                    ent._ks_hp_fg = _p_hp_fg
-                    ent._ks_last_hp_key = _p_hp_key
-                elif getattr(ent, '_ks_last_hp_key', None) != _p_hp_key:
-                    _p_hp_fg.scale_x = _p_bar_w * _p_ratio
-                    _p_hp_fg.x = -(_p_bar_w * (1 - _p_ratio) / 2)
-                    _p_hp_fg.color = color.green if _p_ratio > 0.5 else color.red
-                    ent._ks_last_hp_key = _p_hp_key
-
-                _p_hp_bg.enabled = True
-                _p_hp_fg.enabled = True
-                _configure_ks_overlay(_p_hp_bg)
-                _configure_ks_overlay(_p_hp_fg)
-            else:
-                if _p_hp_bg is not None:
-                    _p_hp_bg.enabled = False
-                if _p_hp_fg is not None:
-                    _p_hp_fg.enabled = False
+            sync_hp_bar(ent, _p_hp, _p_max_hp, PEASANT_SPEC)
 
             worker_label = str(getattr(p, "render_worker_type", "peasant") or "peasant").replace("_", " ").title()
-            _ensure_ks_name_label(ent, "_ks_name_label", worker_label, y=0.48, scale=8)
+            _ensure_ks_name_label(ent, "_ks_name_label", worker_label, y=PEASANT_SPEC.label_y, scale=PEASANT_SPEC.label_scale)
 
             active_ids.add(obj_id)
 
@@ -1846,56 +1707,12 @@ class UrsinaRenderer:
             )
 
             # --- R5: Native Ursina health bar (Agent 09) ---
-            # WK58 W6 Fix 3.A (Agent 03): see hero block — same hp-key dirty gate.
+            # WK62: delegates to ursina_unit_overlays.sync_hp_bar
             _g_hp = int(getattr(g, 'hp', 0) or 0)
             _g_max_hp = int(getattr(g, 'max_hp', 1) or 1)
-            _g_hp_bg = getattr(ent, '_ks_hp_bg', None)
-            _g_hp_fg = getattr(ent, '_ks_hp_fg', None)
-            _g_hp_key = (_g_hp, _g_max_hp)
+            sync_hp_bar(ent, _g_hp, _g_max_hp, GUARD_SPEC)
 
-            if _g_max_hp > 0 and _g_hp > 0:
-                _g_ratio = _g_hp / _g_max_hp
-                _g_bar_w = 0.7
-                _g_bar_h = 0.03
-                _g_bar_y = 0.40
-
-                if _g_hp_bg is None:
-                    _g_hp_bg = Entity(
-                        parent=ent, model='quad', color=color.rgb(0.25, 0.25, 0.25),
-                        scale=(_g_bar_w, _g_bar_h, 1), position=(0, _g_bar_y, -0.01),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_g_hp_bg)
-                    ent._ks_hp_bg = _g_hp_bg
-
-                if _g_hp_fg is None:
-                    _g_hp_fg = Entity(
-                        parent=ent, model='quad',
-                        color=color.green if _g_ratio > 0.5 else color.red,
-                        scale=(_g_bar_w * _g_ratio, _g_bar_h, 1),
-                        position=(-(_g_bar_w * (1 - _g_ratio) / 2), _g_bar_y, -0.02),
-                        billboard=True, unlit=True,
-                    )
-                    _configure_ks_overlay(_g_hp_fg)
-                    ent._ks_hp_fg = _g_hp_fg
-                    ent._ks_last_hp_key = _g_hp_key
-                elif getattr(ent, '_ks_last_hp_key', None) != _g_hp_key:
-                    _g_hp_fg.scale_x = _g_bar_w * _g_ratio
-                    _g_hp_fg.x = -(_g_bar_w * (1 - _g_ratio) / 2)
-                    _g_hp_fg.color = color.green if _g_ratio > 0.5 else color.red
-                    ent._ks_last_hp_key = _g_hp_key
-
-                _g_hp_bg.enabled = True
-                _g_hp_fg.enabled = True
-                _configure_ks_overlay(_g_hp_bg)
-                _configure_ks_overlay(_g_hp_fg)
-            else:
-                if _g_hp_bg is not None:
-                    _g_hp_bg.enabled = False
-                if _g_hp_fg is not None:
-                    _g_hp_fg.enabled = False
-
-            _ensure_ks_name_label(ent, "_ks_name_label", "Guard", y=0.50, scale=8)
+            _ensure_ks_name_label(ent, "_ks_name_label", "Guard", y=GUARD_SPEC.label_y, scale=GUARD_SPEC.label_scale)
 
             active_ids.add(obj_id)
 
@@ -1932,7 +1749,7 @@ class UrsinaRenderer:
                     col, (sx, sy, 1), (wx, terrain_y + sy * 0.5, wz), sprite_unlit_shader,
                 )
 
-                _ensure_ks_name_label(ent, "_ks_name_label", "Tax Collector", y=0.50, scale=8)
+                _ensure_ks_name_label(ent, "_ks_name_label", "Tax Collector", y=TAX_COLLECTOR_SPEC.label_y, scale=TAX_COLLECTOR_SPEC.label_scale)
 
                 # --- R5: Tax collector gold display (Agent 08) ---
                 carried = int(getattr(tc, 'carried_gold', 0) or 0)
@@ -2154,6 +1971,14 @@ class UrsinaRenderer:
         for obj_id in dead_ids:
             self._unit_anim_state.pop(obj_id, None)
             ent = self._entities.pop(obj_id)
+            gold = getattr(ent, "_ks_gold_label", None)
+            if gold is not None:
+                try:
+                    import ursina as _u
+
+                    _u.destroy(gold)
+                except Exception:
+                    pass
             import ursina
 
             ursina.destroy(ent)

@@ -746,9 +746,24 @@ class UrsinaApp:
 
         return pos, kind, hit, wx_sim, wy_sim
 
+    def _sidebar_split_drag_active(self) -> bool:
+        hud = getattr(self.engine, "hud", None)
+        return hud is not None and getattr(hud, "_left_split_drag_kind", None) is not None
+
+    def _virtual_screen_pos(self) -> tuple[int, int]:
+        pos = self.input_manager.get_mouse_pos()
+        return int(pos[0]), int(pos[1])
+
+    def _pointer_event_pos(self) -> tuple[int, int]:
+        """Virtual HUD pixels for sidebar split drags; otherwise engine routing coords."""
+        if self._sidebar_split_drag_active():
+            return self._virtual_screen_pos()
+        pos, _kind, _hit, _wx, _wy = self._engine_screen_pos_for_pointer()
+        return pos
+
     def _queue_pointer_motion_event(self) -> None:
         """Building placement needs update_preview() via MOUSEMOTION before MOUSEDOWN sets preview_valid."""
-        pos, _kind, _hit, _wx, _wy = self._engine_screen_pos_for_pointer()
+        pos = self._pointer_event_pos()
         self._last_engine_screen_pos = pos
         # Ursina: expose left-button hold state so UI sliders only drag while LMB is down.
         try:
@@ -775,11 +790,19 @@ class UrsinaApp:
                 )
             return
         if key == "left mouse down":
+            # WK61-R11 BUG-005: capture sidebar split handle before deferred world MOUSEDOWN.
+            vpos = self._virtual_screen_pos()
+            hud = getattr(self.engine, "hud", None)
+            if hud is not None and hasattr(hud, "handle_sidebar_split_pointer_down"):
+                try:
+                    hud.handle_sidebar_split_pointer_down(vpos, self.engine.get_game_state())
+                except Exception:
+                    pass
             # Process click on next update() after motion, so BuildingMenu.preview_valid is current.
             self._pending_lmb = True
             return
         if key == "left mouse up":
-            pos = self._last_engine_screen_pos
+            pos = self._virtual_screen_pos() if self._sidebar_split_drag_active() else self._last_engine_screen_pos
             self.input_manager.queue_event(InputEvent(type="MOUSEUP", button=1, pos=pos, key=None))
             return
         _ks = str(key).strip().lower()
@@ -1271,10 +1294,18 @@ class UrsinaApp:
             # 2) Same-frame click after motion (placement reads preview_valid).
             if self._pending_lmb:
                 self._pending_lmb = False
-                pos = self._last_engine_screen_pos
-                self.input_manager.queue_event(
-                    InputEvent(type="MOUSEDOWN", button=1, pos=pos, key=None)
-                )
+                vpos = self._virtual_screen_pos()
+                hud = getattr(eng, "hud", None)
+                if hud is not None and hasattr(hud, "handle_sidebar_split_pointer_down"):
+                    try:
+                        hud.handle_sidebar_split_pointer_down(vpos, eng.get_game_state())
+                    except Exception:
+                        pass
+                pos = self._pointer_event_pos()
+                if not self._sidebar_split_drag_active():
+                    self.input_manager.queue_event(
+                        InputEvent(type="MOUSEDOWN", button=1, pos=pos, key=None)
+                    )
                 if is_ursina_debug_input_enabled():
                     from config import TILE_SIZE
 
