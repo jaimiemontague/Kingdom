@@ -1,1235 +1,535 @@
-# GPT 5.5 Codebase Improvements Recommendations
+# Kingdom Sim — Codebase Improvements Recommendations
 
-**Created:** 2026-05-28  
-**Author:** GPT-5.5 audit synthesis  
-**Scope:** End-to-end read-only architecture and code-quality audit of Kingdom Sim  
-**Goal:** Identify "slop code" patterns, rank cleanup opportunities, and propose practical refactors that make the game easier to ship without derailing gameplay work.
-
----
-
-## Executive Summary
-
-Kingdom Sim is not a hopeless mess. It has several good foundations: a `SimEngine` split exists, deterministic time/RNG tools exist, systems have a `SystemContext` protocol, renderers consume a snapshot, the AI has behavior modules, QA smoke gates exist, and agent ownership is documented.
-
-The problem is that many refactors stopped at the halfway point. Large classes were split mechanically, but compatibility shims and old orchestration paths stayed behind. Feature agents then kept adding new behavior to whichever file was easiest to touch. The result is a codebase with several "almost clean" boundaries that are repeatedly punctured by live objects, `Any`, raw dicts, private fields, and duplicated feature logic.
-
-The biggest cleanup opportunity is not a rewrite. It is to finish the boundaries already started:
-
-1. **Make `SimEngine` the single owner of sim time, cleanup, and system updates.**
-2. **Make render/UI/AI snapshots real data transfer objects, not shallow wrappers over live objects.**
-3. **Split the largest coordinator files by responsibility, starting with `HUD`, `UrsinaRenderer`, `InputHandler`, `Hero`, and `SimEngine`.**
-4. **Create canonical registries for building definitions, visual specs, audio events, prefabs, and AI task types.**
-5. **Clean up tooling/docs sprawl so future agents can find the right patterns instead of copying old sprint code.**
-
-The highest-risk actual bug found during the audit is that **sim time appears to have two owners**: `GameEngine._prepare_sim_and_camera()` and `SimEngine.update()` both advance `_sim_now_ms` in deterministic mode. That should be verified and fixed before large refactors.
+**v2 — deep multi-agent slop audit revision**
+**Original:** GPT-5.5 read-only audit synthesis (2026-05-28)
+**This revision:** Claude Opus 4.8 (1M) — 47-agent parallel audit + adversarial verification (2026-05-28)
+**Scope:** End-to-end architecture & code-quality audit of every production subsystem (game/, ai/, config), with cross-cutting analysis and a completeness pass that also names the surface still un-audited.
+**Goal:** Find "slop" (over-complicated, redundant, poorly-designed code; oversized files that should be modules) and turn it into an executable refactor plan — specific files, concrete module-split blueprints, before/after sketches, and a dependency-ordered roadmap — without derailing gameplay.
 
 ---
 
-## What "Slop Code" Means Here
+## How this revision was produced (and how confident to be in it)
 
-This audit treats code as "slop" when it has one or more of these properties:
+The original v1 (GPT-5.5) was a strong single-pass read. This v2 replaces it with a **fan-out audit**: 19 subsystem agents each read their area in full, then three cross-cutting agents built the architecture map / de-duplication map / boundary-leak map, then **24 of the highest-severity findings were handed to independent adversarial reviewers**, and finally a completeness critic looked for what the audit itself missed.
 
-- **Responsibility pile-up:** a file or class handles unrelated jobs because it was the convenient place to add the next feature.
-- **Half-finished refactor:** a new abstraction exists, but the old path is still present and callable.
-- **Boundary leakage:** render/UI/AI/tooling mutates or reads live sim internals through `Any`, dicts, private fields, or `getattr`.
-- **Parallel registries:** one concept is defined in several places and must be updated by memory.
-- **Stringly typed state:** important behavior depends on magic strings or dict shapes with no central contract.
-- **Compatibility barnacles:** legacy fields and fallback paths remain long after the branch has shipped.
-- **Per-frame work hidden in UI/render code:** repeated surface/text/path/object allocation that should be cached or precomputed.
-- **Sprint artifact accumulation:** one-off files and test names that preserve history but obscure current architecture.
+- **187 findings** total: **1 critical, 60 high, 83 medium, 43 low**.
+- By category: redundant 47 · oversized_file 22 · boundary_leak 21 · poor_design 19 · dead_code 18 · over_complex 16 · perf 15 · stringly_typed 14 · parallel_registry 6 · error_handling 6 · naming 2.
+- **All 24 adversarially-verified findings were confirmed real** (`is_real = true`), though the reviewers *down-graded 18 of 24 from high→medium* — almost always because the issue is a **maintainability/structure hazard, not a live runtime or determinism bug.** Treat that as the headline calibration: this codebase is not broken, it is *overgrown*. The reviewers also corrected several specifics (e.g. "byte-for-byte duplicate" → "drifted duplicate"; a grep count of 35 → 39; a claim that `observe_sync` kept dead code alive → false). Those corrections are folded in below.
+
+**Confidence guide for the reader:** findings tagged **[VERIFIED]** below were independently re-read and confirmed. Everything else is single-agent evidence with concrete `file:line` citations you can check in seconds. Severity here means *priority of attention*, not *severity of a bug* — most of this is "clean this up before it rots," not "fix this now."
+
+**Raw evidence:** the full per-finding inventory (all 187, each with `file:line` + a one-line recommendation, grouped by area) is the companion file `.cursor/plans/codebase_audit_2026-05-28_finding_inventory.md`. This document is the synthesized plan; that file is the underlying dataset.
 
 ---
 
-## Current Architecture Map
+## What v1 recommended that is now DONE (do not re-recommend)
+
+Sprints WK62/WK63/WK64 already shipped a large slice of v1. The audit confirmed these are landed; this revision **builds on them** rather than repeating them:
+
+| v1 item | Status | Where it landed |
+|---|---|---|
+| #1 Sim time single-owner | ✅ Done | `SimEngine` owns `_sim_now_ms`; `GameEngine._sim_now_ms` is now a delegating property (`engine.py:631`). The double-advance bug is gone. |
+| #2 Destroyed-building cleanup de-dup (partial) | ◑ Partial | `SimEngine._cleanup_destroyed_buildings` is the authoritative path; `CleanupManager` is now a secondary on-demand-demolish path. **Still open:** extract one `BuildingLifecycleSystem` and retire the parallel path (see §Boundaries / Move 7). |
+| #3 Deterministic pathfinding budget | ✅ Done | `navigation.compute_path_worldpoints` returns `None` (DEFERRED) on budget exhaustion instead of `[]`; callers keep their path; path-less heroes direct-steer (WK64 Phase A). |
+| #4 Delete dead `GameEngine` sim helpers | ◑ Mostly | `_update_ai_and_heroes/_process_combat/_process_bounties/_update_buildings/_apply_entity_separation` are gone. **Newly found still-dead:** `GameEngine._maybe_apply_early_pacing_nudge`, `_nearest_lair_to`, `_build_system_context` (see [VERIFIED] list). |
+| #5 Split `GameCommands` into narrow ports | ✅ Done | 5 Protocols (Camera/Selection/Placement/Menu/GameState) implemented by `EngineCommandHub`. **Residual:** the hub still exposes ~14 engine-private fields as `Any` (Move toward typed ports). |
+| #7 Selection state → presentation | ✅ Done | `game/presentation/selection_state.py` stores stable IDs; `SimEngine.selected_*` stubs are now dead (delete them — see sim-engine area). |
+| #15 AI task/target registry | ✅ Done | `ai/contracts.py` (`TargetType`, `HeroTask`, `to_dict`/`from_dict`/`coerce_task`/`assign_hero_task`). |
+| #17 Extract arrival handling | ✅ Done | `ai/arrival_handlers.py` registry; `bounty_pursuit.handle_moving` shrank 585→363. |
+| #22 Widen `SystemContext` + runner | ◑ Partial | `SystemContext` widened to 13 fields; a `SystemRunner` exists but holds **only** buff+wave_event and `update()` still calls them at non-adjacent points — **the runner is currently dead** (see sim-engine). Growing it into the real ordered pipeline is Move 9. |
+
+Everything below is **net-new depth** or **the still-open remainder** of the above.
+
+---
+
+## Executive summary
+
+Kingdom Sim is in good shape structurally: the *seams* the v1 audit asked for mostly exist now (a real `SimEngine`, Protocol command ports, `SelectionState` with stable IDs, `SystemContext`, typed `HeroTask`). The problem this audit surfaces is sharper and more consistent than v1's:
+
+1. **The seams exist, but live mutable sim state still flows across them.** `SimStateSnapshot` is `@frozen` at the tuple level but every element is a *live* entity / the live `World`; `get_game_state()` ships the live `world`, `economy`, `bounty_system`, and even `self` (the whole `GameEngine`) into AI and UI; renderers *write back* onto sim entities during the render pass; 36 sites key render maps on `id(obj)` despite stable IDs now existing. The boundaries are nominal, not real. **(21 boundary_leak findings.)**
+
+2. **Files are too large.** **32 files** carry explicit module-split blueprints below. The worst: `hud.py` (2477) → 8 modules, `ursina_renderer.py` (1985) → 8, `ursina_terrain_fog_collab.py` (1783) → 9, `engine.py` (1735) → 6, `sim_engine.py` (1331) → 7, `hero.py` (1152) → 5. Every blueprint preserves the public API behind thin shims so the split is mechanical and low-risk.
+
+3. **The same concept is defined in many places.** Building static data lives in **6+ parallel string-keyed maps with measured drift** (enum=30 keys, costs=42, sizes=47, colors=47, occupants=42, factory=27; lairs present in some, absent in others; ~17 dead "WK34 REMOVED" zombie keys). Unit visual scales, hero-class colors, the audio event contract, the path-replan block, the hero-intent taxonomy, "route to a building," and "engage an enemy" each have 3–8 copies. **(47 redundant + 6 parallel_registry findings.)**
+
+4. **Dead and over-built code accumulates.** A whole legacy LLM prompt path (`build_summary` 95 LOC + `SYSTEM_PROMPT`/`build_decision_prompt`) is unreachable; the Ursina underground render subsystem (~250 LOC) sits behind an unconditional early return; `_unit_anim_surface` (72 LOC) is a dead second animation engine; `get_ranged_spec` is a probe no building implements. **(18 dead_code findings.)**
+
+5. **No observability, lots of silent failure.** Repo-wide there are **423+ broad `except` clauses** and **62 `print()` calls** but the codebase imports the `logging` module **zero** times. Refactors will introduce bugs; right now they would fail silently.
+
+The good news for sequencing: a large fraction of the highest-value work is **deletion** (dead code) and **mechanical extraction behind compat shims** (god-file splits, registry consolidation) — low-risk, high-clarity, and exactly the kind of work that makes the next feature wave safe.
+
+### What "slop" means here (unchanged from v1, with this audit's category tags)
+
+- **oversized_file** — a file doing many jobs because it was the convenient place to add the next feature.
+- **redundant / parallel_registry** — one concept defined in several places, updated by memory, already drifting.
+- **dead_code** — abstractions or branches that exist and are callable but never run.
+- **boundary_leak** — render/UI/AI/tools reading or mutating live sim internals through `Any`/dicts/`getattr`/`id()`.
+- **over_complex / poor_design** — a simpler, more elegant solution clearly exists.
+- **stringly_typed** — important behavior depends on magic strings or dict shapes with no central contract.
+- **perf** — per-frame allocation/recompute that should be cached or precomputed.
+- **error_handling** — bare excepts and `print` debugging instead of typed handling + logging.
+
+---
+
+## Current architecture (real code as of WK64)
+
+This reflects the actual code, with the boundary leaks annotated as dashed edges.
 
 ```mermaid
 flowchart TD
-  main[main.py] --> pygamePath[Pygame path]
-  main --> ursinaPath[Ursina path]
+  Main["main.py (create_ai factory, --renderer)"]
+  Main --> UA["UrsinaApp — ursina_app.py (1525)\napp+camera+input bridge+HUD upload+capture"]
+  Main --> GErun["GameEngine.run() (pygame)"]
 
-  pygamePath --> GE[GameEngine / presentation shell]
-  ursinaPath --> UA[UrsinaApp]
-  UA --> GE
+  UA -->|"owns .engine"| GE
+  GErun --> GE["GameEngine — engine.py (1735)\nPRESENTATION shell"]
 
-  GE --> SE[SimEngine]
-  GE --> IH[InputHandler]
-  GE --> HUD[HUD and UI panels]
-  GE --> PR[PygameRenderer]
-  GE --> Audio[AudioSystem]
-  GE --> VFX[VFXSystem]
+  subgraph PRES["Presentation layer"]
+    GE --> SEL["SelectionState — presentation/selection_state.py (IDs)"]
+    GE --> HUB["EngineCommandHub + 5 Protocols — game_commands.py (512)"]
+    GE --> IH["InputHandler (772)"]
+    GE --> HUD["HUD + ~15 UI panels — ui/hud.py (2477)"]
+    GE --> RC["EngineRenderCoordinator + FrameContext.build()"]
+    GE --> CAM["EngineCameraDisplay"]
+    GE --> AUD["AudioSystem"]
+    GE --> VFX["VFXSystem"]
+    GE --> CM["CleanupManager"]
+  end
 
-  SE --> World[World / fog / terrain / tiles]
-  SE --> Entities[Heroes, enemies, peasants, guards, buildings, POIs]
-  SE --> Systems[Combat, economy, spawner, lairs, waves, bounties, POIs, nature]
-  SE --> AI[BasicAI]
+  IH -->|"5 aliases all point to ONE hub object (nominal split)"| HUB
+  HUB -.->|"LEAK L5: ~25 Any props + _borderless_drag/_command_mode engine-private passthrough"| GE
+  GE ==>|"~40 @property forwards: world/heroes/enemies/economy/buff_system/_sim_now_ms…"| SE
 
-  AI --> Behaviors[ai/behaviors]
-  AI --> LLM[LLMBrain / providers / prompts]
+  subgraph SIM["Simulation core"]
+    SE["SimEngine — sim_engine.py (1331)\nOWNS _sim_now_ms (single owner ✓)"]
+    SE --> WORLD["World (523) — tiles+gen+fog+render fallback"]
+    SE --> ENT["Entities: Hero(1152)/Enemy(668)/Guard/Peasant/Building/POI"]
+    SE --> SYS["Systems: combat/economy/spawner/lairs/waves/bounty/nature/poi/neutral"]
+    SE --> SR["SystemRunner (holds buff+wave ONLY — currently dead)"]
+    SE -.->|"god-file L8: ALSO owns fog, separation, building cleanup, trees/logs, POI discovery, snapshot build, pacing nudge"| SEX["(inlined services)"]
+    SE --> AIC["BasicAI — basic_ai.py (551)"]
+  end
 
-  SE --> Snapshot[SimStateSnapshot]
-  GE --> GameState[get_game_state dict]
+  AIC --> BEH["ai/behaviors/* (bounty_pursuit, hunger, shopping, journey, defense, exploration, stuck)"]
+  AIC --> ARR["ai/arrival_handlers.py ✓ + ai/contracts.py HeroTask ✓"]
+  AIC --> LLM["LLMBrain + providers + context_builder(443)"]
+  SYS --> EB["EventBus"]
+  EB --> AUD
+  EB --> VFX
 
-  Snapshot --> UR[UrsinaRenderer]
-  Snapshot --> PR
-  GameState --> HUD
-  GameState --> AI
-  GameState --> Tools[observe/capture/tools]
+  SE -->|"build_snapshot()"| SNAP["SimStateSnapshot — @frozen but tuples hold LIVE entities (L1)"]
+  SE -->|"get_game_state(**presentation kwargs)"| GS["get_game_state dict"]
+  GE -->|"injects camera/selection/screen/paused INTO sim DTOs (L6)"| SNAP
+  GE -->|"injects selection + engine ref (L3)"| GS
+
+  SNAP --> UR["UrsinaRenderer (1985) + terrain_fog_collab (1783)"]
+  SNAP --> PR["PygameRenderer + renderers/*"]
+  GS --> HUD
+  GS -->|"carries LIVE world/economy/sim/engine"| AIC
+
+  UR -.->|"LEAK L2: setattr(entity,'_ursina_anim_trigger',None) writes back to sim entity"| ENT
+  BEH -.->|"LEAK L3b: mutate hero/world/economy via game_state['sim'],['world']"| SIM
+
+  CFG["config.py (774)"] -.->|"DUP registry L7: BUILDING_COSTS/SIZES/COLORS/MAX_OCCUPANTS"| BF["BuildingFactory.BUILDING_REGISTRY"]
+  PFB["assets/prefabs/*.json (building_type, footprint)"] -.->|"3rd copy"| BF
 ```
 
-### Boundary Problem
+### The real leaks (each a located, concrete problem)
 
-The diagram above looks reasonably clean, but the actual code still has these leaks:
-
-- `GameEngine` forwards many sim fields through compatibility properties.
-- `get_game_state()` passes live lists, `world`, `economy`, `sim`, and then `engine`.
-- `SimStateSnapshot` is frozen only at the top level; it contains live mutable objects.
-- `InputHandler` depends on `GameCommands`, but `GameCommands` exposes broad engine internals with `Any`.
-- AI behaviors mutate heroes/buildings/bounties directly through a loose `game_state` dict.
-- Renderers sometimes consume or mutate sim entity fields.
-- Production graphics import `tools.*` helpers.
+| # | Leak | Where (evidence) |
+|---|------|------------------|
+| **L1** | `SimStateSnapshot` is `@frozen` but every list field is a `tuple` of **live mutable entities** / the live `World` | `game/sim/snapshot.py:14-33` (docstring admits "individual entities are still mutable"); `build_snapshot` passes `tuple(self.buildings)`, `world=self.world` (`sim_engine.py:466-501`) |
+| **L2** | Renderer **mutates** sim entities/world during render | `ursina_renderer.py:1103` (`b.is_discovered=True`), `:1114-1115` (`world.visibility[..]=1`), `:560/570/645` + `renderers/hero_renderer.py:68` (`setattr(entity,"_render_anim_trigger",None)`) |
+| **L3** | `get_game_state()` ships **live `world`/`economy`/`sim`/`engine`** into AI/UI | `sim_engine.py:432-435` (`"sim": self`), `engine.py:1574` (`gs["engine"]=self`), `hud.py:475` reads `engine` |
+| **L3b** | AI **mutates** sim through the dict | `ai/behaviors/shopping.py:97` (`economy.hero_purchase(...)`), `poi_awareness.py:334` (`sim=game_state.get("sim")`), 14 sites read `game_state.get("world")` |
+| **L4** | `GameEngine` ~40 `@property` forwards to `self.sim.*` | `engine.py:439-684` |
+| **L5** | `EngineCommandHub` exposes engine-private fields as `Any` | `game_commands.py:413-497` (`_borderless_drag_*`, `_command_mode`, `_command_buffer`) |
+| **L6** | Presentation state injected **into** sim DTOs | `sim_engine.get_game_state(screen_w, camera…, micro_view_*, ui_cursor_pos)` `:375-391`; `build_snapshot(camera_x, paused, selected_hero…)` `:445-462` |
+| **L7** | Building data defined in **3+ places** | `config.py:309/362/421/498` + `building_factory.py:45` + `assets/prefabs/*.json` |
+| **L8** | `SimEngine` is a second god-file | fog `:1183`, separation `:1004`, building cleanup `:864`, trees/logs `:506-621`, POI discovery `:823`, snapshot `:445`, pacing nudge `:1122` |
+| **L9** | `game/graphics` imports `tools.*` at **runtime** (packaged build would need the dev `tools/` tree) | `ursina_app.py:39-40,249`, `ursina_environment.py:238,254`, `ursina_prefabs.py:225-226` |
+| **L10** | Sim object `game/world.py` owns pygame rendering + `Surface`s | `world.py:4` (`import pygame`), `:74-76` (fog Surfaces), `:361/474` (`render`/`render_fog`) |
 
 ---
 
-## Ranked Recommendations
+## Target architecture
 
-### P0 - Fix Real Correctness Risks First
+```mermaid
+flowchart TD
+  Main2["main.py"] --> RT["RuntimeMode selector"]
+  RT --> PRRT["PygameRuntime"]
+  RT --> URRT["UrsinaRuntime"]
 
-#### 1. Make sim time single-owner
+  PRRT --> PRES2["PresentationLayer (camera, window, selection, audio, vfx, UI)"]
+  URRT --> PRES2
+  URRT --> URW["UrsinaWorldRenderer (units/buildings/bounties/rubble/terrain_fog split)"]
 
-**Files:** `game/engine.py`, `game/sim_engine.py`, `game/sim/timebase.py`, tests under `tests/test_engine.py`
+  subgraph PL["Presentation (owns selection/camera/window/UI/audio/input)"]
+    PRES2 --> INP["Input Ports (Camera/Selection/Placement/Menu/GameState)"]
+    PRES2 --> UI2["UI Layer (HUD split: layout/chrome/sidebar/toast/overlay) + typed UIAction"]
+    PRES2 --> PW["PygameWorldRenderer"]
+    PRES2 --> FC["FrameContext (built ONCE/frame)"]
+  end
 
-`GameEngine._prepare_sim_and_camera()` advances `_sim_now_ms` in deterministic mode, and `SimEngine.update()` also advances `_sim_now_ms`. If both paths run in one update, deterministic timers can advance twice. This can affect cooldowns, early pacing, rubble expiry, hunger, path replans, bounties, and any future replay/multiplayer work.
+  PRES2 -->|"tick decision only (never mutates sim time)"| SIM2["SimEngine"]
 
-**Recommendation:**
+  subgraph CORE["Sim core (authoritative state + time)"]
+    SIM2 --> CLK["SimClock (owns now_ms)"]
+    SIM2 --> RUN2["SystemRunner (FULL ordered pipeline)"]
+    SIM2 --> ST["SimState (entity stores by stable id)"]
+    RUN2 --> SYS2["Ordered systems incl. nature, fog, separation, BuildingLifecycle, spawn, combat, bounty, poi — all update(ctx,dt)"]
+    SYS2 --> EB2["EventBus"]
+  end
 
-- Add a targeted test first:
+  SIM2 --> SB["SnapshotBuilder"]
+  SB --> RSNAP["RenderSnapshot DTOs (UnitDTO/BuildingDTO/BountyDTO — value types)"]
+  SB --> AIV["AiGameView DTO (pure, JSON-safe)"]
+  SB --> UIV["UiGameView DTO (gold/selection/panels)"]
 
-```python
-def test_game_engine_update_advances_sim_time_once():
-    engine = GameEngine(headless=True)
-    before = int(engine.sim._sim_now_ms)
-    engine.update(0.05)
-    after = int(engine.sim._sim_now_ms)
-    assert after - before == 50
+  RSNAP --> PW
+  RSNAP --> URW
+  UIV --> UI2
+  AIV --> ROUTER["AI TaskRouter (behaviors return TaskProposal)"]
+  ROUTER --> CMDS["HeroCommand DTOs"]
+  CMDS -->|"applied by sim, validated"| SIM2
+
+  REG["content registries: BuildingDef / UnitVisualSpec / audio manifest / prefab index"] --> SYS2
+  REG --> URW
+  REG --> PW
+  REG --> BF2["BuildingFactory (reads registry)"]
 ```
 
-- Move all authoritative sim time advancement into `SimEngine.tick(dt)` or `SimEngine.update(dt, view)`.
-- Let `GameEngine` decide **whether** to call the sim, but never mutate `sim._sim_now_ms`.
-- Presentation time, camera time, and UI cooldown time should stay separate and explicitly non-authoritative.
+**Target invariants:** sim owns state + time; presentation owns selection/camera/window/UI/audio/input; renderers consume **value-type DTOs** and never touch sim entities; AI consumes a pure `AiGameView` and **proposes `HeroCommand`s** the sim applies; content (buildings/visuals/audio/prefabs) is defined **once** in registries.
 
-Target shape:
+---
 
-```python
-class GameEngine:
-    def update(self, dt: float) -> None:
-        if self._should_tick_sim():
-            self.sim.update(dt, self._build_ai_view())
-        self.presentation.update(dt)
+## The 12 highest-leverage structural moves (dependency-ordered)
 
-class SimEngine:
-    def update(self, dt: float, ai_view: AiGameView | None = None) -> None:
-        self.clock.advance(dt)
-        set_sim_now_ms(self.clock.now_ms)
-        self.system_runner.update_all(dt)
-```
+This is the spine of the roadmap. Each move builds on the prior; the WK62-64 items are done and these extend them. (Sprint groupings are in §Roadmap.)
 
-#### 2. Remove duplicated destroyed-building cleanup
+1. **Stop renderers/engine mutating sim entities (kill L2).** Move `_ursina_anim_trigger` / `_render_anim_trigger` off the entity onto a presentation-owned, **id-keyed** record. *Files:* `ursina_renderer.py:560/570/645`, `engine.py:_update_render_animations` (1309-1335), `graphics/renderers/registry.py`. *Smallest blast radius; unblocks treating the snapshot as read-only.*
+2. **Add guard tests:** "snapshot does not mutate entities" + "`AiGameView` is JSON-serializable." *Files:* extend `tests/test_renderer_snapshot_contract.py`, new `tests/test_ai_view_pure.py`. *Locks the boundary before the DTO work.*
+3. **Render DTOs for units & buildings (begin dismantling L1).** Add `game/sim/render_dto.py` (`UnitDTO`/`BuildingDTO`/`BountyDTO` value types); populate in `build_snapshot` (`sim_engine.py:445-501`); migrate `graphics/renderers/hero_renderer.py`+`enemy_renderer.py`+Ursina units first. Keep live-object tuples temporarily for unmigrated consumers.
+4. **Split frame DTOs by audience (finish L1/L6).** Separate `SimStateSnapshot` into `RenderSnapshot` (entities/world/fog), `PresentationFrameState` (camera/screen/paused — built by `GameEngine`), `UiGameView` (gold/selection/panels). Remove presentation kwargs from `get_game_state`/`build_snapshot`. *Files:* `sim/snapshot.py`, `sim_engine.py:375-501`, `engine.py:1540-1608`, `presentation/frame_context.py`.
+5. **Pure `AiGameView`; stop shipping `sim`/`world`/`economy`/`engine` in the dict (kill L3/L3b read side).** New `ai/game_view.py`; `BasicAI.update` consumes it. Remove `"sim": self` (`sim_engine.py:433`) and `gs["engine"]=self` (`engine.py:1574`). *Files:* `sim_engine.py`, `engine.py`, `ai/basic_ai.py`, `ai/behaviors/poi_awareness.py:334`, the 14 `game_state.get("world")` sites.
+6. **`HeroCommand` DTOs so AI proposes and sim applies (close L3b write side).** Behaviors return commands; `SimEngine` applies them in one place (model it on `game/sim/direct_prompt_exec.py`). *Files:* new `ai/commands.py`, `ai/basic_ai.py`, `ai/behaviors/*`, `sim_engine.py`. *Depends on 5.*
+7. **Extract `BuildingLifecycleSystem` (finish v1 #2).** One sim-owned service for destruction + reference cleanup + rubble + events; presentation only listens and clears selection by id. *Files:* new `game/systems/building_lifecycle.py`; remove `SimEngine._cleanup_destroyed_buildings` (`:864-957`), the `CleanupManager` path, `engine.py:1403-1405`. *First SimEngine extraction.*
+8. **Extract `FogService`/`EntitySeparation`/`NatureBridge`/`PoiDiscovery`/`SnapshotBuilder` from SimEngine (kill L8).** Move inlined services to `game/sim/{fog,separation,lumber,poi_discovery,snapshot_builder}.py`; `SimEngine.update` calls them. Keep thin delegating wrappers (tests call `sim._apply_entity_separation`/`_update_fog_of_war`). *Depends on 7.*
+9. **Grow `SystemRunner` to the real ordered pipeline (fix the dead WK64 seed).** Fold lifecycle/fog/separation/spawn/nature/poi into the runner in fixed order; document combat's event-routing post-step. *Files:* `sim/system_runner.py`, `sim_engine.py:623-820`, `systems/protocol.py`. *Depends on 7+8.*
+10. **`BuildingDef` registry; derive the duplicates (kill L7).** New `game/content/buildings.py` single source; generate `BUILDING_COSTS/SIZES/COLORS/MAX_OCCUPANTS` as views; `BuildingFactory` reads it; add `assets/prefabs/buildings/index.json`. *Independent of the DTO chain — can run in parallel after 2.*
+11. **`UnitVisualSpec` registry + split `hud.py` & `ursina_renderer.py`.** Finish `graphics/visual_specs.py` adoption (both renderers + `ursina_pick.py` + `instanced_unit_renderer.py`); split the two god-files per §Blueprints. *Depends on 3 so split modules consume DTOs.*
+12. **Replace `BasicAI.update_hero` priority ladder with a `TaskRouter` of `TaskProposal`s.** Behaviors expose `propose(hero, view) -> TaskProposal | None`; router picks max priority. *Files:* new `ai/task_router.py`, `ai/basic_ai.py`, `ai/behaviors/*`. *Last — depends on 5+6.*
 
-**Files:** `game/sim_engine.py`, `game/engine.py`, `game/cleanup_manager.py`, `game/entities/rubble.py`
+**Sequencing:** 1-2 are prerequisites for the DTO chain (3→4→5→6). 7 unlocks 8→9. 10 and the HUD split in 11 can run in parallel after 2-3. 12 lands last.
 
-Destroyed-building cleanup exists in both sim and presentation-era code. Comments indicate this was patched after a refactor moved update logic to `SimEngine`, but both paths still remain conceptually alive.
+---
 
-**Recommendation:**
+## Oversized-file module-split blueprints (32 files)
 
-- Create `game/systems/building_lifecycle.py`.
-- Move destruction, reference cleanup, rubble creation, and event emission into one sim-owned service.
-- Presentation should only listen for events and clear selected/panel state by ID if needed.
-- Add tests asserting exactly one rubble record and one destruction event per destroyed building.
+The audit produced a concrete module breakdown for every oversized file. **Universal rule for all of these:** the split is a *mechanical move* — keep the original file path as a thin facade / re-export and keep every public symbol (and every externally-poked attribute) as a delegating shim, so callers, tools, and tests need **zero** changes initially. Each split must land behind characterization tests + `determinism_guard` + `qa_smoke` (and screenshots for UI/render). Sizes are current LOC.
 
-Target shape:
+### UI (pygame)
 
+- **`game/ui/hud.py` (2477) → `game/ui/hud/` package, 8 modules** — the single largest file; the #1 split.
+  - `hud.py` (~280) thin coordinator (wires sub-renderers, fixed paint order, forwards input); keeps the exact external API + property shims for poked fields (`_watch_card_expanded`, `_chat_visible`, `_pin_slot`, `watch_card_map_world_*`).
+  - `left_column.py` (~230) game-state-dependent left-column allocation + resize-drag handles.
+  - `watch_card.py` (~330) pinned-hero card (peek/expand, map slot, vitals/XP, chat band) + `MiniMapProjection`.
+  - `radar_minimap.py` (~230) cached terrain underlay + entity/POI dot overlay.
+  - `toasts.py` (~300) **one** `ToastManager` (one `Toast` dataclass + one fade/pill/stack renderer) replacing the **three** duplicated toast implementations.
+  - `messages.py` (~40) bottom-left message ticker (the `add_message` log sink engine calls ~40×).
+  - `selection_panels.py` (~430) peasant/building/right-panel/help panels + chrome helpers (stateless given surface+rect+entity).
+  - `input_router.py` (~320) all hit-testing → returns a **typed `HudAction`** (replaces magic strings/dicts).
+- **`game/ui/hero_panel.py` (1056) → 4 modules** — `hero_panel.py` (~300) orchestrator; `hero_sheet_view.py` (~180) typed `HeroSheetView.from_sources(hero, profile)` (kills the 110-line getattr wall at 416-529); `_panel_column.py` (~90) scrolling-layout helper (replaces 47 inline `TextLabel.render` + 12 magic `y+=14`); `hero_minor_renderers.py` (~180) tax-collector + guard panels.
+- **`game/ui/pause_menu.py` (811) → `game/ui/pause/` package, 8 modules** — thin `PauseMenu` router + one module per page (main/graphics/audio/controls/difficulty) + `page.py` Protocol + `keybinds_data.py`. Each page gets one `_layout()` used by **both** draw and hit-test, eliminating the duplicate-rect bug class.
+
+### Graphics (Ursina/Panda3D + pygame renderers)
+
+- **`game/graphics/ursina_renderer.py` (1985) → 8 modules** — but **delete ~450 LOC of dead code first** (`_unit_anim_surface` 72L, the underground subsystem behind the early return ~250L, `_apply_poi_mystery_state` no-op, 5 duplicated scale constants). Then: slimmed `ursina_renderer.py` (~300) orchestrator; `ursina_unit_sync.py` (~420) per-entity-type render loops + `_gate_or_hide`; `ursina_building_sync.py` (~260); `ursina_building_ui.py` (~210) tax overlay + world-space labels; `ursina_anim.py` (~90); `ursina_frustum.py` (~190) culling math; `ursina_underground.py` (~150); `ursina_misc_props_sync.py` (~170) bounties + rubble.
+- **`game/graphics/ursina_terrain_fog_collab.py` (1783) → `terrain/` package, 9 modules** — `state.py` `TerrainRenderState` dataclass (replaces ~70 `self._r._<field>` reach-ins); `fog_overlay.py` (~230); `visibility.py` (~210) prop fog/chunk gate; `chunk_cull.py` (~150); `static_batch.py` (~160); `instanced_trees.py` (~160); `builder.py` (~320) terrain/ground/grass; `dynamic_sync.py` (~260) tree/log per-frame sync; thin facade (~120).
+- **`game/graphics/ursina_app.py` (1525) → 5 modules** — slimmed `ursina_app.py` (~300) bootstrap + ~25-line `update()`; `ursina_camera_controller.py` (~300) rig/transition/clamp/follow/zone-fog; `hud_texture_uploader.py` (~160) CRC early-out + dirty-row upload; `ursina_input_router.py` (~200); `ursina_debug_harness.py` (~320) debug/capture.
+- **`game/graphics/instanced_nature_renderer.py` (1009) → `nature/` package, 5 modules** — `nature_shader.py` (~85); `tree_model_loader.py` (~200, the only Panda3D loader importer); `nature_diagnostics.py` (~110); `instanced_nature_renderer.py` (~340); `__init__.py` re-export. **Delete the triplicated dead GLB base-color extraction (236-302) — value never consumed.**
+- **`game/graphics/interior_sprites.py` (855) → `interiors/` package, 10 modules** — `geometry.py` `InteriorGeometry(w,h)` (owns the `wall_h=h//3` math duplicated ~18×); `palette.py`; `base.py` shared NPC builder; one module each for inn/marketplace/warrior_guild/blacksmith/temple/fallback; `library.py` with a `{key: module}` `_REGISTRY` replacing three string if-chains.
+- **`game/graphics/vfx.py` (434) → `vfx/` package, 5 modules** — `effects.py` dataclasses (cache scatter/direction at spawn, not per-frame); `events.py` typed `VFXEventType`; `spawn.py` seeded spawners; `draw.py` pygame draw; `system.py` facade. Delete the unreachable `size_px==1` branch.
+
+### Engine / Sim
+
+- **`game/engine.py` (1735) → 6 modules** — `engine.py` (~700) composition shell (sim property forwards, ID-selection properties, snapshot/game-state assembly, `run()` loop, 1-line wrappers); `engine_facades/selection.py` (~230) all `try_select_*` + one `_select_only(kind,entity)` helper; `engine_facades/lifecycle.py` (~250) `update`/`_prepare_sim_and_camera`/`tick_simulation`; `engine_facades/actions.py` (~240) `try_hire_hero`/`place_building`/`place_bounty`/de-stringified `apply_hud_pin_action`; `game/console.py` (~140) cheat-command registry replacing the 111-line `process_command`; `null_stub.py` (~15).
+- **`game/sim_engine.py` (1331) → 7 modules** — slimmed `sim_engine.py` (~700) orchestrator; `sim/fog.py` (~170); `sim/lumber.py` (~150) tree↔tile + lumberjack economy; `sim/building_tick.py` (~120) data-driven per-building dispatch (kills the stringly-typed ladder); `sim/destruction.py` (~100); `sim/separation.py` (~80); `sim/early_pacing.py` (~70). Keep delegating wrappers for `_apply_entity_separation`/`_update_fog_of_war`/`chop_tree_at` (tests + builder peasants call them).
+- **`game/sim/hero_profile.py` (549) → `hero_profile/` package, 4 modules** — `snapshots.py` (frozen dataclasses), `build.py`, `discovery.py`, `llm_select.py`.
+- **`game/game_commands.py` (512) → 2 modules** — `game_commands.py` (~150) the 5 Protocols only (typed with real classes, not `Any`); `engine_command_hub.py` (~190) the concrete facade (shrinks once command-mode/window-drag/cursor state move to the input package; delete the `GameCommands`/`EngineBackedGameCommands` compat aliases + `_cleanup_destroyed_buildings` shim).
+- **`game/input_handler.py` (772) → `game/input/` package, 7 modules** — `router.py` (~110) event-poll loop + SDL skip-frame guard; `keyboard.py` (~150); `mouse.py` (~230); `hud_actions.py` (~90) typed dispatch table (replaces 90-line stringly-typed ladder); `window_drag.py` (~70) (removes `_borderless_drag_*` from engine); `command_mode.py` (~45); `placement.py` (~55). **Note:** WK63 explicitly deferred this split — schedule it deliberately behind `tests/test_input_handler_gamecommands.py`.
+
+### Entities
+
+- **`game/entities/hero.py` (1152) → 5 modules via mixins (zero call-site change)** — `hero.py` (~360) core state/movement; `hero_rest.py` `HeroRestMixin` (~170); `hero_economy.py` `HeroEconomyMixin` (~150); `hero_profile_memory.py` `HeroMemoryMixin` (~140); `ai/intent.py` (~90) move intent derivation out of the entity. [VERIFIED safe: Hero is a plain class, all callers duck-type `hero.method()`, mixins keep MRO identical.]
+- **`game/entities/enemy.py` (668) → 3 modules** — `enemy.py` (~280) base driven by an `ENEMY_STATS` table; `enemy_stats.py` (~90) `EnemyStats` dataclass + table (replaces 7 stat-only subclasses) + `make_enemy()` factory; `enemy_archer.py` (~90) the one real behavioral subclass.
+- **`game/entities/buildings/base.py` (311) → 4 modules** — `ids.py` (id alloc), `research_state.py` (global tech-tree registry), `geometry.py` (`BuildingRect`), slimmed `base.py` (~200).
+- **`game/entities/buildings/economic.py` (289) → 3 modules** — `researchable_mixin.py` (~45) shared timed-research lifecycle (kills 3× Marketplace/Blacksmith/Library duplication) + slimmed economic classes.
+
+### AI
+
+- **`ai/basic_ai.py` (551) → 5 modules** — slimmed coordinator (~300) + `ai/behaviors/{combat,recovery,deferred_tasks}.py` (move the inline state-machine bodies) + co-locate `_get_nearest_undepleted_poi` (dead — delete or revive) in `poi_awareness.py`.
+- **`ai/providers/mock_provider.py` (519) → `mock/` package, 5 modules** — `dispatcher.py`, `direct_prompt.py`, `autonomous.py`, `conversation.py`, `legacy_decision.py` (audit for deadness).
+- **`ai/context_builder.py` (443) → 3 modules** — orchestrator + small private builders (~200, `build_summary` DELETED as dead), nearby-entities collector (~70), `context_builder_places.py` (~90, removes the double `select_known_places_for_llm` call).
+- **`ai/direct_prompt_validator.py` (434) → 3 modules** — entry+normalization+serializer (~150), `direct_prompt_intents.py` (~160) one pure handler per intent + table, `direct_prompt_places.py` (~90). [VERIFIED: preserve the deferred-combat early-return, critical-health redirect, and the **two** distinct obey/defy post-passes — do not collapse them.]
+- **`ai/behaviors/bounty_pursuit.py` (363) → 3 modules** — `bounty_pursuit.py` (~200) bounty logic only; `ai/behaviors/movement.py` (~90) the generic MOVING-state dispatcher that `handle_moving` secretly is; `direct_prompt.py` (~40) explore-bearing seed.
+- **`ai/behaviors/exploration.py` (350) → 3 modules** — slimmed `exploration.py` (~150); `idle_router.py` (~130) `handle_idle` as ordered predicate steps; `zones.py` (~50) patrol-zone assignment (consumed by stuck_recovery + bounty_pursuit too).
+
+### Audio / World / Config
+
+- **`game/audio/audio_system.py` (533) → 6 modules** — `contract.py` (SoT for `AUDIO_EVENT_MAP`/cooldowns/`INTERIOR_AMBIENT_MAP`), `sfx_cache.py` (shared loader), `visibility_gate.py`, `mixer_volume.py`, `ambient_player.py`, facade (~140).
+- **`game/world.py` (523) → 4 modules** — slimmed `world.py` (~150) tile data + queries (no pygame); `worldgen.py` (~250) one-shot generation as pure functions; `fog.py` (~150) `FogOfWar` state machine (`_currently_visible` typed as a real `set`); **move `render`/`render_fog` into `graphics/pygame_renderer.py`** (kills L10). Keep delegating `visibility`/`fog_disabled` properties returning the live grids.
+- **`config.py` (774) → `config/` package, 6 modules behind a back-compat `__init__.py`** — `env.py` (typed getenv helpers; kills 7 copy-pasted parse/clamp blocks), `gameplay.py` (deterministic sim tuning), `content_buildings.py` (the building registries → ideally one `BUILDING_DEFS`), `render.py` (`COLOR_*`/`URSINA_*`/`TERRAIN_*`), `runtime.py` (SIM/LLM/`DEV_MODE`). **Also delete the vestigial 13-dataclass layer** (`WindowConfig`..`RangerConfig`) whose instances exist only to produce the flat aliases 152 files import — keep the flat scalars, drop ~150 LOC of indirection (retain only `DifficultyConfig`/`WaveEventConfig`, which are consumed as objects).
+
+### Tools (lower priority infra)
+
+- **`tools/screenshot_scenarios.py` (1603) → `tools/screenshots/` package, 8 modules** — `scene_setup.py` (kills the 17× find/create-castle + 8× `center_of` duplication), `shot.py`, four scenario-family modules, `ursina_capture.py` (move the unrelated Ursina registry out), thin re-export facade.
+- **`tools/observe_sync.py` (846) → `tools/observe/` package, 5 modules** — `world_setup.py`, `scenarios.py`, `metrics.py` (3 collector classes: `StuckMetrics`/`OccupancyChecker`/`BountyIntentQA`), `report.py`, ~130-line CLI. **Fix the dual-clock bug** (`now_ms_val = int(t*1000/60)` at `:582` vs `set_sim_now_ms` at `:537`) by reading `timebase.now_ms()`.
+
+---
+
+## De-duplication / single-source-of-truth map
+
+The most pervasive slop class. Seven cross-cutting clusters, then a table of the strongest per-area duplications.
+
+### Cluster 1 — Building static data fragmented across 6+ parallel string-keyed maps (most severe; this is L7)
+
+No single source of truth for a building type. Adding/changing one building means editing, in lockstep: the `BuildingType` enum (`game/entities/buildings/types.py:8-38`), four parallel dicts in `config.py` (`BUILDING_COSTS:309`, `BUILDING_SIZES:362`, `BUILDING_COLORS:421`, `BUILDING_MAX_OCCUPANTS:498`), `BuildingFactory.BUILDING_REGISTRY` (`building_factory.py:45`), the placeable list + hotkeys in `build_catalog_panel.py` (and a **second** copy in `building_list_panel.py:16-27,64-69`), a hardcoded hotkey `elif` chain in `input_handler.py:298-320`, and prefab JSON `footprint_tiles`. `Building.__init__` (`base.py:76-93`) does three fallible `.get(type, default)` lookups, silently falling back to `(1,1)`/grey/cost-100/8-occupants.
+
+**Measured drift (runtime):** enum=30 members, `BUILDING_SIZES`/`COLORS`=47 keys, `COSTS`/`MAX_OCCUPANTS`=42, factory=27. Lair types exist in SIZES/COLORS but **not** COSTS/OCCUPANTS. ~17 dead "WK34 REMOVED" keys (e.g. `gnome_hovel`, `ballista_tower`) still occupy all five maps with `cost=0` sentinels.
+
+**Single-source design** (`game/content/buildings.py`):
 ```python
 @dataclass(frozen=True)
-class BuildingDestroyed:
-    building_id: str
-    building_type: str
-    center_x: float
-    center_y: float
-    rubble_id: int
-
-class BuildingLifecycleSystem:
-    def cleanup_destroyed(self, ctx: SystemContext) -> list[BuildingDestroyed]:
-        ...
-```
-
-#### 3. Replace wall-clock pathfinding budget decisions
-
-**Files:** `game/systems/navigation.py`, `game/systems/pathfinding.py`, `game/systems/perf_stats.py`
-
-The sim can change behavior based on wall-clock pathfinding budget. Perf timing is useful, but it should not decide whether a unit gets a path in deterministic gameplay.
-
-**Recommendation:**
-
-- Use deterministic max-plans-per-tick limits for gameplay.
-- Keep `perf_counter()` only for metrics.
-- If budget is exhausted, return a deterministic "defer path request" result rather than an empty path that looks like failure.
-
-Target shape:
-
-```python
-@dataclass
-class PathBudget:
-    max_plans_per_tick: int = 12
-    used: int = 0
-
-    def allow(self) -> bool:
-        if self.used >= self.max_plans_per_tick:
-            return False
-        self.used += 1
-        return True
-```
-
----
-
-### P1 - Finish The Core Architecture Boundaries
-
-#### 4. Delete old sim helper methods from `GameEngine`
-
-**Files:** `game/engine.py`, `game/sim_engine.py`
-
-`GameEngine` still contains old sim methods such as `_update_ai_and_heroes`, `_apply_entity_separation`, `_process_combat`, `_process_bounties`, `_update_buildings`, and other helpers even though `GameEngine.update()` now calls `self.sim.update()`.
-
-This is dangerous because future agents may patch the dead method instead of the live path.
-
-**Recommendation:**
-
-- Add characterization tests around `SimEngine.update()`.
-- Search for references to old `GameEngine` helpers.
-- Delete dead helpers once no tests or tools call them.
-- If a helper is still needed by a profiler or legacy tool, move it to `SimEngine` or a system module and update the caller.
-
-Acceptance:
-
-```powershell
-python -m pytest tests/test_engine.py tests/test_renderer_snapshot_contract.py
-python tools/qa_smoke.py --quick
-```
-
-#### 5. Split `GameCommands` into narrow command ports
-
-**Files:** `game/game_commands.py`, `game/input_handler.py`, `game/engine.py`
-
-`GameCommands` removed a direct `GameEngine` reference from `InputHandler`, but it now mirrors too much of the engine with `Any` properties and private fields. That is nominal decoupling, not real decoupling.
-
-**Recommendation:**
-
-Replace the single giant protocol with smaller ports:
-
-```python
-class CameraCommands(Protocol):
-    def zoom_by(self, factor: float) -> None: ...
-    def center_on_castle(self, reset_zoom: bool = True) -> None: ...
-
-class SelectionCommands(Protocol):
-    def select_at_screen(self, pos: tuple[int, int]) -> SelectionResult: ...
-    def clear_selection(self) -> None: ...
-
-class PlacementCommands(Protocol):
-    def select_building_for_placement(self, building_type: str) -> bool: ...
-    def place_building_at_screen(self, pos: tuple[int, int]) -> PlacementResult: ...
-
-class MenuCommands(Protocol):
-    def apply_ui_action(self, action: UIAction) -> None: ...
-```
-
-Then make `InputHandler` a dispatcher that composes these ports rather than a policy object that knows every panel and selection rule.
-
-#### 6. Split snapshot contracts into sim, presentation, and UI views
-
-**Files:** `game/sim/snapshot.py`, `game/sim_engine.py`, `game/engine.py`, `game/graphics/**`, `game/ui/**`, `ai/**`
-
-`SimStateSnapshot` currently carries live entity/world objects plus camera, screen, pause, UI, and VFX state. It is pragmatic, but the name overpromises immutability and sim purity.
-
-**Recommendation:**
-
-Create three view contracts over time:
-
-```python
-@dataclass(frozen=True, slots=True)
-class SimSnapshot:
-    tick_id: int
-    units: tuple[UnitSimDTO, ...]
-    buildings: tuple[BuildingSimDTO, ...]
-    bounties: tuple[BountySimDTO, ...]
-    rubble: tuple[RubbleDTO, ...]
-    fog_revision: int
-
-@dataclass(frozen=True, slots=True)
-class PresentationFrameState:
-    screen_w: int
-    screen_h: int
-    camera_x: float
-    camera_y: float
-    zoom: float
-    paused: bool
-
-@dataclass(frozen=True, slots=True)
-class UiGameView:
-    gold: int
-    selected: SelectionView
-    panels: PanelState
-    alerts: tuple[ToastDTO, ...]
-```
-
-Do not convert everything in one sprint. Start with renderer DTOs for units and buildings, because renderer live-object mutation is one of the clearest coupling problems.
-
-#### 7. Move selection state out of `SimEngine`
-
-**Files:** `game/sim_engine.py`, `game/engine.py`, `game/input_handler.py`, render snapshots
-
-`selected_hero`, `selected_building`, `selected_enemy`, and `selected_peasant` are player/presentation state, not authoritative sim state. Keeping them in `SimEngine` encourages UI and sim to stay coupled.
-
-**Recommendation:**
-
-- Add `game/presentation/selection_state.py`.
-- Store selected IDs in presentation state.
-- Snapshots can include selected IDs for highlight rendering.
-- Sim should expose entity lookup by stable ID, not store the current UI selection.
-
----
-
-### P1 - Break Up The Largest Files
-
-#### 8. Split `game/ui/hud.py`
-
-**Current size:** about 2,470 lines  
-**Problem:** Layout, rendering, clicks, split handles, minimap, watch card, chat placement, overlays, toasts, command bar, speed bar, and selection panels all live in one class.
-
-**Target modules:**
-
-- `game/ui/layout.py`
-  - `HUDLayout`
-  - `LeftColumnLayout`
-  - split handle geometry
-  - chrome hit regions
-- `game/ui/ui_actions.py`
-  - typed `UIAction`
-  - no string/dict action shapes leaking into input
-- `game/ui/hud_chrome.py`
-  - top bar, bottom bar, speed bar, command bar
-- `game/ui/selection_sidebar.py`
-  - hero/enemy/peasant/building panel composition
-- `game/ui/watch_card_panel.py`
-  - pinned hero card, minimap rectangle, chat band
-- `game/ui/toast_layer.py`
-  - HUD messages, POI toasts, wave toasts, dev labels
-- `game/ui/overlay_layer.py`
-  - memorial, demolish confirmation, building interior overlay
-
-Example click flow:
-
-```python
-@dataclass(frozen=True)
-class UIAction:
-    kind: str
-    payload: object | None = None
-
-class HUD:
-    def handle_click(self, pos: tuple[int, int], view: UiGameView) -> UIAction | None:
-        return self.action_router.action_at(pos, view)
-
-class InputHandler:
-    def handle_mousedown(self, event) -> None:
-        action = self.ui.click(event.pos)
-        if action:
-            self.commands.apply_ui_action(action)
-            return
-        self.world_selection.select_at_screen(event.pos)
-```
-
-#### 9. Split `game/graphics/ursina_renderer.py`
-
-**Current size:** about 2,227 lines  
-**Problem:** Orchestration, units, overlays, buildings, prefabs, bounty flags, rubble, projectiles, debug text, culling, animation, terrain/fog collaborator calls, and old/experimental instancing paths are all mixed.
-
-**Target modules:**
-
-- `game/graphics/ursina/renderer.py` - orchestration only
-- `game/graphics/ursina/units.py` - hero/enemy/worker/guard/tax collector sync
-- `game/graphics/ursina/unit_overlays.py` - HP/name/gold/rest labels
-- `game/graphics/ursina/buildings.py` - prefab/mesh/billboard building sync
-- `game/graphics/ursina/bounties.py` - 3D bounty flags
-- `game/graphics/ursina/rubble.py` - rubble visuals
-- `game/graphics/ursina/projectiles.py` - projectile visuals
-- `game/graphics/ursina/terrain_fog.py` - terrain/fog orchestration
-
-Start with unit overlays and shared visual specs because they remove duplication without touching terrain or prefab risk.
-
-#### 10. Split `game/graphics/ursina_terrain_fog_collab.py`
-
-**Problem:** This collaborator has become its own subsystem: terrain building, fog texture, chunk culling, static batching, tree entity fallback, instanced trees, grid overlay, and cave shader hooks.
-
-**Target modules:**
-
-- `game/graphics/ursina/terrain_mesh.py`
-- `game/graphics/ursina/fog_texture.py`
-- `game/graphics/ursina/terrain_props.py`
-- `game/graphics/ursina/instanced_trees.py`
-- `game/graphics/ursina/debug_grid.py`
-
-#### 11. Split `game/graphics/ursina_app.py`
-
-**Current size:** about 1,526 lines  
-**Problem:** App setup, camera rig, input bridge, HUD texture upload, screenshot automation, debug layouts, perf probes, capture hooks, and zone/underground camera logic are mixed.
-
-**Target modules:**
-
-- `game/graphics/ursina/app.py` - app shell and run loop
-- `game/graphics/ursina/camera_controller.py`
-- `game/graphics/ursina/input_bridge.py`
-- `game/graphics/ursina/hud_texture_upload.py`
-- `game/graphics/ursina/debug_capture.py`
-- `game/graphics/ursina/perf_probe.py`
-
-#### 12. Split `game/sim_engine.py`
-
-**Current size:** about 1,307 lines  
-**Problem:** `SimEngine` now owns too many domains: initial state, trees/nature/logs, POIs, building cleanup, fog, system update order, separation, AI hooks, snapshots, and helper callbacks.
-
-**Target modules:**
-
-- `game/sim/initial_state.py`
-- `game/sim/system_runner.py`
-- `game/sim/fog_service.py`
-- `game/sim/entity_separation.py`
-- `game/sim/building_lifecycle.py` or `game/systems/building_lifecycle.py`
-- `game/sim/nature_bridge.py`
-- `game/sim/poi_discovery.py`
-- `game/sim/snapshot_builder.py`
-
-The important thing is to extract services with clear inputs, not to move code mechanically into more files while still passing the whole `SimEngine`.
-
----
-
-### P1 - Create Canonical Registries
-
-#### 13. Building definitions registry
-
-**Files:** `config.py`, `game/building_factory.py`, `game/entities/buildings/**`, `assets/prefabs/**`, UI build menus
-
-Building data is spread across:
-
-- `BUILDING_COSTS`
-- `BUILDING_SIZES`
-- `BUILDING_COLORS`
-- `BUILDING_MAX_OCCUPANTS`
-- `BuildingType`
-- `BuildingFactory.BUILDING_REGISTRY`
-- prefab JSON `building_type` and `footprint_tiles`
-- build catalog/menu data
-
-This is exactly the kind of duplicated registry that causes agent drift.
-
-**Recommendation:**
-
-Create `game/content/buildings.py`:
-
-```python
-@dataclass(frozen=True, slots=True)
 class BuildingDef:
-    key: str
-    cls: type
-    cost: int
+    type: str                 # "warrior_guild"
     size: tuple[int, int]
     color: tuple[int, int, int]
-    max_occupants: int = 0
-    placeable: bool = True
-    tax_stash: bool = False
-    prefab_key: str | None = None
+    cost: int
+    max_occupants: int
+    cls: type | None          # WarriorGuild, or None for POI/lair
+    hotkey: str | None        # "1"
+    placeable: bool           # shows in build catalog
+    hero_class: str | None    # "warrior" — folds in guild->class (cluster 6)
 
-BUILDINGS: dict[str, BuildingDef] = {
-    "marketplace": BuildingDef(
-        key="marketplace",
-        cls=Marketplace,
-        cost=250,
-        size=(3, 3),
-        color=(...),
-        tax_stash=True,
-        prefab_key="marketplace_v1",
-    ),
-}
-```
-
-Then generate compatibility aliases from the registry while migrating:
-
-```python
+BUILDINGS: dict[str, BuildingDef] = { ... }
+# thin back-compat views (config.py already uses this pattern for WINDOW_WIDTH=WINDOW.width):
 BUILDING_COSTS = {k: d.cost for k, d in BUILDINGS.items()}
 BUILDING_SIZES = {k: d.size for k, d in BUILDINGS.items()}
+# + an import-time assert that BUILDINGS covers BuildingType so they can't drift.
 ```
+`BuildingFactory`, the build catalog, and input hotkey dispatch all read `BUILDINGS[t]`.
 
-#### 14. Unit visual specs registry
+### Cluster 2 — Build-menu hotkeys defined 2–5×
+`BUILDING_HOTKEYS` dict (`build_catalog_panel.py:21-32`) **and** a 12-branch `elif event.key=='1'` chain (`input_handler.py:298-320`) **and** a duplicate dict+list in `building_list_panel.py`. Already drifting: the `elif` uses lowercase `'t'/'u'`, the dicts use `'T'/'U'`; the command-bar tooltip advertises hotkeys the chain doesn't implement. → Fold into `BuildingDef.hotkey`; derive a `{hotkey: type}` reverse map; regenerate the tooltip from it.
 
-**Files:** `game/graphics/ursina_renderer.py`, `game/graphics/instanced_unit_renderer.py`, `game/graphics/ursina_pick.py`, `game/graphics/renderers/**`, `game/graphics/unit_atlas.py`
+### Cluster 3 — Unit visual scales re-derived in 3 places despite `visual_specs.py` being the intended SoT
+WK62's `graphics/visual_specs.py:91-173` holds canonical scales, but `ursina_renderer.py:95-112` defines its own `UNIT_BILLBOARD_SCALE/ENEMY_SCALE/…` (and uses *those* at 1633-1735), and `instanced_unit_renderer.py:55-66` re-derives the identical `0.62/0.5/0.7` magic factors. → Both renderers import `unit_visual_spec(kind)`; delete the local constants. Low-risk (frozen dataclass).
 
-Unit scales, labels, atlas keys, HP bar offsets, billboard sizes, and picking offsets are repeated.
+### Cluster 4 — Hero-class → color duplicated 3–4× (values already disagree)
+`hero_sprites.py:17-21` palette vs `ursina_renderer.py:1469-1481` 3D tint (uses generic `color.white/lime/magenta` — **disagrees** with pygame) vs `ursina_renderer.py:71` `COLOR_HERO` (4th copy). → `HERO_CLASS_COLORS` dict next to `HeroClass` in `game/types.py`; renderers look up by class key.
 
-**Recommendation:**
+### Cluster 5 — Audio event contract in 3–4 hand-synced places
+`AUDIO_EVENT_MAP`+`SOUND_COOLDOWNS_MS` (`audio_system.py:23-71`) vs the same tables restated in `EVENT_CONTRACT.md:14-143` vs `ENEMY_SOUND_MAP` (`enemy_sounds.py:26-69`) vs the event names being a 4th copy of `GameEventType` (`events.py:11-38`). → Code is SoT, keyed off `GameEventType.*.value`; generate the doc from it (or link).
 
-Create `game/graphics/visual_specs.py`:
+### Cluster 6 — Guild→hero-class mapping + the class list repeated 5+×
+Inline `class_by_guild` dict (`engine.py:1002-1009`), `allowed` guild frozenset (`engine.py:958`), `PLAYER_GUILD_TYPES` (`config.py:550`), and the `("warrior","ranger","rogue","wizard","cleric")` tuple respelled in `unit_atlas.py:79`, `hero_sprites.py`, `ursina_renderer.py`. → `BuildingDef.hero_class`; derive guild sets + the class list from `HeroClass`.
 
-```python
-@dataclass(frozen=True, slots=True)
-class UnitVisualSpec:
-    kind: str
-    atlas_key: str
-    scale_xyz: tuple[float, float, float]
-    hp_bar_y: float
-    label_y: float
-    pick_radius_px: float
+### Cluster 7 — POI footprints duplicated; orphaned enums
+`POIDefinition.size` (`poi.py:65+`) is 100%-identical to the same keys in `config.BUILDING_SIZES` (verified at runtime) — `PointOfInterest` already inherits size via `super().__init__`, so `POIDefinition.size` is vestigial. `EnemyType` enum (`types.py:15-21`) is orphaned (live enemies store raw strings; only consumer is a no-op round-trip at `combat.py:73`). Spider/Bandit/boss stats are hardcoded inline (`enemy.py:592-660`) while Goblin/Wolf/Skeleton use config; enemy colors are triple-defined.
 
-def unit_visual_spec(entity: object) -> UnitVisualSpec:
-    ...
-```
+### More high-value duplication (by area)
 
-Use this from:
-
-- Ursina billboards
-- instanced units
-- pygame renderers
-- unit atlas building
-- picking/hit tests
-
-#### 15. AI task/target registry
-
-**Files:** `ai/basic_ai.py`, `ai/behaviors/bounty_pursuit.py`, `ai/behaviors/exploration.py`, `game/entities/hero.py`, `game/sim/direct_prompt_exec.py`
-
-Hero task state is stringly typed and often stored as dicts on `hero.target`. New tasks require changes across arrival handlers, intent labels, commit windows, interruption policy, and UI.
-
-**Recommendation:**
-
-Create `ai/contracts.py`:
-
-```python
-class TargetType(StrEnum):
-    BOUNTY = "bounty"
-    SHOPPING = "shopping"
-    REST_INN = "rest_inn"
-    DIRECT_PROMPT = "direct_prompt"
-    BUY_MEAL = "buy_meal"
-    PATROL = "patrol"
-    VISIT_POI = "visit_poi"
-    JOURNEY_EXPLORE = "journey_explore"
-
-@dataclass(slots=True)
-class HeroTask:
-    type: TargetType
-    target_id: str | int | None = None
-    target_ref: object | None = None
-    started_ms: int = 0
-    metadata: dict[str, object] = field(default_factory=dict)
-```
-
-Then create:
-
-- `ai/task_router.py`
-- `ai/arrival_handlers.py`
-- `ai/task_policy.py`
-
-#### 16. Audio and prefab manifests
-
-**Files:** `game/audio/audio_system.py`, `game/audio/enemy_sounds.py`, `game/audio/EVENT_CONTRACT.md`, `tools/assets_manifest.json`, `game/graphics/ursina_prefabs.py`, `assets/prefabs/buildings/**`
-
-Audio contracts are split across runtime maps, enemy sound maps, docs, and manifest entries. Prefab resolution is hardcoded in Python despite prefab JSON already containing building types.
-
-**Recommendation:**
-
-- Add `assets/audio/audio_manifest.json` with event mappings, cooldowns, optional flags, enemy aliases, and filenames.
-- Add `assets/prefabs/buildings/index.json` for building/POI prefab resolution.
-- Make validators read these manifests and fail on drift.
-- Generate or load runtime maps from the same data source.
-
----
-
-### P2 - Clean AI Architecture
-
-#### 17. Extract arrival handling from `bounty_pursuit.py`
-
-**Files:** `ai/behaviors/bounty_pursuit.py`
-
-This file now handles much more than bounties: direct prompts, shopping arrival, rest, inn drinks, POIs, meals, combat chase gating, and stuck-adjacent continuation.
-
-**Recommendation:**
-
-Create `ai/arrival_handlers.py`:
-
-```python
-ARRIVAL_HANDLERS: dict[TargetType, Callable[[Hero, HeroTask, GameState], ArrivalResult]] = {
-    TargetType.SHOPPING: handle_shopping_arrival,
-    TargetType.REST_INN: handle_rest_arrival,
-    TargetType.BUY_MEAL: handle_meal_arrival,
-    TargetType.DIRECT_PROMPT: handle_direct_prompt_arrival,
-    TargetType.BOUNTY: handle_bounty_arrival,
-}
-```
-
-Keep `bounty_pursuit.py` focused on scoring and pursuing bounties.
-
-#### 18. Replace `BasicAI.update_hero()` priority ladder with a router
-
-**Files:** `ai/basic_ai.py`, `ai/behaviors/**`
-
-Behavior extraction helped, but the actual decision ordering is still implicit in a long coordinator method.
-
-**Recommendation:**
-
-Create a router where modules return proposals:
-
-```python
-@dataclass(frozen=True)
-class TaskProposal:
-    priority: int
-    source: str
-    task: HeroTask
-    reason: str
-
-class TaskRouter:
-    def choose(self, hero: Hero, view: AiGameView) -> TaskProposal | None:
-        proposals = [
-            defense.propose(hero, view),
-            hunger.propose(hero, view),
-            rest.propose(hero, view),
-            bounty.propose(hero, view),
-            journey.propose(hero, view),
-        ]
-        return max((p for p in proposals if p), key=lambda p: p.priority, default=None)
-```
-
-This makes behavior competition explicit and testable.
-
-#### 19. Split LLM context into pure JSON slices
-
-**Files:** `ai/context_builder.py`, `ai/profile_context_adapter.py`, `game/entities/hero.py`
-
-`ContextBuilder` mixes live sim objects, JSON prompt shaping, UI-style stat blocks, POI awareness, known-place selection, and marketplace catalog logic. It also passes raw `available_bounties` objects alongside JSON-friendly summaries.
-
-**Recommendation:**
-
-- Create `ai/context/slices.py`.
-- Create slice builders:
-  - `HeroFactsSlice`
-  - `TacticalSituationSlice`
-  - `KnownPlacesSlice`
-  - `BountySlice`
-  - `ShopSlice`
-  - `ConversationSlice`
-- Assert prompt payloads are JSON-serializable and contain no raw entity objects.
-- Remove or deprecate `Hero.get_context_for_llm()` after compatibility tests pass.
-
----
-
-### P2 - Clean Gameplay Systems
-
-#### 20. Split `Hero` into services
-
-**Files:** `game/entities/hero.py`
-
-`Hero` currently combines identity, stats, inventory, buffs, memory, rest, building occupancy, shopping/taxes, hunger, movement/pathfinding, intent snapshots, LLM context, and event hooks. It also initializes some fields twice.
-
-**Recommendation:**
-
-Keep `Hero` as the data shell during migration, but extract behavior:
-
-- `game/entities/hero_inventory.py`
-- `game/entities/hero_resting.py`
-- `game/entities/hero_navigation.py`
-- `game/entities/hero_intent.py`
-- `game/entities/hero_memory_facade.py`
-
-Do this by moving methods first, not changing data layout first.
-
-#### 21. Centralize attacks and projectile events
-
-**Files:** `game/systems/combat.py`, `game/entities/enemy.py`, `game/entities/guard.py`, `game/entities/buildings/defensive.py`
-
-Combat is split: hero attacks are centralized, but enemy, guard, guardhouse, ballista, tower, and ranged projectile behaviors live in entity/building updates with `_last_ranged_event` side channels.
-
-**Recommendation:**
-
-Introduce attack profiles:
-
-```python
-@dataclass(frozen=True)
-class AttackProfile:
-    attacker_id: str
-    team: Literal["hero", "enemy", "defense"]
-    damage: int
-    range_px: float
-    cooldown_ms: int
-    projectile: ProjectileSpec | None = None
-```
-
-Then `CombatSystem` processes all attacks and emits standard events:
-
-- `DamageEvent`
-- `ProjectileEvent`
-- `UnitKilledEvent`
-- `BuildingDestroyedEvent`
-
-#### 22. Expand `SystemContext` and use one system update style
-
-**Files:** `game/systems/protocol.py`, `game/sim_engine.py`, `game/systems/**`
-
-`SystemContext` only includes heroes, enemies, buildings, world, economy, and event bus. Several systems need peasants, guards, POIs, castle, lairs, or rubble, so the engine calls custom `tick()` methods and bypasses the protocol.
-
-**Recommendation:**
-
-```python
-@dataclass(slots=True)
-class SystemContext:
-    heroes: list
-    enemies: list
-    buildings: list
-    peasants: list
-    guards: list
-    bounties: list
-    pois: list
-    rubble_records: list
-    world: object
-    economy: object
-    event_bus: EventBus
-```
-
-Then `SimEngine` can use an ordered system runner:
-
-```python
-SYSTEM_ORDER = (
-    nature_system,
-    ai_system,
-    movement_system,
-    fog_system,
-    spawn_system,
-    combat_system,
-    building_lifecycle_system,
-    bounty_system,
-    poi_system,
-)
-```
-
----
-
-### P2 - Clean UI And Renderer Performance
-
-#### 23. Build one frame context per frame
-
-**Files:** `game/engine.py`, `game/engine_facades/render_coordinator.py`, `game/graphics/ursina_app.py`, `game/sim_engine.py`
-
-The render paths currently rebuild overlapping frame state. In the Ursina path, `UrsinaApp` builds a snapshot for `UrsinaRenderer`, then the pygame HUD/render coordinator can build another snapshot and call `get_game_state()` several times. `get_game_state()` can also build hero profile snapshots for every hero, so repeated UI calls multiply work.
-
-**Recommendation:**
-
-- Introduce a `FrameContext` built once per rendered frame.
-- Store one `snapshot`, one cheap `ui_view`, and optional lazy expensive profile data.
-- Pass that context through `UrsinaRenderer`, `EngineRenderCoordinator`, HUD, debug panel, and pause/menu render paths.
-- Split `get_game_state()` into a cheap base view and lazy selected/pinned hero profile lookups.
-
-Target shape:
-
-```python
-@dataclass(slots=True)
-class FrameContext:
-    snapshot: SimSnapshot
-    presentation: PresentationFrameState
-    ui: UiGameView
-    hero_profiles: LazyHeroProfileCache
-```
-
-#### 24. Add dirty-surface caching for panels
-
-**Files:** `game/ui/building_panel.py`, `game/ui/pause_menu.py`, `game/ui/chat_panel.py`, `game/ui/build_catalog_panel.py`, `game/ui/hud.py`
-
-Several panels still render text or allocate scratch surfaces every frame. This is especially risky for the Ursina HUD texture upload path.
-
-**Recommendation:**
-
-- Add a `PanelRenderCache` helper.
-- Rebuild only when a dirty key changes.
-- Use cached text helpers for static labels and repeated values.
-
-Example:
-
-```python
-@dataclass(frozen=True)
-class PanelDirtyKey:
-    selected_id: str | None
-    gold: int
-    hp: int
-    scroll: int
-    width: int
-    height: int
-
-class CachedPanelSurface:
-    def render(self, key: PanelDirtyKey, build: Callable[[], pygame.Surface]) -> pygame.Surface:
-        if key != self._key:
-            self._surface = build()
-            self._key = key
-        return self._surface
-```
-
-#### 25. Cache chat wrapping by message and width
-
-**Files:** `game/ui/chat_panel.py`, `game/ui/hud.py`
-
-Active chat wraps conversation history for measurement and then wraps/renders visible lines again every frame.
-
-**Recommendation:**
-
-- Cache wrapped lines per message ID and available width.
-- Invalidate only when history changes, font changes, or width changes.
-- Keep scroll calculations over cached line records.
-
-#### 26. Precompute VFX debris decals
-
-**Files:** `game/graphics/vfx.py`
-
-Debris/rubble render paths should not re-randomize, recalculate all pieces, or allocate underlay surfaces every frame.
-
-**Recommendation:**
-
-- Compute decal pieces at spawn time.
-- Store piece positions, colors, sizes, and underlay metadata.
-- Render only stored pieces.
-
-#### 27. Cache flipped animation frames
-
-**Files:** `game/graphics/renderers/hero_renderer.py`, `game/graphics/renderers/enemy_renderer.py`, `game/graphics/animation.py`
-
-Pygame renderers call `pygame.transform.flip()` at render time. Mirrored frames should be cached by clip/frame/facing.
-
-**Recommendation:**
-
-Add mirrored-frame support to `AnimationClip`:
-
-```python
-class AnimationClip:
-    def frame(self, index: int, *, flipped: bool = False) -> pygame.Surface:
-        if not flipped:
-            return self.frames[index]
-        return self._flipped_cache[index]
-```
-
-#### 28. Replace path `pop(0)` with cursors or deques
-
-**Files:** `game/systems/navigation.py`, entity movement methods
-
-`follow_path()` mutates paths with `pop(0)`, shifting the whole list for every waypoint.
-
-**Recommendation:**
-
-- Store paths as tuples or lists plus an integer cursor.
-- Or use `collections.deque` if mutation remains simpler.
-- Cache paths as immutable tuples keyed by start, goal, layer, and blocker revision.
-
-#### 29. Measure HUD texture upload strategy before optimizing it
-
-**Files:** `game/graphics/ursina_app.py`, `tools/perf_render_benchmark.py`, `tools/ursina_frame_profiler.py`
-
-The Ursina HUD upload path still converts the full pygame HUD surface with `pygame.image.tobytes()` before dirty-row logic. Dirty-row upload may or may not beat full upload after row scanning and temporary Panda texture work.
-
-**Recommendation:**
-
-- Benchmark full upload versus dirty-row upload in the existing stage profiler.
-- Keep the simpler path if it is faster or equal at common HUD sizes.
-- If dirty upload wins, isolate it in `game/graphics/ursina/hud_texture_upload.py` with explicit metrics.
-
----
-
-### P2 - Clean Tools, Tests, Assets, And Docs
-
-#### 30. Split monolithic QA/capture tools
-
-**Files:** `tools/qa_smoke.py`, `tools/observe_sync.py`, `tools/screenshot_scenarios.py`, `tools/capture_screenshots.py`
-
-The tool stack works, but major files are too broad and WK-specific logic keeps accumulating.
-
-**Recommendation:**
-
-Create `tools/kingdom_tools/`:
-
-- `kingdom_tools/cli.py`
-- `kingdom_tools/process.py`
-- `kingdom_tools/sim_harness.py`
-- `kingdom_tools/observe/cli.py`
-- `kingdom_tools/observe/scenarios.py`
-- `kingdom_tools/observe/assertions.py`
-- `kingdom_tools/capture/pygame.py`
-- `kingdom_tools/capture/ursina.py`
-- `kingdom_tools/capture/scenarios/`
-- `kingdom_tools/assets/schema.py`
-- `kingdom_tools/assets/validate.py`
-
-Then keep old entrypoints as thin wrappers until tests and docs migrate.
-
-#### 31. Organize tests by domain
-
-**Files:** `tests/**`
-
-The test suite is flat and sprint-named. That preserves history, but it makes intent and ownership harder to scan.
-
-**Recommendation:**
-
-Target structure:
-
-```text
-tests/
-  gameplay/
-  ai/
-  ui/
-  rendering/
-  tools/
-  integration/
-  perf_manual/
-```
-
-Add `pytest.ini` markers:
-
-```ini
-[pytest]
-markers =
-    slow: longer integration tests
-    render: screenshot or renderer tests
-    ursina: requires Ursina/Panda runtime
-    perf: performance/manual benchmarks
-    integration: multi-system checks
-```
-
-Then change `qa_smoke --quick` to run:
-
-```powershell
-python -m pytest -m "not slow and not render and not perf"
-```
-
-plus selected observe profiles.
-
-#### 32. Refactor the AI studio orchestrator separately
-
-**Files:** `tools/ai_studio_orchestrator/src/**`
-
-The TypeScript orchestrator appears functional, but `cli.ts` owns too much and the docs conflict around git behavior. Because automation and git are high-risk, isolate this from gameplay cleanup.
-
-**Recommendation:**
-
-- Split command modules:
-  - `commands/validate.ts`
-  - `commands/run.ts`
-  - `commands/complete.ts`
-  - `commands/status.ts`
-- Add:
-  - `args.ts`
-  - `git.ts`
-  - `receipts.ts`
-  - `cloudBranch.ts`
-- Remove hardcoded `origin/main` behavior where branch options exist.
-- Add mocked tests before live orchestrator runs.
-
-#### 33. Create current architecture docs
-
-**Files:** `docs/**`, `.cursor/plans/**`, `README.md`, `.cursor/rules/**`
-
-The repo has old master plans and narrow inventories, but not a current architecture map that reflects the actual WK53-WK61 code.
-
-**Recommendation:**
-
-Add:
-
-- `docs/architecture/current_architecture.md`
-- `docs/architecture/rendering_pipeline_ursina.md`
-- `.cursor/plans/README.md` or `.cursor/plans/INDEX.md`
-
-Also:
-
-- Make `AGENTS.md` the canonical ownership table.
-- Have role/rule files link back to it instead of duplicating full maps.
-- Fix stale links to the old architecture master plan.
-- Move or ignore `.bak_*` agent-log backups so search results stay useful.
-- Reconcile orchestrator docs with git safety rules.
-
----
-
-## Proposed Target Architecture
-
-```mermaid
-flowchart TD
-  Main[main.py] --> Runtime[Runtime Mode]
-  Runtime --> PygameRuntime[PygameRuntime]
-  Runtime --> UrsinaRuntime[UrsinaRuntime]
-
-  PygameRuntime --> Presentation[PresentationLayer]
-  UrsinaRuntime --> Presentation
-  UrsinaRuntime --> UrsinaWorld[UrsinaWorldRenderer]
-
-  Presentation --> Input[Input Ports]
-  Presentation --> UI[UI Layer]
-  Presentation --> PygameWorld[PygameWorldRenderer]
-  Presentation --> Sim[SimEngine]
-
-  Sim --> Clock[SimClock]
-  Sim --> Runner[SystemRunner]
-  Sim --> State[SimState]
-
-  Runner --> Systems[Ordered Game Systems]
-  Systems --> Events[EventBus]
-  State --> SnapshotBuilder[SnapshotBuilder]
-
-  SnapshotBuilder --> RenderSnapshot[RenderSnapshot DTOs]
-  SnapshotBuilder --> AiView[AiGameView DTOs]
-  SnapshotBuilder --> UiView[UiGameView DTOs]
-
-  RenderSnapshot --> PygameWorld
-  RenderSnapshot --> UrsinaWorld
-  AiView --> AIRouter[AI Task Router]
-  UiView --> UI
-
-  AIRouter --> Commands[Hero Commands]
-  Commands --> Sim
-```
-
-### Principles
-
-- **Sim owns authoritative state and time.**
-- **Presentation owns selection, camera, windows, UI, audio, and input.**
-- **Renderers never mutate sim entities.**
-- **AI proposes commands; sim applies them.**
-- **Registries define content once.**
-- **Compatibility aliases can exist temporarily, but every alias needs a removal target.**
-
----
-
-## Recommended Cleanup Roadmap
-
-### Phase 0 - Finish In-Flight v1.6 Gameplay, Then Baseline
-
-**Goal:** Do not interrupt active v1.6 gameplay tuning with broad structural cleanup. Finish the current playtest/gameplay slice first, then lock down current behavior before moving code.
-
-This does not mean ignoring real correctness risks. If the sim-time double-advance test confirms a bug, fix that as a narrow hotfix. Otherwise, keep structural cleanup out of the same wave as wave tuning, difficulty, hunger, tax overlay, rubble, or other v1.6 playtest features.
-
-Owner recommendations:
-
-- Agent 03 (high intelligence): engine/sim time and cleanup tests
-- Agent 11 (medium intelligence): regression coverage and smoke profile review
-- Agent 10 (low/medium intelligence): perf baseline
-
-Tasks:
-
-- Let in-flight v1.6 gameplay work close before starting broad file splits.
-- Add sim time single-advance test.
-- Add destroyed-building single-cleanup test.
-- Add snapshot render no-mutation test.
-- Add import-boundary smoke tests for `game/sim`, `game/systems`, and `game/entities`.
-- Run baseline gates:
-
-```powershell
-python -m pytest
-python tools/qa_smoke.py --quick
-python tools/validate_assets.py --report
-python tools/perf_benchmark.py
-```
-
-### Phase 1 - Engine/Sim Boundary Cleanup
-
-**Goal:** Finish the existing refactor instead of piling on more compatibility.
-
-Tasks:
-
-- Make sim time single-owner.
-- Consolidate destroyed-building lifecycle.
-- Delete dead `GameEngine` sim helper methods.
-- Move selection state toward presentation-owned IDs.
-- Split `GameCommands` into narrow command ports.
-
-Acceptance:
-
-```powershell
-python -m pytest tests/test_engine.py tests/test_renderer_snapshot_contract.py tests/test_input_handler_gamecommands.py
-python tools/qa_smoke.py --quick
-```
-
-### Phase 2 - Renderer/UI Large File Split
-
-**Goal:** Reduce the files most likely to create future feature collisions.
-
-Tasks:
-
-- Add `game/graphics/visual_specs.py`.
-- Extract `UrsinaUnitOverlaySync`.
-- Split `HUD` layout and action routing first.
-- Add panel dirty caching for the most expensive panels.
-- Add `FrameContext` reuse so snapshot/game-state/profile work happens once per frame.
-- Split `UrsinaRenderer` into unit/building/bounty/rubble modules.
-
-Acceptance:
-
-```powershell
-python -m pytest tests/test_pygame_renderer_wk39.py tests/test_renderer_snapshot_contract.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r9_hero_chat_readable_layout.py tests/test_wk61_r4_ui_regressions.py
-python tools/qa_smoke.py --quick
-python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/codebase_cleanup_ui_panels --size 1920x1080 --ticks 480
-python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/codebase_cleanup_base_overview --size 1920x1080 --ticks 480
-python tools/perf_render_benchmark.py --warmup 8 --measure 15
-```
-
-### Phase 3 - AI And Gameplay Contracts
-
-**Goal:** Stop adding behavior through stringly typed hero targets and live-object dicts.
-
-Tasks:
-
-- Add `ai/contracts.py`.
-- Add typed `HeroTask` while still supporting old dict target shape.
-- Extract arrival handlers from `bounty_pursuit.py`.
-- Split `ContextBuilder` into JSON slices.
-- Begin stable ID migration for enemies/buildings/POIs where `id(obj)` is used.
-- Replace pathfinding wall-clock budget with deterministic budget.
-
-Acceptance:
-
-```powershell
-python -m pytest tests/test_ai_bounty.py tests/test_ai_exploration.py tests/test_direct_prompt_integration.py tests/test_llm_bridge_apply_decision.py tests/test_poi_interaction.py tests/test_combat.py
-python tools/determinism_guard.py
-python tools/qa_smoke.py --quick
-```
-
-### Phase 4 - Registries And Content Data
-
-**Goal:** Define game/content/visual/audio/prefab concepts once.
-
-Tasks:
-
-- Add building definition registry with compatibility aliases.
-- Add prefab index.
-- Add audio manifest.
-- Add unit visual specs.
-- Move production-used asset helper code out of `tools`.
-- Extend asset validation to detect unlisted prefab drift.
-
-Acceptance:
-
-```powershell
-python -m json.tool tools/assets_manifest.json
-python tools/validate_assets.py --report
-python tools/validate_assets.py --strict --check-attribution
-python tools/qa_smoke.py --quick
-```
-
-### Phase 5 - Tooling And Docs Hygiene
-
-**Goal:** Make future agents land in the right files and use current patterns.
-
-Tasks:
-
-- Add current architecture docs.
-- Add `.cursor/plans` index.
-- Archive one-off scripts and sprint-specific patches.
-- Split `observe_sync.py` and `screenshot_scenarios.py`.
-- Add pytest markers and domain folders.
-- Reconcile orchestrator docs and git behavior.
-
-Acceptance:
-
-```powershell
-python tools/qa_smoke.py --quick
-python tools/validate_assets.py --report
-npm --prefix tools/ai_studio_orchestrator run typecheck
-```
-
----
-
-## Files To Prioritize
-
-### Highest Value
-
-| File | Why | First action |
+| Concept | Copies | Single source |
 |---|---|---|
-| `game/engine.py` | Dead sim logic, compatibility forwarding, presentation/sim leakage | Delete old sim helpers after tests |
-| `game/sim_engine.py` | Too many sim responsibilities, possible time double-advance | Fix clock ownership, extract lifecycle/fog/separation |
-| `game/ui/hud.py` | Main UI god object | Extract layout and typed UI actions |
-| `game/graphics/ursina_renderer.py` | Main renderer god object | Extract visual specs and unit overlays |
-| `game/input_handler.py` | Input plus UI policy plus world selection | Split into hotkeys, UI router, world selection, placement |
-| `game/entities/hero.py` | Entity god object | Extract inventory/rest/navigation/intent services |
-| `ai/behaviors/bounty_pursuit.py` | Arrival handler dumping ground | Move arrival dispatch out |
-| `config.py` | Mixed gameplay/render/env/dev registries | Move content definitions to registries |
-
-### Important But Later
-
-| File | Why | First action |
-|---|---|---|
-| `game/graphics/ursina_app.py` | App/camera/input/HUD upload/debug capture mixed | Extract HUD upload and camera controller |
-| `game/graphics/ursina_terrain_fog_collab.py` | Terrain/fog/props/instancing/debug mixed | Split terrain props and fog texture |
-| `tools/observe_sync.py` | Monolithic QA harness | Split scenarios/assertions/reporting |
-| `tools/screenshot_scenarios.py` | Huge scenario registry | Move scenarios into modules |
-| `tools/ai_studio_orchestrator/src/cli.ts` | Automation command god object | Split commands and git/receipt services |
-| `game/world.py` | World state plus generation plus rendering | Split tiles, generation, fog, render fallback |
-| `game/systems/poi_interaction.py` | Large coupled content resolver | Split interaction handlers by POI type |
+| **Path replan + commit-window + follow/deferred-None block** | 5–7 copies: `enemy.py:289-320,562-589`, `guard.py:159-180`, `tax_collector.py:136-160,191-213` (+ kite branch) | `navigation.advance_along_path_to(entity, world, buildings, gx, gy, dt, ...)`; leave `hero.py` out (its crc32 stagger + fog guards differ) |
+| **Hero intent taxonomy derivation** | `hero.py:1013-1086` + `basic_ai.py:144-175` (the latter is a dead fallback) | `ai/intent.py:derive_intent(hero)` |
+| **"Route hero to a building" (best_adjacent_tile + center fallback)** | 11 sites across exploration/shopping/hunger/journey/bounty/basic_ai | `ai/behaviors/movement.py:route_to_building(...)` |
+| **"Engage enemy" + commit-window guard + ms conversion** | ~8 copies in `defense.py` + `exploration.py` | `defense.engage(hero, enemy, now_ms)` + `_combat_commit_active()` + module `TARGET_COMMIT_MS` |
+| **Difficulty HP/damage scaling on a fresh enemy** | `spawner.py:189-197`, `lairs.py:144-153`, `wave_events.py:254-259` | `DifficultySystem.apply_to_enemy(enemy)` |
+| **Ranged-tower scan-and-fire loop + inline `sqrt`** | Guardhouse/Ballista/Wizard in `defensive.py` | `RangedAttackMixin` + `nearest_enemy_in_range()` + `Building.dist_to()` (Wizard is AoE — shares only the distance helper) |
+| **Timed-research start/advance/progress** | Marketplace/Blacksmith/Library | `ResearchableMixin` (subclasses supply `available_research` + `_on_research_complete`) |
+| **One-shot animation FSM** | pygame `hero/enemy/worker_renderer.py` (3×) + Ursina `_compute_anim_frame`/`instanced_unit_renderer` | `graphics/renderers/_anim_base.py:OneShotAnim` + `ursina_units_anim.resolve_anim_clip_frame` |
+| **Health-bar draw + `to_screen` projection** | 5–7 renderer copies | `graphics/renderers/_overlays.py` |
+| **Word-wrap text to pixel width** | `chat_panel.py` (imported cross-module by `pause_menu`), `dev_tools_panel.py` | `game/ui/text_wrap.py` |
+| **Modal dim-backdrop + card + button shell** | memorial / demolish-confirm / interior overlays | `widgets.ModalOverlay` base |
+| **OpenAI-compatible provider + `_init_client` scaffolding** | `openai_provider`, `grok_provider`, + 4 providers' import/try-except | `OpenAIProvider(base_url=...)` (Grok = 5-line subclass) + `BaseLLMProvider` helpers |
+| **LLM JSON-object extraction + PROMPT_SENT/RESPONSE sequence** | `llm_brain.py` 2–3× each | `LLMBrain._extract_json_object()` + `_complete_with_events()` |
+| **AI tool-action vocabulary + place-type groupings** | `prompt_templates`, `decision_moments`, `prompt_packs`, `direct_prompt_validator`, `arrival_handlers` | `ai/vocab.py` (`ToolAction`/`DirectIntent` enums + `SAFE_HAVEN/SHOP/PLAYER_HOME` frozensets) |
+| **`move_towards`/`distance_to` reimplemented per entity** | hero/enemy/guard/peasant/tax_collector | `MovableEntity` mixin (or reuse `navigation.step_towards`) — unify the bool-vs-None return |
+| **Scene preamble (find/create castle + clear + reveal)** | 17× in `screenshot_scenarios.py` | `tools/screenshots/scene_setup.py` |
 
 ---
 
-## What Not To Refactor Yet
+## Boundary-leak map (sim ↔ render ↔ ui ↔ ai ↔ tools)
 
-- Do not rewrite the whole renderer before extracting shared visual specs. The renderer has performance-sensitive paths and visual regressions are expensive.
-- Do not move all config to JSON in one pass. Start with building and audio registries that have clear drift today.
-- Do not replace the entire AI with command DTOs in one sprint. Add typed `HeroTask` compatibility first.
-- Do not reorganize all tests before critical engine/sim correctness tests exist. Test movement should follow stable markers and fixtures.
-- Do not remove compatibility aliases without grep checks and tests. Some tools and old scenarios still depend on old names.
-- Do not refactor orchestrator git behavior casually. Treat automation safety as its own isolated sprint.
+The seams exist; the data crossing them is still live. The leak inventory is L1–L10 in the architecture map above. The fixing seams:
 
----
-
-## Suggested Agent Ownership
-
-If this becomes a cleanup initiative, do not send every agent at once. Use staged waves.
-
-### Phase 0
-
-- Agent 03 - high intelligence: engine/sim time and cleanup characterization tests
-- Agent 11 - medium intelligence: test/gate coverage
-- Agent 10 - low intelligence: baseline perf run
-
-### Phase 1
-
-- Agent 03 - high intelligence: engine/sim boundary cleanup
-- Agent 11 - medium intelligence: verify gate coverage
-- Agent 04 - low/medium intelligence: determinism review
-
-### Phase 2
-
-- Agent 08 - high intelligence: HUD split and UI actions
-- Agent 09 - high intelligence: renderer split, visual specs, snapshot no-mutation
-- Agent 10 - medium intelligence: render/UI perf checks
-- Agent 11 - medium intelligence: visual snapshot regression
-
-### Phase 3
-
-- Agent 06 - high intelligence: AI task contracts and arrival handlers
-- Agent 05 - high intelligence: combat/entity/service extraction
-- Agent 04 - medium intelligence: stable ID and deterministic path budget review
-- Agent 11 - medium intelligence: behavior regression tests
-
-### Phase 4
-
-- Agent 05 - medium intelligence: building definition registry
-- Agent 09 - medium intelligence: visual specs and prefab registry integration
-- Agent 14 - medium intelligence: audio manifest
-- Agent 12 - high intelligence: validators and tooling schema
-
-### Phase 5
-
-- Agent 12 - high intelligence: tooling package split and orchestrator cleanup
-- Agent 01 - medium intelligence: docs/process plan and send list
-- Agent 11 - medium intelligence: test organization and markers
+1. **Render DTOs** — `UnitRenderDTO`/`BuildingRenderDTO` (frozen, scalar: `entity_id`, `x`, `y`, `hp`, `state_name`, `anim_trigger`, `kind`, `is_discovered`, `tile_visible`). Snapshot becomes `tuple[DTO, ...]`, which **simultaneously kills renderer write-back (L2) AND `id(obj)` keying** (key on the existing `entity_id`/`hero_id`). Start here (Move 3).
+2. **`AiGameView` / `UiGameView`** — split `get_game_state()` into typed read-only views. AI needs query helpers (`nearest_enemy`, `is_walkable`, `shop_catalog_for(id)`) + immutable economy facts (`player_gold:int`, a purchase *request* channel), **never** the live `World`/`economy`/`sim`/`engine`. UI gets the same + selection, never `engine`. (`economy.hero_purchase` called from inside `shopping.py:97` is a write across the boundary — route through a command/event.)
+3. **Render-state ownership** — animation one-shots owned by `RendererRegistry` keyed on `entity_id`, not stamped on `_render_anim_trigger` on the sim entity.
+4. **Move `World.render`/`render_fog` out of `world.py`** into a `WorldTerrainRenderer` in `graphics/` (kills L10; the headless sim drags a `pygame` import for nothing). Note: `render`/`render_fog` have **two** callers (`pygame_renderer.py` + `render_coordinator.py` minimap), and `.visibility` is referenced across 25 files incl. AI — the delegating property must return the **live** grid (Ursina does `world.visibility[ty][tx]=1`).
+5. **Invert `graphics → tools` imports (L9)** — move reusable runtime helpers (Kenney tint/scale, GLTF shading in `model_viewer_kenney._apply_gltf_color_and_shading`) into `game/graphics/kenney_material.py`; leave `tools/` as the dev-only caller. `tools → game` is the only allowed direction. **This makes `tools/model_viewer_kenney.py` (966) and `tools/kenney_pack_scale.py` (275) load-bearing runtime deps today** — a packaged build needs the dev tree.
+6. **AI uses object identity instead of stable IDs** — `context_builder.py:125` (`enemy.target == hero`), raw `Bounty` objects handed toward LLM context (`:106`), `sim = game_state.get("sim")` in `poi_awareness.py:334` + `builder_peasant.py`. → Compare by `enemy.target_id == hero.hero_id`; pass `BountySimDTO` summaries; give the view the specific data instead of the whole `SimEngine`.
+7. **`PygameWorldRenderContext` holds live `bounty_system`/`economy`** (`pygame_renderer.py:48-54`) — lower priority; carry render DTOs + `gold:int` instead.
 
 ---
 
-## Verification Commands
+## Cross-cutting slop themes
 
-Use these as the default gates for cleanup work:
+### Dead code (delete-first wins — ~1000+ LOC, near-zero risk)
+
+Deleting unreachable code is the cheapest way to shrink the god-files before splitting them. Confirmed-dead (each grep-verified, no live caller):
+
+- **Legacy LLM prompt path (~260 LOC):** `ContextBuilder.build_summary` (95 LOC, `context_builder.py:320-414`), `prompt_templates.SYSTEM_PROMPT`/`DECISION_PROMPT`/`build_decision_prompt`, and the non-autonomous branch of `llm_brain._process_request:162-201`. Only reachable when `wk50_autonomous` is absent, which never happens (`llm_bridge.py:73` always sets it). Collapse `_process_request` to always use the autonomous path with a `get_fallback_decision` safety net. [VERIFIED — and the v1 claim that `observe_sync` also kept this alive is **false**; it needs no changes.]
+- **Ursina underground render subsystem (~250 LOC):** behind an unconditional early return in `ursina_renderer.py:1320-1441`. (The *sim-side* dungeon entry is live — only the render is gated; do not touch `poi_interaction._handle_dungeon`.)
+- **`_unit_anim_surface` (72 LOC, `ursina_renderer.py:543-614):** a dead second animation engine; `_compute_anim_frame` is the live one.
+- **`get_ranged_spec` probe (`defensive.py:156-160`):** no building implements it; always falls through to hardcoded `'bolt'` defaults. Replace with a `RANGED_SPEC` class attr. Also dead: `_last_ranged_events` (plural) list — engine only reads the singular `_last_ranged_event`.
+- **`GameEngine._maybe_apply_early_pacing_nudge` + `_nearest_lair_to` + `_build_system_context`** (`engine.py:1103-1180,1285-1294`): forks of live `SimEngine` versions, zero callers; the stale `_build_system_context` returns only 6 of the 13 `SystemContext` fields. [VERIFIED — and `tests/test_engine.py:129` monkeypatches the **dead** copy, so the test isolates nothing; repoint it to `engine.sim`.]
+- **Dead AI/tool one-offs:** `basic_ai._get_nearest_undepleted_poi` (no callers); `audio_system.emit_from_events` (dead); the GeoMipTerrain path (env-flag default-off, per MEMORY); `_spawn_underground_enemies` (`poi_interaction.py:445-491`, only the commented `:376` call site).
+- **Vestigial config layer:** the 13 `*Config` dataclasses in `config.py` whose instances exist only to produce the flat aliases (keep `DifficultyConfig`/`WaveEventConfig`).
+
+### Error-handling & observability sprawl (its own remediation track)
+
+Repo-wide: **423+ broad `except` clauses** (worst: `ursina_terrain_fog_collab.py` 41, `instanced_nature_renderer.py` 39, `ursina_app.py` 37, `display_manager.py` 24, `hero_panel.py` 23), **62 `print()` calls** in `game/`+`ai/`, and the `logging` module is imported **zero** times. There is no logging facility — only prints and silent swallows. This both hides current bugs and will hide the bugs the refactors introduce. **Recommendation:** introduce a `game/logging.py` (or stdlib `logging` config) early; replace bare `except Exception: pass` around `vfx.update`/`render` (`pygame_renderer.py:117-121`, `engine.py:1380-1384`) and the building-panel `research()` arity cascade with logged/typed handling so wiring bugs surface.
+
+### Performance (cache/precompute, all in render/UI — determinism-exempt)
+
+- One `FrameContext` per frame: `get_game_state()` builds **every hero's** profile snapshot every call (`sim_engine.py:397-401`), and the Ursina path + pygame HUD each rebuild overlapping frame state. Build hero profiles on HUD demand, not per tick. (v1 item 23.)
+- Per-frame allocation: VFX debris re-randomizes every frame; chat wrapping re-wraps every frame; pygame renderers call `transform.flip()` at render time; `follow_path` uses `pop(0)`; `ursina_terrain_fog_collab.py:532` re-allocates a `set()` each frame. (v1 items 24-28.)
+- Panel dirty-caching for `building_panel`/`pause_menu`/`chat_panel` (esp. the Ursina HUD texture-upload path). (v1 item 24.)
+- `instanced_nature` `set_visible_chunks` blanket-dirties every model each frame → skip the GPU re-upload when the visible set is unchanged.
+
+### Stringly-typed state (close the typo class)
+
+`hero.target["type"]` magic strings (WK64 added `TargetType` but behaviors still write bare `{"type":"..."}` literals — add `contracts.task_dict(TargetType.X, **payload)`); building `update()` dispatch by `building_type == "trading_post"` string (`sim_engine.py:970-995`); HUD actions as magic strings/dicts; VFX events as bare dicts; POI `interaction_type` strings (add a `POIInteraction(str, Enum)`).
+
+---
+
+## [VERIFIED] high-confidence findings (24, independently re-read)
+
+These were handed to adversarial reviewers who confirmed all 24 are real. Severity = adjusted (most high→medium because they are structure/maintainability, not live bugs). Start here for "confirmed, do-able now."
+
+| Area | Finding | Sev | Notes from the reviewer |
+|---|---|---|---|
+| engine | Dead `_maybe_apply_early_pacing_nudge`/`_nearest_lair_to` duplicates; test monkeypatches the dead copy | med | drifted (not byte-identical); repoint `test_engine.py:129` to `engine.sim` |
+| engine | `engine.py` is a 1735-LOC god-object | med | safe **only** if 1-line delegating wrappers are kept (GameCommands/InputHandler/tests depend on the surface) |
+| engine | 39× "set one selection, null the others" idiom | med | ~80% already solved by `SelectionState`; the manual nulls are now **dead no-ops** — finish wiring + delete, don't add a new helper |
+| sim | `SimEngine.update(dt, game_state)` takes the UI dict only for `castle` + forwarding | med | also reads `micro_view_building` (LLM-only); build a sim-owned `EntityTickContext`, cache `_castle()` |
+| sim | `sim_engine.py` is a 1331-LOC god-module (7 responsibilities) | **high** | extraction safe; iteration already deterministic; keep delegating wrappers (tests call `_apply_entity_separation`/`_update_fog_of_war`) |
+| sim | `_update_fog_of_war` is 148 LOC doing 6 things | med | two building passes are over **disjoint** sets (neutral skip) — preserve one-radius-per-building |
+| input | `input_handler.py` 772-LOC god-file | med | WK63 explicitly deferred this; cohesive concern, schedule deliberately behind regression tests |
+| input | Selection mutual-exclusion implemented 3× | **high** | thin test net + a real WK61 regression history → keep high; pair the dedup with new enemy/empty-space deselect tests |
+| input | Building hotkey registry triplicated (actually 5×) | med | display order ≠ hotkey order — registry must encode both |
+| entities | 4 entities copy-paste the path-replan block (+2 more found) | **high** | scope the helper to enemy/guard/tax; **leave hero.py out** (crc32 stagger/fog logic); TaxCollector enrichment is a deliberate behavior change, gate it |
+| entities | `hero.py` 1152-LOC, 7 responsibilities | **high** | mixin approach is safe (plain class, duck-typed callers); also de-dup the double `set_event_bus`/`_event_bus` init |
+| entities | Two parallel hero-intent taxonomies (entity vs AI) | med | the `basic_ai` fallback is effectively dead; `HeroDecisionRecord` lives in `game/sim/contracts.py` (not `ai/contracts.py`) |
+| buildings | Stringly-typed `update()` dispatch ladder, 6 signatures | **high** | 7th (Palace) handled engine-side with no `update()`; reuse the widened `SystemContext`; keep guard-spawn synchronous |
+| buildings | 3 near-duplicate ranged-tower bodies; dead `get_ranged_spec`/`_last_ranged_events` | med | Wizard is AoE — don't force it onto the single-target mixin; keep singular `_last_ranged_event` (a test asserts it) |
+| buildings | Timed-research duplicated across Marketplace/Blacksmith/Library | med | not byte-identical (cost defaults 200 vs 300; Library has a completion effect) — mixin must thread `game_state` |
+| systems | Triplicated difficulty HP/damage scaling | med | guards are consistent; `apply_to_enemy(enemy)` fits all 3 control-flow shapes |
+| systems | `poi_interaction.py` oversized + dead underground spawner | med | underground is **live** on mountain maps — only `_spawn_underground_enemies` is dead; the "always empty" claim is false |
+| systems | POI cooldown keyed on `id()` not stable IDs | med | mock fixtures lack IDs — use `getattr(h,"hero_id",id(h))`; theoretical (no save system yet) |
+| world | `World` God-class mixes tiles+gen+fog+**pygame** | **high** | real sim→render leak; delegating `.visibility` must return the live grid (25 files, incl. Ursina item-assignment) |
+| world | `_currently_visible` is `list` in sim but `set` in renderer/tools (latent `.discard()` crash) | med | not used for sim correctness; fix the type + the `= []` sites |
+| ai | Dead legacy prompt system (`build_summary` + `SYSTEM_PROMPT`) | med | the `observe_sync` dependency claim is false; safe to delete |
+| ai | `validate_direct_prompt_output` is a 295-LOC function | med | preserve deferred-combat early-return, critical-HP redirect, and the **two** distinct obey/defy passes |
+| ai | `ContextBuilder.build_hero_context` 227-LOC god-method | med | the `poi_awareness` import **must stay lazy** (circular import via `ai.behaviors.__init__` → `llm_bridge`) |
+| ai | `BasicAI` mixes coordinator + ~250 LOC inline handlers | med | fold into the already-planned router (item 12) rather than spinning up parallel behavior files |
+
+---
+
+## Remaining audit surface (completeness critic — what THIS audit did not cover)
+
+The audit's own critic flagged 12 gaps. These are real and should drive a follow-up pass; do not assume the codebase is fully mapped.
+
+1. **`studio_gateway/` (1734 LOC, 15 files + web frontend) — zero coverage.** A standalone HTTP orchestration daemon (sprint state machine, gates, git_ops, queue, `daemon.py` 315 / `orchestrator.py` 314). Disconnected from the game, so silently dropped. Classify it: keep+audit or declare out-of-charter.
+2. **`game/graphics → tools/` runtime import edge (L9) — confirmed but un-scoped.** 7 sites; `model_viewer_kenney.py` (966) + `kenney_pack_scale.py` (275) are load-bearing renderer deps. Invalidates the "tools is offline" scoping assumption.
+3. **Error-handling/logging sprawl** (423 excepts / 62 prints / 0 logging) — see Cross-cutting themes; deserves its own track.
+4. **~13 dead one-off `tools/` scripts** (codemods `patch_*.py`, PM-hub updaters `update_pm_hub_wk*.py`, capture patches) — archive/delete; `tools/archive/` already exists.
+5. **~6000 LOC of asset/model/build tooling never audited** (`model_assembler_kenney.py` 1445, `model_viewer_kenney.py` 966, `generate_cc0_placeholders.py` 707, the `*_export_frames`/`*_texture_overrides` copy-paste families). Some are runtime deps (gap 2).
+6. **`tests/` (12,504 LOC, 81 files) — zero coverage, prime slop habitat.** 32 WK-numbered one-shot regression files, a 1014-LOC `test_terrain_perf.py`, ~33 conftest fixtures. **This matters because the headline plan is "split god-files behind characterization tests" — the trustworthiness of that net is currently unassessed.**
+7. **Duplicate-name parallel harness:** `tools/perf_stress_test.py` (298) vs `tests/perf_stress_test.py` (276) share ~no lines. Nobody owns "how we measure perf" — relevant to the open hero-render perf issue in MEMORY.
+8. **`tools/ai_studio_orchestrator/` (TypeScript/Node subproject)** — vendored `node_modules`, `dist/` build artifacts, hundreds of run JSONs inside the Python repo. Repo-hygiene decision needed.
+9. **~2700 LOC of mid-size `game/graphics` support modules outside all 5 gfx scopes:** `visual_specs.py` (200, high blast radius), `terrain_geomipterrain.py` (462, rejected-but-present), `ursina_unit_overlays.py`, `ursina_pick.py`, texture-bridge pairs, `underground_terrain.py` (likely dead).
+10. **Seam modules dropped between areas:** `game/sim/direct_prompt_{exec,commit,targets}.py` (404 LOC, sim↔ai bridge — possible over-fragmentation/duplication of the validator); `game/display_manager.py` (314 LOC, 24 bare excepts).
+11. **`main.py` bootstrap** (113 LOC, the real entry point) only partially covered.
+12. **Repo bloat / hazard:** `docs/` 119MB, `.cursor/` 91MB (114 plan `.md` + churning agent-log JSON), checked-in perf baseline JSONs + `models_compressed/` mirror, and **a full second copy of the repo under `.claude/worktrees/quirky-roentgen-e15808/`** that doubles every grep/glob and can mask which copy is authoritative.
+
+---
+
+## Sequenced roadmap (proposed sprints)
+
+Six rounds, ordered by risk and dependency. Rounds 0 and C are mostly parallelizable and low-risk; A and B are the structural core and need the test/screenshot net from Round 0. Map to WK65+.
+
+### Round 0 — Delete-first, observability, and the characterization net (LOW risk, do immediately)
+*The cheapest, highest-clarity work; it shrinks the god-files and builds the safety net the rest of the plan stands on.*
+- Delete all confirmed dead code (Cross-cutting §Dead code): legacy prompt path (~260), Ursina underground render (~250), `_unit_anim_surface` (72), `get_ranged_spec`/`_last_ranged_events`, the 3 dead `GameEngine` methods (+ fix `test_engine.py:129`), `_spawn_underground_enemies`, `basic_ai._get_nearest_undepleted_poi`, `audio.emit_from_events`, the vestigial config dataclass layer.
+- Introduce `logging`; replace the worst bare `except: pass` (VFX, building-panel research arity) with logged handling.
+- Archive the ~13 dead `tools/` one-off scripts; resolve the `.claude/worktrees/` shadow copy so it stops polluting search.
+- **Write characterization tests for every god-file slated for splitting** (snapshot no-mutation, `AiGameView` JSON-pure, HUD/renderer/sim-engine behavior pins). This is Move 2 and the precondition for Rounds A/B.
+- *Gates:* `pytest` · `determinism_guard` · `qa_smoke --quick`. *Agents:* 03/05/06/11. *Screenshots:* none (no render change).
+
+### Round A — Boundary correctness: the DTO chain (Moves 1-6) (MED-HIGH risk)
+*Make the seams real so render/AI stop touching live sim state.* Strictly ordered: 1 (stop render mutation) → 3 (render DTOs) → 4 (split frame DTOs) → 5 (`AiGameView`, drop `sim`/`world`/`economy`/`engine` from the dict) → 6 (`HeroCommand`). Also fold in L9 (invert `graphics→tools`) and L10 (move `World.render` out).
+- *Gates:* full suite + determinism + `qa_smoke`; **before/after screenshots** for every render path (units, buildings, fog, bounties, rubble) since DTOs touch rendering. *Agents:* 03 (DTOs/boundary), 06 (AI view/commands), 09 (renderer), 11 (regression + screenshots), 04 (determinism).
+
+### Round B — God-file splits (Moves 7-9, 11 + blueprints) (MED risk, mechanical)
+*Break up the 32 oversized files behind compat shims.* Sim side: Move 7 (`BuildingLifecycleSystem`) → Move 8 (extract `fog`/`separation`/`lumber`/`poi_discovery`/`snapshot_builder`) → Move 9 (grow `SystemRunner` to the real ordered pipeline). Presentation side (parallel): split `hud.py`, `ursina_renderer.py`, `ursina_terrain_fog_collab.py`, `ursina_app.py`, `engine.py`, `hero.py`, `input_handler.py`, plus `visual_specs` adoption (Move 11).
+- *Gates:* full suite + determinism + `qa_smoke`; **broad screenshots** for every UI/render split (HUD panels, pause menu, build catalog, base overview, Ursina capture). *Agents:* 03/05 (engine/sim), 08 (HUD/UI), 09 (renderers), 10 (perf), 11 (visual regression).
+
+### Round C — Registries / single-source-of-truth (Move 10 + dedup clusters) (LOW-MED risk, mostly headless)
+*Define each concept once.* `BuildingDef` registry (clusters 1/2/6) with derived back-compat views + import-time drift assert; finish `visual_specs` adoption (cluster 3); `HERO_CLASS_COLORS` (cluster 4); audio `contract.py` (cluster 5); the per-area helper extractions (path-replan, route-to-building, engage, difficulty `apply_to_enemy`, ranged/research mixins, `text_wrap`, provider base). Purge the ~17 "WK34 REMOVED" zombie building keys.
+- *Gates:* full suite + determinism + `qa_smoke` + `validate_assets`. *Agents:* 05 (building registry/systems), 09 (visual specs), 14 (audio), 06 (AI vocab/helpers), 11.
+
+### Round D — AI router + AI file splits (Move 12) (MED risk, determinism-fragile)
+*Make behavior competition explicit.* `TaskRouter` of `TaskProposal`s (Move 12); split `basic_ai`/`context_builder`/`direct_prompt_validator`/`bounty_pursuit`/`exploration`; add `ai/vocab.py`. **Requires the WK64 characterization-test discipline** (behavior pins + `determinism_guard`).
+- *Gates:* full suite + determinism + `qa_smoke` + AI behavior suite. *Agents:* 06 (AI), 04 (determinism), 11.
+
+### Round E — Follow-up audit of the un-covered surface (completeness gaps)
+*Decide charter + de-slop the rest.* Classify `studio_gateway/` and `tools/ai_studio_orchestrator/`; audit the ~6000 LOC asset/model tooling (esp. the runtime deps from L9); audit `tests/` for slop/overlap before relying on it as the net; reconcile the duplicate perf harness; repo-hygiene pass (artifacts, worktree shadow, `docs/`/`.cursor/` size). *Agents:* 12 (tooling), 11 (tests), 01 (charter/hygiene decisions).
+
+---
+
+## What NOT to refactor yet / risk guidance
+
+- **Keep delegating wrappers on every god-file split.** Tests + `GameCommands`/`InputHandler` + tools depend on the current method surface; a "pure move" that deletes symbols will break them. Verified repeatedly in the adversarial pass.
+- **Sim-boundary code (`game/systems`, `game/entities`, `ai`) needs characterization tests + a green `determinism_guard` before any move** — iteration order, RNG call order, and `now_ms()` usage must be preserved exactly. Most findings here are *structure*, not bugs; don't "fix behavior" while refactoring (e.g. the TaxCollector replan enrichment is a deliberate, gated change, not free cleanup).
+- **UI/render changes require broad screenshot verification** — every visual change path, checking alignment/layering before styling. Don't rubber-stamp one narrow scenario.
+- **Don't reorder `SimEngine.update()` side effects** when growing the `SystemRunner` — preserve exact execution order (WK64 kept buff/wave un-collapsed for this reason).
+- **Isolate the orchestrator/`studio_gateway` git-touching automation** — treat as its own sprint with mocked tests; never slip git-behavior changes into gameplay cleanup.
+- **Don't remove compat aliases or "WK34 REMOVED" keys without a grep + test pass** — some tools/scenarios still import old names.
+- **The shadow worktree under `.claude/worktrees/` is not the working copy** — verify which tree you're editing before trusting grep counts.
+
+---
+
+## Per-area top recommendations (quick index)
+
+The single highest-leverage change per area (full findings in the audit dataset; blueprints above):
+
+- **engine-core** — delete the 3 dead methods now; split `engine.py` into selection/lifecycle/actions facades + `console.py`; collapse the 39× selection idiom into `SelectionState`.
+- **sim-engine** — split `sim_engine.py` into orchestrator + 6 services; `update(dt)` (drop the UI dict); **delete the dead `SystemRunner` wiring or actually route systems through it**; cache `_castle()`/`_unclaimed` per tick.
+- **input-commands** — split into the `game/input/` package; collapse triple selection mutual-exclusion; unify the hotkey registry; typed `HudActionDispatcher`.
+- **entities-units** — `navigation.advance_along_path_to` (kills 5+ copies); `hero.py` mixin split; `ai/intent.py`; `ENEMY_STATS` table replacing 7 subclasses.
+- **buildings** — polymorphic `Building.update(ctx, dt)` (kill the stringly-typed ladder); `ResearchableMixin`; `RangedAttackMixin`; one `BUILDING_SPECS`.
+- **systems** — `DifficultySystem.apply_to_enemy`; split `poi_interaction.py`; move `LayerPathfinder` out of `pathfinding.py`; one predicate-driven `_find_spot`.
+- **world** — split into `world`/`worldgen`/`fog` + move `render` to the pygame renderer; fix `_currently_visible` type; collapse `get_zone`/`get_zone_blend`.
+- **ai-core** — delete the legacy prompt path (~260 LOC); split the 3 god-files; `ai/vocab.py`; halve per-consult context rebuild.
+- **ai-behaviors** — rename/split `bounty_pursuit.handle_moving` (it's the global MOVING dispatcher) into `movement.py`; one `route_to_building` + one `engage` helper; collapse providers; `task_dict(TargetType.X, ...)`.
+- **ui-hud** — split `hud.py` into the 8-module package; one `ToastManager`; typed `HudAction`; stop reaching across boundaries (POI SFX via EventBus).
+- **ui-panels** — `HeroSheetView.from_sources` + `_Column` helper (1056→~380); shared `build_catalog_model.py`; renderers return a `RenderResult` instead of mutating panel fields.
+- **ui-other** — split `pause_menu.py` (one `_layout()` per page); `text_wrap.py`; `ModalOverlay` base; kill per-frame `SysFont` allocation.
+- **gfx-ursina-renderer** — delete ~450 LOC dead first, then split into 8 modules; fix terrain/fog ownership inversion (state dataclass); `_gate_or_hide` helper; stable-ID keying.
+- **gfx-ursina-terrain-app** — split the 1783-LOC collaborator into `terrain/` + extract `CameraController`/`HudTextureUploader`; `_create_tree_at`; delete dead cave-shader body.
+- **gfx-instanced-sprites** — split nature renderer into `nature/` (delete triplicated dead GLB color extraction); split interiors into per-building modules + `InteriorGeometry`; shared `build_clips()`.
+- **gfx-pygame-vfx** — fix the shared-guard-renderer bug; extract `_anim_base`/`_overlays`; migrate registry off `id()`; split `vfx.py`; type the VFX event contract.
+- **audio** — split `audio_system.py` into the package; one listener-position for gating AND attenuation; reserve an ambient channel; key cooldowns on stable IDs.
+- **config-content** — split into `config/` package behind a re-export `__init__`; one `BUILDING_DEFS`; delete the vestigial dataclass layer; `env.py` helpers.
+- **tools-qa** — fix the two `determinism_guard.py` correctness bugs FIRST; fix `observe_sync` dual-clock; split `screenshot_scenarios.py`/`observe_sync.py`; add the (currently-zero) tool tests before the splits.
+
+---
+
+## Verification commands (default gates for all cleanup work)
 
 ```powershell
 python -m pytest
@@ -1239,44 +539,28 @@ python tools/validate_assets.py --report
 python tools/perf_benchmark.py
 ```
 
-For UI/pygame visual changes:
-
+For UI / pygame visual changes (capture before AND after; view and compare):
 ```powershell
-python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/codebase_cleanup_ui_panels --size 1920x1080 --ticks 480
-python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/codebase_cleanup_pause --size 1920x1080 --ticks 480
-python tools/capture_screenshots.py --scenario ui_build_catalog --seed 3 --out docs/screenshots/codebase_cleanup_catalog --size 1920x1080 --ticks 480
+python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/cleanup_ui_panels --size 1920x1080 --ticks 480
+python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/cleanup_pause --size 1920x1080 --ticks 480
+python tools/capture_screenshots.py --scenario ui_build_catalog --seed 3 --out docs/screenshots/cleanup_catalog --size 1920x1080 --ticks 480
+python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/cleanup_base --size 1920x1080 --ticks 480
 ```
 
 For Ursina visual changes:
-
 ```powershell
-python tools/run_ursina_capture_once.py --scenario base_overview --ticks 480 --out docs/screenshots/codebase_cleanup_ursina --no-llm
-```
-
-For orchestrator changes:
-
-```powershell
-npm --prefix tools/ai_studio_orchestrator run typecheck
-npx tsx tools\ai_studio_orchestrator\src\cli.ts validate --plan .cursor\plans\v1.6_gameplay_fun_roadmap.plan.md --dry-run
+python tools/run_ursina_capture_once.py --scenario base_overview --ticks 480 --out docs/screenshots/cleanup_ursina --no-llm
 ```
 
 ---
 
-## Final Recommendation
+## Final recommendation
 
-The best next move is to **finish the active v1.6 gameplay/playtest slice**, then run a **two-round cleanup sprint before the next large feature wave**:
+The original v1 plan was right that "the biggest cleanup opportunity is to finish the boundaries already started." This audit confirms it with evidence and sharpens the order:
 
-1. **Round A: Engine/sim correctness cleanup**
-   - Fix sim time ownership.
-   - Consolidate destroyed-building lifecycle.
-   - Delete dead `GameEngine` sim helpers.
-   - Add snapshot no-mutation tests.
+1. **Round 0 first, always.** Deleting ~1000+ LOC of dead code, adding logging, and writing the characterization net is low-risk, immediately shrinks the god-files, and is the precondition for everything else. Do it before the next feature wave.
+2. **Then Round A (make the seams real)** — render/AI must stop touching live sim state. This is the structural keystone; the DTO/`AiGameView`/`HeroCommand` chain is what makes every later split safe and unblocks future replay/multiplayer.
+3. **Round B and C in parallel** — god-file splits (mechanical, behind shims) and registries (define content once) don't conflict and can run as parallel tracks.
+4. **Round D (AI router) last** among the code-cleanup rounds, and **Round E (audit the un-covered surface)** whenever there's slack — at minimum, classify `studio_gateway/` and assess the test suite before relying on it as the safety net.
 
-2. **Round B: UI/render large-file pressure relief**
-   - Extract HUD layout and UI actions.
-   - Add visual specs.
-   - Extract Ursina unit overlays.
-   - Add panel dirty caching for the worst per-frame offenders.
-   - Add one-per-frame `FrameContext` reuse for snapshot/UI/profile data.
-
-This preserves v1.6 momentum while preventing the next feature wave from piling more code into the same overgrown files. After that, tackle AI task contracts and registries in parallel with feature work.
+The through-line: this codebase is *overgrown, not broken.* The work is disciplined deletion and behavior-preserving extraction behind tests and screenshots — exactly the pattern WK62-64 already proved out.
