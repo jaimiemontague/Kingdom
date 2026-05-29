@@ -100,11 +100,38 @@ def _ordered_sprint_keys(sprints: Dict[str, Any]) -> List[str]:
 
     Rolling logs are dicts; insertion order is usually chronological but can be wrong if old
     sprint blocks are edited/added later. Prefer created_utc when present.
+
+    Undated sprints inherit their most-recent DATED predecessor's timestamp
+    -------------------------------------------------------------------------
+    A naive "missing created_utc -> epoch (1970)" rule is WRONG for the common
+    real-world log shape where EARLY sprints carry created_utc but RECENT sprints
+    were appended without it. Treating those recent undated sprints as 1970 makes
+    them sort OLDEST, so "keep last N" archives the *newest* work and keeps ancient
+    sprints instead.
+
+    Real incident (2026-05-29): agent_01's log had dated wk58..wk63 followed by
+    undated wk64/wk65/wk66. The epoch rule sorted wk64+wk65 as 1970, so the roll
+    archived the recent wk64+wk65 and kept the ancient wk58+wk59. The fix below
+    walks the dict in INSERTION ORDER and makes each undated sprint inherit the
+    timestamp of the most recent dated sprint seen so far. Because logs are
+    appended top-to-bottom, an undated sprint that follows dated ones is therefore
+    treated as *at least as new* as its predecessor (it keeps its insertion
+    position relative to peers via the secondary index key), so newest work is
+    correctly kept.
+
+    Behavior summary:
+      - All-undated (e.g. worker logs): early-return preserving insertion order.
+      - Dated sprints: sort by their own created_utc (still corrects out-of-order
+        insertion).
+      - Undated sprint AFTER a dated one: inherits that predecessor's time -> sorts
+        right after it (newest-trailing-undated stays newest).
+      - Undated sprint BEFORE any dated one (leading-undated): inherits epoch ->
+        sorts oldest (archived first).
     """
     keys = list(sprints.keys())
     if not keys:
         return []
-    # If none of the sprints have created_utc, keep insertion order.
+    # Parse created_utc for each sprint; note whether ANY sprint is dated.
     created_any = False
     parsed: Dict[str, Optional[_dt.datetime]] = {}
     for k in keys:
@@ -113,15 +140,26 @@ def _ordered_sprint_keys(sprints: Dict[str, Any]) -> List[str]:
         if dt is not None:
             created_any = True
     if not created_any:
+        # All-undated (worker-log path): preserve insertion order exactly.
         return keys
-    # Stable sort: primary by created_utc (None sorts oldest), secondary by original insertion index.
+    # Predecessor-time inheritance: walk in INSERTION ORDER, carrying the most
+    # recent dated timestamp forward so trailing undated sprints sort as new.
     index = {k: i for i, k in enumerate(keys)}
-    def _key(k: str) -> tuple:
+    EPOCH = _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
+    effective: Dict[str, _dt.datetime] = {}
+    last_seen = EPOCH
+    for k in keys:
         dt = parsed.get(k)
-        # None -> sort first (oldest) so “keep last N” keeps newest dated sprints.
-        dt_key = dt or _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
-        return (dt_key, index[k])
-    return sorted(keys, key=_key)
+        if dt is not None:
+            # Running max (not just the immediate predecessor): keeps trailing undated
+            # sprints "newest" even if the dated sprints are themselves appended out of
+            # chronological order. Matches the docstring's "most recent dated seen so far".
+            last_seen = max(last_seen, dt)
+            effective[k] = dt          # dated sprint: its own timestamp
+        else:
+            effective[k] = last_seen    # undated: inherit most-recent dated predecessor
+    # Secondary key (insertion index) keeps ties stable and chronological.
+    return sorted(keys, key=lambda k: (effective[k], index[k]))
 
 
 def _backup_file(path: Path) -> Path:

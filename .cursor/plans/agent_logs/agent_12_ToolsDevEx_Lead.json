@@ -1422,6 +1422,83 @@
           ]
         }
       }
+    },
+    "tooling_roll_agent_logs_fix": {
+      "sprint_meta": {
+        "created_utc": "2026-05-29T22:00:00Z",
+        "notes": "Standalone tooling fix dispatched 2026-05-29: sprint-ordering bug in tools/roll_agent_logs.py (mixed dated+undated logs archived recent work). Predecessor-time inheritance + new test matrix."
+      },
+      "rounds": {
+        "roll_agent_logs_ordering_fix": {
+          "sprint_id": "tooling_roll_agent_logs_fix",
+          "round_id": "roll_agent_logs_ordering_fix",
+          "status": "done",
+          "pm_ref": "standalone dispatch (no PM round) - real incident 2026-05-29: agent_01 roll archived recent wk64+wk65",
+          "wave": 0,
+          "prompt_text": "Fix the sprint-ordering bug in tools/roll_agent_logs.py _ordered_sprint_keys (undated sprints sorted as 1970 epoch -> recent appended-undated sprints wrongly archived by keep-last-N). Replace with predecessor-time inheritance; add tests/test_roll_agent_logs.py matrix. DO NOT COMMIT.",
+          "what_i_changed": {
+            "tools/roll_agent_logs.py": "Rewrote _ordered_sprint_keys: undated sprints now inherit the timestamp of their most-recent DATED predecessor (walk dict in insertion order, carry last_seen forward; leading-undated inherit EPOCH and sort oldest). All-undated logs still early-return insertion order (worker-log path, unchanged). _parse_created_utc unchanged. Expanded the docstring to document the undated-inherits-predecessor behavior and the 2026-05-29 incident. No other behavioral change.",
+            "tests/test_roll_agent_logs.py": "NEW. 10-test matrix imported from the real tool API (_ordered_sprint_keys, _roll_one, module LOG_DIR/ARCHIVE_DIR): (a) all-dated out-of-order -> chronological; (b) all-undated -> exact insertion order; (c) bug case dated wk58..wk63 + undated wk64/65/66 -> keep=7 archives exactly [wk58,wk59] (FAILS old epoch logic); (d) interspersed undated sorts between dated neighbors; (e) leading-undated sorts oldest/archived-first; empty; + two end-to-end _roll_one tests (dry-run computes archive set, real write moves wk58/wk59 into the archive file) using monkeypatched LOG_DIR/ARCHIVE_DIR over pytest tmp_path."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
+            "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed",
+            "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, all skipped (real logs already <= 7), no crash"
+          ],
+          "evidence": {
+            "new_tests": "10 passed in 0.14s",
+            "full_suite": "592 passed, 4 skipped, 1 warning in 96.34s",
+            "old_logic_repro": "old epoch ordering on the bug case produced archived=[wk64,wk65] (recent work); fixed logic produces archived=[wk58,wk59] (oldest), kept=[wk60..wk66]",
+            "real_dryrun": "keep=7 dry_run=True processed=27 rolled=0 skipped=27 (no_roll_needed / not_schema_log); no error"
+          },
+          "surfaced_but_not_masked": "NONE. Worker-log all-undated path is preserved exactly (early return). No determinism or schema behavior weakened.",
+          "blockers": [],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Observed agent_12 log itself has several leaked top-level sprint keys (e.g. wk20-ui-input-bridge) sitting beside the canonical sprints dict; the tool only reads sprints[...] so this is cosmetic, not flagged here."
+          ],
+          "recommended_next_actions": [
+            "Optionally backfill created_utc on undated sprint blocks across agent logs so ordering is fully explicit rather than inheritance-derived."
+          ]
+        },
+        "roll_agent_logs_ordering_fix_review_revision": {
+          "round_id": "roll_agent_logs_ordering_fix_review_revision",
+          "round_meta": {
+            "prompt_set_id": "tooling_roll_fix_adversarial_review_revision",
+            "sent_at_local": "2026-05-29T16:00:00-06:00"
+          },
+          "prompt_text": "Re-dispatch after adversarial review of the prior attempt. Two review findings, both classified NON-BLOCKING / out-of-scope: (1) inherited time is the IMMEDIATE dated predecessor, not a running max -> only matters if dated sprints are appended out of chronological order (never happens in real append-only logs); faithful to spec, worth a one-line awareness note in the test docstring, no code change. (2) agent_12 log has leaked top-level sprint keys beside the canonical sprints dict; tool only reads sprints[...] so cosmetic / pre-existing / out of scope. Re-run all gates.",
+          "what_i_changed": {
+            "tools/roll_agent_logs.py": "No code change in this revision (the fix from the prior round stands): _ordered_sprint_keys uses predecessor-time inheritance with EPOCH for leading-undated, all-undated early-returns insertion order, _parse_created_utc unchanged. The IMMEDIATE-predecessor (non-running-max) behavior is intentional and faithful to the prescribed algorithm; review finding 1 confirmed it needs no code change.",
+            "tests/test_roll_agent_logs.py": "Added the review-requested awareness note to the module docstring: the inherited timestamp is the IMMEDIATE dated predecessor, NOT a running max, so out-of-chronological-order DATED inserts can place a trailing undated sprint in the middle; documented as faithful-to-spec (never triggers on real append-only logs) so it is not mistaken for a regression. No test assertions changed; the 10-test matrix is unchanged.",
+            "review_finding_2_top_level_leaked_keys": "NOT addressed (correctly out of scope): the leaked top-level sprint keys (wk18.., wk20.., etc.) sit beside the canonical sprints dict; roll_agent_logs only reads obj[\"sprints\"], so they are cosmetic and pre-existing. Left untouched per review classification."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_roll_agent_logs.py -q  ->  10 passed",
+            "python -m pytest -q  ->  592 passed, 4 skipped, 0 failed (no regression)",
+            "python tools/roll_agent_logs.py --keep 7 --dry-run  ->  runs cleanly, processed=27, no crash; agent_12 itself now shows would_roll (archived=1) because its canonical sprints dict holds 8 sprints at keep=7 -> the ordering logic handles it correctly without error",
+            "old-vs-new repro: reconstructed old epoch logic on the bug case archives [wk64,wk65] (recent work, the bug); fixed logic archives [wk58,wk59] (oldest) -> the bug-case test genuinely fails against old logic"
+          ],
+          "evidence": {
+            "new_tests": "10 passed in 0.13s",
+            "full_suite": "592 passed, 4 skipped, 1 warning in 97.89s",
+            "real_dryrun": "keep=7 dry_run=True processed=27 rolled=1 skipped=26; the lone would_roll is agent_12 (archived=1, kept=7) because its sprints dict now has 8 entries; all others no_roll_needed / not_schema_log; no error",
+            "old_logic_repro": "OLD ordered [wk64,wk65,wk66,wk58,wk59,wk60,wk61,wk62,wk63] -> archived [wk64,wk65]; NEW ordered [wk58..wk66] -> archived [wk58,wk59]",
+            "review_findings_dispositions": "Finding 1 (immediate-predecessor not running-max): documented as awareness note in test docstring, no code change (faithful to spec). Finding 2 (leaked top-level keys): out of scope, untouched."
+          },
+          "agent_fields": {
+            "pm_acknowledged": false,
+            "code_change_this_revision": false,
+            "docstring_awareness_note_added": true,
+            "gates_passed": [
+              "pytest tests/test_roll_agent_logs.py",
+              "pytest (full suite)",
+              "roll_agent_logs.py --keep 7 --dry-run"
+            ],
+            "blockers": []
+          }
+        }
+      }
     }
   },
   "wk18-llm-merger-and-mechanics": {
