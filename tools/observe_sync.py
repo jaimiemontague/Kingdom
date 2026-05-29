@@ -32,7 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import TILE_SIZE, MAP_WIDTH, MAP_HEIGHT  # noqa: E402
-from game.sim.timebase import set_sim_now_ms, set_time_multiplier, get_time_multiplier  # noqa: E402
+from game.sim.timebase import set_sim_now_ms, set_time_multiplier, get_time_multiplier, now_ms  # noqa: E402
 from game.world import World, TileType  # noqa: E402
 from game.entities import Castle, WarriorGuild, RangerGuild, RogueGuild, WizardGuild, Marketplace, Hero, Goblin, Peasant  # noqa: E402
 from game.systems.economy import EconomySystem  # noqa: E402
@@ -579,7 +579,11 @@ def main() -> int:
         bounty_system.cleanup()
 
         # WK2 scenario metrics/counters (contract-aware, deterministic-friendly).
-        now_ms_val = int((t * 1000) / 60)
+        # WK65: read the single authoritative sim clock (set above via
+        # set_sim_now_ms, which is speed-multiplier-aware) instead of a second,
+        # multiplier-blind clock. The old `int((t * 1000) / 60)` diverged from
+        # hero.stuck_since_ms under a speed multiplier, corrupting max_stuck_ms.
+        now_ms_val = int(now_ms())
         for h in heroes:
             hid = id(h)
 

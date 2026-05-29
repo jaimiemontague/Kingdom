@@ -5,6 +5,9 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-29 (Agent 01 WK65 CLOSE): wk65_round0_deslop_foundation COMPLETE -- Definition of Done met, GOAL 'all tests pass' satisfied. Full suite 575 passed / 4 skipped / 0 failed (was 513; +62 new characterization/tooling tests). determinism_guard repo-wide PASS, qa_smoke --quick PASS, validate_assets errors=0 (46 known warns), before/after screenshots (Ursina + pygame units) verified IDENTICAL by PM. ~950 LOC verified-dead code removed (every deletion grep-confirm gated): config dataclass layer 205, legacy LLM prompt path 363, ursina_renderer dead render/anim 215, engine dead methods 92, poi _spawn_underground_enemies 57, audio emit_from_events 20. game/logging.py added + adopted in engine + pygame_renderer (vfx.py had no swallow -- audit premise stale). determinism_guard (3 fixes) + observe_sync dual-clock fixed w/ 21 unit tests. 11 dead tools archived; .claude/worktrees shadow removed. Executed via Claude Code Agent-tool subagents (model claude-opus-4-8), role-onboarded, PM-evaluated each wave + screenshots. NOT COMMITTED (HEAD 5d20445; human git gate). Follow-ups recorded in wk65_close.pm_followups (none block DoD).",
+    "2026-05-29 (Agent 01 WK65 KICKOFF): Kicked off wk65_round0_deslop_foundation. Execution via Claude Code Agent-tool subagents (NOT the Cursor SDK orchestrator): each worker is spawned as its studio role on model claude-opus-4-8, onboards via .cursor/rules/01-studio-onboarding.mdc + agent-NN-*.mdc, then follows its pm_agent_prompts[NN] in round wk65_r0_plan + its section in .cursor/plans/wk65_round0_deslop_foundation.plan.md. Agent 01 (parent) evaluates each wave by running gates (pytest/determinism_guard/qa_smoke/validate_assets) and viewing screenshots, and loops fixes back to the owning agent until the Definition of Done holds. GOAL: all tests pass. Wave order: W0[12,11] -> verify -> W1[03,05,06] -> Gate1 -> W2[03,06,05,10,14,12] -> Gate2. Workers update their OWN logs under sprint wk65_round0_deslop_foundation; DO NOT COMMIT (git is a human gate).",
+    "2026-05-29 (Agent 01 WK65 PLAN): Sprint wk65_round0_deslop_foundation -- Round 0 of the v2 codebase audit. Delete-first (~700-1000 LOC verified-dead, every deletion grep-confirm gated) + a logging facility (game/logging.py) + a characterization-test net (snapshot no-mutation, sim/engine/hero digest, AI decision, buildings/systems pins) + a tool-correctness/hygiene track (determinism_guard 3 fixes + observe_sync dual-clock + dead-tools archival + .claude/worktrees shadow removal). Plan: .cursor/plans/wk65_round0_deslop_foundation.plan.md. Scope locked with Jaimie 2026-05-29: Round 0 ONLY (Rounds A-E deferred to WK66+); delete all verified-dead with shims; include hygiene track. PM scope corrections during planning: get_ranged_spec/_last_ranged_events PULLED to Round C (test-double coupling in conftest + guardhouse multi-arrow behavior); per-god-file characterization scoped to foundational pins only (each later round writes its own). Waves: W0[12,11] -> W1[03,05,06] -> G1[11] -> W2[03,06,05,10,14,12] -> G2[11,04]. AWAITING Jaimie 'kick off WK65' to transcribe per-wave rounds + emit the universal prompt + orchestrator command. NOT YET KICKED OFF. No game/UI/tool code edited by PM.",
     "2026-05-28 (Agent 01 WK63 Kickoff): Sprint wk63_engine_boundary_cleanup -- Engine boundary cleanup (GPT 5.5 items 3,5,7). Deterministic pathfinding budget, selection state migration to IDs, GameCommands Protocol split. Plan: .cursor/plans/wk63_engine_boundary_cleanup.plan.md. Claude Code parent Agent 1 coordinates subagents directly.",
     "2026-05-28 (Agent 01 WK62 Kickoff): Sprint wk62_architecture_cleanup_baseline -- Codebase cleanup pivot. WK61 v1.5.9 ON HOLD. GPT 5.5 audit recommendations + cleanup_sprint_plan_c4d96dca.plan.md. Claude Code parent Agent 1 coordinates subagents directly (no orchestrator). Wave 0: baseline tests. Wave 1: engine/sim correctness. Wave 2: UI/render pressure relief.",
     "2026-05-23 (Agent 01 WK61 R10 Kickoff): Round wk61_r10_v159_economy_pacing_ux — Jaimie playtest: hold-G tax overlay ($0 while held), faster taxable gold, harder waves, hero hunger meals at food stands (10g/3min), resizable left sidebar. Local orchestrator auto_until_human_gate. Plan: .cursor/plans/wk61_r10_v1.5.9_9ecaca05.plan.md.",
@@ -3875,6 +3878,182 @@
             "model": "claude-opus-4-8[1m]",
             "effort": "max"
           }
+        }
+      }
+    },
+    "wk65_round0_deslop_foundation": {
+      "rounds": {
+        "wk65_r0_plan": {
+          "round_meta": {
+            "title": "WK65 Round 0 -- De-Slop Foundation (PLAN; awaiting kickoff)",
+            "status": "executed_dod_met",
+            "depends_on": "wk64 closed green; v2 audit 2026-05-28 (post-wk64)",
+            "plan_doc": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max",
+            "execution_mode": "claude_code_agent_tool_subagents (role-onboard + PM-log-follow); model claude-opus-4-8; PM evaluates each wave + loops"
+          },
+          "pm_status_summary": "WK65 Round 0 PLANNED, not yet kicked off. Full executable plan with per-agent code-level tasks, grep-confirm gates, verification commands, and screenshot steps is in .cursor/plans/wk65_round0_deslop_foundation.plan.md. Scope: delete-first dead code (grep-confirm gated, ~700-1000 LOC) + game/logging.py facility + characterization net + tool-correctness/hygiene. Build healthy at plan time: qa_smoke --quick PASS, validate_assets errors=0 (46 known missing_model_file warns), wk64 closed with 3 commits on main. Next: Jaimie reviews plan, then 'kick off WK65' -> Agent 01 transcribes the per-wave rounds and emits the universal prompt + Local-to-Cloud orchestrator command.",
+          "pm_scope_decisions": [
+            "Jaimie 2026-05-29 Q1 (scope): Round 0 ONLY. Rounds A-E deferred to WK66+ (Round A depends on the test net Round 0 builds).",
+            "Jaimie 2026-05-29 Q2 (deletion risk): Delete ALL verified-dead, keep shims/back-compat aliases (incl. the wide-reach legacy LLM prompt path + config dataclass layer). Git recovers anything.",
+            "Jaimie 2026-05-29 Q3 (hygiene): YES -- include tool-correctness fixes (determinism_guard + observe_sync) FIRST + dead-tools archival + worktree-shadow resolution.",
+            "PM correction A: get_ranged_spec + _last_ranged_events (plural) PULLED from Round 0 to Round C -- not pure dead code (get_ranged_spec implemented by tests/conftest.py:76 + probed in combat.py/enemy.py; _last_ranged_events entangled with guardhouse multi-arrow behavior). Singular _last_ranged_event is live -- keep.",
+            "PM correction B: _unit_anim_surface deletion carries a doc-contradiction trap (stale docs call it the live billboard path; grep proves zero call sites). Requires grep-confirm + before/after Ursina screenshots, assigned to Agent 10.",
+            "PM correction C: delete ONLY the engine copy of _build_system_context (engine.py:1285); the sim copy (sim_engine.py:354) is live. Keep engine._early_nudge_* property forwarders + the live sim nudge methods."
+          ],
+          "pm_next_actions_by_agent": {
+            "human": "Review .cursor/plans/wk65_round0_deslop_foundation.plan.md (esp. 'Why This Sprint', 'Critical Design Rules', 'Wave Structure'). When ready, say 'kick off WK65' and Agent 01 will create the per-wave rounds, emit the universal prompt, and give the Local-to-Cloud orchestrator command + send list. Optional first: manual playtest of current main (nothing changed since wk64 close).",
+            "03": "See plan section 'Agent 03' (Wave 1 + Wave 2). HIGH intelligence.",
+            "04": "See plan section 'Agent 04' (Gate 2 determinism sign-off). MEDIUM.",
+            "05": "See plan section 'Agent 05' (Wave 1 pins + Wave 2 poi_interaction deletion). MEDIUM.",
+            "06": "See plan section 'Agent 06' (Wave 1 AI pins + Wave 2 legacy-prompt deletion). HIGH.",
+            "10": "See plan section 'Agent 10' (Wave 2 render dead-code + logging + screenshot verify). MEDIUM.",
+            "11": "See plan section 'Agent 11' (Wave 0 baseline + snapshot guard; Gate 1; Gate 2 visual diff). HIGH.",
+            "12": "See plan section 'Agent 12' (Wave 0 tool fixes; Wave 2 hygiene). MEDIUM.",
+            "14": "See plan section 'Agent 14' (Wave 2 audio emit_from_events deletion). LOW."
+          },
+          "pm_agent_prompts": {
+            "03": "WK65 Round 0. Do your tasks EXACTLY as in plan section 'Agent 03'. Wave 1: create game/logging.py (stdlib facade per plan) + tests/test_wk65_engine_sim_hero_characterization.py GREEN on current code (sim digest, selection exclusivity, console, hero methods). Wave 2: delete the 3 dead GameEngine methods (engine.py:1103-1119 _nearest_lair_to, 1121-1180 _maybe_apply_early_pacing_nudge, 1285-1294 _build_system_context ENGINE copy only) + repoint tests/test_engine.py:129 to engine.sim + delete the config.py vestigial dataclass layer (delete 11 dataclasses WindowConfig..RangerConfig + instances WINDOW..RANGER; KEEP flat aliases + DifficultyConfig/WaveEventConfig; INLINE os.getenv for SIM/LLM-derived aliases) + log the engine VFX swallow (engine.py:1380-1384). Every deletion gated by grep-confirm (zero LIVE callers; paste outputs in log). Keep the sim copies + engine._early_nudge_* forwarders. Gates: python -c import config smoke, pytest, determinism_guard --paths game/engine.py config.py game/logging.py, qa_smoke. DO NOT COMMIT.",
+            "04": "WK65 Round 0 Gate 2 (determinism sign-off) -- activate AFTER Wave 2. Per plan section 'Agent 04': run python tools/determinism_guard.py repo-wide (PASS); confirm Agent 12 surfaced no MASKED finding; run qa_smoke --quick twice seed 3 for identical verdicts. Record any pre-existing surfaced violation for PM (becomes a Round-A/B ticket, not a Round-0 blocker). Update log. DO NOT COMMIT.",
+            "05": "WK65 Round 0. Per plan section 'Agent 05'. Wave 1: write tests/test_wk65_buildings_systems_characterization.py GREEN (ranged-tower SINGULAR _last_ranged_event cadence, building update() dispatch outcome, DifficultySystem scaling -- do NOT assert _last_ranged_events plural; that is deferred to Round C). Wave 2: delete _spawn_underground_enemies (poi_interaction.py:445-491) + its commented call at :376, grep-confirmed; touch NO other underground/dungeon logic (it is live on mountain maps). Gates: pytest -k poi, pytest, qa_smoke, determinism_guard --paths game/systems/poi_interaction.py. DO NOT COMMIT.",
+            "06": "WK65 Round 0. Per plan section 'Agent 06'. Wave 1: write tests/test_wk65_ai_characterization.py GREEN (autonomous decision path shape, get_fallback_decision, build_hero_context keys, validate_direct_prompt_output verdicts incl. deferred-combat early-return + critical-HP redirect). Wave 2: after grep-confirm, delete the legacy LLM prompt path -- collapse llm_brain._process_request to autonomous-only (per plan code block) + remove SYSTEM_PROMPT/build_decision_prompt imports; delete context_builder.build_summary; delete prompt_templates SYSTEM_PROMPT/DECISION_PROMPT/build_decision_prompt + CONVERSATION_SYSTEM_PROMPT/CONVERSATION_USER_PROMPT/build_conversation_prompt; delete basic_ai._get_nearest_undepleted_poi. KEEP AUTONOMOUS_* + prompt_packs + VALID_ACTIONS/TOOL_ACTIONS/OBEY_DEFY_VALUES. Gates: pytest test_wk65_ai_characterization (still GREEN), pytest, qa_smoke (conversation+direct_prompt), determinism_guard --paths ai. DO NOT COMMIT.",
+            "10": "WK65 Round 0 Wave 2 (render dead-code) -- activate AFTER Gate 1. Per plan section 'Agent 10': grep-confirm ZERO call sites, then delete in game/graphics/ursina_renderer.py: _unit_anim_surface (543-614) [TRAP: stale docs call it the live billboard path; it is NOT -- _compute_anim_frame is live], the underground render block (1320-1441), _apply_poi_mystery_state (1071-1074) + its 3 call sites (1219,1254,1307), the 5 dead env scale consts (82-91). Adopt game.logging in pygame_renderer.py:117-121 + vfx.py swallows (behavior unchanged -- still swallow, now log). MANDATORY: before/after Ursina screenshots vs docs/screenshots/wk65_baseline (base + units-in-combat + mountain/underground) into wk65_after, explicit verdict 'identical' (alignment/layering first). Gates: pytest, qa_smoke, determinism_guard --paths the 3 files. DO NOT COMMIT.",
+            "11": "WK65 Round 0 (QA: Wave 0 + Gate 1 + Gate 2). Per plan section 'Agent 11'. Wave 0 (BEFORE any code change): capture the FULL before-baseline into docs/screenshots/wk65_baseline (pygame base_overview/ui_panels/ui_pause_menu/ui_build_catalog + Ursina base + units-in-combat + mountain/underground; enumerate scenarios via --help) AND write tests/test_wk65_snapshot_no_mutation.py GREEN on current code. Gate 1: verify all four tests/test_wk65_* pins GREEN + determinism_guard + qa_smoke before deletions proceed; if red, STOP sprint + report PM. Gate 2: full pytest + determinism_guard + qa_smoke + validate_assets (errors=0), re-capture into wk65_after, diff EVERY visual path (verdict identical; alignment/layering first). Any red/diff -> stop + report. DO NOT COMMIT.",
+            "12": "WK65 Round 0 (Tools: Wave 0 fixes + Wave 2 hygiene). Per plan section 'Agent 12'. Wave 0: fix determinism_guard.py (a: --paths-outside-root relative_to crash; b: separate parse-errors from violations; c: alias-aware AST matcher) + observe_sync.py dual-clock (delete now_ms_val, read game.sim.timebase.now_ms()) + write tests/test_wk65_tooling.py. REPORT-DON'T-MASK any newly-surfaced pre-existing violation. Wave 2 (hygiene): git mv grep-confirmed dead one-off tools (patch_*.py, update_pm_hub_wk*.py, capture patches) to tools/archive/ (log the exact list) + safely resolve .claude/worktrees shadow (git worktree list + status; remove ONLY if stale/clean/non-main). Gates: pytest test_wk65_tooling, determinism_guard, qa_smoke. DO NOT COMMIT.",
+            "14": "WK65 Round 0 Wave 2 -- activate AFTER Gate 1. Per plan section 'Agent 14': grep-confirm then delete game/audio/audio_system.py emit_from_events (234-252). NOTE: VFXSystem.emit_from_events in game/graphics/vfx.py is a DIFFERENT class -- do NOT touch it. on_event is the live audio path. Gates: pytest, qa_smoke. DO NOT COMMIT."
+          },
+          "pm_send_list_minimal": {
+            "waves": [
+              {
+                "round": "wk65_w0_tooling_baseline",
+                "agents": [
+                  "12",
+                  "11"
+                ],
+                "parallel": true
+              },
+              {
+                "round": "wk65_w1_characterization",
+                "agents": [
+                  "03",
+                  "05",
+                  "06"
+                ],
+                "parallel": true
+              },
+              {
+                "round": "wk65_g1_verify",
+                "after": [
+                  "wk65_w1_characterization"
+                ],
+                "agents": [
+                  "11"
+                ]
+              },
+              {
+                "round": "wk65_w2_deletion_hygiene",
+                "after": [
+                  "wk65_g1_verify"
+                ],
+                "agents": [
+                  "03",
+                  "06",
+                  "05",
+                  "10",
+                  "14",
+                  "12"
+                ],
+                "parallel": true
+              },
+              {
+                "round": "wk65_g2_final",
+                "after": [
+                  "wk65_w2_deletion_hygiene"
+                ],
+                "agents": [
+                  "11",
+                  "04"
+                ]
+              }
+            ],
+            "intelligence_by_agent": {
+              "03": "high",
+              "04": "medium",
+              "05": "medium",
+              "06": "high",
+              "10": "medium",
+              "11": "high",
+              "12": "medium",
+              "14": "low"
+            },
+            "rationale": "Implementers: 03 high (config 152-importer surgery + dead-method/test coupling), 06 high (LLM control-flow collapse, must preserve autonomous path), 05 medium (spec-following deletion + buildings pins), 10 medium (render deletion behind early-returns + mandatory screenshot verify), 14 low (single grep-confirmed deletion). Infra/verify: 11 high (novel characterization design + broad visual regression), 12 medium (AST/dual-clock reasoning + reversible hygiene), 04 medium (determinism sign-off + triage of any surfaced finding). Strict ordering: tools+baseline -> characterization (green) -> Gate1 -> deletions+hygiene -> Gate2.",
+            "do_not_send": [
+              "02",
+              "07",
+              "08",
+              "09",
+              "13",
+              "15"
+            ],
+            "do_not_send_note": "Optional: 09 (LOW, consult) for a second pair of eyes on Wave-2/Gate-2 render screenshot diffs if extra visual coverage is wanted.",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          }
+        },
+        "wk65_close": {
+          "round_meta": {
+            "title": "WK65 Round 0 -- CLOSE (Definition of Done met)",
+            "status": "closed_success",
+            "plan_doc": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+            "model": "claude-opus-4-8[1m]",
+            "effort": "max"
+          },
+          "pm_status_summary": "WK65 Round 0 (de-slop foundation) COMPLETE and verified by PM. All tests pass (575 passed / 4 skipped / 0 failed). ~950 LOC verified-dead removed behind grep-confirm gates; logging facility added; characterization safety net (62 tests) green before and after deletions; QA tooling correctness fixed; repo hygiene done. Rounds A-E remain (see plan Follow-Up Backlog). Changes are uncommitted (human git gate).",
+          "pm_evidence": {
+            "full_suite": "python -m pytest -q -> 575 passed, 4 skipped, 0 failed (ran twice, stable)",
+            "determinism_guard_repo_wide": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (exit 0)",
+            "validate_assets": "errors=0 warns=46 (known missing_model_file baseline)",
+            "screenshots": "PM viewed before/after: Ursina base IDENTICAL; pygame units (ranged_projectiles) IDENTICAL (closeup byte-identical). docs/screenshots/wk65_baseline vs wk65_after.",
+            "loc_removed_approx": {
+              "config.py": 205,
+              "ai(llm_brain/context_builder/prompt_templates/basic_ai)": 363,
+              "ursina_renderer.py": 215,
+              "engine.py": 92,
+              "poi_interaction.py": 57,
+              "audio_system.py": 20,
+              "total_approx": 952
+            },
+            "files_created": [
+              "game/logging.py",
+              "tests/test_wk65_tooling.py",
+              "tests/test_wk65_snapshot_no_mutation.py",
+              "tests/test_wk65_engine_sim_hero_characterization.py",
+              "tests/test_wk65_buildings_systems_characterization.py",
+              "tests/test_wk65_ai_characterization.py"
+            ]
+          },
+          "pm_round_outcomes": {
+            "12_wave0": "Fixed determinism_guard.py (--paths crash, parse-error vs violation separation, alias-aware AST) + observe_sync.py dual-clock; 21 unit tests. Wave2: archived 11 dead tools to tools/archive/ (git mv, staged), removed stale .claude/worktrees shadow. Kept wk61_r10_capture_patch.py (live).",
+            "11_wave0": "Captured 23 baseline screenshots (pygame + Ursina) into docs/screenshots/wk65_baseline; wrote tests/test_wk65_snapshot_no_mutation.py (2, green). Corrected plan: snapshot entry is engine.build_snapshot() (zero-arg), not engine.sim.build_snapshot(); flagged underground render unreachable (not pixel-diffable).",
+            "03": "Wave1: game/logging.py + tests/test_wk65_engine_sim_hero_characterization.py (9, green, stable digest). Wave2: deleted engine _maybe_apply_early_pacing_nudge/_nearest_lair_to/_build_system_context(engine copy) + repointed test_engine.py:129 to engine.sim; flattened config.py dataclass layer (kept flat aliases + DifficultyConfig/WaveEventConfig, inlined SIM/LLM os.getenv); logging in engine VFX except. Pins green (proves values preserved).",
+            "06": "Wave1: tests/test_wk65_ai_characterization.py (16, green); confirmed live path is autonomous. Wave2: deleted legacy LLM prompt path (build_summary, SYSTEM_PROMPT/DECISION_PROMPT/build_decision_prompt, CONVERSATION_* + build_conversation_prompt, basic_ai._get_nearest_undepleted_poi) + collapsed _process_request to autonomous-only + removed orphaned imports. 47 AI/conversation/direct-prompt tests green.",
+            "05": "Wave1: tests/test_wk65_buildings_systems_characterization.py (14, green). Wave2: deleted dead _spawn_underground_enemies + commented call; no other underground logic touched. Confirmed get_ranged_spec dead-on-real-buildings (validates Round-C deferral).",
+            "10": "Wave2: deleted _unit_anim_surface, dead Ursina underground render block (kept live _sync_underground_meshes shell) + 2 orphaned lighting helpers, _apply_poi_mystery_state + 3 call sites, 5 dead env scale consts; logging in pygame_renderer. Screenshots Ursina+units IDENTICAL. Reduced determinism findings on these files 8->1 (remaining is pre-existing presentation wall-clock).",
+            "14": "Wave2: deleted dead AudioSystem.emit_from_events (no caller); VFXSystem.emit_from_events (different class) untouched."
+          },
+          "pm_followups": [
+            "TRIVIAL: update 3 stale comments referencing the deleted _unit_anim_surface -> _compute_anim_frame (game/entities/guard.py:83, game/graphics/instanced_unit_renderer.py:111,221). Cosmetic; Agent 10 couldn't due to file ownership.",
+            "ROUND-E (test hygiene): tests/test_spawner.py rebinds module globals SkeletonArcher/Goblin to Dummy* without restore (lines ~33/60/89) -> latent order-dependent leak crashing combat.py:333 when it runs before an enemy-spawning test. Suite green under default sort; convert to monkeypatch-with-restore. (Agent 03 found; made its own test hermetic.)",
+            "ROUND-A/B (determinism triage): pre-existing presentation wall-clock flagged only via --paths (repo-wide PASS): game/engine.py:1133 send_player_message chat cooldown (pygame.time.get_ticks); game/graphics/ursina_renderer.py:343 debug-tax-overlay throttle (time.time). Both presentation/debug, determinism-exempt. Consider timebase.now_ms() or a formal presentation-exempt list in determinism_guard.",
+            "FOLLOW-UP: pre-existing observe_sync --scenario hero_stuck_repro --speed-multiplier 0.5 -> [qa] FAIL stuck_events=0 (confirmed pre-existing via git stash; NOT in qa_smoke gate set). Investigate stuck-detection threshold under speed multiplier.",
+            "ROUND-A/B note: game/sim/timebase.py now_ms() falls back to pygame.time.get_ticks() (wall clock) when global clock is None -- determinism foot-gun.",
+            "ROUND-C: deferred get_ranged_spec/_last_ranged_events cleanup confirmed dead-on-real-buildings (only conftest test-double implements get_ranged_spec; guardhouse _last_ranged_events plural is Guardhouse-specific) -- handle in RangedAttackMixin.",
+            "HYGIENE: orphan .git/worktrees/uhy/ metadata dir (dangling, Dec 15) -> git worktree prune once OneDrive lock releases. determinism_guard --json schema changed {findings}->{violations,parse_errors} (no consumers).",
+            "NEXT SPRINT: WK66 = Round A (boundary/DTO chain, Moves 1-6) per plan Follow-Up Backlog -- now unblocked by this sprint's characterization net."
+          ],
+          "pm_commits": "NONE -- not committed/pushed (human git gate). HEAD remains 5d20445. Working tree holds all WK65 changes + Agent 12's staged tools/archive renames."
         }
       }
     }

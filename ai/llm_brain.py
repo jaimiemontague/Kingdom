@@ -6,7 +6,6 @@ import json
 import threading
 import queue
 from typing import Optional
-from ai.context_builder import ContextBuilder
 from ai.decision_moments import decision_moment_from_prompt_dict
 from ai.decision_output_validator import validate_autonomous_decision
 from ai.direct_prompt_validator import validate_direct_prompt_output
@@ -16,11 +15,9 @@ from ai.prompt_packs import (
     build_direct_prompt_messages,
 )
 from ai.prompt_templates import (
-    SYSTEM_PROMPT,
     VALID_ACTIONS,
     TOOL_ACTIONS,
     OBEY_DEFY_VALUES,
-    build_decision_prompt,
     get_fallback_decision,
 )
 from config import LLM_PROVIDER, LLM_TIMEOUT, CONVERSATION_TIMEOUT
@@ -153,52 +150,12 @@ class LLMBrain:
                         )
     
     def _process_request(self, hero_key, context: dict) -> dict:
-        """Process a single LLM request."""
-        try:
-            aut = context.get("wk50_autonomous")
-            if isinstance(aut, dict):
-                return self._process_autonomous_decision_request(hero_key, context, aut)
-            # Build the prompt
-            summary = ContextBuilder.build_summary(context)
-            prompt = build_decision_prompt(context, summary)
-            
-            # WK18: Emit for dev tools overlay (non-blocking; bus queues and flushes on main thread).
-            if self._event_bus and GameEventType is not None:
-                self._event_bus.emit({
-                    "type": GameEventType.LLM_PROMPT_SENT.value,
-                    "hero_key": hero_key,
-                    "system_prompt": SYSTEM_PROMPT,
-                    "user_prompt": prompt,
-                    "mode": "decision",
-                })
-            
-            # Call the LLM
-            response_text = self.provider.complete(
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=prompt,
-                timeout=LLM_TIMEOUT
-            )
-            
-            if self._event_bus and GameEventType is not None:
-                self._event_bus.emit({
-                    "type": GameEventType.LLM_RESPONSE_RECEIVED.value,
-                    "hero_key": hero_key,
-                    "response_text": response_text or "",
-                    "mode": "decision",
-                })
-            
-            # Parse the response
-            decision = self._parse_response(response_text)
-            
-            if decision:
-                return decision
-            else:
-                # Failed to parse, use fallback
-                return get_fallback_decision(context)
-                
-        except Exception as e:
-            print(f"LLM request failed for {hero_key}: {e}")
-            return get_fallback_decision(context)
+        """Process a single LLM request. WK65: legacy non-autonomous decision-prompt
+        path removed (llm_bridge always sets wk50_autonomous); fall back safely if absent."""
+        aut = context.get("wk50_autonomous")
+        if isinstance(aut, dict):
+            return self._process_autonomous_decision_request(hero_key, context, aut)
+        return get_fallback_decision(context)
 
     def _process_autonomous_decision_request(
         self, hero_key: str, context: dict, aut: dict

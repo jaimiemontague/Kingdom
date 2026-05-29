@@ -230,26 +230,6 @@ class AudioSystem:
             pass
 
         return True
-    
-    def emit_from_events(self, events: list[dict]):
-        """
-        Consume events and trigger sounds.
-        
-        Non-blocking: never crashes simulation.
-        Respects cooldowns to prevent spam.
-        WK6 Mid-Sprint: Only plays world SFX if event is on-screen and in explored area.
-        """
-        if not self.enabled:
-            return
-        
-        if not events:
-            return
-        
-        from game.sim.timebase import now_ms as sim_now_ms
-        now_ms = float(sim_now_ms())
-        
-        for event in events:
-            self._emit_single_event(event, now_ms)
 
     def on_event(self, event: dict):
         """

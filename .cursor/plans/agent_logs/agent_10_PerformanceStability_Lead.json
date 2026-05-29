@@ -764,6 +764,104 @@
           ]
         }
       }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "Round 0 de-slop: Agent 10 deletes dead Ursina render code + adopts logging in pygame_renderer; vfx.py had no swallow."
+      },
+      "rounds": {
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "round_meta": {
+            "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+            "wave": "Wave 2 (deletion + logging + screenshot verification)",
+            "role": "Agent 10 PerformanceStability_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "files_editable": [
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/pygame_renderer.py",
+              "game/graphics/vfx.py"
+            ],
+            "constraints": "DELETE-ONLY where grep-confirmed zero live callers; no behavior change; screenshot-verify drawn paths; DO NOT COMMIT/PUSH."
+          },
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "ursina_renderer.py: net -205 LOC (215 deletions / 10 doc-comment insertions). Deleted: _unit_anim_surface (dead), the unreachable underground render block + 2 orphaned helpers, _apply_poi_mystery_state (no-op) + all 3 call sites, 5 dead env-scale consts.",
+              "pygame_renderer.py: +5 LOC logging adoption only (import get_logger + module _log + log-on-swallow around vfx render; still swallows).",
+              "vfx.py: UNCHANGED -- FINDING: the audit-cited bare 'except: pass' swallow no longer exists in current vfx.py (0 try/except in 434 lines); nothing to adopt logging into; introducing one would be a behavior change (Rule #3). Reported to PM.",
+              "Screenshot verdict: pygame units (closeup) BYTE-IDENTICAL to baseline; pygame overview differs only by pre-existing run-to-run animation-timing jitter in the top moving-enemy strip (proven by same-code rerun diff 2.8% >= baseline-vs-after 0.6%); Ursina surface buildings/POIs/terrain/props IDENTICAL. Verdict: units animate identically, buildings/POIs render identically.",
+              "Underground render block: unreachable (early return precedes deleted code) -> NOT drawn in any capture -> validated by grep-unreachable + snapshot-no-mutation test (2 passed) + this note (per PM, no pixel-diff possible).",
+              "Scoped gates: test_wk65_snapshot_no_mutation.py 2 passed; determinism_guard --paths <3 files> reports 1 PRE-EXISTING render-side wall_clock violation (debug throttle _maybe_log_tax_overlay_debug:343) -- HEAD had 8, my deletions removed 7 (the dead _unit_anim_surface). Reported-not-masked per Rule #7.",
+              "Out-of-lane note for PM: 3 stale comments still reference deleted _unit_anim_surface (game/entities/guard.py:83, game/graphics/instanced_unit_renderer.py:111,221). Task asked to repoint them to _compute_anim_frame, but those files are outside Agent 10's edit ownership (Rule #6). Flagged for owner/follow-up; NOT edited."
+            ],
+            "grep_confirms": {
+              "_unit_anim_surface": "rg game ai tools tests -> ONLY: ursina_renderer.py:543 (def, now deleted) + 3 COMMENTS (guard.py:83, instanced_unit_renderer.py:111,221). ZERO live call sites. _compute_anim_frame is the live path (def 633, called 735).",
+              "_apply_poi_mystery_state": "rg -> def ursina_renderer.py:1071 + 3 call sites (1219,1254,1307) all within ursina_renderer.py. Documented no-op; live POI visibility handled inline at 1119-1132. All deleted.",
+              "env_scale_consts": "TERRAIN/TREE/ROCK/GRASS_SCATTER/GROUND_PROP_*_SCALE: renderer copies (ursina_renderer.py:82-91) used ONLY at their definitions (no internal use). Live source = ursina_environment.py:15-19, imported by ursina_terrain_fog_collab.py:15. Renderer copies deleted; ursina_environment copies kept.",
+              "underground_block": "_sync_underground_meshes is LIVE (called 944,956) and kept as early-return shell. Deleted code was AFTER its unconditional return (unreachable). _create_underground_lighting only caller was inside that dead block; _remove_underground_lighting had ZERO callers. Both helper methods deleted.",
+              "post_delete_residual": "rg _unit_anim_surface|_apply_poi_mystery_state|_create_underground_lighting|_remove_underground_lighting in ursina_renderer.py -> only the intentional docstring mention in _sync_underground_meshes (line 1230). No live refs remain."
+            },
+            "loc_removed": {
+              "ursina_renderer.py_net": -205,
+              "ursina_renderer.py_deletions": 215,
+              "ursina_renderer.py_insertions": 10,
+              "pygame_renderer.py_net": 5,
+              "vfx.py_net": 0,
+              "breakdown_approx": {
+                "_unit_anim_surface": 72,
+                "underground_dead_block_plus_2_helpers": 133,
+                "_apply_poi_mystery_state_method_and_3_calls": 10,
+                "env_scale_consts": 13
+              }
+            },
+            "screenshots": {
+              "baseline_dir": "docs/screenshots/wk65_baseline/",
+              "after_dir": "docs/screenshots/wk65_after/",
+              "ursina_surface": {
+                "after": "docs/screenshots/wk65_after/ursina_base/ursina_20260529_085907_258.png",
+                "baseline": "docs/screenshots/wk65_baseline/ursina_base/ursina_base_20260529_080152_580.png",
+                "cmd": "python tools/run_ursina_capture_once.py --ticks 480 --out docs/screenshots/wk65_after/ursina_base --no-llm",
+                "verdict": "IDENTICAL (HUD, 3D terrain island, building cluster, tree/rock/grass scatter, lighting, camera all match; env-scale deletion did not alter prop scale)."
+              },
+              "pygame_units": {
+                "after_dir": "docs/screenshots/wk65_after/pyg_combat_ranged/",
+                "baseline_dir": "docs/screenshots/wk65_baseline/pyg_combat_ranged/",
+                "cmd": "python tools/capture_screenshots.py --scenario ranged_projectiles --seed 3 --out docs/screenshots/wk65_after/pyg_combat_ranged --size 1920x1080 --ticks 480",
+                "closeup_sha256_identical": true,
+                "overview_diff_pct_baseline_vs_after": 0.604,
+                "overview_diff_pct_samecode_rerun": 2.8,
+                "verdict": "IDENTICAL for units/buildings/POIs/terrain/labels. Closeup byte-identical. Overview's 0.6% delta is pre-existing capture non-determinism (moving-enemy animation timing in top strip y=0..140), proven by same-code rerun delta (2.8%) exceeding baseline-vs-after delta (0.6%). Not caused by this change."
+              }
+            },
+            "scoped_gates": {
+              "pytest_snapshot_no_mutation": "tests/test_wk65_snapshot_no_mutation.py -> 2 passed",
+              "determinism_guard_paths": "python tools/determinism_guard.py --paths game/graphics/ursina_renderer.py game/graphics/pygame_renderer.py game/graphics/vfx.py -> exit 1, 1 violation (PRE-EXISTING).",
+              "determinism_guard_finding_for_pm": "ursina_renderer.py:343 [wall_clock_time] time.time() in _maybe_log_tax_overlay_debug (KINGDOM_DEBUG_TAX_OVERLAY-gated once/sec debug throttle, render/debug-side, not sim logic). PRE-EXISTING: HEAD reported 8 violations on these files (lines 351,565,578,587,591,596,600 time.time() + 612 hash()); 7 were inside the dead _unit_anim_surface I deleted, leaving this 1 pre-existing debug-throttle false-positive. Reported-not-masked per Rule #7; this is not a Round-0 regression."
+            },
+            "what_i_changed": [
+              "game/graphics/ursina_renderer.py: deleted _unit_anim_surface; deleted unreachable underground render block + _create_underground_lighting + _remove_underground_lighting (kept live _sync_underground_meshes early-return shell); deleted _apply_poi_mystery_state + its 3 call sites; deleted 5 renderer-local env-scale consts (kept ursina_environment.py source).",
+              "game/graphics/pygame_renderer.py: added 'from game.logging import get_logger' + module '_log'; replaced silent 'except Exception: pass' around ctx.vfx_system.render with '_log.exception(VFX render failed)' (still swallows; behavior unchanged).",
+              "game/graphics/vfx.py: NO CHANGE (no swallow exists)."
+            ],
+            "how_to_test": [
+              "python -m pytest tests/test_wk65_snapshot_no_mutation.py -q",
+              "python tools/determinism_guard.py --paths game/graphics/ursina_renderer.py game/graphics/pygame_renderer.py game/graphics/vfx.py",
+              "python tools/run_ursina_capture_once.py --ticks 480 --out docs/screenshots/wk65_after/ursina_base --no-llm",
+              "python tools/capture_screenshots.py --scenario ranged_projectiles --seed 3 --out docs/screenshots/wk65_after/pyg_combat_ranged --size 1920x1080 --ticks 480"
+            ],
+            "questions_back_to_pm": [
+              "vfx.py has no bare except:pass to adopt logging into (0 try/except in 434 lines) -- audit premise is stale. Confirm OK to leave vfx.py unchanged (I did).",
+              "3 stale comments referencing deleted _unit_anim_surface live in files outside Agent 10's ownership (guard.py:83, instanced_unit_renderer.py:111,221). I did not edit them (Rule #6). Assign repoint-to-_compute_anim_frame to the owning agent or a follow-up.",
+              "determinism_guard surfaces 1 PRE-EXISTING render/debug wall_clock false-positive (ursina_renderer.py:343, debug-throttle). Not masked, not fixed here. For triage (likely a guard scope refinement, not a sim-determinism bug)."
+            ],
+            "did_not_commit": true,
+            "completion_receipt": "Agent 10 Wave 2 complete: 4 grep-confirmed deletions in ursina_renderer.py (net -205 LOC), pygame_renderer.py logging adopted, vfx.py left unchanged (no swallow). Screenshot verdict IDENTICAL (units + buildings/POIs). Scoped gates green (snapshot test 2 passed; determinism guard surfaces only 1 pre-existing render false-positive, down from 8). No commit/push."
+          }
+        }
+      }
     }
   }
 }

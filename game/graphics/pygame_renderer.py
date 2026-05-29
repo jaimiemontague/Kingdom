@@ -30,10 +30,14 @@ import pygame
 
 from config import COLOR_BLACK
 from game.graphics.render_context import set_render_zoom
+from game.logging import get_logger
 from game.world import Visibility
 
 if TYPE_CHECKING:
     from game.sim.snapshot import SimStateSnapshot
+
+
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -118,7 +122,8 @@ class PygameRenderer:
             try:
                 ctx.vfx_system.render(target, camera_offset)
             except Exception:
-                pass
+                # WK65 Round 0: behavior unchanged (still swallow) — now observable.
+                _log.exception("VFX render failed")
 
         if draw_fog and hasattr(world, "render_fog"):
             world.render_fog(target, camera_offset)

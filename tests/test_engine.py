@@ -126,7 +126,7 @@ def test_engine_spawns_peasant_and_builds_new_structure(monkeypatch) -> None:
     engine = GameEngine(headless=True)
     try:
         # Keep the regression focused on the worker/build loop.
-        monkeypatch.setattr(engine, "_maybe_apply_early_pacing_nudge", lambda dt, castle: None)
+        monkeypatch.setattr(engine.sim, "_maybe_apply_early_pacing_nudge", lambda *a, **k: None)
         monkeypatch.setattr(engine.spawner, "spawn", lambda dt: [])
         monkeypatch.setattr(engine.lair_system, "spawn_enemies", lambda dt, buildings: [])
 

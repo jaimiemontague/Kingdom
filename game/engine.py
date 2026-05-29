@@ -43,7 +43,7 @@ from game.display_manager import DisplayManager
 from game.building_factory import BuildingFactory
 from game.cleanup_manager import CleanupManager
 from game.events import EventBus, GameEventType
-from game.systems.protocol import SystemContext
+from game.logging import get_logger
 from game.types import BountyType, HeroClass
 from game.graphics.pygame_renderer import PygameRenderer, PygameWorldRenderContext
 from game.graphics.renderers import RendererRegistry
@@ -1100,85 +1100,6 @@ class GameEngine:
             "y": float(world_y),
         })
 
-    def _nearest_lair_to(self, x: float, y: float):
-        """Return nearest living lair to (x,y) or None."""
-        lairs = getattr(self.lair_system, "lairs", []) or []
-        best = None
-        best_d2 = None
-        for lair in lairs:
-            if getattr(lair, "hp", 1) <= 0:
-                continue
-            lx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
-            ly = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-            dx = lx - float(x)
-            dy = ly - float(y)
-            d2 = dx * dx + dy * dy
-            if best is None or (best_d2 is not None and d2 < best_d2):
-                best = lair
-                best_d2 = d2
-        return best
-
-    def _maybe_apply_early_pacing_nudge(self, dt: float, castle):
-        """
-        Deterministic-ish early-session pacing hook:
-        - show a short HUD prompt early if the player hasn't placed a bounty
-        - later, optionally place a starter 'attack_lair' bounty on the nearest lair
-          (only if the player can afford it and hasn't placed any bounties yet)
-        """
-        if not castle:
-            return
-
-        mode = getattr(self, "_early_nudge_mode", "auto")
-        if mode == "off":
-            return
-        if mode not in ("auto", "force"):
-            mode = "auto"
-
-        # Only relevant in the early game window.
-        self._early_nudge_elapsed_s += float(dt)
-        if self._early_nudge_elapsed_s > 180.0:
-            return
-
-        unclaimed = self.bounty_system.get_unclaimed_bounties()
-        has_any_bounty = bool(unclaimed)
-
-        tip_time_s = 0.0 if mode == "force" else 35.0
-        starter_time_s = 0.0 if mode == "force" else 90.0
-
-        # 1) Tip prompt: show once.
-        if (not self._early_nudge_tip_shown) and (self._early_nudge_elapsed_s >= tip_time_s) and (not has_any_bounty):
-            self._early_nudge_tip_shown = True
-            self.hud.add_message("Tip: Press B to place a bounty and guide heroes.", (220, 220, 255))
-            self.hud.add_message("Try targeting a lair for big stash payouts.", (220, 220, 255))
-
-        # 2) Optional starter bounty: show player a clear lever if they haven't engaged.
-        if self._early_nudge_starter_bounty_done:
-            return
-        if self._early_nudge_elapsed_s < starter_time_s:
-            return
-        if has_any_bounty:
-            # Player already engaged with the bounty system; don't interfere.
-            self._early_nudge_starter_bounty_done = True
-            return
-
-        lair = self._nearest_lair_to(float(castle.center_x), float(castle.center_y))
-        if lair is None:
-            self._early_nudge_starter_bounty_done = True
-            return
-
-        reward = int(LAIR_BOUNTY_COST) if LAIR_BOUNTY_COST else 75
-        if not self.economy.add_bounty(reward):
-            # Can't afford; keep it non-spammy and don't keep retrying.
-            self._early_nudge_starter_bounty_done = True
-            self.hud.add_message("Tip: Earn more gold to place bounties that guide heroes.", (220, 220, 255))
-            return
-
-        bx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
-        by = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-        self.bounty_system.place_bounty(bx, by, reward, BountyType.ATTACK_LAIR.value, target=lair)
-        self._early_nudge_starter_bounty_done = True
-        self.hud.add_message(f"Starter bounty placed: Clear the lair (+${reward})", (255, 215, 0))
-    
     def update(self, dt: float):
         """Update game state."""
         if not self._prepare_sim_and_camera(dt):
@@ -1282,17 +1203,6 @@ class GameEngine:
         self.update_camera(camera_dt)
         return True
 
-    def _build_system_context(self) -> SystemContext:
-        """Construct a shared context object for protocol-based systems."""
-        return SystemContext(
-            heroes=self.heroes,
-            enemies=self.enemies,
-            buildings=self.buildings,
-            world=self.world,
-            economy=self.economy,
-            event_bus=self.event_bus,
-        )
-
     # -----------------------------------------------------------------------
     # WK62 Task C: Dead sim-era helpers removed.
     # The following methods were deleted because all authoritative sim logic
@@ -1381,7 +1291,7 @@ class GameEngine:
             try:
                 self.vfx_system.update(dt)
             except Exception:
-                pass
+                get_logger(__name__).exception("VFX update/render failed")  # behavior unchanged; now observable
 
     def _flush_event_bus(self):
         """Flush queued events once per frame after updating listener context."""

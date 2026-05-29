@@ -5,8 +5,6 @@ Handles routine behavior, defers important decisions to LLM.
 
 from __future__ import annotations
 
-import math
-
 from ai.behaviors import (
     bounty_pursuit,
     defense,
@@ -30,40 +28,6 @@ from game.sim.direct_prompt_commit import (
 from game.sim.timebase import now_ms as sim_now_ms
 from game.systems.navigation import best_adjacent_tile
 
-
-def _get_nearest_undepleted_poi(hero, game_state):
-    """Return the nearest discovered, undepleted POI or None.
-
-    Scans the ``pois`` list in game_state and returns a ``(poi, distance_tiles)``
-    tuple for the closest POI that is discovered but not yet depleted, or ``None``
-    if no such POI exists within a reasonable radius.
-    """
-    pois = game_state.get("pois", []) or []
-    hx = getattr(hero, 'world_x', getattr(hero, 'x', 0))
-    hy = getattr(hero, 'world_y', getattr(hero, 'y', 0))
-
-    best = None
-    best_dist = float('inf')
-
-    for poi in pois:
-        if not getattr(poi, 'is_discovered', False):
-            continue
-        if getattr(poi, 'is_depleted', False):
-            continue
-        poi_def = getattr(poi, 'poi_def', None)
-        if poi_def is None:
-            continue
-        size = getattr(poi_def, 'size', (1, 1))
-        poi_cx = (getattr(poi, 'grid_x', 0) + size[0] / 2) * TILE_SIZE
-        poi_cy = (getattr(poi, 'grid_y', 0) + size[1] / 2) * TILE_SIZE
-        dist = math.hypot(hx - poi_cx, hy - poi_cy) / TILE_SIZE
-        if dist < best_dist:
-            best_dist = dist
-            best = poi
-
-    if best is not None:
-        return (best, round(best_dist, 1))
-    return None
 
 # Deterministic AI RNG stream (isolated from gameplay RNG).
 _AI_RNG = get_rng("ai_basic")

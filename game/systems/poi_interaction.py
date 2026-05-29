@@ -371,10 +371,6 @@ class POIInteractionSystem:
         if hasattr(world, "reveal_underground_circle"):
             world.reveal_underground_circle(area_id, cx, 0, 4)
 
-        # WK57 Wave 5C: Spawn underground enemies
-        # FEATURE GATE: underground visuals disabled — skip enemy spawning underground.
-        # _spawn_underground_enemies(area, self._sim_engine, event_bus)
-
         poi.is_interacted = True
         poi.interaction_count = getattr(poi, "interaction_count", 0) + 1
         self._hero_poi_cooldowns[cooldown_key] = _ONESHOT_COOLDOWN_SEC
@@ -436,59 +432,6 @@ class POIInteractionSystem:
             event_bus.emit(payload)
         except Exception:
             pass
-
-
-# ---------------------------------------------------------------------------
-# WK57 Wave 5C: Underground Enemy Spawning
-# ---------------------------------------------------------------------------
-
-def _spawn_underground_enemies(area, sim_engine, event_bus):
-    """Spawn enemies in unexplored chambers when hero enters underground.
-
-    Each chamber's enemy list (populated by generate_underground_area) is
-    instantiated into actual Enemy entities placed at the chamber center
-    in world-pixel coordinates, on layer -1.
-    """
-    if area is None or sim_engine is None:
-        return
-
-    from game.entities.enemy import Enemy, Goblin, Skeleton
-
-    _ENEMY_CLASSES = {
-        "goblin": Goblin,
-        "skeleton": Skeleton,
-        "spider": Enemy,  # generic fallback for spider type
-    }
-
-    rng = get_rng("underground_spawn")
-
-    for ch in area.chambers:
-        if ch.is_cleared:
-            continue
-        # Only spawn enemies for chambers that have not yet been populated
-        # (is_explored may have been set by the entrance reveal above)
-        if not ch.enemies:
-            continue
-
-        # Calculate world-pixel center of this chamber
-        cx_local = area.total_width // 2 + ch.world_offset_x + ch.width // 2
-        cz_local = ch.world_offset_z + ch.height // 2
-        # Convert local coords to world grid coords then to pixels
-        world_gx = cx_local - area.total_width // 2 + area.entrance_grid_x
-        world_gy = cz_local + area.entrance_grid_y
-        px = world_gx * TILE_SIZE + TILE_SIZE // 2
-        py = world_gy * TILE_SIZE + TILE_SIZE // 2
-
-        for enemy_type in ch.enemies:
-            cls = _ENEMY_CLASSES.get(enemy_type, Enemy)
-            # Small random offset so enemies don't stack
-            offset_x = (rng.random() - 0.5) * TILE_SIZE
-            offset_y = (rng.random() - 0.5) * TILE_SIZE
-            enemy = cls(px + offset_x, py + offset_y)
-            if enemy.enemy_type == "enemy" and enemy_type == "spider":
-                enemy.enemy_type = "spider"
-            enemy.layer = -1  # underground
-            sim_engine.enemies.append(enemy)
 
 
 # Dispatch table — avoids a long if/elif chain.

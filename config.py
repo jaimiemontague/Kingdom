@@ -8,116 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-@dataclass(frozen=True)
-class WindowConfig:
-    width: int = 1920
-    height: int = 1080
-    fps: int = 60
-    prototype_version: str = "1.5.8"
-    game_title: str = "Kingdom Sim (Prototype v1.5.8) — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching"
-    default_borderless: bool = True
-
-
-@dataclass(frozen=True)
-class SimConfig:
-    deterministic_sim: bool
-    tick_hz: int
-    seed: int
-    early_pacing_nudge_mode: str
-
-
-@dataclass(frozen=True)
-class MapConfig:
-    tile_size: int = 32
-    width: int = 250
-    height: int = 250
-
-
-@dataclass(frozen=True)
-class CameraConfig:
-    speed_px_per_sec: int = 900
-    edge_margin_px: int = 40
-    zoom_min: float = 0.3
-    zoom_max: float = 5.0
-    zoom_step: float = 1.15
-
-
-@dataclass(frozen=True)
-class HeroConfig:
-    hire_cost: int = 100  # WK60: doubled from 50 (Feature 4 — Make It Fun)
-    base_hp: int = 60  # WK61-TUNE-004: reduced from 100 (heroes fragile early, tough with levels)
-    base_attack: int = 10
-    base_defense: int = 5
-    speed: float = 120.0  # px/sec (baked: old 2 * 60)
-
-
-@dataclass(frozen=True)
-class EnemyConfig:
-    goblin_hp: int = 30
-    goblin_attack: int = 5
-    goblin_speed: float = 90.0  # px/sec (baked: old 1.5 * 60)
-    goblin_spawn_interval: int = 3500   # wk15: lower = more frequent waves (was 5000)
-    max_alive_enemies: int = 80         # WK61-R12: raised from 48 for doubled wave counts
-    wolf_hp: int = 22
-    wolf_attack: int = 4
-    wolf_speed: float = 138.0  # px/sec (baked: old 2.3 * 60)
-    skeleton_hp: int = 55
-    skeleton_attack: int = 7
-    skeleton_speed: float = 66.0  # px/sec (baked: old 1.1 * 60)
-    skeleton_archer_hp: int = 40
-    skeleton_archer_attack: int = 4
-    skeleton_archer_speed: float = 81.0  # px/sec (baked: old 1.35 * 60)
-    skeleton_archer_attack_range_tiles: float = 6.0
-    skeleton_archer_min_range_tiles: float = 2.0
-    skeleton_archer_attack_cooldown_ms: int = 1400
-
-
-@dataclass(frozen=True)
-class LairConfig:
-    initial_count: int = 5   # WK60: raised from 4 for more early pressure
-    min_distance_from_castle_tiles: int = 15  # WK60: reduced from 18 (lairs feel closer, more threatening)
-    stash_growth_per_spawn: int = 8
-    rogue_lair_gold_threshold: int = 100
-    bounty_cost: int = 90
-
-
-@dataclass(frozen=True)
-class BountyConfig:
-    reward_low: int = 25
-    reward_med: int = 60
-    reward_high: int = 150
-    black_fog_distance_penalty: float = 1.2
-
-
-@dataclass(frozen=True)
-class EconomyConfig:
-    starting_gold: int = 2100   # wk15: +40% from 1500 for pacing
-    tax_rate: float = 0.25      # 25% (hero/lair gold uses this; monster gold increased separately for pacing)
-    tax_collection_interval_sec: float = 45.0  # wk15: collector runs more often (was 60s hardcoded)
-    tax_collector_rest_after_return_sec: float = 10.0  # Rest at castle 10s after returning a nice haul
-    tax_collector_nice_haul_gold: int = 20  # Gold deposited >= this triggers the short rest
-
-
-@dataclass(frozen=True)
-class LLMConfig:
-    provider: str
-    openai_api_key: str
-    openai_model: str
-    anthropic_api_key: str
-    gemini_api_key: str
-    grok_api_key: str
-    decision_cooldown: int = 2000
-    timeout: float = 5.0
-    health_threshold_for_decision: float = 0.5
-
-
-@dataclass(frozen=True)
-class RangerConfig:
-    explore_black_fog_bias: float = 0.7
-    frontier_scan_radius_tiles: int = 10
-    frontier_commit_ms: int = 4000
-
-
 # WK60: Starting Buildings (Feature 6 — Make It Fun)
 # Pre-constructed buildings placed around castle at game start.
 # Each entry: (building_type, grid_x, grid_y)
@@ -216,54 +106,29 @@ SPEED_TIER_NAMES = {
 }
 
 
-# Grouped config objects (frozen dataclasses)
-WINDOW = WindowConfig()
-SIM = SimConfig(
-    deterministic_sim=os.getenv("DETERMINISTIC_SIM", "0") == "1",
-    tick_hz=int(os.getenv("SIM_TICK_HZ", str(WINDOW.fps))),
-    seed=int(os.getenv("SIM_SEED", "1")),
-    early_pacing_nudge_mode=os.getenv("EARLY_PACING_NUDGE_MODE", "auto"),
-)
-MAP = MapConfig()
-CAMERA = CameraConfig()
-HERO = HeroConfig()
-ENEMY = EnemyConfig()
-LAIR = LairConfig()
-BOUNTY = BountyConfig()
-ECONOMY = EconomyConfig()
-LLM = LLMConfig(
-    provider=os.getenv("LLM_PROVIDER", "openai"),
-    openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-    openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-    gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-    grok_api_key=os.getenv("GROK_API_KEY", ""),
-)
-RANGER = RangerConfig()
-
 # Research timer (wk15: timed research for Marketplace/Blacksmith/Library)
 RESEARCH_POTIONS_DURATION_MS = 30_000  # 30s for potions
 RESEARCH_DURATION_MS_PER_100_GOLD = 10_000  # e.g. 200 cost = 20s, 300 = 30s
 
-# Backward-compatible module-level aliases (consumers unchanged)
+# Flat module-level config constants (the canonical surface consumers import).
 # Window settings
-WINDOW_WIDTH = WINDOW.width
-WINDOW_HEIGHT = WINDOW.height
-FPS = WINDOW.fps
-PROTOTYPE_VERSION = WINDOW.prototype_version
-GAME_TITLE = WINDOW.game_title
-DEFAULT_BORDERLESS = WINDOW.default_borderless
+WINDOW_WIDTH = 1920
+WINDOW_HEIGHT = 1080
+FPS = 60
+PROTOTYPE_VERSION = "1.5.8"
+GAME_TITLE = "Kingdom Sim (Prototype v1.5.8) — Major FPS Leap with Tree Instancing, Terrain Fog Shading, and Batching"
+DEFAULT_BORDERLESS = True
 
-# Determinism / simulation settings
-DETERMINISTIC_SIM = SIM.deterministic_sim
-SIM_TICK_HZ = SIM.tick_hz
-SIM_SEED = SIM.seed
-EARLY_PACING_NUDGE_MODE = SIM.early_pacing_nudge_mode
+# Determinism / simulation settings (env-driven; read at import time)
+DETERMINISTIC_SIM = os.getenv("DETERMINISTIC_SIM", "0") == "1"
+SIM_TICK_HZ = int(os.getenv("SIM_TICK_HZ", str(FPS)))
+SIM_SEED = int(os.getenv("SIM_SEED", "1"))
+EARLY_PACING_NUDGE_MODE = os.getenv("EARLY_PACING_NUDGE_MODE", "auto")
 
 # Map settings
-TILE_SIZE = MAP.tile_size
-MAP_WIDTH = MAP.width
-MAP_HEIGHT = MAP.height
+TILE_SIZE = 32
+MAP_WIDTH = 250
+MAP_HEIGHT = 250
 
 # 2D unit sprite raster size (PNG scale for heroes/enemies/workers). Simulation grid stays TILE_SIZE px/tile.
 UNIT_SPRITE_PIXELS = int(os.getenv("KINGDOM_UNIT_SPRITE_PX", "48"))
@@ -285,11 +150,11 @@ BUILDER_WOOD_COST_FARM = 20
 BUILDER_MIN_CHOP_GROWTH = 0.50
 
 # Camera / view settings
-CAMERA_SPEED_PX_PER_SEC = CAMERA.speed_px_per_sec
-CAMERA_EDGE_MARGIN_PX = CAMERA.edge_margin_px
-ZOOM_MIN = CAMERA.zoom_min
-ZOOM_MAX = CAMERA.zoom_max
-ZOOM_STEP = CAMERA.zoom_step
+CAMERA_SPEED_PX_PER_SEC = 900
+CAMERA_EDGE_MARGIN_PX = 40
+ZOOM_MIN = 0.3
+ZOOM_MAX = 5.0
+ZOOM_STEP = 1.15
 
 # Colors
 COLOR_GRASS = (34, 139, 34)
@@ -551,45 +416,45 @@ PLAYER_GUILD_TYPES = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", 
 PLAYER_GUILD_EXTRA_VISION_TILES = 2
 
 # Hero settings
-HERO_HIRE_COST = HERO.hire_cost
-HERO_BASE_HP = HERO.base_hp
-HERO_BASE_ATTACK = HERO.base_attack
-HERO_BASE_DEFENSE = HERO.base_defense
-HERO_SPEED = HERO.speed
+HERO_HIRE_COST = 100  # WK60: doubled from 50 (Feature 4 — Make It Fun)
+HERO_BASE_HP = 60  # WK61-TUNE-004: reduced from 100 (heroes fragile early, tough with levels)
+HERO_BASE_ATTACK = 10
+HERO_BASE_DEFENSE = 5
+HERO_SPEED = 120.0  # px/sec (baked: old 2 * 60)
 
 # Enemy settings
-GOBLIN_HP = ENEMY.goblin_hp
-GOBLIN_ATTACK = ENEMY.goblin_attack
-GOBLIN_SPEED = ENEMY.goblin_speed
-GOBLIN_SPAWN_INTERVAL = ENEMY.goblin_spawn_interval
+GOBLIN_HP = 30
+GOBLIN_ATTACK = 5
+GOBLIN_SPEED = 90.0  # px/sec (baked: old 1.5 * 60)
+GOBLIN_SPAWN_INTERVAL = 3500   # wk15: lower = more frequent waves (was 5000)
 
 # Safety cap: reduce overall monster density for release stability.
 # (~2/3 reduction from 60 -> 20)
-MAX_ALIVE_ENEMIES = ENEMY.max_alive_enemies
+MAX_ALIVE_ENEMIES = 80         # WK61-R12: raised from 48 for doubled wave counts
 
 # Additional enemy types (lairs)
-WOLF_HP = ENEMY.wolf_hp
-WOLF_ATTACK = ENEMY.wolf_attack
-WOLF_SPEED = ENEMY.wolf_speed
+WOLF_HP = 22
+WOLF_ATTACK = 4
+WOLF_SPEED = 138.0  # px/sec (baked: old 2.3 * 60)
 
-SKELETON_HP = ENEMY.skeleton_hp
-SKELETON_ATTACK = ENEMY.skeleton_attack
-SKELETON_SPEED = ENEMY.skeleton_speed
+SKELETON_HP = 55
+SKELETON_ATTACK = 7
+SKELETON_SPEED = 66.0  # px/sec (baked: old 1.1 * 60)
 
 # Skeleton Archer (ranged kiter)
-SKELETON_ARCHER_HP = ENEMY.skeleton_archer_hp
-SKELETON_ARCHER_ATTACK = ENEMY.skeleton_archer_attack
-SKELETON_ARCHER_SPEED = ENEMY.skeleton_archer_speed
-SKELETON_ARCHER_ATTACK_RANGE_TILES = ENEMY.skeleton_archer_attack_range_tiles
-SKELETON_ARCHER_MIN_RANGE_TILES = ENEMY.skeleton_archer_min_range_tiles
-SKELETON_ARCHER_ATTACK_COOLDOWN_MS = ENEMY.skeleton_archer_attack_cooldown_ms
+SKELETON_ARCHER_HP = 40
+SKELETON_ARCHER_ATTACK = 4
+SKELETON_ARCHER_SPEED = 81.0  # px/sec (baked: old 1.35 * 60)
+SKELETON_ARCHER_ATTACK_RANGE_TILES = 6.0
+SKELETON_ARCHER_MIN_RANGE_TILES = 2.0
+SKELETON_ARCHER_ATTACK_COOLDOWN_MS = 1400
 
 # Lair settings (release tuning)
 # (~2/3 reduction from 6 -> 2)
-LAIR_INITIAL_COUNT = LAIR.initial_count
-LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = LAIR.min_distance_from_castle_tiles
-LAIR_STASH_GROWTH_PER_SPAWN = LAIR.stash_growth_per_spawn
-ROGUE_LAIR_GOLD_THRESHOLD = LAIR.rogue_lair_gold_threshold
+LAIR_INITIAL_COUNT = 5   # WK60: raised from 4 for more early pressure
+LAIR_MIN_DISTANCE_FROM_CASTLE_TILES = 15  # WK60: reduced from 18 (lairs feel closer, more threatening)
+LAIR_STASH_GROWTH_PER_SPAWN = 8
+ROGUE_LAIR_GOLD_THRESHOLD = 100
 
 # --- WK22 Ursina 3D viewer (directional shadows; lower = faster GPU) ---
 # Shadow maps + lit_with_shadows_shader are expensive; default off for playable FPS (WK31).
@@ -644,17 +509,17 @@ if _spf_env > 0:
 URSINA_FOG_MIN_UPDATE_INTERVAL_SEC = 0.12
 # Legacy: Ursina HUD GPU upload is now skipped via row-sampled CRC when pixels are unchanged (ursina_app).
 URSINA_UI_UPLOAD_INTERVAL_SEC = 0.10
-LAIR_BOUNTY_COST = LAIR.bounty_cost
+LAIR_BOUNTY_COST = 90
 
 # Bounty reward bands (player-paid; cost == reward). Used by Engine input + early pacing nudge.
-BOUNTY_REWARD_LOW = BOUNTY.reward_low
-BOUNTY_REWARD_MED = BOUNTY.reward_med
-BOUNTY_REWARD_HIGH = BOUNTY.reward_high
+BOUNTY_REWARD_LOW = 25
+BOUNTY_REWARD_MED = 60
+BOUNTY_REWARD_HIGH = 150
 
 # Economy settings
-STARTING_GOLD = ECONOMY.starting_gold
-TAX_RATE = ECONOMY.tax_rate
-TAX_COLLECTION_INTERVAL_SEC = ECONOMY.tax_collection_interval_sec
+STARTING_GOLD = 2100   # wk15: +40% from 1500 for pacing
+TAX_RATE = 0.25      # 25% (hero/lair gold uses this; monster gold increased separately for pacing)
+TAX_COLLECTION_INTERVAL_SEC = 45.0  # wk15: collector runs more often (was 60s hardcoded)
 # WK61-R6: building types with ``stored_tax_gold`` / ``has_tax_stash_data`` for hold-G overlay.
 TAX_STASH_BUILDING_TYPES = frozenset({
     "marketplace",
@@ -691,21 +556,21 @@ NON_TAX_STASH_BUILDING_TYPES = frozenset({
     "library",
     "royal_gardens",
 })
-TAX_COLLECTOR_REST_AFTER_RETURN_SEC = ECONOMY.tax_collector_rest_after_return_sec
-TAX_COLLECTOR_NICE_HAUL_GOLD = ECONOMY.tax_collector_nice_haul_gold
+TAX_COLLECTOR_REST_AFTER_RETURN_SEC = 10.0  # Rest at castle 10s after returning a nice haul
+TAX_COLLECTOR_NICE_HAUL_GOLD = 20  # Gold deposited >= this triggers the short rest
 
-# LLM settings
-LLM_PROVIDER = LLM.provider  # openai, claude, gemini, grok, mock
-OPENAI_API_KEY = LLM.openai_api_key
-OPENAI_MODEL = LLM.openai_model
-ANTHROPIC_API_KEY = LLM.anthropic_api_key
-GEMINI_API_KEY = LLM.gemini_api_key
-GROK_API_KEY = LLM.grok_api_key
+# LLM settings (env-driven; read at import time)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # openai, claude, gemini, grok, mock
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROK_API_KEY = os.getenv("GROK_API_KEY", "")
 
 # LLM decision settings
-LLM_DECISION_COOLDOWN = LLM.decision_cooldown
-LLM_TIMEOUT = LLM.timeout
-HEALTH_THRESHOLD_FOR_DECISION = LLM.health_threshold_for_decision
+LLM_DECISION_COOLDOWN = 2000
+LLM_TIMEOUT = 5.0
+HEALTH_THRESHOLD_FOR_DECISION = 0.5
 
 # wk14 Persona and Presence: conversation mode
 CONVERSATION_COOLDOWN_MS = 2000
@@ -713,9 +578,9 @@ CONVERSATION_HISTORY_LIMIT = 20
 CONVERSATION_TIMEOUT = 8.0
 
 # WK6: Ranger exploration bias toward black fog
-RANGER_EXPLORE_BLACK_FOG_BIAS = RANGER.explore_black_fog_bias  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
-RANGER_FRONTIER_SCAN_RADIUS_TILES = RANGER.frontier_scan_radius_tiles  # Maximum radius (in tiles) to scan for black fog frontier tiles
-RANGER_FRONTIER_COMMIT_MS = RANGER.frontier_commit_ms  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
+RANGER_EXPLORE_BLACK_FOG_BIAS = 0.7  # 0.0-1.0: probability of picking frontier vs random wander (default 0.7 = 70% frontier)
+RANGER_FRONTIER_SCAN_RADIUS_TILES = 10  # Maximum radius (in tiles) to scan for black fog frontier tiles
+RANGER_FRONTIER_COMMIT_MS = 4000  # Commitment window (sim-time ms) to prevent rapid re-targeting of exploration goals
 
 # --- WK53 Terrain Elevation (Agent 03: terrain_height.py + heightmap generation) ---
 # Maximum terrain elevation in world units (Ursina Y).
@@ -762,7 +627,7 @@ UNDERGROUND_ROCK_TEXTURE = "assets/textures/rock_ground.png"
 POI_DISCOVERY_RANGE_TILES = 5
 
 # WK6: Bounty targeting in black fog
-BOUNTY_BLACK_FOG_DISTANCE_PENALTY = BOUNTY.black_fog_distance_penalty  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
+BOUNTY_BLACK_FOG_DISTANCE_PENALTY = 1.2  # Distance multiplier for bounties in black fog (uncertainty penalty, but never exclusion)
 
 # ---------- WK60: Dev Mode (Feature 9 — Make It Fun) ----------
 DEV_MODE = os.getenv("KINGDOM_DEV_MODE", "0") == "1"

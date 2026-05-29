@@ -1575,6 +1575,98 @@
           ]
         }
       }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 (De-Slop Foundation). Wave 1: AI decision characterization net (GREEN on current code) so the Wave-2 legacy-prompt deletion is provably inert and Round D is protected. Subtractive/observability/safety-net sprint; no behavior changes."
+      },
+      "rounds": {
+        "wk65_w1_characterization": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "Round 0 (De-Slop Foundation), Wave 1",
+            "launched_by": "tools/ai_studio_orchestrator (parent Agent 01 PM)"
+          },
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w1_characterization",
+          "status": "done",
+          "prompt_text": "WK65 Round 0 Wave 1. Create tests/test_wk65_ai_characterization.py GREEN on current unmodified code. Pin: (1) autonomous decision path via LIVE _process_autonomous_decision_request (reached when context['wk50_autonomous'] is a dict) - decision dict shape/keys; (2) get_fallback_decision well-formed per branch; (3) build_hero_context top-level keys; (4) validate_direct_prompt_output verdicts incl. deferred-combat early-return + critical-health redirect. CREATE only that one file; edit no production code. DO NOT COMMIT.",
+          "file_created": "tests/test_wk65_ai_characterization.py",
+          "what_it_pins": {
+            "autonomous_decision_path_LIVE": "Drives LLMBrain._process_request -> _process_autonomous_decision_request through the mock provider (context with wk50_autonomous dict from build_llm_context_for_moment). Pins the exact 8-key decision dict {action,target,reasoning,confidence,memory_used,personality_influence,obey_defy,tool_action}, action in moment allowlist, tool_action==action, obey_defy=='Obey', confidence float in [0,1]. Second test pins the autonomous->fallback edge (disallowed action -> get_fallback_decision == use_potion for crit-hp+potion). This is the path that SURVIVES Wave 2; the legacy non-autonomous branch is only reachable when wk50_autonomous is absent, so these pins prove the Wave-2 deletion is inert.",
+            "get_fallback_decision": "Pins all 6 documented branches with EXACT dicts: critical+potion->use_potion; critical+nopotion->retreat/castle; low+combat+nopotion->retreat/marketplace; can_shop+needs_potion->buy_item/Health Potion; enemies_nearby+healthy->fight; idle default->explore. Each asserted well-formed ({action,target,reasoning}).",
+            "build_hero_context_keys": "Pins the exact top-level key set (20 keys) for a real Hero+game_state, plus hero sub-keys (13), situation keys (10), and inventory keys (5). Pins context_builder for Round D.",
+            "validate_direct_prompt_output": "Pins the 12-key output schema and the two audit-flagged fragile verdicts: deferred-combat early-return (attack_* -> no_action_chat_only, tool_action=None, obey_defy=Defy, refusal_reason=mvp_combat_deferred, safety_assessment=deferred) including the attack_ prefix path; critical-health redirect with potion (explore/go_to -> seek_healing/use_potion, safety_assessment=critical_redirect) and without potion (-> seek_healing/retreat home). Also status_report (no tool, Obey) and non-dict raw -> safe no_action fallback."
+          },
+          "verified_live_path_is_autonomous": "Inspected LLMBrain._process_request source: when context.get('wk50_autonomous') is a dict it RETURNS _process_autonomous_decision_request(...) BEFORE any reference to ContextBuilder.build_summary / build_decision_prompt / SYSTEM_PROMPT. The legacy branch (those symbols) is therefore unreachable for autonomous requests, which is the only request shape llm_bridge emits. Wave-2 deletion of the legacy branch is provably inert against this test.",
+          "gate_output": {
+            "pytest_test_wk65_ai_characterization": "16 passed, 1 warning (run twice, stable)",
+            "qa_smoke_quick": "FAIL overall (rc=1) but NOT due to this file: my file is green inside the full suite. The 2 failures are in tests/test_wk65_engine_sim_hero_characterization.py (Agent 03's Wave-1 file) deterministic-digest pins, plus a pre-existing combat test-double error (DummySkeletonArcher has no 'is_alive' in game/systems/combat.py:333). Neither is in Agent 06 scope; a new isolated test file cannot affect another file's sim digest. Reported to PM.",
+            "determinism_guard_static": "exit_code=0 (PASS, run inside qa_smoke)"
+          },
+          "constraints_honored": [
+            "CREATE only tests/test_wk65_ai_characterization.py; edited no production code.",
+            "Wave-2 legacy-prompt deletion NOT performed (later activation).",
+            "DID NOT COMMIT. DID NOT PUSH."
+          ],
+          "questions_back_to_pm": [
+            "Gate 1 (Agent 11) will see 2 red tests in test_wk65_engine_sim_hero_characterization.py (Agent 03) + the DummySkeletonArcher.is_alive combat-double error. These are outside Agent 06's lane and predate my file. Flagging so Gate 1 routes them to Agent 03 / QA rather than blocking the AI pins."
+          ]
+        },
+        "wk65_w2_deletion_hygiene": {
+          "round_meta": {
+            "role": "Agent 06 AIBehaviorDirector_LLM",
+            "phase": "Round 0 (De-Slop Foundation), Wave 2 (deletions)",
+            "launched_by": "tools/ai_studio_orchestrator (parent Agent 01 PM)"
+          },
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "prompt_text": "WK65 Round 0 Wave 2. Delete the legacy LLM prompt path after grep-confirm (zero LIVE callers). EDIT only ai/llm_brain.py, ai/prompt_templates.py, ai/context_builder.py, ai/basic_ai.py. DO NOT COMMIT.",
+          "grep_confirm_gating": {
+            "command": "rg -n \"build_summary|build_decision_prompt|build_conversation_prompt|SYSTEM_PROMPT|DECISION_PROMPT|CONVERSATION_SYSTEM_PROMPT|CONVERSATION_USER_PROMPT\" game ai tools tests",
+            "result_pre_delete": "All LIVE code references confined to the 3 files in my lane: ai/llm_brain.py (imports SYSTEM_PROMPT:19, build_decision_prompt:23; uses build_summary:162, build_decision_prompt:163, SYSTEM_PROMPT:170,177), ai/context_builder.py (build_summary def:320), ai/prompt_templates.py (SYSTEM_PROMPT:27, CONVERSATION_SYSTEM_PROMPT:72, CONVERSATION_USER_PROMPT:95, DECISION_PROMPT:106, build_conversation_prompt:124, build_decision_prompt:178). AUTONOMOUS_SYSTEM_PROMPT (prompt_packs.py:27, imported by llm_brain) is the KEPT autonomous path - NOT deleted. All other matches are .cursor/ plans+logs, docs, the onboarding .mdc, and tests that import the KEPT AUTONOMOUS_SYSTEM_PROMPT/build_autonomous_user_prompt from prompt_packs (test_wk50_phase2a) - none count as callers per Critical Design Rule 1.",
+            "conversation_path_check": "CONFIRMED _process_conversation (LIVE, llm_brain.py) uses build_direct_prompt_messages from ai.prompt_packs - it does NOT reference CONVERSATION_SYSTEM_PROMPT / build_conversation_prompt. Deletion of those is safe.",
+            "build_conversation_prompt_callers": "ZERO call sites in code (only its own def + the plan).",
+            "get_nearest_undepleted_poi": {
+              "command": "rg -n \"_get_nearest_undepleted_poi\" game ai tools tests",
+              "result": "Only LIVE hit was the definition at ai/basic_ai.py:34. All other matches are .cursor/ plans. ZERO callers -> safe to delete."
+            },
+            "result_post_delete": "rg over ai/ for the 7 legacy symbols now returns ONLY AUTONOMOUS_SYSTEM_PROMPT (llm_brain import+2 uses, prompt_packs def). All 6 legacy prompt symbols + build_summary + _get_nearest_undepleted_poi are gone."
+          },
+          "deletions": {
+            "ai/llm_brain.py": "Collapsed _process_request (~155-201, 47 LOC) to autonomous-only 7-line form per plan; removed now-unused imports SYSTEM_PROMPT + build_decision_prompt; ALSO removed the now-unused `from ai.context_builder import ContextBuilder` import (its only use was build_summary in the deleted branch; nothing imports ContextBuilder *from* llm_brain - verified). get_fallback_decision kept (used at :197,201,209,241 originally). AUTONOMOUS_SYSTEM_PROMPT/build_autonomous_user_prompt/_process_autonomous_decision_request/_process_conversation untouched.",
+            "ai/context_builder.py": "Deleted build_summary @staticmethod (lines 319-414, the method body) = 96 LOC. build_hero_context, build_hero_stat_block, build_inputs_summary all kept.",
+            "ai/prompt_templates.py": "Deleted SYSTEM_PROMPT, CONVERSATION_SYSTEM_PROMPT, CONVERSATION_USER_PROMPT, DECISION_PROMPT, build_conversation_prompt, build_decision_prompt (contiguous block lines 27-212) = 186 LOC. KEPT VALID_ACTIONS, TOOL_ACTIONS, OBEY_DEFY_VALUES, FALLBACK_DECISIONS, get_fallback_decision.",
+            "ai/basic_ai.py": "Deleted module-level _get_nearest_undepleted_poi (lines 34-66) = 33 LOC; ALSO removed the now-orphaned `import math` (line 8) - the deleted function held the file's only math.* usage (math.hypot); verified zero remaining math refs. TILE_SIZE import kept (used at :86,266,374+ etc). _AI_RNG and all behavior logic untouched."
+          },
+          "loc_removed": {
+            "ai/llm_brain.py": "47 (method body) + 3 (import lines: SYSTEM_PROMPT, build_decision_prompt, ContextBuilder) net; method replaced by 7-line autonomous-only form so net file shrink ~43",
+            "ai/context_builder.py": 96,
+            "ai/prompt_templates.py": 186,
+            "ai/basic_ai.py": "33 (function) + 1 (import math) = 34",
+            "approx_total_loc_removed": "~360 (legacy prompt path + dead POI helper)"
+          },
+          "scoped_gates": {
+            "determinism_guard_paths_ai": "PASS - `python tools/determinism_guard.py --paths ai` -> '[determinism_guard] PASS: no violations found'. AST-based, independent of the config.py break; proves my deletions add no nondeterminism.",
+            "module_import_smoke": "PASS (run BEFORE the config.py break) - imported all 4 edited modules; confirmed build_summary_gone=True, legacy_syms_gone=True (none of SYSTEM_PROMPT/DECISION_PROMPT/CONVERSATION_SYSTEM_PROMPT/CONVERSATION_USER_PROMPT/build_decision_prompt/build_conversation_prompt remain), poi_fn_gone=True.",
+            "py_compile_all_four": "PASS - `python -m py_compile` on all 4 files -> ALL_FOUR_COMPILE_OK (no syntax errors).",
+            "pytest_pins_and_ai_suite": "PASS (47 passed, 1 pygame-deprecation warning, 6.13s) - `python -m pytest tests/test_wk65_ai_characterization.py tests/test_ai_shopping.py tests/test_ai_defense.py tests/test_ai_exploration.py tests/test_direct_prompt_integration.py tests/test_chat_direct_feedback.py -q`. NOTE: this gate was initially BLOCKED for ~several minutes by a transient parallel-wave write race on config.py (Agent 03's owned Wave-2 file, NOT mine): the dataclass instances WINDOW..RANGER were deleted but the flat-alias block had not yet been redefined, so config import walked NameError :110 WINDOW -> :419 HERO -> :563 LLM and conftest (which imports config) failed every collection. I did NOT touch config.py (Rule 6/8); once Agent 03 finished redefining the aliases, config imported cleanly and the full scoped gate ran GREEN. My 16 Wave-1 AI pins (inside test_wk65_ai_characterization.py) stay green after the deletion -> deletion is provably inert."
+          },
+          "untouched_paths_confirmation": "Autonomous path (_process_autonomous_decision_request, AUTONOMOUS_SYSTEM_PROMPT, build_autonomous_user_prompt, validate_autonomous_decision) UNCHANGED. prompt_packs.py UNCHANGED (build_direct_prompt_messages, AUTONOMOUS_SYSTEM_PROMPT, DIRECT_PROMPT_MARK). _process_conversation (direct-prompt/conversation live path) UNCHANGED. get_fallback_decision + FALLBACK_DECISIONS + VALID_ACTIONS + TOOL_ACTIONS + OBEY_DEFY_VALUES UNCHANGED. All BasicAI behavior logic UNCHANGED.",
+          "constraints_honored": [
+            "EDITED only ai/llm_brain.py, ai/prompt_templates.py, ai/context_builder.py, ai/basic_ai.py.",
+            "Did NOT touch config.py (Agent 03's lane) even though a transient broken state mid-edit briefly blocked my pytest gate; waited for Agent 03 to finish rather than editing out of lane.",
+            "Did NOT run the full suite or qa_smoke (Gate-2 / Agent 01 scope).",
+            "DID NOT COMMIT. DID NOT PUSH."
+          ],
+          "questions_back_to_pm": [
+            "RESOLVED (FYI for sequencing): there was a ~several-minute window where config.py was a broken intermediate from Agent 03's parallel Wave-2 edit (dataclass instances WINDOW..RANGER deleted, flat aliases not yet redefined; NameError walked :110 WINDOW -> :419 HERO -> :563 LLM). During that window every pytest collection failed because conftest imports config, so my scoped pytest gate was temporarily un-runnable. I did NOT touch config.py (out of lane); I waited and re-ran once Agent 03 completed - all 47 scoped tests then passed. Flagging only so Gate 1/Gate 2 understands any transient red collection seen during Wave 2 against config.py is this race, not an AI-deletion defect. No action needed from PM beyond ensuring Gate 2 runs after all Wave-2 writers (esp. Agent 03 config.py) have settled.",
+            "Carryover from Wave 1 Gate 1 (still relevant): the DummySkeletonArcher.is_alive combat-double error (game/systems/combat.py) and Agent 03's engine/sim/hero digest pins are outside Agent 06's lane."
+          ]
+        }
+      }
     }
   }
 }

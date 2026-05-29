@@ -978,14 +978,19 @@
             "feature_6_starting_buildings": {
               "status": "done",
               "summary": "Added STARTING_BUILDINGS config list in config.py and placement loop in SimEngine.setup_initial_state(). 4 buildings (Warriors Guild, Rangers Guild, Marketplace, Guardhouse) placed pre-constructed around castle with full HP, path tiles, and tree clearing. Fog-of-war revealers handled automatically by existing _update_fog_of_war() logic.",
-              "files_modified": ["config.py", "game/sim_engine.py"],
+              "files_modified": [
+                "config.py",
+                "game/sim_engine.py"
+              ],
               "config_added": "STARTING_BUILDINGS = [(warrior_guild,128,124), (ranger_guild,119,124), (marketplace,124,128), (guardhouse,124,131)]",
               "grid_overlap_check": "Castle footprint 124-126,124-126 (3x3). Warriors Guild 128-129,124-125 — no overlap. Rangers Guild 119-120,124-125 — no overlap. Marketplace 124-125,128-129 — no overlap. Guardhouse 124-125,131-132 — no overlap."
             },
             "feature_7_bounty_flags_ursina_3d": {
               "status": "done",
               "summary": "Added _sync_snapshot_bounties() method to UrsinaRenderer. Creates 3-part flag assemblies (brown pole, gold pennant, $reward text) for each unclaimed bounty. Manages lifecycle via _bounty_entities dict keyed by bounty_id. Removes entities when bounties are claimed/expired. Called from update() alongside other _sync_snapshot_* methods.",
-              "files_modified": ["game/graphics/ursina_renderer.py"],
+              "files_modified": [
+                "game/graphics/ursina_renderer.py"
+              ],
               "snapshot_data": "SimStateSnapshot.bounties tuple already populated from bounty_system.get_unclaimed_bounties() — no snapshot changes needed.",
               "entities_per_bounty": "3 (pole Entity, flag Entity, Text entity)",
               "cleanup": "Automatic — removed_ids = cached - active; ursina.destroy each part"
@@ -1012,7 +1017,9 @@
           "status": "done",
           "what_i_changed": {
             "summary": "Completed all 4 Agent 03 renderer items: (1) WK61-BUG-001 counter-flip child text entities on heroes and enemies so names/HP bars never appear mirrored when facing left, (2) WK61-FEAT-001 disabled building name label creation in _sync_building_worldspace_ui, (3) WK61-FEAT-003 gated building gold labels on held_keys['g'] so taxable gold only shows while holding G key, (4) WK61-FEAT-004 added _sync_snapshot_rubble method to render 3 scattered rock models at destroyed building locations using deterministic Random(record_id) for scatter positions.",
-            "files_modified": ["game/graphics/ursina_renderer.py"],
+            "files_modified": [
+              "game/graphics/ursina_renderer.py"
+            ],
             "per_item": {
               "item_1_reversed_names": {
                 "ticket": "WK61-BUG-001",
@@ -1068,7 +1075,10 @@
               "status": "done",
               "root_cause": "engine.py's _cleanup_after_combat() method (which calls _cleanup_destroyed_buildings()) became dead code during the SimEngine refactoring. The method was defined at line 1412 but never called from engine.update() or sim_engine.update(). This meant buildings with hp<=0 were never removed from engine.buildings, never cleared from snapshots, and their Ursina entities were never destroyed. Only player-initiated demolish (confirm_demolish action at line 1685) called _cleanup_destroyed_buildings().",
               "fix": "Two-pronged fix: (1) In game/engine.py update(), added self._cleanup_destroyed_buildings() call after self.sim.update() so buildings at hp<=0 are removed from engine.buildings and rubble records are created before the next snapshot. (2) In game/graphics/ursina_renderer.py _sync_snapshot_buildings(), added defensive hp<=0 check that skips and destroys entities for destroyed buildings still in the snapshot (belt-and-suspenders for the frame between destruction and cleanup).",
-              "files": ["game/engine.py", "game/graphics/ursina_renderer.py"]
+              "files": [
+                "game/engine.py",
+                "game/graphics/ursina_renderer.py"
+              ]
             },
             "item_3_rubble_rendering_verification": {
               "ticket": "WK61-FEAT-004",
@@ -1103,9 +1113,19 @@
             }
           },
           "commands_run": [
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1, "note": "346 passed / 2 failed — pre-existing Agent 06 tests/test_ai_exploration.py stub _AI missing bounty_behavior (WK61-R4-BUG-005 scope)"},
-            {"cmd": "python -m pytest tests/test_wk61_r4_ursina_regressions.py tests/test_engine.py tests/test_input_handler_gamecommands.py -x -q", "exit_code": 0},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "note": "346 passed / 2 failed — pre-existing Agent 06 tests/test_ai_exploration.py stub _AI missing bounty_behavior (WK61-R4-BUG-005 scope)"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk61_r4_ursina_regressions.py tests/test_engine.py tests/test_input_handler_gamecommands.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "qa_smoke": "determinism_guard PASS; full pytest 346/348 pass (2 Agent 06 exploration failures unrelated to renderer/input changes)",
@@ -1135,10 +1155,22 @@
             }
           },
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r4_ursina_regressions.py -x -q", "exit_code": 0},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python -m pytest tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r4_ursina_regressions.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "qa_smoke": "DONE: PASS (exit 0)",
@@ -1168,10 +1200,22 @@
             }
           },
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -x -q", "exit_code": 0},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "qa_smoke": "DONE: PASS (exit 0)",
@@ -1201,9 +1245,18 @@
             }
           },
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r7_tax_overlay_none_guard.py -x -q", "exit_code": 0},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r6_ursina_tax_gold_overlay.py tests/test_wk61_r7_tax_overlay_none_guard.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "qa_smoke": "DONE: PASS (exit 0)",
@@ -1236,9 +1289,18 @@
             }
           },
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r11_tax_overlay_world_y.py -x -q", "exit_code": 0},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r11_tax_overlay_world_y.py -x -q",
+              "exit_code": 0
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "scoped_pytest": "9 passed (R10 hold-G + R11 world-Y overlay tests)",
@@ -1273,11 +1335,30 @@
             "tests/test_engine_sim_boundary.py"
           ],
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_engine_sim_boundary.py -x -v", "exit_code": 0, "detail": "4 passed (tests 1+2 now PASS, not xfail)"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "467 passed"},
-            {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "detail": "PASS: no violations found"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "detail": "PASS (all scenarios + 467 tests)"},
-            {"cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json", "exit_code": 0}
+            {
+              "cmd": "python -m pytest tests/test_engine_sim_boundary.py -x -v",
+              "exit_code": 0,
+              "detail": "4 passed (tests 1+2 now PASS, not xfail)"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "detail": "467 passed"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "detail": "PASS: no violations found"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "detail": "PASS (all scenarios + 467 tests)"
+            },
+            {
+              "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json",
+              "exit_code": 0
+            }
           ],
           "evidence": {
             "test_engine_sim_boundary": "4/4 PASS — tests 1+2 now pass without xfail (sim time single-owner fix verified), tests 3+4 still pass (building cleanup still produces exactly 1 rubble + 1 event)",
@@ -1318,9 +1399,21 @@
             "game/input_handler.py multiple get_game_state() calls — input handling is event-driven, not per-frame; FrameContext may not apply directly but could be cached on the engine for the current frame"
           ],
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_engine.py tests/test_renderer_snapshot_contract.py -x -q", "exit_code": 0, "detail": "16 passed (includes 2 new FrameContext tests)"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "469 passed"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "detail": "PASS (all scenarios exit 0, 469 tests)"}
+            {
+              "cmd": "python -m pytest tests/test_engine.py tests/test_renderer_snapshot_contract.py -x -q",
+              "exit_code": 0,
+              "detail": "16 passed (includes 2 new FrameContext tests)"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "detail": "469 passed"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "detail": "PASS (all scenarios exit 0, 469 tests)"
+            }
           ],
           "evidence": {
             "test_engine": "10/10 PASS (8 existing + 2 new FrameContext tests)",
@@ -1396,10 +1489,26 @@
             "tests/test_wk63_engine_boundary.py"
           ],
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_engine_sim_boundary.py tests/test_wk63_engine_boundary.py tests/test_engine.py -x -v", "exit_code": 0, "detail": "21 passed"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "500 passed"},
-            {"cmd": "python tools/determinism_guard.py", "exit_code": 0, "detail": "PASS: no violations found"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 0, "detail": "PASS (all scenarios exit 0)"}
+            {
+              "cmd": "python -m pytest tests/test_engine_sim_boundary.py tests/test_wk63_engine_boundary.py tests/test_engine.py -x -v",
+              "exit_code": 0,
+              "detail": "21 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "detail": "500 passed"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "detail": "PASS: no violations found"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "detail": "PASS (all scenarios exit 0)"
+            }
           ],
           "evidence": {
             "targeted_tests": "21/21 PASS (4 engine_sim_boundary + 7 wk63_engine_boundary + 10 engine)",
@@ -1471,10 +1580,26 @@
             "tests/test_wk63_engine_boundary.py"
           ],
           "commands_run": [
-            {"cmd": "python -m pytest tests/test_input_handler_gamecommands.py -x -v", "exit_code": 0, "detail": "6 passed"},
-            {"cmd": "python -m pytest tests/test_wk63_engine_boundary.py -x -v", "exit_code": 0, "detail": "7 passed"},
-            {"cmd": "python -m pytest tests/ -x -q", "exit_code": 0, "detail": "503 passed"},
-            {"cmd": "python tools/qa_smoke.py --quick", "exit_code": 1, "detail": "speed_scaling 0.25x flaky (bounty responder timeout) — pre-existing, not caused by protocol split"}
+            {
+              "cmd": "python -m pytest tests/test_input_handler_gamecommands.py -x -v",
+              "exit_code": 0,
+              "detail": "6 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk63_engine_boundary.py -x -v",
+              "exit_code": 0,
+              "detail": "7 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -x -q",
+              "exit_code": 0,
+              "detail": "503 passed"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "exit_code": 1,
+              "detail": "speed_scaling 0.25x flaky (bounty responder timeout) — pre-existing, not caused by protocol split"
+            }
           ],
           "evidence": {
             "targeted_tests": "6/6 input_handler PASS, 7/7 boundary PASS",
@@ -1489,6 +1614,169 @@
             "Future: extract WindowDragState and SpeedState to remove _ prefixed hooks from GameStateCommands",
             "Pre-existing: speed_scaling 0.25x bounty responder flaky with seed=3 — AI team (Agent 06) should investigate"
           ]
+        }
+      }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "Round 0 de-slop foundation: delete-first + observability + characterization net. Agent 03 Wave-1 = logging facade + engine/sim/hero characterization pins (this round). Wave-2 deletions are a separate later activation."
+      },
+      "rounds": {
+        "wk65_w1_characterization": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w1_characterization",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Wave 1: created the additive stdlib logging facade game/logging.py (no wiring, no hot-path logging) and the engine/sim/hero characterization net tests/test_wk65_engine_sim_hero_characterization.py, GREEN on current unmodified code. No deletions (those are the later Wave-2 activation). No production code beyond game/logging.py.",
+            "files_created": {
+              "game/logging.py": "Minimal stdlib logging facade exactly as the plan code block: _configure() reads KINGDOM_LOG_LEVEL (default WARNING), get_logger(name) returns a stdlib Logger. Additive only; not imported anywhere yet (Wave-2 adopts it). Verified no stdlib-shadowing breakage: 'import logging' inside game/ still resolves to the stdlib module; game.engine and ai.basic_ai import cleanly.",
+              "tests/test_wk65_engine_sim_hero_characterization.py": "9 characterization tests pinning behavior Rounds A/B will refactor."
+            },
+            "what_each_test_pins": [
+              "test_deterministic_sim_digest_matches_baseline: pins SimEngine.update end-to-end via an exact digest after DETERMINISTIC_SIM(forced)+SIM_SEED=3, 600 ticks: gold=2101, n_heroes=0, n_enemies=13, n_buildings=43, n_peasants=1, sim_now_ms=10200, enemy_type_counts {bandit:2,goblin:3,skeleton:1,skeleton_archer:2,spider:3,wolf:2}, enemy_hp multiset. Exact per-enemy POSITIONS deliberately NOT pinned (one skeleton_archer kites a few px differently under a cross-module global-state leak; positions would be brittle without being a meaningful signal). Type+HP multisets ARE fully stable and catch spawn/combat drift.",
+              "test_deterministic_sim_digest_is_stable_across_runs: two independent deterministic runs in-process produce byte-identical digests (guards the determinism property itself).",
+              "test_try_select_hero_clears_other_selection_slots: after try_select_hero_at_world, exactly the hero slot is set; selected_building/peasant/enemy cleared (selection mutual-exclusion).",
+              "test_selection_slots_are_mutually_exclusive_when_switching: switching hero->building selection clears the hero slot.",
+              "test_console_revealmap_disables_fog_and_reveals_pois: /revealmap sets world.fog_disabled=True and discovers all 32 POIs.",
+              "test_console_gold_adds_exact_amount: /gold <n> adds exactly n to economy.player_gold; no-arg form adds default 500.",
+              "test_hero_should_go_home_to_rest_thresholds: should_go_home_to_rest() damage-threshold state machine (fresh=False, 10+ damage=True, RESTING=False).",
+              "test_hero_derive_intent_taxonomy: _derive_intent() (intent,reason,context) tuples for idle / resting->returning_to_safety / FIGHTING->engaging_enemy / bounty attack_lair->attacking_lair / shopping.",
+              "test_hero_get_intent_snapshot_shape: get_intent_snapshot(now_ms=0) returns contract dict with 'intent' key (default 'idle')."
+            ],
+            "determinism_approach": "Mirrors tests/test_engine_sim_boundary.py: patch game.engine.DETERMINISTIC_SIM=True + patch game.sim_engine.DETERMINISTIC_SIM=True + patch game.sim_engine.SIM_SEED=3 (env-derived config consts are read at import time, so env vars are unreliable mid-suite). Digest is hermetic via _reset_global_sim_state(): set_sim_now_ms(0) (timebase.now_ms falls back to pygame wall-clock when the global clock is None), set_time_multiplier(1.0), set_sim_seed(3), and restore spawner enemy classes leaked by test_spawner.",
+            "snapshot_note": "Did not touch snapshots; if needed the zero-arg entry point is engine.build_snapshot() (game/engine.py:1577), NOT engine.sim.build_snapshot() (which needs per-frame kwargs) - confirmed."
+          },
+          "files_touched": [
+            "game/logging.py (created)",
+            "tests/test_wk65_engine_sim_hero_characterization.py (created)"
+          ],
+          "commands_run": [
+            {
+              "cmd": "python -m pytest tests/test_wk65_engine_sim_hero_characterization.py -q",
+              "result": "9 passed (PASS)"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk65_engine_sim_hero_characterization.py -q  (run 2, standalone)",
+              "result": "9 passed (PASS) - digest stable across two pytest invocations"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py --paths game/logging.py",
+              "result": "PASS: no violations found (exit 0)"
+            },
+            {
+              "cmd": "python -m pytest -q  (full suite)",
+              "result": "575 passed, 4 skipped, 0 failed (exit 0)"
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "result": "DONE: PASS (exit 0)"
+            }
+          ],
+          "evidence": {
+            "my_file_pytest": "PASS (9 passed) in isolation, twice, and inside the full suite",
+            "digest_stable_two_runs": "YES - test_deterministic_sim_digest_is_stable_across_runs passes; standalone file run twice both 9-passed; baseline recomputed under dirtied RNG+timebase reproduced identically",
+            "determinism_guard_logging": "PASS (exit 0)",
+            "full_suite": "575 passed, 4 skipped, 0 failed",
+            "qa_smoke_quick": "PASS (exit 0)"
+          },
+          "blockers": [],
+          "questions_back_to_pm": [
+            "PRE-EXISTING TEST ISOLATION BUG (not introduced by me; reported per Critical Design Rule 7 report-don't-mask): tests/test_spawner.py at lines 33, 60, 89 rebinds game.systems.spawner.SkeletonArcher / .Goblin to local Dummy* stand-ins via DIRECT module-attribute assignment (NOT the pytest monkeypatch fixture) and never restores them. After test_spawner runs, any later test whose live sim spawns a skeleton_archer/goblin gets the stub (which lacks .is_alive) and crashes combat at game/systems/combat.py:333 with AttributeError. This already breaks the PRE-EXISTING tests/test_engine.py::test_engine_full_tick_with_enemies_no_crash when test_spawner runs first (reproducible with just: pytest tests/test_spawner.py tests/test_engine.py). In the NATURAL full-suite collection order test_engine sorts before test_spawner so the full suite is green, but the latent leak is real. Recommend a follow-up ticket (Agent 05/11 lane) to convert those assignments to the monkeypatch fixture (auto-restores). I defensively neutralized it inside MY test via _restore_real_spawner_enemy_classes() so my file is hermetic in any ordering; I did NOT edit test_spawner.py (out of my Wave-1 lane).",
+            "OBSERVABILITY NOTE (informational, not a blocker): timebase.now_ms() (game/sim/timebase.py:40-44) falls back to pygame.time.get_ticks() (wall clock) whenever the global _SIM_NOW_MS is None. Any sim code path that reads now_ms() before the engine's first deterministic clock write picks up wall-clock time. It did not affect my pinned invariants, but it is a determinism foot-gun worth a Round-A/B note."
+          ],
+          "follow_ups": [
+            "Wave 2 (mine): delete the 3 dead GameEngine methods + repoint tests/test_engine.py:129 to engine.sim + flatten the config.py vestigial dataclass layer + log the engine VFX swallow - keep my Wave-1 pins GREEN before/after.",
+            "Suite hygiene ticket: fix test_spawner.py unrestored module-attribute monkeypatches (see questions_back_to_pm)."
+          ]
+        },
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "what_i_changed": {
+            "summary": "Wave 2 deletions (all grep-gated, zero LIVE callers): removed 3 dead GameEngine methods + the now-orphaned SystemContext import from game/engine.py; repointed tests/test_engine.py monkeypatch to the LIVE SimEngine method; flattened the vestigial config dataclass layer (11 dataclasses + 11 instances) to direct flat constants in config.py (env reads for SIM/LLM inlined verbatim, no value changes); adopted game.logging in the engine non-headless VFX swallow. No behavior changes beyond the deletions + the one logging line. Kept all sim copies, the _early_nudge_* forwarders, and DifficultyConfig/WaveEventConfig.",
+            "task1_engine_dead_methods": {
+              "file": "game/engine.py",
+              "deleted": [
+                "_nearest_lair_to (was lines 1103-1119)",
+                "_maybe_apply_early_pacing_nudge (was lines 1121-1180; its internal _nearest_lair_to call at old 1164 went with it)",
+                "_build_system_context -- ENGINE copy only (was lines 1285-1294)"
+              ],
+              "also_removed": "from game.systems.protocol import SystemContext (was line 46) -- orphaned: it was used ONLY by the deleted engine _build_system_context (grep confirmed lines 46/1285/1287 were its only refs in engine.py). Removing a directly-orphaned import is dead-code hygiene, not a behavior change.",
+              "kept": "engine._early_nudge_* property forwarders (engine.py ~638-668) forward to self.sim and are out of Round 0 scope; the SIM copies in sim_engine.py (_build_system_context:354 called at 641; _maybe_apply_early_pacing_nudge:1122 called at 693; _nearest_lair_to:1167 called at 1150) untouched.",
+              "loc": "engine.py net +2 / -92 (git numstat). The -92 = 3 method bodies (~89 LOC) + SystemContext import (1) + spacing; the +2 = the get_logger import (Task 4) and the VFX log line (Task 4, a 1-for-1 swap of the 'pass')."
+            },
+            "task2_repoint_test": {
+              "file": "tests/test_engine.py",
+              "line": 129,
+              "old": "monkeypatch.setattr(engine, '_maybe_apply_early_pacing_nudge', lambda dt, castle: None)  # patched a dead no-op",
+              "new": "monkeypatch.setattr(engine.sim, '_maybe_apply_early_pacing_nudge', lambda *a, **k: None)  # patches the LIVE SimEngine method",
+              "result": "test_engine_spawns_peasant_and_builds_new_structure PASSES; full test_engine.py (10 tests) green."
+            },
+            "task3_config_flatten": {
+              "file": "config.py",
+              "deleted_dataclasses": "WindowConfig, SimConfig, MapConfig, CameraConfig, HeroConfig, EnemyConfig, LairConfig, BountyConfig, EconomyConfig, LLMConfig, RangerConfig (11; were lines 11-118)",
+              "deleted_instances": "WINDOW, SIM, MAP, CAMERA, HERO, ENEMY, LAIR, BOUNTY, ECONOMY, LLM, RANGER (11; were lines 220-242)",
+              "kept": "DifficultyConfig (line 47) + WaveEventConfig (line 61) classes; DIFFICULTY/WAVE_EVENT instances (lines 69-70); 'from dataclasses import dataclass' import (line 4, still needed by the two kept dataclasses).",
+              "method": "Every flat alias redefined directly with the IDENTICAL value (mechanical for pure-default ones). For SIM/LLM-derived aliases the os.getenv reads were inlined VERBATIM: DETERMINISTIC_SIM=os.getenv('DETERMINISTIC_SIM','0')=='1'; SIM_TICK_HZ=int(os.getenv('SIM_TICK_HZ',str(FPS))); SIM_SEED=int(os.getenv('SIM_SEED','1')); EARLY_PACING_NUDGE_MODE=os.getenv('EARLY_PACING_NUDGE_MODE','auto'); LLM_PROVIDER=os.getenv('LLM_PROVIDER','openai'); OPENAI_API_KEY/OPENAI_MODEL/ANTHROPIC_API_KEY/GEMINI_API_KEY/GROK_API_KEY env reads preserved exactly. FPS is defined before SIM_TICK_HZ so the str(FPS) default ordering is preserved. No alias renamed; no value changed.",
+              "loc": "config.py net +70 / -205 (git numstat).",
+              "import_smoke": "python -c import config -> '1920 60 False 60 1 openai gpt-4o-mini 60 2100 90 4000' (WINDOW_WIDTH FPS DETERMINISTIC_SIM SIM_TICK_HZ SIM_SEED LLM_PROVIDER OPENAI_MODEL HERO_BASE_HP STARTING_GOLD LAIR_BOUNTY_COST RANGER_FRONTIER_COMMIT_MS) -- SUCCEEDS."
+            },
+            "task4_vfx_logging": {
+              "file": "game/engine.py",
+              "location": "_finalize_update non-headless VFX block (the '# Update VFX (after simulation state is updated).' try/except)",
+              "change": "added 'from game.logging import get_logger' to imports; replaced 'except Exception: pass' with 'except Exception: get_logger(__name__).exception(\"VFX update/render failed\")'. Still swallows; now observable. The separate HEADLESS vfx swallow (in the headless early-return branch) was intentionally left as-is per task scope (plan targets the one ~1380-1384 swallow)."
+            }
+          },
+          "grep_confirms": {
+            "task1_methods": {
+              "cmd": "rg -n \"_maybe_apply_early_pacing_nudge|_nearest_lair_to|_build_system_context\" game ai tools tests",
+              "result_before_delete": [
+                "game/engine.py:1103 def _nearest_lair_to  (DELETE)",
+                "game/engine.py:1121 def _maybe_apply_early_pacing_nudge  (DELETE)",
+                "game/engine.py:1164 self._nearest_lair_to(...)  (inside the deleted method body)",
+                "game/engine.py:1285 def _build_system_context  (DELETE engine copy)",
+                "game/sim_engine.py:354 def _build_system_context  (KEEP - sim)",
+                "game/sim_engine.py:641 self._build_system_context()  (KEEP - sim caller)",
+                "game/sim_engine.py:693 self._maybe_apply_early_pacing_nudge(dt, castle)  (KEEP - sim caller)",
+                "game/sim_engine.py:1122 def _maybe_apply_early_pacing_nudge  (KEEP - sim)",
+                "game/sim_engine.py:1150 lair = self._nearest_lair_to(...)  (KEEP - sim caller)",
+                "game/sim_engine.py:1167 def _nearest_lair_to  (KEEP - sim)",
+                "tests/perf_stress_test.py:133 sim._build_system_context()  (KEEP - calls sim copy)",
+                "tests/test_engine.py:129 monkeypatch (the Task-2 repoint)"
+              ],
+              "verdict": "Zero LIVE callers of the engine-side copies outside engine.py itself. Safe to delete. Post-delete grep of engine.py for the 3 names + SystemContext returns NO MATCHES.",
+              "result_after_delete_engine_only": "no matches in game/engine.py"
+            },
+            "task3_config_objects": {
+              "cmd_a": "rg -n config.(WINDOW|SIM|MAP|CAMERA|HERO|ENEMY|LAIR|BOUNTY|ECONOMY|LLM|RANGER)\\b game ai tools tests -> No matches found",
+              "cmd_b": "rg -n from config import (WINDOW|SIM|MAP|CAMERA|HERO|ENEMY|LAIR|BOUNTY|ECONOMY|LLM|RANGER)\\b game ai tools tests -> No matches found",
+              "cmd_c_typenames": "rg -n \\b(WindowConfig|SimConfig|MapConfig|CameraConfig|HeroConfig|EnemyConfig|LairConfig|BountyConfig|EconomyConfig|LLMConfig|RangerConfig)\\b game ai tools tests -> No matches found",
+              "cmd_d_attr_access": "rg -n \\b(WINDOW|SIM|MAP|CAMERA|HERO|ENEMY|LAIR|BOUNTY|ECONOMY|LLM|RANGER)\\. game ai tools tests -> only false positives (the word 'LLM.' in comments; HeroClass.RANGER.value enum). No real object-attribute access (e.g. config.HERO.base_hp) anywhere.",
+              "verdict": "No module outside config.py references any of the 11 dataclass objects or type names. Importers use ONLY the flat aliases. Safe to delete the dataclass layer."
+            }
+          },
+          "scoped_gates": {
+            "config_import_smoke": "PASS -- 1920 60 False 60 1 openai gpt-4o-mini 60 2100 90 4000",
+            "pytest_pins": "python -m pytest tests/test_wk65_engine_sim_hero_characterization.py tests/test_engine.py -q -> 19 passed (9 wk65 pins + 10 test_engine). The deterministic-sim digest pin (exact gold=2101/enemy-type+HP multisets/counts) staying GREEN proves the config flatten changed NO values and the method deletions were inert.",
+            "determinism_guard_scoped": "python tools/determinism_guard.py --paths game/engine.py config.py game/logging.py -> FAIL: 1 violation, game/engine.py:1133 wall_clock_time (pygame.time.get_ticks). config.py + game/logging.py alone -> PASS (clean).",
+            "loc_numstat": "git diff --numstat: config.py 70/205, game/engine.py 2/92, tests/test_engine.py 1/1. Total removed ~298 lines (net ~-225) across the three files."
+          },
+          "pre_existing_finding_for_pm": {
+            "what": "determinism_guard now flags game/engine.py:1133 'now_ms = pygame.time.get_ticks()' [wall_clock_time]. This is in GameEngine.send_player_message (wk14 chat-request cooldown) -- code I did NOT touch. It shifted from old line ~1213 to 1133 purely because I removed ~89 LOC above it; the line content is unchanged.",
+            "pre_existing_proof": "git log -S 'now_ms = pygame.time.get_ticks()' -- game/engine.py -> last touched in commit ca86a76 (2026-04-27), well before this WK65 sprint. NOT introduced by Round 0.",
+            "why_not_fixed_here": "Out of my task scope (task is delete 3 methods + flatten config + 1 VFX log line; no behavior changes). send_player_message is a presentation/input path (player-initiated chat request cooldown), not a deterministic sim tick path -- likely why it was never surfaced before. Per Critical Design Rule #7 (report-don't-mask) and the plan risk table, I am NOT masking it and NOT fixing it; it becomes a Round-A/B ticket for triage.",
+            "tooling_note": "When I stashed back to HEAD to compare, the OLD (HEAD) tools/determinism_guard.py CRASHED with ValueError 'game\\\\engine.py is not in the subpath of <root>' on --paths -- exactly the Wave-0 crash Agent 12 fixed. My working tree has Agent 12's fixed guard, which is why the scoped --paths run produces a clean FAIL report rather than crashing. So this violation was effectively un-observable via --paths until Agent 12's fix; a repo-wide pre-fix run may classify send_player_message differently. Flagging for Agent 04/PM.",
+            "owner_recommendation": "Agent 04 determinism sign-off + PM to decide if send_player_message should switch to game.sim.timebase.now_ms() or be explicitly exempted as a UI-clock cooldown."
+          },
+          "constraints_honored": {
+            "files_edited": "game/engine.py, tests/test_engine.py, config.py (game/logging.py was created in Wave 1).",
+            "do_not_commit": "No commit/push performed.",
+            "kept_sim_copies": true,
+            "kept_flat_aliases": true,
+            "kept_difficulty_waveevent": true
+          }
         }
       }
     }

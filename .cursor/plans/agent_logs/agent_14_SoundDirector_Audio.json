@@ -6,6 +6,69 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 De-Slop Foundation. Agent 14 task (Wave 2): delete dead AudioSystem.emit_from_events. Subtractive only; no behavior change; DO NOT COMMIT."
+      },
+      "rounds": {
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "round_meta": {
+            "wave": "Wave 2",
+            "build_target": "deletion_hygiene",
+            "sent_at_local": "2026-05-29T00:00:00"
+          },
+          "prompt_text": "Delete dead audio method emit_from_events from game/audio/audio_system.py (~234-252). Grep-confirm first: rg -n \"emit_from_events\" game ai tools tests. The game/audio/audio_system.py definition (AudioSystem.emit_from_events) should be the only live hit for THAT class. VFXSystem.emit_from_events in game/graphics/vfx.py is a DIFFERENT class -- do NOT touch it. on_event is the live audio path. If any caller invokes AudioSystem.emit_from_events, STOP and report. Scoped verification only (no full suite/qa_smoke -- Agent 01 runs those at Gate 2). EDIT only game/audio/audio_system.py. DO NOT COMMIT/PUSH.",
+          "response": {
+            "status": "complete",
+            "summary_bullets": [
+              "Grep-confirmed AudioSystem.emit_from_events was dead: zero call sites across game/ ai/ tools/ tests/. The only audio_system.py hit was the definition (line 234); rg \"\\.emit_from_events\\(\" returned zero call sites anywhere.",
+              "VFXSystem.emit_from_events (game/graphics/vfx.py:66,79) is a DIFFERENT class and was NOT touched.",
+              "Deleted AudioSystem.emit_from_events (method body lines 234-252 plus the separating blank line). on_event remains the live single-event path -> _emit_single_event.",
+              "Scoped gates green: import ok; determinism_guard PASS on game/audio/audio_system.py; pytest -k 'audio or sound' collected 0 tests (exit 5 = none selected; there are no audio/sound-named tests in tests/, so this is expected, not a regression)."
+            ],
+            "proposed_changes": [
+              "game/audio/audio_system.py: removed dead public method AudioSystem.emit_from_events (~20 LOC incl. docstring + trailing blank). No behavior change; on_event is the live path."
+            ],
+            "acceptance_criteria": [
+              "rg -n \"emit_from_events\" game ai tools tests shows no AudioSystem hit (only VFXSystem in vfx.py remains, untouched).",
+              "python -c \"from game.audio.audio_system import AudioSystem; print('import ok')\" -> import ok",
+              "python tools/determinism_guard.py --paths game/audio/audio_system.py -> PASS",
+              "python -m pytest tests/ -q -k \"audio or sound\" -> 579 deselected (no audio/sound-named tests exist; nothing collected)."
+            ],
+            "risks": [],
+            "agent_fields": {
+              "grep_confirm": {
+                "command": "rg -n \"emit_from_events\" game ai tools tests",
+                "output_pre_delete": [
+                  "game\\audio\\audio_system.py:234:    def emit_from_events(self, events: list[dict]):",
+                  "game\\graphics\\vfx.py:66:    - emit_from_events(events)",
+                  "game\\graphics\\vfx.py:79:    def emit_from_events(self, events: list[dict]):"
+                ],
+                "callsite_grep": "rg -n \"\\.emit_from_events\\(\" game ai tools tests -> (no output / zero call sites)",
+                "caller_of_AudioSystem_emit_from_events": "NONE -- verified-dead per Critical Design Rule 1",
+                "vfx_class_untouched": true
+              },
+              "loc_removed": 20,
+              "deletion_range": "game/audio/audio_system.py lines 234-252 (method) + separating blank line 253",
+              "scoped_gates": {
+                "import_check": "PASS (import ok)",
+                "pytest_audio_sound_k": "exit 5 -- 579 deselected, 0 collected (no audio/sound-named tests; expected, not a failure)",
+                "determinism_guard_paths": "PASS: no violations found"
+              },
+              "constraints_honored": {
+                "edited_only": "game/audio/audio_system.py",
+                "committed": false,
+                "pushed": false,
+                "ran_full_suite_or_qa_smoke": false
+              }
+            }
+          }
+        }
+      }
+    },
     "wk6-audio-buildmenu-fogbounties-explorexp": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk6_ranged_update+_dee12351.plan.md",

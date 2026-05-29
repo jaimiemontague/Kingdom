@@ -1065,6 +1065,138 @@
           ]
         }
       }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 (De-Slop Foundation). Agent 05 Wave 1: write buildings/systems characterization net GREEN on current code. Wave-2 poi_interaction deletion is a later activation."
+      },
+      "rounds": {
+        "wk65_w1_characterization": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w1_characterization",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 1 (characterization pins, green on current code)",
+            "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md (section: Agent 05 (GameplaySystems) — buildings/systems pins)",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Wave-1 ONLY: create tests/test_wk65_buildings_systems_characterization.py, GREEN on current unmodified code. Pin (1) ranged-tower fire cadence via SINGULAR _last_ranged_event + cooldown (do NOT assert plural _last_ranged_events — deferred to Round C), (2) building update() dispatch outcomes, (3) DifficultySystem hp/damage scaling at a couple levels. CREATE only that one test file; edit no production code. DO NOT COMMIT. DO NOT PUSH.",
+          "what_i_changed": {
+            "summary": "Created the buildings/systems characterization safety net (14 tests) that pins observable behavior Round C will dedup. No production code touched. Green before any deletion exists; this is the bracket proving the Wave-2 deletions are inert.",
+            "files_touched": [
+              "tests/test_wk65_buildings_systems_characterization.py (NEW, created)"
+            ],
+            "production_code_edited": "NONE (test file only, per file-ownership table)"
+          },
+          "behaviors_pinned": {
+            "ranged_tower_fire_cadence": [
+              "Guardhouse.update(dt, guards_list, enemies): fires at in-range enemy, deals GUARDHOUSE_ARROW_DAMAGE * GUARDHOUSE_ARROWS_PER_SHOT (12*2=24) per volley, sets SINGULAR _last_ranged_event (type=ranged_projectile, kind=arrow, to_x/to_y=enemy pos), latches target.",
+              "Guardhouse respects GUARDHOUSE_ARROW_COOLDOWN (2.0s): no second volley on a sub-cooldown tick; fires again after cooldown elapses.",
+              "Guardhouse clears _last_ranged_event and target when cooldown ready but no enemy in range.",
+              "BallistaTower.update(dt, enemies): deals attack_damage (15), sets singular _last_ranged_event, respects attack_interval (2.0s) cooldown.",
+              "Unconstructed ranged tower (is_constructed=False) performs no attack (pins the early-return guard).",
+              "DELIBERATELY did NOT assert on _last_ranged_events (plural) — deferred to Round C RangedAttackMixin per plan."
+            ],
+            "building_update_dispatch": [
+              "Guardhouse.update returns True (should_spawn) once spawn_interval (30s) elapses and guard cap not reached; False under interval and False at/over max_guards cap.",
+              "TradingPost.update(dt, economy): grants income_amount gold once income_interval elapses; tracks total_income_generated.",
+              "Marketplace.update(dt, economy): accrues passive tax into stored_tax_gold once MARKETPLACE_PASSIVE_TAX_INTERVAL_MS elapses (deterministic via get_rng; sim clock pinned via monkeypatch).",
+              "Marketplace timed-research: research_progress climbs 0 -> mid -> 1.0 across research_duration_ms; advance_research completes potions research."
+            ],
+            "difficulty_scaling": [
+              "Multiplier table: NORMAL neutral (1.0), EASY softens hp/damage (<1.0), HARD hardens (>1.0); unknown keys fall back to 1.0.",
+              "NORMAL leaves a fresh Goblin unscaled.",
+              "EASY scales a fresh Goblin hp/damage DOWN via exact production formula max(1,int(round(base*mult))) applied only when mult!=1.0.",
+              "HARD scales a fresh Skeleton hp/damage UP via the same formula; verified strict increase.",
+              "Pin mirrors the formula triplicated across spawner.py:189-197, lairs.py:144-153, wave_events.py:254-259 that Round C unifies into DifficultySystem.apply_to_enemy."
+            ]
+          },
+          "commands_run": [
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py -q  -> 14 passed (run twice, stable)",
+            "python tools/qa_smoke.py --quick  -> DONE: PASS"
+          ],
+          "evidence": {
+            "pytest_result": "14 passed, 1 warning in ~0.1s (stable across two runs)",
+            "qa_smoke": "DONE: PASS (exit 0)",
+            "green_on_current_code": true
+          },
+          "surprising_findings_for_round_c": [
+            "Guardhouse already maintains BOTH the singular _last_ranged_event AND the plural _last_ranged_events list; the singular is literally set to _last_ranged_events[0]. The plural exists only on Guardhouse (multi-arrow), not on BallistaTower or Enemy.do_attack — so a Round-C RangedAttackMixin must treat plural as a Guardhouse-specific extension, not a base contract.",
+            "BallistaTower.update probes self.get_ranged_spec() via hasattr+try/except but the real BallistaTower defines no get_ranged_spec, so it ALWAYS falls to defaults (kind=bolt, color=(180,180,200), size=2). This is the get_ranged_spec entanglement the plan deferred — the only real implementer is the test double in conftest. Round C should decide whether buildings get a real get_ranged_spec or the defaults become explicit.",
+            "The hp/damage scaling is byte-identical in all three sites (spawner/lairs/wave_events) including the mult!=1.0 short-circuit and the max(1, round) rounding; a single DifficultySystem.apply_to_enemy(enemy) is a clean drop-in. Note the guard does NOT scale speed/xp/gold — only hp and attack_power — so apply_to_enemy must preserve that exact scope.",
+            "Guardhouse.update has dual responsibility (guard spawn + ranged) and returns a guard-spawn bool while mutating ranged state as a side effect; the two concerns share one tick path. This is the stringly-adjacent dispatch the plan flags for Round B/C."
+          ],
+          "blockers": [],
+          "recommended_next_actions": [
+            "Wave-2 (later activation): delete _spawn_underground_enemies in game/systems/poi_interaction.py:445-491 + its commented ref at :376 after grep-confirm; re-run this characterization file + -k poi to confirm still GREEN."
+          ]
+        },
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "round_meta": {
+            "role": "05_GameplaySystemsDesigner",
+            "wave": "Wave 2 (dead-code deletion)",
+            "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md (section: Agent 05 (GameplaySystems) — delete dead underground spawner)",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "launched_by": "tools/ai_studio_orchestrator"
+          },
+          "prompt_text": "Wave-2 deletion: delete the dead module-level function _spawn_underground_enemies (game/systems/poi_interaction.py ~445-491) + its only (commented-out) reference at ~376. Grep-confirm FIRST. Touch NO other underground/dungeon logic (_handle_dungeon, begin_descent, fog reveal all stay). EDIT only game/systems/poi_interaction.py. SCOPED verification only. DO NOT COMMIT. DO NOT PUSH.",
+          "grep_confirm": {
+            "command": "rg -n \"_spawn_underground_enemies\" game ai tools tests",
+            "output_before_edit": [
+              "game\\systems\\poi_interaction.py:376:        # _spawn_underground_enemies(area, self._sim_engine, event_bus)",
+              "game\\systems\\poi_interaction.py:445:def _spawn_underground_enemies(area, sim_engine, event_bus):"
+            ],
+            "verdict": "VERIFIED DEAD: only 2 hits, both in game/systems/poi_interaction.py — the def (:445) and the commented-out call (:376). ZERO live callers in game/, ai/, tools/, tests/. No uncommented caller anywhere.",
+            "output_after_edit": "(no matches; rg exit code 1) — symbol fully removed."
+          },
+          "what_i_changed": {
+            "summary": "Deleted the verified-dead module-level function _spawn_underground_enemies and its only reference (a commented-out call). Pure subtraction, no behavior change. The function was never invoked (its single call site was already commented out behind a 'underground visuals disabled' feature gate).",
+            "files_touched": [
+              "game/systems/poi_interaction.py (EDIT: 57 lines removed, 0 added)"
+            ],
+            "deletions": [
+              "Function def _spawn_underground_enemies(area, sim_engine, event_bus) + body + docstring (was lines ~445-491), and its 3-line WK57-Wave-5C section-header comment block that introduced it.",
+              "The commented-out call '# _spawn_underground_enemies(area, self._sim_engine, event_bus)' at ~376 plus its 2 orphaned explanatory comment lines (WK57 Wave 5C / feature-gate note)."
+            ],
+            "loc_removed": 57,
+            "loc_added": 0,
+            "imports_touched": "NONE — TILE_SIZE (config) and get_rng (game.sim.determinism) both remain used by many other call sites in the file; imports kept.",
+            "underground_dungeon_logic_untouched": "CONFIRMED. Left intact: _handle_dungeon (still in _HANDLERS dispatch under 'dungeon'), hero.begin_descent call, world.reveal_underground_circle fog reveal, area.chambers[0].is_explored entrance mark, and the hero_entered_underground event emit. Underground is LIVE on mountain maps — only the dead enemy spawner was removed."
+          },
+          "commands_run": [
+            "rg -n \"_spawn_underground_enemies\" game ai tools tests  -> (before) 2 hits both in poi_interaction.py; (after) 0 hits / exit 1",
+            "python -c ast.parse(poi_interaction.py)  -> AST OK",
+            "git diff --numstat game/systems/poi_interaction.py  -> 0\t57 (57 removed, 0 added)",
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py tests/test_ai_poi_awareness.py -q -k \"poi or building or ranged or difficulty\"  -> 34 passed",
+            "python -m pytest tests/test_wk65_buildings_systems_characterization.py -q  -> 14 passed",
+            "python tools/determinism_guard.py --paths game/systems/poi_interaction.py  -> PASS (exit 0)"
+          ],
+          "evidence": {
+            "scoped_pytest_selectors": "34 passed (test_wk65_buildings_systems_characterization.py + test_ai_poi_awareness.py, -k 'poi or building or ranged or difficulty')",
+            "wave1_pins_full": "14 passed (test_wk65_buildings_systems_characterization.py) — my Wave-1 pins STILL GREEN after deletion (proves deletion inert)",
+            "determinism_guard": "[determinism_guard] PASS: no violations found (exit 0)",
+            "loc_removed": 57,
+            "note_on_full_suite": "Did NOT run full pytest / qa_smoke per task instruction (scoped verification only; Agent 01 runs the full suite + qa_smoke at Gate 2)."
+          },
+          "blockers": [],
+          "report_to_agent_01": {
+            "grep_result": "VERIFIED DEAD — 2 hits before (def @:445 + commented call @:376, both in poi_interaction.py), 0 hits after. No live callers in game/ai/tools/tests.",
+            "loc_removed": 57,
+            "scoped_gates": "GREEN — 34 passed (scoped -k), 14 passed (full Wave-1 pins), determinism_guard PASS on poi_interaction.py.",
+            "no_other_underground_logic_touched": "CONFIRMED — _handle_dungeon, begin_descent, reveal_underground_circle fog reveal, chamber explored-mark, and hero_entered_underground emit all preserved. Edit scoped to game/systems/poi_interaction.py only.",
+            "committed": false
+          },
+          "recommended_next_actions": [
+            "Agent 01 / Gate 2: run full pytest + qa_smoke --quick + validate_assets to confirm the deletion is inert across the whole suite (scoped gates already green here)."
+          ]
+        }
+      }
     }
   }
 }

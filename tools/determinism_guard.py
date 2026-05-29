@@ -63,6 +63,21 @@ _DATETIME_ATTRS_FORBIDDEN = {
 }
 
 
+def _display_path(p: Path) -> str:
+    """Human-readable path for reporting.
+
+    Prefer a repo-relative path, but fall back to the absolute string when the
+    path lives outside ``PROJECT_ROOT`` (``relative_to`` raises ``ValueError``).
+    This is load-bearing: callers run ``determinism_guard --paths <file>`` with
+    paths that may be outside the repo, and the old ``file.relative_to(...)``
+    crashed those runs.
+    """
+    try:
+        return str(p.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(p)
+
+
 def _is_under(path: Path, parent: Path) -> bool:
     try:
         path.resolve().relative_to(parent.resolve())
@@ -101,10 +116,79 @@ def _attr_chain(node: ast.AST) -> list[str] | None:
     return None
 
 
+# Modules whose aliases we care about when normalizing attribute chains.
+# (We only rewrite the *root* of a chain through a module alias, plus direct
+# `from X import name` bindings for these modules.)
+_TRACKED_MODULES = {"pygame", "time", "datetime", "random"}
+
+
+def _build_alias_map(tree: ast.AST) -> dict[str, tuple[str, ...]]:
+    """
+    Build a map from a locally-bound name to the canonical attribute prefix it
+    refers to, so aliased imports are matched like their canonical form.
+
+    Examples (name -> canonical prefix tuple):
+      ``import time as t``                  -> {"t": ("time",)}
+      ``import datetime as dt``             -> {"dt": ("datetime",)}
+      ``from random import random``         -> {"random": ("random", "random")}
+      ``from random import random as rnd``  -> {"rnd": ("random", "random")}
+      ``from time import time as now``      -> {"now": ("time", "time")}
+      ``from datetime import datetime``     -> {"datetime": ("datetime", "datetime")}
+
+    Only tracked modules (``pygame``/``time``/``datetime``/``random``) are mapped;
+    everything else is ignored so unrelated aliases don't create false positives.
+    """
+    aliases: dict[str, tuple[str, ...]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            # `import time as t` / `import datetime.foo as d`
+            for alias in node.names:
+                root = alias.name.split(".")[0]
+                if root not in _TRACKED_MODULES:
+                    continue
+                bound = alias.asname or alias.name
+                # `import datetime as d` -> d == datetime; submodule imports
+                # bind the dotted name only when unaliased, which we skip.
+                if alias.asname:
+                    aliases[alias.asname] = tuple(alias.name.split("."))
+                elif "." not in alias.name:
+                    aliases[bound] = (alias.name,)
+        elif isinstance(node, ast.ImportFrom):
+            # `from random import random [as rnd]`
+            if node.level and node.level > 0:
+                continue  # relative import; not a tracked stdlib module
+            module = node.module or ""
+            root = module.split(".")[0]
+            if root not in _TRACKED_MODULES:
+                continue
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                bound = alias.asname or alias.name
+                aliases[bound] = (*module.split("."), alias.name)
+    return aliases
+
+
+def _normalize_chain(
+    chain: list[str], aliases: dict[str, tuple[str, ...]]
+) -> list[str]:
+    """Rewrite the root of an attribute chain through the alias map.
+
+    ``["t", "time"]`` with ``{"t": ("time",)}`` -> ``["time", "time"]``.
+    ``["rnd"]``       with ``{"rnd": ("random", "random")}`` -> ``["random", "random"]``.
+    """
+    if not chain:
+        return chain
+    mapped = aliases.get(chain[0])
+    if mapped is None:
+        return chain
+    return [*mapped, *chain[1:]]
+
+
 def _violation(kind: str, file: Path, node: ast.AST, detail: str) -> dict:
     return {
         "kind": kind,
-        "file": str(file.relative_to(PROJECT_ROOT)),
+        "file": _display_path(file),
         "line": int(getattr(node, "lineno", 0) or 0),
         "col": int(getattr(node, "col_offset", 0) or 0),
         "detail": detail,
@@ -123,7 +207,7 @@ def scan_file(file_path: Path) -> list[dict]:
         return [
             {
                 "kind": "parse_error",
-                "file": str(file_path.relative_to(PROJECT_ROOT)),
+                "file": _display_path(file_path),
                 "line": int(getattr(e, "lineno", 0) or 0),
                 "col": int(getattr(e, "offset", 0) or 0),
                 "detail": f"SyntaxError: {e}",
@@ -131,14 +215,16 @@ def scan_file(file_path: Path) -> list[dict]:
         ]
 
     findings: list[dict] = []
+    aliases = _build_alias_map(tree)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
 
-        chain = _attr_chain(node.func)
-        if not chain:
+        raw_chain = _attr_chain(node.func)
+        if not raw_chain:
             continue
+        chain = _normalize_chain(raw_chain, aliases)
 
         # pygame.time.get_ticks()
         if chain == ["pygame", "time", "get_ticks"]:
@@ -214,7 +300,13 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     ns = ap.parse_args()
 
-    roots = [Path(p) for p in ns.paths] if ns.paths else list(DEFAULT_SCAN_DIRS)
+    # Resolve input roots to absolute so paths outside the repo (and relative
+    # paths) are handled consistently; reporting falls back to the raw string
+    # for anything outside PROJECT_ROOT (see _display_path).
+    if ns.paths:
+        roots = [Path(p).resolve() for p in ns.paths]
+    else:
+        roots = list(DEFAULT_SCAN_DIRS)
     exclude_dirs = list(DEFAULT_EXCLUDE_DIRS)
 
     files = _iter_py_files(roots, exclude_dirs=exclude_dirs)
@@ -222,17 +314,34 @@ def main() -> int:
     for f in files:
         all_findings.extend(scan_file(f))
 
+    # A parse error is NOT a determinism violation: a malformed/partial file
+    # should not produce the same FAIL/exit-1 as a real wall-clock/RNG use.
+    parse_errors = [v for v in all_findings if v.get("kind") == "parse_error"]
+    violations = [v for v in all_findings if v.get("kind") != "parse_error"]
+
     if ns.json:
-        print(json.dumps({"findings": all_findings}, indent=2))
+        print(
+            json.dumps(
+                {"violations": violations, "parse_errors": parse_errors},
+                indent=2,
+            )
+        )
     else:
-        if not all_findings:
+        if parse_errors:
+            print(
+                f"[determinism_guard] WARN: {len(parse_errors)} file(s) could not be parsed (not counted as violations)"
+            )
+            for v in parse_errors:
+                print(f"- {v['file']}:{v['line']}:{v['col']} [parse_error] {v['detail']}")
+        if not violations:
             print("[determinism_guard] PASS: no violations found")
         else:
-            print(f"[determinism_guard] FAIL: {len(all_findings)} violation(s)")
-            for v in all_findings:
+            print(f"[determinism_guard] FAIL: {len(violations)} violation(s)")
+            for v in violations:
                 print(f"- {v['file']}:{v['line']}:{v['col']} [{v['kind']}] {v['detail']}")
 
-    return 0 if not all_findings else 1
+    # Exit non-zero only for real determinism violations.
+    return 0 if not violations else 1
 
 
 if __name__ == "__main__":

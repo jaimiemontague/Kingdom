@@ -2005,6 +2005,150 @@
           ]
         }
       }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "notes": "WK65 Round 0 de-slop foundation. Agent 12 Wave-0: QA tool-correctness fixes (determinism_guard 3 fixes + observe_sync dual-clock) + pinning tests. Wave-2 hygiene is a later activation."
+      },
+      "rounds": {
+        "wk65_w2_deletion_hygiene": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w2_deletion_hygiene",
+          "status": "done",
+          "pm_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md -> 'Agent 12 (ToolsDevEx) — repo hygiene' (Wave 2)",
+          "wave": "W2",
+          "prompt_text": "Wave 2 repo hygiene: (1) archive dead one-off tools/ scripts to tools/archive/ after grep-confirming zero live references; (2) resolve the .claude/worktrees/ shadow copy only if stale/clean/non-main. Scoped verify (test_wk65_tooling.py + git status). DO NOT COMMIT. Touch only tools/** and the .claude/worktrees/ removal.",
+          "what_i_changed": [
+            "Task 1: git mv 11 confirmed-dead one-off tools/ scripts into tools/archive/ (moves staged, NOT committed): 4x patch_*.py + 7x update_pm_hub_wk*.py.",
+            "Task 2: removed the stale, clean, non-main worktree .claude/worktrees/quirky-roentgen-e15808 (git worktree remove succeeded logically; OneDrive file-lock required a follow-up git worktree prune + rm -rf to clear the physical dir and .git/worktrees/ metadata, which then succeeded on retry). .claude/worktrees/ is now empty and the worktree is gone from `git worktree list`.",
+            "Did NOT touch determinism_guard.py / observe_sync.py (Wave 0 already done). Did NOT touch any non-tools/ file. Did NOT archive tools/wk61_r10_capture_patch.py because it has a LIVE caller (see below)."
+          ],
+          "task1_scripts_archived": {
+            "method": "For each candidate: rg -n \"<scriptname_without_ext>\" game ai tools tests .cursor (ignoring the file itself + .cursor/plans/agent_logs/ historical entries). Archived only those with ZERO live references. Also ran a repo-root-wide rg excluding the scripts themselves + agent_logs = zero hits; no .github/workflows CI exists.",
+            "archived_count": 11,
+            "archived_list": [
+              "tools/patch_hero_id.py -> tools/archive/patch_hero_id.py  (grep-confirm: zero references in game ai tools tests .cursor)",
+              "tools/patch_ai_use_hero_id.py -> tools/archive/patch_ai_use_hero_id.py  (grep-confirm: zero references)",
+              "tools/patch_enemy_attackers.py -> tools/archive/patch_enemy_attackers.py  (grep-confirm: zero references)",
+              "tools/patch_combat_attackers.py -> tools/archive/patch_combat_attackers.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk51.py -> tools/archive/update_pm_hub_wk51.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_hotfix.py -> tools/archive/update_pm_hub_wk50_hotfix.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r14.py -> tools/archive/update_pm_hub_wk50_r14.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r15.py -> tools/archive/update_pm_hub_wk50_r15.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r16.py -> tools/archive/update_pm_hub_wk50_r16.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r17.py -> tools/archive/update_pm_hub_wk50_r17.py  (grep-confirm: zero references)",
+              "tools/update_pm_hub_wk50_r18.py -> tools/archive/update_pm_hub_wk50_r18.py  (grep-confirm: zero references)"
+            ],
+            "candidates_left_in_place": [
+              "tools/wk61_r10_capture_patch.py -- LEFT (NOT archived): it is a LIVE one-off capture patch. grep-confirm shows it referenced as 'patch_path': 'tools/wk61_r10_capture_patch.py' in tools/screenshot_scenarios.py:1366 (scenario 'wk61_hold_g_tax_overlay'), and tools/run_ursina_capture_once.py reads that patch_path (line 169), asserts patch_path.is_file() (line 230), and dynamically imports+executes it via importlib.util.spec_from_file_location (lines 55-56, 234). Archiving would break the wk61_hold_g_tax_overlay Ursina capture scenario at runtime. Per Critical Design Rule #1 (zero live callers required), left in place."
+            ],
+            "archive_dir_note": "tools/archive/ already existed and is git-tracked (previously held tools/archive/root_wk40_stage5/**); the 11 new files land directly under tools/archive/."
+          },
+          "task2_worktree_outcome": {
+            "result": "REMOVED",
+            "target": ".claude/worktrees/quirky-roentgen-e15808",
+            "pre_checks": "git worktree list -> it was a separate worktree on branch claude/quirky-roentgen-e15808 at ca92e3e, NOT the main checkout (main = the OneDrive path at 5d20445) and NOT the active checkout. git -C <wt> status -> 'nothing to commit, working tree clean' (behind origin/main by 117 commits, fast-forwardable). => stale + clean + non-main => safe to remove per task gate.",
+            "removal_steps": "1) git worktree remove '.claude/worktrees/quirky-roentgen-e15808' -> unregistered from `git worktree list` but reported 'Permission denied' deleting the physical dir + .git/worktrees metadata (Windows/OneDrive transient file lock). 2) git worktree prune (cleared stale gitdir pointers). 3) rm -rf '.claude/worktrees/quirky-roentgen-e15808' (succeeded on retry). 4) rm -rf '.git/worktrees/quirky-roentgen-e15808' (succeeded on retry).",
+            "final_state": ".claude/worktrees/ is empty; .git/worktrees/quirky-roentgen-e15808 gone; absent from `git worktree list`. Shadow second-repo copy that doubled every grep is fully resolved."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_wk65_tooling.py -q   (scoped Wave-0 regression)",
+            "git status   (confirm only the 11 intended renames into tools/archive/ are staged from my work; worktree gone)",
+            "git worktree list   (quirky-roentgen-e15808 absent)"
+          ],
+          "evidence": [
+            {"command": "git mv (x11) tools/<dead>.py tools/archive/", "result": "ALL 11 MOVES OK", "status": "PASS"},
+            {"command": "git status", "result": "11 renames into tools/archive/ staged (4 patch_*.py + 7 update_pm_hub_wk*.py); no other tools/ changes from me. (Many non-tools/ files modified/untracked = OTHER parallel Wave-2 agents 03/05/06/14 in the shared working tree.)", "status": "PASS"},
+            {"command": "git worktree remove + prune + rm -rf (.claude + .git metadata)", "result": ".claude/worktrees/ empty; .git/worktrees/quirky-roentgen-e15808 removed; absent from `git worktree list`", "status": "PASS"},
+            {"command": "python -m pytest tests/test_wk65_tooling.py -q", "result": "BLOCKED at collection: conftest.py import fails -> config.py NameError 'HERO' is not defined at config.py:419 (HERO_HIRE_COST = HERO.hire_cost). This is Agent 03's in-progress Wave-2 config.py dataclass-flatten (Task 3) leaving a transient broken import in the SHARED working tree; it breaks ALL test collection, not just mine. NOT caused by my hygiene work (git mv of dead tools/ scripts + worktree removal cannot affect config.py).", "status": "BLOCKED_BY_PARALLEL_AGENT_03"},
+            {"command": "python -c ast.parse + --help on tools/determinism_guard.py; ast.parse on tools/observe_sync.py", "result": "determinism_guard parse OK + --help exit 0; observe_sync parse OK. My Wave-0 deliverables intact (no config dependency). git diff tests/test_wk65_tooling.py = empty (untouched this wave).", "status": "PASS"}
+          ],
+          "surfaced_but_not_masked": "N/A for this wave (no determinism_guard matcher changes in W2; Wave-0 already reported clean).",
+          "blockers": [
+            "tests/test_wk65_tooling.py cannot run to green RIGHT NOW because Agent 03's parallel Wave-2 config.py flatten is mid-edit and config.py fails to import (NameError 'HERO' at config.py:419), which breaks conftest.py collection for the ENTIRE suite. This is expected to clear once Agent 03 finishes inlining the flat aliases. My Wave-0 tooling tests are unaffected by anything I did this wave and will pass once collection recovers. Re-verify at Gate 2 (Agent 01/11)."
+          ],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Pre-existing orphan worktree metadata: .git/worktrees/uhy/ exists (dated Dec 15) with a dangling gitdir ('gitdir file does not exist' on prune), no on-disk worktree, and is NOT in `git worktree list`. It is unrelated to quirky-roentgen-e15808 and out of my assigned scope, so I left it. `git worktree prune` would clean it but hit the same OneDrive Permission-denied lock; recommend a follow-up `git worktree prune` when the lock clears (cosmetic only).",
+            "OneDrive on this checkout intermittently locks files (Permission denied on git worktree remove/prune); retries succeeded. Worth noting for any future worktree/file-deletion ops."
+          ],
+          "recommended_next_actions": [
+            "Agent 01/11 at Gate 2: re-run `python -m pytest tests/test_wk65_tooling.py -q` after Agent 03's config.py flatten lands clean (`python -c \"import config\"` must succeed first); expect GREEN.",
+            "Optional cosmetic: `git worktree prune` to clear the pre-existing dangling .git/worktrees/uhy metadata once the OneDrive lock releases."
+          ]
+        },
+        "wk65_w0_tooling_baseline": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w0_tooling_baseline",
+          "status": "done",
+          "pm_ref": "sprints['wk65_round0_deslop_foundation'].rounds['wk65_r0_plan'].pm_agent_prompts['12'] + plan section 'Agent 12 (ToolsDevEx) - fix the QA tools FIRST'",
+          "wave": 0,
+          "prompt_text": "Wave 0: fix determinism_guard.py (a: --paths-outside-root relative_to crash; b: separate parse-errors from violations; c: alias-aware AST matcher) + observe_sync.py dual-clock (delete now_ms_val=int((t*1000)/60), read game.sim.timebase.now_ms()) + write tests/test_wk65_tooling.py. REPORT-DONT-MASK any newly-surfaced pre-existing determinism violation. DO NOT COMMIT.",
+          "what_i_changed": {
+            "files": [
+              "tools/determinism_guard.py (EDIT)",
+              "tools/observe_sync.py (EDIT)",
+              "tests/test_wk65_tooling.py (NEW, 21 tests)"
+            ],
+            "determinism_guard_fixes": [
+              "(a) --paths-outside-root crash FIXED: added _display_path(p) helper (try p.relative_to(PROJECT_ROOT) except ValueError -> str(p)); used it in _violation() and the parse_error dict (was file.relative_to(PROJECT_ROOT)); main() now resolves input roots to absolute (roots=[Path(p).resolve() for p in ns.paths]).",
+              "(b) parse-errors separated from violations: main() partitions all_findings into parse_errors (kind==parse_error) vs violations; prints parse errors under a distinct WARN header; PASS/FAIL + exit code now driven ONLY by real violations (return 0 if not violations else 1). --json now emits {violations, parse_errors} instead of {findings}.",
+              "(c) alias-aware AST matching: added _build_alias_map(tree) (scans ast.Import/ast.ImportFrom for tracked modules pygame/time/datetime/random; maps bound name -> canonical prefix tuple) + _normalize_chain(chain, aliases) (rewrites chain root through alias map). scan_file builds the alias map and normalizes each call chain before matching. Handles: import time as t; from random import random; from time import time as now; etc. rng.random() on a passed-in object stays NOT flagged."
+            ],
+            "observe_sync_fix": "dual-clock removed: deleted now_ms_val=int((t*1000)/60) (multiplier-blind); now reads now_ms_val=int(now_ms()) from game.sim.timebase (single authoritative clock set each tick via set_sim_now_ms(int(t*sim_dt*1000)), which IS speed-multiplier-aware). Added now_ms to the existing timebase import. Verified hero.stuck_since_ms is set via the SAME clock (hero.py:9 from game.sim.timebase import now_ms as sim_now_ms), so max_stuck_ms = now_ms_val - stuck_since_ms is now correct under any speed multiplier.",
+            "summary": "Wave-0 tool-correctness fixes only; no behavior change beyond the 4 documented bug fixes. Touched only the 3 files in my lane. No commit/push."
+          },
+          "how_to_test": [
+            "python -m pytest tests/test_wk65_tooling.py -q",
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty"
+          ],
+          "evidence": {
+            "pytest_wk65_tooling": {
+              "command": "python -m pytest tests/test_wk65_tooling.py -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "21 passed, 1 warning"
+            },
+            "determinism_guard": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "[determinism_guard] PASS: no violations found. Also verified --paths game/entities game/systems ai => PASS exit 0. Alias-aware matcher surfaced NO pre-existing hidden violation (clean, as plan predicted for Round 0)."
+            },
+            "qa_smoke": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "DONE: PASS. All speed_scaling profiles (0.1x/0.25x/0.5x/1.0x) green - exercises the observe_sync dual-clock fix under multiplier."
+            },
+            "observe_sync_bounty": {
+              "command": "python tools/observe_sync.py --seconds 24 --heroes 20 --seed 3 --log-every 9999 --qa --bounty",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "[qa] PASS: bounty_exists=True bounty_has_responder=True ... ; counters max_stuck_ms=2100 (non-zero, correct after clock fix)."
+            },
+            "full_suite_regression": {
+              "command": "python -m pytest tests/ -q",
+              "exit_code": 0,
+              "status": "PASS",
+              "detail": "536 passed, 4 skipped - no regressions from tool changes."
+            }
+          },
+          "surfaced_but_not_masked": "NONE. Repo-wide determinism_guard with the new alias-aware matcher reports PASS (no pre-existing violations surfaced). Nothing weakened, nothing hidden.",
+          "blockers": [],
+          "questions_back_to_pm": [],
+          "notes_non_blocking": [
+            "Pre-existing (NOT my regression): observe_sync --scenario hero_stuck_repro at --speed-multiplier 0.5 reports [qa] FAIL with stuck_events=0/max_stuck_ms=0. Verified via git stash: the UNMODIFIED baseline observe_sync produces the identical FAIL at 0.5x. Cause: at 0.5x, 24 real seconds = 12 sim-seconds, below the hero stuck-detection threshold, so stuck_active never trips (independent of my now_ms_val line, which only feeds max_stuck_ms accounting). This scenario+speed combo is NOT in the qa_smoke gate set (qa_smoke runs hero_stuck_repro only at default speed, which PASSES) and is not one of my 4 required gates. Flagging for awareness only; not a Round-0 blocker.",
+            "--json output schema changed from {findings:[...]} to {violations:[...], parse_errors:[...]} as part of fix (b). Grep confirms no repo code consumes determinism_guard --json (qa_smoke invokes the guard without --json and checks only exit code), so this is safe."
+          ],
+          "recommended_next_actions": [
+            "Wave-2 hygiene (my later activation): git mv grep-confirmed dead one-off tools to tools/archive/ + resolve .claude/worktrees shadow."
+          ]
+        }
+      }
     }
   },
   "wk18-llm-merger-and-mechanics": {

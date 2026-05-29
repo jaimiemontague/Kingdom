@@ -1958,6 +1958,162 @@
           "do_not_commit_ack": "Acknowledged. Verification only; I did not commit, push, branch, or edit production code."
         }
       }
+    },
+    "wk65_round0_deslop_foundation": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk65_round0_deslop_foundation.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "Round 0 de-slop foundation. Agent 11 owns Wave 0 (full before-baseline + snapshot-no-mutation guard), Gate 1 (verify 4 wk65 pins + determinism + qa_smoke green before deletions), Gate 2 (full regression + after-capture + visual diff)."
+      },
+      "rounds": {
+        "wk65_w0_tooling_baseline": {
+          "sprint_id": "wk65_round0_deslop_foundation",
+          "round_id": "wk65_w0_tooling_baseline",
+          "status": "done",
+          "round_meta": {
+            "wave": "Wave 0",
+            "role": "QA_TestEngineering_Lead",
+            "build_target": "BEFORE any code change: capture FULL pygame+Ursina visual before-baseline into docs/screenshots/wk65_baseline/ AND write tests/test_wk65_snapshot_no_mutation.py GREEN on current code. Baseline is the 'before' for Wave-2 render-deletion diffs; snapshot guard is the Round-A precondition.",
+            "created_utc": "2026-05-29T00:00:00Z",
+            "depends_on": "none (runs before Wave 1 deletions exist)"
+          },
+          "what_i_changed": {
+            "summary": "Created tests/test_wk65_snapshot_no_mutation.py (GREEN) and captured 23 baseline PNGs across 7 scenarios (6 pygame + 1 Ursina 3D). No production code touched. DID NOT COMMIT.",
+            "files_created": [
+              "tests/test_wk65_snapshot_no_mutation.py",
+              "docs/screenshots/wk65_baseline/** (23 PNGs + manifests)"
+            ],
+            "files_edited": [
+              ".cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json (this log)"
+            ]
+          },
+          "snapshot_api": {
+            "entry_point_used": "engine.build_snapshot()  (game/engine.py:1577)",
+            "delegates_to": "engine.sim.build_snapshot(**frame_kwargs)  (game/sim_engine.py:445)",
+            "why_engine_not_sim": "Plan skeleton suggested engine.sim.build_snapshot() but the SIM-level method REQUIRES per-frame kwargs (vfx_projectiles, screen_w/h, camera_x/y, zoom, default_zoom, paused, running, pause_menu_visible). The zero-arg renderer-facing contract is engine.build_snapshot() (confirmed by tests/test_renderer_snapshot_contract.py:76,94). LATER WAVES: use engine.build_snapshot() unless you supply all sim-level kwargs.",
+            "snapshot_type": "game.sim.snapshot.SimStateSnapshot (frozen dataclass)",
+            "copy_semantics": "Entity LISTS are shallow-copied to tuples (membership frozen); individual entities are shared live references -> a mutation guard on entity fields is meaningful.",
+            "renderer_consumed_lists": [
+              "heroes",
+              "enemies",
+              "buildings",
+              "peasants",
+              "guards",
+              "bounties"
+            ]
+          },
+          "entity_fields_digested": {
+            "heroes_enemies_buildings": [
+              "x",
+              "y",
+              "hp",
+              "max_hp",
+              "level",
+              "gold",
+              "xp",
+              "state",
+              "target",
+              "is_alive",
+              "is_constructed",
+              "construction_progress",
+              "building_type",
+              "enemy_type"
+            ],
+            "method": "defensive getattr with '<missing>' sentinel; floats rounded(6); enums/refs coerced via repr() for value (not identity) comparison",
+            "also_pinned": "len(peasants), len(guards), engine.economy.player_gold",
+            "default_world_state": "GameEngine(headless=True) default world: 0 heroes, 0 enemies, buildings>=1 (castle). Digest still exercises buildings; assertion is before==after."
+          },
+          "tests": {
+            "file": "tests/test_wk65_snapshot_no_mutation.py",
+            "cases": [
+              "test_build_snapshot_does_not_mutate_entities -- digest entities before, call engine.build_snapshot(), read snapshot lists like a renderer, digest after, assert before==after.",
+              "test_build_snapshot_lists_are_copies_not_aliases -- snap.heroes/enemies/buildings are NOT the same object as engine lists (tuples) and have identical membership at snapshot time."
+            ],
+            "result": "2 passed, 1 warning in ~3s (pygame pkg_resources deprecation warning is pre-existing/unrelated). GREEN on current unmodified code.",
+            "command": "python -m pytest tests/test_wk65_snapshot_no_mutation.py -q"
+          },
+          "baseline_captures": {
+            "tool_pygame": "tools/capture_screenshots.py (deterministic; SDL dummy driver; sim-time ticks; no LLM)",
+            "tool_ursina": "tools/run_ursina_capture_once.py (launches real Panda3D/Ursina app as subprocess, auto-saves one PNG)",
+            "scenario_enumeration_note": "capture_screenshots.py has NO --help scenario list; --scenario is a required free string resolved by tools/screenshot_scenarios.py::get_scenario(). The Ursina tool's --scenario only accepts keys in URSINA_CAPTURE_SCENARIOS (currently only 'wk61_hold_g_tax_overlay'); for a base_overview-equivalent the Ursina tool is run WITHOUT --scenario (default app + auto-screenshot).",
+            "pygame_scenarios_available": [
+              "building_catalog",
+              "enemy_catalog",
+              "base_overview",
+              "ui_panels",
+              "ui_pause_menu",
+              "ui_build_catalog",
+              "ui_audio_blacksmith",
+              "ui_polish_after",
+              "world_variation",
+              "worker_catalog",
+              "ranged_projectiles",
+              "building_debris",
+              "bounty_in_black_fog",
+              "building_menu_open",
+              "wk52_pin_alerts",
+              "wk61_hold_g_tax_overlay",
+              "wk61_guardhouse_hp_panel",
+              "wk61_hero_menu_chat"
+            ],
+            "ursina_capture_scenarios_available": [
+              "wk61_hold_g_tax_overlay"
+            ],
+            "commands_run": [
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk65_baseline/pyg_base --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_panels --seed 3 --out docs/screenshots/wk65_baseline/pyg_ui_panels --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_pause_menu --seed 3 --out docs/screenshots/wk65_baseline/pyg_pause --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ui_build_catalog --seed 3 --out docs/screenshots/wk65_baseline/pyg_catalog --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario ranged_projectiles --seed 3 --out docs/screenshots/wk65_baseline/pyg_combat_ranged --size 1920x1080 --ticks 480",
+              "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk65_baseline/pyg_enemy_catalog --size 1920x1080 --ticks 480",
+              "python tools/run_ursina_capture_once.py --seconds 12 --out docs/screenshots/wk65_baseline/ursina_base --stem ursina_base --no-llm"
+            ],
+            "pngs_produced": [
+              "docs/screenshots/wk65_baseline/pyg_base/base_overview__Z1__ui_default.png",
+              "docs/screenshots/wk65_baseline/pyg_base/base_overview__Z1__world_clean.png",
+              "docs/screenshots/wk65_baseline/pyg_base/base_overview__Z2__ui_default.png",
+              "docs/screenshots/wk65_baseline/pyg_base/base_overview__Z2__world_clean.png",
+              "docs/screenshots/wk65_baseline/pyg_catalog/ui_build_catalog.png",
+              "docs/screenshots/wk65_baseline/pyg_combat_ranged/ranged_projectiles_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_combat_ranged/ranged_projectiles_overview.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_bandit_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_catalog_overview.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_goblin_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_skeleton_archer_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_skeleton_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_spider_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_enemy_catalog/enemy_wolf_closeup.png",
+              "docs/screenshots/wk65_baseline/pyg_pause/ui_pause_menu.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_building.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_debug.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_hero.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_hidden.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_marketplace_tax.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_sidebar_split.png",
+              "docs/screenshots/wk65_baseline/pyg_ui_panels/ui_panels_tax_collector.png",
+              "docs/screenshots/wk65_baseline/ursina_base/ursina_base_20260529_080152_580.png"
+            ],
+            "png_count": 23,
+            "visual_spot_check": "Opened (Read tool) base_overview__Z1__ui_default (full HUD+town), ui_panels_hero (left hero info panel 'Gareth', alignment flush to left edge), ranged_projectiles_overview (units in combat: hero+HP bar, skeleton enemies with HP bars, castle+house), ursina_base (live 3D: castle/buildings prefabs, trees/VFX, HUD bars, perf overlay). All non-blank; content as expected.",
+            "combat_coverage": "ranged_projectiles (hero ranger vs goblin, projectile mid-flight) + enemy_catalog (all enemy sprites) cover the 'units in combat' render path Agent 10 deletions touch.",
+            "mountain_underground_coverage": "GAP flagged: NO pygame headless mountain/underground scenario exists in screenshot_scenarios.py, and the underground RENDER subsystem is Ursina-only. The dead block Agent 10 deletes (ursina_renderer.py:1320-1441) is behind an UNCONDITIONAL EARLY RETURN, so it is NOT drawn in any capture -> a before/after pixel diff cannot validate its deletion. Closest captured: ursina_base (surface 3D). Recommend Gate 2 accept grep-confirm + full pytest + snapshot-no-mutation guard for that specific deletion; Agent 10 must state the early-return-unreachable fact in their log."
+          },
+          "gates": {
+            "snapshot_test": "PASS (2 passed)",
+            "note": "Wave-0 task is capture + write-the-pin only; the full gate stack (pytest/determinism_guard/qa_smoke/validate_assets) runs at Gate 1 and Gate 2 per assignment."
+          },
+          "constraints_honored": {
+            "created_only_allowed_files": "tests/test_wk65_snapshot_no_mutation.py + docs/screenshots/wk65_baseline/** only",
+            "no_production_code_edited": true,
+            "did_not_commit": true,
+            "did_not_push": true
+          },
+          "completion_receipt": "Agent 11 Wave 0 COMPLETE: snapshot-no-mutation guard GREEN (2 passed) on unmodified code via engine.build_snapshot(); 23 before-baseline PNGs captured (6 pygame scenarios + 1 Ursina 3D) incl. units-in-combat (ranged_projectiles, enemy_catalog). Mountain/underground capture gap flagged (Ursina-only render behind early-return; not pixel-diffable). No code edits, no commit, no push.",
+          "questions_back_to_pm": [
+            "Underground/mountain RENDER is Ursina-only AND behind an unconditional early return (ursina_renderer.py:1320-1441) -> not drawn in any capture, so Agent 10 deletion of that block CANNOT be validated by a before/after screenshot diff. Recommend Gate 2 accept grep-confirm + full pytest + snapshot guard for that specific deletion and require Agent 10 to state the early-return-unreachable fact in their log."
+          ]
+        }
+      }
     }
   }
 }

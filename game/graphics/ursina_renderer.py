@@ -78,17 +78,9 @@ COLOR_LAIR = color.brown
 # 1 world unit along the floor == 1 tile == 32 px (scale lives in ursina_coords)
 from game.graphics.ursina_coords import SCALE, px_to_world, sim_px_to_world_xz
 
-# v1.5 Sprint 1.2: uniform scale for Kenney OBJ tiles (1×1 plane ≈ one sim tile).
-TERRAIN_SCALE_MULTIPLIER = 1.0
-# Props sit on the same grid; tune if authored mesh bounds drift.
-# Trees are *not* part of the WK34 ground-scatter 4× pass (only rocks + grass clumps).
-# Kenney tree GLBs are already tall; keep this near 1.0 to avoid "massive" canopy scale.
-TREE_SCALE_MULTIPLIER = 1.15
-ROCK_SCALE_MULTIPLIER = 1.68  # 4× of pre-WK34 0.42
-# Grass tiles use organic scatter doodads on the base plane, not full-tile voxels.
-GRASS_SCATTER_SCALE_MULTIPLIER = 2.08  # 4× of pre-WK34 0.52
-# Flower / log / mushroom mesh instances: half the scatter scale of other ground props (2× original vs 4×).
-GROUND_PROP_FLOWER_LOG_MUSHROOM_SCALE = 0.5
+# WK65 Round 0: env scale constants live in ursina_environment.py (the single source
+# imported by ursina_terrain_fog_collab.py). The unused renderer-local copies of
+# TERRAIN/TREE/ROCK/GRASS_SCATTER/GROUND_PROP_*_SCALE were deleted (verified zero callers).
 
 # Pixel billboard height in world units; scales with UNIT_SPRITE_PIXELS so larger raster reads larger on screen.
 _US = float(getattr(config, "UNIT_SPRITE_PIXELS", config.TILE_SIZE)) / float(config.TILE_SIZE)
@@ -539,79 +531,6 @@ class UrsinaRenderer:
             self._directional_light = dl
         except Exception:
             self._directional_light = None
-
-    def _unit_anim_surface(
-        self,
-        obj_id: int,
-        entity,
-        clips: dict[str, AnimationClip],
-        base_clip_fn,
-        cache_prefix: str,
-        class_key: str,
-    ) -> tuple[pygame.Surface, tuple]:
-        """Pick hero/enemy frame from clips using triggers + base locomotion; time-based playback."""
-        # Prefer snapshot from engine (see _update_render_animations): pygame clears _render_anim_trigger first.
-        trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
-            entity, "_render_anim_trigger", None
-        )
-        if trigger:
-            tname = str(trigger)
-            if tname in clips:
-                setattr(entity, "_ursina_anim_trigger", None)
-                setattr(entity, "_render_anim_trigger", None)
-                base = base_clip_fn(entity)
-                self._unit_anim_state[obj_id] = {
-                    "clip": tname,
-                    "t0": time.time(),
-                    "base": base,
-                    "oneshot": not clips[tname].loop,
-                }
-            else:
-                setattr(entity, "_ursina_anim_trigger", None)
-                setattr(entity, "_render_anim_trigger", None)
-
-        base = base_clip_fn(entity)
-        st = self._unit_anim_state.get(obj_id)
-        if st is None:
-            self._unit_anim_state[obj_id] = {
-                "clip": base,
-                "t0": time.time(),
-                "base": base,
-                "oneshot": False,
-            }
-            st = self._unit_anim_state[obj_id]
-        else:
-            st["base"] = base
-            if st.get("oneshot"):
-                oc = clips[st["clip"]]
-                elapsed_done = time.time() - st["t0"]
-                _i, finished = _frame_index_for_clip(oc, elapsed_done)
-                if finished:
-                    st["clip"] = st["base"]
-                    st["t0"] = time.time()
-                    st["oneshot"] = False
-            if not st.get("oneshot"):
-                if st["clip"] != base:
-                    st["clip"] = base
-                    st["t0"] = time.time()
-
-        clip_name = st["clip"]
-        clip = clips[clip_name]
-        elapsed = time.time() - st["t0"]
-        idx, _fin = _frame_index_for_clip(clip, elapsed)
-        surf = clip.frames[idx]
-        upx = _unit_raster_px()
-        _spec = HeroSpriteSpec(size=upx)
-        cache_key = (
-            cache_prefix,
-            "anim",
-            class_key,
-            clip_name,
-            idx,
-            upx,
-            hash(_spec),
-        )
-        return surf, cache_key
 
     # ------------------------------------------------------------------
     # Atlas-based UV rendering (WK59 perf): single shared texture, UV offsets
@@ -1068,11 +987,6 @@ class UrsinaRenderer:
                 pass
             self._shadow_bounds_initialized = True
 
-    def _apply_poi_mystery_state(self, b, ent, wx, wz, bld_terrain_y) -> None:
-        """WK55: No-op — binary visibility is handled in _sync_snapshot_buildings.
-        Kept as stub so any stray calls don't crash."""
-        pass
-
     def _sync_snapshot_buildings(self, snapshot: "SimStateSnapshot", world, active_ids: set) -> None:
         # Buildings — billboard quads, except castle / house / lair (v1.5 Sprint 2.1: lit 3D meshes).
         _active_layer = self._camera_active_layer
@@ -1215,8 +1129,6 @@ class UrsinaRenderer:
                         except Exception:
                             pass
                         ent._ks_cave_tint_applied = True
-                # WK55: POI 3-state visibility post-processing
-                self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 # R5 Phase 2 (Agent 03): native building label / HP bar / gold
                 _sync_building_worldspace_ui(
                     b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
@@ -1250,8 +1162,6 @@ class UrsinaRenderer:
                         except Exception:
                             pass
                         ent._ks_cave_tint_applied = True
-                # WK55: POI 3-state visibility post-processing
-                self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
                 # R5 Phase 2 (Agent 03): native building label / HP bar / gold
                 _sync_building_worldspace_ui(
                     b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
@@ -1303,8 +1213,6 @@ class UrsinaRenderer:
                     except Exception:
                         pass
                     ent._ks_cave_tint_applied = True
-            # WK55: POI 3-state visibility post-processing
-            self._apply_poi_mystery_state(b, ent, wx, wz, bld_terrain_y)
             # R5 Phase 2 (Agent 03): native building label / HP bar / gold
             _sync_building_worldspace_ui(
                 b, bts, ent, is_lair, wx=wx, wz=wz, terrain_y=bld_terrain_y, hy=hy
@@ -1313,131 +1221,18 @@ class UrsinaRenderer:
 
         _maybe_log_tax_overlay_debug(getattr(snapshot, "buildings", ()))
 
-    # ------------------------------------------------------------------
-    # WK57 Wave 3: Underground lighting (torch PointLights per chamber)
-    # ------------------------------------------------------------------
-
-    def _create_underground_lighting(self, area) -> None:
-        """Create torch PointLights for an underground area's chambers."""
-        try:
-            from panda3d.core import PointLight as PandaPointLight, Vec4
-            from panda3d.core import Vec3 as PVec3
-            from panda3d.core import NodePath
-        except ImportError:
-            return
-        from config import (
-            UNDERGROUND_TORCH_COLOR, UNDERGROUND_TORCH_INTENSITY,
-            UNDERGROUND_TORCH_ATTENUATION, UNDERGROUND_DEPTH, TILE_SIZE,
-        )
-
-        entrance_px = area.entrance_grid_x * TILE_SIZE + TILE_SIZE
-        entrance_py = area.entrance_grid_y * TILE_SIZE + TILE_SIZE
-        base_wx, base_wz = sim_px_to_world_xz(entrance_px, entrance_py)
-        cx = area.total_width // 2
-
-        for ch in area.chambers:
-            gx = cx + ch.world_offset_x + ch.width // 2
-            gz = ch.world_offset_z + ch.height // 2
-
-            wx = (gx - cx) * 1.0 + base_wx
-            wz = -gz * 1.0 + base_wz
-            wy = -UNDERGROUND_DEPTH + 3.0  # torch height above cave floor
-
-            try:
-                from ursina import scene as _scene
-                pl = PandaPointLight(f"torch_{area.area_id}_{ch.chamber_id}")
-                r, g, b = UNDERGROUND_TORCH_COLOR
-                pl.setColor(Vec4(
-                    r * UNDERGROUND_TORCH_INTENSITY,
-                    g * UNDERGROUND_TORCH_INTENSITY,
-                    b * UNDERGROUND_TORCH_INTENSITY,
-                    1.0,
-                ))
-                a1, a2, a3 = UNDERGROUND_TORCH_ATTENUATION
-                pl.setAttenuation(PVec3(a1, a2, a3))
-
-                from panda3d.core import NodePath as NP
-                render_node = _scene.getParent()  # Panda3D render node
-                plnp = render_node.attachNewNode(pl)
-                plnp.setPos(wx, wy, wz)
-                render_node.setLight(plnp)
-                self._underground_lights.append(plnp)
-            except Exception:
-                pass
-
-    def _remove_underground_lighting(self) -> None:
-        """Remove all torch PointLights."""
-        for plnp in self._underground_lights:
-            try:
-                parent = plnp.getParent()
-                if parent:
-                    parent.clearLight(plnp)
-                plnp.removeNode()
-            except Exception:
-                pass
-        self._underground_lights.clear()
-
     def _sync_underground_meshes(self, snapshot: "SimStateSnapshot", world) -> None:
         """WK57 Wave 2: Create underground cave meshes for discovered dungeon POIs.
 
-        Also triggers the cave entrance shader update (Wave 1 Task 1D) when
-        POI discovery state changes.
+        WK65 Round 0: FEATURE GATE — underground visuals are disabled and the method
+        returns immediately. The dead render block that previously followed this return
+        (cave-mesh/stalactite creation + torch PointLight helpers
+        ``_create_underground_lighting`` / ``_remove_underground_lighting``) was
+        unreachable and has been deleted. The sim-side dungeon entry
+        (``poi_interaction._handle_dungeon``) is unaffected. If underground visuals are
+        revived, restore from git history (WK57 Wave 2/3).
         """
-        # FEATURE GATE: underground visuals disabled — no cave meshes, stalactites,
-        # or torch lights created. All infrastructure code preserved for future use.
         return
-
-        ug_areas = getattr(snapshot, 'underground_areas', None) or {}
-        pois = getattr(snapshot, 'pois', ())
-
-        # Task 2C: Update cave entrance shader when fog revision changes
-        fog_rev = int(getattr(snapshot, 'fog_revision', 0))
-        if fog_rev != self._underground_cave_shader_rev:
-            self._underground_cave_shader_rev = fog_rev
-            if pois and world:
-                map_w = int(getattr(world, 'width', 1))
-                map_h = int(getattr(world, 'height', 1))
-                self._terrain_fog.update_cave_entrance_shader(pois, map_w, map_h)
-
-        # WK57 Wave 3: Toggle stalactite/decoration visibility by camera layer.
-        # Cave floor mesh (index 0 in entity list) stays always visible (seen through
-        # surface holes). Stalactites (index 1+) are only visible when camera is underground.
-        active_layer = self._camera_active_layer
-        for area_id, ent_list in self._underground_mgr._area_entities.items():
-            for idx, ent in enumerate(ent_list):
-                if idx == 0:
-                    # Cave floor mesh — always visible once created
-                    if not ent.enabled:
-                        ent.enabled = True
-                else:
-                    # Stalactite/decoration — only when camera underground
-                    ent.enabled = (active_layer == -1)
-
-        # Task 2B: Create underground meshes for discovered dungeon POIs
-        if not ug_areas:
-            return
-
-        for b in getattr(snapshot, 'buildings', ()):
-            if not getattr(b, 'is_poi', False):
-                continue
-            if not getattr(b, 'is_discovered', False):
-                continue
-            poi_def = getattr(b, 'poi_def', None)
-            if poi_def is None:
-                continue
-            poi_type = getattr(poi_def, 'poi_type', '')
-            if poi_type not in ('poi_cave_entrance', 'poi_mine_entrance'):
-                continue
-
-            area_id = f"underground_{getattr(b, 'grid_x', 0)}_{getattr(b, 'grid_y', 0)}"
-            if area_id in self._underground_mgr._area_entities:
-                continue  # already created
-
-            area = ug_areas.get(area_id)
-            if area and area.is_generated:
-                self._underground_mgr.create_underground_mesh(area, scene)
-                self._underground_mgr.create_stalactites(area, scene)
-                self._create_underground_lighting(area)
 
     def _sync_snapshot_heroes(self, snapshot: "SimStateSnapshot", active_ids: set, HeroClass) -> None:
         # Heroes — atlas UV billboards (WK59 perf: single shared texture, UV offset per frame)
