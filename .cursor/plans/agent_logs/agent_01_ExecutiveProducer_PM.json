@@ -3151,7 +3151,7 @@
             "WK67/Round B: pre-existing app-shell setattr leaks ursina_app.py:860 (engine._ursina_hud_force_upload) + :1090 (sim._worker_scale_shot_hold) -- a different (L5-ish) leak, not the L2 render path.",
             "Follow-up (12 + 06): add a registered Ursina melee combat-capture scenario (spawn hero+enemy adjacent, force attack tick, capture strike+hurt frame) -- Ursina is the primary renderer but has the thinnest visual capture coverage; the DTO/anim-boundary change is currently guarded only by a headless unit test on that path."
           ],
-          "pm_commits": "NOT COMMITTED / NOT PUSHED. Human git gate. Working tree carries the WK66 changes on top of HEAD a469841. Awaiting Jaimie go to commit + push."
+          "pm_commits": "COMMITTED + PUSHED 2026-05-29 (Jaimie authorized): main 6762073..65440bb (42 files, +7136/-4220), pushed to origin jaimiemontague/Kingdom; local and origin/main in sync. Commit bundles the WK66 render-boundary work + the sprint-boundary agent-log roll (keep 7: wk60..wk66; wk58/wk59 archived)."
         }
       }
     }
