@@ -27,6 +27,8 @@ class EnemyRenderer:
         self._anim_lock_one_shot: str | None = None
         self._facing = 1
         self._last_pos: tuple[float, float] | None = None
+        # WK66 Move 1a: renderer-owned last-seen one-shot sequence (see HeroRenderer).
+        self._last_trigger_seq: int = -1
 
     def set_one_shot(self, name: str) -> None:
         self._anim_lock_one_shot = str(name)
@@ -52,9 +54,19 @@ class EnemyRenderer:
                 self._facing = 1 if dx >= 0 else -1
         self._last_pos = (x, y)
 
-        entity_one_shot = _state_get(entity_state, "_render_anim_trigger", None)
-        if entity_one_shot:
-            setattr(entity_state, "_render_anim_trigger", None)
+        # WK66 Move 1a: consume one-shots via the sim's monotonic anim_trigger_seq
+        # (no _render_anim_trigger write-back). See HeroRenderer for the rationale.
+        trigger_seq = int(
+            _state_get(entity_state, "anim_trigger_seq",
+                       _state_get(entity_state, "_anim_trigger_seq", 0)) or 0
+        )
+        entity_one_shot = None
+        if trigger_seq != self._last_trigger_seq:
+            self._last_trigger_seq = trigger_seq
+            entity_one_shot = _state_get(
+                entity_state, "anim_trigger",
+                _state_get(entity_state, "_render_anim_trigger", None),
+            )
         if not entity_one_shot:
             entity_one_shot = _state_get(entity_state, "_anim_lock_one_shot", None)
         if entity_one_shot:

@@ -108,7 +108,7 @@ class InstancedUnitRenderer:
         self._shadow_geom_node: NodePath | None = None
         self._geom: Geom | None = None
         self._initialized = False
-        # Mirror ``UrsinaRenderer._unit_anim_surface`` triggers + locomotion timing (wall clock).
+        # Mirror ``UrsinaRenderer._compute_anim_frame`` triggers + locomotion timing (wall clock).
         self._unit_anim_state: dict[int, dict] = {}
         self._visual_pos_by_id: dict[int, tuple[float, float, float]] = {}
 
@@ -218,15 +218,19 @@ class InstancedUnitRenderer:
         clips: dict[str, AnimationClip],
         base_clip_fn,
     ) -> tuple[str, int]:
-        """Same resolution as ``UrsinaRenderer._unit_anim_surface`` minus surface/cache_key."""
+        """Same resolution as ``UrsinaRenderer._compute_anim_frame`` minus surface/cache_key."""
+        # WK66 Move 1a: play one-shots when the sim's monotonic anim_trigger_seq
+        # advances vs our renderer-owned last-seen value; never write the trigger
+        # back onto the entity.
         trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
             entity, "_render_anim_trigger", None
         )
-        if trigger:
+        trigger_seq = int(getattr(entity, "_anim_trigger_seq", 0) or 0)
+        st = self._unit_anim_state.get(obj_id)
+        last_seq = st.get("last_seq", -1) if st is not None else -1
+        if trigger and trigger_seq != last_seq:
             tname = str(trigger)
             if tname in clips:
-                setattr(entity, "_ursina_anim_trigger", None)
-                setattr(entity, "_render_anim_trigger", None)
                 base = base_clip_fn(entity)
                 oc = clips[tname]
                 self._unit_anim_state[obj_id] = {
@@ -234,10 +238,11 @@ class InstancedUnitRenderer:
                     "t0": time.time(),
                     "base": base,
                     "oneshot": not oc.loop,
+                    "last_seq": trigger_seq,
                 }
-            else:
-                setattr(entity, "_ursina_anim_trigger", None)
-                setattr(entity, "_render_anim_trigger", None)
+                st = self._unit_anim_state[obj_id]
+            elif st is not None:
+                st["last_seq"] = trigger_seq
 
         base = base_clip_fn(entity)
         st = self._unit_anim_state.get(obj_id)
@@ -247,6 +252,7 @@ class InstancedUnitRenderer:
                 "t0": time.time(),
                 "base": base,
                 "oneshot": False,
+                "last_seq": trigger_seq,
             }
             st = self._unit_anim_state[obj_id]
         else:

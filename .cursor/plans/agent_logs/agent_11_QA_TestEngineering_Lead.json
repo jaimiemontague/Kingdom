@@ -2114,6 +2114,356 @@
           ]
         }
       }
+    },
+    "wk66_round_a1_render_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk66_round_a1_render_boundary.plan.md",
+        "created_utc": "2026-05-29T00:00:00Z",
+        "notes": "WK66 Round A-1 = render/snapshot boundary (Moves 1,3,4 + leak L10), behavior-preserving. Agent 11 owns Wave 0 (full before-baseline + 4 new pins) + gate rounds G1/G2/G3 (re-run gates + re-capture/diff every render path vs wk66_baseline). QA writes NO production code."
+      },
+      "rounds": {
+        "wk66_w0_baseline": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_w0_baseline",
+          "status": "done",
+          "round_meta": {
+            "role": "Agent 11 (QA_TestEngineering_Lead)",
+            "wave": "Wave 0 (baseline + safety net; NO production code)",
+            "model": "claude-opus-4-8[1m]",
+            "started_from_head": "a469841 (working tree clean at activation)",
+            "intelligence": "HIGH"
+          },
+          "prompt_text": "WK66 Wave 0: (1) capture the FULL before-baseline into docs/screenshots/wk66_baseline/ for BOTH ursina (primary) and pygame render paths the sprint touches; enumerate scenarios via tools/capture_screenshots.py --help and tools/run_ursina_capture_once.py --help. (2) Write tests/test_wk66_render_boundary.py with 4 pins GREEN on current code: render-DTO field-parity, anim one-shot semantics, fog/discovery digest (DETERMINISTIC_SIM=1 seed 3), snapshot-no-mutation-on-consume. No production code; capture-only + the test file. DO NOT COMMIT.",
+          "what_i_changed": {
+            "files_created": [
+              "tests/test_wk66_render_boundary.py (4 pins + 3 supporting tests = 7 test fns)",
+              "docs/screenshots/wk66_baseline/** (62 baseline PNGs across 11 subdirs)"
+            ],
+            "production_code_touched": "NONE (QA Wave 0 is baseline + tests only, per file-ownership table)"
+          },
+          "scenario_enumeration": {
+            "source_of_truth": "tools/screenshot_scenarios.py (get_scenario for pygame; URSINA_CAPTURE_SCENARIOS for ursina)",
+            "pygame_scenarios_available": [
+              "building_catalog",
+              "enemy_catalog",
+              "base_overview",
+              "ui_panels",
+              "ui_pause_menu",
+              "ui_build_catalog",
+              "ui_audio_blacksmith",
+              "ui_polish_after",
+              "world_variation",
+              "worker_catalog",
+              "ranged_projectiles",
+              "building_debris",
+              "bounty_in_black_fog",
+              "building_menu_open",
+              "wk52_pin_alerts",
+              "wk61_hold_g_tax_overlay",
+              "wk61_guardhouse_hp_panel",
+              "wk61_hero_menu_chat"
+            ],
+            "ursina_capture_scenarios_available": [
+              "wk61_hold_g_tax_overlay (ONLY registered Ursina scenario)"
+            ],
+            "ursina_default_mode": "no --scenario => runs main.py --renderer ursina live, captures after --seconds then exits; --reveal-map reveals fog"
+          },
+          "baseline_captures": {
+            "out_root": "docs/screenshots/wk66_baseline/",
+            "total_pngs": 62,
+            "commands_run": [
+              "python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk66_baseline/pyg_base_overview --size 1920x1080 --ticks 480   (4 png: units idle + core buildings + HUD)",
+              "python tools/capture_screenshots.py --scenario building_catalog --seed 3 --out docs/screenshots/wk66_baseline/pyg_building_catalog --size 1920x1080 --ticks 480   (35 png: every building type built closeup incl. lair/neutral/palace/guilds)",
+              "python tools/capture_screenshots.py --scenario building_debris --seed 3 --out docs/screenshots/wk66_baseline/pyg_building_debris --size 1920x1080 --ticks 480   (2 png: rubble/debris + damaged)",
+              "python tools/capture_screenshots.py --scenario bounty_in_black_fog --seed 3 --out docs/screenshots/wk66_baseline/pyg_bounty_fog --size 1920x1080 --ticks 480   (2 png: bounty flag + reward + R:/tier labels in black fog -> fog/discovery path)",
+              "python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/wk66_baseline/pyg_enemy_catalog --size 1920x1080 --ticks 480   (7 png: every enemy type)",
+              "python tools/capture_screenshots.py --scenario worker_catalog --seed 3 --out docs/screenshots/wk66_baseline/pyg_worker_catalog --size 1920x1080 --ticks 480   (3 png: peasant + tax_collector)",
+              "python tools/capture_screenshots.py --scenario ranged_projectiles --seed 3 --out docs/screenshots/wk66_baseline/pyg_ranged_projectiles --size 1920x1080 --ticks 480   (2 png: ranger attacking goblin + projectile mid-flight = units-in-combat/attack)",
+              "python tools/capture_screenshots.py --scenario world_variation --seed 3 --out docs/screenshots/wk66_baseline/pyg_world_variation --size 1920x1080 --ticks 480   (2 png: terrain/trees/paths)",
+              "python tools/run_ursina_capture_once.py --seconds 8 --out docs/screenshots/wk66_baseline/ursina_base --stem ursina_base --no-llm --reveal-map   (1 png: PRIMARY renderer base overview, fog revealed; visually confirmed valid)",
+              "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --out docs/screenshots/wk66_baseline/ursina_tax_overlay --no-llm   (1 png: PRIMARY renderer starting-buildings row + tax overlay; visually confirmed valid)",
+              "python tools/run_ursina_capture_once.py --seconds 8 --out docs/screenshots/wk66_baseline/ursina_fog --stem ursina_fog --no-llm   (1 png: PRIMARY renderer fog-of-war NOT revealed; visually confirmed valid)"
+            ],
+            "render_path_coverage": {
+              "base_overview": "pyg_base_overview (4 zoom/ui variants) + ursina_base",
+              "units_idle": "pyg_base_overview (4 heroes named w/ HP bars), pyg_worker_catalog, pyg_enemy_catalog",
+              "units_attack_hurt_one_shots": "pyg_ranged_projectiles (ranger attack + projectile). NOTE: no scripted scenario drives a melee attack/hurt one-shot frame on screen; one-shot anim correctness is pinned directly at the renderer level by pin 2 instead.",
+              "buildings_built": "pyg_building_catalog (35), pyg_base_overview, ursina_tax_overlay",
+              "buildings_damaged": "pyg_building_debris (house demolished -> damaged/rubble)",
+              "buildings_construction": "GAP: no scenario places an unconstructed/in-progress building; construction sprite_state exercised by pin 1 building-view (is_constructed/construction_progress fields), not a screenshot.",
+              "buildings_lair": "pyg_building_catalog includes lair-type closeups (camps/crypts/dens/nests)",
+              "buildings_neutral": "pyg_building_catalog includes neutral building types",
+              "buildings_palace": "pyg_building_catalog (palace closeup if present in assets_manifest)",
+              "bounty_flags": "pyg_bounty_fog (flag + $reward + R:n + tier label)",
+              "fog_discovery_reveal": "pyg_bounty_fog (bounty in black fog), ursina_fog (un-revealed) vs ursina_base (revealed)",
+              "rubble": "pyg_building_debris",
+              "mountain_underground": "GAP: no named scenario frames a mountain or underground/cave area; recorded as a gap."
+            },
+            "scenario_gaps_noted": [
+              "Ursina has only ONE registered capture scenario (wk61_hold_g_tax_overlay); other render paths (combat one-shots, individual building states, rubble, underground) are NOT scriptable on the Ursina path -- captured on pygame instead, plus 3 live Ursina frames (base/tax/fog). Gate-2/3 Ursina diff will be base + tax + fog frames + any newly registered scenario.",
+              "No on-screen melee combat (attack/hurt one-shot) scenario exists -> one-shot semantics pinned at renderer level (pin 2).",
+              "No building-under-construction scenario exists -> construction fields pinned in pin 1.",
+              "No mountain / underground view scenario exists -> documented gap (same class WK65 hit)."
+            ]
+          },
+          "pins": {
+            "file": "tests/test_wk66_render_boundary.py",
+            "green_on_current_code": true,
+            "pin_1_render_dto_field_parity": {
+              "test": "test_render_dto_field_parity",
+              "status": "GREEN",
+              "pins": "Move 3. Reads EXACTLY the fields the renderers read off live entities, via the same getattr-with-default, for first 3 heroes, 3 enemies, 5 buildings, 3 bounties. inside_building flattened to a center tuple (never a live ref). has_target is a bool (never the live target). entity_id keyed via hero_id||entity_id||id(). This is the tuple shape Agent 03 DTO builders + Agent 10 DTO consumers must reproduce."
+            },
+            "pin_2_anim_one_shot": {
+              "tests": [
+                "test_anim_one_shot_plays_once_then_replays_on_new_trigger",
+                "test_anim_one_shot_via_registry_level"
+              ],
+              "status": "GREEN",
+              "pins": "Move 1a. At HeroRenderer + RendererRegistry level: a one-shot trigger (attack/hurt, loop=False clips) plays once -> finishes -> returns to base (idle); does NOT replay without a new trigger; a new identical trigger replays it. Documents current behavior (renderer consumes/clears the entity trigger via setattr) so the seq-based replacement preserves play-once-per-trigger."
+            },
+            "pin_3_fog_discovery_digest": {
+              "tests": [
+                "test_fog_discovery_digest_is_stable (skipif DETERMINISTIC_SIM!=1)",
+                "test_fog_discovery_digest_is_reproducible (always)"
+              ],
+              "status": "GREEN",
+              "golden": {
+                "visible": 486,
+                "seen": 313,
+                "discovered_buildings": 1
+              },
+              "pins": "Move 1b byte-identical guardrail. DETERMINISTIC_SIM=1, seed 3, no AI controller, a ranger walks two scripted legs across the map for 600 ticks. Grid-coverage digest (VISIBLE/SEEN tile counts + is_discovered building count) is the byte-stable fog STATE."
+            },
+            "pin_4_snapshot_no_mutation_on_consume": {
+              "test": "test_snapshot_not_mutated_on_consume",
+              "status": "GREEN",
+              "pins": "Extends WK65 build-time guard to CONSUME. Builds snapshot, drives a full RendererRegistry pass (animate + render every hero/enemy/peasant/guard/tax/building/bounty) against a dummy Surface, asserts the gameplay-field digest unchanged. Field set is gameplay/renderer-visible fields ONLY (excludes private _ui_cache_* and _render_anim_trigger scratch -- exactly the L2 write-backs WK66 removes -- so it stays GREEN on current code AND after Wave 2)."
+            }
+          },
+          "dto_field_lists_pinned": {
+            "note": "Enumerated from renderer source (game/graphics/renderers/*) and cross-checked vs the plan's Agent-03 Task-1 lists. Agent 03 must build DTOs with these fields/types for pin 1 to keep matching.",
+            "UnitDTO_fields": [
+              "entity_id:str (hero_id||entity_id||id())",
+              "kind:str",
+              "x:float",
+              "y:float",
+              "facing:int (getattr default 1)",
+              "is_alive:bool",
+              "hp:float",
+              "max_hp:float (>=1.0)",
+              "size:int",
+              "state_name:str (str(state.name||state))",
+              "hero_class:str (default warrior)",
+              "enemy_type:str (default goblin)",
+              "name:str",
+              "gold:int",
+              "taxed_gold:int",
+              "is_inside_building:bool",
+              "inside_building_center:tuple[float,float]|None (FLATTENED from inside_building.center_x/center_y)"
+            ],
+            "BuildingDTO_fields": [
+              "entity_id:str",
+              "building_type:str (lowercased, .value-normalized)",
+              "world_x:float",
+              "world_y:float",
+              "width:int",
+              "height:int",
+              "hp:float",
+              "max_hp:float (>=1.0)",
+              "is_constructed:bool",
+              "construction_progress:float (0..1)",
+              "color:tuple[int,int,int] (default (128,128,128))",
+              "is_lair:bool",
+              "is_neutral:bool",
+              "stash_gold:int",
+              "stored_tax_gold:int",
+              "level:int (default 1)",
+              "has_target:bool (bool(getattr target) -- NOT the live target)",
+              "attack_range:int"
+            ],
+            "BountyDTO_fields": [
+              "bounty_id:str",
+              "x:float",
+              "y:float",
+              "claimed:bool",
+              "reward:int",
+              "responders:int (responders||ui_responders)",
+              "attractiveness_tier:str low|med|high (attractiveness_tier||ui_attractiveness)"
+            ],
+            "renderer_read_sites": {
+              "hero": "game/graphics/renderers/hero_renderer.py:54-173",
+              "enemy": "game/graphics/renderers/enemy_renderer.py:44-124",
+              "worker_guard_tax": "game/graphics/renderers/worker_renderer.py:53-253",
+              "building": "game/graphics/renderers/building_renderer.py:50-186",
+              "bounty": "game/graphics/renderers/bounty_renderer.py:20-103"
+            }
+          },
+          "commands_run": [
+            {
+              "cmd": "python tools/capture_screenshots.py --help",
+              "exit": 0,
+              "note": "enumerated pygame scenarios"
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py --help",
+              "exit": 0,
+              "note": "enumerated ursina capture flags; scenarios only from URSINA_CAPTURE_SCENARIOS"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk66_render_boundary.py -q",
+              "exit": 0,
+              "result": "5 passed, 1 skipped (golden fog test skipif DETERMINISTIC_SIM!=1)"
+            },
+            {
+              "cmd": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py -q",
+              "exit": 0,
+              "result": "6 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk65_snapshot_no_mutation.py -q",
+              "exit": 0,
+              "result": "2 passed (still GREEN)"
+            },
+            {
+              "cmd": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py tests/test_wk65_snapshot_no_mutation.py -v",
+              "exit": 0,
+              "result": "8 passed"
+            },
+            {
+              "cmd": "python -m pytest tests/ -q --co",
+              "exit": 0,
+              "result": "585 tests collected (no collection errors with new file)"
+            }
+          ],
+          "evidence": {
+            "pytest_summary_no_det": "5 passed, 1 skipped in ~6.6s (golden fog test skipped without DETERMINISTIC_SIM=1)",
+            "pytest_summary_det": "6 passed in ~9.1s (DETERMINISTIC_SIM=1)",
+            "wk65_still_green": "2 passed",
+            "combined_det": "8 passed (wk66 + wk65)"
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Gate sections (G1/G2/G3): re-run pytest + determinism_guard + qa_smoke (+ validate_assets at G3) and re-capture/diff every render path vs docs/screenshots/wk66_baseline/. Ursina diff = ursina_base + ursina_tax_overlay + ursina_fog (only registered scenario is wk61_hold_g_tax_overlay).",
+            "Agent 03: build UnitDTO/BuildingDTO/BountyDTO to the field lists in dto_field_lists_pinned (pin 1 is the contract).",
+            "If Agent 03/10 add a registered Ursina scenario for combat/construction/underground, QA will fold it into the gate diff."
+          ],
+          "recommended_next_actions": [
+            "PM: proceed to Gate 0 (net GREEN on current code + baseline captured) then Wave 1 (03 DTOs additive, 10 comment-fix)."
+          ],
+          "questions_back_to_pm": [
+            "Recorded (NOT masked) pre-existing nondeterminism: SimEngine._fog_revision drifts +/-1 across repeated in-process GameEngine() builds (61,61,62 over 3 runs). The fog GRID (VISIBLE/SEEN/discovered) is byte-stable, so the fog pin excludes _fog_revision. Same family as the WK65 carry-item (test_spawner global-rebind). Flagging for Agent 04 determinism sign-off at the gates."
+          ],
+          "constraints_honored": [
+            "No production code written (tests + screenshots only).",
+            "No commit, no push.",
+            "Pins describe CURRENT behavior and are GREEN on current unmodified code (HEAD a469841 working tree).",
+            "Reused tests/conftest.py idioms + mirrored tests/test_engine.py / test_wk65_snapshot_no_mutation.py style (GameEngine(headless=True), pygame.quit() finally).",
+            "Captured BOTH ursina (primary) and pygame paths; visually confirmed the 3 Ursina frames render valid scenes."
+          ],
+          "completion_receipt": "WK66 Wave 0 COMPLETE. 62 before-baseline PNGs captured (8 pygame scenarios + 3 ursina frames) into docs/screenshots/wk66_baseline/. tests/test_wk66_render_boundary.py written with 4 pins (DTO field-parity, anim one-shot, fog/discovery digest, snapshot-no-mutation-on-consume) -- all GREEN on current code (6 passed DETERMINISTIC_SIM=1; 5 passed +1 skipped otherwise). WK65 snapshot guard still GREEN. Scenario gaps recorded. Pre-existing _fog_revision nondeterminism recorded for Agent 04. DO NOT COMMIT honored.",
+          "suite_crash_fix": {
+            "title": "Full single-process suite crash (Windows fatal exception 0xC0000005) fixed without weakening any pin",
+            "reported_by": "PM (wk66_round_a1_render_boundary follow-up)",
+            "symptom": "`python -m pytest -q` (INCLUDING tests/test_wk66_render_boundary.py) died mid-run with 'Windows fatal exception: access violation (0xC0000005)'; the same suite with --ignore=tests/test_wk66_render_boundary.py ran clean (575 passed, 4 skipped). pytest-forked / pytest-xdist not installed, so no per-test process isolation available.",
+            "reproduced": "Yes. First `python -m pytest -q` crashed; faulthandler traceback: game/graphics/font_cache.py:84 render_text_shadowed_cached -> building_renderer.py:109 _draw_center_label -> building_renderer.py:168 render -> registry.py:103 render_building -> test_wk66_render_boundary.py:582 _drive_full_render_pass -> :614 test_snapshot_not_mutated_on_consume. Crash localized to the consume/no-mutation render-pass pin.",
+            "root_cause": "The renderer pass these pins drive populates several MODULE-GLOBAL / class-level pygame.Surface (and pygame.font.Font) caches that persist for the whole process: font_cache._FONT_CACHE/_TEXT_CACHE/_TEXT_SHADOW_CACHE; HeroSpriteLibrary._cache / EnemySpriteLibrary._cache / WorkerSpriteLibrary._cache / BuildingSpriteLibrary._cache (AnimationClip frame surfaces, some built via convert_alpha() i.e. display-format-bound); ui_icons._type_cache/_tier_cache/_badge_cache. Those Surfaces are allocated under one pygame display session; this file's per-test `pygame.quit()` (the pinned test style) then tears down SDL, leaving the cached Surfaces/Fonts ORPHANED in the global dicts. A later test in the same process re-inits pygame, gets a cache HIT, and blits / pygame.transform.* the stale surface, corrupting the SDL/GDI heap until the process dies. The crash surfaces inside font.render() but the cause is the stale cached surfaces being reused across a pygame teardown, not the font call. The 575 other tests never drive a full render pass through these caches (e.g. test_wk65_snapshot_no_mutation only BUILDS the snapshot, never consumes it), so they stayed under Windows' surface limit; these pins were the straw. NOT dominated by the other 575 tests -> a file-local fix is correct (no conftest/escalation needed).",
+            "hygiene_fix_applied": "Added to tests/test_wk66_render_boundary.py ONLY: (1) a `_clear_global_render_caches()` helper that defensively .clear()s every one of the above module-global Surface/Font caches (each in its own try/except so a not-yet-imported module can't break teardown); (2) an autouse `_render_resource_hygiene` fixture that, AFTER each test in this module, calls `_clear_global_render_caches()` then `pygame.display.quit()` (if display init) and `pygame.quit()`. This guarantees the file leaves ZERO stale cached pygame surfaces/fonts behind, so a surface allocated by one of these pins can never be reused by a later suite test after a pygame teardown -> the access-violation cause is removed. No assertion, scenario, golden, or field list was changed.",
+            "assertions_unchanged_confirmation": "All 4 pins keep full rigor: pin 4 (no-mutation) STILL drives a real full RendererRegistry render pass over the snapshot (cache clearing only happens in teardown, AFTER the assertion); pin 1 (DTO parity) STILL checks the full UnitDTO/BuildingDTO/BountyDTO field lists; pin 3 (fog digest) is byte-identical to golden {visible:486, seen:313, discovered_buildings:1} under DETERMINISTIC_SIM=1; pin 2 (anim one-shot) unchanged. Only additive teardown was introduced.",
+            "conftest_touched": false,
+            "conftest_note": "tests/conftest.py was NOT modified. The accumulation is caused solely by THIS file's render-pass + pygame.quit() pattern, so a file-local autouse fixture is the correct, minimal fix; no shared/conftest teardown and no pytest-forked install was needed.",
+            "verification": {
+              "full_suite_run_1": "581 passed, 4 skipped, 1 warning in 92.54s (0:01:32) -- NO fatal exception, suite completed",
+              "full_suite_run_2": "581 passed, 4 skipped, 1 warning in 91.11s (0:01:31) -- NO fatal exception, stable/reproducible (crash was intermittent; two clean runs prove stability)",
+              "pins_standalone": "python -m pytest tests/test_wk66_render_boundary.py -q -> 5 passed, 1 skipped (fog golden skipif DETERMINISTIC_SIM!=1)",
+              "pins_deterministic": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py -q -> 6 passed (fog golden GREEN, byte-identical)",
+              "note_on_count": "Full-run shows 581 passed / 4 skipped (1 of the 4 skips is this file's fog-golden test, skipped because the full run does not set DETERMINISTIC_SIM). 0 failed, 0 errors, 0 fatal exceptions in both runs."
+            },
+            "files_edited": [
+              "tests/test_wk66_render_boundary.py (added _clear_global_render_caches helper + autouse _render_resource_hygiene teardown fixture; assertions untouched)"
+            ],
+            "commands_run": [
+              {
+                "cmd": "python -m pytest -q (run 1, INCLUDING this file)",
+                "exit": 0,
+                "result": "581 passed, 4 skipped, 1 warning in 92.54s -- no crash"
+              },
+              {
+                "cmd": "python -m pytest -q (run 2, stability)",
+                "exit": 0,
+                "result": "581 passed, 4 skipped, 1 warning in 91.11s -- no crash"
+              },
+              {
+                "cmd": "python -m pytest tests/test_wk66_render_boundary.py -q",
+                "exit": 0,
+                "result": "5 passed, 1 skipped"
+              },
+              {
+                "cmd": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py -q",
+                "exit": 0,
+                "result": "6 passed (fog golden green)"
+              }
+            ]
+          },
+          "wave2_anim_repin": {
+            "title": "Re-pinned the 2 anim one-shot pins to Agent 10's seq-based mechanism (Wave 2 / Move 1a) -- re-pin of the SAME behavior, WITH TEETH; also VERIFIES the new mechanism is correct",
+            "context": "Agent 10 Wave 2 (Move 1a) landed: renderers no longer clear the trigger via setattr(entity, '_render_anim_trigger', None). The sim now bumps a monotonic entity._anim_trigger_seq on each NEW trigger (also exposed as UnitDTO.anim_trigger_seq), and each renderer plays the one-shot only when the seq advances vs a renderer-owned last-seen (pygame HeroRenderer.self._last_trigger_seq; Ursina self._unit_anim_state[obj_id]['last_seq']). The trigger STRING is no longer cleared off the entity, so it now LINGERS. The Wave-0 pins over-fit the OLD write-back mechanism and went red as the plan anticipated.",
+            "old_pins_asserted": [
+              "test_anim_one_shot_plays_once_then_replays_on_new_trigger: after consuming a trigger, asserted attack_state._render_anim_trigger is None (the setattr-clear write-back -- gone by design); and that re-SETTING an IDENTICAL trigger string (without any seq concept) replays the one-shot.",
+              "test_anim_one_shot_via_registry_level: asserted getattr(hero, '_render_anim_trigger', None) is None after one registry pass (the write-back clear off the live entity -- gone)."
+            ],
+            "new_seq_based_contract": "Each renderer plays a one-shot ONLY when the sim's monotonic _anim_trigger_seq advances past the renderer's own last-seen seq. The trigger string is NOT cleared off the entity (it lingers). Driven via the REAL sim path Hero._queue_render_animation(name) (same call on_attack_landed makes), which sets _render_anim_trigger AND increments _anim_trigger_seq (verified: 0 -> 1 -> 2). render_state is the hero itself, so the registry reads the seq directly off the live entity.",
+            "pins_after": [
+              "test_anim_one_shot_plays_once_then_replays_on_new_trigger (pygame HeroRenderer, seq-based)",
+              "test_anim_one_shot_via_registry_level_driven_by_sim_path (RendererRegistry, driven by real Hero._queue_render_animation)",
+              "test_ursina_compute_anim_frame_seq_gating_headless (NEW -- Ursina _compute_anim_frame seq-gating, headless via UrsinaRenderer.__new__)"
+            ],
+            "teeth_against_three_failure_modes": {
+              "never_play": "Each pin asserts that an ADVANCED seq starts the one-shot clip (renderer current/clip == 'attack'). If a seq advance failed to play, this fails.",
+              "loop_forever": "_advance_until_base() raises if the one-shot does not release within a 400-frame budget; pins then assert the clip is back on the base (idle). Ursina pin rewinds the record's t0 past the clip length (the elapsed input _frame_index_for_clip reads) to deterministically drive the finished-branch, then asserts clip=='idle', oneshot is False.",
+              "replay_on_unchanged_seq": "THE KEYSTONE TEETH for Move 1a. After the one-shot finishes, the trigger STRING still lingers on the entity (asserted) but the seq is UNCHANGED -> pins tick the renderer 60x (pygame) / call _compute_anim_frame 30x (Ursina) and assert NO replay: pygame asserts _anim_lock_one_shot stays None every frame; Ursina asserts the record's t0 is NOT reset and last_seq stays pinned. This is the exact hazard introduced by removing the write-back clear (the string now lingers)."
+            },
+            "ursina_headless_coverage": {
+              "answer": "YES -- covered headlessly.",
+              "how": "UrsinaRenderer.__init__ builds a real Ursina window/Entity graph, so the instance is created via UrsinaRenderer.__new__(UrsinaRenderer) and ONLY the two attributes _compute_anim_frame reads are populated (_unit_anim_state={} + _clips_cache={}). The method itself, the clip metadata (HeroSpriteLibrary.clips_for -- pure pygame, no window) and _frame_index_for_clip are the REAL production code -- nothing is faked. The unchanged-seq/lingering-trigger case is the most dangerous on this path because GameEngine._update_render_animations (engine.py:1219-1238) copies _render_anim_trigger -> _ursina_anim_trigger EVERY tick the trigger is set but does NOT touch _anim_trigger_seq, so _compute_anim_frame sees the string every frame while the seq is static. The only value not naturally controllable headlessly is time.perf_counter(); the finished-branch is driven deterministically by rewinding the record's t0 (the elapsed input the method reads) rather than a flaky real sleep.",
+              "follow_up_recommended": "An Ursina combat-capture (live attack/hurt one-shot frame on a 3D billboard) is still the only thing not exercisable headlessly -- recommend folding it into the G2/G3 Ursina gate diff if/when Agent 03/10 register a combat capture scenario (currently the only registered Ursina scenario is wk61_hold_g_tax_overlay; no scripted melee one-shot scenario exists)."
+            },
+            "verification_that_teeth_are_real_mutation_checks": [
+              "pygame replay-on-unchanged-seq: monkey-patched HeroRenderer.update_animation in-memory (NO production edit) to gate on the trigger STRING and ignore the seq (the old behavior). The 60-frame teeth loop CAUGHT it (_anim_lock_one_shot went non-None) -> teeth confirmed real.",
+              "Ursina replay-on-unchanged-seq: built a buggy _compute that restarts on every lingering-trigger tick (ignores last_seq); the t0-unchanged assertion CAUGHT it (t0 reset detected) -> teeth confirmed real.",
+              "loop-forever: _advance_until_base's frame budget raises AssertionError with a 'LOOP-FOREVER regression' message if the clip never releases."
+            ],
+            "real_bug_found_in_agent10_mechanism": "NONE. Agent 10's seq mechanism is VERIFIED CORRECT on BOTH render paths. pygame HeroRenderer: new seq plays once (returns to idle after 117 frames at 1/60 dt), unchanged-seq + lingering trigger does NOT replay, seq bump replays. Ursina _compute_anim_frame: new seq -> clip='attack' oneshot=True last_seq=1; 30 unchanged-seq calls keep t0 fixed + last_seq=1 (no restart); after t0 elapses -> base 'idle' oneshot=False; seq bump -> 'attack' last_seq=2. No bending of any test to force a pass.",
+            "other_pins_intact": "Kept GREEN and unchanged: pin 1 render-DTO field-parity, pin 3 fog/discovery digest (byte-identical golden {visible:486, seen:313, discovered_buildings:1} under DETERMINISTIC_SIM=1) + reproducibility pin, pin 4 keystone test_snapshot_not_mutated_on_consume, and the autouse _render_resource_hygiene cache-hygiene fixture (still prevents the suite crash).",
+            "files_edited": [
+              "tests/test_wk66_render_boundary.py (rewrote the 2 anim pins to the seq contract + added the Ursina headless seq-gating pin + updated the module/pin-2 docstring; no other pin touched; NO production code)"
+            ],
+            "commands_run": [
+              {
+                "cmd": "python -m pytest tests/test_wk66_render_boundary.py -q",
+                "exit": 0,
+                "result": "6 passed, 1 skipped (fog golden skipif DETERMINISTIC_SIM!=1)"
+              },
+              {
+                "cmd": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py -q",
+                "exit": 0,
+                "result": "7 passed (fog golden GREEN)"
+              },
+              {
+                "cmd": "python -m pytest -q (full suite, single-process, run 1)",
+                "exit": 0,
+                "result": "582 passed, 4 skipped, 1 warning in 94.94s -- NO crash"
+              },
+              {
+                "cmd": "python -m pytest -q (full suite, single-process, run 2 stability)",
+                "exit": 0,
+                "result": "582 passed, 4 skipped, 1 warning in 93.86s -- NO crash, stable"
+              }
+            ],
+            "count_note": "Full suite is now 582 passed (was 581) because the 2 anim pins became 3 (added the Ursina headless seq-gating pin per the PM ask); the registry pin was also renamed test_anim_one_shot_via_registry_level -> test_anim_one_shot_via_registry_level_driven_by_sim_path. Skip count unchanged at 4 (1 of which is this file's fog golden under a non-deterministic full run). 0 failed, 0 errors, 0 fatal exceptions."
+          }
+        }
+      }
     }
   }
 }

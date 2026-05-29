@@ -33,6 +33,10 @@ class HeroRenderer:
         self._anim_lock_one_shot: str | None = None
         self._facing = 1
         self._last_pos: tuple[float, float] | None = None
+        # WK66 Move 1a: renderer-owned last-seen one-shot sequence. The sim bumps a
+        # monotonic anim_trigger_seq each new trigger; we play when it advances,
+        # instead of clearing _render_anim_trigger on the entity (zero write-back).
+        self._last_trigger_seq: int = -1
 
         # Avoid repeated scale allocations for inside-building bubbles.
         self._bubble_cache: dict[int, pygame.Surface] = {}
@@ -62,10 +66,20 @@ class HeroRenderer:
                 self._facing = 1 if dx >= 0 else -1
         self._last_pos = (x, y)
 
-        # Primary trigger path after WK9 sim/render split.
-        entity_one_shot = _state_get(entity_state, "_render_anim_trigger", None)
-        if entity_one_shot:
-            setattr(entity_state, "_render_anim_trigger", None)
+        # WK66 Move 1a: consume one-shots via the sim's monotonic anim_trigger_seq.
+        # Play only when the seq advances vs our renderer-owned last-seen value, so
+        # the renderer never writes _render_anim_trigger back onto the sim entity.
+        trigger_seq = int(
+            _state_get(entity_state, "anim_trigger_seq",
+                       _state_get(entity_state, "_anim_trigger_seq", 0)) or 0
+        )
+        entity_one_shot = None
+        if trigger_seq != self._last_trigger_seq:
+            self._last_trigger_seq = trigger_seq
+            entity_one_shot = _state_get(
+                entity_state, "anim_trigger",
+                _state_get(entity_state, "_render_anim_trigger", None),
+            )
 
         # Transitional compatibility while entities still carry legacy fields.
         if not entity_one_shot:
@@ -123,7 +137,17 @@ class HeroRenderer:
         screen_y = y - cam_y
 
         inside_building = bool(_state_get(entity_state, "is_inside_building", False))
+        # WK66 Move 3: prefer the flattened DTO center; fall back to a live ref so the
+        # renderer still works when handed a live entity (e.g. characterization tests).
+        inside_center = _state_get(entity_state, "inside_building_center", None)
         building_ref = _state_get(entity_state, "inside_building", None)
+        if inside_building and inside_center is not None:
+            bx = float(inside_center[0]) - cam_x
+            by = float(inside_center[1]) - cam_y
+            bubble = self._anim.frame()
+            bubble_small = self._bubble_surface(bubble)
+            surface.blit(bubble_small, (int(bx - 8), int(by - 28)))
+            return
         if inside_building and building_ref is not None:
             bx = float(getattr(building_ref, "center_x", x)) - cam_x
             by = float(getattr(building_ref, "center_y", y)) - cam_y
@@ -164,8 +188,12 @@ class HeroRenderer:
             gold_rect = gold_text.get_rect(center=(screen_x, screen_y + size // 2 + 22))
             surface.blit(gold_text, gold_rect)
 
-        state = _state_get(entity_state, "state", None)
-        state_name = str(getattr(state, "name", state))
+        # WK66 Move 3: DTOs carry the precomputed state_name; live entities carry the
+        # state enum. Support both so this renderer is shape-agnostic.
+        state_name = _state_get(entity_state, "state_name", None)
+        if state_name is None:
+            state = _state_get(entity_state, "state", None)
+            state_name = str(getattr(state, "name", state))
         if state_name == "RESTING":
             rest_text = render_text_cached(16, "Zzz", (150, 200, 255))
             rest_rect = rest_text.get_rect(center=(screen_x + 15, screen_y - size // 2 - 15))

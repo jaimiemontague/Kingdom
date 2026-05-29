@@ -17,17 +17,23 @@ class RendererRegistry:
     """Maps live entities to renderer instances (render-only state ownership)."""
 
     def __init__(self):
-        self._hero_renderers: dict[int, HeroRenderer] = {}
-        self._enemy_renderers: dict[int, EnemyRenderer] = {}
-        self._peasant_renderers: dict[int, PeasantRenderer] = {}
-        self._collector_renderers: dict[int, TaxCollectorRenderer] = {}
+        self._hero_renderers: dict[str, HeroRenderer] = {}
+        self._enemy_renderers: dict[str, EnemyRenderer] = {}
+        self._peasant_renderers: dict[str, PeasantRenderer] = {}
+        self._collector_renderers: dict[str, TaxCollectorRenderer] = {}
         self._guard_renderer = GuardRenderer(size_px=UNIT_SPRITE_PIXELS)
         self._building_renderer = BuildingRenderer()
         self._bounty_renderer = BountyRenderer()
 
     @staticmethod
-    def _key(entity: object) -> int:
-        return id(entity)
+    def _key(entity: object) -> str:
+        # WK63 stable-ID contract: key renderer state on the entity's stable id,
+        # never id(entity) (which is reused after GC). id() is only a fixture fallback.
+        return str(
+            getattr(entity, "hero_id", None)
+            or getattr(entity, "entity_id", None)
+            or id(entity)
+        )
 
     def _hero_renderer_for(self, hero: object) -> HeroRenderer:
         key = self._key(hero)

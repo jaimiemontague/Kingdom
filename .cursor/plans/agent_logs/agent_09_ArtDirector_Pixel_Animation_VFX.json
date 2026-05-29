@@ -9,321 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk33-terrain-lair-economy-prefabs": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
-        "master_plan_ref": ".cursor/plans/master_plan_3d_graphics_v1_5.md",
-        "notes": "WK33 r0: lair static mesh pick, marketplace/blacksmith art briefs, floor_ground_grass albedo sign-off; aligns Phase 1 terrain + Phase 2.2 economy prefabs per master plan"
-      },
-      "rounds": {
-        "wk33_r0_kickoff": {
-          "sprint_id": "wk33-terrain-lair-economy-prefabs",
-          "round_id": "wk33_r0_kickoff",
-          "status": "done",
-          "prompt_text": "WK33: art direction only — lair Graveyard choice, economy building silhouettes, ground texture approval per wk33 plan and master plan Phase 1–2",
-          "references_reviewed": [
-            ".cursor/plans/wk33_3d_sprint_plan_6e616891.plan.md",
-            ".cursor/plans/master_plan_3d_graphics_v1_5.md (Phase 1 Static Environments; Phase 2 kitbash/texture override bullets)",
-            ".cursor/plans/prefab_texture_override_standard.md (skim: flat-kit overrides for Graveyard/Fantasy Town as needed)",
-            "assets/models/Graveyard Kit.PNG",
-            "assets/models/Models/Textures/floor_ground_grass.png"
-          ],
-          "deliverables": {
-            "lair_mesh": {
-              "choice": "crypt-large-graveyard",
-              "source_path": "assets/models/Models/GLB format/crypt-large-graveyard.glb",
-              "export_target": "assets/models/environment/lair_graveyard_crypt_large.glb (or in-place replace assets/models/environment/lair.glb — confirm with Agent 03 wiring)",
-              "rationale": "Single static mesh; strong crypt silhouette readable at strategy distance; matches undead / monster-lair fantasy. Lair BUILDING_SIZES span 2x2 (goblin_camp, wolf_den, spider_nest) to 3x3 (skeleton_crypt, bandit_camp) — this asset reads 'building-sized'; Agent 03 should scale/anchor so footprint feels OK for all shared lair types.",
-              "alternates_if_too_tall": [
-                "crypt-a-graveyard.glb or crypt-b-graveyard.glb (smaller A/B crypt variants in same pack)"
-              ],
-              "not_recommended_solo": [
-                "altar-stone-graveyard (prop scale; weak as sole lair landmark unless kitbashed with walls)"
-              ]
-            },
-            "marketplace_silhouette": {
-              "mood": "Open-air market: stall awnings or canopy, low wall / rail, plaza feel — not a sealed fort.",
-              "pieces": "Bias Fantasy Town (stalls, cloth, wood trim) + sparse Graveyard/earth props only if it sells 'old kingdom market'; keep piece count low.",
-              "readability": "2x2 footprint per config: silhouette wider than tall; entrance/gap readable toward path."
-            },
-            "blacksmith_silhouette": {
-              "mood": "Forge: squat dark mass, **chimney or tall vent stack** breaking the roofline, anvil/forge read (warm stone or override).",
-              "pieces": "Darker stone + metal accents; avoid bright fantasy pastel; use texture_override per prefab standard for flat kit parts.",
-              "readability": "2x2; chimney/stack makes it distinct from marketplace at a glance."
-            },
-            "ground_texture_floor_ground_grass": {
-              "approved": true,
-              "use": "Full-map repeating albedo on base terrain quad (per Agent 03); seamless tile pattern is suitable.",
-              "caveat": "Texture is **low-value / quite dark** as painted — OK as baseline. After WK33 ~20% scatter lift, if ground still looks muddy or mismatched vs SEEN fog, Agent 03 may apply a **slight** Entity.color multiply on the ground only (e.g. 1.05–1.1) and tune SEEN prop tint separately — do not push grass PNG to 'neon' in isolation."
-            }
-          },
-          "what_i_changed": {
-            "summary": "Art direction only: chose crypt-large-graveyard for lair; wrote economy prefab briefs; approved floor_ground_grass.png with value note. No game code, assets, or manifest edits.",
-            "files_touched": [
-              ".cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json"
-            ]
-          },
-          "how_to_test": [
-            "N/A for Agent 09 this round (direction only). Integrators: run gates after their code changes.",
-            "python tools/qa_smoke.py --quick",
-            "python tools/validate_assets.py --report (when assets/manifest touched by 12/15/03)"
-          ],
-          "evidence": {
-            "qa_smoke": {
-              "status": "PASS",
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "note": "Log-only change; gate run from repo root to confirm branch health"
-            }
-          },
-          "blockers": [],
-          "handoff": {
-            "agent_15": "Export lair from choice crypt-large-graveyard.glb per sprint plan; build marketplace_v1 + blacksmith_v1 prefabs using silhouettes above + prefab_texture_override_standard.md",
-            "agent_03": "Tile floor_ground_grass.png; wire lair to exported env file; FOW/brightness per plan; prefab table for marketplace/blacksmith"
-          }
-        }
-      }
-    },
-    "ad_hoc-cleric-hero-pixel-sprites": {
-      "sprint_meta": {
-        "notes": "Hotfix: cleric hero was rendering as a teal circle; update procedural hero sprites so cleric matches the shared pixel-hero style (teal accent)."
-      },
-      "rounds": {
-        "2026-04-26_cleric_pixel_sprites": {
-          "sprint_id": "ad_hoc-cleric-hero-pixel-sprites",
-          "round_id": "2026-04-26_cleric_pixel_sprites",
-          "status": "done",
-          "what_i_changed": {
-            "summary": "Changed HeroSpriteLibrary procedural frames from circle+glyph to a pixel-hero (head/torso/legs) style, matching existing warrior/rogue look at gameplay zoom. Added cleric teal accent (48,186,178) and ensured cleric gets the same animation set. Also added cleric teal to Ursina hero tint + UI portrait color maps, and updated CC0 placeholder generator accent mapping.",
-            "files": [
-              "game/graphics/hero_sprites.py",
-              "game/graphics/ursina_renderer.py",
-              "game/ui/chat_panel.py",
-              "game/ui/quest_view_panel.py",
-              "tools/generate_cc0_placeholders.py"
-            ]
-          },
-          "how_to_test": [
-            "python tools/qa_smoke.py --quick",
-            "python main.py --renderer ursina --no-llm",
-            "python main.py --no-llm"
-          ],
-          "evidence": {
-            "qa_smoke": {
-              "status": "PASS",
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0
-            }
-          },
-          "blockers": [],
-          "coordination_notes": [
-            "No PNG hero sprites were added; this change standardizes the procedural fallback so new classes (like cleric) do not render as circles."
-          ]
-        }
-      }
-    },
-    "orch_tiny_warrior_red": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/orchestrator_tiny_sprint_warrior_red_1fbddbf6.plan.md",
-        "notes": "Orchestrator tiny sprint: warrior shirt blue→dark red (pygame + Ursina)."
-      },
-      "rounds": {
-        "orch_r0_impl_then_qa": {
-          "sprint_id": "orch_tiny_warrior_red",
-          "round_id": "orch_r0_impl_then_qa",
-          "status": "done",
-          "what_i_changed": {
-            "summary": "Set HeroSpriteSpec.warrior to (180,45,45) for procedural pygame sprites. Ursina: explicit warrior tint color.white so textured billboards match collab behavior (native sprite colors) and missing-texture fallback is not azure.",
-            "files": [
-              "game/graphics/hero_sprites.py",
-              "game/graphics/ursina_renderer.py"
-            ]
-          },
-          "commands_run": [
-            {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "cwd": "repo root"
-            }
-          ],
-          "evidence": {
-            "qa_smoke_quick": {
-              "status": "PASS",
-              "exit_code": 0
-            }
-          },
-          "blockers": [],
-          "follow_ups": [],
-          "tint_note": "UrsinaEntityRenderCollab.sync_billboard_entity already applies color.white when tex is present and tint_textured is false; warrior branch aligns tint_col with that path and fixes azure-only fallback if tex were absent."
-        },
-        "orch_r1_bugfix_warrior_red_visual": {
-          "sprint_id": "orch_tiny_warrior_red",
-          "round_id": "orch_r1_bugfix_warrior_red_visual",
-          "status": "done",
-          "what_i_changed": {
-            "summary": "R0 changed HeroSpriteSpec.warrior to dark red but HeroSpriteLibrary and TerrainTextureBridge cached frames/GPU textures under keys that did not include the palette version, so Ursina could keep serving pre-R0 blue procedural pixels. R1: include hash(HeroSpriteSpec(size)) in HeroSpriteLibrary.clips_for cache keys; append same spec token to Ursina _unit_anim_surface texture cache keys; include spec hash in ursina_texture_bridge.get_hero_idle_texture keys. COLOR_HERO default tint set from azure to HeroSpriteSpec.warrior RGB for missing-texture / unknown-class fallback paths.",
-            "files": [
-              "game/graphics/hero_sprites.py",
-              "game/graphics/ursina_renderer.py",
-              "game/graphics/ursina_texture_bridge.py"
-            ]
-          },
-          "commands_run": [
-            {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "cwd": "repo root"
-            }
-          ],
-          "evidence": {
-            "qa_smoke_quick": {
-              "status": "PASS",
-              "exit_code": 0
-            }
-          },
-          "root_cause_vs_r0": "R0 updated procedural pixels but cache keys stayed identical; Ursina billboard path reused stale AnimationClip surfaces and TerrainTextureBridge GPU uploads. Textured billboards still multiply with white (sync_billboard_entity); stale GPU data was the Ursina-blue failure mode.",
-          "blockers": [],
-          "follow_ups": [
-            "Agent 11: orchestrator qa_smoke + log fields; Jaimie Ursina + pygame visual gate."
-          ]
-        },
-        "orch_r3_canonical_log_then_live_blue_diagnosis": {
-          "sprint_id": "orch_tiny_warrior_red",
-          "round_id": "orch_r3_canonical_log_then_live_blue_diagnosis",
-          "status": "done",
-          "what_i_changed": [
-            "No edits under game/graphics/ this round. Read Agent 03 canonical log at sprints.orch_tiny_warrior_red.rounds.orch_r3_canonical_log_then_live_blue_diagnosis in agent_03_TechnicalDirector_Architecture.json: live default Ursina path is correct (clips_for → PNG load → TerrainTextureBridge → sync_billboard_entity with white tint); blue warrior shirts are pixel content from assets/sprites/heroes/warrior/*/frame_*.png (shirt probe (70,120,255)), not procedural HeroSpriteSpec / cache-key bugs.",
-            "Per assignment: procedural/atlas/clips plumbing was not reassigned to art code — 03 closed the plumbing diagnosis; therefore no hero_sprites.py or bridge changes."
-          ],
-          "commands_run": [
-            {
-              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"orch_tiny_warrior_red\" --round \"orch_r3_canonical_log_then_live_blue_diagnosis\" --agent \"09\" --token \"e2b73169-159b-4017-bc6d-5a646f5a2dc4\" --status done --summary \"Agent 09: no game/graphics edits; cited Agent 03 PNG-pixel proof for blue shirts; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json\" --log-round \"sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r3_canonical_log_then_live_blue_diagnosis\\\"]\"",
-              "exit_code": 0,
-              "cwd": "repo root",
-              "note": "Wrote tools/ai_studio_orchestrator/runs/inbox/e2b73169-159b-4017-bc6d-5a646f5a2dc4.completion.json"
-            }
-          ],
-          "evidence": {
-            "agent_03_proof_ref": ".cursor/plans/agent_logs/agent_03_TechnicalDirector_Architecture.json → sprints[\"orch_tiny_warrior_red\"].rounds[\"orch_r3_canonical_log_then_live_blue_diagnosis\"] (shirt_pixel_probe rgba (70,120,255,255); entry_chain HeroSpriteLibrary.clips_for → PNG frames)",
-            "qa_smoke": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS"
-            }
-          },
-          "blockers": [],
-          "recommended_next_actions": [
-            "Recolor or replace warrior PNGs under assets/sprites/heroes/warrior/ toward shirt target (180,45,45), or temporarily remove PNG folders to force procedural clips — per Agent 03 recommended_next_actions; defer to a follow-up art commit before Jaimie visual gate."
-          ]
-        },
-        "orch_r4_screenshot_proof_dark_red_warrior_shirt": {
-          "sprint_id": "orch_tiny_warrior_red",
-          "round_id": "orch_r4_screenshot_proof_dark_red_warrior_shirt",
-          "status": "done",
-          "what_i_changed": {
-            "summary": "Recolored tracked warrior hero PNG frames so shirt pixels match dark red target (~180,45,45) on the live Ursina billboard path (R3: blue came from asset pixels (70,120,255) / (50,100,235), not plumbing).",
-            "files": [
-              "assets/sprites/heroes/warrior/idle/frame_000.png",
-              "assets/sprites/heroes/warrior/idle/frame_001.png",
-              "assets/sprites/heroes/warrior/idle/frame_002.png",
-              "assets/sprites/heroes/warrior/idle/frame_003.png",
-              "assets/sprites/heroes/warrior/idle/frame_004.png",
-              "assets/sprites/heroes/warrior/idle/frame_005.png",
-              "assets/sprites/heroes/warrior/walk/frame_000.png",
-              "assets/sprites/heroes/warrior/walk/frame_001.png",
-              "assets/sprites/heroes/warrior/walk/frame_002.png",
-              "assets/sprites/heroes/warrior/walk/frame_003.png",
-              "assets/sprites/heroes/warrior/walk/frame_004.png",
-              "assets/sprites/heroes/warrior/walk/frame_005.png",
-              "assets/sprites/heroes/warrior/walk/frame_006.png",
-              "assets/sprites/heroes/warrior/walk/frame_007.png",
-              "assets/sprites/heroes/warrior/attack/frame_000.png",
-              "assets/sprites/heroes/warrior/attack/frame_001.png",
-              "assets/sprites/heroes/warrior/attack/frame_002.png",
-              "assets/sprites/heroes/warrior/attack/frame_003.png",
-              "assets/sprites/heroes/warrior/attack/frame_004.png",
-              "assets/sprites/heroes/warrior/attack/frame_005.png",
-              "assets/sprites/heroes/warrior/inside/frame_000.png",
-              "assets/sprites/heroes/warrior/inside/frame_001.png",
-              "assets/sprites/heroes/warrior/inside/frame_002.png",
-              "assets/sprites/heroes/warrior/inside/frame_003.png",
-              "assets/sprites/heroes/warrior/inside/frame_004.png",
-              "assets/sprites/heroes/warrior/inside/frame_005.png"
-            ],
-            "recolor_map": "(70,120,255)→(180,45,45); (50,100,235)→(155,35,35)"
-          },
-          "screenshot_attempts": [
-            {
-              "attempt": "01",
-              "screenshot_paths": [
-                "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png"
-              ],
-              "note": "PIL batch remap of shirt blues on warrior PNGs; Ursina capture via tools/run_ursina_capture_once.py (main.py --renderer ursina --no-llm) with KINGDOM_URSINA_HERO_FPS_PROBE_COUNT=5 for visible warriors.",
-              "self_inspection": "dark_red — torso reads dark red; image sampling finds (180,45,45) and no saturated blue shirt pixels in central ROI; PASS"
-            }
-          ],
-          "commands_run": [
-            {
-              "command": "python tools/run_ursina_capture_once.py --seconds 10 --subdir orch_tiny_warrior_red/r4 --stem attempt01 --no-llm --hero-fps-probe-count 5",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "python -m json.tool .cursor/plans/agent_logs/agent_09_ArtDirector_Pixel_Animation_VFX.json",
-              "exit_code": 0,
-              "cwd": "repo root"
-            },
-            {
-              "command": "npx tsx \"tools\\ai_studio_orchestrator\\src\\cli.ts\" complete --cwd \"C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom\" --sprint \"orch_tiny_warrior_red\" --round \"orch_r4_screenshot_proof_dark_red_warrior_shirt\" --agent \"09\" --token \"3fc5bd27-66fc-4321-9174-12f7042996cd\" --status done --summary \"Agent 09: warrior PNG shirt remap to dark red; Ursina screenshot PASS; qa_smoke PASS.\" --log-path \".cursor\\plans\\agent_logs\\agent_09_ArtDirector_Pixel_Animation_VFX.json\" --log-round \"sprints[\\\"orch_tiny_warrior_red\\\"].rounds[\\\"orch_r4_screenshot_proof_dark_red_warrior_shirt\\\"]\"",
-              "exit_code": 0,
-              "cwd": "repo root",
-              "note": "receipt: tools/ai_studio_orchestrator/runs/inbox/3fc5bd27-66fc-4321-9174-12f7042996cd.completion.json"
-            }
-          ],
-          "evidence": {
-            "ursina_screenshot": {
-              "path": "docs/screenshots/orch_tiny_warrior_red/r4/attempt01_20260429_120321_529.png",
-              "heroes_visible": 5,
-              "shirt_verdict": "dark_red"
-            },
-            "qa_smoke": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS"
-            },
-            "validate_assets": {
-              "command": "python tools/validate_assets.py --report",
-              "exit_code": 0,
-              "summary": "errors=0 (pre-existing WARN missing_model_file entries)"
-            }
-          },
-          "blockers": [],
-          "follow_ups": [
-            "Agent 11: qa_smoke + contract log for this round; Jaimie retains final Ursina/pygame visual gate."
-          ]
-        }
-      }
-    },
     "wk47_unit_instancing_core": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
@@ -831,6 +516,76 @@
             "instanced_unit_renderer.py and ursina_pick.py still have their own copy of scale constants — future round can point them at visual_specs too.",
             "Building HP bar in _sync_building_worldspace_ui uses different constants (not unit overlays); separate extraction if needed.",
             "Per-class hero spec overrides (e.g., wizard label colour) can be added to unit_visual_spec() when needed."
+          ]
+        }
+      }
+    },
+    "wk66_round_a1_render_boundary": {
+      "sprint_meta": {
+        "notes": "WK66 behavior-preserving render-boundary refactor. Agent 09 consult-only: Gate 3 broad visual-cohesion verdict across all pygame + Ursina render paths. No production code."
+      },
+      "rounds": {
+        "wk66_g3_final": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_g3_final",
+          "status": "done",
+          "role": "consult - Gate 3 broad visual-cohesion verdict (no code; behavior-preserving render-boundary refactor)",
+          "what_i_changed": {
+            "summary": "Reviewed BASELINE (docs/screenshots/wk66_baseline) vs AFTER (wk66_after_w2 = renderer/DTO wave; wk66_after_w3 = L10 terrain/fog move, pygame-only) for every render path. Method: sha256 byte-compare on deterministic static pygame scenes; PIL bbox/changed-pixel quantification on the building-catalog closeups (to distinguish regression from capture jitter); direct visual composition review on dynamic pygame + all 3 Ursina scenes. No production code touched.",
+            "files": []
+          },
+          "verdict_overall": "PASS - every render path is identical or compositionally cohesive. No real (non-jitter) visual difference found anywhere. Bounty labels, building labels/HP bars, unit health bars, fog edges all unchanged.",
+          "per_path_verdicts": {
+            "pyg_building_catalog_overview": "IDENTICAL - byte-identical (sha256) baseline vs w2 vs w3; visual confirm: full building grid + paths + fog + central units match.",
+            "pyg_building_catalog_closeups(34)": "COHESIVE - these are NOT static catalog shots; each is a live base scene with a battle in progress (moving heroes/goblins, debris VFX). sha256 differs AND w2-vs-w3 also differs (both post-change) => capture-nondeterministic, not regression. PIL diffs are localized to unit/combat bboxes (blacksmith changed 0.9-2.3pct lower-left only; palace 0.37pct corner). Buildings with no animated overlay are byte-identical across all 3 (castle, ranger/rogue/warrior guild). Visual confirm (inn, largest diff 16pct): same building grid + same labels (RANGERS/ROGUES/WIZARDS/MARKET/SMITH/AGRELA/DAUROS/FERVUS/GNOMES/ELVES/LIBRARY/GARDENS) + same HP bars + same fog edge + same debris VFX; only unit positions/anim frames differ.",
+            "pyg_enemy_catalog(7)": "IDENTICAL - all 7 closeups + overview byte-identical; visual confirm of overview matches.",
+            "pyg_worker_catalog(3)": "IDENTICAL - peasant/tax_collector closeups + overview byte-identical; HP bars + CASTLE label + worker sprites render identically.",
+            "pyg_bounty_fog(2)": "IDENTICAL - closeup + overview byte-identical baseline vs w3 (post bounty-label-cache relocation). Visual confirm: $100 reward (white), gold flag sprite, R:0 responder (white), High tier (green), black fog square edges all pixel-identical. The relocated label cache produced ZERO visual change.",
+            "pyg_building_debris(2)": "IDENTICAL - closeup + overview byte-identical; castle sprite, blue roof, foundation platform, hero, debris all unchanged.",
+            "pyg_world_variation(2)": "IDENTICAL - closeup + overview byte-identical baseline vs w3 (the L10 terrain/fog-move wave). Terrain field, tree clumps, fog, full HUD/minimap/command-bar all unchanged. L10 terrain/fog refactor is visually invisible.",
+            "pyg_base_overview(4)": "COHESIVE - Z1/Z2 ui_default + world_clean differ by sha256 (documented ~3pct dynamic capture nondeterminism). Visual confirm Z1: same map shape, building positions, cross-roads, fog edges, HUD, perf panel, minimap, command bar; only moving-unit positions vary.",
+            "pyg_ranged_projectiles(2)": "COHESIVE - closeup byte-identical; overview differs (live combat scene). Visual confirm: same Gareth hero label, same enemy+HP bar, same ranger+green HP bar, same HOUSE+HP bar, same CASTLE+hero+platform, same fog/trees; only anim frame/projectile-in-flight differ. Projectile/attack VFX + unit HP bars styled/placed identically.",
+            "ursina_base": "COHESIVE - composition identical: same 3D village island, buildings, units, trees, fog-disabled banner (32 POIs revealed), HUD, minimap, command bar. Only perf-overlay digits jitter (ignored per PM).",
+            "ursina_tax_overlay(hold_g)": "COHESIVE - composition identical: same close-up village row, same buildings, same red-cloaked hero, same teal markers, Gold:2443 HUD, minimap, command bar. No tax-overlay tint/label artifact. Only perf digits jitter.",
+            "ursina_fog": "COHESIVE - composition identical to ursina_base; island/village/units/HUD all match. Only perf digits jitter."
+          },
+          "high_risk_paths_confirmed_unchanged": [
+            "Bounty labels (reward $ / R: responder / tier) - cache moved off sim object - byte-identical, pixel-perfect.",
+            "Building labels + HP bars + tax overlays - unchanged (pygame catalogs byte/visually identical; Ursina tax overlay cohesive).",
+            "Unit health bars - unchanged (worker_catalog byte-identical; debris/base/projectile bars visually identical; Ursina hp bars cohesive).",
+            "Fog edges - unchanged (bounty black-fog square byte-identical; world/enemy/base fog wedges identical; Ursina fog cohesive)."
+          ],
+          "real_differences_found": "NONE. Every sha256 DIFF traces to a dynamic/animated scene (live combat or moving units) and is confirmed by PIL bbox localization + visual composition review to be capture jitter, not a render-boundary regression.",
+          "known_gap": {
+            "issue": "No scripted Ursina melee-combat / attack one-shot capture scenario. Only wk61_hold_g_tax_overlay is registered for Ursina. The attack/hurt one-shot on the Ursina path was verified by a headless unit test, not a capture.",
+            "recommendation": "ADD a registered Ursina combat-capture scenario as a FOLLOW-UP (not a Gate-3 blocker). Rationale: (1) Ursina is the primary renderer and is the path with the least visual capture coverage; (2) the DTO/render-boundary change specifically affects how attack/hurt anim state reaches the renderer, so a one-shot capture would give a visual (not just unit-test) regression guard for future refactors; (3) the pygame ranged_projectiles scenario already proves the pattern is feasible. Suggest a deterministic scripted scenario that spawns a hero+enemy adjacent, forces an attack tick, and captures the strike + hurt frame. Owner: Agent 12 (capture harness) + Agent 06 (combat state). Gate 3 can pass WITHOUT it because the one-shot is already unit-test-covered."
+          },
+          "how_to_test": [
+            "Open PNG pairs in docs/screenshots/wk66_baseline vs wk66_after_w2 / wk66_after_w3",
+            "Deterministic static scenes: byte-compare (PowerShell Get-FileHash) on bounty_fog/building_debris/world_variation/enemy_catalog/worker_catalog/building_catalog_overview => identical",
+            "Dynamic scenes (base_overview, building_catalog closeups, ranged_projectiles): judge composition, not pixels"
+          ],
+          "evidence": {
+            "byte_compare": {
+              "method": "sha256 per-file, baseline vs w2 and baseline vs w3 and w2 vs w3",
+              "identical_static": "pyg_bounty_fog(2), pyg_building_debris(2), pyg_world_variation(2), pyg_enemy_catalog(7+overview), pyg_worker_catalog(3), pyg_building_catalog_overview",
+              "nondeterministic_dynamic": "pyg_building_catalog closeups (mixed; same set differs in w2-vs-w3 too), pyg_base_overview(4), pyg_ranged_projectiles_overview",
+              "note": "byte-DIFF on building_catalog closeups is NOT a regression - w2 and w3 (both post-change) also differ from each other => animation/combat jitter."
+            },
+            "pixel_quantification": {
+              "tool": "PIL/numpy changed-pixel + bbox",
+              "samples": "blacksmith base-vs-w2 2.33pct bbox(0,908,708,1080); blacksmith w2-vs-w3 0.89pct same bbox; farm 4.53pct bbox upper-right; inn 15.96pct (full battle); palace 0.37pct corner; castle(same-hash) 0.00pct",
+              "interpretation": "diffs localized to moving-unit/combat regions, not building sprites or labels"
+            },
+            "visual_review": {
+              "pairs_opened": "building_inn, building_catalog_overview, bounty_fog_closeup, enemy_catalog_overview, building_debris_closeup, world_variation_overview, worker_catalog_overview, base_overview_Z1, ranged_projectiles_overview, ursina_base, ursina_tax_overlay, ursina_fog",
+              "alignment_layering": "checked first per studio rule - all edges flush, no panel overlap/offset, draw order (labels over sprites, HP bars above units, fog over terrain) preserved in every pair"
+            }
+          },
+          "blockers": [],
+          "follow_ups": [
+            "FOLLOW-UP: register a deterministic Ursina melee-combat/attack one-shot capture scenario (Agent 12 + Agent 06) - see known_gap.recommendation.",
+            "Catalog scene naming is misleading: pyg_building_catalog *_closeup shots are live battle scenes, not static catalog frames - consider a static/paused capture variant so they can be byte-judged like the other catalogs."
           ]
         }
       }

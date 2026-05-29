@@ -185,7 +185,14 @@ class EngineRenderCoordinator:
             pr.render_minimap_contents(mini_surf, snapshot, camera_offset)
         else:
             w = snapshot.world
-            w.render(mini_surf, camera_offset)
+            # WK66 L10: terrain/fog drawing lives on a graphics-side renderer now;
+            # cache one instance on the engine (this is the no-PygameRenderer fallback).
+            wtr = getattr(e, "_world_terrain_renderer", None)
+            if wtr is None:
+                from game.graphics.world_terrain_renderer import WorldTerrainRenderer
+                wtr = WorldTerrainRenderer()
+                e._world_terrain_renderer = wtr
+            wtr.render(w, mini_surf, camera_offset)
             for b in snapshot.buildings:
                 e.renderer_registry.render_building(mini_surf, b, camera_offset)
             for en in snapshot.enemies:
@@ -201,8 +208,7 @@ class EngineRenderCoordinator:
                 e.renderer_registry.render_peasant(mini_surf, p, camera_offset)
             if snapshot.tax_collector:
                 e.renderer_registry.render_tax_collector(mini_surf, snapshot.tax_collector, camera_offset)
-            if hasattr(w, "render_fog"):
-                w.render_fog(mini_surf, camera_offset)
+            wtr.render_fog(w, mini_surf, camera_offset)
 
         pygame.draw.rect(mini_surf, (100, 100, 100), mini_surf.get_rect(), 2)
         pygame.draw.rect(mini_surf, (40, 40, 40), mini_surf.get_rect().inflate(-4, -4), 1)

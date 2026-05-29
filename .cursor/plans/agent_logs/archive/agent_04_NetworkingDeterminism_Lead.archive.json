@@ -159,6 +159,548 @@
           }
         }
       }
+    },
+    "wk66_round_a1_render_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk66_round_a1_render_boundary.plan.md",
+        "notes": "WK66 Round A-1 (render/snapshot boundary). Agent 04 is Gate-3 determinism sign-off: review-only, no production code. Behavior-preserving render-boundary refactor (frozen render DTOs + sim-owned _anim_trigger_seq + World.is_tile_visible_at; renderers consume DTOs and no longer write back to sim entities/world; World.render/render_fog moved to world_terrain_renderer.py). Move 4 (snapshot split) deferred to WK67 via the documented escape hatch."
+      },
+      "rounds": {
+        "wk66_g3_final": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_g3_final",
+          "status": "done",
+          "what_i_changed": "Nothing in production code (Gate-3 determinism review/sign-off only). Ran the determinism + gate suite, performed an A/B determinism spot-check, signed off the core question (did WK66 introduce new nondeterminism), and triaged the four pre-existing findings surfaced this sprint. Updated this log only. DID NOT COMMIT, DID NOT PUSH.",
+          "signoff_verdict": "PASS — WK66 introduced NO new nondeterminism in the sim.",
+          "gate_results": {
+            "determinism_guard_repo_wide": {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0,
+              "result": "PASS: no violations found",
+              "note": "Default scan = game/entities, game/systems, ai (game/ui, game/graphics, game/sim are intentionally excluded — render/VFX/UI are determinism-exempt per the guard's own docstring and the agent-04 onboarding sim-boundary table)."
+            },
+            "qa_smoke_quick_run1": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS"
+            },
+            "qa_smoke_quick_run2_ab": {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "result": "DONE: PASS",
+              "note": "A/B determinism spot-check — identical verdict to run1 (both seed 3, all sub-scenarios exit_code=0: mock-LLM, speed_scaling 0.1/0.25/0.5/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration)."
+            },
+            "validate_assets_report": {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "result": "SUMMARY errors=0 warns=46",
+              "note": "46 known missing_model_file warns (buildings + workers placeholder GLBs) — exactly as expected; errors=0."
+            },
+            "wk66_render_boundary_deterministic": {
+              "command": "$env:DETERMINISTIC_SIM='1'; python -m pytest tests/test_wk66_render_boundary.py -q",
+              "exit_code": 0,
+              "result": "7 passed, 1 warning",
+              "note": "With DETERMINISTIC_SIM=1, the gated test_fog_discovery_digest_is_stable RAN (no longer skipped) and matched the golden. Without the env var it is 6 passed / 1 skipped (the gated golden)."
+            },
+            "fog_discovery_golden": {
+              "golden": {
+                "visible": 486,
+                "seen": 313,
+                "discovered_buildings": 1
+              },
+              "result": "STABLE — byte-identical to Wave-0 golden across two SEPARATE process invocations (test_fog_discovery_digest_is_stable + test_fog_discovery_digest_is_reproducible both passed twice).",
+              "note": "The fog/discovery digest pins the VISIBLE/SEEN tile counts + is_discovered building count off world.visibility. It deliberately EXCLUDES SimEngine._fog_revision (see pre-existing-finding triage #1)."
+            },
+            "full_suite_single_process": {
+              "command": "python -m pytest -q",
+              "exit_code": 0,
+              "result": "582 passed, 4 skipped, 0 failed in 91.13s",
+              "note": "Matches Agent 11's twice-verified count exactly. No crash, no access-violation (the WK66 test file's per-test render-cache hygiene fixture holds)."
+            }
+          },
+          "evidence": {
+            "L2_writeback_closed_grep": {
+              "is_discovered_visibility_writes": {
+                "command": "rg -n \"\\.is_discovered\\s*=|\\.visibility\\[[^]]+\\]\\s*=\" game/graphics",
+                "result": "No matches found — ZERO renderer writes to sim fog/discovery state (L2 fog/discovery leak closed)."
+              },
+              "anim_trigger_writeback": {
+                "command": "rg -n \"_render_anim_trigger|_ursina_anim_trigger\" game/graphics",
+                "result": "All hits are READS (getattr / _state_get) only; zero setattr write-backs. Comments explicitly state 'no _render_anim_trigger write-back' / 'zero write-back' (hero_renderer.py:38,71; enemy_renderer.py:58; worker_renderer.py:62; ursina_renderer.py:563). L2 anim-trigger leak closed."
+              },
+              "setattr_in_graphics": {
+                "command": "rg -n \"setattr\\(\" game/graphics",
+                "result": "5 hits, NONE are renderer->sim-entity gameplay write-backs: ursina_app.py:860 (self.engine _ursina_hud_force_upload, presentation flag), ursina_app.py:1090 (eng.sim _worker_scale_shot_hold — inside a SCREENSHOT-SCENARIO setup helper, pre-existing capture scaffolding, not the per-frame render path), ursina_renderer.py:809 (self._visible_rect_lens_warned, renderer-local warn-once), ursina_terrain_fog_collab.py:1302 (self._r._geomip_terrain_handle, renderer-local), ursina_unit_overlays.py:89 (setattr on an Ursina Text-label parent entity — render-to-render, not a sim entity).",
+                "verdict": "The three WK66-targeted L2 write-backs (anim-trigger clear, fog/discovery writes, bounty _ui_cache_* stamps) are gone. Remaining setattr calls are presentation/render-local or pre-existing capture scaffolding — none mutate sim gameplay state during the render pass."
+              }
+            },
+            "determinism_guard_paths_presentation": {
+              "command": "python tools/determinism_guard.py --paths game/engine_facades/render_coordinator.py game/graphics/ursina_renderer.py",
+              "result": "FAIL: 2 violation(s) — render_coordinator.py:236 [wall_clock_time] pygame.time.get_ticks(); ursina_renderer.py:343 [wall_clock_time] time.time().",
+              "interpretation": "EXPECTED and NOT a regression. These files live in the determinism-EXEMPT layer (game/graphics + engine facade presentation). The repo-wide default scan correctly excludes them; naming a graphics file explicitly to --paths bypasses the directory-exclude filter (the direct-file branch in _iter_py_files adds the file before the exclude check) and force-scans a presentation file. Both flagged lines are presentation-only (perf-overlay FPS meter; env-gated debug-print throttle) and feed nothing in the sim."
+            }
+          },
+          "core_question_signoff": {
+            "question": "Did WK66 introduce ANY new nondeterminism in the sim?",
+            "answer": "NO.",
+            "evidence": [
+              "Repo-wide determinism_guard (game/entities + game/systems + ai) PASS, exit 0 — no new wall-clock/RNG/hash/unordered-iteration violation entered the sim boundary.",
+              "The WK66 additions are determinism-neutral by construction: (a) frozen value-type render DTOs are read-only scalars/tuples consumed by the render layer — they carry sim values OUT, never feed sim state back; (b) the sim-owned monotonic _anim_trigger_seq is a deterministic integer counter bumped 1:1 with the existing trigger set-sites (no clock, no RNG); (c) World.is_tile_visible_at is a pure read helper over the existing visibility grid; (d) moving World.render/render_fog into world_terrain_renderer.py is a code move of pygame DRAWING out of the sim (strictly removes nondeterminism-irrelevant render code FROM the sim object).",
+              "The removed writes were render->sim LEAKS (anim-trigger clear, fog/discovery writes, bounty _ui_cache_* stamps). Removing a renderer->sim write can only REDUCE coupling/nondeterminism risk, never add it; grep confirms they are gone (zero is_discovered/visibility writes, zero anim-trigger setattr in game/graphics).",
+              "Behavioral guardrails all green AFTER the refactor: fog/discovery golden byte-identical {visible:486, seen:313, discovered_buildings:1} across separate processes; full suite 582 passed/4 skipped/0 failed; qa_smoke --quick PASS twice with identical verdict (A/B); the 4 WK66 characterization pins (DTO field-parity, anim one-shot seq semantics, fog digest, snapshot-no-mutation-on-consume) GREEN.",
+              "Move 4 (snapshot dataclass split) was deferred to WK67 via the documented escape hatch, so there is no presentation-state-in-sim-DTO change to assess this sprint either."
+            ]
+          },
+          "preexisting_findings_triage": [
+            {
+              "id": "PRE-1",
+              "finding": "SimEngine._fog_revision drifts +/-1 across repeated in-process GameEngine() builds (observed 61, 61, 62 in one process); the fog GRID (VISIBLE/SEEN tile counts + discovered-building count) is byte-stable. Agent 11 excluded _fog_revision from the fog pin for this reason.",
+              "wk66_introduced": false,
+              "classification": "REAL (latent) sim-determinism risk — but cross-INSTANCE, not cross-FRAME; low severity today.",
+              "assessment": "_fog_revision counts how many frames update_visibility actually ran, and that count is sensitive to module-level/global state carried between engine instances within one process (same family as the WK65 carry-item 'tests/test_spawner.py order-dependent global-rebind'). It is an INTERNAL revision/dirty counter, not authoritative sim state, and it does NOT change which tiles are revealed or which buildings are discovered (the grid is identical run-to-run). For a future lockstep/replay client the relevant invariant is the fog GRID, which is stable; a per-instance revision counter that only drives render-cache invalidation is not part of the synchronized state. The drift is a global-reset hygiene smell, not a gameplay divergence.",
+              "recommend_ticket": "YES — low-priority WK67/Round-B hygiene ticket: make _fog_revision deterministic across in-process engine builds (reset it with the rest of the per-engine fog state at construction, and/or audit the module-level fog globals it depends on). Pair it with the existing WK65 'test_spawner order-dependent global-rebind' carry-item — same root cause (global state surviving across engine instances). Keep _fog_revision excluded from the fog pin until fixed.",
+              "priority": "low"
+            },
+            {
+              "id": "PRE-2",
+              "finding": "Presentation wall-clock reads flagged by determinism_guard --paths: game/engine_facades/render_coordinator.py:236 (pygame.time.get_ticks() in render_perf_overlay), game/graphics/ursina_renderer.py:343 (time.time() in env-gated _maybe_log_tax_overlay_debug), and ~7 more time.perf_counter()/time.time() reads in presentation/billboard timing.",
+              "wk66_introduced": false,
+              "classification": "PRESENTATION-EXEMPT — not a sim-determinism risk.",
+              "assessment": "Every flagged site is in the determinism-EXEMPT layer (game/graphics/** + the engine presentation facade) and is one of: (a) the perf/FPS overlay clock (render_coordinator.py:236), (b) an env-gated debug-print throttle (ursina_renderer.py:343, KINGDOM_DEBUG_TAX_OVERLAY=1), (c) Ursina billboard one-shot animation timing (instanced_unit_renderer.py:238-275; ursina_renderer.py:571 _compute_anim_frame t0/elapsed — purely cosmetic clip frame selection; the WK66 anim pin deterministically rewinds t0 precisely because it is render-only), or (d) _stage_profile-gated FPS stage instrumentation (ursina_app.py / ursina_renderer.py _rec(...) lines). None feed the sim. The guard's repo-wide run correctly PASSES because these dirs are excluded by design; the --paths FAIL is only because naming a graphics file explicitly bypasses the directory-exclude filter.",
+              "recommend_ticket": "OPTIONAL/low — these are correctly exempt, so no ticket is required for determinism. They overlap the existing WK65 carry-item 'presentation wall-clock determinism notes (engine.py:1133, ursina_renderer.py:343) + timebase.now_ms() wall-clock fallback'. Recommendation: FOLD into that existing WK65 backlog note rather than open a new WK67 ticket. The only forward-looking action is the capture-mode render-clock pin (see PRE-4), which addresses the part of this that actually matters for reproducible capture.",
+              "priority": "low"
+            },
+            {
+              "id": "PRE-4",
+              "finding": "PM finding: the pygame 480-tick screenshot capture is nondeterministic for DYNAMIC scenes (same-code double-capture differs ~3%).",
+              "wk66_introduced": false,
+              "classification": "CAPTURE-HARNESS / render-clock timing issue — NOT a sim-determinism concern.",
+              "assessment": "This is a presentation/capture-timing artifact, not a sim divergence. The SIM is deterministic under DETERMINISTIC_SIM=1 + fixed seed (proven by the fog golden being byte-identical across separate processes and the full deterministic suite). The ~3% diff on DYNAMIC scenes comes from the RENDER/capture layer reading wall-clock for animation/billboard timing (the same time.time()/time.perf_counter() t0 reads as PRE-2: _compute_anim_frame, instanced_unit_renderer billboard timing) and frame-cadence jitter between the sim tick loop and the capture grab. The same sim state can be sampled at slightly different ANIMATION phases run-to-run, so pixels differ while the simulation does not. Static scenes are stable precisely because there is no animation phase to drift. This is why Agent 11 captures at a fixed --ticks and the WK66 visual gate compares scenes designed to be stable.",
+              "recommend_fix_direction": "Pin the render/animation clock under a capture/deterministic mode. Concretely: when DETERMINISTIC_SIM=1 (or a new KINGDOM_CAPTURE_DETERMINISTIC flag) is set, drive the renderer's animation timebase from the SIM tick/frame counter (deterministic, monotonic) instead of time.time()/time.perf_counter(). The hook already exists conceptually — _anim_trigger_seq (sim-owned, deterministic) gates WHICH clip plays; the missing piece is making the WITHIN-clip frame index (currently elapsed = time.perf_counter() - t0) derive from sim-frame count under capture mode so a one-shot is at the same frame on every capture. Apply the same to the instanced_unit_renderer billboard timing. This makes dynamic-scene captures byte-reproducible without touching live gameplay (the wall-clock path stays the default for interactive play).",
+              "recommend_ticket": "YES — WK67/Round-B ticket: 'Deterministic capture mode: pin the render-animation clock to sim-frame count under DETERMINISTIC_SIM/capture flag so dynamic-scene screenshot double-captures are byte-identical.' Owner: Agent 10 (graphics/perf, owns the billboard/anim timing) with Agent 12 (capture harness) and Agent 04 determinism consult. Medium value (unblocks reliable dynamic-scene visual regression diffing); not blocking WK66 close.",
+              "priority": "medium"
+            }
+          ],
+          "commands_run": [
+            {
+              "command": "python tools/determinism_guard.py",
+              "exit_code": 0
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "run 1 of A/B"
+            },
+            {
+              "command": "python tools/qa_smoke.py --quick",
+              "exit_code": 0,
+              "note": "run 2 of A/B — identical verdict"
+            },
+            {
+              "command": "python tools/validate_assets.py --report",
+              "exit_code": 0,
+              "note": "errors=0 warns=46"
+            },
+            {
+              "command": "$env:DETERMINISTIC_SIM='1'; python -m pytest tests/test_wk66_render_boundary.py -q",
+              "exit_code": 0,
+              "note": "7 passed"
+            },
+            {
+              "command": "python -m pytest -q",
+              "exit_code": 0,
+              "note": "582 passed, 4 skipped"
+            },
+            {
+              "command": "$env:DETERMINISTIC_SIM='1'; python -m pytest tests/test_wk66_render_boundary.py::test_fog_discovery_digest_is_stable tests/test_wk66_render_boundary.py::test_fog_discovery_digest_is_reproducible -q (x2 separate processes)",
+              "exit_code": 0,
+              "note": "fog golden byte-identical across processes"
+            },
+            {
+              "command": "python tools/determinism_guard.py --paths game/engine_facades/render_coordinator.py game/graphics/ursina_renderer.py",
+              "exit_code": 1,
+              "note": "EXPECTED FAIL — presentation-exempt files force-scanned; documents PRE-2"
+            }
+          ],
+          "blockers": [],
+          "recommended_next_actions": [
+            "PM (Agent 01): Gate-3 determinism sign-off is PASS — WK66 introduced no new nondeterminism. Clear to close/commit WK66 (the render boundary) once Agent 11's final visual diff and Agent 09's cohesion verdict are green.",
+            "WK67/Round-B ticket (low): make SimEngine._fog_revision deterministic across in-process engine builds; pair with the WK65 'test_spawner order-dependent global-rebind' carry-item (shared root cause: global state surviving across engine instances).",
+            "WK67/Round-B ticket (medium): deterministic capture mode — pin the render-animation clock to sim-frame count under a capture/DETERMINISTIC_SIM flag so dynamic-scene screenshot double-captures are byte-identical (owner Agent 10 + Agent 12, Agent 04 consult). Fixes PRE-4 and subsumes the relevant part of PRE-2.",
+            "Backlog hygiene: fold PRE-2 (presentation wall-clock reads) into the existing WK65 carry-item 'presentation wall-clock determinism notes' rather than opening a separate ticket — they are determinism-exempt by design."
+          ]
+        }
+      }
+    },
+    "wk4-new-enemy-skeleton-archer": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+        "notes": "WK4 is plan-only right now. Although the sprint plan lists Agent 04 as consult-only, I am posting a wk4_r1 planning response because the universal prompt explicitly requests it."
+      },
+      "rounds": {
+        "wk4_r1": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r1",
+          "round_meta": {
+            "prompt_set_id": "wk4_prompts_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:26:22"
+          },
+          "prompt_text": "WK4 plan-only: Add new enemy type skeleton_archer (ranged kiter) spawned from Skeleton Crypt, with procedural CC0 placeholder art, determinism/perf guardrails, and coverage in asset validation + Visual Snapshot System. First pass should be instant-hit ranged damage (no projectile system) unless strongly recommended otherwise.",
+          "response": {
+            "received_at_local": "2025-12-25T15:26:22",
+            "status": "complete",
+            "raw": "Status: Agent 04 (NetworkingDeterminism_Lead). WK4 is plan-only; I’m providing determinism guardrails + low-risk implementation constraints for adding `skeleton_archer` as a new enemy type.\n\nDeliverables\n- Determinism constraints for a ranged/kiting enemy (timebase, RNG, ordering, float usage).\n- Suggested Build A vs Build B split (keep Build A minimal/low-risk).\n- Acceptance criteria + exact gate commands for determinism/tooling coverage (qa_smoke, validate_assets, snapshot gallery).\n\nQuestions (blockers only)\n- None; this is plan-only. (Note: sprint plan lists Agent 04 as consult-only; the universal prompt requests a reply from all agents. I’ll defer to PM on whether this entry should be considered advisory only.)\n\nNext actions\n- Wait for Agent 03’s determinism-safe constraints/contracts and align on any locked field names or helper APIs before implementation.\n- Review Agent 12’s tooling/snapshot plan for deterministic inclusion of `skeleton_archer` (manifest-driven, stable outputs).\n\nUnderstanding of the goal (1–2 sentences)\nAdd a new enemy `skeleton_archer` that meaningfully changes combat pacing (ranged pressure + kiting) while keeping the sim deterministic-friendly and the art/tooling pipelines (assets validation + snapshot system) green.\n\nProposed scope split (Build A vs Build B)\n- Build A: instant-hit ranged attack (no projectile system), basic kite behavior, spawn from Skeleton Crypt, procedural placeholder sprite generation, update asset manifest + validators, and ensure snapshot enemy catalog includes it.\n- Build B: tuning polish + readability (VFX/telegraph), optional simple projectile/VFX line ONLY if needed for clarity (avoid physics), perf sanity pass.\n\nDeterminism guardrails (must-haves)\n- Time: use sim-time/tick or dt accumulation; no wall-clock time in sim logic.\n- RNG: no unseeded RNG; spawns/variants use seeded per-lair/per-system RNG streams.\n- Ordering: any “pick target to shoot” must have stable tie-breaks (e.g., by distance then stable id/index); never rely on set iteration order.\n- Math: prefer squared-distance comparisons and explicit thresholds; avoid oscillation at boundary with hysteresis (deterministic).\n\nAcceptance criteria (lock for WK4)\n- Combat/behavior:\n  - `skeleton_archer` can attack from range (instant-hit) and tries to maintain distance (kite) without rapid oscillation.\n  - Behavior is deterministic-safe: same seed + same inputs produces consistent outcomes.\n- Spawning:\n  - Skeleton Crypt spawns `skeleton_archer` per a deterministic mix policy (seeded RNG).\n- Tooling/pipelines:\n  - `python tools/qa_smoke.py --quick` passes.\n  - `python tools/validate_assets.py --strict --check-attribution` passes.\n  - Visual Snapshot System enemy catalog includes `skeleton_archer` and gallery builds (no machine-dependent paths in manifests).\n\nExact gate commands (expected)\n- `python tools/qa_smoke.py --quick`\n- `python tools/validate_assets.py --strict --check-attribution`\n- Snapshot run(s) (expected to already be manifest-driven):\n  - `python tools/capture_screenshots.py --scenario enemy_catalog --seed 3 --out docs/screenshots/<wk4_run>/enemy_catalog_seed3 --size 1920x1080 --ticks 0`\n  - `python tools/build_gallery.py --shots docs/screenshots/<wk4_run> --refs .cursor/plans/art_examples --out docs/art/compare_gallery.html`\n\nRisks + mitigations (determinism/perf/tooling)\n- Risk: kiting introduces oscillation and nondeterministic tie-breaks.\n  - Mitigation: hysteresis bands + stable ordering rules for target selection and move-away direction.\n- Risk: ranged logic uses wall-clock time for cooldowns.\n  - Mitigation: cooldowns driven by sim-time/ticks; reuse existing sim timebase helpers.\n- Risk: placeholder sprite generation or manifest entries are machine/path dependent.\n  - Mitigation: manifest uses repo-relative paths only; seeded placeholder generation; snapshot manifests avoid absolute paths.\n- Risk: increased per-frame cost from additional AI checks.\n  - Mitigation: keep computations O(1) per enemy per tick, avoid per-frame allocations, and cap expensive searches.\n\nConcrete file touchpoints (paths only; no implementation yet)\n- `config.py`\n- `game/entities/enemy.py`\n- `game/entities/lair.py`\n- `game/graphics/enemy_sprites.py`\n- `tools/assets_manifest.json`\n- `tools/generate_cc0_placeholders.py`\n- `tools/validate_assets.py`\n- `tools/capture_screenshots.py`\n- `tools/screenshot_scenarios.py`\n- `tools/build_gallery.py`\n- `docs/networking_determinism.md`\n\nDeterminism/testing/tooling asks (role-specific)\n- Agent 03: specify stable tie-break keys for target selection (id/index) and confirm how cooldowns/time should be expressed (ticks vs ms).\n- Agent 11/12: ensure `enemy_catalog` snapshot scenario reads enemy types from the manifest and will auto-include `skeleton_archer` once added; add a smoke assertion that the type exists in the catalog output.",
+            "summary_bullets": [
+              "Recommend Build A uses instant-hit ranged damage + simple deterministic kite behavior (no projectile system).",
+              "Determinism must-haves: sim-time/ticks only, seeded RNG streams for spawns, stable ordering/tie-breaks for targeting, hysteresis to avoid oscillation.",
+              "Tooling gates must cover: qa_smoke, validate_assets, and snapshot enemy catalog + gallery build including skeleton_archer."
+            ],
+            "proposed_changes": [
+              "Build A: add `skeleton_archer` enemy type, crypt spawn mix, procedural placeholder frames, manifest + validators + snapshot coverage.",
+              "Build B: tuning/readability polish; optional simple projectile/VFX only if clarity requires it (avoid physics)."
+            ],
+            "acceptance_criteria": [
+              "`skeleton_archer` spawns from Skeleton Crypt and performs ranged attacks (instant-hit) with deterministic-safe kite behavior.",
+              "No wall-clock time or unseeded RNG in sim logic; stable ordering/tie-breaks for targeting to prevent nondeterministic outcomes.",
+              "`python tools/qa_smoke.py --quick` and `python tools/validate_assets.py --strict --check-attribution` pass; snapshot enemy catalog includes the new enemy and gallery builds."
+            ],
+            "risks": [
+              "Kiting can cause oscillation or nondeterministic tie-breaks if boundary conditions aren’t hysteresis-based.",
+              "Cooldowns implemented with wall-clock time (regression) instead of sim-time/ticks.",
+              "Tooling manifests/snapshots accidentally capture absolute paths or machine-dependent output."
+            ],
+            "dependencies": [
+              "Agent 03: determinism-safe constraints and recommended stable tie-break key for targeting (id/index) + cooldown timebase guidance.",
+              "Agent 12/11: ensure manifest-driven enemy catalog snapshots auto-include new enemy types and add non-flaky assertions."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: treat this as advisory unless you want Agent 04 to be Active for WK4; otherwise I’ll remain consult-only for signoff.",
+              "Agent 03: lock determinism constraints for ranged/kiting behavior (ordering, timebase, hysteresis).",
+              "Agent 12/11: confirm snapshot + validation pipelines include skeleton_archer with deterministic outputs (no machine paths)."
+            ],
+            "agent_fields": {
+              "required_guardrails": [
+                "Sim-time/ticks for all cooldowns/timers; no wall-clock time in sim logic.",
+                "Seeded RNG streams only for spawns/variants (no random.*).",
+                "Stable ordering/tie-breaks for targeting and recovery decisions; never rely on set iteration order.",
+                "Use hysteresis bands for kite/min-range thresholds to avoid oscillation."
+              ],
+              "determinism_risks": [
+                "Target selection tie-breaks depend on iteration order of collections.",
+                "Threshold flapping causing divergent movement/attack decisions across dt variations.",
+                "Cooldowns tied to wall-clock or inconsistent dt accumulation."
+              ],
+              "tooling_gates": [
+                "python tools/qa_smoke.py --quick",
+                "python tools/validate_assets.py --strict --check-attribution",
+                "Visual Snapshot System enemy_catalog includes skeleton_archer and gallery builds"
+              ]
+            }
+          }
+        },
+        "wk4_r3": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": ""
+          },
+          "round_id": "wk4_r3",
+          "round_meta": {
+            "prompt_set_id": "wk4_greenlight_r3_v1",
+            "build_target": "BuildA_midweek+BuildB_endweek",
+            "sent_at_local": "2025-12-25T15:40:23"
+          },
+          "prompt_text": "WK4 wk4_r3 implementation greenlight: implement skeleton_archer per locked PM synthesis in Agent 01 wk4_r2 and follow integration order + gates.",
+          "response": {
+            "received_at_local": "2025-12-25T15:40:23",
+            "status": "complete",
+            "raw": "Status: Agent 04 is consult-only for WK4. I am responding only because there is a blocker/contradiction in the greenlight prompt.\n\nBLOCKER: PM synthesis referenced as locked source-of-truth is missing.\n- The wk4_r3 prompt says PM synthesis is already locked in `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` under `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2\"]`.\n- I searched the PM hub file and there is currently no `wk4-new-enemy-skeleton-archer` section at all, so agents cannot verify locked tunables, tie-break strategy, or acceptance evidence requirements.\n\nWhat I need / from whom\n- From PM (Agent 01): publish the wk4_r2 synthesis entry in the PM hub at the referenced path (or correct the reference to where it actually lives) so active implementers can proceed without guessing.\n\nRepro / evidence\n- Repo search in `agent_01_ExecutiveProducer_PM.json` for string `wk4-new-enemy-skeleton-archer` returns no matches.\n\nUntil resolved\n- I recommend active agents do not implement/merge behavior/tunables for skeleton_archer until the wk4_r2 PM synthesis is visible and treated as source-of-truth, per the greenlight prompt itself.",
+            "summary_bullets": [
+              "Consult-only response: blocker—wk4_r3 prompt references PM hub wk4_r2 synthesis that is not present in agent_01 log.",
+              "Active agents cannot safely implement against ‘locked decisions’ until PM publishes wk4_r2 source-of-truth."
+            ],
+            "proposed_changes": [
+              "PM: add `sprints[\"wk4-new-enemy-skeleton-archer\"].rounds[\"wk4_r2\"]` to `.cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json` (or correct the reference)."
+            ],
+            "acceptance_criteria": [
+              "PM hub contains wk4_r2 synthesis at the referenced path (or an updated authoritative path is communicated) before implementation proceeds."
+            ],
+            "risks": [
+              "Without a visible wk4_r2 synthesis, implementers will guess tunables/tie-breaks and risk determinism regressions or rework."
+            ],
+            "dependencies": [
+              "BLOCKER: PM (Agent 01) publishes wk4_r2 synthesis in the PM hub."
+            ],
+            "questions_back_to_pm": [
+              "Please confirm where the authoritative wk4_r2 PM synthesis lives (and ensure it exists before merges)."
+            ],
+            "recommended_next_actions": [
+              "PM: publish wk4_r2 synthesis in agent_01 log; then proceed with integration order and required gates."
+            ],
+            "agent_fields": {
+              "pm_acknowledged": false,
+              "determinism_review_needed": true
+            }
+          }
+        },
+        "wk4_r2_ack": {
+          "sprint_id": "wk4-new-enemy-skeleton-archer",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk4-new-enemy-skeleton-archer_0feaab3a.plan.md",
+            "notes": "Context refresh/acknowledgment round before implementation greenlight."
+          },
+          "round_id": "wk4_r2_ack",
+          "round_meta": {
+            "prompt_set_id": "wk4_context_refresh_r2_ack_v1",
+            "build_target": "BuildA_midweek",
+            "sent_at_local": "2026-01-03T08:07:18"
+          },
+          "prompt_text": "WK4 context refresh: Confirm understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn mix, manifest+placeholders, gates). List role-specific deliverables, blockers, and file touchpoints before implementation proceeds.",
+          "response": {
+            "received_at_local": "2026-01-03T08:07:18",
+            "status": "complete",
+            "raw": "Status: Agent 04 (NetworkingDeterminism_Lead), consult-only for WK4. Context refresh acknowledgment: I understand the locked Build A decisions and am ready to provide determinism signoff/review when implementation PRs are ready.\n\nDeliverables (role-specific)\n- Determinism review checklist for skeleton_archer implementation:\n  - Verify no wall-clock time usage (cooldowns/timers use sim-time/ticks only).\n  - Verify no unseeded RNG (spawn mix uses seeded lair RNG stream).\n  - Verify stable ordering/tie-breaks for target selection (no set iteration dependence).\n  - Verify hysteresis bands for kite thresholds (avoid oscillation).\n- Signoff criteria: `python tools/determinism_guard.py` must pass; `python tools/qa_smoke.py --quick` must pass.\n\nQuestions (blockers only; max 3)\n- None. Locked Build A decisions are determinism-safe (instant-hit avoids projectile physics; 80/20 spawn mix via seeded RNG is acceptable; kite behavior with hysteresis is deterministic-friendly).\n\nNext actions\n- Stand by for implementation PR review (consult-only).\n- When active agents post PRs touching `game/entities/enemy.py` or `game/entities/lair.py`, I will review for determinism compliance:\n  - Time source: sim-time/ticks only (no pygame.time.get_ticks/time.time).\n  - RNG: seeded streams only (no random.*).\n  - Ordering: stable tie-breaks (sort by distance then stable id/index).\n  - Hysteresis: kite thresholds use bands to avoid flapping.\n- Run `python tools/determinism_guard.py` and `python tools/qa_smoke.py --quick` as signoff gates.\n\nLocked Build A decisions (confirmed understanding)\n- Ranged-only in Build A (no melee fallback).\n- Instant-hit ranged in Build A (no projectile system).\n- Kiting behavior: maintain distance band with hysteresis/commitment to avoid jitter.\n- Deterministic spawn mix from Skeleton Crypt: 80/20 skeleton / skeleton_archer (use lair RNG; deterministic).\n- Pipeline completeness: add skeleton_archer to tools/assets_manifest.json; generate placeholder PNGs; gates must pass (qa_smoke, validate_assets, snapshot enemy_catalog + gallery).\n- Allowed clarity safeguard: tiny deterministic cue (attack pose + minimal impact flash) allowed only if needed for readability, but no new systems.\n\nFile touchpoints (determinism review scope)\n- `game/entities/enemy.py` (SkeletonArcher class + kite logic; must use sim-time, seeded RNG, stable ordering).\n- `game/entities/lair.py` (spawn mix; must use seeded lair RNG stream).\n- `config.py` (tunables; no determinism risk, but verify no wall-clock defaults).\n- `tools/assets_manifest.json` (manifest entry; verify repo-relative paths only).\n- `tools/generate_cc0_placeholders.py` (placeholder generation; verify seeded if procedural).\n- `tools/validate_assets.py` (validator; verify no machine-dependent path checks).\n- `tools/capture_screenshots.py` / `tools/screenshot_scenarios.py` (snapshot tooling; verify deterministic outputs, no absolute paths in manifests).\n\nRisks + mitigations (determinism perspective)\n- Risk: Kite behavior introduces oscillation if thresholds lack hysteresis.\n  - Mitigation: Use hysteresis bands (enter-kite-range vs exit-kite-range) and stable tie-breaks for target selection.\n- Risk: Cooldowns implemented with wall-clock time (regression).\n  - Mitigation: Enforce sim-time/ticks via determinism_guard and code review.\n- Risk: Spawn mix uses unseeded RNG.\n  - Mitigation: Verify lair spawn logic uses `game.sim.determinism.get_rng(\"lair_spawn\")` or equivalent seeded stream.\n- Risk: Tooling manifests/snapshots capture absolute paths.\n  - Mitigation: Verify manifest entries use repo-relative paths; snapshot manifests avoid machine-dependent outputs.",
+            "summary_bullets": [
+              "Consult-only acknowledgment: locked Build A decisions are determinism-safe (instant-hit, seeded spawn mix, hysteresis-based kiting).",
+              "Role-specific deliverable: determinism review checklist + signoff gates (determinism_guard + qa_smoke --quick) when implementation PRs are ready.",
+              "No blockers; ready to provide consult-only signoff review when active agents post PRs."
+            ],
+            "proposed_changes": [
+              "None (consult-only; no implementation)."
+            ],
+            "acceptance_criteria": [
+              "Implementation uses sim-time/ticks for all cooldowns/timers (no wall-clock).",
+              "Spawn mix uses seeded RNG stream (no random.*).",
+              "Target selection uses stable ordering/tie-breaks (no set iteration dependence).",
+              "Kite thresholds use hysteresis bands to avoid oscillation.",
+              "`python tools/determinism_guard.py` and `python tools/qa_smoke.py --quick` pass."
+            ],
+            "risks": [
+              "Kite behavior oscillation if thresholds lack hysteresis.",
+              "Cooldowns regressed to wall-clock time.",
+              "Spawn mix uses unseeded RNG.",
+              "Tooling manifests/snapshots capture absolute paths."
+            ],
+            "dependencies": [
+              "Active agents (03/05/09/11/12) implement skeleton_archer per locked Build A decisions.",
+              "PM publishes wk4_r2 synthesis in agent_01 log (if not already present) before implementation proceeds."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "PM: proceed with implementation greenlight (wk4_r3) when ready.",
+              "Active agents: tag Agent 04 for determinism review when PRs touch enemy.py or lair.py.",
+              "Run determinism_guard + qa_smoke --quick as mandatory signoff gates before merge."
+            ],
+            "agent_fields": {
+              "determinism_review_checklist": [
+                "Verify no wall-clock time usage (cooldowns/timers use sim-time/ticks only).",
+                "Verify no unseeded RNG (spawn mix uses seeded lair RNG stream).",
+                "Verify stable ordering/tie-breaks for target selection (no set iteration dependence).",
+                "Verify hysteresis bands for kite thresholds (avoid oscillation)."
+              ],
+              "signoff_gates": [
+                "python tools/determinism_guard.py",
+                "python tools/qa_smoke.py --quick"
+              ],
+              "file_review_scope": [
+                "game/entities/enemy.py",
+                "game/entities/lair.py",
+                "config.py",
+                "tools/assets_manifest.json",
+                "tools/generate_cc0_placeholders.py",
+                "tools/validate_assets.py",
+                "tools/capture_screenshots.py",
+                "tools/screenshot_scenarios.py"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "wk8-engine-entities-refactor": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+        "notes": "WK8 verification pass after Engine + Entities refactor landed."
+      },
+      "rounds": {
+        "wk8_r2_verification": {
+          "sprint_id": "wk8-engine-entities-refactor",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+            "notes": "Determinism verification round."
+          },
+          "round_id": "wk8_r2_verification",
+          "round_meta": {
+            "prompt_set_id": "wk8_verification_r2_v1",
+            "build_target": "verification",
+            "sent_at_local": "2026-02-18T06:28:56.4886920-07:00"
+          },
+          "prompt_text": "Review all refactor-created game files for determinism compliance and sim boundary integrity. Run determinism_guard and report regressions with repro steps if found.",
+          "response": {
+            "received_at_local": "2026-02-18T06:28:56.4886920-07:00",
+            "status": "complete",
+            "raw": "Agent 04 WK8 verification complete. I reviewed all refactor-created game modules from the sprint plan (`game/input_handler.py`, `game/display_manager.py`, `game/building_factory.py`, `game/cleanup_manager.py`, and `game/entities/buildings/*.py`, plus compatibility shims `game/entities/building.py` and `game/entities/__init__.py`) for determinism hazards and sim boundary regressions. No wall-clock time usage (`time.time`, `pygame.time.get_ticks`, `datetime`) or unseeded RNG (`random.*`) was found in the new modules. BuildingFactory uses direct key lookup only (no iteration-order dependence), and no set/dict iteration patterns that would introduce nondeterministic outcomes were found in the new files. Determinism gate command passed: `python tools/determinism_guard.py` -> PASS (exit 0). No regressions found in this audit.",
+            "summary_bullets": [
+              "Reviewed all refactor-created game modules and building package split files for determinism anti-patterns.",
+              "No wall-clock usage, no unseeded RNG, and no nondeterministic set/dict iteration patterns found in newly added files.",
+              "Determinism guard PASS: `python tools/determinism_guard.py` exited 0."
+            ],
+            "proposed_changes": [
+              "None. Verification-only round; no code edits required."
+            ],
+            "acceptance_criteria": [
+              "All new game modules avoid wall-clock calls in sim logic (`time.time`, `pygame.time.get_ticks`, `datetime`).",
+              "All new game modules avoid unseeded RNG (`random.*`) in simulation paths.",
+              "No new nondeterministic iteration patterns in refactor-created modules.",
+              "`python tools/determinism_guard.py` passes."
+            ],
+            "risks": [
+              "No new determinism regressions identified in the reviewed WK8 refactor files."
+            ],
+            "dependencies": [
+              "Agent 11 and Agent 12 verification still required for full WK8 closeout."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed with Agent 11 gate verification (`qa_smoke --quick`, `validate_assets --report`, headless profiles/manual smoke).",
+              "Proceed with Agent 12 tooling import-path/shim verification.",
+              "If either downstream verification finds behavior drift, re-open determinism review on the specific failing path."
+            ],
+            "agent_fields": {
+              "status": "PASS",
+              "bugs_found": [],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "determinism_guard_refactor_paths": {
+                  "command": "python tools/determinism_guard.py --paths game/input_handler.py game/display_manager.py game/building_factory.py game/cleanup_manager.py game/entities/buildings",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "reviewed_files": [
+                  "game/input_handler.py",
+                  "game/display_manager.py",
+                  "game/building_factory.py",
+                  "game/cleanup_manager.py",
+                  "game/entities/buildings/__init__.py",
+                  "game/entities/buildings/types.py",
+                  "game/entities/buildings/hiring_mixin.py",
+                  "game/entities/buildings/base.py",
+                  "game/entities/buildings/guilds.py",
+                  "game/entities/buildings/temples.py",
+                  "game/entities/buildings/defensive.py",
+                  "game/entities/buildings/economic.py",
+                  "game/entities/buildings/special.py",
+                  "game/entities/buildings/castle.py",
+                  "game/entities/buildings/dwellings.py",
+                  "game/entities/building.py",
+                  "game/entities/__init__.py"
+                ]
+              }
+            }
+          }
+        },
+        "wk8_r4_final_verification": {
+          "sprint_id": "wk8-engine-entities-refactor",
+          "sprint_meta": {
+            "plan_ref": ".cursor/plans/wk8_engine+entities_refactor_9cc21436.plan.md",
+            "notes": "Final verification after Track 3 (EventBus + System Protocol + Enums) landed."
+          },
+          "round_id": "wk8_r4_final_verification",
+          "round_meta": {
+            "prompt_set_id": "wk8_final_verification_r4_v1",
+            "build_target": "verification",
+            "sent_at_local": "2026-02-18T06:49:12.8530757-07:00"
+          },
+          "prompt_text": "Final determinism verification across Tracks 1-3. Audit EventBus dispatch determinism, SystemContext sim-boundary safety, BuildingFactory determinism, and run determinism_guard.",
+          "response": {
+            "received_at_local": "2026-02-18T06:49:12.8530757-07:00",
+            "status": "complete",
+            "raw": "Agent 04 final WK8 verification complete (Tracks 1-3). EventBus dispatch is deterministic: subscribers are stored in a list and invoked in registration order (`game/events.py`), and engine subscription order is explicit (`audio_system` then `vfx_system`). SystemContext only carries sim-facing references (`heroes`, `enemies`, `buildings`, `world`, `economy`, `event_bus`) with no render/window/input objects (`game/systems/protocol.py`, engine context construction). BuildingFactory remains deterministic by direct key lookup (`dict.get`) with no iteration-based selection. Static scan found no wall-clock (`time.time`, `pygame.time.get_ticks`, `datetime`) or unseeded RNG (`random.*`) in the Track 1-3 files reviewed. Required gate passed: `python tools/determinism_guard.py` exit 0. Additional targeted scan over explicit WK8 file paths also passed.",
+            "summary_bullets": [
+              "EventBus dispatch order is deterministic and registration-order based.",
+              "SystemContext does not leak render-side state into protocol systems.",
+              "BuildingFactory creation path uses deterministic direct lookup, not iteration.",
+              "No new wall-clock or unseeded RNG usage found in Track 1-3 files.",
+              "Determinism guard PASS on default scope and targeted WK8 file scope."
+            ],
+            "proposed_changes": [
+              "None. Verification-only round."
+            ],
+            "acceptance_criteria": [
+              "EventBus subscriber dispatch order is deterministic (registration order).",
+              "SystemContext remains sim-facing and render-agnostic.",
+              "BuildingFactory does not depend on nondeterministic iteration.",
+              "No wall-clock or unseeded RNG introduced in new Track 1-3 files.",
+              "`python tools/determinism_guard.py` passes."
+            ],
+            "risks": [
+              "No determinism regressions identified in final WK8 verification scope."
+            ],
+            "dependencies": [
+              "Agent 11 final QA verification and Agent 12 config/tooling verification for full sprint closeout."
+            ],
+            "questions_back_to_pm": [],
+            "recommended_next_actions": [
+              "Proceed to PM closeout once Agent 11 and Agent 12 publish PASS evidence.",
+              "If downstream QA surfaces a behavior regression, rerun deterministic audit on that specific code path."
+            ],
+            "agent_fields": {
+              "status": "PASS",
+              "bugs_found": [],
+              "evidence": {
+                "determinism_guard": {
+                  "command": "python tools/determinism_guard.py",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "determinism_guard_wk8_paths": {
+                  "command": "python tools/determinism_guard.py --paths game/events.py game/types.py game/systems/protocol.py game/input_handler.py game/display_manager.py game/building_factory.py game/cleanup_manager.py game/entities/buildings",
+                  "exit_code": 0,
+                  "result": "PASS"
+                },
+                "eventbus_dispatch_order_check": {
+                  "result": "PASS",
+                  "details": "List-backed subscriber storage + sequential dispatch; engine subscriber registration order fixed."
+                },
+                "system_context_boundary_check": {
+                  "result": "PASS",
+                  "details": "SystemContext fields are sim-facing only; no render/input/window fields."
+                },
+                "reviewed_files": [
+                  "game/events.py",
+                  "game/types.py",
+                  "game/systems/protocol.py",
+                  "game/input_handler.py",
+                  "game/display_manager.py",
+                  "game/building_factory.py",
+                  "game/cleanup_manager.py",
+                  "game/entities/buildings/__init__.py",
+                  "game/entities/buildings/types.py",
+                  "game/entities/buildings/hiring_mixin.py",
+                  "game/entities/buildings/base.py",
+                  "game/entities/buildings/guilds.py",
+                  "game/entities/buildings/temples.py",
+                  "game/entities/buildings/defensive.py",
+                  "game/entities/buildings/economic.py",
+                  "game/entities/buildings/special.py",
+                  "game/entities/buildings/castle.py",
+                  "game/entities/buildings/dwellings.py"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

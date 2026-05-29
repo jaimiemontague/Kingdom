@@ -9,190 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk42-renderer-dedupe-wire-collabs": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/wk42_renderer_dedupe_wire_collabs.plan.md",
-        "notes": "Perf consult Steps 4 & 6: Ursina FPS after R2 terrain/fog collab wire + R3 entity collab wire (merged tree)."
-      },
-      "rounds": {
-        "wk42_r2_r3_perf_consult": {
-          "sprint_id": "wk42-renderer-dedupe-wire-collabs",
-          "round_id": "wk42_r2_r3_perf_consult",
-          "round_meta": {
-            "prompt_set_id": "wk42_parallel_11_10",
-            "pm_steps": [
-              "STEP_4_after_R2",
-              "STEP_6_after_R3"
-            ],
-            "sent_at_local": "2026-04-27",
-            "note": "Repo state has Track A+B+C applied (696-line ursina_renderer.py). Single probe satisfies PM parallel perf checks for both rounds."
-          },
-          "response": {
-            "status": "complete",
-            "raw": "WK42 Agent 10 consult (R2+R3 merged verification): Sprint goal was delete duplicate renderer code and delegate terrain/fog to UrsinaTerrainFogCollab and entities to UrsinaEntityRenderCollab with no behavior change. Verified wiring present in game/graphics/ursina_renderer.py (__init__ creates self._terrain_fog and self._entity_render; call sites delegate). Headless perf_benchmark: ms/tick total ~1.28 — consistent with recent refactor-era band (~1.0–1.3). Ursina automated FPS probe: 300s wall time, 10s warmup, --no-llm — avg_fps 33.6, p50 29.6, heroes=29 at sample end; ursina_renderer stage avg ~5.42ms. Min/p10 tails reflect occasional hitches/GC (min_fps 5.3, p10 12.5) — same class of variance as WK41 probes, not a new sustained-collapse pattern attributable to delegation. No Agent 10 code edits.",
-            "summary_bullets": [
-              "ursina_renderer.py line count: 696 (plan target ≤900 / ~700).",
-              "perf_benchmark (default 12s): ~1.280 ms/tick total; PF ~0.879 ms/tick — OK.",
-              "Ursina 300s FPS probe: avg_fps 33.6, p50 29.6; ursina_renderer avg ~5.42ms — playable; compare to WK41 probes with hero/scene variance.",
-              "Regression verdict for WK42 dedupe + collab wiring: no blocking perf regression.",
-              "Blockers: none."
-            ],
-            "what_i_changed": [],
-            "how_to_test": [
-              "python tools/perf_benchmark.py",
-              "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
-              "Manual (Jaimie per plan): python main.py --renderer ursina --no-llm 5–10 min; python main.py --renderer pygame --no-llm 5 min"
-            ],
-            "evidence": {
-              "perf_benchmark_cmd": "python tools/perf_benchmark.py",
-              "perf_benchmark_exit_code": 0,
-              "perf_benchmark_ms_per_tick_total": 1.28,
-              "perf_benchmark_pf_ms_per_tick": 0.879,
-              "ursina_300s_probe_cmd": "python tools/run_ursina_capture_once.py --seconds 300 --no-screenshot --no-llm --fps-probe --fps-warmup-sec 10",
-              "ursina_300s_exit_code": 0,
-              "ursina_fps_probe": {
-                "heroes": 29,
-                "frames": 6021,
-                "avg_fps": 33.6,
-                "min_fps": 5.3,
-                "p10_fps": 12.5,
-                "p50_fps": 29.6,
-                "p90_fps": 73.4,
-                "max_fps": 105.3
-              },
-              "ursina_probe_stages_ms": {
-                "hud_texture_upload_avg_ms": 23.756,
-                "hud_texture_upload_p90_ms": 48.958,
-                "hud_texture_upload_max_ms": 77.951,
-                "pygame_hud_render_avg_ms": 2.27,
-                "tick_simulation_avg_ms": 2.693,
-                "tick_simulation_max_ms": 21.879,
-                "ursina_renderer_avg_ms": 5.416,
-                "ursina_renderer_p90_ms": 8.81,
-                "ursina_renderer_max_ms": 71.143
-              },
-              "ursina_renderer_line_count": 696,
-              "wk42_regression_verdict": "no"
-            },
-            "agent_fields": {
-              "reviewed_files": [
-                "game/graphics/ursina_renderer.py (collab wiring + delegations)"
-              ]
-            }
-          }
-        }
-      }
-    },
-    "wk47_unit_instancing_core": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/unit_instancing_master_plan_09d73f6a.plan.md",
-        "notes": "WK47 R3 validation: perf stress baseline vs KINGDOM_URSINA_INSTANCING on/off."
-      },
-      "rounds": {
-        "wk47_r3_validation": {
-          "sprint_id": "wk47_unit_instancing_core",
-          "round_id": "wk47_r3_validation",
-          "status": "done",
-          "what_i_changed": "Benchmark-only: re-ran full PM perf matrix after Agent 03 fixes (NodePath.set_instance_count on Panda 1.10.16; instanced_unit_shader uses samplerBuffer + GLSL 330 for buffer texture). Wrote per-run JSON under tools/perf_wk47_r3_*.json. No perf_stress_test.py logic edits this round.",
-          "commands_run": [
-            {
-              "shell": "PowerShell",
-              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"0\"; python tools/perf_stress_test.py --units 200 --frames 300 --json-out tools/perf_wk47_r3_inst0_u200.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"0\"; python tools/perf_stress_test.py --units 500 --frames 300 --json-out tools/perf_wk47_r3_inst0_u500.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"1\"; python tools/perf_stress_test.py --units 200 --frames 300 --json-out tools/perf_wk47_r3_inst1_u200.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "$env:KINGDOM_URSINA_INSTANCING = \"1\"; python tools/perf_stress_test.py --units 500 --frames 300 --json-out tools/perf_wk47_r3_inst1_u500.json",
-              "exit_code": 0
-            },
-            {
-              "shell": "PowerShell",
-              "commands": "python tools/qa_smoke.py --quick",
-              "exit_code": 0
-            }
-          ],
-          "evidence": {
-            "machine_note": "Win32; Python 3.13.2; Ursina 8.3.0; Panda3D 1.10.16 wglGraphicsPipe; same session back-to-back runs.",
-            "perf_json_outputs": [
-              "tools/perf_wk47_r3_inst0_u200.json",
-              "tools/perf_wk47_r3_inst0_u500.json",
-              "tools/perf_wk47_r3_inst1_u200.json",
-              "tools/perf_wk47_r3_inst1_u500.json"
-            ],
-            "perf_stress_KINGDOM_URSINA_INSTANCING_0": {
-              "units_200": {
-                "heroes_enemies": "100 / 100",
-                "avg_frame_ms": 4.351,
-                "min_max_ms": [
-                  2.575,
-                  8.956
-                ],
-                "avg_fps": 229.85,
-                "one_pct_low_fps": 124.56,
-                "p99_ms": 7.242
-              },
-              "units_500": {
-                "heroes_enemies": "250 / 250",
-                "avg_frame_ms": 7.339,
-                "min_max_ms": [
-                  4.979,
-                  15.5
-                ],
-                "avg_fps": 136.25,
-                "one_pct_low_fps": 67.11,
-                "p99_ms": 14.029
-              }
-            },
-            "perf_stress_KINGDOM_URSINA_INSTANCING_1": {
-              "units_200": {
-                "heroes_enemies": "100 / 100",
-                "avg_frame_ms": 3.196,
-                "min_max_ms": [
-                  1.697,
-                  12.448
-                ],
-                "avg_fps": 312.93,
-                "one_pct_low_fps": 107.62,
-                "p99_ms": 5.009
-              },
-              "units_500": {
-                "heroes_enemies": "250 / 250",
-                "avg_frame_ms": 3.991,
-                "min_max_ms": [
-                  2.506,
-                  7.966
-                ],
-                "avg_fps": 250.56,
-                "one_pct_low_fps": 134.49,
-                "p99_ms": 7.001
-              }
-            },
-            "qa_smoke": {
-              "command": "python tools/qa_smoke.py --quick",
-              "exit_code": 0,
-              "status": "PASS"
-            },
-            "note": "Inst-on improved avg FPS vs billboards on this machine for the stressed hero/enemy mix; results vary by GPU/driver."
-          },
-          "blockers": [],
-          "recommended_next_actions": [
-            "Jaimie manual playtest with $env:KINGDOM_URSINA_INSTANCING=\"1\"; python main.py --no-llm",
-            "Optional: re-run orchestrator verify-receipt for Agent 10 if sprint requires SDK completion token."
-          ],
-          "follow_ups": []
-        }
-      }
-    },
     "wk49_hero_profile_foundation": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/wk49_hero_profile_foundation_274e344b.plan.md",
@@ -860,6 +676,185 @@
             "did_not_commit": true,
             "completion_receipt": "Agent 10 Wave 2 complete: 4 grep-confirmed deletions in ursina_renderer.py (net -205 LOC), pygame_renderer.py logging adopted, vfx.py left unchanged (no swallow). Screenshot verdict IDENTICAL (units + buildings/POIs). Scoped gates green (snapshot test 2 passed; determinism guard surfaces only 1 pre-existing render false-positive, down from 8). No commit/push."
           }
+        }
+      }
+    },
+    "wk66_round_a1_render_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk66_round_a1_render_boundary.plan.md",
+        "notes": "Round A-1: render/snapshot boundary. Behavior-preserving: renderer can no longer mutate the sim. Agent 10 owns Wave 2 (consume DTOs + kill L2 write-back)."
+      },
+      "rounds": {
+        "wk66_w2_consume": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_w2_consume",
+          "status": "complete",
+          "intelligence": "HIGH",
+          "summary": "Wave 2: migrated the renderers to consume the frozen render DTOs and removed ALL L2 render-to-sim write-back. Both zero-write greps in game/graphics are clean. Full pygame screenshot set (57 PNGs across 8 scenarios) is BYTE-IDENTICAL to the Wave-0 baseline; all 3 Ursina paths (base/tax/fog) are visually identical. The 3 behavioral pins (snapshot-no-mutation-on-consume, DTO field parity, fog/discovery digest incl. DETERMINISTIC_SIM golden) are GREEN. Repo-wide determinism_guard PASS; qa_smoke static-determinism PASS. The ONLY 2 failing tests are Agent 11's two anim one-shot pins, which assert the now-removed setattr-clear mechanism (not game behavior) — see anim_pin_conflict_for_pm below with the exact recommended fix.",
+          "what_i_changed": {
+            "task0_comment_fixes": [
+              "game/graphics/instanced_unit_renderer.py:111 comment _unit_anim_surface -> _compute_anim_frame",
+              "game/graphics/instanced_unit_renderer.py:221 comment _unit_anim_surface -> _compute_anim_frame",
+              "NOTE: game/entities/guard.py:84 was already corrected by Agent 03 in Wave 1 (no edit needed)."
+            ],
+            "task1_registry_stable_id_key": [
+              "game/graphics/renderers/registry.py: _key() now returns str(getattr(e,'hero_id',None) or getattr(e,'entity_id',None) or id(e)); the four renderer-map dict type hints changed dict[int,...] -> dict[str,...]. prune() uses the same _key so it follows automatically (WK63 stable-ID contract; was id(obj))."
+            ],
+            "task2_anim_writeback_removed_seq_based": [
+              "game/graphics/renderers/hero_renderer.py: deleted setattr(entity_state,'_render_anim_trigger',None); added self._last_trigger_seq=-1; play one-shot only when anim_trigger_seq (DTO) / _anim_trigger_seq (live) advances vs last-seen.",
+              "game/graphics/renderers/enemy_renderer.py: same pattern (deleted the :55-57 setattr-clear).",
+              "game/graphics/renderers/worker_renderer.py: same pattern (deleted the :59-61 setattr-clear) — covers peasant/guard/tax.",
+              "game/graphics/ursina_renderer.py:_compute_anim_frame: deleted BOTH setattr(...,None) lines; track _unit_anim_state[obj_id]['last_seq'] and play when _anim_trigger_seq advances.",
+              "game/graphics/instanced_unit_renderer.py:_resolve_unit_anim_clip_frame: deleted all 4 setattr(...,None); same seq-based last_seq tracking (this renderer is opt-in behind KINGDOM_URSINA_INSTANCING=1, default OFF)."
+            ],
+            "task3_fog_discovery_writeback_removed": [
+              "game/graphics/ursina_renderer.py: deleted b.is_discovered=True (was :1017/now ~:1026) and the two world.visibility[..]=SEEN writes (was :1028-1029/now ~:1037-1038). These were inside 'if _debug_show_pois and is_poi' (KINGDOM_DEBUG_SHOW_ALL_POIS, default OFF) -> DEBUG-ONLY, never fire in normal play (per Agent 03's W1 investigation).",
+              "Added renderer-owned self._debug_revealed_pois: dict[str,bool] (keyed by stable entity_id) in __init__; the debug block now records the force-reveal there. The lair SEEN-gate (~:1081) now reads world.visibility[ty][tx] >= SEEN READ-ONLY OR (debug AND _debug_revealed_pois[id]) so debug force-reveal is preserved without any sim/world write. Normal-play is_discovered reads remain the sim-owned value."
+            ],
+            "task4_bounty_cache_off_object": [
+              "game/graphics/renderers/bounty_renderer.py: removed all 9 setattr(bounty,'_ui_cache_*',...) writes; added BountyRenderer.__init__ self._cache: dict[str,dict] keyed by bounty_id; the rendered reward/meta Surfaces are cached there. render_all() now prunes cache entries for gone bounties. No setattr on bounties."
+            ],
+            "task5_dto_consumption": [
+              "game/graphics/pygame_renderer.py: _draw_world_layers now iterates snapshot.building_dtos / enemy_dtos / hero_dtos for the DRAW pass (was .buildings/.enemies/.heroes).",
+              "game/graphics/renderers/hero_renderer.py: render() reads inside_building_center (DTO) with a live inside_building fallback; reads state_name (DTO) with a live state-enum fallback — shape-agnostic.",
+              "game/graphics/renderers/building_renderer.py: ballista range-ring now reads has_target (DTO bool) with a live target fallback.",
+              "game/graphics/ursina_renderer.py: _sync_snapshot_bounties consumes snapshot.bounty_dtos (reads only bounty_id/claimed/x/y/reward, none mutated mid-render).",
+              "DELIBERATELY KEPT ON LIVE ENTITIES (reads only, no write-back) — see scope_clarifications_for_pm: pygame guard/peasant/tax DRAW (UnitDTO lacks is_inside_castle/carried_gold/state); pygame bounty DRAW (render_bounties reads post-update_ui_metrics responders/tier, fresher than the snapshot-time DTO); the Ursina unit + building loops (deep live-entity coupling: layer, is_poi, b.x, poi_def, grid_x/grid_y, get_or_create_entity(entity), _unit_facing_direction(entity), base_clip_fns)."
+            ],
+            "files_touched": [
+              "game/graphics/renderers/registry.py",
+              "game/graphics/renderers/hero_renderer.py",
+              "game/graphics/renderers/enemy_renderer.py",
+              "game/graphics/renderers/worker_renderer.py",
+              "game/graphics/renderers/bounty_renderer.py",
+              "game/graphics/renderers/building_renderer.py",
+              "game/graphics/ursina_renderer.py",
+              "game/graphics/instanced_unit_renderer.py",
+              "game/graphics/pygame_renderer.py"
+            ]
+          },
+          "zero_writeback_greps": {
+            "rg -n 'setattr\\(' game/graphics": [
+              "ZERO setattr onto sim entities. Remaining matches are renderer-owned objects, NOT sim entities:",
+              "ursina_renderer.py:803 setattr(self,'_visible_rect_lens_warned',True) -> renderer self (fine)",
+              "ursina_terrain_fog_collab.py:1302 setattr(self._r,...) -> renderer (fine)",
+              "ursina_unit_overlays.py:89 setattr(ent,attr,lab) -> Ursina Entity render object (fine)",
+              "bounty_renderer.py NOW HAS ZERO setattr (was 9; moved to self._cache).",
+              "PRE-EXISTING / OUT-OF-LANE (NOT in my Wave-2 files, untouched by me, NOT the L2 render write-backs): ursina_app.py:860 setattr(self.engine,'_ursina_hud_force_upload',False) and ursina_app.py:1090 setattr(eng.sim,'_worker_scale_shot_hold',True) — these are app/input-shell flags committed at wk61/wk62; flagged for PM as a possible separate L2 sub-leak, but out of WK66 Agent-10 scope."
+            ],
+            "rg -n '\\.is_discovered\\s*=|\\.visibility\\[[^]]+\\]\\s*=' game/graphics": [
+              "ZERO matches. All fog/discovery write-back removed from the renderer."
+            ],
+            "rg -n '_render_anim_trigger\\s*=|_ursina_anim_trigger\\s*=' game/graphics": [
+              "ZERO matches (no anim-trigger writes from any renderer)."
+            ]
+          },
+          "screenshot_verdict": {
+            "method": "Re-captured every Wave-0 baseline path into docs/screenshots/wk66_after_w2/ with the SAME commands/seed(3)/ticks(480)/size(1920x1080). pygame: MD5 byte-compare + PIL pixel-diff vs docs/screenshots/wk66_baseline/. Ursina (live, time-based, non-pixel-deterministic): visual compare of composition/fog/buildings/units/HUD/layering (alignment & layering checked first).",
+            "pygame_overall": "ALL 57 PNGs across 8 scenarios are BYTE-IDENTICAL (MD5) to baseline.",
+            "per_path": [
+              "pyg_base_overview: baseline/pyg_base_overview vs after_w2/pyg_base_overview -> 4/4 IDENTICAL (units idle + core buildings + HUD/zoom variants)",
+              "pyg_building_catalog: 35/35 IDENTICAL (every building type incl. lair/neutral/palace/guilds, built closeups)",
+              "pyg_building_debris: 2/2 IDENTICAL (rubble + damaged)",
+              "pyg_bounty_fog: 2/2 IDENTICAL (bounty flag + $reward + R:n + tier label in black fog -> fog/discovery + bounty-cache paths)",
+              "pyg_enemy_catalog: 7/7 IDENTICAL (every enemy type)",
+              "pyg_ranged_projectiles: 2/2 IDENTICAL (ranger attack + projectile mid-flight = units-in-combat)",
+              "pyg_worker_catalog: 3/3 IDENTICAL (peasant + tax_collector — confirms keeping workers on live DRAW is inert)",
+              "pyg_world_variation: 2/2 IDENTICAL (terrain/trees/paths)",
+              "ursina_base: baseline/ursina_base/ursina_base_*.png vs after_w2/ursina_base/ursina_base_20260529_121014_024.png -> IDENTICAL (revealed island, same building cluster/positions, '32 POIs revealed' banner, HUD Gold:2100, minimap, layering; only wall-clock FPS-overlay text jitters)",
+              "ursina_tax_overlay: baseline hold_g_tax_overlay_*.png vs after_w2 hold_g_tax_overlay_20260529_121040_823.png -> IDENTICAL (same starting-buildings row + facades/shadows, hero, trees, Gold:2443; only perf-graph wall-clock noise)",
+              "ursina_fog: baseline ursina_fog_*.png vs after_w2 ursina_fog_20260529_121222_639.png -> IDENTICAL (same fog edges + island + buildings + HUD; only perf-overlay jitter). CONFIRMS removing the debug fog write-back changed nothing in normal play."
+            ],
+            "overall_verdict": "IDENTICAL on every render path. No changed pixel attributable to a Wave-2 task."
+          },
+          "anim_pin_conflict_for_pm": {
+            "what": "2 of Agent 11's Wave-0 pins fail AFTER Wave 2 — by design, not a behavior change:",
+            "failing": [
+              "tests/test_wk66_render_boundary.py::test_anim_one_shot_plays_once_then_replays_on_new_trigger (line 414/431-433)",
+              "tests/test_wk66_render_boundary.py::test_anim_one_shot_via_registry_level (line 469)"
+            ],
+            "root_cause": "Both pins assert the OLD mechanism: (a) the renderer clears the trigger off the entity (assert entity._render_anim_trigger is None), and (b) re-setting the SAME trigger string WITHOUT bumping the seq replays the one-shot. The plan/PM Task 2 requires removing the setattr-clear and playing on anim_trigger_seq advance. With no clear and a sim-owned monotonic seq (Agent 03 W1), re-presenting an identical (same-seq) trigger MUST NOT replay (else a sticky trigger loops forever in production). So 'plays once' (production, sticky trigger) and 'replays on identical same-seq re-set' (the test) are mutually exclusive without the clear. There is no zero-write-back design that satisfies both — the None->value edge the clear created is gone by design. The production semantic (play once per NEW trigger / replay on NEW seq) is preserved and PROVEN by test_snapshot_not_mutated_on_consume + the byte-identical screenshots.",
+            "i_did_NOT_edit_tests": "Per the explicit 'Do NOT touch tests/ (Agent 11)' lane rule, I left the pins as-is and surface this for PM/Agent 11 to ratify at Gate 2 (where Agent 11 owns the pins).",
+            "recommended_fix_for_agent_11": [
+              "test_anim_one_shot_via_registry_level: replace 'hero._render_anim_trigger = \"attack\"' with 'hero._queue_render_animation(\"attack\")' (bumps _anim_trigger_seq), and replace the line-469 'assert getattr(hero, \"_render_anim_trigger\", None) is None' with 'assert renderer._last_trigger_seq == hero._anim_trigger_seq' (the renderer consumed THIS seq).",
+              "test_anim_one_shot_plays_once_then_replays_on_new_trigger: give _UnitState an _anim_trigger_seq=1 on the first trigger (drop the line-417 'assert attack_state._render_anim_trigger is None'); for each replay, bump attack_state._anim_trigger_seq (e.g. =2 then =3) instead of (or in addition to) re-setting _render_anim_trigger. The play-once-then-base and replay-on-NEW-seq assertions then hold against the seq-based renderer."
+            ]
+          },
+          "scope_clarifications_for_pm": [
+            "Task 5 DTO consumption is COMPLETE where the DTO field set fully covers the renderer's DRAW reads (pygame hero/enemy/building, Ursina bounty). It is DEFERRED (kept on live-entity READS, no write-back) where the current UnitDTO/BuildingDTO do not carry the needed draw fields and enriching them is Agent 03's lane (would also break Agent 11's frozen field-parity pin): (1) pygame guard/peasant/tax DRAW need is_inside_castle / carried_gold / state (not on UnitDTO); (2) the Ursina unit loops need layer, _unit_facing_direction internals, get_or_create_entity(entity), and per-type base_clip_fns; the Ursina building loop needs is_poi, poi_def, grid_x/grid_y, b.x/b.y (not on BuildingDTO). These remain READS of live entities — allowed in Wave 2 (only WRITES are forbidden, and all write-back is removed).",
+            "pygame bounty DRAW (render_bounties) intentionally stays on live bounties: bounty_system.update_ui_metrics mutates responders/attractiveness_tier on the live bounty DURING the render pass (game/systems/bounty.py:343/346), so the live object carries fresher R:n/tier than the snapshot-time BountyDTO. Using the DTO would lag those labels by one frame (a visible behavior change). The keystone (cache off the bounty object) is done regardless.",
+            "WAVE 3 DEPENDENCY: if Agent 03 removes the live tuples (snapshot.heroes/enemies/buildings/guards/peasants/tax_collector/bounties) in Wave 3, the still-live-reading consumers above (pygame workers + bounty, Ursina unit/building loops) will break. Wave 3 must either keep the live tuples that are still consumed, or those consumers need DTO enrichment first (DTO field additions = Agent 03; loop rewrites = Agent 10). Flagging now."
+          ],
+          "commands_run": [
+            {
+              "cmd": "rg -n 'setattr\\(' game/graphics",
+              "result": "0 writes onto sim entities (renderer-owned objects only; 2 pre-existing out-of-lane app-shell writes in ursina_app.py noted)"
+            },
+            {
+              "cmd": "rg -n '\\.is_discovered\\s*=|\\.visibility\\[[^]]+\\]\\s*=' game/graphics",
+              "result": "0 matches"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk66_render_boundary.py -q",
+              "result": "2 failed (anim-mechanism pins, see anim_pin_conflict_for_pm), 3 passed, 1 skipped"
+            },
+            {
+              "cmd": "python -m pytest tests/test_wk66_render_boundary.py::test_snapshot_not_mutated_on_consume ::test_render_dto_field_parity ::test_fog_discovery_digest_is_reproducible -q",
+              "result": "3 passed"
+            },
+            {
+              "cmd": "DETERMINISTIC_SIM=1 python -m pytest tests/test_wk66_render_boundary.py::test_fog_discovery_digest_is_stable -q",
+              "result": "1 passed (fog/discovery digest byte-identical to golden)"
+            },
+            {
+              "cmd": "python -m pytest -q  (FULL suite, single-process)",
+              "result": "2 failed, 579 passed, 4 skipped (the 2 failures are ONLY the anim-mechanism pins). Baseline before my change was 581 passed/4 skipped/0 failed."
+            },
+            {
+              "cmd": "python tools/determinism_guard.py  (repo-wide, via qa_smoke)",
+              "result": "exit_code=0 PASS"
+            },
+            {
+              "cmd": "python tools/determinism_guard.py --paths game/graphics/ursina_renderer.py game/graphics/pygame_renderer.py game/graphics/instanced_unit_renderer.py",
+              "result": "FAIL 7 wall_clock_time violations — ALL PRE-EXISTING (confirmed in HEAD blob): instanced_unit_renderer.py time.time() x6 (billboard/locomotion timing) + ursina_renderer.py:343 time.time(). I added NONE. Presentation-layer wall clock is exempt per 03-coding-standards and these pass the repo-wide guard (qa_smoke=0). ursina_renderer.py:343 is already in the WK65 carry-backlog."
+            },
+            {
+              "cmd": "python tools/qa_smoke.py --quick",
+              "result": "determinism_guard(static)=PASS exit 0; pytest=FAIL rc=1 ONLY due to the same 2 anim-mechanism pins."
+            },
+            {
+              "cmd": "python tools/capture_screenshots.py --scenario {base_overview,building_catalog,building_debris,bounty_in_black_fog,enemy_catalog,worker_catalog,ranged_projectiles,world_variation} --seed 3 --size 1920x1080 --ticks 480 --out docs/screenshots/wk66_after_w2/...",
+              "result": "57 PNGs; all MD5 byte-identical to wk66_baseline"
+            },
+            {
+              "cmd": "python tools/run_ursina_capture_once.py (ursina_base --reveal-map / wk61_hold_g_tax_overlay / ursina_fog) --no-llm",
+              "result": "3 PNGs; all visually identical to baseline (only wall-clock perf-overlay text jitter)"
+            }
+          ],
+          "evidence": {
+            "keystone_win": "L2 render-to-sim write-back is CLOSED: zero anim-trigger setattr, zero is_discovered/world.visibility writes, zero bounty _ui_cache_* setattr in game/graphics. test_snapshot_not_mutated_on_consume GREEN proves a full renderer pass over the snapshot does not mutate sim gameplay state.",
+            "behavior_preserved": "57/57 pygame PNGs byte-identical + 3/3 Ursina visually identical; fog/discovery digest byte-identical (incl. DETERMINISTIC golden).",
+            "perf": "No new per-frame allocations introduced. Bounty surface caching preserved (now in a renderer dict instead of on the bounty object). Seq-compare is O(1) per entity. Stable-id key removes id()-reuse renderer churn (a correctness + minor perf improvement)."
+          },
+          "blockers": [],
+          "follow_ups": [
+            "Agent 11 (Gate 2): apply the 2-line anim-pin fix in anim_pin_conflict_for_pm.recommended_fix_for_agent_11 so the pins assert the new seq semantics (the pins currently assert the removed setattr-clear). After that the full suite returns to 581 passed / 4 skipped / 0 failed.",
+            "PM: ratify the Task-5 scope (DTO consumption done for pygame hero/enemy/building + Ursina bounty; workers + Ursina unit/building loops + pygame bounty kept on live READS for behavior preservation — see scope_clarifications_for_pm). Decide Wave-3 handling of the still-consumed live tuples.",
+            "PM: two PRE-EXISTING out-of-lane sim writes (ursina_app.py:860/1090) surface in the setattr grep — assess whether they are a separate L2 sub-leak for a future round (not WK66 Agent-10 scope).",
+            "Agent 04 (Gate): note the determinism_guard --paths wall-clock flags are pre-existing presentation timing (repo-wide guard is clean); ursina_renderer.py:343 is already a WK65 carry-item.",
+            "Cosmetic: git shows a large phantom line-count for pygame_renderer.py due to CRLF blob vs autocrlf normalization; --ignore-all-space confirms the real change is 5 insertions / 3 deletions. No action needed (human commit + autocrlf will normalize)."
+          ],
+          "recommended_next_actions": [
+            "Proceed to Gate 2 (Agent 11 full suite + broad screenshot diff; Agent 09 cohesion; Agent 04 determinism). The keystone (L2 closed) is done and screenshot-proven; only the 2 anim pins need Agent 11's seq-semantics update."
+          ],
+          "constraints_honored": [
+            "DID NOT COMMIT / DID NOT PUSH.",
+            "DID NOT edit tests/ (Agent 11's lane) — surfaced the anim-pin conflict + exact fix instead.",
+            "DID NOT edit render_dto.py / snapshot.py / sim_engine.py (Agent 03's) — imported DTOs read-only via the snapshot tuples.",
+            "DID NOT change update()'s snapshot SHAPE (Wave 3) — only swapped per-entity render-data SOURCE to DTO tuples.",
+            "Stayed within my Wave-2 file list (game/graphics/**) + the 2 comment-only sites."
+          ],
+          "completion_receipt": "Wave 2 complete (subagent execution; no orchestrator CLI receipt). L2 write-back closed, DTOs consumed where behavior-safe, screenshots identical, behavioral pins green; 2 anim pins flagged for Agent 11 with the exact fix."
         }
       }
     }

@@ -174,7 +174,10 @@ class BuildingRenderer:
                 gold_rect = gold.get_rect(center=(screen_x + width // 2, screen_y + height + 8))
                 surface.blit(gold, gold_rect)
 
-        if building_type == "ballista_tower" and getattr(building, "target", None):
+        # WK66 Move 3: BuildingDTO carries has_target (bool); live entities carry target.
+        if building_type == "ballista_tower" and (
+            getattr(building, "has_target", None) or getattr(building, "target", None)
+        ):
             radius = int(getattr(building, "attack_range", 0))
             pygame.draw.circle(
                 surface,

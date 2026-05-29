@@ -66,6 +66,7 @@ class Peasant:
         self._idle_offset = Peasant._idle_offsets[slot]
         self._idle_outside = False
         self._render_anim_trigger: str | None = None
+        self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
 
     @property
     def is_alive(self) -> bool:
@@ -252,5 +253,7 @@ class Peasant:
 
     def _queue_render_animation(self, name: str) -> None:
         self._render_anim_trigger = str(name)
+        # WK66 Move 1a: sim-owned monotonic counter (see Hero._queue_render_animation).
+        self._anim_trigger_seq = int(getattr(self, "_anim_trigger_seq", 0)) + 1
 
 

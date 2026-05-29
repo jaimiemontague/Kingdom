@@ -1,13 +1,11 @@
 """
 World and tile map system.
 """
-import pygame
 import math
 from config import (
     TILE_SIZE, MAP_WIDTH, MAP_HEIGHT,
     COLOR_GRASS, COLOR_WATER, COLOR_PATH, COLOR_TREE,
 )
-from game.graphics.tile_sprites import TileSpriteLibrary
 from game.sim.determinism import get_rng
 from game.world_zones import get_zone_blend
 
@@ -69,13 +67,10 @@ class World:
         # WK57 Wave 4: Per-underground-area visibility grids.
         # area_id -> 2D grid of Visibility values (UNSEEN/SEEN/VISIBLE)
         self.underground_visibility: dict[str, list[list[int]]] = {}
+        # WK66 L10: terrain/fog DRAWING + the reusable fog Surfaces moved to
+        # game.graphics.world_terrain_renderer.WorldTerrainRenderer (the sim no
+        # longer imports pygame). All fog STATE below stays sim-owned.
 
-        # Reusable fog tile overlays (avoid per-tile Surface allocations).
-        self._fog_tile_unseen = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        self._fog_tile_unseen.fill((0, 0, 0, 255))
-        self._fog_tile_seen = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
-        self._fog_tile_seen.fill((0, 0, 0, 170))
-        
     def generate_terrain(self):
         """Generate a simple procedural terrain."""
         # Add some water (a pond/lake)
@@ -357,32 +352,21 @@ class World:
     def grid_to_world(self, grid_x: int, grid_y: int) -> tuple:
         """Convert grid coordinates to world coordinates (top-left of tile)."""
         return grid_x * TILE_SIZE, grid_y * TILE_SIZE
-    
-    def render(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render the tile map."""
-        cam_x, cam_y = camera_offset
-        
-        # Calculate visible tile range
-        start_x = max(0, int(cam_x // TILE_SIZE))
-        start_y = max(0, int(cam_y // TILE_SIZE))
-        end_x = min(self.width, int((cam_x + surface.get_width()) // TILE_SIZE) + 1)
-        end_y = min(self.height, int((cam_y + surface.get_height()) // TILE_SIZE) + 1)
-        
-        for y in range(start_y, end_y):
-            for x in range(start_x, end_x):
-                tile_type = self.tiles[y][x]
 
-                screen_x = int(x * TILE_SIZE - cam_x)
-                screen_y = int(y * TILE_SIZE - cam_y)
+    def is_tile_visible_at(self, world_x: float, world_y: float) -> bool:
+        """WK66: sim-owned read of the fog grid — is the tile under (world_x, world_y)
+        currently VISIBLE? Out-of-bounds tiles read as visible (matches the
+        renderer's pre-WK66 behavior of skipping the bounds-checked dimming).
 
-                # Pixel-art sprites (procedural fallback) for tiles.
-                tile_img = TileSpriteLibrary.get(tile_type, x, y, size=TILE_SIZE)
-                if tile_img is not None:
-                    surface.blit(tile_img, (screen_x, screen_y))
-                else:
-                    # Safety fallback (shouldn't normally happen)
-                    color = TILE_COLORS.get(tile_type, COLOR_GRASS)
-                    pygame.draw.rect(surface, color, (screen_x, screen_y, TILE_SIZE, TILE_SIZE))
+        This lets ``build_snapshot`` populate ``BuildingDTO.tile_visible`` so the
+        render boundary does not have to reach into ``world.visibility`` for it.
+        The live grid is still exposed for richer gating (e.g. lair SEEN checks).
+        """
+        tx = int(world_x // TILE_SIZE)
+        ty = int(world_y // TILE_SIZE)
+        if 0 <= ty < self.height and 0 <= tx < self.width:
+            return self.visibility[ty][tx] == Visibility.VISIBLE
+        return True
 
     def _reveal_circle(self, grid_cx: int, grid_cy: int, radius_tiles: int, newly_revealed: set = None):
         """
@@ -470,30 +454,6 @@ class World:
                 self._reveal_circle(gx, gy, int(radius_tiles))
 
         return newly_revealed if return_new_reveals else None
-
-    def render_fog(self, surface: pygame.Surface, camera_offset: tuple = (0, 0)):
-        """Render fog-of-war overlay over the currently-visible screen region."""
-        cam_x, cam_y = camera_offset
-
-        start_x = max(0, int(cam_x // TILE_SIZE))
-        start_y = max(0, int(cam_y // TILE_SIZE))
-        end_x = min(self.width, int((cam_x + surface.get_width()) // TILE_SIZE) + 1)
-        end_y = min(self.height, int((cam_y + surface.get_height()) // TILE_SIZE) + 1)
-
-        for y in range(start_y, end_y):
-            vis_row = self.visibility[y]
-            for x in range(start_x, end_x):
-                state = vis_row[x]
-                if state == Visibility.VISIBLE:
-                    continue
-
-                screen_x = x * TILE_SIZE - cam_x
-                screen_y = y * TILE_SIZE - cam_y
-
-                if state == Visibility.UNSEEN:
-                    surface.blit(self._fog_tile_unseen, (screen_x, screen_y))
-                else:
-                    surface.blit(self._fog_tile_seen, (screen_x, screen_y))
 
     # ------------------------------------------------------------------
     # WK57 Wave 4: Underground fog of war

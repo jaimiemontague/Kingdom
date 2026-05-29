@@ -58,6 +58,7 @@ class Guard:
         # Visual
         self.size = 14
         self.color = (120, 120, 160)
+        self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
 
     @property
     def is_alive(self) -> bool:
@@ -80,8 +81,10 @@ class Guard:
         if self.hp <= 0:
             self.state = GuardState.DEAD
             return True
-        # One-shot hurt clip on billboard paths (_unit_anim_surface / instancing).
+        # One-shot hurt clip on billboard paths (_compute_anim_frame / instancing).
         setattr(self, "_render_anim_trigger", "hurt")
+        # WK66 Move 1a: sim-owned monotonic counter (see Hero._queue_render_animation).
+        self._anim_trigger_seq = int(getattr(self, "_anim_trigger_seq", 0)) + 1
         return False
 
     def move_towards(self, target_x: float, target_y: float, dt: float) -> bool:

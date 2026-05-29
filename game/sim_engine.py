@@ -461,15 +461,28 @@ class SimEngine:
         selected_building=None,
     ):
         from game.sim.snapshot import SimStateSnapshot
+        from game.sim.render_dto import (
+            unit_dto_from,
+            building_dto_from,
+            bounty_dto_from,
+        )
 
         castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
+
+        # WK66 Round A-1 (ADDITIVE): build frozen render DTOs alongside the live
+        # tuples. tile_visible is computed here from the sim's fog grid so the
+        # render boundary does not have to read world.visibility for it.
+        _world = self.world
+        _world_vis = getattr(_world, "is_tile_visible_at", None)
+        _bounties = self.bounty_system.get_unclaimed_bounties()
+        _tax = getattr(self, "tax_collector", None)
         return SimStateSnapshot(
             buildings=tuple(self.buildings),
             heroes=tuple(self.heroes),
             enemies=tuple(self.enemies),
             peasants=tuple(self.peasants),
             guards=tuple(self.guards),
-            bounties=tuple(self.bounty_system.get_unclaimed_bounties()),
+            bounties=tuple(_bounties),
             pois=tuple(getattr(self, 'pois', ())),
             trees=tuple(self.trees),
             log_stacks=tuple(self.log_stacks),
@@ -498,6 +511,24 @@ class SimEngine:
             sim_tick_id=int(sim_tick_id),
             underground_areas=getattr(self, 'underground_areas', None),
             rubble_records=tuple(getattr(self, 'rubble_records', ())),
+            # WK66 Round A-1: frozen render DTOs (additive; consumers flip in W2).
+            hero_dtos=tuple(unit_dto_from(h, "hero") for h in self.heroes),
+            enemy_dtos=tuple(unit_dto_from(e, "enemy") for e in self.enemies),
+            peasant_dtos=tuple(unit_dto_from(p, "peasant") for p in self.peasants),
+            guard_dtos=tuple(unit_dto_from(g, "guard") for g in self.guards),
+            tax_collector_dto=(
+                unit_dto_from(_tax, "tax_collector") if _tax is not None else None
+            ),
+            building_dtos=tuple(
+                building_dto_from(
+                    b,
+                    tile_visible=bool(
+                        _world_vis(float(getattr(b, "x", 0.0)), float(getattr(b, "y", 0.0)))
+                    ) if _world_vis is not None else True,
+                )
+                for b in self.buildings
+            ),
+            bounty_dtos=tuple(bounty_dto_from(b) for b in _bounties),
         )
 
     # ---------------------------------------------------------------------

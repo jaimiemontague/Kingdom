@@ -80,7 +80,8 @@ class Enemy:
         self.size = 18
         self.color = COLOR_RED
         self._render_anim_trigger: str | None = None
-        
+        self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
+
     @property
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -106,6 +107,8 @@ class Enemy:
 
     def _queue_render_animation(self, name: str) -> None:
         self._render_anim_trigger = str(name)
+        # WK66 Move 1a: sim-owned monotonic counter (see Hero._queue_render_animation).
+        self._anim_trigger_seq = int(getattr(self, "_anim_trigger_seq", 0)) + 1
     
     def distance_to(self, x: float, y: float) -> float:
         """Calculate distance to a point."""

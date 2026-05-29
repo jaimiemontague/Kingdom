@@ -12,22 +12,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_01_ExecutiveProducer_PM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk58_ursina_entities_overload`
-- `wk59_lair_diagnostic`
 - `wk60_v159_gameplay_fun`
+- `wk61_playtest_polish`
+- `wk62_architecture_cleanup_baseline`
+- `wk63_engine_boundary_cleanup`
+- `wk64_ai_contracts_and_system_runner`
+- `wk65_round0_deslop_foundation`
+- `wk66_round_a1_render_boundary`
 
-**Archived sprints:** 51
+**Archived sprints:** 53
 - `wk7-ui-polish`
 - `v1.3-visual-polish-journey-ai`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `…`
-- `wk53_world_beauty_terrain`
-- `wk54_map_zones_poi_foundation`
 - `wk60_v16_perf_optimization`
 - `v16_r5_hud_perf_worldspace_ui`
 - `wk57_underground_vertical_stacking`
+- `wk58_ursina_entities_overload`
+- `wk59_lair_diagnostic`
 
 ### 02 — GameDirector_ProductOwner
 
@@ -51,22 +55,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_03_TechnicalDirector_Architecture.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk59_lair_diagnostic`
 - `wk58_ursina_entities_overload`
 - `wk60_v159_gameplay_fun`
+- `wk61_playtest_polish`
+- `wk62_architecture_cleanup_baseline` — Task D — FrameContext design + minimal implementation: Created game/presentation/frame_context.py with a @dataclass(slots=True) FrameContext holding snapshot (SimStateSnapshot) and game_state (dict). Static factory FrameContext.build(engine) constructs both once.; Modified EngineRenderCoordinator.render() to build FrameContext once at the top of the render pass and reuse ctx.snapshot / ctx.game_state throughout. Eliminated 2 redundant e.get_game_state() calls per frame (HUD render, debug panel render) and 1 conditional call (pause menu fallback). Previously the pygame render path called get_game_state() up to 3 times per frame; now it calls it exactly once via FrameContext.build().
+- `wk63_engine_boundary_cleanup`
+- `wk65_round0_deslop_foundation`
+- `wk66_round_a1_render_boundary`
 
-**Archived sprints:** 47
+**Archived sprints:** 48
 - `wk33-terrain-lair-economy-prefabs`
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `…`
-- `wk52_attachment_phase3_radar_alerts_memorial`
 - `wk53_world_beauty_terrain`
 - `v16_r5_hud_perf_worldspace_ui`
 - `wk57_underground_vertical_stacking`
 - `wk57-wave4-underground-camera-hotfix`
+- `wk59_lair_diagnostic`
 
 ### 04 — NetworkingDeterminism_Lead
 
@@ -74,17 +82,20 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_04_NetworkingDeterminism_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk4-new-enemy-skeleton-archer` — Consult-only acknowledgment: locked Build A decisions are determinism-safe (instant-hit, seeded spawn mix, hysteresis-based kiting).; Role-specific deliverable: determinism review checklist + signoff gates (determinism_guard + qa_smoke --quick) when implementation PRs are ready.
-- `wk8-engine-entities-refactor` — EventBus dispatch order is deterministic and registration-order based.; SystemContext does not leak render-side state into protocol systems.
 - `wk9-sim-render-tests-ui` — PASS: no `pygame` imports in any entity files.; PASS: protocol-conforming systems remain deterministic (seeded RNG + sim-time usage).
 - `wk10-ai-behavior-refactor` — PASS: no `random` module usage and no wall-clock APIs in `ai/behaviors/`.; PASS: no inter-behavior imports/circular dependencies inside behavior modules.
 - `wk49_hero_profile_foundation`
 - `wk50_llm_context_direct_prompts`
 - `wk51_attachment_ux_phase3`
+- `wk63_engine_boundary_cleanup`
+- `wk64_ai_contracts_and_system_runner`
 
-**Archived sprints:** 2
+**Archived sprints:** 5
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
+- `wk66_round_a1_render_boundary`
+- `wk4-new-enemy-skeleton-archer`
+- `wk8-engine-entities-refactor`
 
 ### 05 — GameplaySystemsDesigner
 
@@ -92,26 +103,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_05_GameplaySystemsDesigner.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk45-stage2_5-sapling-spawning`
-- `wk46-stage3-lumberjack-builders`
-- `wk49_hero_profile_foundation`
-- `wk50_llm_context_direct_prompts`
 - `wk53_world_beauty_terrain`
 - `wk57_underground_vertical_stacking` — game/entities/hero.py: Added underground_area_id, underground_local_x, underground_local_z fields to Hero.__init__. Added begin_descent(area_id, entrance_x, entrance_y) and begin_ascent() transition methods.; game/systems/poi_interaction.py: Added _underground_areas and _sim_engine references to POIInteractionSystem.__init__. Replaced _handle_dungeon from flavor-text-only to full cave entry: triggers hero.begin_descent(), marks entrance chamber explored, reveals underground fog, spawns underground enemies. Added module-level _spawn_underground_enemies() function that instantiates enemies from chamber data at layer=-1.
 - `wk60_v159_gameplay_fun`
+- `wk61_playtest_polish` — TASK 1 — Wave counts 2x: game/systems/wave_events.py _WAVE_TABLE doubled all enemy counts (Goblin Raid 8, Wolf Pack 6+4, Skeleton Patrol 6+4, Spider Swarm 12+4, Bandit Ambush 6+4, Goblin Horde 16+4, Boss Wave 2+8); config.py EnemyConfig.max_alive_enemies 48→80.; TASK 2 — Food stand pacing: config.py HUNGER_INTERVAL_MS 120_000→60_000, FOOD_MEAL_COST_GOLD 10→5.
+- `wk61-playtest2-regressions` — ITEM 1 (CRITICAL) — Hero idle regression: Buildings now have is_alive (WK61-BUG-003), causing hasattr checks in bounty_pursuit.py and basic_ai.py to incorrectly treat building/lair targets as enemy targets. Fixed by excluding building_type targets from zone-distance chase abort (bounty_pursuit.py L558) and from range-to-fight checks (L571), and by ejecting non-lair building targets from FIGHTING state (basic_ai.py L364).; ITEM 2 — Guard HP halved: guard.py max_hp reduced from 80 to 40.
+- `wk64_ai_contracts_and_system_runner`
+- `wk65_round0_deslop_foundation`
 
-**Archived sprints:** 18
+**Archived sprints:** 22
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk32-camera-construction-nature-polish`
-- `wk33-terrain-lair-economy-prefabs`
-- `wk34-3d-final-model-pass`
-- `wk43-building-nature-stage1`
 - `wk44-stage2-dynamic-trees`
+- `wk45-stage2_5-sapling-spawning`
+- `wk46-stage3-lumberjack-builders`
+- `wk49_hero_profile_foundation`
+- `wk50_llm_context_direct_prompts`
 
 ### 06 — AIBehaviorDirector_LLM
 
@@ -119,16 +130,19 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_06_AIBehaviorDirector_LLM.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk2-hero-polish-ai-sprites` — Refactored AI guardrails to import locked thresholds from game.sim.hero_guardrails_tunables (no duplicated constants).; Ran deterministic hero_stuck_repro once and captured scenario counters for QA wiring.
-- `wk4-new-enemy-skeleton-archer` — Context refresh ACK: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates).; Role: consult-only (no implementation); will provide review criteria/signoff for kite behavior stability + determinism compliance.
-- `wk6-audio-buildmenu-fogbounties-explorexp` — Implemented Ranger black-fog exploration bias: frontier detection (UNSEEN adjacent to SEEN/VISIBLE), deterministic selection, commitment window (4s) to prevent thrash.; Removed visibility filtering from bounty targeting: bounties in black fog are fully eligible; added distance penalty (1.2x) for uncertainty but never exclusion.
 - `v1.3-visual-polish-journey-ai` — Fixed bounty pursuit by reducing the minimum score gate so heroes accept bounties again.; Implemented Journey behavior triggered by recent shopping + full health, with class-specific routing.
 - `wk24-ui-and-renderer-polish`
 - `wk49_hero_profile_foundation` — docs/ai/hero_profile_llm_readiness.md: LLM readiness review — profile_to_dict suitability, storage vs prompt limits, merge strategy with ContextBuilder, missing fields before Phase 2 adapter.
 - `wk50_llm_context_direct_prompts` — ai/context_builder.py: When synthetic home guild is prepended to known_places_llm, use select_known_places_for_llm(..., limit=7) first so rows[:8] still seats home + priority POIs (inn, marketplace). WK50 R17 marketplace resolution now scans the same truncated known_llm_rows sent to prompts.; ai/providers/mock_provider.py: Inn phrase uses token-boundary regex so incidental substrings do not trigger go-to-inn paths.
+- `wk61_playtest_polish` — ai/basic_ai.py: hunger tick now runs for all heroes except RETREATING/DEAD (FIGHTING and RESTING included); healthy fighters can disengage to eat.; ai/behaviors/hunger.py: _CRITICAL_HP_FRACTION 0.25 -> 0.15 so heroes seek meals down to 15% HP.
+- `wk64_ai_contracts_and_system_runner`
+- `wk65_round0_deslop_foundation`
 
-**Archived sprints:** 1
+**Archived sprints:** 4
 - `wk1-broad-sweep-midweek-endweek`
+- `wk2-hero-polish-ai-sprites`
+- `wk4-new-enemy-skeleton-archer`
+- `wk6-audio-buildmenu-fogbounties-explorexp`
 
 ### 07 — ContentScenarioDirector
 
@@ -150,26 +164,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_08_UX_UI_Director.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk38-refactor-stage3-gamecommands`
-- `wk49_hero_profile_foundation` — game/ui/hero_panel.py: profile-first HeroPanel (_render_standard_hero); truncate_panel_line + intent_label_from_slug; XP/progression bar; compact career/memory/known-places lines; fallback to hero fields when profile missing; render_focus_top for HERO_FOCUS upper region.; game/ui/hud.py: HeroPanel.render receives selected_hero_profile from game_state; _render_hero_focus_profile forwards to HeroPanel.render_focus_top.
 - `wk50_llm_context_direct_prompts` — game/ui/chat_panel.py: format_direct_prompt_hint() gates success copy on physical_committed; compact lines — Order applied, Redirected — safer option/path, Refused — …, Not applied — no action committed; chat-only remains no hint.; game/engine.py: _poll_conversation_response runs apply_validated_direct_prompt_physical before receive_response; passes physical_committed in direct_feedback.
 - `wk51_attachment_ux_phase3` — game/ui/hud.py: _render_pin_button now uses cached pygame.font.SysFont chain (segoeuiemoji / Segoe UI / Noto Color Emoji / arial) to render U+1F4CC pushpin emoji; pinned = full-alpha blit centered in pin_button_rect, unpinned = copy with alpha 128; fallback to existing circle+P if font missing or glyph width<=4.; Phase 4b screenshots: docs/screenshots/wk51_r7_pin_before (baseline from main hud) and docs/screenshots/wk51_r7_pin_after.
 - `wk52_attachment_phase3_radar_alerts_memorial` — BUG A+B game/ui/building_panel.py: render() accepts left_rect matching HUD `_layout_rects_for_screen`; panel_x/y/width/layout height from rect (no floating over map); `_fallback_left_rect` for callers without HUD.; game/engine_facades/render_coordinator.py: pass hud._last_left_rect into BuildingPanel.render.
 - `v16_r5_hud_perf_worldspace_ui` — game/graphics/ursina_renderer.py _sync_snapshot_heroes(): Added hero name label (UrsinaText, billboard, y=-0.6), hero gold display ($X or $X(+Y) when total_gold>0, gold-yellow HSV, y=-0.8), hero rest indicator ('Zzz' when state==RESTING, light blue, y=0.7 x=0.3). All three blocks placed AFTER Agent 09 health bar code (line ~1017) and BEFORE active_ids.add(obj_id) (line ~1067).; game/graphics/ursina_renderer.py _sync_snapshot_tax_collector(): Added tax collector carried_gold display ($N when carried>0, gold-yellow HSV, y=0.5). Placed AFTER billboard sync and BEFORE active_ids.add(obj_id).
 - `wk60_v159_gameplay_fun` — TASK 1 — WAVE WARNING HUD TOASTS: game/ui/hud.py: Added wave toast system (on_wave_incoming, on_wave_cleared, _render_wave_toast) — prominent centered banner with fade-in/out, countdown timer for incoming waves, gold-colored clear reward. game/engine.py: Subscribed to 'wave_incoming' and 'wave_cleared' EventBus events, routed to HUD via _on_wave_incoming_event and _on_wave_cleared_event handlers.; TASK 2 — GUILD N/8 DISPLAY: game/ui/building_renderers/guild_panel.py: Replaced 'Total Heroes: N' with 'Heroes: N/max_heroes' using building.heroes_hired and building.max_heroes attributes from HiringBuilding mixin. Text turns red when guild is at capacity.
+- `wk61_playtest_polish` — WK61-R11-BUG-005 game/ui/hud.py: main_solo split handle (8px hit) at bottom of unpinned hero/enemy/building column above minimap; _left_split_fracs['main_solo']; pointer down/move/up for main_solo drag; handle_click returns sidebar_split_drag on handle hit; chat-popup path keeps full column height (R9 regression guard).; tests/test_wk61_r11_sidebar_main_solo_handle.py: solo handle layout, drag fraction update, handle_click action, visible handle pixels.
+- `wk62_architecture_cleanup_baseline` — NEW game/ui/ui_actions.py: Typed UIAction(frozen dataclass, slots=True) with kind:str and payload:object|None; normalize_ui_action() converts legacy str/dict/None returns to UIAction or None.; NEW game/ui/hud_layout.py: HUDLayout(dataclass, slots=True) holding top_bar, bottom_bar, left_panel, right_panel, minimap, command_bar, speed_control, recall_button, memorial_button rects; HUDLayoutManager.compute() pure-geometry function from screen_w/h and theme metrics; authoritative LEFT_COL_W, RADAR_MINIMAP_H, RADAR_MINIMAP_W, RECALL_BTN_W, MEMORIAL_BTN_W constants.
 
-**Archived sprints:** 20
+**Archived sprints:** 22
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk6-audio-buildmenu-fogbounties-explorexp`
 - `…`
-- `wk17-quality-logic-immersion`
-- `wk18-llm-merger-and-mechanics`
 - `wk20-ui-input-bridge`
 - `wk22-3d-refinement`
 - `wk24-ui-and-renderer-polish`
+- `wk38-refactor-stage3-gamecommands`
+- `wk49_hero_profile_foundation`
 
 ### 09 — ArtDirector_Pixel_Animation_VFX
 
@@ -177,26 +191,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_09_ArtDirector_Pixel_Animation_VFX.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk33-terrain-lair-economy-prefabs`
-- `ad_hoc-cleric-hero-pixel-sprites`
-- `orch_tiny_warrior_red`
 - `wk47_unit_instancing_core`
 - `wk48_hd2d_polish`
 - `v16_r5_hud_perf_worldspace_ui`
 - `tiny_rpg_sprite_rebuild`
+- `wk61_playtest_polish`
+- `wk62_architecture_cleanup_baseline`
+- `wk66_round_a1_render_boundary`
 
-**Archived sprints:** 19
+**Archived sprints:** 22
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `v1.3-visual-polish-journey-ai`
 - `…`
-- `wk27-sprint-2-1-3d-buildings`
-- `wk29-first-house-playtest`
-- `wk30-buildings-pipeline`
 - `wk32-inn-texture-polish`
 - `wk32-camera-construction-nature-polish`
+- `wk33-terrain-lair-economy-prefabs`
+- `ad_hoc-cleric-hero-pixel-sprites`
+- `orch_tiny_warrior_red`
 
 ### 10 — PerformanceStability_Lead
 
@@ -204,26 +218,26 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_10_PerformanceStability_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk42-renderer-dedupe-wire-collabs` — ursina_renderer.py line count: 696 (plan target ≤900 / ~700).; perf_benchmark (default 12s): ~1.280 ms/tick total; PF ~0.879 ms/tick — OK.
-- `wk47_unit_instancing_core`
 - `wk49_hero_profile_foundation`
 - `wk50_llm_context_direct_prompts`
 - `wk52_attachment_phase3_radar_alerts_memorial`
 - `v16_r5_hud_perf_worldspace_ui` — hud_texture_upload: avg=13.0-14.1ms P90=42.8-43.3ms max=48.0-60.8ms — P90 NOT below 15ms target; partial improvement from 49ms baseline.; ursina_renderer: avg=7.9-8.4ms P90=9.0-10.5ms max=22.8-24.6ms — within 12ms P90 budget.
 - `wk58_ursina_entities_overload`
+- `wk65_round0_deslop_foundation` — ursina_renderer.py: net -205 LOC (215 deletions / 10 doc-comment insertions). Deleted: _unit_anim_surface (dead), the unreachable underground render block + 2 orphaned helpers, _apply_poi_mystery_state (no-op) + all 3 call sites, 5 dead env-scale consts.; pygame_renderer.py: +5 LOC logging adoption only (import get_logger + module _log + log-on-swallow around vfx render; still swallows).
+- `wk66_round_a1_render_boundary`
 
-**Archived sprints:** 18
+**Archived sprints:** 20
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
 - `wk3-ui-polish-1080p-pixelart`
 - `wk4-new-enemy-skeleton-archer`
 - `wk5-demolition-projectiles-workers`
 - `…`
-- `wk32-camera-construction-nature-polish`
-- `wk33-terrain-lair-economy-prefabs`
 - `wk36-refactor-stage1-snapshot-decouple`
 - `wk37-refactor-stage2-simengine-presentation-split`
 - `wk41-mechanical-module-split`
+- `wk42-renderer-dedupe-wire-collabs`
+- `wk47_unit_instancing_core`
 
 ### 11 — QA_TestEngineering_Lead
 
@@ -232,6 +246,12 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 
 **Rolling sprints (most recent kept):**
 - `wk58_ursina_entities_overload`
+- `wk61_playtest_polish`
+- `wk62_architecture_cleanup_baseline`
+- `wk63_engine_boundary_cleanup`
+- `wk64_ai_contracts_and_system_runner`
+- `wk65_round0_deslop_foundation`
+- `wk66_round_a1_render_boundary`
 
 **Archived sprints:** 42
 - `wk1-broad-sweep-midweek-endweek`
@@ -262,17 +282,19 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_12_ToolsDevEx_Lead.archive.json`
 
 **Rolling sprints (most recent kept):**
-- `wk3-ui-polish-1080p-pixelart` — Release gates PASS (qa_smoke --quick; validate_assets --strict --check-attribution); Rolling wk3_baseline_v2_next snapshots regenerated and compare_gallery rebuilt successfully
-- `wk4-new-enemy-skeleton-archer` — Context refreshed: confirmed understanding of locked Build A decisions (ranged-only, instant-hit, 80/20 spawn, manifest+placeholders, gates); Role-specific deliverables: manifest-driven snapshot inclusion, atomic manifest+placeholder changes, strict validator coverage, snapshot artifacts, gallery buildability
 - `wk5-demolition-projectiles-workers` — Added scenario_building_debris() function to tools/screenshot_scenarios.py; Registered building_debris in get_scenario() registry
 - `v1.3-visual-polish-journey-ai`
 - `wk8-engine-entities-refactor`
 - `wk9-sim-render-tests-ui`
 - `wk47_unit_instancing_core`
+- `wk61_playtest_polish`
+- `wk65_round0_deslop_foundation`
 
-**Archived sprints:** 2
+**Archived sprints:** 4
 - `wk1-broad-sweep-midweek-endweek`
 - `wk2-hero-polish-ai-sprites`
+- `wk3-ui-polish-1080p-pixelart`
+- `wk4-new-enemy-skeleton-archer`
 
 ### 13 — SteamRelease_Ops_Marketing
 
@@ -296,6 +318,7 @@ It lists which sprints live in rolling logs vs archives, so you can look up hist
 - **Archive**: `C:/Users/Jaimie Montague/OneDrive/Documents/Kingdom/.cursor/plans/agent_logs/archive/agent_14_SoundDirector_Audio.archive.json`
 
 **Rolling sprints (most recent kept):**
+- `wk65_round0_deslop_foundation` — Grep-confirmed AudioSystem.emit_from_events was dead: zero call sites across game/ ai/ tools/ tests/. The only audio_system.py hit was the definition (line 234); rg "\.emit_from_events\(" returned zero call sites anywhere.; VFXSystem.emit_from_events (game/graphics/vfx.py:66,79) is a DIFFERENT class and was NOT touched.
 - `wk6-audio-buildmenu-fogbounties-explorexp` — Final Build A file list: 6 SFX files (build, bounty, weapons) + 1 ambient loop (day_loop.ogg), single files per event.; Event → sound key mapping aligned to Agent 03 contract: building_placed → build_place, ranged_projectile → ranger_shot/skeleton_archer_shot.
 
 **Archived sprints:** 0

@@ -52,6 +52,7 @@ class TaxCollector:
         self.carried_gold = 0
         self.total_collected = 0
         self._render_anim_trigger: str | None = None
+        self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
     
     def distance_to(self, x: float, y: float) -> float:
         return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)

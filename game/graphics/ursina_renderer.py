@@ -472,8 +472,14 @@ class UrsinaRenderer:
             background=True,
         )
 
-        # WK22 R3: per-sim-object billboard animation (wall clock; consumes _render_anim_trigger).
+        # WK22 R3: per-sim-object billboard animation (wall clock). WK66: each entry
+        # also tracks "last_seq" — the sim's anim_trigger_seq we last played — so a
+        # one-shot plays once per new trigger without writing back to the entity.
         self._unit_anim_state: dict[int, dict] = {}
+        # WK66 L2: renderer-owned record of POIs force-revealed by debug mode
+        # (KINGDOM_DEBUG_SHOW_ALL_POIS), keyed by stable entity_id. Replaces the
+        # old renderer writes of b.is_discovered / world.visibility = SEEN.
+        self._debug_revealed_pois: dict[str, bool] = {}
         # WK23: single shared GPU texture for VFX projectiles (arrow-shaped, not yellow fallback).
         self._projectile_tex = None
         # Atlas renderer: cached clips metadata per (unit_type, class_key).
@@ -551,18 +557,22 @@ class UrsinaRenderer:
 
     def _compute_anim_frame(self, obj_id, entity, unit_type: str, class_key: str, base_clip_fn) -> tuple:
         """Compute current animation clip name and frame index. Uses perf_counter for precision."""
+        # WK66 Move 1a: read the one-shot trigger + the sim's monotonic
+        # anim_trigger_seq and play when the seq advances vs our renderer-owned
+        # last-seen value, instead of clearing the trigger on the entity. The
+        # renderer no longer writes _ursina_anim_trigger/_render_anim_trigger back.
         trigger = getattr(entity, "_ursina_anim_trigger", None) or getattr(
             entity, "_render_anim_trigger", None
         )
+        trigger_seq = int(getattr(entity, "_anim_trigger_seq", 0) or 0)
 
         base = base_clip_fn(entity)
         st = self._unit_anim_state.get(obj_id)
         now = time.perf_counter()
+        last_seq = st.get("last_seq", -1) if st is not None else -1
 
-        if trigger:
+        if trigger and trigger_seq != last_seq:
             tname = str(trigger)
-            setattr(entity, "_ursina_anim_trigger", None)
-            setattr(entity, "_render_anim_trigger", None)
             clips = self._get_cached_clips(unit_type, class_key)
             if tname in clips:
                 self._unit_anim_state[obj_id] = {
@@ -570,12 +580,17 @@ class UrsinaRenderer:
                     "t0": now,
                     "base": base,
                     "oneshot": not clips[tname].loop,
+                    "last_seq": trigger_seq,
                 }
                 st = self._unit_anim_state[obj_id]
+            elif st is not None:
+                # Unknown clip name: still record the seq so we don't re-evaluate it.
+                st["last_seq"] = trigger_seq
 
         if st is None:
             self._unit_anim_state[obj_id] = {
-                "clip": base, "t0": now, "base": base, "oneshot": False
+                "clip": base, "t0": now, "base": base, "oneshot": False,
+                "last_seq": trigger_seq,
             }
             st = self._unit_anim_state[obj_id]
         else:
@@ -1012,21 +1027,12 @@ class UrsinaRenderer:
                     _bld_existing.enabled = False
                     active_ids.add(_bld_obj_id)
                 continue
-            # WK54+fix: Debug mode — force POI tiles to SEEN so they render consistently
+            # WK54+fix: Debug mode — force POIs to render consistently.
+            # WK66 L2: record the force-reveal in a renderer-owned dict keyed by the
+            # stable entity_id instead of writing b.is_discovered / world.visibility
+            # (the renderer must never mutate sim fog/discovery state).
             if _debug_show_pois and getattr(b, 'is_poi', False):
-                b.is_discovered = True
-                # Also mark POI tiles as SEEN in fog-of-war so lair-visibility checks pass
-                _world = getattr(snapshot, 'world', None)
-                if _world is not None:
-                    _poi_def = getattr(b, 'poi_def', None)
-                    _pw, _ph = (getattr(_poi_def, 'size', (1,1)) if _poi_def else (1,1))
-                    _gx, _gy = int(getattr(b, 'grid_x', 0)), int(getattr(b, 'grid_y', 0))
-                    for _dy in range(_ph):
-                        for _dx in range(_pw):
-                            _tx, _ty = _gx + _dx, _gy + _dy
-                            if 0 <= _tx < _world.width and 0 <= _ty < _world.height:
-                                if _world.visibility[_ty][_tx] == 0:  # UNSEEN
-                                    _world.visibility[_ty][_tx] = 1  # SEEN
+                self._debug_revealed_pois[str(getattr(b, 'entity_id', None) or id(b))] = True
             # WK55-fix: Binary POI visibility — hidden until discovered by hero.
             # Undiscovered POIs are completely hidden (minimap gray dots are the only hint).
             # Once a hero walks within discovery range, the POI becomes fully visible.
@@ -1069,7 +1075,15 @@ class UrsinaRenderer:
                 tx, ty = int(getattr(b, "x", 0.0) / ts), int(getattr(b, "y", 0.0) / ts)
                 lair_visible = True
                 if 0 <= ty < world.height and 0 <= tx < world.width:
-                    lair_visible = (world.visibility[ty][tx] >= Visibility.SEEN)
+                    # Read the sim fog grid READ-ONLY (>= SEEN). In debug mode a
+                    # POI force-revealed above is always shown (replaces the old
+                    # renderer write of world.visibility = SEEN).
+                    lair_visible = (world.visibility[ty][tx] >= Visibility.SEEN) or (
+                        _debug_show_pois
+                        and self._debug_revealed_pois.get(
+                            str(getattr(b, "entity_id", None) or id(b)), False
+                        )
+                    )
                 obj_id = id(b)
                 existing = self._entities.get(obj_id)
                 if not lair_visible:
@@ -1624,7 +1638,12 @@ class UrsinaRenderer:
         """Create/update/remove 3D bounty flag entities for each unclaimed bounty."""
         import ursina
 
-        bounties = getattr(snapshot, "bounties", ()) or ()
+        # WK66 Move 3: consume frozen BountyDTOs (bounty_id/claimed/x/y/reward) — the
+        # Ursina flag shows only $reward (not responders/tier), and none of those
+        # fields are mutated during the render pass, so this is behavior-identical.
+        bounties = getattr(snapshot, "bounty_dtos", None)
+        if bounties is None:
+            bounties = getattr(snapshot, "bounties", ()) or ()
 
         # Build set of currently active bounty IDs
         active_bounty_ids: set[int] = set()

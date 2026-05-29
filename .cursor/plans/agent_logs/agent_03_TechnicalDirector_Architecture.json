@@ -9,164 +9,6 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
-    "wk59_lair_diagnostic": {
-      "sprint_meta": {
-        "plan_ref": ".cursor/plans/agent_logs/agent_01_ExecutiveProducer_PM.json sprints.wk59_lair_diagnostic",
-        "notes": "WK59: Diagnostic-only sprint. Lairs disappeared since ~WK54 POI updates. Agent 03 read-only code investigation to identify root cause(s)."
-      },
-      "rounds": {
-        "wk59_r1_lair_diagnostic": {
-          "sprint_id": "wk59_lair_diagnostic",
-          "round_id": "wk59_r1_lair_diagnostic",
-          "status": "done",
-          "diagnostic_findings": {
-            "hypothesis_a_fog_visibility_gating": {
-              "verdict": "CONFIRMED — PRIMARY ROOT CAUSE",
-              "evidence": {
-                "smoking_gun_file": "game/graphics/ursina_renderer.py",
-                "smoking_gun_lines": "955-970",
-                "code_snippet": "is_lair = hasattr(b, 'stash_gold')\nif is_lair:\n    ts = float(config.TILE_SIZE)\n    tx, ty = int(getattr(b, 'x', 0.0) / ts), int(getattr(b, 'y', 0.0) / ts)\n    lair_visible = True\n    if 0 <= ty < world.height and 0 <= tx < world.width:\n        lair_visible = (world.visibility[ty][tx] == Visibility.VISIBLE)\n    ...\n    if not lair_visible:\n        if existing is not None:\n            existing.enabled = False\n            active_ids.add(obj_id)\n        continue",
-                "comparison_with_player_buildings": "Regular player buildings (guilds, marketplace, etc.) have NO fog-of-war visibility check whatsoever — they always render. Only lairs get the VISIBLE gate. POIs have a separate discovery-based gate (is_discovered flag). Enemies also use the same VISIBLE check (line 1428).",
-                "visibility_enum_values": "Visibility.UNSEEN=0, Visibility.SEEN=1, Visibility.VISIBLE=2. VISIBLE means real-time line-of-sight from a revealer. SEEN means previously explored but not currently in LoS.",
-                "vision_ranges": "CASTLE_VISION_TILES=10, HERO_VISION_TILES=7, GUARD_VISION_TILES=6 (sim_engine.py lines 1026-1028)",
-                "lair_min_distance": "LAIR_MIN_DISTANCE_FROM_CASTLE_TILES=18 (config.py LairConfig)",
-                "geometric_proof": "Castle center is at tile (124,124) on the 250x250 map. Lairs must be >= 18 tiles from castle. Castle vision is 10 tiles. Therefore the closest possible lair tile is 18 tiles from castle, but castle only reveals 10 tiles — an 8-tile gap of permanent fog between castle vision and the nearest lair. Heroes have 7-tile vision but start at the castle and must WALK to the lair to make it VISIBLE. On the old smaller map, heroes patrolled the whole map quickly. On the 250x250 map with zones (Darkwood, Mountains, Canyon), hero pathfinding is much slower and they may never reach lair tiles at all in early game.",
-                "critical_distinction": "Lairs are functional in the simulation (they exist in self.buildings, spawn enemies correctly, enemies pathfind to heroes/castle). The bug is RENDERING ONLY — lairs are invisible because they require Visibility.VISIBLE (active LoS) but are always outside vision range. If a hero walks near a lair, it would briefly appear while the hero is in range, then disappear again when the hero leaves. Player buildings use no visibility check, so they always show.",
-                "when_introduced": "This fog check was likely already present before WK54 but only became a problem after WK54 expanded the map from ~150x150 to 250x250. On the smaller map, heroes explored the whole map faster and frequently entered lair LoS. On the larger map, the 18-tile minimum distance plus 250x250 scale means heroes almost never reach lair tiles.",
-                "revealmap_test": "The /revealmap console command sets world.fog_disabled=True, which bypasses fog entirely. If lairs appear after /revealmap, this confirms the fog gate is the cause."
-              },
-              "recommended_fix": {
-                "approach": "Change lair rendering from Visibility.VISIBLE to Visibility.SEEN. This means lairs appear once a hero has explored near them (the tile transitions from UNSEEN to SEEN/VISIBLE) and remain visible permanently after that, even when no hero is currently nearby. This matches how player buildings implicitly work (always visible) while preserving some fog-of-war mystery (lairs in totally unexplored territory stay hidden).",
-                "code_change": "game/graphics/ursina_renderer.py line 963: change `world.visibility[ty][tx] == Visibility.VISIBLE` to `world.visibility[ty][tx] >= Visibility.SEEN`",
-                "alternative_approach": "Remove the visibility check entirely for lairs (like player buildings). This would show lairs through fog, which may or may not be desired from a gameplay perspective — PM decision.",
-                "effort": "1-line fix, quick implementation",
-                "pm_decision_needed": "Whether lairs should use SEEN (appear once explored, stay visible) or have no fog check at all (always visible like player buildings). SEEN is recommended as the best middle ground."
-              }
-            },
-            "hypothesis_b_placement_failures": {
-              "verdict": "RULED OUT — placement succeeds with high probability",
-              "evidence": {
-                "file": "game/systems/lairs.py",
-                "max_tries": "LAIR_INITIAL_COUNT * 250 = 4 * 250 = 1000 attempts",
-                "map_area": "250 * 250 = 62,500 tiles",
-                "blocking_tiles_estimate": "Trees: capped at max_starting_trees = max(750, int(62500 * 750 / 22500)) = 2083 tiles (~3.3%). Lake: ~530 tiles. Cross paths: ~1000 tiles. Total blocked: ~3,600 tiles (~5.8%)",
-                "valid_distance_tiles": "Tiles >= 18 tiles from castle center (124,124): ~62,500 - pi*18^2 = ~61,482 tiles (~98.4% of map)",
-                "valid_buildable_at_distance": "Combining buildability + distance: approximately 57,000+ tiles are valid candidates",
-                "probability_per_attempt": "With ~57,000 valid tiles out of ~62,500 total sampling space, each random attempt has ~91% chance of hitting a valid tile. For a 2x2 lair (4 tiles), all 4 tiles need to be buildable, which is still very high on a map with only ~5.8% blocked tiles.",
-                "success_probability": "With 1000 attempts and ~91% per-attempt success for distance + buildability, placing 4 lairs is virtually certain. The probability of ALL 1000 attempts failing is astronomically low.",
-                "logging_gap": "spawn_initial_lairs() has NO logging on failure. It silently returns however many lairs it managed to place. Adding a log line would help diagnose placement issues in the future.",
-                "tree_growth_timing": "tree_growth_lookup is injected into world at sim_engine.py line 100, BEFORE spawn_initial_lairs at line 259. All initial trees have growth_percentage=1.0, so is_buildable correctly rejects tree tiles."
-              },
-              "minor_improvement": "Add logging to spawn_initial_lairs: log how many lairs were placed vs requested, and if fewer than LAIR_INITIAL_COUNT, log the failure count. This is a low-priority improvement, not a bug fix."
-            },
-            "hypothesis_c_spawn_slot_starvation": {
-              "verdict": "RULED OUT — lair spawning has adequate slots",
-              "evidence": {
-                "file": "game/sim_engine.py",
-                "spawn_order_lines": "672-683",
-                "mechanism": "Wave spawning runs first (line 674-677), then alive count is recalculated (line 678), then lair spawning gets remaining_slots (line 679-683). This is INSIDE the same if remaining_slots>0 block.",
-                "wave_spawner_volume": "EnemySpawner (game/systems/spawner.py) spawns 1 enemy per wave initially, with a 5-second warmup + 22,500ms spawn interval (GOBLIN_SPAWN_INTERVAL*3 + extra_spawn_delay_ms = 3500*3 + 12000 = 22500ms). Growth: enemies_per_wave increases by 1 every 3 wave_numbers, capped at 4.",
-                "max_alive_enemies": "MAX_ALIVE_ENEMIES = 32",
-                "steady_state_analysis": "At early game, wave spawner produces 1 enemy every ~22 seconds. Heroes kill enemies. With 32 slots and very slow wave spawning, there are always 20+ slots available for lair enemy spawning.",
-                "lair_spawn_intervals": "GoblinCamp: 8.5s, WolfDen: 7.5s, SpiderNest: 7.0s, SkeletonCrypt: 10.5s, BanditCamp: 10.0s. Each spawn produces 1-3 enemies.",
-                "conclusion": "Even with all 4 lairs actively spawning, the combined output is well within the 32-slot cap. Wave spawning is very slow and never consumes all slots. Lair enemies spawn correctly — the issue is that players never SEE them because lairs are invisible."
-              }
-            },
-            "hypothesis_d_frustum_culling_mismatch": {
-              "verdict": "RULED OUT — coordinate systems match",
-              "evidence": {
-                "frustum_culling_file": "game/graphics/ursina_renderer.py lines 940-947",
-                "frustum_check_timing": "Frustum culling check at line 941 runs BEFORE the fog check at line 958. If a lair is outside the frustum, it gets disabled and skipped via 'continue'. If inside the frustum, it proceeds to the fog check.",
-                "coordinate_system_analysis": "Building.x returns center_x = grid_x * TILE_SIZE + (size[0] * TILE_SIZE) / 2 (game/entities/buildings/base.py line 125-126). _entity_in_view(sim_x, sim_y) at line 775-781 converts sim_x to tile via int(sim_x / tile_size). For a 2x2 lair at grid_x=100: b.x = 100*32 + 32 = 3232, tx = int(3232/32) = 101. This is the correct tile coordinate.",
-                "visible_rect_computation": "_get_visible_tile_rect (lines 597-773) computes the camera's visible tile rect using either Panda3D lens extrusion or an FOV heuristic, with a 6-8 tile margin. Falls back to full map (0,0,249,249) on any error.",
-                "lair_coordinate_format": "Lair entities use the standard Building base class which stores grid_x, grid_y and computes x, y as pixel-space center coordinates. Same format as all other buildings. Frustum culling treats all buildings uniformly via getattr(b, 'x', 0.0).",
-                "note": "While frustum culling is not the ROOT cause of invisible lairs, it does add a secondary filter: a lair that passes the fog check would STILL be culled if the camera isn't pointed at it. But this is expected behavior (same as all other entities) and not a bug."
-              }
-            },
-            "additional_findings": {
-              "poi_placement_interference": {
-                "verdict": "NOT A FACTOR",
-                "evidence": "sim_engine.py lines 259-277: spawn_initial_lairs is called at line 259, POI placement at lines 262-277. Lairs are placed FIRST, then POIs respect existing buildings (including lairs) via the all_structures spacing check in poi_placement.py line 128. POIs cannot overwrite or displace lairs."
-              },
-              "lair_prefab_exists": {
-                "verdict": "NOT A FACTOR",
-                "evidence": "assets/prefabs/buildings/lair_v1.json exists on disk. The prefab resolver in ursina_prefabs.py line 211-212 correctly routes all lair types (via is_lair or stash_gold check) to this file."
-              },
-              "dead_code_in_engine": {
-                "finding": "GameEngine._spawn_enemies (game/engine.py line 1263-1279) is DEAD CODE — never called. self._spawn_enemies is not referenced anywhere in engine.py. All enemy spawning goes through SimEngine.update() (game/sim_engine.py lines 672-683).",
-                "risk": "No risk — the dead code is functionally identical to the live SimEngine path. Could be cleaned up in a future sprint."
-              },
-              "lair_enemies_are_spawning": {
-                "finding": "Lair enemies ARE being spawned correctly into the simulation. The lair.update() method (game/entities/lair.py line 112-133) runs every tick via LairSystem.spawn_enemies() (game/systems/lairs.py line 115-126), which is called from SimEngine.update() (game/sim_engine.py line 681-683). Enemies spawn at adjacent tiles and pathfind to heroes/castle. Players may see enemies appearing 'from nowhere' (from the invisible lair).",
-                "implication": "This confirms the bug is purely a RENDERING issue, not a simulation issue. The game world has lairs and they are active — they just can't be seen."
-              }
-            },
-            "root_cause_summary": "The single root cause is the Visibility.VISIBLE fog-of-war gate on lair rendering (ursina_renderer.py line 963). Lairs require real-time line-of-sight to be rendered, but they are always placed >= 18 tiles from castle while castle vision is only 10 tiles. On the 250x250 map, heroes rarely reach lair positions. This was not a problem on the old smaller map because heroes explored the whole map faster. The WK54 map expansion to 250x250 made this latent bug manifest as 'lairs disappeared'.",
-            "fix_priority": {
-              "must_fix": [
-                {
-                  "file": "game/graphics/ursina_renderer.py",
-                  "line": 963,
-                  "change": "Replace `== Visibility.VISIBLE` with `>= Visibility.SEEN`",
-                  "effort": "1 line, trivial",
-                  "pm_decision": "Whether to use SEEN (appears once explored) or remove the check entirely (always visible). SEEN recommended."
-                }
-              ],
-              "should_fix": [
-                {
-                  "file": "game/systems/lairs.py",
-                  "change": "Add logging to spawn_initial_lairs: print how many lairs placed vs LAIR_INITIAL_COUNT, warn if fewer than expected",
-                  "effort": "3-5 lines, trivial"
-                }
-              ],
-              "could_fix": [
-                {
-                  "file": "game/engine.py",
-                  "change": "Remove dead code GameEngine._spawn_enemies (lines 1263-1279)",
-                  "effort": "Delete 17 lines"
-                }
-              ]
-            }
-          },
-          "blockers": [],
-          "follow_ups": [
-            "PM decision: lair fog visibility level (SEEN vs no check). Recommend SEEN.",
-            "Fix sprint: 1-line change in ursina_renderer.py + optional logging in lairs.py",
-            "QA: after fix, verify lairs appear on the map after hero exploration, verify lair prefab renders correctly, verify lair enemies spawn from visible lair, verify lair can be attacked and cleared"
-          ]
-        },
-        "wk59_r2_lair_visibility_fix": {
-          "sprint_id": "wk59_lair_diagnostic",
-          "round_id": "wk59_r2_lair_visibility_fix",
-          "status": "done",
-          "what_i_changed": {
-            "summary": "Two targeted changes: (1) fix lair fog-of-war visibility gate from VISIBLE to SEEN so lairs appear once explored and stay visible permanently; (2) add spawn logging to LairSystem.spawn_initial_lairs().",
-            "files_modified": [
-              {
-                "file": "game/graphics/ursina_renderer.py",
-                "line": 963,
-                "change": "Changed `world.visibility[ty][tx] == Visibility.VISIBLE` to `world.visibility[ty][tx] >= Visibility.SEEN`. Also updated the comment block (lines 956-960) to explain the SEEN rationale."
-              },
-              {
-                "file": "game/systems/lairs.py",
-                "line": 108,
-                "change": "Added print(f\"[LairSystem] Placed {len(created)} lairs: {[(l.grid_x, l.grid_y, type(l).__name__) for l in created]}\") after the placement loop completes, before the return statement."
-              }
-            ]
-          },
-          "verification": {
-            "visibility_enum_confirmed": "Visibility.UNSEEN=0, SEEN=1, VISIBLE=2 (game/world.py lines 38-41). >= Visibility.SEEN matches both SEEN(1) and VISIBLE(2), excluding only UNSEEN(0).",
-            "grid_x_attribute_confirmed": "MonsterLair.__init__ accepts grid_x, grid_y and passes them to Building super().__init__. All lair subclasses (GoblinCamp, WolfDen, etc.) use grid_x, grid_y in their __init__. Logging safely references l.grid_x and l.grid_y.",
-            "logging_pattern_match": "Codebase uses print(f\"[tag] message\") style (e.g. camera_display.py, instanced_nature_renderer.py, ursina_app.py). New log line follows the same convention."
-          },
-          "blockers": [],
-          "follow_ups": [
-            "QA visual verification: run game, send hero toward lair, confirm lair appears when hero vision reaches lair tile and stays visible after hero moves away",
-            "QA console check: confirm [LairSystem] log line prints on game start with correct lair count and positions"
-          ]
-        }
-      }
-    },
     "wk58_ursina_entities_overload": {
       "sprint_meta": {
         "plan_ref": ".cursor/plans/Ursina Entities Overload Solution.md",
@@ -1777,6 +1619,176 @@
             "kept_flat_aliases": true,
             "kept_difficulty_waveevent": true
           }
+        }
+      }
+    },
+    "wk66_round_a1_render_boundary": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk66_round_a1_render_boundary.plan.md",
+        "notes": "Round A-1 render/snapshot boundary. Agent 03 Wave 1 = additive DTOs + sim-owned anim_trigger_seq + is_discovered/visibility investigation. Wave 3 (snapshot split + L10 World.render-out) is a SEPARATE later activation."
+      },
+      "rounds": {
+        "wk66_w1_additive": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_w1_additive",
+          "status": "done",
+          "intelligence": "HIGH",
+          "summary": "Wave 1 ADDITIVE: created frozen render DTOs (UnitDTO/BuildingDTO/BountyDTO) + per-type builders; added sim-owned monotonic _anim_trigger_seq at every sim-side trigger set; populated 7 DTO tuples in build_snapshot alongside the live tuples; extended SimStateSnapshot additively. No behavior change, no renderer touched. wk66 net + snapshot-no-mutation + fog golden all GREEN (inert).",
+          "what_i_changed": {
+            "new_files": [
+              "game/sim/render_dto.py - frozen @dataclass(frozen=True) UnitDTO/BuildingDTO/BountyDTO matching the exact fields the renderers read; builders unit_dto_from(entity,kind) / building_dto_from(b,tile_visible) / bounty_dto_from(b); _stable_entity_id(e)=str(hero_id or entity_id or id). Hero.inside_building FLATTENED to inside_building_center tuple (never a live ref). has_target=bool(getattr(b,'target',None)). anim_trigger + anim_trigger_seq populated from the entity."
+            ],
+            "edited_files": [
+              "game/sim/snapshot.py - ADDITIVE: added hero_dtos/enemy_dtos/peasant_dtos/guard_dtos/tax_collector_dto/building_dtos/bounty_dtos fields (defaults) after rubble_records. No existing field removed/renamed/split (that is Wave 3).",
+              "game/sim_engine.py - build_snapshot now ALSO builds the 7 DTO tuples alongside heroes=tuple(self.heroes) etc (live tuples KEPT). tile_visible computed via world.is_tile_visible_at(b.x,b.y) with defensive getattr so a stub world cannot crash the snapshot. Imports the 3 builders.",
+              "game/world.py - added sim-owned read helper World.is_tile_visible_at(world_x,world_y)->bool reading the existing self.visibility grid (==VISIBLE; OOB reads True). No new state, no behavior change.",
+              "game/entities/hero.py - _queue_render_animation now also bumps self._anim_trigger_seq (+1); init _anim_trigger_seq=0 in __init__.",
+              "game/entities/enemy.py - same seq bump in _queue_render_animation + init=0.",
+              "game/entities/peasant.py - same seq bump in _queue_render_animation + init=0.",
+              "game/entities/tax_collector.py - init _anim_trigger_seq=0 (no _queue_render_animation; never sets a trigger today, but seq exists for the DTO read).",
+              "game/entities/guard.py - guard sets the trigger via setattr in take_damage (NOT a _queue_render_animation); added seq bump there + init=0; also fixed a stale comment (_unit_anim_surface -> _compute_anim_frame)."
+            ]
+          },
+          "anim_trigger_set_site_grep": {
+            "command": "rg -n \"_render_anim_trigger\\s*=|_ursina_anim_trigger\\s*=\" game ai",
+            "raw_results": [
+              "game/engine.py:1229: hero._ursina_anim_trigger = str(t)   # RENDER-BRIDGE copy, not a sim set",
+              "game/engine.py:1233: enemy._ursina_anim_trigger = str(t)  # RENDER-BRIDGE copy",
+              "game/engine.py:1237: guard._ursina_anim_trigger = str(t)  # RENDER-BRIDGE copy",
+              "game/entities/enemy.py:108: self._render_anim_trigger = str(name)   # SIM set (via _queue_render_animation)",
+              "game/entities/peasant.py:254: self._render_anim_trigger = str(name) # SIM set (via _queue_render_animation)",
+              "game/entities/hero.py:1089: self._render_anim_trigger = str(name)   # SIM set (via _queue_render_animation)"
+            ],
+            "grep_anchor_miss_corrected": "The \\s*= anchored grep MISSED game/entities/guard.py:84 which sets the trigger via setattr(self,'_render_anim_trigger','hurt') (no '=' token). A broader grep for _render_anim_trigger found it. Guard is the 4th sim-side trigger source.",
+            "true_sim_side_set_sites": [
+              "game/entities/hero.py:_queue_render_animation (attack on attack-landed)",
+              "game/entities/enemy.py:_queue_render_animation (hurt/dead on take_damage)",
+              "game/entities/peasant.py:_queue_render_animation",
+              "game/entities/guard.py:take_damage (setattr 'hurt')"
+            ],
+            "seq_counter_placement": "Incremented _anim_trigger_seq at all 4 sim-side set sites (the 3 _queue_render_animation methods + guard.take_damage). The engine.py:1229/1233/1237 _ursina_anim_trigger writes are NOT seq sites - they are a render-bridge in engine._update_render_animations that COPIES _render_anim_trigger to _ursina_anim_trigger for the Ursina path before the pygame registry clears _render_anim_trigger. Seq is owned at the single sim source.",
+            "triggers_are_NOT_eventbus": "Confirmed triggers are set as attributes on the entity (not emitted via EventBus), so the sim-owned seq counter is the correct approach for Agent 10 Wave 2 (play when anim_trigger_seq increases). Verified seq increments: hero attack->1, hero hurt->2, enemy take_damage->1, guard take_damage->1; DTO.anim_trigger_seq mirrors it."
+          },
+          "is_discovered_visibility_investigation": {
+            "verdict": "is_discovered is a SIM-OWNED POI flag that the renderer only READS. The ursina_renderer.py:1017/1028-1029 writes are DEBUG-ONLY (gated on KINGDOM_DEBUG_SHOW_ALL_POIS env var, default OFF). No sim change was needed for discovery in Wave 1 - the sim already owns it.",
+            "evidence": [
+              "is_discovered is defined ONLY on PointOfInterest(Building) at game/entities/poi.py:42 (is_poi=True at :37). Base Building (game/entities/buildings/base.py) has NEITHER is_discovered NOR is_poi - confirmed by grep returning No matches in base.py.",
+              "The SIM already sets poi.is_discovered=True at game/sim_engine.py:850 inside _check_poi_discovery, driven by HERO VISION range (POI_DISCOVERY_RANGE_TILES). This is gameplay/hero-vision discovery and it already lives in the sim.",
+              "POIs flow into snapshot.buildings: sim_engine.py:317 self.buildings.append(poi) (and a quick-access self.pois at :318). So BuildingDTO covers POIs.",
+              "ALL is_discovered READERS are gated on is_poi and live in UI/AI (read-only): game/ui/hud.py:462,1642,1663 (POI toasts + minimap dots), ai/behaviors/poi_awareness.py:144,283, game/systems/poi_interaction.py (which itself SETS poi.is_discovered at :283 - a second SIM writer, also hero-proximity driven), game/graphics/ursina_terrain_fog_collab.py:1463 (render read).",
+              "ursina_renderer.py:1017 (b.is_discovered=True) and :1028-1029 (world.visibility[..]=1 SEEN) are BOTH inside `if _debug_show_pois and getattr(b,'is_poi',False):` - _debug_show_pois = os.environ.get('KINGDOM_DEBUG_SHOW_ALL_POIS',...) at ursina_renderer.py:109 (default off). In normal play these never fire."
+            ],
+            "chosen_approach_for_wk66": "RENDER-ONLY for the debug write; SIM-OWNED for the actual discovery flag (no move needed). BuildingDTO.is_discovered = bool(getattr(b,'is_discovered',False)) (defensive - base Building lacks the attr, only POIs have it). BuildingDTO.tile_visible = world.is_tile_visible_at(b.x,b.y) (== Visibility.VISIBLE) computed in build_snapshot from the sim fog grid the sim already owns. The live world.visibility grid stays exposed for richer gating (lair SEEN check at ursina_renderer.py:1072 uses >= SEEN; enemy/building VISIBLE check at :1348).",
+            "recommendation_for_agent_10_wave2": "Delete the ursina_renderer.py:1017 b.is_discovered=True and :1028-1029 world.visibility writes. These are debug-only POI-reveal writes; the cleanest replacement is a renderer-owned dict keyed by entity_id for 'force-show this POI in debug mode', so the renderer never writes the sim object or the world. For non-debug rendering, read BuildingDTO.is_discovered (POI discovery, sim-owned) and BuildingDTO.tile_visible (VISIBLE). For lairs needing the SEEN-gate, read world.visibility[ty][tx] >= Visibility.SEEN directly (read-only) - tile_visible only carries the strict VISIBLE check.",
+            "renderer_world_visibility_write_finding": "The renderer's world.visibility[ty][tx]=SEEN write (ursina_renderer.py:1028-1029) is ONLY in the debug POI block. The SIM's own World.update_visibility already marks tiles SEEN/VISIBLE around heroes (fog grid is sim truth). So in normal play the renderer write is redundant; in debug mode it force-reveals POI tiles. Agent 10 can drop it in W2 with no behavior change for normal play; the debug-only force-reveal should move to a renderer-owned override if that debug mode is to be preserved. NOT changed in W1 (Agent 10 owns the renderer)."
+          },
+          "dto_field_coverage": {
+            "UnitDTO": "entity_id,kind,x,y,facing(1),is_alive,hp,max_hp(>=1),size,state_name,anim_trigger,anim_trigger_seq,hero_class('warrior'),enemy_type('goblin'),name(''),gold(0),taxed_gold(0),is_inside_building(False),inside_building_center(tuple|None FLATTENED). Matches Agent 11 _unit_view parity helper exactly.",
+            "BuildingDTO": "entity_id,building_type(lowercased),world_x,world_y,width,height,hp,max_hp(>=1),is_constructed,construction_progress(0..1),color((128,128,128)),is_lair,is_neutral,stash_gold,stored_tax_gold,level(1),has_target(bool),attack_range,is_discovered,tile_visible. First 18 match Agent 11 _building_view exactly; is_discovered+tile_visible are the 2 sim-fog read-only adds.",
+            "BountyDTO": "bounty_id,x,y,claimed,reward,responders(getattr responders||ui_responders),attractiveness_tier(low|med|high). Matches Agent 11 _bounty_view exactly (excludes the 9 _ui_cache_* scratch attrs).",
+            "keying": "entity_id = str(getattr(e,'hero_id',None) or getattr(e,'entity_id',None) or id(e)); bounty_id=str(bounty_id or id); building uses entity_id or id. No raw id() in the live path (every entity has a stable id).",
+            "frozen_verified": "All three are @dataclass(frozen=True); mutation attempt raises FrozenInstanceError (verified). Builders use the SAME getattr defaults the renderers use, so a renderer reading the DTO sees identical values to reading the live entity (the Move 3 parity contract)."
+          },
+          "scoped_gates": {
+            "wk66_net_plus_snapshot_no_mutation": "python -m pytest tests/test_wk66_render_boundary.py tests/test_wk65_snapshot_no_mutation.py -q => 7 passed, 1 skipped (IDENTICAL to baseline before my change - proves additive change is INERT).",
+            "fog_golden_deterministic": "$env:DETERMINISTIC_SIM=1; python -m pytest tests/test_wk66_render_boundary.py -q => 6 passed (fog/discovery digest BYTE-IDENTICAL to Wave 0 golden - my change did not touch discovery/fog behavior).",
+            "full_suite": "python -m pytest tests/ --ignore=tests/test_wk66_render_boundary.py -q => 575 passed, 4 skipped, 0 failed/error. Plus wk66 net in isolation = 7 passed/1 skip. Combined = 582 passed, 5 skipped, ZERO real failures. (Full 585-in-one-process hits a pre-existing env crash - see pre_existing_finding_for_pm.)",
+            "determinism_guard": "python tools/determinism_guard.py --paths game/sim_engine.py game/sim/snapshot.py game/sim/render_dto.py game/world.py => PASS: no violations found.",
+            "observe_sync_sim_smoke": "python tools/observe_sync.py --seconds 12 --heroes 10 --seed 3 --qa --bounty => [qa] PASS (bounty_exists=True bounty_has_responder=True intent present); heroes move/target/claim, peasants build, combat OK. Runtime snapshot+DTO build every frame works end-to-end.",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick => determinism_guard(static)=exit0 PASS; pytest(unit tests) sub-step hits the PRE-EXISTING environmental access violation 0xC0000005 (3221225477) and qa_smoke bails before the sim observe profiles. determinism + isolated-batch pytest + direct observe_sync all green. See pre_existing_finding_for_pm."
+          },
+          "pre_existing_finding_for_pm": {
+            "issue": "FULL 585-test pytest in one process crashes with 'Windows fatal exception: access violation' (0xC0000005) - NOT caused by Wave 1.",
+            "proof_it_is_preexisting": "Stashed ALL my code changes (8 tracked files) + hid game/sim/render_dto.py, then ran the full suite on the clean baseline: it crashed with the IDENTICAL access violation at tests/test_wk66_render_boundary.py. Reproduced across 5 full-suite runs total (3 with my changes, 1 clean baseline, +2 background). Crash point wanders (7 tests one run, ~24 another, the wk66 file most runs) - the signature of accumulated pygame/SDL display-surface state under SDL_VIDEODRIVER=dummy, not a deterministic logic bug.",
+            "mitigation": "The suite is fully green when run in batches: tests/ minus the wk66 file = 575 passed/4 skip/0 fail; the wk66 file alone = 7 passed/1 skip (6 passed under DETERMINISTIC_SIM). Recommend QA/Agent 11 run the full gate in 2 batches (or install pytest-forked) until the SDL-surface leak is addressed (same family as the WK65 carry-item 'tests/test_spawner.py order-dependent global-rebind'). NOT masked, NOT a Wave 1 regression.",
+            "fog_revision_note": "Confirmed Agent 11's recorded pre-existing nondeterminism (SimEngine._fog_revision drifts +/-1 across in-process GameEngine builds; the fog GRID is byte-stable). My change does not touch _fog_revision and the fog golden stays byte-identical."
+          },
+          "constraints_honored": [
+            "ADDITIVE ONLY - live tuples (heroes=tuple(self.heroes) etc.) KEPT; no existing snapshot field removed/renamed/split (Wave 3).",
+            "Did NOT touch game/graphics/** (Agent 10), ai/**, get_game_state, or SimEngine.selected_* stubs.",
+            "Did NOT remove the renderer's setattr-clear of _render_anim_trigger (Agent 10 does that in Wave 2).",
+            "Did NOT move building-discovery into the sim (it was never a building concept; POI discovery already lives in the sim) - avoided flipping Agent 11's discovered_buildings=1 headless pin.",
+            "Did NOT touch tests/test_wk66_render_boundary.py (Agent 11 owns it).",
+            "No commit, no push.",
+            "Determinism: no wall-clock, no unseeded RNG, no set() iteration, no hash() keys introduced. DTOs are pure value types."
+          ],
+          "follow_ups": [
+            "Agent 10 (W2): delete ursina_renderer.py:1017 + :1028-1029 (debug-only POI writes); consume BuildingDTO.is_discovered/tile_visible; keep any debug force-show in a renderer-owned dict keyed by entity_id; switch anim one-shots to 'play when anim_trigger_seq increases' and delete the setattr-clear in hero/enemy/worker renderers + the two _compute_anim_frame setattr(...,None) lines.",
+            "Agent 04 (Gate): confirm fog/discovery digest byte-identical (it is) and determinism_guard repo-wide clean.",
+            "QA: full-suite SDL access-violation must be run in batches or with pytest-forked until the surface leak is fixed."
+          ]
+        },
+        "wk66_w3_split_l10": {
+          "sprint_id": "wk66_round_a1_render_boundary",
+          "round_id": "wk66_w3_split_l10",
+          "status": "done",
+          "intelligence": "HIGH",
+          "scope_note": "PM NARROWED Wave 3 for Agent 03 to L10 ONLY. Move 4 (SimStateSnapshot -> RenderSnapshot+PresentationFrameState split, extract PresentationFrameState, remove live entity tuples, change build_snapshot/renderer update() signatures) is DEFERRED to WK67 because Wave 2 left several consumers (worker/guard/tax draw, Ursina unit/building loops, pygame bounty draw) reading live entities (DTOs do not yet carry all draw fields). So this round did NOT touch snapshot.py/sim_engine.py/engine.py/render_dto.py/ursina_renderer.py/per-entity renderers/tests/ai.",
+          "summary": "L10 ONLY: moved World.render/render_fog (pygame terrain + fog drawing) + the two reusable fog Surfaces out of the sim's World into a new graphics-side game/graphics/world_terrain_renderer.WorldTerrainRenderer. Behavior-preserving CODE MOVE (method bodies verbatim, self.width->world.width etc.; fog Surfaces constructed identically). world.py no longer imports pygame. All fog STATE (visibility grid, _currently_visible, update_visibility, _reveal_circle, fog_disabled, underground_visibility, is_tile_visible_at, world_to_grid/grid_to_world) stays sim-owned and world.visibility remains a live readable grid. Repointed both callers. Full suite 582 passed / 4 skipped / 0 failed. Screenshot guard: dedicated terrain (world_variation) + fog (bounty_fog) scenarios pixel-IDENTICAL baseline-vs-after; base_overview/building_catalog 'diffs' proven to be pygame capture nondeterminism via same-code take1-vs-take2 control.",
+          "what_i_changed": {
+            "created": [
+              "game/graphics/world_terrain_renderer.py -- WorldTerrainRenderer: __init__ owns _fog_tile_unseen/_fog_tile_seen (fill (0,0,0,255)/(0,0,0,170), identical to former World ctor); render(self, world, surface, camera_offset=(0,0)) and render_fog(self, world, surface, camera_offset=(0,0)) are the EXACT former World.render/World.render_fog bodies with self.->world. for world-state reads (tiles/visibility/width/height) and self._fog_tile_* owned by the renderer. Imports TILE_SIZE,COLOR_GRASS from config; TileSpriteLibrary from game.graphics.tile_sprites; TILE_COLORS,Visibility from game.world."
+            ],
+            "edited": [
+              "game/world.py -- removed: import pygame (line 4); the two fog Surfaces from __init__ (replaced by a comment); the render method; the render_fog method; the now-unused 'from game.graphics.tile_sprites import TileSpriteLibrary' import (was used only by World.render). KEPT: TILE_COLORS + COLOR_* imports (TILE_COLORS now read by WorldTerrainRenderer from game.world; no external file imports it), TileType, Visibility, all fog STATE/methods, is_tile_visible_at (Wave 1), world_to_grid/grid_to_world.",
+              "game/graphics/pygame_renderer.py -- import WorldTerrainRenderer; construct ONE self._world_terrain = WorldTerrainRenderer() in __init__ (not per-frame); in _draw_world_layers (the shared path used by BOTH render_world and render_minimap_contents) swapped world.render(target,cam) -> self._world_terrain.render(world,target,cam) and replaced the 'if draw_fog and hasattr(world,render_fog)' guard (which would now be False -> fog never drawn = behavior change) with 'if draw_fog: self._world_terrain.render_fog(world,target,cam)'.",
+              "game/engine_facades/render_coordinator.py -- in the hero-minimap fallback branch (pr is None; the no-PygameRenderer path) repointed w.render(mini_surf,cam) and w.render_fog(...) to a WorldTerrainRenderer cached lazily on the engine (e._world_terrain_renderer; GameEngine has no __slots__ so the attr is allowed; EngineRenderCoordinator itself has __slots__=('_e',) so could not hold it). Also dropped the now-dead 'if hasattr(w,render_fog)' guard there."
+            ],
+            "production_code_outside_l10_touched": "NONE. Did not touch snapshot.py, sim_engine.py, engine.py, render_dto.py, per-entity renderers, ursina_renderer.py, tests/, ai/ (Move 4 deferred to WK67)."
+          },
+          "import_pygame_removed_from_world": {
+            "removed": true,
+            "evidence": "rg -n 'import pygame' game/world.py -> no matches. rg -n 'pygame' game/world.py -> only one hit at line 72, a COMMENT noting drawing moved out. All prior pygame uses (import @4, fog Surfaces @74-77, render @376/draw.rect @400, render_fog @489) were the L10 code now moved out.",
+            "bonus": "world.py also no longer imports game.graphics.tile_sprites at module load -> the sim no longer pulls in a graphics module (improvement; the lazy game.graphics.terrain_height imports inside generate_heightmap/flatten_building_footprints are pre-existing, non-pygame, and untouched)."
+          },
+          "world_visibility_still_live": {
+            "confirmed": true,
+            "note": "Only the DRAWING moved. world.visibility remains a live 2D grid; update_visibility/_reveal_circle/_currently_visible/fog_disabled/underground_visibility/init_underground_fog/reveal_underground_circle all stayed. WorldTerrainRenderer.render_fog READS world.visibility[y][x]; never writes it. Ursina (world.visibility[ty][tx]) and the 25+ readers are unaffected."
+          },
+          "caller_grep": {
+            "command_1": "rg -n '\\.render_fog\\(|world\\.render\\(|\\.render\\(\\s*surface|terrain.*render' game/graphics",
+            "command_2": "rg -n '\\.render_fog\\b|\\bworld\\.render\\b' game ai tools tests (plus \\bw\\.render\\( variant)",
+            "callers_found_and_repointed": [
+              "game/graphics/pygame_renderer.py:83 (was world.render) -> self._world_terrain.render(world, target, camera_offset)",
+              "game/graphics/pygame_renderer.py:131 (was world.render_fog, behind hasattr guard) -> self._world_terrain.render_fog(world, target, camera_offset)",
+              "game/engine_facades/render_coordinator.py:188 (was w.render, minimap fallback) -> wtr.render(w, mini_surf, camera_offset)",
+              "game/engine_facades/render_coordinator.py:205 (was w.render_fog, minimap fallback behind hasattr guard) -> wtr.render_fog(w, mini_surf, camera_offset)"
+            ],
+            "plan_discrepancy_noted": "Plan/prompt said the minimap caller is game/graphics/render_coordinator.py; the actual file is game/ENGINE_FACADES/render_coordinator.py (game/graphics/render_coordinator.py does not exist). Repointed the real file.",
+            "post_change_grep": "rg -n '\\bworld\\.render\\b|\\.render_fog\\b' game ai tools tests -> only the NEW correct callers (self._world_terrain.render_fog, wtr.render_fog) + a docstring line in world_terrain_renderer.py. Zero stale callers of old World.render/render_fog. registry.py *.render(...) hits are unrelated per-entity renderer .render() methods (building/enemy/hero/guard/peasant)."
+          },
+          "gates": {
+            "import_smoke": "python -c 'import game.world' OK; world_terrain_renderer/pygame_renderer/render_coordinator all import cleanly.",
+            "full_suite_single_process": "python -m pytest -q -> 582 passed, 4 skipped, 1 warning in ~95s. 0 failed, NO crash. Matches expected baseline.",
+            "determinism_guard_my_files": "python tools/determinism_guard.py --paths game/world.py game/graphics/world_terrain_renderer.py game/graphics/pygame_renderer.py -> PASS: no violations.",
+            "determinism_guard_with_render_coordinator": "Adding game/engine_facades/render_coordinator.py to --paths reports 1 violation at render_coordinator.py:236 [wall_clock_time] pygame.time.get_ticks(). PRE-EXISTING (at HEAD: git show HEAD:...render_coordinator.py | grep get_ticks -> committed line 230), lives in render_perf_overlay (presentation FPS-smoothness), NOT in my diff (git diff HEAD shows no get_ticks change), NOT in the moved code. Same known presentation-wall-clock class already in the WK65 backlog (ursina_renderer.py:343). My L10 changes add zero clock usage.",
+            "qa_smoke_quick": "python tools/qa_smoke.py --quick -> DONE: PASS (all speed_scaling/interior_view/quest_panel/conversation/direct_prompt scenarios exit_code=0)."
+          },
+          "screenshot_verification": {
+            "method": "Re-captured the 4 mandated pygame terrain/fog scenarios into docs/screenshots/wk66_after_w3/ using Agent 11's EXACT wk66_w0_baseline commands (capture_screenshots.py --seed 3 --size 1920x1080 --ticks 480): pyg_base_overview(4 png), pyg_bounty_fog(2), pyg_world_variation(2), pyg_building_catalog(35). Compared vs docs/screenshots/wk66_baseline/ by MD5 first, then PIL/numpy pixel diff.",
+            "md5_result_raw": "43 PNGs: 9 byte-identical, 34 differ. RED FLAG investigated -> NOT a behavior change.",
+            "why_md5_diffs_are_NOT_a_behavior_change": "Definitive control: re-captured base_overview AND building_catalog a SECOND time on my OWN modified code (take2) and pixel-compared take1-vs-take2 (ZERO code difference). Same-code take1-vs-take2 already differs by up to 12.0% (base_overview) and 9.46% (building_catalog) of pixels, maxch up to 254 -> the pygame 480-tick capture is inherently nondeterministic (moving units/animation/VFX/evolving fog reveal; capture frame not pinned to a deterministic sim tick). Baseline-vs-after diffs (mean 3.47%, max 18.7% building_catalog) sit in the SAME distribution as the same-code control (mean 2.88%, max 9.46%); 33/35 building_catalog test images are within the control's own max.",
+            "decisive_isolation": "The two scenarios that isolate EXACTLY the L10-moved code with NO moving units are PIXEL-IDENTICAL baseline-vs-after: pyg_world_variation (terrain/trees/paths -> the render() path) BOTH images identical; pyg_bounty_fog (bounty in black fog -> the render_fog() overlay path) BOTH images identical. Terrain+fog drawing reproduces byte-for-byte; the only 'diffs' are scenes dominated by moving entities (base_overview/building_catalog) = capture jitter, not L10.",
+            "verdict": "BEHAVIOR-PRESERVING / IDENTICAL. L10 terrain+fog draw is byte-identical (world_variation + bounty_fog). base_overview/building_catalog MD5 differences are pygame capture nondeterminism (proven by same-code take1-vs-take2 control), not a rendering change.",
+            "control_dir_cleanup": "temp take2 control captures removed; docs/screenshots/wk66_after_w3/ retained (43 png across 4 scenarios)."
+          },
+          "constraints_honored": [
+            "Move 4 NOT done (deferred WK67 per PM): no snapshot split, no PresentationFrameState, no live-tuple removal, no build_snapshot/update() signature change.",
+            "Stayed in lane: edited only game/world.py, new game/graphics/world_terrain_renderer.py, game/graphics/pygame_renderer.py, game/engine_facades/render_coordinator.py. Did NOT touch snapshot.py/sim_engine.py/render_dto.py/per-entity renderers/ursina_renderer.py/tests/ai.",
+            "Behavior-preserving code move: bodies moved verbatim; world.visibility stays live; all fog state sim-owned; full suite + determinism(my files) + qa_smoke green; terrain/fog screenshots pixel-identical.",
+            "WorldTerrainRenderer instantiated ONCE per consumer (pygame_renderer __init__; engine-cached for the minimap fallback), never per-frame.",
+            "DID NOT COMMIT, DID NOT PUSH."
+          ],
+          "findings_for_pm": [
+            "Plan/prompt path typo: the minimap World.render caller is game/ENGINE_FACADES/render_coordinator.py, not game/graphics/render_coordinator.py (latter does not exist). Repointed the correct file.",
+            "Pre-existing determinism finding (NOT introduced by L10): render_coordinator.py render_perf_overlay uses pygame.time.get_ticks() (presentation FPS smoothness). determinism_guard flags it only because --paths scans the whole file. Same class as the WK65 presentation-wall-clock backlog item.",
+            "pygame 480-tick capture nondeterminism: base_overview/building_catalog are NOT byte-stable capture-to-capture even with fixed seed (proven by same-code take1-vs-take2). For future L10-class byte-exact screenshot gates, prefer unit-free static scenarios (world_variation/bounty_fog) which ARE byte-stable, or pin the capture to a deterministic sim tick under DETERMINISTIC_SIM=1.",
+            "Bonus structural win: world.py no longer imports pygame OR game.graphics.tile_sprites at module load -> the headless sim is free of the graphics/pygame coupling for the terrain/fog path (the L10 goal)."
+          ],
+          "follow_ups": [
+            "WK67: Move 4 snapshot split (RenderSnapshot + PresentationFrameState) once DTOs carry the remaining worker/guard/tax/bounty draw fields so the live tuples can be removed.",
+            "Optional QA hardening: add a byte-exact terrain/fog screenshot pin using world_variation + bounty_fog (shown byte-stable) to guard future World/terrain-render moves."
+          ]
         }
       }
     }

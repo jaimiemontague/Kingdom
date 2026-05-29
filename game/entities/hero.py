@@ -164,6 +164,7 @@ class Hero:
         self.size = 20
         self.color = COLOR_BLUE
         self._render_anim_trigger: str | None = None
+        self._anim_trigger_seq: int = 0  # WK66 Move 1a: monotonic one-shot trigger counter
 
         # Building interaction
         self.is_inside_building = False
@@ -1087,6 +1088,9 @@ class Hero:
     def _queue_render_animation(self, name: str) -> None:
         """Queue a one-shot render animation to be consumed by the renderer."""
         self._render_anim_trigger = str(name)
+        # WK66 Move 1a: sim-owned monotonic counter so the renderer can detect a
+        # new trigger without writing back (setattr-clear) onto this entity.
+        self._anim_trigger_seq = int(getattr(self, "_anim_trigger_seq", 0)) + 1
 
     def on_attack_landed(self, target, damage: int, killed: bool):
         """Called by CombatSystem when this hero lands an attack."""

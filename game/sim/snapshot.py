@@ -79,3 +79,16 @@ class SimStateSnapshot:
     # --- WK61: Rubble records for destroyed buildings ---
     rubble_records: tuple = ()
 
+    # --- WK66 Round A-1: frozen render DTOs (ADDITIVE) ---
+    # Built alongside the live entity tuples above. Wave 2 migrates the renderers
+    # to read these instead of the live entities; Wave 3 removes the live tuples.
+    # Value-type only (see game/sim/render_dto.py) so the renderer cannot mutate
+    # sim state through them.
+    hero_dtos: tuple = ()
+    enemy_dtos: tuple = ()
+    peasant_dtos: tuple = ()
+    guard_dtos: tuple = ()
+    tax_collector_dto: Any = None
+    building_dtos: tuple = ()
+    bounty_dtos: tuple = ()
+
