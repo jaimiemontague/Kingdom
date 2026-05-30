@@ -246,63 +246,16 @@ class SimEngine:
             _basic_ai._AI_RNG.seed(int(config.SIM_SEED))
 
     def _init_trees_from_world(self) -> None:
-        """WK44: Build sim tree entities from world TileType.TREE grid."""
-        try:
-            from game.world import TileType
-        except Exception:
-            return
-        self.trees = []
-        for ty in range(int(getattr(self.world, "height", 0))):
-            row = self.world.tiles[ty]
-            for tx in range(int(getattr(self.world, "width", 0))):
-                if int(row[tx]) == int(TileType.TREE):
-                    # Startup trees are mature. Only newly spawned trees after startup should be saplings.
-                    self.trees.append(Tree(int(tx), int(ty), growth_percentage=1.0, growth_ms_accum=10**9))
-        self._tree_growth_by_tile = {t.key: float(getattr(t, "growth_percentage", 0.25)) for t in self.trees}
+        from game.sim import lumber
+        lumber.init_trees_from_world(self)
 
     def _tree_growth_lookup(self, tx: int, ty: int) -> float:
-        """World callback: return current tree growth for a tile (0..1)."""
-        return float(self._tree_growth_by_tile.get((int(tx), int(ty)), 1.0))
+        from game.sim import lumber
+        return lumber.tree_growth_lookup(self, tx, ty)
 
     def remove_trees_in_footprint(self, grid_x: int, grid_y: int, w_tiles: int, h_tiles: int) -> int:
-        """WK45: when placing a building, remove any Tree entities under its footprint."""
-        gx = int(grid_x)
-        gy = int(grid_y)
-        w = max(0, int(w_tiles))
-        h = max(0, int(h_tiles))
-        if w <= 0 or h <= 0 or not self.trees:
-            return 0
-
-        removed_keys: set[tuple[int, int]] = set()
-        kept: list[Tree] = []
-        for t in self.trees:
-            tx, ty = int(getattr(t, "grid_x", 0)), int(getattr(t, "grid_y", 0))
-            if gx <= tx < (gx + w) and gy <= ty < (gy + h):
-                removed_keys.add((tx, ty))
-            else:
-                kept.append(t)
-
-        if not removed_keys:
-            return 0
-
-        self.trees = kept
-
-        # If the underlying tile is a TREE tile, clear it so we don't leave a "tree" behind
-        # with no Tree entity/growth entry (which would default to growth=1.0 and block forever).
-        try:
-            from game.world import TileType
-
-            for tx, ty in removed_keys:
-                if int(self.world.get_tile(int(tx), int(ty))) == int(TileType.TREE):
-                    self.world.set_tile(int(tx), int(ty), int(TileType.GRASS))
-        except Exception:
-            pass
-
-        # Keep lookup consistent immediately (used by World.is_buildable/is_walkable).
-        for k in removed_keys:
-            self._tree_growth_by_tile.pop(k, None)
-
-        return len(removed_keys)
+        from game.sim import lumber
+        return lumber.remove_trees_in_footprint(self, grid_x, grid_y, w_tiles, h_tiles)
 
     def _emit_hud_message(self, text: str, color_rgb: tuple[int, int, int] | None = None) -> None:
         self.event_bus.emit(
@@ -688,120 +641,20 @@ class SimEngine:
     # ---------------------------------------------------------------------
     @staticmethod
     def _wood_yield_for_growth(growth: float) -> int:
-        g = float(growth)
-        if g >= 1.0:
-            return 10
-        if g >= 0.75:
-            return 7
-        if g >= 0.50:
-            return 5
-        return 0
+        from game.sim import lumber
+        return lumber.wood_yield_for_growth(growth)
 
     def find_nearest_choppable_tree_for_builder(self, from_tx: int, from_ty: int) -> tuple[int, int, float] | None:
-        """Return (tx, ty, growth) for the nearest choppable tree tile, or None.
-
-        Rules (WK46 plan):
-        - Must be a sim Tree entity at the tile.
-        - Must have growth >= 0.50.
-        - Must be on a tile with Visibility != UNSEEN (SEEN or VISIBLE).
-        - Deterministic selection with stable tie-breaking.
-
-        Distance metric: Chebyshev (grid-feel; matches plan suggestion).
-        """
-        if not self.trees:
-            return None
-
-        tx0 = int(from_tx)
-        ty0 = int(from_ty)
-
-        world = self.world
-        vis_grid = getattr(world, "visibility", None)
-        if vis_grid is None:
-            return None
-
-        best: tuple[int, int, float] | None = None
-        best_d: int | None = None
-
-        # Determinism: iterate in stable order.
-        for t in sorted(self.trees, key=lambda _t: (int(getattr(_t, "grid_y", 0)), int(getattr(_t, "grid_x", 0)))):
-            tx = int(getattr(t, "grid_x", 0))
-            ty = int(getattr(t, "grid_y", 0))
-            if not (0 <= tx < int(getattr(world, "width", 0)) and 0 <= ty < int(getattr(world, "height", 0))):
-                continue
-
-            try:
-                if vis_grid[ty][tx] == 0:  # Visibility.UNSEEN
-                    continue
-            except Exception:
-                continue
-
-            g = float(self._tree_growth_by_tile.get((tx, ty), float(getattr(t, "growth_percentage", 1.0))))
-            if g < 0.50:
-                continue
-
-            d = max(abs(tx - tx0), abs(ty - ty0))
-            if best_d is None or d < best_d:
-                best_d = d
-                best = (tx, ty, g)
-            elif d == best_d and best is not None:
-                # Tie-break deterministically by tile key.
-                if (ty, tx) < (best[1], best[0]):
-                    best = (tx, ty, g)
-
-        return best
+        from game.sim import lumber
+        return lumber.find_nearest_choppable_tree_for_builder(self, from_tx, from_ty)
 
     def chop_tree_at(self, tx: int, ty: int) -> float | None:
-        """Remove a Tree at (tx,ty), clear world tile to GRASS, and spawn a LogStack record."""
-        tx_i = int(tx)
-        ty_i = int(ty)
-        key = (tx_i, ty_i)
-        if not self.trees:
-            return None
-
-        # Find + remove the tree entity.
-        tree: Tree | None = None
-        kept: list[Tree] = []
-        for t in self.trees:
-            if (int(getattr(t, "grid_x", 0)), int(getattr(t, "grid_y", 0))) == key:
-                tree = t
-            else:
-                kept.append(t)
-        if tree is None:
-            return None
-        self.trees = kept
-
-        g = float(self._tree_growth_by_tile.get(key, float(getattr(tree, "growth_percentage", 1.0))))
-
-        # Clear tile + lookup immediately (prevents invisible blockers).
-        try:
-            from game.world import TileType
-
-            if int(self.world.get_tile(tx_i, ty_i)) == int(TileType.TREE):
-                self.world.set_tile(tx_i, ty_i, int(TileType.GRASS))
-        except Exception:
-            pass
-        self._tree_growth_by_tile.pop(key, None)
-
-        # Ensure a single log stack per tile.
-        self.log_stacks = [ls for ls in self.log_stacks if ls.key != key]
-        self.log_stacks.append(LogStack(tx_i, ty_i, source_tree_growth=g))
-        return g
+        from game.sim import lumber
+        return lumber.chop_tree_at(self, tx, ty)
 
     def harvest_log_at(self, tx: int, ty: int) -> int:
-        """Remove the LogStack at (tx,ty) and return wood yield based on its recorded growth."""
-        tx_i = int(tx)
-        ty_i = int(ty)
-        key = (tx_i, ty_i)
-        for i, ls in enumerate(list(self.log_stacks)):
-            if ls.key == key:
-                g = float(getattr(ls, "source_tree_growth", 1.0))
-                # Remove this one.
-                try:
-                    self.log_stacks.pop(i)
-                except Exception:
-                    self.log_stacks = [x for x in self.log_stacks if x.key != key]
-                return int(self._wood_yield_for_growth(g))
-        return 0
+        from game.sim import lumber
+        return lumber.harvest_log_at(self, tx, ty)
 
     def update(self, dt: float, game_state: dict) -> None:
         """Core sim update loop (no UI/render/vfx)."""
@@ -1017,140 +870,12 @@ class SimEngine:
 
     # --- Below are sim helpers copied/adapted from engine.py ---
     def _check_poi_discovery(self):
-        """Check if any hero is within discovery range of undiscovered POIs."""
-        pois = getattr(self, 'pois', [])
-        if not pois or not self.heroes:
-            return
-
-        discovery_range_px = POI_DISCOVERY_RANGE_TILES * TILE_SIZE
-
-        for poi in pois:
-            if poi.is_discovered:
-                continue
-
-            poi_def = getattr(poi, 'poi_def', None)
-            if poi_def is None:
-                continue
-
-            size = getattr(poi_def, 'size', (1, 1))
-            poi_cx = (poi.grid_x + size[0] / 2.0) * TILE_SIZE
-            poi_cy = (poi.grid_y + size[1] / 2.0) * TILE_SIZE
-
-            for hero in self.heroes:
-                if not getattr(hero, 'is_alive', False):
-                    continue
-                hx = float(getattr(hero, 'world_x', getattr(hero, 'x', 0)))
-                hy = float(getattr(hero, 'world_y', getattr(hero, 'y', 0)))
-                dist = math.hypot(hx - poi_cx, hy - poi_cy)
-                if dist <= discovery_range_px:
-                    poi.is_discovered = True
-                    poi.discoverer_hero_id = getattr(hero, 'hero_id', None)
-                    # Emit discovery event as a proper dict for event bus consumers
-                    if self.event_bus:
-                        self.event_bus.emit({
-                            "type": "poi_discovered",
-                            "poi": poi,
-                            "hero": hero,
-                            "hero_id": str(getattr(hero, 'hero_id', '') or ''),
-                            "poi_type": getattr(poi_def, 'poi_type', ''),
-                            "display_name": getattr(poi_def, 'display_name', ''),
-                        })
-                    break  # Only need one hero to discover
+        from game.sim import poi_discovery
+        poi_discovery.check_poi_discovery(self)
 
     def _cleanup_destroyed_buildings(self) -> None:
-        """WK61-FIX: Remove buildings at 0 HP and clear stale references.
-
-        The full CleanupManager on the presentation layer handles rubble + HUD messages
-        and is wired via GameEngine. This lightweight sim-side pass ensures the
-        authoritative buildings list never keeps dead buildings across ticks.
-        """
-        destroyed = [
-            b for b in self.buildings
-            if b.hp <= 0 and getattr(b, "building_type", None) != "castle"
-        ]
-        if not destroyed:
-            return
-
-        from game.entities.rubble import RubbleRecord, make_rubble_id
-        from game.sim.timebase import now_ms as _now_ms_fn
-
-        _now = int(_now_ms_fn())
-        destruction_events: list[dict] = []
-
-        for building in destroyed:
-            bx = float(getattr(building, "center_x", getattr(building, "x", 0.0)))
-            by = float(getattr(building, "center_y", getattr(building, "y", 0.0)))
-            btype = str(getattr(building, "building_type", "unknown"))
-
-            # Eject occupants
-            for occ in list(getattr(building, "occupants", [])):
-                if hasattr(occ, "pop_out_of_building"):
-                    occ.pop_out_of_building()
-
-            # Remove from primary lists
-            if building in self.buildings:
-                self.buildings.remove(building)
-            if getattr(building, "is_lair", False) and building in getattr(self.lair_system, "lairs", []):
-                self.lair_system.lairs.remove(building)
-
-            # Clear entity references
-            for hero in self.heroes:
-                if getattr(hero, "target", None) is building:
-                    hero.target = None
-                if getattr(hero, "home_building", None) is building:
-                    hero.home_building = None
-            for enemy in self.enemies:
-                if getattr(enemy, "target", None) is building:
-                    enemy.target = None
-            for peasant in self.peasants:
-                if getattr(peasant, "target_building", None) is building:
-                    peasant.target_building = None
-            if self.tax_collector and getattr(self.tax_collector, "target_guild", None) is building:
-                self.tax_collector.target_guild = None
-            for guard in self.guards:
-                if getattr(guard, "target", None) is building:
-                    guard.target = None
-                if getattr(guard, "home_building", None) is building:
-                    guard.home_building = None
-            for bounty in getattr(self.bounty_system, "bounties", []):
-                if getattr(bounty, "target", None) is building:
-                    bounty.target = None
-
-            # Selection: WK63 — moved to presentation-layer SelectionState.
-            # on_entity_destroyed() is called by CleanupManager or GameEngine event handler.
-
-            # Rubble record
-            rubble_size = getattr(building, "size", (1, 1))
-            rubble = RubbleRecord(
-                record_id=make_rubble_id(),
-                center_x=float(bx),
-                center_y=float(by),
-                grid_x=int(getattr(building, "grid_x", 0)),
-                grid_y=int(getattr(building, "grid_y", 0)),
-                width_tiles=int(rubble_size[0]),
-                height_tiles=int(rubble_size[1]),
-                building_type=btype,
-                created_ms=_now,
-            )
-            self.rubble_records.append(rubble)
-
-            building_w = getattr(building, "width", 0) or (rubble_size[0] * TILE_SIZE)
-            building_h = getattr(building, "height", 0) or (rubble_size[1] * TILE_SIZE)
-            destruction_events.append({
-                "type": GameEventType.BUILDING_DESTROYED.value,
-                "x": float(bx),
-                "y": float(by),
-                "building_type": btype,
-                "w": int(building_w),
-                "h": int(building_h),
-            })
-
-            # HUD message via event bus
-            building_name = btype.replace("_", " ").title()
-            self._emit_hud_message(f"{building_name} destroyed", (220, 20, 60))
-
-        if destruction_events:
-            self.event_bus.emit_batch(destruction_events)
+        from game.sim import building_lifecycle
+        building_lifecycle.cleanup_destroyed_buildings(self)
 
     def _update_buildings(self, dt: float) -> None:
         from game.sim.timebase import now_ms as sim_now_ms
@@ -1198,74 +923,8 @@ class SimEngine:
             self.event_bus.emit_batch(building_ranged_events)
 
     def _apply_entity_separation(self, dt: float) -> None:
-        # R2-B: Throttle to every 2 frames — sub-pixel pushes are dt-scaled,
-        # so skipping alternating frames has zero visual impact.
-        tick = getattr(self, '_separation_tick', 0)
-        self._separation_tick = tick + 1
-        if tick % 2 != 0:
-            return
-
-        import math
-
-        min_dist_px = 16.0
-        strength_per_sec = 250.0
-        max_step = 120.0 * dt
-        cell = min_dist_px
-
-        alive = []
-        for lst in (self.heroes, self.enemies, self.peasants, self.guards):
-            alive.extend(e for e in lst if getattr(e, "is_alive", True))
-        if self.tax_collector and getattr(self.tax_collector, "is_alive", True):
-            alive.append(self.tax_collector)
-        if len(alive) < 2:
-            return
-
-        grid: dict[tuple[int, int], list[int]] = {}
-        for idx, ent in enumerate(alive):
-            if getattr(ent, "is_inside_building", False):
-                continue
-            cx = int(ent.x // cell)
-            cy = int(ent.y // cell)
-            key = (cx, cy)
-            bucket = grid.get(key)
-            if bucket is None:
-                grid[key] = [idx]
-            else:
-                bucket.append(idx)
-
-        for key, indices in grid.items():
-            kx, ky = key
-            neighbours: list[int] = []
-            for ox in range(kx - 1, kx + 2):
-                for oy in range(ky - 1, ky + 2):
-                    nb = grid.get((ox, oy))
-                    if nb is not None:
-                        neighbours.extend(nb)
-
-            for i in indices:
-                ent = alive[i]
-                dx_sum, dy_sum = 0.0, 0.0
-                ex, ey = ent.x, ent.y
-                for j in neighbours:
-                    if j == i:
-                        continue
-                    other = alive[j]
-                    dx = ex - other.x
-                    dy = ey - other.y
-                    d2 = dx * dx + dy * dy
-                    if d2 < min_dist_px * min_dist_px and d2 > 1e-12:
-                        dist = math.sqrt(d2)
-                        push = (min_dist_px - dist) * strength_per_sec * dt / dist
-                        dx_sum += dx * push
-                        dy_sum += dy * push
-                if dx_sum != 0 or dy_sum != 0:
-                    step = math.sqrt(dx_sum * dx_sum + dy_sum * dy_sum)
-                    if step > max_step:
-                        scale = max_step / step
-                        dx_sum *= scale
-                        dy_sum *= scale
-                    ent.x += dx_sum
-                    ent.y += dy_sum
+        from game.sim import separation
+        separation.apply_entity_separation(self, dt)
 
     def _route_combat_events(self, events: list) -> None:
         for event in events:
@@ -1316,212 +975,14 @@ class SimEngine:
                     self.lair_system.lairs.remove(lair_obj)
 
     def _maybe_apply_early_pacing_nudge(self, dt: float, castle) -> None:
-        if not castle:
-            return
-        mode = getattr(self, "_early_nudge_mode", "auto")
-        if mode == "off":
-            return
-        if mode not in ("auto", "force"):
-            mode = "auto"
-        self._early_nudge_elapsed_s += float(dt)
-
-        unclaimed = self.bounty_system.get_unclaimed_bounties()
-        has_any_bounty = bool(unclaimed)
-        tip_time_s = 0.0 if mode == "force" else 35.0
-        starter_time_s = 0.0 if mode == "force" else 90.0
-
-        if (not self._early_nudge_tip_shown) and (self._early_nudge_elapsed_s >= tip_time_s) and (not has_any_bounty):
-            self._early_nudge_tip_shown = True
-            self._emit_hud_message("Tip: Press B to place a bounty and guide heroes.", (220, 220, 255))
-            self._emit_hud_message("Try targeting a lair for big stash payouts.", (220, 220, 255))
-
-        if self._early_nudge_starter_bounty_done:
-            return
-        if self._early_nudge_elapsed_s < starter_time_s:
-            return
-        if has_any_bounty:
-            self._early_nudge_starter_bounty_done = True
-            return
-
-        lair = self._nearest_lair_to(float(castle.center_x), float(castle.center_y))
-        if lair is None:
-            self._early_nudge_starter_bounty_done = True
-            return
-
-        reward = int(LAIR_BOUNTY_COST) if LAIR_BOUNTY_COST else 75
-        if not self.economy.add_bounty(reward):
-            self._early_nudge_starter_bounty_done = True
-            self._emit_hud_message("Tip: Earn more gold to place bounties that guide heroes.", (220, 220, 255))
-            return
-
-        bx = float(getattr(lair, "center_x", getattr(lair, "x", 0.0)))
-        by = float(getattr(lair, "center_y", getattr(lair, "y", 0.0)))
-        self.bounty_system.place_bounty(bx, by, reward, BountyType.ATTACK_LAIR.value, target=lair)
-        self._early_nudge_starter_bounty_done = True
-        self._emit_hud_message(f"Starter bounty placed: Clear the lair (+${reward})", (255, 215, 0))
+        from game.sim import early_pacing
+        early_pacing.maybe_apply_early_pacing_nudge(self, dt, castle)
 
     def _nearest_lair_to(self, x: float, y: float):
-        best = None
-        best_d2 = None
-        for b in self.buildings:
-            if not hasattr(b, "stash_gold"):
-                continue
-            bx = float(getattr(b, "center_x", getattr(b, "x", 0.0)))
-            by = float(getattr(b, "center_y", getattr(b, "y", 0.0)))
-            dx = bx - x
-            dy = by - y
-            d2 = dx * dx + dy * dy
-            if best_d2 is None or d2 < best_d2:
-                best = b
-                best_d2 = d2
-        return best
+        from game.sim import early_pacing
+        return early_pacing.nearest_lair_to(self, x, y)
 
     def _update_fog_of_war(self) -> None:
-        """Update fog-of-war visibility around the castle, living heroes, neutral buildings, and guards.
-
-        WK22 Agent-10 perf fix: cache the tile-grid positions of every revealer and
-        skip the expensive ``world.update_visibility`` call when no vision source has
-        moved by at least one full tile since the last rebuild.
-
-        WK34: All constructed player-placed buildings reveal 3 tiles (building LoS).
-
-        WK59 perf: throttle to every 3 ticks — heroes move ~0.08 tiles/tick at normal
-        speed, so skipping 2 ticks adds at most 0.24-tile latency (invisible to player).
-        """
-        tick_counter = getattr(self, "_fog_tick_counter", 0) + 1
-        self._fog_tick_counter = tick_counter
-        if getattr(self.world, 'fog_disabled', False):
-            return
-        if tick_counter % 3 != 0 and getattr(self, "_fog_revealers_snapshot", None) is not None:
-            return
-
-        # Tunables (tile radius). Kept local to avoid cross-agent config conflicts.
-        # WK17: per docs/vision_rules_fog_of_war.md (Agent 05 spec).
-        CASTLE_VISION_TILES = 10
-        HERO_VISION_TILES = 7
-        GUARD_VISION_TILES = 6
-        # WK43 Stage 1: Peasants (incl. BuilderPeasant) provide limited local LoS.
-        PEASANT_VISION_TILES = 6
-        NEUTRAL_VISION = {"house": 3, "farm": 5, "food_stand": 3}
-
-        castle = next((b for b in self.buildings if getattr(b, "building_type", None) == "castle"), None)
-        revealers = []
-        hero_revealers = []  # Track which revealers are heroes (for XP tracking)
-
-        if castle is not None:
-            revealers.append((castle.center_x, castle.center_y, CASTLE_VISION_TILES))
-
-        for hero in self.heroes:
-            if getattr(hero, "is_alive", True):
-                revealers.append((hero.x, hero.y, HERO_VISION_TILES))
-                hero_revealers.append((hero, hero.x, hero.y, HERO_VISION_TILES))
-
-        # WK43: Living peasants as vision sources.
-        for peasant in self.peasants:
-            if not getattr(peasant, "is_alive", True):
-                continue
-            revealers.append((peasant.x, peasant.y, PEASANT_VISION_TILES))
-
-        # WK17: Neutral buildings (house, farm, food_stand) as vision sources.
-        for building in self.buildings:
-            btype = getattr(building, "building_type", None)
-            if btype not in NEUTRAL_VISION:
-                continue
-            if getattr(building, "is_constructed", True) is not True:
-                continue
-            if getattr(building, "hp", 1) <= 0:
-                continue
-            radius = NEUTRAL_VISION[btype]
-            revealers.append((building.center_x, building.center_y, radius))
-
-        # WK34: All constructed player-placed buildings get a small LoS ring; see
-        # `PLAYER_BUILDING_VISION_TILES` / `PLAYER_GUILD_EXTRA_VISION_TILES` in config.
-        for building in self.buildings:
-            if not getattr(building, "is_constructed", False):
-                continue
-            if getattr(building, "hp", 1) <= 0:
-                continue
-            if getattr(building, "is_neutral", False):
-                continue
-            # Lairs are hostile world structures, not player vision sources.
-            if getattr(building, "is_lair", False) or hasattr(building, "stash_gold"):
-                continue
-            # POIs are world features, not player buildings — don't reveal fog.
-            if getattr(building, "is_poi", False):
-                continue
-            raw_bt = getattr(building, "building_type", None)
-            btype_name = str(getattr(raw_bt, "value", raw_bt) or "")
-            if btype_name == "castle":
-                continue
-            r = int(PLAYER_BUILDING_VISION_TILES)
-            if btype_name in PLAYER_GUILD_TYPES:
-                r += int(PLAYER_GUILD_EXTRA_VISION_TILES)
-            revealers.append((building.center_x, building.center_y, r))
-
-        # WK17: Living guards as vision sources.
-        for guard in self.guards:
-            if not getattr(guard, "is_alive", True):
-                continue
-            revealers.append((guard.x, guard.y, GUARD_VISION_TILES))
-
-        if not revealers:
-            return
-
-        # ---- Dirty check: skip update if no revealer moved a full tile ----
-        w2g = self.world.world_to_grid
-        grid_list = []
-        for wx, wy, r in revealers:
-            gxy = w2g(wx, wy)
-            grid_list.append((gxy[0], gxy[1], r))
-        grid_list.sort()
-        grid_snapshot = tuple(grid_list)
-        prev = getattr(self, "_fog_revealers_snapshot", None)
-        if prev is not None and prev == grid_snapshot:
-            return
-        self._fog_revealers_snapshot = grid_snapshot
-        self._fog_revision = getattr(self, "_fog_revision", 0) + 1
-
-        # ---- Perform the full visibility update ----
-        newly_revealed = self.world.update_visibility(revealers, return_new_reveals=True)
-
-        # WK6: Award XP to Rangers for newly revealed tiles
-        if newly_revealed:
-            for hero, hx, hy, radius in hero_revealers:
-                if hero.hero_class == "ranger":
-                    hero_grid_x, hero_grid_y = self.world.world_to_grid(hx, hy)
-                    radius_sq = radius * radius
-
-                    for grid_x, grid_y in newly_revealed:
-                        dx = grid_x - hero_grid_x
-                        dy = grid_y - hero_grid_y
-                        if (dx * dx + dy * dy) <= radius_sq:
-                            if (grid_x, grid_y) not in hero._revealed_tiles:
-                                hero._revealed_tiles.add((grid_x, grid_y))
-                                hero.grant_tile_exploration_xp(1)
-                                hero.increment_career_stat("tiles_revealed", 1)
-
-        # WK49: Known places — runs on every FoW rebuild (not only frontier reveals). POIs uncovered
-        # by castle/neutral/other revealers use the visibility-frame encounter path inside discovery.
-        if hero_revealers:
-            from game.sim.hero_profile import discover_known_buildings_after_fog
-            from game.sim.timebase import now_ms as fog_profile_now_ms
-
-            w = self.world
-
-            def _tile_currently_visible(gx: int, gy: int) -> bool:
-                if gx < 0 or gy < 0 or gx >= w.width or gy >= w.height:
-                    return False
-                return w.visibility[gy][gx] == Visibility.VISIBLE
-
-            hero_grids: list[tuple[object, int, int, int]] = []
-            for hero, hx, hy, radius in hero_revealers:
-                gx, gy = self.world.world_to_grid(hx, hy)
-                hero_grids.append((hero, gx, gy, radius))
-            discover_known_buildings_after_fog(
-                buildings=self.buildings,
-                heroes_world_vision=hero_grids,
-                newly_revealed=newly_revealed or (),
-                now_ms=int(fog_profile_now_ms()),
-                tile_currently_visible=_tile_currently_visible,
-            )
+        from game.sim import fog
+        fog.update_fog_of_war(self)
 

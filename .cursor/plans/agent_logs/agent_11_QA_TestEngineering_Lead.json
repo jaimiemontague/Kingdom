@@ -110,7 +110,7 @@
             ],
             "new_helpers": [
               "_FakeFogTexture (minimal stand-in for the Ursina Texture returned by TerrainTextureBridge.refresh_surface_texture, exposes .filtering attr only)",
-              "_FakeTerrainGroundEntity (empty class — the heightmap branch wraps its setShaderInput in try/except so the AttributeError is silently absorbed, matching production behaviour on entities without a bound shader)"
+              "_FakeTerrainGroundEntity (empty class \u2014 the heightmap branch wraps its setShaderInput in try/except so the AttributeError is silently absorbed, matching production behaviour on entities without a bound shader)"
             ],
             "implementation_notes": [
               "Spy points: pygame.image.frombuffer (line 269) and TerrainTextureBridge.refresh_surface_texture (line 272). Both are reached only AFTER the early-out gate (lines 213-229). Spy_frombuffer returns a real small pygame.Surface so downstream code that touches surf doesn't crash. Spy_refresh returns _FakeFogTexture so the heightmap branch (lines 295-354) can proceed without real Ursina Texture init.",
@@ -321,7 +321,7 @@
             "notes": [
               "All 3 gate checks pass cleanly. No regressions detected.",
               "Code review of all 13 items shows correct implementation with proper feature tags (WK61-TUNE-*, WK61-FEAT-*, WK61-BUG-*).",
-              "validate_assets warns=46 are all pre-existing missing_model_file placeholders — no new asset issues from R1.",
+              "validate_assets warns=46 are all pre-existing missing_model_file placeholders \u2014 no new asset issues from R1.",
               "The enemy building priority logic in enemy.py uses a bias multiplier approach rather than hard override, which preserves emergent behavior while still making enemies prefer buildings when near town. Good design.",
               "The guardhouse multi-arrow implementation correctly applies damage per arrow AND emits separate projectile events for visual rendering. Backward compat maintained via _last_ranged_event alias.",
               "Rubble lifecycle is clean: created on destruction, stored in sim_engine, serialized in snapshot, rendered in 3D, expired after 2 minutes.",
@@ -343,7 +343,7 @@
           "prompt_summary": "Run qa_smoke, pytest, validate_assets; verify R4 ticket fixes and implementer screenshot/capture evidence; no code changes unless small QA assertion clearly needed.",
           "status": "done",
           "what_i_changed": {
-            "summary": "QA verification only — no code changes. All three gates pass on final verification run; R4 regressions covered by 353 pytest items including test_wk61_r4_ursina_regressions.py (4) and test_wk61_r4_ui_regressions.py (5). Documented one flaky qa_smoke failure on speed_scaling 0.25x bounty_responder (passed on immediate retry).",
+            "summary": "QA verification only \u2014 no code changes. All three gates pass on final verification run; R4 regressions covered by 353 pytest items including test_wk61_r4_ursina_regressions.py (4) and test_wk61_r4_ui_regressions.py (5). Documented one flaky qa_smoke failure on speed_scaling 0.25x bounty_responder (passed on immediate retry).",
             "files_created": [],
             "files_modified": []
           },
@@ -352,7 +352,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 1,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "First run FAIL: speed_scaling 0.25x profile — [qa] FAIL expected at least one bounty responder after warmup. determinism_guard PASS, pytest PASS, base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed_scaling 0.1x PASS before failure."
+              "notes": "First run FAIL: speed_scaling 0.25x profile \u2014 [qa] FAIL expected at least one bounty responder after warmup. determinism_guard PASS, pytest PASS, base/intent_bounty/hero_stuck/no-enemies/mock-LLM/speed_scaling 0.1x PASS before failure."
             },
             {
               "cmd": "python -m pytest tests/ -x -q",
@@ -370,25 +370,25 @@
               "cmd": "python tools/observe_sync.py --seconds 48.0 --heroes 10 --seed 3 --log-every 240 --qa --bounty --speed-multiplier 0.25",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "Isolated repro of flaky profile — PASS: bounty_has_responder=True"
+              "notes": "Isolated repro of flaky profile \u2014 PASS: bounty_has_responder=True"
             },
             {
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "Second full run DONE: PASS — all profiles exit 0 including speed_scaling 0.25x"
+              "notes": "Second full run DONE: PASS \u2014 all profiles exit 0 including speed_scaling 0.25x"
             },
             {
               "cmd": "python -m pytest tests/test_wk61_r4_ursina_regressions.py tests/test_wk61_r4_ui_regressions.py tests/test_ai_exploration.py tests/test_building.py tests/test_economy.py -x -q",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "33 passed — R4 targeted regression bundle"
+              "notes": "33 passed \u2014 R4 targeted regression bundle"
             }
           ],
           "evidence": {
             "gate_results": {
               "qa_smoke_final": "PASS (rc=0) on second full run",
-              "qa_smoke_first_run": "FAIL (rc=1) — flaky bounty_responder at speed_multiplier=0.25; passed on isolated repro and second full run",
+              "qa_smoke_first_run": "FAIL (rc=1) \u2014 flaky bounty_responder at speed_multiplier=0.25; passed on isolated repro and second full run",
               "pytest": "353 passed",
               "validate_assets": "errors=0 warns=46 pre-existing"
             },
@@ -397,19 +397,19 @@
                 "status": "PASS_unit_tests",
                 "owner": "Agent 03",
                 "tests": "tests/test_wk61_r4_ursina_regressions.py (overlay flag, billboard offsets)",
-                "screenshot": "MISSING — Agent 03 deferred Ursina capture to Agent 11/09"
+                "screenshot": "MISSING \u2014 Agent 03 deferred Ursina capture to Agent 11/09"
               },
               "WK61-R4-BUG-002_unit_picking": {
                 "status": "PASS_unit_tests",
                 "owner": "Agent 03",
                 "tests": "test_pick_unit_at_screen_uses_projection, test_pick_unit_at_screen_respects_radius",
-                "screenshot": "MISSING — Agent 09 visual consult pending"
+                "screenshot": "MISSING \u2014 Agent 09 visual consult pending"
               },
               "WK61-R4-BUG-003_g_key_gold_overlay": {
                 "status": "PASS_unit_tests",
                 "owner": "Agent 03",
                 "tests": "test_tax_gold_overlay_flag_without_ursina",
-                "screenshot": "MISSING — requires Ursina window capture with G held"
+                "screenshot": "MISSING \u2014 requires Ursina window capture with G held"
               },
               "WK61-R4-BUG-004_taxable_gold_panels": {
                 "status": "PASS_unit_tests",
@@ -418,7 +418,7 @@
                   "Agent 08"
                 ],
                 "tests": "test_economic_panel_taxable_gold_* , test_marketplace_accumulates_shop_tax_in_stored_tax_gold (economy.py)",
-                "screenshot": "PARTIAL — Agent 08 ui_panels capture set does not include marketplace/blacksmith economic panel"
+                "screenshot": "PARTIAL \u2014 Agent 08 ui_panels capture set does not include marketplace/blacksmith economic panel"
               },
               "WK61-R4-BUG-005_hero_idle_regression": {
                 "status": "PASS_unit_tests",
@@ -438,17 +438,17 @@
                 "status": "PASS_unit_tests_and_screenshot",
                 "owner": "Agent 08",
                 "tests": "test_hero_panel_chat_button_returns_start_conversation, test_start_conversation_does_not_pin_unpinned_hero, test_hud_renders_hero_menu_chat_popup_without_pin",
-                "screenshot": "docs/screenshots/wk61_r4_agent08/ui_panels_hero.png — Chat button visible at bottom of hero panel; manifest at docs/screenshots/wk61_r4_agent08/manifest.json"
+                "screenshot": "docs/screenshots/wk61_r4_agent08/ui_panels_hero.png \u2014 Chat button visible at bottom of hero panel; manifest at docs/screenshots/wk61_r4_agent08/manifest.json"
               }
             },
             "implementer_evidence_review": {
-              "agent_03": "Log done; scoped pytest 15 passed; no Ursina screenshot — follow-up to Agent 09",
+              "agent_03": "Log done; scoped pytest 15 passed; no Ursina screenshot \u2014 follow-up to Agent 09",
               "agent_05": "Log done; qa_smoke PASS; new tests marketplace tax + guardhouse HP",
               "agent_06": "Log done; qa_smoke PASS; AI exploration + idle moment tests",
               "agent_08": "Log done; qa_smoke PASS; capture_screenshots ui_panels scenario (5 PNGs + manifest)"
             },
             "notes": [
-              "No Agent 11 code changes — existing R4 regression tests from implementers provide adequate automated coverage.",
+              "No Agent 11 code changes \u2014 existing R4 regression tests from implementers provide adequate automated coverage.",
               "Known fragile area: bounty_has_responder assertion at speed_multiplier=0.25 failed once then passed on retry (same seed 3). Documented in agent-11 onboarding as bounty tuning sensitivity.",
               "Ursina-visible fixes (labels, G overlay, unit pick feedback) lack PNG evidence from implementers; Agent 09 visual consult wave should capture before human playtest gate.",
               "Human playtest gate (Jaimie 10-15 min) still required per PM automation human_gates."
@@ -473,7 +473,7 @@
           "prompt_summary": "Verify R5 after Agent 08: qa_smoke, pytest, inspect screenshot evidence; do not sign off if selected Guardhouse panel lacks HP.",
           "status": "done",
           "what_i_changed": {
-            "summary": "QA verification only — no code changes. Gates pass; Agent 08 screenshot confirms selected Guardhouse left panel shows HP: 200/200, green HP bar, guard stats, and Demolish button below.",
+            "summary": "QA verification only \u2014 no code changes. Gates pass; Agent 08 screenshot confirms selected Guardhouse left panel shows HP: 200/200, green HP bar, guard stats, and Demolish button below.",
             "files_touched": []
           },
           "commands_run": [
@@ -481,7 +481,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "DONE: PASS — all profiles exit 0"
+              "notes": "DONE: PASS \u2014 all profiles exit 0"
             },
             {
               "cmd": "python -m pytest tests/ -x -q",
@@ -505,16 +505,16 @@
               "WK61-R5-BUG-001_guardhouse_hp_panel": {
                 "status": "PASS_gates_and_screenshot",
                 "owner": "Agent 08",
-                "tests": "tests/test_wk61_r5_guardhouse_hp_panel.py — defensive renderer HP pixels + BuildingPanel HP colors and demolish_button_rect",
-                "screenshot": "docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png — Guardhouse panel shows HP: 200/200, green HP bar, Guards Spawned stats, Demolish button visible below HP block",
-                "manifest": "docs/screenshots/wk61_r5_agent08/manifest.json — scenario wk61_guardhouse_hp_panel seed 3 ticket WK61-R5-BUG-001"
+                "tests": "tests/test_wk61_r5_guardhouse_hp_panel.py \u2014 defensive renderer HP pixels + BuildingPanel HP colors and demolish_button_rect",
+                "screenshot": "docs/screenshots/wk61_r5_agent08/wk61_guardhouse_hp_panel.png \u2014 Guardhouse panel shows HP: 200/200, green HP bar, Guards Spawned stats, Demolish button visible below HP block",
+                "manifest": "docs/screenshots/wk61_r5_agent08/manifest.json \u2014 scenario wk61_guardhouse_hp_panel seed 3 ticket WK61-R5-BUG-001"
               }
             },
             "implementer_evidence_review": {
-              "agent_08": "Log done; qa_smoke PASS; pytest 355 passed; capture_screenshots wk61_guardhouse_hp_panel scenario — PNG inspected by Agent 11, HP visible above Demolish"
+              "agent_08": "Log done; qa_smoke PASS; pytest 355 passed; capture_screenshots wk61_guardhouse_hp_panel scenario \u2014 PNG inspected by Agent 11, HP visible above Demolish"
             },
             "notes": [
-              "No Agent 11 code changes — verification-only per assignment.",
+              "No Agent 11 code changes \u2014 verification-only per assignment.",
               "R5 Definition of Done satisfied for automated gates and screenshot evidence; human playtest gate still pending per PM automation."
             ]
           },
@@ -536,7 +536,7 @@
           "prompt_summary": "Verify gates, R6 regression tests, and multi-building hold-G overlay evidence; do not sign off on single-building special case only.",
           "status": "blocked",
           "what_i_changed": {
-            "summary": "Re-verified R6 after Agents 05/03 (verification-only). Agent 05 data layer PASS (14 tax-stash types, zero-vs-missing). Agent 03 tax-stash snapshot PASS (14 parametrized) but non-tax snapshot still crashes int(None) at ursina_renderer.py:166 — qa_smoke FAIL. No Ursina screenshot evidence. Cannot sign off R6 Definition of Done.",
+            "summary": "Re-verified R6 after Agents 05/03 (verification-only). Agent 05 data layer PASS (14 tax-stash types, zero-vs-missing). Agent 03 tax-stash snapshot PASS (14 parametrized) but non-tax snapshot still crashes int(None) at ursina_renderer.py:166 \u2014 qa_smoke FAIL. No Ursina screenshot evidence. Cannot sign off R6 Definition of Done.",
             "files_created": [
               "tests/test_wk61_r6_qa_renderer_tax_coverage.py"
             ],
@@ -547,19 +547,19 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 1,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "DONE: FAIL — pytest rc=1 (6 failed in test_wk61_r6_qa_renderer_tax_coverage.py non-tax snapshot tests); determinism_guard PASS"
+              "notes": "DONE: FAIL \u2014 pytest rc=1 (6 failed in test_wk61_r6_qa_renderer_tax_coverage.py non-tax snapshot tests); determinism_guard PASS"
             },
             {
               "cmd": "python -m pytest tests/ -x -q",
               "exit_code": 1,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "404 passed, 6 failed — same non-tax TypeError at building_tax_overlay_snapshot"
+              "notes": "404 passed, 6 failed \u2014 same non-tax TypeError at building_tax_overlay_snapshot"
             },
             {
               "cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r6_tax_gold_overlay_data.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=no -q",
               "exit_code": 1,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "49 passed, 6 failed — 14 tax-stash renderer PASS; 27 data PASS; 8 ursina unit PASS; 6 non-tax renderer FAIL"
+              "notes": "49 passed, 6 failed \u2014 14 tax-stash renderer PASS; 27 data PASS; 8 ursina unit PASS; 6 non-tax renderer FAIL"
             },
             {
               "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
@@ -570,7 +570,7 @@
           ],
           "evidence": {
             "gate_results": {
-              "qa_smoke": "FAIL (rc=1) — pytest step fails on 6 non-tax snapshot regressions",
+              "qa_smoke": "FAIL (rc=1) \u2014 pytest step fails on 6 non-tax snapshot regressions",
               "pytest_full": "404 passed, 6 failed",
               "pytest_r6_scoped": "49 passed, 6 failed (14 tax-stash renderer + 27 data + 8 ursina unit)"
             },
@@ -578,7 +578,7 @@
               "WK61-R6-BUG-001_data_coverage": {
                 "status": "PASS",
                 "owner": "Agent 05",
-                "tests": "tests/test_wk61_r6_tax_gold_overlay_data.py — marketplace, blacksmith, 4 guilds, temples, dwellings, neutrals parametrized; shop/tax deposit paths",
+                "tests": "tests/test_wk61_r6_tax_gold_overlay_data.py \u2014 marketplace, blacksmith, 4 guilds, temples, dwellings, neutrals parametrized; shop/tax deposit paths",
                 "building_types_covered": 14,
                 "note": "TAX_STASH_BUILDING_TYPES + NON_TAX_STASH documented in config.py; zero gold distinguishable from None"
               },
@@ -586,12 +586,12 @@
                 "status": "PASS",
                 "owner": "Agent 03",
                 "tests": "tests/test_wk61_r6_qa_renderer_tax_coverage.py tax-stash parametrized (14/14) + test_wk61_r6_ursina_tax_gold_overlay.py hold-release/prefab Y",
-                "note": "building_tax_overlay_snapshot returns (True, amount) for all 14 tax-stash classes when gold > 0 — not marketplace-only"
+                "note": "building_tax_overlay_snapshot returns (True, amount) for all 14 tax-stash classes when gold > 0 \u2014 not marketplace-only"
               },
               "WK61-R6-BUG-001_renderer_non_tax_snapshot": {
                 "status": "FAIL",
                 "owner": "Agent 03",
-                "repro": "building_tax_overlay_snapshot(Castle(), is_lair=False) raises TypeError: int(None) at ursina_renderer.py:166 — has_data=False but int(b.get_overlay_tax_gold()) still called when get_overlay_tax_gold() returns None",
+                "repro": "building_tax_overlay_snapshot(Castle(), is_lair=False) raises TypeError: int(None) at ursina_renderer.py:166 \u2014 has_data=False but int(b.get_overlay_tax_gold()) still called when get_overlay_tax_gold() returns None",
                 "affected_types": [
                   "castle",
                   "guardhouse",
@@ -613,7 +613,7 @@
               "agent_03": "Log done; 8 ursina unit tests PASS but stub-only; non-tax None guard missing at line 166; deferred Ursina PNG to verification wave"
             },
             "notes": [
-              "Multi-building model coverage proven at data layer (14 types) and tax-stash renderer snapshot layer (14/14) — not a single marketplace special case.",
+              "Multi-building model coverage proven at data layer (14 types) and tax-stash renderer snapshot layer (14/14) \u2014 not a single marketplace special case.",
               "R6 Definition of Done NOT satisfied: qa_smoke FAIL, non-tax snapshot crash open, no Ursina hold-G PNG evidence.",
               "Agent 03 must fix None guard; Agent 09 or human playtest needed for Ursina visual proof."
             ]
@@ -648,7 +648,7 @@
           "prompt_summary": "Verify R7 after Agent 03: full gates pass, non-tax crash gone, Ursina capture proves hold-G $ overlay over multiple building models.",
           "status": "done",
           "what_i_changed": {
-            "summary": "Verification-only R7 sign-off after Agent 03 None guard. Gates green (qa_smoke + 419 pytest). R6/R7 scoped tax overlay regressions 37/37 PASS including 6 non-tax types and 14 tax-stash snapshots. Fixed and ran Ursina capture harness (tests/wk61_r7_capture_tax_overlay.py + patch) — PNG shows simultaneous $42 labels on house, inn, and guild prefabs with G held.",
+            "summary": "Verification-only R7 sign-off after Agent 03 None guard. Gates green (qa_smoke + 419 pytest). R6/R7 scoped tax overlay regressions 37/37 PASS including 6 non-tax types and 14 tax-stash snapshots. Fixed and ran Ursina capture harness (tests/wk61_r7_capture_tax_overlay.py + patch) \u2014 PNG shows simultaneous $42 labels on house, inn, and guild prefabs with G held.",
             "files_created": [
               "tests/wk61_r7_capture_patch.py"
             ],
@@ -673,7 +673,7 @@
               "cmd": "python -m pytest tests/test_wk61_r6_qa_renderer_tax_coverage.py tests/test_wk61_r7_tax_overlay_none_guard.py tests/test_wk61_r6_ursina_tax_gold_overlay.py -v --tb=short -q",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "37 passed — 14 tax-stash + 6 non-tax + 8 ursina unit + R7 None guard"
+              "notes": "37 passed \u2014 14 tax-stash + 6 non-tax + 8 ursina unit + R7 None guard"
             },
             {
               "cmd": "python tests/wk61_r7_capture_tax_overlay.py",
@@ -699,7 +699,7 @@
                 "status": "PASS",
                 "owner": "Agent 03",
                 "tests": "tests/test_wk61_r7_tax_overlay_none_guard.py + parametrized non-tax in test_wk61_r6_qa_renderer_tax_coverage.py",
-                "note": "building_tax_overlay_snapshot returns (False, 0) when has_tax_stash_data is False or get_overlay_tax_gold() is None — no int(None) TypeError"
+                "note": "building_tax_overlay_snapshot returns (False, 0) when has_tax_stash_data is False or get_overlay_tax_gold() is None \u2014 no int(None) TypeError"
               },
               "WK61-R7-BUG-001_tax_stash_regression": {
                 "status": "PASS",
@@ -722,10 +722,10 @@
               }
             },
             "implementer_evidence_review": {
-              "agent_03": "Log done; None guard at ursina_renderer.py building_tax_overlay_snapshot; deferred Ursina PNG to verification wave — now captured"
+              "agent_03": "Log done; None guard at ursina_renderer.py building_tax_overlay_snapshot; deferred Ursina PNG to verification wave \u2014 now captured"
             },
             "notes": [
-              "R6 blocker (int(None) on 6 non-tax types) cleared — qa_smoke no longer fails on renderer tax coverage.",
+              "R6 blocker (int(None) on 6 non-tax types) cleared \u2014 qa_smoke no longer fails on renderer tax coverage.",
               "R7 Definition of Done satisfied: gates pass, crash gone, multi-building hold-G overlay PNG evidence on file."
             ]
           },
@@ -753,7 +753,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 1,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "First run FAIL — flaky speed_scaling 0.25x bounty responder assertion (unrelated to R8)"
+              "notes": "First run FAIL \u2014 flaky speed_scaling 0.25x bounty responder assertion (unrelated to R8)"
             },
             {
               "cmd": "python -m pytest tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
@@ -826,7 +826,7 @@
           "prompt_summary": "Verify R9 after Agent 08: gates pass; screenshot evidence shows readable hero menu chat without control overlap.",
           "status": "done",
           "what_i_changed": {
-            "summary": "Verification-only R9 sign-off after Agent 08 split-layout fix. Gates green (qa_smoke + 424 pytest). R9 targeted regression 8/8 PASS. Re-captured and inspected wk61_hero_menu_chat PNGs at 1024x576 and 1920x1080 — split left column reserves readable chat band with history, input row, and End Conversation; no overlap with bottom Build/Hire/Bounty bar.",
+            "summary": "Verification-only R9 sign-off after Agent 08 split-layout fix. Gates green (qa_smoke + 424 pytest). R9 targeted regression 8/8 PASS. Re-captured and inspected wk61_hero_menu_chat PNGs at 1024x576 and 1920x1080 \u2014 split left column reserves readable chat band with history, input row, and End Conversation; no overlap with bottom Build/Hire/Bounty bar.",
             "files_created": [],
             "files_modified": []
           },
@@ -872,7 +872,7 @@
               "WK61-R9-BUG-001_split_layout": {
                 "status": "PASS",
                 "owner": "Agent 08",
-                "tests": "tests/test_wk61_r9_hero_chat_readable_layout.py — split rects at 1024x576 and 1920x1080 reserve hero_rect >= 120px and chat_rect >= 152px; render integration asserts chat band above bottom bar",
+                "tests": "tests/test_wk61_r9_hero_chat_readable_layout.py \u2014 split rects at 1024x576 and 1920x1080 reserve hero_rect >= 120px and chat_rect >= 152px; render integration asserts chat band above bottom bar",
                 "note": "In-column split replaces cramped below-minimap popup; hero sheet scrollable in top band when chat open"
               },
               "WK61-R9-BUG-001_screenshot": {
@@ -907,7 +907,7 @@
           "prompt_summary": "Verify-only wave 3: run qa_smoke, validate_assets, full pytest; inspect hold-G and sidebar PNGs; do not sign off hold-G without multi-building $ labels.",
           "status": "done",
           "what_i_changed": {
-            "summary": "Verification-only R10 sign-off. All gates green (445 pytest, qa_smoke PASS first run). Inspected hold-G Ursina capture and sidebar pygame captures — multiple building $ labels confirmed ($0 acceptable); sidebar split handle and marketplace Taxable Gold $42 in gold color confirmed.",
+            "summary": "Verification-only R10 sign-off. All gates green (445 pytest, qa_smoke PASS first run). Inspected hold-G Ursina capture and sidebar pygame captures \u2014 multiple building $ labels confirmed ($0 acceptable); sidebar split handle and marketplace Taxable Gold $42 in gold color confirmed.",
             "files_created": [],
             "files_modified": []
           },
@@ -916,7 +916,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "DONE: PASS first run — determinism_guard PASS, 445 pytest passed, all observe_sync profiles exit 0 including speed_scaling 0.25x"
+              "notes": "DONE: PASS first run \u2014 determinism_guard PASS, 445 pytest passed, all observe_sync profiles exit 0 including speed_scaling 0.25x"
             },
             {
               "cmd": "python tools/validate_assets.py --report",
@@ -934,7 +934,7 @@
               "cmd": "python -m pytest tests/test_wk61_r10_hold_g_shows_zero.py tests/test_wk61_r10_economy_tax_accrual.py tests/test_wk61_r10_wave_timing.py tests/test_wk61_r10_hunger_ai.py tests/test_wk61_r10_sidebar_layout.py tests/test_wk61_r8_marketplace_potion_tax.py -x -q",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "23 passed — R10 targeted regression bundle"
+              "notes": "23 passed \u2014 R10 targeted regression bundle"
             },
             {
               "cmd": "python -m json.tool .cursor/plans/agent_logs/agent_11_QA_TestEngineering_Lead.json",
@@ -945,7 +945,7 @@
           ],
           "evidence": {
             "gate_results": {
-              "qa_smoke": "PASS (exit 0) first run — no speed_scaling 0.25x flake this session",
+              "qa_smoke": "PASS (exit 0) first run \u2014 no speed_scaling 0.25x flake this session",
               "validate_assets": "errors=0 warns=46 pre-existing",
               "pytest_full": "445 passed",
               "pytest_r10_targeted": "23 passed (hold_g_shows_zero, economy_tax_accrual, wave_timing, hunger_ai, sidebar_layout, marketplace_potion_tax)"
@@ -955,7 +955,7 @@
                 "status": "PASS_gates_and_screenshot",
                 "owner": "Agent 03",
                 "tests": "tests/test_wk61_r10_hold_g_shows_zero.py + R6/R7 overlay regressions in full suite",
-                "screenshot": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png — inspected: simultaneous $0 labels above castle, long house, hut, gabled house, tower, blue-roof house (6+ buildings) with G held",
+                "screenshot": "docs/screenshots/wk61_r10_hold_g/hold_g_tax_overlay_20260523_134524_910.png \u2014 inspected: simultaneous $0 labels above castle, long house, hut, gabled house, tower, blue-roof house (6+ buildings) with G held",
                 "capture_owner": "Agent 12 wk61_hold_g_tax_overlay scenario"
               },
               "WK61-R10-FEAT-001_economy_tax_accrual": {
@@ -981,8 +981,8 @@
                 "owner": "Agent 08",
                 "tests": "tests/test_wk61_r10_sidebar_layout.py (4 passed)",
                 "screenshots": {
-                  "sidebar_split": "docs/screenshots/wk61_r10_sidebar/ui_panels_sidebar_split.png — compact hero main band + taller pinned watch card; thin divider/handle visible between sections",
-                  "marketplace_tax": "docs/screenshots/wk61_r10_sidebar/ui_panels_marketplace_tax.png — Taxable Gold: $42 rendered in gold (not stale grey $0)"
+                  "sidebar_split": "docs/screenshots/wk61_r10_sidebar/ui_panels_sidebar_split.png \u2014 compact hero main band + taller pinned watch card; thin divider/handle visible between sections",
+                  "marketplace_tax": "docs/screenshots/wk61_r10_sidebar/ui_panels_marketplace_tax.png \u2014 Taxable Gold: $42 rendered in gold (not stale grey $0)"
                 }
               }
             },
@@ -997,7 +997,7 @@
               "R10 Definition of Done satisfied for automated gates and screenshot evidence.",
               "Hold-G sign-off criterion met: multiple simultaneous building $ labels visible in Ursina capture ($0 dim style acceptable per Jaimie preference).",
               "Human playtest gate (Jaimie 8-10 min Ursina) still required per PM automation before version bump to v1.5.9.",
-              "No Agent 11 code changes — verification-only per assignment."
+              "No Agent 11 code changes \u2014 verification-only per assignment."
             ]
           },
           "blockers": [],
@@ -1028,7 +1028,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
+              "notes": "DONE: PASS \u2014 determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
             },
             {
               "cmd": "python tools/validate_assets.py --report",
@@ -1046,7 +1046,7 @@
               "cmd": "python -m pytest tests/test_wk61_r11_wolf_pack_spawn.py tests/test_wk61_r11_marketplace_passive_tax.py tests/test_wk61_r11_tax_overlay_world_y.py tests/test_wk61_r11_sidebar_main_solo_handle.py tests/test_wk61_r11_hunger_live_path.py tests/test_wk61_r11_starting_food_stand.py -v --tb=short -q",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "18 passed — R11 targeted regression bundle"
+              "notes": "18 passed \u2014 R11 targeted regression bundle"
             },
             {
               "cmd": "python tools/run_ursina_capture_once.py --scenario wk61_hold_g_tax_overlay --ticks 5400 --out docs/screenshots/wk61_r11_hold_g --no-llm",
@@ -1072,7 +1072,7 @@
               "WK61-R11-BUG-001_wolf_pack_spawn": {
                 "status": "PASS",
                 "owner": "Agent 05",
-                "tests": "tests/test_wk61_r11_wolf_pack_spawn.py — Wolf Pack wave spawns Wolf instances; cap reservation does not drop wave composition"
+                "tests": "tests/test_wk61_r11_wolf_pack_spawn.py \u2014 Wolf Pack wave spawns Wolf instances; cap reservation does not drop wave composition"
               },
               "WK61-R11-BUG-002_hunger_food_stand": {
                 "status": "PASS",
@@ -1080,18 +1080,18 @@
                   "Agent 05",
                   "Agent 06"
                 ],
-                "tests": "tests/test_wk61_r11_starting_food_stand.py + tests/test_wk61_r11_hunger_live_path.py — starter food_stand + hero redirect/movement toward stand"
+                "tests": "tests/test_wk61_r11_starting_food_stand.py + tests/test_wk61_r11_hunger_live_path.py \u2014 starter food_stand + hero redirect/movement toward stand"
               },
               "WK61-R11-BUG-003_marketplace_passive_tax": {
                 "status": "PASS",
                 "owner": "Agent 05",
-                "tests": "tests/test_wk61_r11_marketplace_passive_tax.py — deterministic 100-400g accrual into stored_tax_gold every ~2 min interval"
+                "tests": "tests/test_wk61_r11_marketplace_passive_tax.py \u2014 deterministic 100-400g accrual into stored_tax_gold every ~2 min interval"
               },
               "WK61-R11-BUG-004_hold_g_labels_above_roofs": {
                 "status": "PASS_gates_and_screenshot",
                 "owner": "Agent 03",
-                "tests": "tests/test_wk61_r11_tax_overlay_world_y.py — scene-parented gold Text at terrain_y + prefab_top + 1.2 clearance",
-                "screenshot": "docs/screenshots/wk61_r11_hold_g/hold_g_tax_overlay_20260523_141538_439.png — inspected: simultaneous $0 billboards floating above rooflines on long house, hut, gabled house, tower (not occluded by meshes)"
+                "tests": "tests/test_wk61_r11_tax_overlay_world_y.py \u2014 scene-parented gold Text at terrain_y + prefab_top + 1.2 clearance",
+                "screenshot": "docs/screenshots/wk61_r11_hold_g/hold_g_tax_overlay_20260523_141538_439.png \u2014 inspected: simultaneous $0 billboards floating above rooflines on long house, hut, gabled house, tower (not occluded by meshes)"
               },
               "WK61-R11-BUG-005_sidebar_drag": {
                 "status": "PASS_gates_and_screenshot",
@@ -1099,10 +1099,10 @@
                   "Agent 08",
                   "Agent 03"
                 ],
-                "tests": "tests/test_wk61_r11_sidebar_main_solo_handle.py — test_drag_main_solo_updates_fraction asserts taller main column after simulated drag",
+                "tests": "tests/test_wk61_r11_sidebar_main_solo_handle.py \u2014 test_drag_main_solo_updates_fraction asserts taller main column after simulated drag",
                 "screenshots": {
-                  "solo_handle": "docs/screenshots/wk61_r11_sidebar/ui_panels_hero.png — unpinned Gareth column with thin resize handle bar above minimap gap",
-                  "split_heights": "docs/screenshots/wk61_r11_sidebar/ui_panels_sidebar_split.png — pinned main/watch asymmetric split (main 32% / watch 68%) showing different panel heights"
+                  "solo_handle": "docs/screenshots/wk61_r11_sidebar/ui_panels_hero.png \u2014 unpinned Gareth column with thin resize handle bar above minimap gap",
+                  "split_heights": "docs/screenshots/wk61_r11_sidebar/ui_panels_sidebar_split.png \u2014 pinned main/watch asymmetric split (main 32% / watch 68%) showing different panel heights"
                 }
               }
             },
@@ -1116,7 +1116,7 @@
               "R11 Definition of Done satisfied for automated gates, targeted regressions, and screenshot evidence.",
               "wk61_r11_hold_g/ was missing at verify start; QA captured Ursina hold-G PNG using existing wk61_hold_g_tax_overlay scenario + wk61_r10_capture_patch.",
               "Sidebar drag before/after PNG pair not scripted in ui_panels scenario; programmatic drag height change verified via test_drag_main_solo_updates_fraction + asymmetric split capture.",
-              "No Agent 11 code changes — verification-only per assignment.",
+              "No Agent 11 code changes \u2014 verification-only per assignment.",
               "Human playtest gate (Jaimie Ursina: wolves visible, heroes eat, passive tax in panel, hold-G readability, LMB sidebar drag) still required per PM automation before version bump."
             ]
           },
@@ -1148,7 +1148,7 @@
               "cmd": "python tools/qa_smoke.py --quick",
               "exit_code": 0,
               "cwd": "C:\\Users\\jaimi\\OneDrive\\Documents\\Kingdom",
-              "notes": "DONE: PASS — determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
+              "notes": "DONE: PASS \u2014 determinism_guard PASS, 463 pytest passed, all observe_sync profiles exit 0"
             },
             {
               "cmd": "python -m pytest tests/ -x -q",
@@ -1165,7 +1165,7 @@
           ],
           "evidence": {
             "gate_results": {
-              "qa_smoke": "PASS (exit 0) — DONE: PASS",
+              "qa_smoke": "PASS (exit 0) \u2014 DONE: PASS",
               "pytest_full": "463 passed in 14.11s (exit 0)"
             },
             "implementer_log_review": {
@@ -1213,7 +1213,7 @@
               }
             },
             "notes": [
-              "No Agent 11 code changes — verification-only per assignment.",
+              "No Agent 11 code changes \u2014 verification-only per assignment.",
               "All six PM-assigned checks PASS; R12 automated gates green."
             ]
           },
@@ -1274,7 +1274,7 @@
             },
             "architecture_findings": {
               "double_sim_time": "CONFIRMED. Both GameEngine._prepare_sim_and_camera() and SimEngine.update() advance _sim_now_ms. In deterministic mode, each engine.update(dt) increments by 2*int(round(dt*1000)).",
-              "pause_leak": "CONFIRMED. _prepare_sim_and_camera() advances sim time before checking pause, then returns False. SimEngine.update() does not run, so only one of the two advances leaks — but it should be zero.",
+              "pause_leak": "CONFIRMED. _prepare_sim_and_camera() advances sim time before checking pause, then returns False. SimEngine.update() does not run, so only one of the two advances leaks \u2014 but it should be zero.",
               "redundant_cleanup": "GameEngine._cleanup_destroyed_buildings() at engine.py:1157 is effectively dead code because SimEngine._cleanup_destroyed_buildings() at sim_engine.py:749 already removes all destroyed buildings. CleanupManager never finds anything to clean. The redundant call is safe (idempotent) but wastes cycles and creates maintenance risk.",
               "cleanup_ordering_fragility": "If cleanup ordering changes (e.g., engine-side cleanup runs before sim-side), double rubble and double events would occur. The new tests guard against this."
             }
@@ -2822,36 +2822,36 @@
               "test_combat_capture_scenario_is_registered (Pin 5c)"
             ],
             "new_helpers": [
-              "_representative_clips() — display-independent AnimationClip set (looping idle 4f/0.15s, looping walk 6f/0.08s, NON-looping attack 3f/0.06s)",
-              "_anim_frame_pass(clips, ticks) — per-(tick,clip,frame) selection the renderers would pick, via anim_clock_seconds + _frame_index_for_clip",
-              "_run_fog_revision_sequence(ticks) — scripted ranger two-leg reveal (mirrors WK66 fog scenario), returns per-tick _fog_revision tuple",
-              "_compute_fog_sequence_in_subprocess() — fresh-process fog sequence with pinned DETERMINISTIC_SIM=1/SIM_SEED=3 env (same bulletproofing as the keystone digest subprocess)",
+              "_representative_clips() \u2014 display-independent AnimationClip set (looping idle 4f/0.15s, looping walk 6f/0.08s, NON-looping attack 3f/0.06s)",
+              "_anim_frame_pass(clips, ticks) \u2014 per-(tick,clip,frame) selection the renderers would pick, via anim_clock_seconds + _frame_index_for_clip",
+              "_run_fog_revision_sequence(ticks) \u2014 scripted ranger two-leg reveal (mirrors WK66 fog scenario), returns per-tick _fog_revision tuple",
+              "_compute_fog_sequence_in_subprocess() \u2014 fresh-process fog sequence with pinned DETERMINISTIC_SIM=1/SIM_SEED=3 env (same bulletproofing as the keystone digest subprocess)",
               "__main__ extended: `python -m tests.test_wk67_ai_boundary --fog-revision` prints WK67_FOG_REVISION_SEQ=<tuple repr>; default still prints WK67_AI_DECISION_DIGEST=<sha256>"
             ]
           },
           "new_pins_detail": {
             "pin_5a_anim_to_tick": {
               "test": "test_anim_clock_is_tick_derived_under_deterministic_sim",
-              "wave_item": "5a (Agent 10) — game/graphics/ursina_units_anim.py::anim_clock_seconds(frame_tick_id); under config.DETERMINISTIC_SIM returns int(frame_tick_id)*(1/20), else time.perf_counter(); both unit renderers read it.",
+              "wave_item": "5a (Agent 10) \u2014 game/graphics/ursina_units_anim.py::anim_clock_seconds(frame_tick_id); under config.DETERMINISTIC_SIM returns int(frame_tick_id)*(1/20), else time.perf_counter(); both unit renderers read it.",
               "what_it_pins": "Forces config.DETERMINISTIC_SIM=True via monkeypatch and asserts the anim clock is a PURE FUNCTION of the sim tick: (a) same tick -> same value across calls; (b) strictly monotonic increasing with tick (0..200); (c) equals tick*(1/20) exactly; (d) the per-(tick,clip,frame) selection (the actual renderer-facing choice, via _frame_index_for_clip) is IDENTICAL across two independent passes over a representative clip set. Sanity guards that the non-looping attack one-shot actually reaches its finished pose and the looping walk advances (clock not stuck on 0).",
-              "headless_safe": "yes — plain pygame.Surface frames need no display; no Ursina import.",
+              "headless_safe": "yes \u2014 plain pygame.Surface frames need no display; no Ursina import.",
               "agent10_manual_proof_referenced": "per-(tick,clip,idx) digest cbecc2e6356b4475a1d293ad42825d6e7b74f69c0726798b85245cb87808cbd6 identical across two runs (cited in the pin's section comment).",
               "result": "PASS"
             },
             "pin_5b_fog_revision": {
               "test": "test_fog_revision_sequence_is_stable_across_builds",
-              "wave_item": "5b (Agent 03) — root cause: class-global Peasant._spawn_counter carried over between builds, shifting a peasant idle offset -> a fog revealer's grid tile -> the _fog_revision increment COUNT (the +/-1 drift). Fix: reset Peasant._spawn_counter=0 in SimEngine.__init__ next to the seed reset.",
+              "wave_item": "5b (Agent 03) \u2014 root cause: class-global Peasant._spawn_counter carried over between builds, shifting a peasant idle offset -> a fog revealer's grid tile -> the _fog_revision increment COUNT (the +/-1 drift). Fix: reset Peasant._spawn_counter=0 in SimEngine.__init__ next to the seed reset.",
               "what_it_pins": "Computes the per-tick _fog_revision sequence (engine.sim._fog_revision) over a scripted ranger two-leg reveal (600 ticks, no AI controller so movement is fully scripted; mirrors tests/test_wk66_render_boundary.py::_run_fog_scenario) in TWO FRESH SUBPROCESSES with pinned env (DETERMINISTIC_SIM=1, SIM_SEED=3) and asserts the two sequences are BYTE-IDENTICAL. Sanity: parsed tuple length == 600 and final value > 1 (non-trivial evolving sequence).",
               "why_subprocess": "Same load-bearing reason as the keystone digest: pytest collection imports perf_*stress* modules that set os.environ['SIM_SEED']='42' at import; config.SIM_SEED is read at import and SimEngine re-applies it, OVERRIDING in-test set_sim_seed(). Pinning SIM_SEED in a fresh process makes the sequence byte-stable regardless of suite ordering.",
               "observed": "Both subprocess runs: 600-tick sequence, final _fog_revision = 61 (scripted scout reveal). Pre-pin spot check confirmed two same-seed IN-PROCESS builds also now agree (Agent 03 fix working); subprocess is the bulletproof unit. NOTE: the prompt's 'final=54 at 2000 ticks' is the full-game-loop figure; this pin uses a 600-tick scripted-scout scenario (final=61) chosen for a rich-but-fast deterministic reveal footprint without spawning/AI nondeterminism.",
-              "headless_safe": "yes — GameEngine(headless=True), no display.",
+              "headless_safe": "yes \u2014 GameEngine(headless=True), no display.",
               "result": "PASS"
             },
             "pin_5c_combat_capture": {
               "test": "test_combat_capture_scenario_is_registered",
-              "wave_item": "5c (Agent 12) — tools/screenshot_scenarios.py::ursina_melee_combat + tools/wk67_combat_capture_patch.py; `python tools/run_ursina_capture_once.py --scenario ursina_melee_combat ...` byte-identical across two DETERMINISTIC_SIM runs (Agent 12 manual proof SHA256 2DE5D5F4...).",
+              "wave_item": "5c (Agent 12) \u2014 tools/screenshot_scenarios.py::ursina_melee_combat + tools/wk67_combat_capture_patch.py; `python tools/run_ursina_capture_once.py --scenario ursina_melee_combat ...` byte-identical across two DETERMINISTIC_SIM runs (Agent 12 manual proof SHA256 2DE5D5F4...).",
               "what_it_pins": "Does NOT run the Ursina capture (needs a display). Asserts the scenario stays REGISTERED + importable so the coverage can't silently disappear: (1) 'ursina_melee_combat' in URSINA_CAPTURE_SCENARIOS (the registry run_ursina_capture_once.py consumes) with the expected patch_path/default_ticks>0/stem via get_ursina_capture_scenario; (2) the pygame-path builder scenario_ursina_melee_combat is importable + callable (dispatched by get_scenario). Agent 12's byte-identical hash is referenced in the pin's section comment.",
-              "headless_safe": "yes — pure registry/import assertions; no display, no Ursina init.",
+              "headless_safe": "yes \u2014 pure registry/import assertions; no display, no Ursina init.",
               "agent12_manual_proof_referenced": "SHA256 2DE5D5F4... byte-identical across two DETERMINISTIC_SIM capture runs (cited in the pin's section comment).",
               "result": "PASS"
             }
@@ -2873,7 +2873,7 @@
               "cmd": "python tools/determinism_guard.py",
               "exit_code": 0,
               "cwd": "C:\\Users\\Jaimie Montague\\OneDrive\\Documents\\Kingdom",
-              "notes": "[determinism_guard] PASS: no violations found. (Known/pre-existing presentation wall-clock exemptions remain whitelisted: engine.py chat cooldown, ursina_renderer.py tax-overlay debug throttle — NOT introduced by WK67.)"
+              "notes": "[determinism_guard] PASS: no violations found. (Known/pre-existing presentation wall-clock exemptions remain whitelisted: engine.py chat cooldown, ursina_renderer.py tax-overlay debug throttle \u2014 NOT introduced by WK67.)"
             },
             {
               "cmd": "python tools/qa_smoke.py --quick",
@@ -2912,7 +2912,7 @@
             },
             "known_preexisting_items": [
               "determinism_guard wall-clock exemptions (KNOWN, pre-existing, NOT introduced by WK67): engine.py chat cooldown; ursina_renderer.py tax-overlay debug throttle.",
-              "validate_assets warns=46: all missing_model_file placeholder models (buildings + workers) — pre-existing, unchanged.",
+              "validate_assets warns=46: all missing_model_file placeholder models (buildings + workers) \u2014 pre-existing, unchanged.",
               "4 pre-existing pytest skips (unchanged since the Wave-0 baseline).",
               "3 global-state test-isolation leaks tracked since WK67-W0-DET-001 (_AI_RNG non-reseed, RESEARCH_UNLOCKS, perf_*stress* SIM_SEED-at-import). The keystone digest + the new Pin 5b both neutralize these via fresh subprocesses with pinned env; the underlying leaks remain a latent test-hygiene follow-up, independent of WK67 boundary correctness."
             ],
@@ -2922,11 +2922,11 @@
           "definition_of_done_certification": {
             "verdict": "PASS",
             "criteria": {
-              "full_suite_green": "MET — 601 passed, 4 skipped, 0 failed, 0 xfail, 0 xpass.",
-              "ai_decision_digest_byte_identical": "MET — b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged through Moves 4/5/6 and Wave-5 determinism items).",
-              "shopping_parity_byte_identical": "MET — test_shopping_purchase_parity GREEN through the Move-6 SimCommandSink path; gold/potions/weapon/armor + full economy transaction_log + total_spent_by_heroes all match the recorded reference.",
-              "L3_L3b_L6_L9_closed": "MET (verified at Gates 3/4 and unchanged here): L3/L3b (AiGameView/WorldView purity — test_ai_view_purity GREEN: no economy/sim/engine on the view, world is a read-only WorldView), L6 (frame-state split — test_frame_state_split GREEN: RenderSnapshot has no presentation fields, build_snapshot drops presentation kwargs, PresentationFrameState carries them), L9 (HeroCommand write path — shopping parity proven through SimCommandSink). No regressions detected this gate.",
-              "determinism_items_landed": "MET — 5a anim->tick (Pin 5a GREEN), 5b fog_revision stability (Pin 5b GREEN), 5c combat-capture registration (Pin 5c GREEN); all three pinned headlessly so they cannot silently regress."
+              "full_suite_green": "MET \u2014 601 passed, 4 skipped, 0 failed, 0 xfail, 0 xpass.",
+              "ai_decision_digest_byte_identical": "MET \u2014 b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (unchanged through Moves 4/5/6 and Wave-5 determinism items).",
+              "shopping_parity_byte_identical": "MET \u2014 test_shopping_purchase_parity GREEN through the Move-6 SimCommandSink path; gold/potions/weapon/armor + full economy transaction_log + total_spent_by_heroes all match the recorded reference.",
+              "L3_L3b_L6_L9_closed": "MET (verified at Gates 3/4 and unchanged here): L3/L3b (AiGameView/WorldView purity \u2014 test_ai_view_purity GREEN: no economy/sim/engine on the view, world is a read-only WorldView), L6 (frame-state split \u2014 test_frame_state_split GREEN: RenderSnapshot has no presentation fields, build_snapshot drops presentation kwargs, PresentationFrameState carries them), L9 (HeroCommand write path \u2014 shopping parity proven through SimCommandSink). No regressions detected this gate.",
+              "determinism_items_landed": "MET \u2014 5a anim->tick (Pin 5a GREEN), 5b fog_revision stability (Pin 5b GREEN), 5c combat-capture registration (Pin 5c GREEN); all three pinned headlessly so they cannot silently regress."
             },
             "residuals": [
               "Pre-existing only (none block DoD): determinism_guard presentation wall-clock exemptions (chat cooldown, tax-overlay throttle); validate_assets 46 missing-model placeholder warns; 3 global-state test-isolation leaks (neutralized in the WK67 pins via pinned-env subprocesses, latent follow-up).",
@@ -2946,7 +2946,7 @@
             "no_commit": true,
             "no_push": true
           },
-          "completion_receipt": "WK67 Gate 5 (FINAL) COMPLETE. Added 3 headless-safe Wave-5 determinism/capture pins to tests/test_wk67_ai_boundary.py — Pin 5a anim->tick (anim_clock_seconds pure function of sim tick + reproducible per-(tick,clip,frame) selection), Pin 5b fog_revision byte-identical across two same-seed fresh-process builds, Pin 5c combat-capture scenario registration guard — all GREEN; boundary file 8 passed / 0 xfail / 0 xpass. Full final gate: AI-decision digest BYTE-IDENTICAL (b73961...); full suite 601 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS; validate_assets errors=0 warns=46 (pre-existing). WK67 Definition of Done: PASS (full suite green; AI-decision digest + shopping parity byte-identical; L3/L3b/L6/L9 closed; 5a/5b/5c determinism items landed and pinned). Residuals are pre-existing only. Only tests/** edited; no game/ai/tools changes; no commit/push."
+          "completion_receipt": "WK67 Gate 5 (FINAL) COMPLETE. Added 3 headless-safe Wave-5 determinism/capture pins to tests/test_wk67_ai_boundary.py \u2014 Pin 5a anim->tick (anim_clock_seconds pure function of sim tick + reproducible per-(tick,clip,frame) selection), Pin 5b fog_revision byte-identical across two same-seed fresh-process builds, Pin 5c combat-capture scenario registration guard \u2014 all GREEN; boundary file 8 passed / 0 xfail / 0 xpass. Full final gate: AI-decision digest BYTE-IDENTICAL (b73961...); full suite 601 passed / 4 skipped / 0 failed; determinism_guard PASS; qa_smoke --quick PASS; validate_assets errors=0 warns=46 (pre-existing). WK67 Definition of Done: PASS (full suite green; AI-decision digest + shopping parity byte-identical; L3/L3b/L6/L9 closed; 5a/5b/5c determinism items landed and pinned). Residuals are pre-existing only. Only tests/** edited; no game/ai/tools changes; no commit/push."
         }
       }
     },
@@ -3063,6 +3063,65 @@
             "PRE-EXISTING full-suite failures in test_wk66_render_boundary.py (3) + test_wk67_ai_boundary.py (2) belong to the concurrent render-DTO/Move-4 wave -- PM should confirm those land green before Wave V sign-off."
           ],
           "committed": false
+        }
+      }
+    },
+    "wk69_round_b1_simengine_decomposition": {
+      "sprint_meta": {
+        "sprint_id": "wk69_round_b1_simengine_decomposition",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W3: verify the SimEngine decomposition is behavior-preserving (digest byte-identical), lock the new module/wrapper seam with tests, run the full DoD gate."
+      },
+      "rounds": {
+        "wk69_w3": {
+          "sprint_id": "wk69_round_b1_simengine_decomposition",
+          "round_id": "wk69_w3",
+          "status": "done",
+          "round_meta": {
+            "wave": "W3 (verification sweep + final DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk69 W1+W2 (Agent 03 extracted 6 services from sim_engine.py into game/sim/ behind delegating wrappers)"
+          },
+          "prompt_summary": "WK69 W3: confirm sim characterization/boundary/contract tests still pass; add tests/test_wk69_simengine_extraction.py locking the new module+wrapper seam; run the full DoD gate (suite, determinism_guard, AI digest pin, qa_smoke) and report sim_engine.py LOC. No production edits. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk69_simengine_extraction.py (15 headless seam tests) locking the WK69 extraction structure: each of the 6 new game/sim/ modules exists with its public free function(s), each SimEngine wrapper delegates to it (spy + monkeypatch, asserts live engine passed as first arg + extra args forwarded + result returned), plus a no-import-cycle AST guard. No production code touched.",
+            "files_created": [
+              "tests/test_wk69_simengine_extraction.py"
+            ],
+            "files_modified": [],
+            "production_code_edited": false
+          },
+          "new_tests": [
+            "test_modules_and_public_functions_exist",
+            "test_extracted_modules_do_not_import_sim_engine_at_module_top",
+            "test_wrapper_update_fog_of_war_delegates",
+            "test_wrapper_apply_entity_separation_delegates",
+            "test_wrapper_check_poi_discovery_delegates",
+            "test_wrapper_maybe_apply_early_pacing_nudge_delegates",
+            "test_wrapper_nearest_lair_to_delegates",
+            "test_wrapper_cleanup_destroyed_buildings_delegates",
+            "test_wrapper_chop_tree_at_delegates",
+            "test_wrapper_harvest_log_at_delegates",
+            "test_wrapper_find_nearest_choppable_tree_for_builder_delegates",
+            "test_wrapper_remove_trees_in_footprint_delegates",
+            "test_wrapper_tree_growth_lookup_delegates",
+            "test_wrapper_init_trees_from_world_delegates",
+            "test_wrapper_wood_yield_for_growth_delegates"
+          ],
+          "dod_gate": {
+            "A_full_suite": "633 passed, 4 skipped (baseline 618+4; +15 = new seam tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden. tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0)",
+            "E_sim_engine_loc": "988 LOC (baseline 1527; 539 removed, exceeds plan ~400-450 target). 6 new modules: fog 173, separation 87, lumber 204, poi_discovery 61, early_pacing 83, building_lifecycle 122.",
+            "named_characterization_sweep": "test_wk65_*characterization* (3 files) + test_wk67_ai_boundary + test_wk66_render_boundary + test_wk65_snapshot_no_mutation + test_renderer_snapshot_contract = 64 passed, 1 skipped. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "One false alarm during verification: a manual `set SIM_SEED=3 ... && python -m tests.test_wk67_ai_boundary` from a cmd compound line printed a non-golden digest (b317450...) because that bare invocation bypasses the _build_digest_engine _AI_RNG/RESEARCH_UNLOCKS resets. Reproducing via the keystone helper _compute_digest_in_subprocess (exactly what the pytest gate uses) yields the golden b73961... byte-for-byte. The pytest keystone is the authoritative gate and is green. No real drift."
         }
       }
     }

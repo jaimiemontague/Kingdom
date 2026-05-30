@@ -2237,6 +2237,96 @@
           "visual_verdict": "PASS - deletion changed nothing visually across all three render paths. Alignment/layering/panels/fog/overlays match R2."
         }
       }
+    },
+    "wk69_round_b1_simengine_decomposition": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk69_round_b1_simengine_decomposition.plan.md",
+        "created_utc": "2026-05-30T03:00:00Z",
+        "notes": "Round B-1: extract the inlined services out of the 1527-LOC game/sim_engine.py into game/sim/ modules behind 1-line delegating wrappers (Moves 7+8). Pure mechanical behavior-preserving move: each module exposes a free function taking the live SimEngine as sim; every self. -> sim.; the SimEngine method becomes a delegating shim so callers/tests are unchanged. WK67 AI-decision digest b73961... must stay byte-identical (verified after each extraction). W1 = fog + separation + lumber (this entry). W2 (poi_discovery + early_pacing + building_lifecycle) is gated by PM after W1."
+      },
+      "rounds": {
+        "wk69_w1": {
+          "sprint_id": "wk69_round_b1_simengine_decomposition",
+          "round_id": "wk69_w1",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W1 - extract fog + separation + lumber (3 of the 6 services). Sequential single-file work (all touch sim_engine.py). STOP after W1 for PM digest gate before W2.",
+          "summary": "Mechanical behavior-preserving extraction of three inlined services from game/sim_engine.py into new game/sim/ modules behind 1-line delegating wrappers. Bodies moved verbatim with self.->sim.; the nested _tile_currently_visible fog closure moved intact; the @staticmethod _wood_yield_for_growth became plain module fn wood_yield_for_growth(growth); harvest_log_at now calls that module fn directly. No signatures/logic/order/call-sites changed. New modules take sim as a duck-typed param and import only the same leaf helpers (no game.sim_engine import at module top; TYPE_CHECKING-only type hint) -> no import cycle.",
+          "new_modules": {
+            "game/sim/fog.py": "update_fog_of_war(sim) <- _update_fog_of_war (incl. nested _tile_currently_visible). Leaf imports: game.world.Visibility + config PLAYER_BUILDING_VISION_TILES/PLAYER_GUILD_EXTRA_VISION_TILES/PLAYER_GUILD_TYPES; lazy game.sim.hero_profile.discover_known_buildings_after_fog + timebase.now_ms (as before).",
+            "game/sim/separation.py": "apply_entity_separation(sim, dt) <- _apply_entity_separation. Local import math preserved verbatim.",
+            "game/sim/lumber.py": "wood_yield_for_growth(growth), init_trees_from_world(sim), tree_growth_lookup(sim,tx,ty), remove_trees_in_footprint(sim,...), find_nearest_choppable_tree_for_builder(sim,...), chop_tree_at(sim,tx,ty), harvest_log_at(sim,tx,ty). Leaf imports: game.entities.nature LogStack,Tree; lazy game.world.TileType (as before)."
+          },
+          "wrappers_on_simengine": [
+            "def _update_fog_of_war(self): from game.sim import fog; fog.update_fog_of_war(self)",
+            "def _apply_entity_separation(self, dt): from game.sim import separation; separation.apply_entity_separation(self, dt)",
+            "def _init_trees_from_world(self): from game.sim import lumber; lumber.init_trees_from_world(self)",
+            "def _tree_growth_lookup(self, tx, ty): from game.sim import lumber; return lumber.tree_growth_lookup(self, tx, ty)",
+            "def remove_trees_in_footprint(self, grid_x, grid_y, w_tiles, h_tiles): from game.sim import lumber; return lumber.remove_trees_in_footprint(self, grid_x, grid_y, w_tiles, h_tiles)",
+            "@staticmethod _wood_yield_for_growth(growth): from game.sim import lumber; return lumber.wood_yield_for_growth(growth)",
+            "def find_nearest_choppable_tree_for_builder(self, from_tx, from_ty): from game.sim import lumber; return lumber.find_nearest_choppable_tree_for_builder(self, from_tx, from_ty)",
+            "def chop_tree_at(self, tx, ty): from game.sim import lumber; return lumber.chop_tree_at(self, tx, ty)",
+            "def harvest_log_at(self, tx, ty): from game.sim import lumber; return lumber.harvest_log_at(self, tx, ty)"
+          ],
+          "loc": {
+            "sim_engine_before": 1527,
+            "sim_engine_after": 1169,
+            "removed": 358,
+            "fog_py": 173,
+            "separation_py": 87,
+            "lumber_py": 204
+          },
+          "digest": {
+            "expected": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+            "after_fog": "unchanged (tests/test_wk67_ai_boundary.py 10 passed)",
+            "after_separation": "unchanged (10 passed)",
+            "after_lumber": "unchanged (10 passed)"
+          },
+          "verify": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed after EACH of the three extractions (digest b73961... byte-identical). python -m pytest -q -> 618 passed / 4 skipped / 0 failed (== baseline). python tools/determinism_guard.py -> PASS no violations. python tools/qa_smoke.py --quick -> DONE: PASS. Standalone import of game.sim_engine + the 3 new modules + SimEngine() construction OK -> no import cycle.",
+          "import_cycle": "NONE. New modules use from __future__ import annotations + TYPE_CHECKING-only import of SimEngine for the type hint; wrapper imports the module (game.sim import fog/separation/lumber), not vice-versa.",
+          "commit": "NOT COMMITTED (per instructions / PM commits after DoD).",
+          "next": "STOP after W1 for PM gate. W2 (poi_discovery + early_pacing + building_lifecycle) only after PM confirms the W1 digest."
+        },
+        "wk69_w2": {
+          "sprint_id": "wk69_round_b1_simengine_decomposition",
+          "round_id": "wk69_w2",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W2 - extract poi_discovery + early_pacing + building_lifecycle (final 3 of the 6 services). Sequential single-file work (all touch sim_engine.py), gated by PM after W1. Methods located by name (line numbers shifted after W1).",
+          "summary": "Mechanical behavior-preserving extraction of the final three inlined services from game/sim_engine.py into new game/sim/ modules behind 1-line delegating wrappers. Bodies moved verbatim with self.->sim.; early_pacing nudge + nearest-lair helper moved together (nudge calls the helper via sim._nearest_lair_to, still routed through the wrapper); building_lifecycle preserves the SAME HUD messages, BUILDING_DESTROYED events, rubble records, and entity-reference clearing exactly. No signatures/logic/order/call-sites changed. New modules take sim as a duck-typed param and import only the same leaf helpers (no game.sim_engine import at module top; TYPE_CHECKING-only type hint) -> no import cycle. CleanupManager + game/engine.py dead duplicates untouched (deferred to WK70).",
+          "new_modules": {
+            "game/sim/poi_discovery.py": "check_poi_discovery(sim) <- _check_poi_discovery. Leaf imports: math + config POI_DISCOVERY_RANGE_TILES/TILE_SIZE. Emits poi_discovered events verbatim.",
+            "game/sim/early_pacing.py": "maybe_apply_early_pacing_nudge(sim, dt, castle) + nearest_lair_to(sim, x, y) <- _maybe_apply_early_pacing_nudge + _nearest_lair_to (moved together). Leaf imports: config LAIR_BOUNTY_COST + game.types.BountyType. Nudge calls sim._nearest_lair_to (wrapper) to keep the seam identical.",
+            "game/sim/building_lifecycle.py": "cleanup_destroyed_buildings(sim) <- _cleanup_destroyed_buildings. Leaf imports: config TILE_SIZE + game.events.GameEventType; local method-body imports (game.entities.rubble RubbleRecord/make_rubble_id, game.sim.timebase.now_ms) preserved verbatim. Same HUD msg / BUILDING_DESTROYED batch / rubble_records append / ref-clearing. CleanupManager NOT touched."
+          },
+          "wrappers_on_simengine": [
+            "def _check_poi_discovery(self): from game.sim import poi_discovery; poi_discovery.check_poi_discovery(self)",
+            "def _maybe_apply_early_pacing_nudge(self, dt, castle): from game.sim import early_pacing; early_pacing.maybe_apply_early_pacing_nudge(self, dt, castle)",
+            "def _nearest_lair_to(self, x, y): from game.sim import early_pacing; return early_pacing.nearest_lair_to(self, x, y)",
+            "def _cleanup_destroyed_buildings(self): from game.sim import building_lifecycle; building_lifecycle.cleanup_destroyed_buildings(self)"
+          ],
+          "loc": {
+            "sim_engine_sprint_start": 1527,
+            "sim_engine_after_w1": 1169,
+            "sim_engine_after_w2": 988,
+            "removed_in_w2": 181,
+            "removed_total_sprint": 539,
+            "poi_discovery_py": 61,
+            "early_pacing_py": 83,
+            "building_lifecycle_py": 122
+          },
+          "digest": {
+            "expected": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+            "after_poi_discovery": "unchanged (tests/test_wk67_ai_boundary.py 10 passed)",
+            "after_early_pacing": "unchanged (10 passed)",
+            "after_building_lifecycle": "unchanged (10 passed)"
+          },
+          "verify": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed after EACH of the three extractions (digest b73961... byte-identical). python -m pytest -q -> 618 passed / 4 skipped / 0 failed (== baseline). python tools/determinism_guard.py -> PASS: no violations found. python tools/qa_smoke.py --quick -> DONE: PASS (all scenarios exit_code=0). Standalone import of the 3 new modules OK -> no import cycle.",
+          "import_cycle": "NONE. New modules use from __future__ import annotations + TYPE_CHECKING-only import of SimEngine for the type hint; wrappers import the module (game.sim import poi_discovery/early_pacing/building_lifecycle), not vice-versa. grep confirms all 6 game/sim/* service modules reference game.sim_engine only under TYPE_CHECKING.",
+          "commit": "NOT COMMITTED (per instructions / PM commits after DoD).",
+          "next": "W2 complete -> hand to PM gate, then Agent 11 W3 characterization sweep + final DoD gate. sim_engine.py now 988 LOC (target was ~1050-1100; beat it)."
+        }
+      }
     }
   }
 }
