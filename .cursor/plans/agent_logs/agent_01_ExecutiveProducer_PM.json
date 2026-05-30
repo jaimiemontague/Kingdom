@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK89 CLOSE): wk89_round_b_ursina_anim COMPLETE -- DoD met. ursina_renderer split slice 3: moved unit-anim computation (_compute_anim_frame + _facing_from_dto + _base_clip_from_dto) from ursina_renderer.py (1602 -> 1461 LOC) into the existing game/graphics/ursina_units_anim.py behind delegating wrappers; _unit_anim_state/_unit_facing_state/_frame_tick_id stay on the renderer; WK67 sim-tick anim clock preserved verbatim. No cycle. Behavior/visually-preserving: 867 passed/4 skipped/0 failed (+10 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL + anim-tick pins pass, before/after combat+base screenshots identical (PM+Agent 11 verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk89_round_b_ursina_anim.plan.md. WK88 was main 5f09d89. Committing+pushing. SESSION: 22 sprints WK68-89 shipped; suite 601->867; digest b73961 held byte-identical throughout all 22; ursina_renderer 1959->1461 over WK87/88/89. REMAINING: rest of ursina_renderer split (unit/building/misc-props sync); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK90.",
+    "2026-05-30 (Agent 01 WK89 KICKOFF): consolidate unit-anim computation into ursina_units_anim.py (Round B-6, ursina_renderer split slice 3). Move _compute_anim_frame + _facing_from_dto + _base_clip_from_dto from ursina_renderer.py (1602 LOC) into the existing ursina_units_anim.py behind delegating wrappers; _unit_anim_state + _frame_tick_id stay on the renderer; WK67 sim-tick anim clock preserved. Pure-move; screenshot-verified (combat attack clip + base). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + anim-tick pins). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk89_round_b_ursina_anim.plan.md. WK88 was main 5f09d89. NOT YET COMMITTED for WK89.",
     "2026-05-30 (Agent 01 WK88 CLOSE): wk88_round_b_ursina_frustum COMPLETE -- DoD met. ursina_renderer split slice 2: moved camera frustum-culling math (_get_visible_tile_rect ~177 LOC + _entity_in_view) from ursina_renderer.py (1780 -> 1602 LOC) into game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache + its update() assignment + the 5 sync-method _entity_in_view call sites stay on the renderer. Agent 09 repointed 1 test_terrain_perf monkeypatch (camera, patch-where-used). No cycle. Behavior/visually-preserving: 857 passed/4 skipped/0 failed (+8 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after base_overview screenshot BYTE-IDENTICAL (PM + Agent 11 both verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk88_round_b_ursina_frustum.plan.md. WK87 was main 11fea3c. Committing+pushing. SESSION: 21 sprints WK68-88 shipped; suite 601->857; digest b73961 held byte-identical throughout all 21; ursina_renderer 1959->1602 over WK87/88. REMAINING: ursina_anim + rest of ursina_renderer split (unit/building/misc-props sync); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK89.",
     "2026-05-30 (Agent 01 WK88 KICKOFF): extract ursina_frustum.py (Round B-5, ursina_renderer split slice 2). Move the camera frustum-culling math (_get_visible_tile_rect ~177 LOC + _entity_in_view) from ursina_renderer.py (1780 LOC) into game/graphics/ursina_frustum.py behind delegating wrappers; _frame_visible_rect cache + its update() assignment stay on the renderer. Pure-move; screenshot-verified (culling invisible if preserved -- before/after base_overview must show same entities). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk88_round_b_ursina_frustum.plan.md. WK87 was main 11fea3c. NOT YET COMMITTED for WK88.",
     "2026-05-30 (Agent 01 WK87 CLOSE): wk87_round_b_ursina_building_ui COMPLETE -- DoD met. First slice of the ursina_renderer.py (1959 -> 1780 LOC) split: moved the tax-overlay public API (set/is_tax_gold_overlay_held) + building_tax_overlay_snapshot + _sync_building_worldspace_ui + _maybe_log_tax_overlay_debug + overlay-Y helpers + _prefab_local_top_y (8 module fns) into game/graphics/ursina_building_ui.py; re-exported same-object from ursina_renderer so building-sync call sites + tests are unchanged; shared unit-overlay chrome (_configure_ks_overlay/_ensure_ks_name_label/_sync_ks_facing_overlay) stayed. Agent 09 repointed 2 wk61 test monkeypatch targets (patch-where-used). No cycle (ursina_building_ui never imports ursina_renderer). Behavior/visually-preserving: 849 passed/4 skipped/0 failed (+15 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, before/after tax-overlay screenshot BYTE-IDENTICAL (PM + Agent 11 both verified). Agent 09 extract+screenshot, Agent 11 verify. Plan: .cursor/plans/wk87_round_b_ursina_building_ui.plan.md. WK86 was main 3bdb57e. Committing+pushing. SESSION: 20 sprints WK68-87 shipped; suite 601->849; digest b73961 held byte-identical throughout all 20. REMAINING: rest of ursina_renderer.py split (unit-sync/building-sync/frustum/anim/misc-props); hud.py(2477); ursina_terrain_fog_collab/ursina_app; Move 9; world.py fog; context_builder/direct_prompt_validator; ai/vocab.py + TaskRouter; config package; clusters 3/4; Round E audit; 21-file zombie purge. Next: WK88.",
@@ -4628,6 +4630,67 @@
             "10(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk88_round_b_ursina_frustum'].rounds['wk88_kickoff']) + plan .cursor/plans/wk88_round_b_ursina_frustum.plan.md; claude-opus-4-8; PURE MOVE, keep wrapper names + the _frame_visible_rect cache on the renderer, TYPE_CHECKING-only import; before/after base_overview MUST match + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk89_round_b_ursina_anim": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T23:30:00Z",
+        "plan_doc": ".cursor/plans/wk89_round_b_ursina_anim.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK89 / Round B-6)",
+        "notes": "Round B-6 (ursina_renderer split slice 3): move the unit-animation-frame computation (_compute_anim_frame + _facing_from_dto + _base_clip_from_dto) from ursina_renderer.py (1602 LOC) into the EXISTING game/graphics/ursina_units_anim.py behind delegating wrappers; _unit_anim_state + _frame_tick_id stay on the renderer; WK67 sim-tick anim clock preserved. Pure-move; screenshot-verified (combat attack clip + base). Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + anim-tick pins). Agent 09 extract+screenshot, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (857/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + anim-tick pins pass",
+          "D. qa_smoke green",
+          "E. 3 fns in ursina_units_anim.py; wrappers on UrsinaRenderer; call sites unchanged; anim-state on renderer; ursina_renderer.py smaller; no cycle",
+          "F. before/after combat+base Ursina screenshots visually identical",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "867 passed / 4 skipped / 0 failed (857 + 10 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS",
+          "ai_decision_digest": "b73961... byte-identical + anim-tick pins pass",
+          "screenshots": "base byte-identical; combat attack-clip pose identical (PM+Agent 11 verified)",
+          "ursina_renderer_loc": "1602 -> 1461 (-141); cumulative 1959 -> 1461 over WK87/88/89",
+          "result": "unit-anim computation (compute_anim_frame + facing_from_dto + base_clip_from_dto) moved into ursina_units_anim.py behind delegating wrappers; _unit_anim_state/_unit_facing_state/_frame_tick_id stay on renderer; WK67 sim-tick anim clock preserved; no cycle."
+        }
+      },
+      "rounds": {
+        "wk89_kickoff": {
+          "round_meta": {
+            "round_id": "wk89_kickoff",
+            "created_utc": "2026-05-30T23:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk89_round_b_ursina_anim.plan.md",
+            "build_target": "move unit-anim computation into ursina_units_anim.py",
+            "goal": "all tests pass; units animate identically"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "before/after combat screenshot identical (attack clip) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + anim-tick pins",
+            "wave_dag": "W1(09 extract+screenshots)->gate->W2(11 verify+screenshot review)->commit",
+            "dispatch_order": [
+              "09 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "09": "[Agent 09 ArtDirector] Consolidate the unit-animation-frame computation from game/graphics/ursina_renderer.py (1602 LOC) into the EXISTING game/graphics/ursina_units_anim.py per plan .cursor/plans/wk89_round_b_ursina_anim.plan.md sections 1-2 (pure-move behind delegating wrappers). STEP 0 BEFORE screenshots: python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 240 --no-llm --out docs/screenshots/wk89_before_combat ; and base overview (default) --out docs/screenshots/wk89_before_base. Then MOVE VERBATIM into ursina_units_anim.py: _base_clip_from_dto (ursina_renderer.py:272, module fn) -> base_clip_from_dto(dto); _facing_from_dto (453, method) -> facing_from_dto(r, dto); _compute_anim_frame (485-614, method) -> compute_anim_frame(r, obj_id, entity, unit_type, class_key, base_clip_fn=None) (reads r._unit_anim_state, r._frame_tick_id, the clips; calls the in-module anim_clock_seconds/_frame_index_for_clip/base_clip_from_dto). Leave 1-line delegating wrappers on UrsinaRenderer (SAME names) so the call sites (~616 self._compute_anim_frame, ~1089/1183 self._facing_from_dto) are UNCHANGED. Re-export _base_clip_from_dto from ursina_renderer if a test imports it there. KEEP _unit_anim_state + _frame_tick_id ON the renderer (only the compute moves). CRITICAL: preserve the WK67 sim-tick-derived anim clock under DETERMINISTIC_SIM exactly (compute_anim_frame still uses r._frame_tick_id via anim_clock_seconds). RULES: ursina_units_anim.py is a leaf module the renderer already imports (one-directional) -- the new fns take `r`; no new import of ursina_renderer (TYPE_CHECKING only if a hint needed); no cycle. Move VERBATIM (no anim-timing change). STEP N AFTER screenshots (same 2 scenarios, _after); VIEW before vs after -- MUST be visually identical (the attack-clip frame in combat + base). VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + the anim-tick determinism pins), python -m pytest -q (857 passed), determinism_guard, qa_smoke --quick, import check. If combat anim differs, you broke the clock/clip -- revert+reinvestigate. Report: the 3 fns moved, the wrappers, ursina_renderer.py new LOC (was 1602), before/after screenshot paths + visual verdict, digest, suite totals, no-cycle. Lane = ursina_renderer.py + ursina_units_anim.py. DO NOT COMMIT; update agent_09 log (round wk89_w1).",
+            "11": "[Agent 11] W2 (after 09): create tests/test_wk89_ursina_anim.py: assert game.graphics.ursina_units_anim has compute_anim_frame + facing_from_dto + base_clip_from_dto (callable); assert UrsinaRenderer._compute_anim_frame + _facing_from_dto delegate (spy+monkeypatch the module fns; use object.__new__(UrsinaRenderer) or a fake `self` with _unit_anim_state/_frame_tick_id, OR source/AST assert the wrappers call ursina_units_anim.<fn>(self, ...)); AST guard ursina_units_anim.py has no module-top ursina_renderer import + no module-load cycle (fresh subprocess both orders). INDEPENDENTLY VIEW before/after screenshots (wk89_before_combat vs wk89_after_combat -- attack clip; wk89_before_base vs wk89_after_base) -- confirm visually identical; written verdict. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk89_w2).",
+            "10": "[Agent 10 CONSULT] available -- you did the WK68 instanced anim FSM. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "09",
+            "11",
+            "10(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk89_round_b_ursina_anim'].rounds['wk89_kickoff']) + plan .cursor/plans/wk89_round_b_ursina_anim.plan.md; claude-opus-4-8; PURE MOVE, keep wrapper names + anim-state on the renderer + the WK67 sim-tick anim clock; before/after combat+base screenshots MUST match + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unchanged; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

@@ -9,6 +9,58 @@
     "Structure nests rounds inside sprints to keep history organized."
   ],
   "sprints": {
+    "wk89_round_b_ursina_anim": {
+      "sprint_meta": {
+        "sprint_id": "wk89_round_b_ursina_anim",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify WK89's behavior-preserving MOVE of the per-frame unit-animation-frame computation out of game/graphics/ursina_renderer.py (1602->1461) into the existing leaf game/graphics/ursina_units_anim.py as module functions compute_anim_frame(r,obj_id,entity,unit_type,class_key,base_clip_fn=None), facing_from_dto(r,dto), base_clip_from_dto(dto). UrsinaRenderer keeps 1-line delegating wrappers _compute_anim_frame/_facing_from_dto (forward self) and RE-EXPORTS base_clip_from_dto as _base_clip_from_dto; the per-entity anim FSM (_unit_anim_state), facing scratch (_unit_facing_state) and the WK67 sim-tick anim-clock id (_frame_tick_id) STAY on the renderer; call sites unchanged. Lock the seam (3 fns exist+callable on ursina_units_anim; both wrappers delegate self via spy+monkeypatch AND AST; _base_clip_from_dto re-export is the SAME object; no module-top renderer import; fresh-subprocess import both orders) + INDEPENDENT before/after screenshot review (combat attack clip + base overview) + full DoD gate."
+      },
+      "rounds": {
+        "wk89_w2": {
+          "sprint_id": "wk89_round_b_ursina_anim",
+          "round_id": "wk89_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + DoD gate + INDEPENDENT before/after screenshot review)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk89 W1 (Agent 09 moved the 3 anim-frame fns into ursina_units_anim.py behind delegating wrappers + base_clip re-export; verified digest UNCHANGED + anim-tick pins + 857 passed + before/after combat+base screenshots base byte-identical / combat attack-frame identical; PM independently confirmed the combat attack-strike pose identical before/after)."
+          },
+          "prompt_summary": "WK89 W2: create tests/test_wk89_ursina_anim.py asserting ursina_units_anim has compute_anim_frame+facing_from_dto+base_clip_from_dto (callable); UrsinaRenderer._compute_anim_frame/_facing_from_dto delegate (spy+monkeypatch the module fns on the units_anim module + AST assert the wrapper bodies call ursina_units_anim.<fn>(self,...)); ursina_renderer._base_clip_from_dto IS ursina_units_anim.base_clip_from_dto (same object re-export); AST guard ursina_units_anim.py has NO module-top ursina_renderer import; fresh-subprocess import both orders OK. INDEPENDENTLY VIEW before/after screenshots (wk89_before/after_combat attack clip; wk89_before/after_base) - written verdict. Full DoD: pytest all pass, determinism_guard, WK67 digest == b73961..., qa_smoke --quick. Only the test file; no prod edits; DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk89_ursina_anim.py (10 headless seam tests, all pass) locking the WK89 unit-anim-frame MOVE: (1) ursina_units_anim has compute_anim_frame + facing_from_dto + base_clip_from_dto and each is callable (parametrized x3); (2) UrsinaRenderer._compute_anim_frame DELEGATES - spy+monkeypatch ursina_units_anim.compute_anim_frame (patch-where-used: the wrapper does a lazy 'from game.graphics import ursina_units_anim' then calls the module attr), assert called exactly once with self forwarded as arg 0 and obj_id/entity/unit_type/class_key/base_clip_fn forwarded, returns the module fn's result; (3) UrsinaRenderer._facing_from_dto DELEGATES the same way (self + dto forwarded, result returned); (4) ursina_renderer._base_clip_from_dto IS ursina_units_anim.base_clip_from_dto (identity 'is' check - a pure re-export, not a copy/wrapper; guards the legacy ursina_renderer._base_clip_from_dto import path); (5) AST belt-and-suspenders - each wrapper body contains a call ursina_units_anim.<fn>(self, ...) (pins delegation even if the monkeypatch path changed); (6) AST guard - ursina_units_anim.py has NO module-top (runtime) import of ursina_renderer (dependency points one way: renderer->units_anim); (7) fresh-subprocess import of both modules in EITHER order succeeds (no module-load cycle, parametrized x2). Used object.__new__(UrsinaRenderer) bare instance for the wrapper spies (wrappers only forward self, touch no instance state). No production code touched. INDEPENDENTLY opened all 4 screenshots and confirmed visually identical.",
+            "files_created": [
+              "tests/test_wk89_ursina_anim.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_moved_function_lives_on_units_anim (parametrized x3: compute_anim_frame/facing_from_dto/base_clip_from_dto)",
+            "test_compute_anim_frame_wrapper_delegates (spy+monkeypatch: self+obj_id+entity+unit_type+class_key+base_clip_fn forwarded; result returned)",
+            "test_facing_from_dto_wrapper_delegates (spy+monkeypatch: self+dto forwarded; result returned)",
+            "test_base_clip_from_dto_is_reexported_same_object (identity: ursina_renderer._base_clip_from_dto IS ursina_units_anim.base_clip_from_dto)",
+            "test_wrappers_call_units_anim_module_in_source (AST: both wrapper bodies call ursina_units_anim.<fn>(self, ...))",
+            "test_units_anim_has_no_module_top_import_of_renderer (AST: no module-top runtime ursina_renderer import)",
+            "test_fresh_subprocess_imports_both_orders (parametrized x2: import order independence / no cycle)"
+          ],
+          "screenshot": "INDEPENDENT REVIEW DONE - VISUALLY IDENTICAL. Opened all 4 PNGs myself. (1) COMBAT/attack clip: docs/screenshots/wk89_before_combat/ursina_melee_combat_20260530_102420_173.png vs wk89_after_combat/ursina_melee_combat_20260530_103314_822.png - identical: same castle, same hero ('S...' label) + Goblin positioned identically mid-attack, same green HP bar, same attack-strike pose/frame, same terrain+crystal+rock layout, same HUD (Gold/Heroes 1/Enemies 1/Buildings). (2) BASE overview: wk89_before_base/ursina_20260530_102442_301.png vs wk89_after_base/ursina_20260530_103336_874.png - identical: same island shape, same buildings (castle/towers/houses/orange-roof structures), same crystal+decoration placement, same HUD (Gold 2100, Heroes 0, Wave 1), same frame-time debug panel, same bottom toolbar (Build/Hire/Bounty). No visible difference in either pair - the move is render-equivalent.",
+          "dod_gate": {
+            "A_full_suite": "867 passed, 4 skipped, 0 failed in 167.65s (baseline 857 + 10 new WK89 seam tests = 867). PASS",
+            "B_determinism_guard": "[determinism_guard] PASS: no violations found (exit 0). PASS",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to the golden pin (present in tests/test_wk67_ai_boundary.py; confirmed). tests/test_wk67_ai_boundary.py = 10 passed (incl. the WK67 sim-tick anim-clock determinism pins, which compute_anim_frame still drives via r._frame_tick_id->anim_clock_seconds). PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) across speed_scaling 0.25x/0.5x/1.0x + interior_view + quest_panel + conversation + direct_prompt_integration. PASS",
+            "E_seam_structure": "The 3 fns live in ursina_units_anim.py (compute_anim_frame/facing_from_dto/base_clip_from_dto, callable); UrsinaRenderer keeps the _compute_anim_frame/_facing_from_dto delegating wrappers (both proven to forward self + args and return the module result via spy+monkeypatch AND AST) + _base_clip_from_dto re-export (same object as ursina_units_anim.base_clip_from_dto); call sites at ~475/948/1042 unchanged; _unit_anim_state/_unit_facing_state/_frame_tick_id stay on the renderer; ursina_renderer.py = 1461 LOC (1602->1461, ~141 smaller); NO module-top renderer import in units_anim + fresh-subprocess import both orders OK = no import cycle. PASS",
+            "F_screenshots": "BEFORE/AFTER ursina_melee_combat (attack clip) AND base_overview - independently opened + visually identical (see screenshot field). PASS",
+            "G_logs_and_close": "this log entry written (round wk89_w2); PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam verification; no production edits, did not commit. The WK67 300-tick AI-decision digest stays byte-identical (b73961...) and the WK67 anim-tick determinism tests pass - compute_anim_frame still derives the within-clip elapsed from r._frame_tick_id via anim_clock_seconds (the WK67 sim-tick anim clock preserved), so byte-reproducible captures are intact. KEY SEAM NOTES: (a) the wrappers do a LAZY function-local 'from game.graphics import ursina_units_anim' then call the module attr, so the delegation spies monkeypatch the name ON ursina_units_anim (patch-where-used) - not on ursina_renderer; (b) _base_clip_from_dto is a RE-EXPORT not a wrapper, so it is pinned with an identity ('is') check rather than a delegation spy; (c) used object.__new__(UrsinaRenderer) so the wrapper spies need no ursina window. Both wrapper spies use a bare renderer because the wrappers forward self and touch no instance state. No regressions found; all 7 DoD criteria A-G hold."
+        }
+      }
+    },
     "wk85_round_d_handle_idle_split": {
       "sprint_meta": {
         "sprint_id": "wk85_round_d_handle_idle_split",

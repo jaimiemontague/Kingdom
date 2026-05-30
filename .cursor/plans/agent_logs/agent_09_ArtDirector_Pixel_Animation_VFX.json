@@ -878,6 +878,66 @@
           ]
         }
       }
+    },
+    "wk89_round_b_ursina_anim": {
+      "sprint_meta": {
+        "notes": "WK89 Round B-6 (Agent 09): consolidated the unit-animation-frame computation (_base_clip_from_dto, _facing_from_dto, _compute_anim_frame) out of ursina_renderer.py into the EXISTING game/graphics/ursina_units_anim.py (which already held anim_clock_seconds / _frame_index_for_clip / the *_base_clip helpers). PURE VERBATIM move behind 1-line delegating wrappers (same names) on UrsinaRenderer; call sites unchanged. _unit_anim_state + _unit_facing_state + _frame_tick_id stay on the renderer (only the compute moved). WK67 sim-tick anim clock preserved exactly. Render visually unchanged (before/after combat + base identical). ursina_renderer.py 1602 -> 1461 LOC; ursina_units_anim.py 123 -> 287 LOC.",
+        "created_utc": "2026-05-30T16:35:58.371798+00:00"
+      },
+      "rounds": {
+        "wk89_w1": {
+          "sprint_id": "wk89_round_b_ursina_anim",
+          "round_id": "wk89_w1",
+          "status": "done",
+          "role": "WAVE W1 - move the 3 unit-anim-frame fns from ursina_renderer.py into ursina_units_anim.py behind delegating wrappers; before/after combat+base screenshot verify; suite+digest+anim-tick+gates.",
+          "what_i_changed": {
+            "game/graphics/ursina_units_anim.py (123 -> 287 LOC)": [
+              "MOVED VERBATIM (module fn): _base_clip_from_dto (was renderer :272) -> base_clip_from_dto(dto) -> str. Body byte-for-byte identical (dto.kind/state_name/is_inside_building/is_alive dispatch). Natural home: it mirrors the in-module *_base_clip helpers.",
+              "MOVED VERBATIM (method->fn): _facing_from_dto (was renderer :453) -> facing_from_dto(r, dto) -> int. self.->r.; reads/writes r._unit_facing_state exactly as self.*. Combat-target / last-x delta / last-known-facing precedence unchanged.",
+              "MOVED VERBATIM (method->fn): _compute_anim_frame (was renderer :485-614) -> compute_anim_frame(r, obj_id, entity, unit_type, class_key, base_clip_fn=None) -> tuple. self.->r.; reads r._unit_anim_state, r._frame_tick_id, r._get_cached_clips; calls in-module anim_clock_seconds/_frame_index_for_clip/base_clip_from_dto. WK67 sim-tick anim clock preserved: now = anim_clock_seconds(getattr(r, _frame_tick_id, 0)).",
+              "NO module-top import of ursina_renderer (the fns take r). Leaf deps unchanged (animation, worker_sprites, config). No cycle."
+            ],
+            "game/graphics/ursina_renderer.py (1602 -> 1461 LOC)": [
+              "DELETED the module-level _base_clip_from_dto def (was :271-314); RE-EXPORTED it from ursina_units_anim in the existing import block (base_clip_from_dto as _base_clip_from_dto) so any importer of ursina_renderer._base_clip_from_dto keeps working (verified importable).",
+              "Replaced _facing_from_dto method body with 1-line lazy-delegating wrapper (SAME name): {from game.graphics import ursina_units_anim; return ursina_units_anim.facing_from_dto(self, dto)}.",
+              "Replaced _compute_anim_frame method body with 1-line lazy-delegating wrapper (SAME name): {... return ursina_units_anim.compute_anim_frame(self, obj_id, entity, unit_type, class_key, base_clip_fn)}.",
+              "UNCHANGED: call sites self._compute_anim_frame(...) (~616 _sync_unit_atlas_billboard) and self._facing_from_dto(...) (~1089 hero, ~1183 enemy); _unit_anim_state + _unit_facing_state + _frame_tick_id fields + all their pop() cleanup; tools/wk67_combat_capture_patch.py still wraps renderer._compute_anim_frame (wrapper name preserved)."
+            ]
+          },
+          "state_stays_on_renderer": "_unit_anim_state (per-entity anim FSM dict), _unit_facing_state (movement scratch), and _frame_tick_id (WK67 sim-tick anim clock basis) remain on UrsinaRenderer. Only the COMPUTE moved; the moved fns read/write them via r.",
+          "verify": {
+            "pytest_wk67_ai_boundary": "10 passed; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant asserted in test; line 181) + anim-tick determinism pins pass.",
+            "pytest_full": "857 passed, 4 skipped, 0 failed (162.37s) - matches baseline.",
+            "determinism_guard": "PASS: no violations found (exit 0).",
+            "qa_smoke_quick": "DONE: PASS (exit 0).",
+            "import_check": "from game.graphics.ursina_units_anim import compute_anim_frame, facing_from_dto, base_clip_from_dto -> ok True. from game.graphics.ursina_renderer import _base_clip_from_dto (re-export) -> re-export ok True.",
+            "no_cycle": "CONFIRMED - wrappers import ursina_units_anim LAZILY (inside the method); ursina_units_anim has NO module-top import of ursina_renderer (the 3 fns take r). Fresh import of each module succeeds independently. ursina_units_anim stays a leaf the renderer imports one-directionally."
+          },
+          "screenshots": {
+            "before_combat": "docs/screenshots/wk89_before_combat/ursina_melee_combat_20260530_102420_173.png",
+            "after_combat": "docs/screenshots/wk89_after_combat/ursina_melee_combat_20260530_103314_822.png",
+            "before_base": "docs/screenshots/wk89_before_base/ursina_20260530_102442_301.png",
+            "after_base": "docs/screenshots/wk89_after_base/ursina_20260530_103336_874.png"
+          },
+          "visual_verdict": "IDENTICAL. COMBAT: same castle position, same warrior hero holding the attack/strike pose with sword extended, same goblin to the right (green name label + S + green health bar), same terrain/gem clusters/rock props, same HUD (Gold 2100 | Heroes 1 | Enemies 1). The attack-clip frame is unchanged -> clock/clip preserved. BASE: byte-identical PNG (same SHA-256 3f24bcb2..., 212714 bytes) - same island terrain, building cluster, props, fog, HUD/command bar. Combat PNG differs by 9 bytes (encoder-level jitter only); the unit/attack frame is pixel-identical on inspection.",
+          "how_to_test": [
+            "python tools/run_ursina_capture_once.py --scenario ursina_melee_combat --ticks 240 --no-llm --out docs/screenshots/wk89_before_combat",
+            "python tools/run_ursina_capture_once.py --ticks 480 --no-llm --out docs/screenshots/wk89_before_base",
+            "(make the move) then same 2 captures with _after suffix",
+            "python -m pytest tests/test_wk67_ai_boundary.py -q",
+            "python -m pytest -q",
+            "python tools/determinism_guard.py",
+            "python tools/qa_smoke.py --quick",
+            "python -c \"from game.graphics.ursina_units_anim import compute_anim_frame, facing_from_dto, base_clip_from_dto; print(callable(compute_anim_frame))\""
+          ],
+          "blockers": [],
+          "cross_lane_edits_note": "NONE. Stayed strictly in lane (game/graphics/ursina_renderer.py + game/graphics/ursina_units_anim.py). No test files touched (no test imported _base_clip_from_dto from ursina_renderer; the WK66 headless anim test calls r._compute_anim_frame via the preserved wrapper; the WK67 anim-tick pins import anim_clock_seconds/_frame_index_for_clip from ursina_units_anim, untouched).",
+          "follow_ups_for_PM": [
+            "Agent 11 W2: seam test (compute_anim_frame + facing_from_dto + base_clip_from_dto exist in ursina_units_anim; wrappers delegate; _base_clip_from_dto re-exported from ursina_renderer; no cycle) + full DoD + independently view before/after combat+base screenshots (must match).",
+            "Rest of ursina_renderer split (unit/building/misc-props sync) per plan section 7."
+          ]
+        }
+      }
     }
   }
 }
