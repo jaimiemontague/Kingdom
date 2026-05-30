@@ -2494,6 +2494,38 @@
           "notes_for_pm": "W1 mechanical extraction complete, all gates green, no behavior change. Ready for PM gate then Agent 11 W2 (seam test that wrappers delegate + sanity base_overview screenshot + full DoD). Did NOT commit. Touched only game/input_handler.py + new game/input/*.py."
         }
       }
+    },
+    "wk78_round_b2_engine_lifecycle_facade": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md",
+        "created_utc": "2026-05-30T23:30:00Z",
+        "notes": "Round B-2f: extract game/engine.py per-frame lifecycle (update/_prepare_sim_and_camera/_update_render_animations/tick_simulation) into game/engine_facades/lifecycle.py behind 1-line delegating wrappers. PURE MOVE (WK75/76 pattern): module functions take the live GameEngine as engine (self.->engine.); inter-method calls routed through engine.<wrapper> so the delegation seam stays single; TYPE_CHECKING-only engine import, no cycle. build_snapshot/build_presentation_frame (WK67/68 DTOs), update_camera, run, __init__ stay on GameEngine. Behavior byte-identical; WK67 digest b73961... + suite + qa_smoke stay green. W1 = the extraction (this entry); W2 (Agent 11) adds seam test + sanity screenshot + DoD."
+      },
+      "rounds": {
+        "wk78_w1": {
+          "sprint_id": "wk78_round_b2_engine_lifecycle_facade",
+          "round_id": "wk78_w1",
+          "status": "done",
+          "intelligence": "HIGH",
+          "wave": "Wave W1 - extract the 4 per-frame lifecycle methods out of game/engine.py into new game/engine_facades/lifecycle.py behind 1-line delegating wrappers. Single-lane mechanical work; STOP after W1 for PM gate (suite + WK67 digest + qa_smoke) before W2 (Agent 11 seam test + sanity base_overview screenshot + full DoD).",
+          "summary": "Extracted the GameEngine per-frame lifecycle into game/engine_facades/lifecycle.py (WK75/76 pure-move pattern). Four methods moved byte-for-byte into module functions taking the live GameEngine as engine (self.->engine. only): update, _prepare_sim_and_camera, _update_render_animations, tick_simulation. Frame-step order preserved VERBATIM: update -> engine._prepare_sim_and_camera (early-out + _flush_event_bus), get_game_state, sim.update, engine._update_render_animations, _finalize_update, _poll_conversation_response. tick_simulation: pending display-settings apply, _camera_dt=dt, handle_events + ursina g-held overlay, sim-time accumulate (dt*get_time_multiplier), the fixed-rate while-loop (>=_FIXED_SIM_DT and < _MAX_TICKS_PER_FRAME) calling engine.update(_FIXED_SIM_DT), accumulator drain, tick counters, camera_dt zeroing after first tick, evt/upd timing. _prepare_sim_and_camera: speed-tier/menu pause early-outs + camera pan; _update_render_animations: headless guard, ursina one-shot anim triggers, renderer_registry.update_animations. INTER-METHOD CALLS ROUTED THROUGH WRAPPERS (single seam): update calls engine._prepare_sim_and_camera / engine._update_render_animations; tick_simulation calls engine.update. Each original method on GameEngine is now a 1-line wrapper that lazily imports the module.",
+          "new_module": {
+            "game/engine_facades/lifecycle.py": "update(engine, dt), _prepare_sim_and_camera(engine, dt)->bool, _update_render_animations(engine, dt), tick_simulation(engine, dt)->tuple[float,float]. from __future__ import annotations; leaf imports: import time (used by tick_simulation perf_counter), from game.sim.timebase import get_time_multiplier (used by _prepare_sim_and_camera + tick_simulation); tick_simulation keeps its original inline imports verbatim (from game.graphics.ursina_renderer import set_tax_gold_overlay_held; from ursina import held_keys). GameEngine imported ONLY under TYPE_CHECKING. ~190 LOC."
+          },
+          "wrappers_kept_on_GameEngine": "update(self,dt)->lifecycle.update(self,dt); _prepare_sim_and_camera(self,dt)->lifecycle._prepare_sim_and_camera(self,dt); _update_render_animations(self,dt)->lifecycle._update_render_animations(self,dt); tick_simulation(self,dt)->lifecycle.tick_simulation(self,dt). All 4 names identical (run() still calls self.update(); ursina/pygame loop still calls self.tick_simulation()). LEFT ON GameEngine untouched: build_snapshot, build_presentation_frame (WK67/68 DTO code), update_camera, run, __init__, and all other methods (_finalize_update, _flush_event_bus, send_player_message, _poll_conversation_response, etc.).",
+          "engine_loc": "1184 -> 1072 (-112). The 4 method bodies replaced by 1-line lazy-import wrappers; new ~190-LOC lifecycle.py module holds the bodies. Now-orphaned top-level imports (import time; get_time_multiplier/set_time_multiplier from game.sim.timebase) left in place to keep this a zero-behavior-change pure move (set_time_multiplier was already an unused import at HEAD).",
+          "verification": {
+            "wk67_digest": "python -m pytest tests/test_wk67_ai_boundary.py -q -> 10 passed; AI-decision digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (constant hard-coded in test, asserts byte-identical).",
+            "full_suite": "python -m pytest -q -> 732 passed, 4 skipped, 0 failed (baseline match) in 144.71s.",
+            "determinism_guard": "python tools/determinism_guard.py -> PASS: no violations found (exit 0).",
+            "qa_smoke": "python tools/qa_smoke.py --quick -> DONE: PASS (exit 0); all scenarios incl. speed_scaling 0.5x/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration ran the sim through tick_simulation/update with exit_code=0.",
+            "import_check": "python -c \"from game.engine_facades import lifecycle; print(all(hasattr(lifecycle,m) for m in [update,_prepare_sim_and_camera,_update_render_animations,tick_simulation]))\" -> True.",
+            "no_import_cycle": "Confirmed - import game.engine AND from game.engine_facades import lifecycle both succeed; lifecycle.py imports GameEngine only under TYPE_CHECKING (from __future__ import annotations), wrappers import the module lazily inside the method, module never imports game.engine at top."
+          },
+          "do_not_commit": true,
+          "notes_for_pm": "W1 mechanical extraction complete; all gates green, zero behavior change, no import cycle. Touched ONLY game/engine.py + new game/engine_facades/lifecycle.py. Did NOT commit. Ready for PM gate then Agent 11 W2 (seam test that the 4 wrappers delegate + sanity base_overview pygame screenshot that runs update/tick/render + full DoD)."
+        }
+      }
     }
   }
 }

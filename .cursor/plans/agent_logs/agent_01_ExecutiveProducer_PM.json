@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK78 CLOSE): wk78_round_b2_engine_lifecycle_facade COMPLETE -- DoD met. Extracted the 4 per-frame lifecycle methods (update/_prepare_sim_and_camera/_update_render_animations/tick_simulation) -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern; inter-method calls routed through engine.<wrapper>). build_snapshot/build_presentation_frame/update_camera/run stay on GameEngine. engine.py 1184 -> 1072 (-112; cumulative 1678 -> 1072 across the WK75/76/78 facade extractions). Behavior-preserving: 739 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS (runs the sim through tick/update), WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot normal frame. Agent 03 extract, Agent 11 verify+screenshot. engine.py now substantially decomposed (actions/console/selection/lifecycle facades). Remaining engine.py: __init__ split + 39x idiom cleanup (minor). NEXT MAJOR WORK = the BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 / ursina_terrain_fog_collab.py 1783 / ursina_app.py 1525 -- screenshot-heavy), then Move 9, world.py, config package, audio split, clusters 3/4/5, Round D AI router/splits, Round E audit, zombie purge. Plan: .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md. WK77 was main 500d646. Committing+pushing. Next: WK79.",
+    "2026-05-30 (Agent 01 WK78 KICKOFF): engine.py lifecycle facade (Round B-2f). Extract update/_prepare_sim_and_camera/_update_render_animations/tick_simulation -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern); build_snapshot/build_presentation_frame/update_camera/run stay. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded); guarded by qa_smoke (runs sim) + sanity screenshot (runs engine) + full suite. Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md. WK77 was main 500d646. NOT YET COMMITTED for WK78.",
     "2026-05-30 (Agent 01 WK77 CLOSE): wk77_round_b2_input_handler_split COMPLETE -- DoD met. Split game/input_handler.py (789 -> 170 LOC, -619) into game/input/ package: mouse.py (handle_mousedown+handle_mousemove), keyboard.py (handle_keydown), placement.py (select_building_for_placement), as functions taking the InputHandler as ih, behind 1-line delegating wrappers (WK75/76 pure-move pattern). InputHandler keeps __init__/process_events/_clear_hero_selection. Every branch moved verbatim (pause guard incl WK68 H1 panel_hit, HUD-action ladder, building-panel hire/enter/demolish dispatch, WK70 BUILD_HOTKEY_TO_TYPE reverse-map). Behavior-preserving: 732 passed/4 skipped/0 failed (+12 seam tests), determinism PASS, qa_smoke PASS, WK68 button/paused + input tests green, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. NOTE: PM hub had a minor inline-backtick corruption in the wk77 03-prompt example (bash command-substitution); the plan doc carried the full pattern so no impact -- use Write-file writers for hub edits, not python -c with backticks. Deferred: finer handle_mousedown breakdown; engine.py lifecycle facade; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk77_round_b2_input_handler_split.plan.md. WK76 was main d35c619. Committing+pushing. Next: WK78.",
     "2026-05-30 (Agent 01 WK77 KICKOFF): input_handler.py split into game/input/ package (Round B-2e). Extract handle_mousedown+handle_mousemove->mouse.py, handle_keydown->keyboard.py, select_building_for_placement->placement.py (functions taking ih) behind delegating wrappers (WK75/76 pure-move pattern); InputHandler keeps __init__/process_events/_clear_hero_selection. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded); guarded by WK68 button/paused tests + test_input_handler_gamecommands + sanity screenshot. Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk77_round_b2_input_handler_split.plan.md. WK76 was main d35c619. NOT YET COMMITTED for WK77.",
     "2026-05-30 (Agent 01 WK76 CLOSE): wk76_round_b2_engine_selection_facade COMPLETE -- DoD met. Extracted the 8 try_select_* selection methods -> game/engine_facades/selection.py behind delegating wrappers (WK75 pure-move pattern; 39x idiom cleanup deferred). engine.py 1365 -> 1184 (-181; cumulative 1678->1184 across WK75+WK76). Behavior-preserving: 720 passed/4 skipped/0 failed (+11 seam tests), determinism PASS, qa_smoke PASS, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. Deferred: engine.py lifecycle facade + __init__ split + 39x idiom cleanup; input_handler package; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk76_round_b2_engine_selection_facade.plan.md. WK75 was main 6898168. Committing+pushing. Next: WK77.",
@@ -3950,6 +3952,66 @@
             "08(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints[wk77_round_b2_input_handler_split].rounds[wk77_kickoff]) + plan .cursor/plans/wk77_round_b2_input_handler_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names + every branch verbatim, TYPE_CHECKING-only import; WK68 button/paused + input tests + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay green; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk78_round_b2_engine_lifecycle_facade": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T12:30:00Z",
+        "plan_doc": ".cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK78 / Round B-2f)",
+        "notes": "Round B-2f: engine.py lifecycle facade. Extract update/_prepare_sim_and_camera/_update_render_animations/tick_simulation -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern). build_snapshot/build_presentation_frame/update_camera/run stay. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded); guarded by qa_smoke (runs sim) + sanity screenshot (runs engine) + full suite. Agent 03 extract, Agent 11 verify+screenshot.",
+        "definition_of_done": [
+          "A. pytest all pass (732/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. lifecycle.py exists; 4 wrappers on GameEngine; engine.py smaller; no cycle",
+          "F. sanity screenshot (full frame)",
+          "G. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "739 passed / 4 skipped / 0 failed (732 + 7 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS (runs the sim through tick/update)",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical)",
+          "engine_loc": "1184 -> 1072 (-112); cumulative engine.py 1678 -> 1072 across WK75/76/78",
+          "result": "4 per-frame lifecycle methods (update/_prepare_sim_and_camera/_update_render_animations/tick_simulation) extracted -> engine_facades/lifecycle.py behind delegating wrappers; inter-method calls route through engine.<wrapper>; no import cycle; sanity screenshot normal frame."
+        }
+      },
+      "rounds": {
+        "wk78_kickoff": {
+          "round_meta": {
+            "round_id": "wk78_kickoff",
+            "created_utc": "2026-05-30T12:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md",
+            "build_target": "engine lifecycle facade",
+            "goal": "all tests pass; frame loop byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical + qa_smoke green (runs sim)",
+            "wave_dag": "W1(03)->gate(suite+digest+qa_smoke)->W2(11 verify+screenshot)->commit",
+            "dispatch_order": [
+              "03 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "03": "[Agent 03] Extract the per-frame lifecycle methods out of game/engine.py into game/engine_facades/lifecycle.py behind 1-line delegating wrappers (WK75/76 pure-move pattern: facade fn takes the live GameEngine as `engine`, self.->engine., original method becomes a shim). Methods (locate by name): update (~692), _prepare_sim_and_camera (~784), _update_render_animations (~818), tick_simulation (~1083). Wrapper example: def update(self, dt): from game.engine_facades import lifecycle; return lifecycle.update(self, dt) . KEEP method names (run() calls self.update(); the ursina/pygame loop calls self.tick_simulation()). LEAVE on GameEngine: build_snapshot, build_presentation_frame (WK67/68 DTO code -- keep stable), update_camera, run, __init__. When a moved method calls another moved method, route through engine.<name>(...) (the wrapper) so the seam + behavior are unchanged. RULES: lifecycle.py imports GameEngine ONLY under TYPE_CHECKING (from __future__ import annotations); copy each method's leaf imports; NO import cycle. Move VERBATIM, preserve frame-step order. Touch ONLY game/engine.py + new game/engine_facades/lifecycle.py. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (732 passed), determinism_guard, qa_smoke --quick (runs the sim -- exercises tick/update), import check. Report: lifecycle.py + the 4 functions, the wrappers, engine.py new LOC (was 1184), digest, suite totals, qa_smoke result, no-cycle. DO NOT COMMIT; update agent_03 log (round wk78_w1).",
+            "11": "[Agent 11] W2 (after 03): create tests/test_wk78_engine_lifecycle_facade.py asserting game.engine_facades.lifecycle has update/_prepare_sim_and_camera/_update_render_animations/tick_simulation and each GameEngine wrapper delegates (spy+monkeypatch on a constructed GameEngine). Capture a sanity screenshot (runs the full engine update/tick/render pipeline): python tools/capture_screenshots.py --scenario base_overview --seed 3 --out docs/screenshots/wk78_lifecycle_facade --size 1920x1080 --ticks 480 -- VIEW it, confirm a normal frame (terrain/buildings/units/HUD), give a written verdict. Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke --quick. Report PASS/FAIL + DoD A-G + screenshot verdict. Only your test+screenshots; no prod edits; DO NOT COMMIT; update agent_11 log (round wk78_w2).",
+            "10": "[Agent 10 CONSULT] available if frame timing/perf changes after the move. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "03",
+            "11",
+            "10(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk78_round_b2_engine_lifecycle_facade'].rounds['wk78_kickoff']) + plan .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, route inter-method calls through engine.<wrapper>, TYPE_CHECKING-only engine import; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + qa_smoke must stay green; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

@@ -3645,6 +3645,71 @@
           "notes": "All 12 new seam tests green in 0.17s. The WK67 AI digest is byte-identical as expected (the headless sim never exercises UI mouse/keyboard input paths, so the pure-move extraction cannot move it). input_handler.py shrank 789->170 (-619 LOC), better than the plan's ~250 target. AST guard note: the guard deliberately allows keyboard.py's function-body lazy import of BUILD_HOTKEY_TO_TYPE from game.input_handler (the documented WK70 single-source pattern) because it is inside handle_keydown, not at module level -- it cannot create an import cycle; the guard only forbids module-top-level (non-TYPE_CHECKING) game.input_handler imports, and neither mouse.py nor keyboard.py has one. Confirmed via git status that only tests/test_wk77_input_split.py + docs/screenshots/wk77_input_split/ are mine; game/input/ + game/input_handler.py are Agent 03's W1 work. No commit made. DoD A-H all PASS."
         }
       }
+    },
+    "wk78_round_b2_engine_lifecycle_facade": {
+      "sprint_meta": {
+        "sprint_id": "wk78_round_b2_engine_lifecycle_facade",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify the engine.py per-frame lifecycle facade (update / _prepare_sim_and_camera / _update_render_animations / tick_simulation extracted into game/engine_facades/lifecycle.py behind 1-line delegating wrappers) is behavior-preserving (WK67 digest unchanged), lock the new module/wrapper seam with tests, capture a sanity screenshot (full engine update/tick/render pipeline), run the full DoD gate."
+      },
+      "rounds": {
+        "wk78_w2": {
+          "sprint_id": "wk78_round_b2_engine_lifecycle_facade",
+          "round_id": "wk78_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + sanity screenshot + DoD gate)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk78 W1 (Agent 03 extracted the 4 per-frame lifecycle methods into game/engine_facades/lifecycle.py behind 1-line delegating wrappers; engine.py 1184->1072; inter-method calls route through engine.<wrapper>; verified digest unchanged + 732 passed + qa_smoke PASS)."
+          },
+          "prompt_summary": "WK78 W2: create tests/test_wk78_engine_lifecycle_facade.py asserting lifecycle.py has update/_prepare_sim_and_camera/_update_render_animations/tick_simulation and each GameEngine wrapper delegates (spy+monkeypatch on a constructed headless GameEngine, asserts engine passed as first arg + dt forwarded + result returned) + an AST no-import-cycle guard (TYPE_CHECKING-only engine import); capture a sanity screenshot (base_overview seed 3, 1920x1080, ticks 480 — runs the full engine update/tick/render pipeline) and view it; run the full DoD gate (suite, determinism_guard, WK67 AI digest pin, qa_smoke --quick) and report DoD A-G. Only the test file + screenshots; no production edits. DO NOT COMMIT.",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk78_engine_lifecycle_facade.py (7 headless seam tests) locking the WK78 extraction structure: game/engine_facades/lifecycle.py exists with all 4 public free functions (update, _prepare_sim_and_camera, _update_render_animations, tick_simulation); all 4 wrapper names remain on GameEngine; each wrapper delegates to its module function (spy + monkeypatch, asserts live engine passed as first positional arg + dt forwarded + module result returned); plus a no-import-cycle AST guard (lifecycle.py does not import game.engine at runtime, TYPE_CHECKING-only). Captured 4 sanity screenshots under docs/screenshots/wk78_lifecycle_facade/ and viewed them. No production code touched.",
+            "files_created": [
+              "tests/test_wk78_engine_lifecycle_facade.py",
+              "docs/screenshots/wk78_lifecycle_facade/base_overview__Z1__world_clean.png",
+              "docs/screenshots/wk78_lifecycle_facade/base_overview__Z1__ui_default.png",
+              "docs/screenshots/wk78_lifecycle_facade/base_overview__Z2__world_clean.png",
+              "docs/screenshots/wk78_lifecycle_facade/base_overview__Z2__ui_default.png"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_module_and_public_functions_exist",
+            "test_wrappers_present_on_gameengine",
+            "test_lifecycle_module_does_not_import_engine_at_runtime",
+            "test_wrapper_update_delegates",
+            "test_wrapper_prepare_sim_and_camera_delegates",
+            "test_wrapper_update_render_animations_delegates",
+            "test_wrapper_tick_simulation_delegates"
+          ],
+          "screenshot": {
+            "out_dir": "docs/screenshots/wk78_lifecycle_facade",
+            "scenarios": "base_overview (seed 3), 1920x1080, ticks 480, 4 PNGs (Z1/Z2 x world_clean/ui_default)",
+            "viewed": [
+              "base_overview__Z1__ui_default.png",
+              "base_overview__Z2__ui_default.png",
+              "base_overview__Z1__world_clean.png"
+            ],
+            "visual_verdict": "PASS. The full engine update/tick/render pipeline (now routed through the lifecycle facade) produces a normal frame. Terrain renders correctly (green grass + tree clusters + brown cobblestone cross-road grid + dark forest border). All buildings render and are labeled (CASTLE, SMITH, RANGERS, WARRIORS, MARKET, INN, GUARDS, ROGUES, WIZARDS, multiple HOUSEs). Units present across the map with green HP bars (heroes Nova x2/Cedric + others, peasants, guards, 52 enemies); hero name+gold tags render ($6(+1)/$6(+2)). HUD intact: top bar (Gold 2100 / Heroes 4 / Enemies 52 / Wave 1 / Quit), bottom action bar (Build/Hire/Bounty + hotkeys), minimap with red enemy dots, FPS/entity debug overlay + frame-time graph, speed controls (Normal). No teleport/skip artifacts, no missing layers, no crash. Behavior visually identical to pre-split builds."
+          },
+          "dod_gate": {
+            "A_full_suite": "739 passed, 4 skipped, 0 failed in 145.05s (baseline 732+4; +7 = new WK78 seam tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned in tests/test_wk67_ai_boundary.py line 181). tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) — exercises the sim tick / update path through the lifecycle facade across speed-scaling 0.25x/0.5x/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration profiles",
+            "E_facade_and_loc": "game/engine_facades/lifecycle.py exists with all 4 free functions (update, _prepare_sim_and_camera, _update_render_animations, tick_simulation); the 4 method names remain on GameEngine as 1-line delegating wrappers (engine.py lines 692-695, 767-770, 785-788, 1034-1035); engine.py 1072 LOC (down from 1184, -112); inter-method calls route through engine.<wrapper>; no import cycle (AST guard green, TYPE_CHECKING-only engine import). PASS",
+            "F_sanity_screenshot": "4 PNGs captured + 3 viewed (Z1/Z2 ui_default + Z1 world_clean); the full engine update/tick/render pipeline produces a normal frame; terrain/buildings/units/HP bars/HUD all render normally; no crash/import/timing regression. PASS",
+            "G_logs_and_close": "this log entry written; PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam verification only; no production edits, did not commit. The lifecycle facade is the third/final core slice of Round B-2 engine.py split (after WK75 actions+console and WK76 selection). The four methods are central frame-step orchestration; both behavioral guards that exercise them at runtime (qa_smoke --quick runs the sim tick path; the base_overview sanity screenshot runs the full update/tick/render pipeline) are green, alongside the 739-test suite, clean determinism guard, and the byte-identical WK67 AI-decision digest. No regressions found."
+        }
+      }
     }
   }
 }
