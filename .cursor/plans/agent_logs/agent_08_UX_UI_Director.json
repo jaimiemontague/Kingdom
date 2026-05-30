@@ -1862,6 +1862,70 @@
           "reported_to_pm": "Round wk93_w1 complete: 3 fns moved VERBATIM behind wrappers, world_to_radar re-exported (test_wk52 importer), hud.py 2477->2271, no cycle, minimap identical (byte-identical hero/hidden + crop-verified), digest unchanged, 897 passed."
         }
       }
+    },
+    "wk94_round_b_hud_toasts": {
+      "sprint_meta": {
+        "plan_ref": ".cursor/plans/wk94_round_b_hud_toasts.plan.md",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "notes": "WK94 Round B-11 (second hud.py split slice): extracted the toast subsystem (wave-event + POI discovery/interaction toasts, 9 methods) from game/ui/hud.py into new game/ui/hud_toasts.py behind 1-line lazy-delegating wrappers. Pure VERBATIM move; ALL toast state stays on HUD __init__; only real import the new module needs is pygame (every color/size is an inline literal)."
+      },
+      "rounds": {
+        "wk94_w1": {
+          "sprint_id": "wk94_round_b_hud_toasts",
+          "round_id": "wk94_w1",
+          "status": "done",
+          "task": "Extract the toast subsystem (9 methods) out of hud.py (2271 LOC) into game/ui/hud_toasts.py as module functions taking hud as first arg, behind 1-line delegating wrappers keeping exact original method names+signatures. PURE VERBATIM MOVE, render visually unchanged. Second slice of the hud.py god-file split (WK93 did the radar minimap first).",
+          "fns_moved": [
+            "on_wave_incoming (hud.py:357) -> hud_toasts.on_wave_incoming(hud, event). VERBATIM, self.->hud.",
+            "on_wave_cleared (367) -> on_wave_cleared(hud, event). VERBATIM.",
+            "_render_wave_toast (377) -> render_wave_toast(hud, surface). VERBATIM; self.top_bar_height->hud.top_bar_height.",
+            "notify_poi_discovered (443) -> notify_poi_discovered(hud, poi_name, interaction_type=\"\"). VERBATIM.",
+            "_check_poi_discoveries (450) -> check_poi_discoveries(hud, game_state). VERBATIM; self.notify_poi_discovered(...)->hud.notify_poi_discovered(...) (resolves HUD wrapper->module fn, no recursion).",
+            "_ensure_poi_interaction_subscription (479) -> ensure_poi_interaction_subscription(hud, game_state). VERBATIM; subscribes hud._on_poi_interaction / hud._on_boss_spawned_toast (bound methods) to sim EventBus.",
+            "_on_poi_interaction (493) -> on_poi_interaction(hud, event). VERBATIM.",
+            "_on_boss_spawned_toast (522) -> on_boss_spawned_toast(hud, event). VERBATIM.",
+            "_render_poi_toasts (530) -> render_poi_toasts(hud, surface). VERBATIM; self.top_bar_height->hud.top_bar_height."
+          ],
+          "wrappers": [
+            "All 9 HUD wrappers keep EXACT original names+signatures (incl. leading-underscore private names) and lazy-import hud_toasts inside the body, returning the module fn result.",
+            "engine.py:313 self.hud.on_wave_incoming(event) and engine.py:321 self.hud.on_wave_cleared(event) UNCHANGED.",
+            "render() call sites UNCHANGED: hud.py ~1952 _ensure_poi_interaction_subscription, ~1953 _check_poi_discoveries, ~1954 _render_poi_toasts, ~1957 _render_wave_toast.",
+            "EventBus subscriptions register hud._on_poi_interaction / hud._on_boss_spawned_toast as bound methods -> those private wrapper names MUST and DO stay on HUD."
+          ],
+          "state_unchanged": "CONFIRMED. All toast STATE stays on HUD __init__ (hud.py:333-351): _poi_toasts, _POI_TOAST_DURATION_MS, _POI_TOAST_FADE_MS, _poi_toast_ids, _poi_last_tick_ms, _poi_toast_font, _poi_interaction_subscribed, _wave_toast_text, _wave_toast_color, _wave_toast_start_ms, _wave_toast_duration_ms, _wave_toast_countdown_end_ms, _wave_toast_font. NOT moved: _render_dev_mode_label (not a toast) + effective_card_full_h -- both left on HUD untouched.",
+          "self_grep": "ZERO occurrences of \"self.\" in game/ui/hud_toasts.py (Grep, no matches).",
+          "hud_loc": {
+            "before": 2271,
+            "after": 2085,
+            "hud_toasts_new": 260
+          },
+          "no_cycle": "CONFIRMED. hud_toasts.py imports HUD only under TYPE_CHECKING (from __future__ import annotations); only runtime import is pygame. Wrappers import hud_toasts lazily inside the method body. Fresh interpreter both orders pass.",
+          "import_check": "python -c \"import game.ui.hud_toasts; import game.ui.hud; print(ok1)\" -> ok1 ; python -c \"import game.ui.hud; import game.ui.hud_toasts; print(ok2)\" -> ok2",
+          "screenshots": {
+            "before": [
+              "docs/screenshots/wk94_before_base/ (base_overview, 4 PNG)",
+              "docs/screenshots/wk94_before_panels/ (ui_panels, 7 PNG)"
+            ],
+            "after": [
+              "docs/screenshots/wk94_after_base/ (4 PNG)",
+              "docs/screenshots/wk94_after_panels/ (7 PNG)"
+            ]
+          },
+          "visual_verdict": "HUD CHROME IDENTICAL. ui_panels_hero before/after visually indistinguishable: same top bar, same left watch-card (Gareth stats + chat band), same bottom command bar, same minimap, same world; the top-center toast region is unchanged. MD5 differs on every pair but that is run-to-run sim non-determinism: the HUD-FREE world_clean variants (which render ZERO toast/HUD code) also diff (1-15%), so the deltas are entity-motion/fog/RNG between two separate process runs, NOT a refactor regression. CAVEAT (per plan DoD F): toasts are event-driven and do NOT appear in a steady-state base_overview/ui_panels capture -- the screenshots prove the scene+HUD chrome are unchanged, they do NOT exercise the toast pixels. The real guards for toast rendering are (i) the verbatim move and (ii) Agent 11 W2 behavior test (tests/test_wk94_hud_toasts.py) that drives a wave + POI toast through the moved path. Stated explicitly, not claiming screenshot proof of toast pixels.",
+          "verification": {
+            "wk67_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded UNCHANGED (tests/test_wk67_ai_boundary.py: 10 passed)",
+            "full_suite": "907 passed, 4 skipped, 0 failed (184s) -- matches WK93-close baseline (new seam test is Agent 11 W2, not in this run)",
+            "determinism_guard": "PASS: no violations found",
+            "qa_smoke_quick": "DONE: PASS (all scenarios exit_code=0)"
+          },
+          "files_touched": [
+            "game/ui/hud_toasts.py (NEW, 260 LOC)",
+            "game/ui/hud.py (9 method bodies -> 1-line delegating wrappers; -186 LOC)"
+          ],
+          "committed": false,
+          "reported_to_pm": "WK94 W1 done: hud.py 2271->2085, hud_toasts.py 260 LOC; 907 passed/4 skipped/0 failed; WK67 digest unchanged; ok1/ok2 both import orders pass; ZERO self. in new module; determinism+qa_smoke green; before/after screenshots captured (HUD chrome identical, toasts not in steady-state). DID NOT COMMIT -- Agent 01 commits after W2 gate."
+        }
+      }
     }
   }
 }

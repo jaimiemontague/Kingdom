@@ -9,6 +9,43 @@
   "Structure nests rounds inside sprints to keep history organized."
  ],
  "sprints": {
+  "wk94_round_b_hud_toasts": {
+   "sprint_meta": {
+    "sprint_id": "wk94_round_b_hud_toasts",
+    "created_utc": "2026-05-30T00:00:00Z",
+    "goal": "QA W2: verify WK94 behavior-preserving VERBATIM MOVE of the 9-method toast subsystem out of game/ui/hud.py into the new leaf game/ui/hud_toasts.py as module functions taking hud first (on_wave_incoming, on_wave_cleared, render_wave_toast, notify_poi_discovered, check_poi_discoveries, ensure_poi_interaction_subscription, on_poi_interaction, on_boss_spawned_toast, render_poi_toasts). HUD keeps the 9 1-line delegating wrappers (same names+signatures incl _-prefixed EventBus/render callbacks; engine.py:313/321 + render() 1952/1953/1954/1957 call sites UNCHANGED); ALL toast state stays on the HUD (__init__ 333-351); module imports only pygame + TYPE_CHECKING-only HUD. Author the seam+behavior test, run full DoD A-G, independently view before/after screenshots."
+   },
+   "rounds": {
+    "wk94_w2": {
+     "sprint_id": "wk94_round_b_hud_toasts",
+     "round_id": "wk94_w2",
+     "status": "done",
+     "round_meta": {
+      "wave": "W2 (seam+behavior test + full DoD gate + INDEPENDENT before/after screenshot review)",
+      "role": "Agent 11 QA_TestEngineering_Lead",
+      "model": "claude-opus-4-8[1m]",
+      "behavior_preserving": true,
+      "production_code_edited": false,
+      "depends_on": "wk94 W1 (Agent 08 moved the 9 toast methods into hud_toasts.py behind delegating wrappers; PM independently confirmed 9 fns, 0 self. in new module, 9 wrappers with exact names incl _-prefixed, both import orders clean, digest 10-passed)."
+     },
+     "prompt_summary": "WK94 W2: author tests/test_wk94_hud_toasts.py (mirrors WK93 hud_radar idioms) asserting (1) all 9 fns exist on hud_toasts + callable + first param == 'hud' (inspect.signature); (2) the 9 HUD wrappers exist + delegate (real spy+monkeypatch of hud_toasts.on_wave_incoming AND _on_poi_interaction private path proving self+args forwarded and result returned, PLUS AST belt-and-suspenders that all 9 wrapper bodies call hud_toasts.<fn>(self,...)); (3) AST no-cycle guard: hud_toasts.py has NO module-top runtime import of game.ui.hud (TYPE_CHECKING block skipped) + fresh-subprocess import both orders OK; (4) BEHAVIOR on a headless HUD: drive wave-incoming/cleared + poi loot interaction + boss spawn + notify_poi_discovered through the moved path, assert state mutated + both toast banners render onto a real Surface without raising, plus a 3-toast cap test. Run full DoD A-G; independently view before/after pygame screenshots.",
+     "verdict": "PASS",
+     "dod_results": {
+      "A_full_pytest": "943 passed, 4 skipped, 0 failed (baseline 907 at WK93 close + WK94's new 36-case seam+behavior test = 943; >= the ~911 the plan predicted).",
+      "B_determinism_guard": "PASS: no violations found (exit 0).",
+      "C_wk67_digest": "10 passed; digest pinned byte-identical to b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (UNCHANGED).",
+      "D_qa_smoke_quick": "DONE: PASS (exit 0) across all profiles incl base/bounty/intent/stuck/no-enemies/mock-LLM/speed-scaling/interior/quest/conversation/direct_prompt.",
+      "E_structure_no_cycle": "9 module fns in hud_toasts.py (AST-confirmed); 9 HUD wrappers with exact names incl _-prefixed; 0 'self.' in the new module; toast state stays on HUD (__init__ 333-351); hud.py=2085 LOC, hud_toasts.py=260 LOC; both fresh-interpreter import orders succeed (ok1 + ok2).",
+      "F_screenshots": "INDEPENDENTLY viewed before/after for ui_panels_hero, base_overview Z1 ui_default, ui_panels_building (full-res), ui_panels_debug. HUD chrome (top bar/Gold/Heroes/Wave, watch-card, BuildingPanel, command bar, minimap+speed buttons, perf+debug overlays) is visually identical. Pairs are NOT byte-identical, but deltas are confined to (a) run-to-run sim entity-dot/fog non-determinism between the two separate captures and (b) the perf overlay live ms readout (8.1 vs 8.3) -- neither is a HUD/toast regression. CAVEAT: toasts are event-driven and do NOT appear in these steady-state captures, so the screenshots prove scene+chrome unchanged, NOT the toast pixels; the TASK-1 behavior test (renders wave + POI toast banners through the moved bound-method path with no exception + asserted state mutation) is what proves the toast path.",
+      "G_pm_close": "deferred to Agent 01 at sprint close."
+     },
+     "files_authored": [
+      "tests/test_wk94_hud_toasts.py (36 cases: existence/hud-first signature x9, wrapper-exists x9, 2 monkeypatch-delegation proofs, AST source-delegation guard, AST no-cycle guard, 2 fresh-subprocess import-order, wave-toast behavior, poi-toast behavior, 3-toast-cap)"
+     ],
+     "did_not_commit": true
+    }
+   }
+  },
   "wk92_round_b_ursina_unit_sync": {
    "sprint_meta": {
     "sprint_id": "wk92_round_b_ursina_unit_sync",

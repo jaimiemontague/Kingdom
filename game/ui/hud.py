@@ -355,68 +355,16 @@ class HUD:
     # ------------------------------------------------------------------
 
     def on_wave_incoming(self, event: dict) -> None:
-        """Handle 'wave_incoming' EventBus event — show a prominent countdown toast."""
-        name = event.get("name", "Unknown Wave")
-        seconds = int(event.get("seconds", 10))
-        self._wave_toast_text = f"INCOMING: {name}!"
-        self._wave_toast_color = (255, 100, 100)
-        self._wave_toast_start_ms = pygame.time.get_ticks()
-        self._wave_toast_duration_ms = (seconds + 2) * 1000  # show for countdown duration + 2s
-        self._wave_toast_countdown_end_ms = pygame.time.get_ticks() + seconds * 1000
+        from game.ui import hud_toasts
+        return hud_toasts.on_wave_incoming(self, event)
 
     def on_wave_cleared(self, event: dict) -> None:
-        """Handle 'wave_cleared' EventBus event — show a reward toast."""
-        name = event.get("name", "Wave")
-        reward = int(event.get("reward", 0))
-        self._wave_toast_text = f"Wave Cleared! +{reward} Gold"
-        self._wave_toast_color = (255, 215, 0)
-        self._wave_toast_start_ms = pygame.time.get_ticks()
-        self._wave_toast_duration_ms = 4000
-        self._wave_toast_countdown_end_ms = 0  # no countdown for cleared
+        from game.ui import hud_toasts
+        return hud_toasts.on_wave_cleared(self, event)
 
     def _render_wave_toast(self, surface: pygame.Surface) -> None:
-        """Render the wave event toast banner (centered, top-center area)."""
-        if self._wave_toast_text is None:
-            return
-        now = pygame.time.get_ticks()
-        elapsed = now - self._wave_toast_start_ms
-        if elapsed > self._wave_toast_duration_ms:
-            self._wave_toast_text = None
-            return
-
-        # Build display text with optional countdown
-        display_text = self._wave_toast_text
-        if self._wave_toast_countdown_end_ms > 0:
-            remaining_sec = max(0, (self._wave_toast_countdown_end_ms - now) / 1000.0)
-            if remaining_sec > 0:
-                display_text = f"{self._wave_toast_text} ({int(remaining_sec)}s)"
-
-        # Fade in/out
-        alpha = 255
-        fade_ms = 400
-        if elapsed < fade_ms:
-            alpha = int(255 * elapsed / fade_ms)
-        elif elapsed > self._wave_toast_duration_ms - fade_ms:
-            alpha = int(255 * (self._wave_toast_duration_ms - elapsed) / fade_ms)
-        alpha = max(0, min(255, alpha))
-
-        text_surf = self._wave_toast_font.render(display_text, True, self._wave_toast_color)
-        tw, th = text_surf.get_size()
-        pad_x, pad_y = 20, 8
-        banner_w = tw + pad_x * 2
-        banner_h = th + pad_y * 2
-
-        # Position: top-center, below top bar
-        bx = (surface.get_width() - banner_w) // 2
-        by = self.top_bar_height + 8
-
-        bg = pygame.Surface((banner_w, banner_h), pygame.SRCALPHA)
-        bg.fill((20, 20, 40, min(200, alpha)))
-        pygame.draw.rect(bg, (*self._wave_toast_color, min(180, alpha)), (0, 0, banner_w, banner_h), 2)
-        surface.blit(bg, (bx, by))
-
-        text_surf.set_alpha(alpha)
-        surface.blit(text_surf, (bx + pad_x, by + pad_y))
+        from game.ui import hud_toasts
+        return hud_toasts.render_wave_toast(self, surface)
 
     # ------------------------------------------------------------------
     # WK60 Feature 9: DEV MODE HUD label
@@ -441,166 +389,32 @@ class HUD:
         return WATCH_CARD_FULL_H_WITH_CHAT if self._chat_visible else WATCH_CARD_FULL_H_NO_CHAT
 
     def notify_poi_discovered(self, poi_name: str, interaction_type: str = "") -> None:
-        """Queue a POI discovery toast notification."""
-        msg = f"Discovered: {poi_name}"
-        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), interaction_type))
-        if len(self._poi_toasts) > 3:
-            self._poi_toasts.pop(0)
+        from game.ui import hud_toasts
+        return hud_toasts.notify_poi_discovered(self, poi_name, interaction_type)
 
     def _check_poi_discoveries(self, game_state: dict) -> None:
-        """Scan buildings for newly discovered POIs and fire toasts."""
-        buildings = game_state.get("buildings", [])
-        for b in buildings:
-            if not getattr(b, "is_poi", False):
-                continue
-            if not getattr(b, "is_discovered", False):
-                continue
-            poi_def = getattr(b, "poi_def", None)
-            if poi_def is None:
-                continue
-            b_id = id(b)
-            if b_id in self._poi_toast_ids:
-                continue
-            self._poi_toast_ids.add(b_id)
-            name = getattr(poi_def, "display_name", None) or "Unknown POI"
-            itype = getattr(poi_def, "interaction_type", "") or ""
-            self.notify_poi_discovered(str(name), interaction_type=str(itype))
-            # Play discovery chime via engine audio system
-            engine = game_state.get("engine")
-            if engine is not None:
-                audio = getattr(engine, "audio_system", None)
-                if audio is not None:
-                    audio.play_sfx("poi_discovered")
+        from game.ui import hud_toasts
+        return hud_toasts.check_poi_discoveries(self, game_state)
 
     # ------------------------------------------------------------------
     # POI interaction toasts (WK59)
     # ------------------------------------------------------------------
 
     def _ensure_poi_interaction_subscription(self, game_state: dict) -> None:
-        """Lazily subscribe to poi_interaction / boss_spawned events on first render."""
-        if self._poi_interaction_subscribed:
-            return
-        sim = game_state.get("sim")
-        if sim is None:
-            return
-        bus = getattr(sim, "event_bus", None)
-        if bus is None:
-            return
-        bus.subscribe("poi_interaction", self._on_poi_interaction)
-        bus.subscribe("boss_spawned", self._on_boss_spawned_toast)
-        self._poi_interaction_subscribed = True
+        from game.ui import hud_toasts
+        return hud_toasts.ensure_poi_interaction_subscription(self, game_state)
 
     def _on_poi_interaction(self, event: dict) -> None:
-        """EventBus callback: format and queue a toast for a POI interaction."""
-        itype = event.get("interaction_type", "")
-        hero_name = event.get("hero_name", "A hero")
-        poi_name = event.get("poi_name", "a place of interest")
-
-        if itype == "shrine":
-            buff = event.get("buff_attack", 0)
-            msg = f"{hero_name} prayed at {poi_name}. HP restored! ATK +{buff}"
-        elif itype == "loot":
-            gold = event.get("gold", 0)
-            msg = f"{hero_name} found treasure at {poi_name}! +{gold} gold"
-        elif itype == "combat":
-            msg = f"Enemies emerge from {poi_name}!"
-        elif itype == "knowledge":
-            revealed = event.get("revealed_poi_name")
-            suffix = "A hidden location is revealed!" if revealed else "The fog parts..."
-            msg = f"{hero_name} reads ancient text at {poi_name}. {suffix}"
-        elif itype == "npc":
-            msg = f"A figure beckons from {poi_name}..."
-        elif itype == "dungeon":
-            msg = f"{hero_name} peers into {poi_name}..."
-        else:
-            return  # Unknown interaction type, skip toast
-
-        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), itype))
-        if len(self._poi_toasts) > 3:
-            self._poi_toasts.pop(0)
+        from game.ui import hud_toasts
+        return hud_toasts.on_poi_interaction(self, event)
 
     def _on_boss_spawned_toast(self, event: dict) -> None:
-        """EventBus callback: format and queue a toast for a boss spawn."""
-        poi_name = event.get("poi_name", "a place of interest")
-        msg = f"A powerful foe appears at {poi_name}!"
-        self._poi_toasts.append((msg, float(self._POI_TOAST_DURATION_MS), "boss"))
-        if len(self._poi_toasts) > 3:
-            self._poi_toasts.pop(0)
+        from game.ui import hud_toasts
+        return hud_toasts.on_boss_spawned_toast(self, event)
 
     def _render_poi_toasts(self, surface: pygame.Surface) -> None:
-        """Render and tick POI discovery toast notifications (WK55 polish)."""
-        if not self._poi_toasts:
-            return
-
-        now_ms = pygame.time.get_ticks()
-        dt_ms = float(now_ms - self._poi_last_tick_ms)
-        self._poi_last_tick_ms = now_ms
-
-        screen_w = surface.get_width()
-        y_offset = self.top_bar_height + 16
-
-        # POI type -> dot color (matches minimap palette)
-        _type_colors = {
-            "shrine": (100, 180, 255),
-            "loot": (255, 215, 0),
-            "combat": (220, 120, 30),
-            "knowledge": (180, 100, 255),
-            "npc": (100, 200, 100),
-            "dungeon": (160, 40, 40),
-            "boss": (255, 50, 50),
-        }
-
-        duration = float(self._POI_TOAST_DURATION_MS)
-        fade_ms = self._POI_TOAST_FADE_MS
-
-        remaining: list[tuple[str, float, str]] = []
-        for msg, time_left_ms, itype in self._poi_toasts:
-            time_left_ms -= dt_ms
-            if time_left_ms <= 0:
-                continue
-            remaining.append((msg, time_left_ms, itype))
-
-            # Compute alpha: fade-in during first fade_ms, fade-out during last fade_ms
-            elapsed_ms = duration - time_left_ms
-            if elapsed_ms < fade_ms:
-                # Fade in
-                alpha = max(0, min(255, int(elapsed_ms * 255 / fade_ms)))
-            elif time_left_ms < fade_ms:
-                # Fade out
-                alpha = max(0, min(255, int(time_left_ms * 255 / fade_ms)))
-            else:
-                alpha = 255
-
-            text_surf = self._poi_toast_font.render(msg, True, (255, 255, 220))
-            tw, th = text_surf.get_size()
-            dot_radius = 5
-            dot_padding = dot_radius * 2 + 8  # space for colored dot on left
-            bg_w = tw + dot_padding + 20
-            bg_h = th + 14
-            bg_x = (screen_w - bg_w) // 2
-
-            # Draw background pill
-            bg = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
-            bg.fill((20, 20, 40, min(210, alpha)))
-            # Rounded-corner border highlight
-            pygame.draw.rect(bg, (80, 80, 120, min(140, alpha)), bg.get_rect(), 1, border_radius=4)
-            surface.blit(bg, (bg_x, y_offset))
-
-            # Draw colored type dot
-            dot_color = _type_colors.get(itype, (180, 180, 180))
-            dot_x = bg_x + dot_radius + 8
-            dot_y = y_offset + bg_h // 2
-            dot_surf = pygame.Surface((dot_radius * 2 + 2, dot_radius * 2 + 2), pygame.SRCALPHA)
-            pygame.draw.circle(dot_surf, (*dot_color, alpha), (dot_radius + 1, dot_radius + 1), dot_radius)
-            surface.blit(dot_surf, (dot_x - dot_radius - 1, dot_y - dot_radius - 1))
-
-            # Draw text
-            text_surf.set_alpha(alpha)
-            surface.blit(text_surf, (bg_x + dot_padding + 6, y_offset + 7))
-
-            y_offset += bg_h + 6
-
-        self._poi_toasts = remaining
+        from game.ui import hud_toasts
+        return hud_toasts.render_poi_toasts(self, surface)
 
     def _desired_watch_card_expanded_h(self) -> int:
         """Natural expanded height: no slack band under stats when chat is collapsed (WK52 R13)."""
