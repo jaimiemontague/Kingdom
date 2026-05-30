@@ -5,6 +5,8 @@
     "name": "ExecutiveProducer_PM"
   },
   "notes": [
+    "2026-05-30 (Agent 01 WK79 CLOSE): wk79_round_c_audio_split COMPLETE -- DoD met. Split game/audio/audio_system.py (513 -> 264 LOC) into a game/audio/ package: contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS, now the single source -- re-imported by identity), sfx_cache.py (_assets_dir/_load_sfx/play_sfx), mixer_volume.py (6 volume getters/setters + _apply_ambient_volume), ambient.py (set/stop_ambient + interior + update_enemy_ambient + _INTERIOR_AMBIENT_MAP). AudioSystem keeps __init__/on_event/_emit_single_event/set_listener_view/_is_audible_world_event + 15 delegating wrappers (pure-move pattern). enemy_sounds.py untouched. Behavior-preserving: 758 passed/4 skipped/0 failed (+19 seam tests), determinism PASS, qa_smoke PASS (runs audio dispatch), WK67 digest b73961... BYTE-IDENTICAL, no import cycle. Agent 14 SoundDirector extract, Agent 11 verify. Plan: .cursor/plans/wk79_round_c_audio_split.plan.md. WK78 was main fa58064. Committing+pushing. SESSION: 12 sprints WK68-79 shipped (Round A finish + sim/building/hero/enemy/engine(x4)/input_handler/audio splits + entity/AI dedups + building registry). Next major: BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 -- screenshot-heavy), Move 9, world.py, config package, clusters 3/4, Round D AI router/splits, Round E audit, 21-file zombie purge. Next: WK80.",
+    "2026-05-30 (Agent 01 WK79 KICKOFF): audio_system.py -> game/audio/ package (Round C-3). Split the 513-LOC audio god-file into contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS SoT) + mixer_volume.py + ambient.py + sfx_cache.py behind a thin AudioSystem facade (pure-move pattern). Audio isolated; behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unaffected); guarded by full suite + qa_smoke (runs audio dispatch). NO screenshots. Agent 14 SoundDirector extract, Agent 11 verify. Plan: .cursor/plans/wk79_round_c_audio_split.plan.md. WK78 was main fa58064. NOT YET COMMITTED for WK79.",
     "2026-05-30 (Agent 01 WK78 CLOSE): wk78_round_b2_engine_lifecycle_facade COMPLETE -- DoD met. Extracted the 4 per-frame lifecycle methods (update/_prepare_sim_and_camera/_update_render_animations/tick_simulation) -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern; inter-method calls routed through engine.<wrapper>). build_snapshot/build_presentation_frame/update_camera/run stay on GameEngine. engine.py 1184 -> 1072 (-112; cumulative 1678 -> 1072 across the WK75/76/78 facade extractions). Behavior-preserving: 739 passed/4 skipped/0 failed (+7 seam tests), determinism PASS, qa_smoke PASS (runs the sim through tick/update), WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot normal frame. Agent 03 extract, Agent 11 verify+screenshot. engine.py now substantially decomposed (actions/console/selection/lifecycle facades). Remaining engine.py: __init__ split + 39x idiom cleanup (minor). NEXT MAJOR WORK = the BIG presentation splits (hud.py 2477 / ursina_renderer.py 1985 / ursina_terrain_fog_collab.py 1783 / ursina_app.py 1525 -- screenshot-heavy), then Move 9, world.py, config package, audio split, clusters 3/4/5, Round D AI router/splits, Round E audit, zombie purge. Plan: .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md. WK77 was main 500d646. Committing+pushing. Next: WK79.",
     "2026-05-30 (Agent 01 WK78 KICKOFF): engine.py lifecycle facade (Round B-2f). Extract update/_prepare_sim_and_camera/_update_render_animations/tick_simulation -> game/engine_facades/lifecycle.py behind delegating wrappers (WK75/76 pure-move pattern); build_snapshot/build_presentation_frame/update_camera/run stay. Behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded); guarded by qa_smoke (runs sim) + sanity screenshot (runs engine) + full suite. Agent 03 extract, Agent 11 verify+screenshot. Plan: .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md. WK77 was main 500d646. NOT YET COMMITTED for WK78.",
     "2026-05-30 (Agent 01 WK77 CLOSE): wk77_round_b2_input_handler_split COMPLETE -- DoD met. Split game/input_handler.py (789 -> 170 LOC, -619) into game/input/ package: mouse.py (handle_mousedown+handle_mousemove), keyboard.py (handle_keydown), placement.py (select_building_for_placement), as functions taking the InputHandler as ih, behind 1-line delegating wrappers (WK75/76 pure-move pattern). InputHandler keeps __init__/process_events/_clear_hero_selection. Every branch moved verbatim (pause guard incl WK68 H1 panel_hit, HUD-action ladder, building-panel hire/enter/demolish dispatch, WK70 BUILD_HOTKEY_TO_TYPE reverse-map). Behavior-preserving: 732 passed/4 skipped/0 failed (+12 seam tests), determinism PASS, qa_smoke PASS, WK68 button/paused + input tests green, WK67 digest b73961... BYTE-IDENTICAL, no import cycle, sanity screenshot healthy. Agent 03 extract, Agent 11 verify+screenshot. NOTE: PM hub had a minor inline-backtick corruption in the wk77 03-prompt example (bash command-substitution); the plan doc carried the full pattern so no impact -- use Write-file writers for hub edits, not python -c with backticks. Deferred: finer handle_mousedown breakdown; engine.py lifecycle facade; hud/ursina_renderer/ursina_app splits; Move 9; world.py; config package; Round D AI; zombie purge. Plan: .cursor/plans/wk77_round_b2_input_handler_split.plan.md. WK76 was main d35c619. Committing+pushing. Next: WK78.",
@@ -4012,6 +4014,65 @@
             "10(consult)"
           ],
           "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk78_round_b2_engine_lifecycle_facade'].rounds['wk78_kickoff']) + plan .cursor/plans/wk78_round_b2_engine_lifecycle_facade.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, route inter-method calls through engine.<wrapper>, TYPE_CHECKING-only engine import; digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded + qa_smoke must stay green; update your own log; DO NOT COMMIT; no iterate after status=done.",
+          "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
+        }
+      }
+    },
+    "wk79_round_c_audio_split": {
+      "sprint_meta": {
+        "status": "closed_success",
+        "created_utc": "2026-05-30T13:30:00Z",
+        "plan_doc": ".cursor/plans/wk79_round_c_audio_split.plan.md",
+        "goal": "all tests pass",
+        "version_target": "Prototype (WK79 / Round C-3)",
+        "notes": "Round C-3: audio_system.py (513 LOC) split into game/audio/ package (contract/mixer_volume/ambient/sfx_cache) behind a thin AudioSystem facade (pure-move pattern). Audio is isolated from sim/render/AI; behavior-preserving (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded unaffected); guarded by full suite + qa_smoke (runs audio event dispatch). NO screenshots. Agent 14 extract, Agent 11 verify.",
+        "definition_of_done": [
+          "A. pytest all pass (739/4/0)",
+          "B. determinism_guard clean",
+          "C. digest == b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded",
+          "D. qa_smoke green",
+          "E. game/audio/{contract,mixer_volume,ambient,sfx_cache}.py exist; contract dicts single-source; wrappers on AudioSystem; audio_system.py smaller; no cycle",
+          "F. logs+hub close"
+        ],
+        "closeout_evidence": {
+          "full_suite": "758 passed / 4 skipped / 0 failed (739 + 19 seam tests)",
+          "determinism_guard": "PASS",
+          "qa_smoke_quick": "PASS (emits audio events through on_event/play_sfx)",
+          "ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded (byte-identical -- audio never touches the sim)",
+          "audio_loc": "513 -> 264 (-249)",
+          "result": "audio_system.py split into game/audio/ package: contract.py (AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS, single-source identity-verified), sfx_cache.py, mixer_volume.py, ambient.py; 15 delegating wrappers on AudioSystem facade; no import cycle."
+        }
+      },
+      "rounds": {
+        "wk79_kickoff": {
+          "round_meta": {
+            "round_id": "wk79_kickoff",
+            "created_utc": "2026-05-30T13:30:00Z",
+            "wave": 1,
+            "plan_doc": ".cursor/plans/wk79_round_c_audio_split.plan.md",
+            "build_target": "audio_system.py -> game/audio/ package",
+            "goal": "all tests pass; audio byte-identical"
+          },
+          "pm_status_summary": {
+            "state": "kicked_off",
+            "headline_invariant": "qa_smoke green (runs audio dispatch) + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded byte-identical",
+            "wave_dag": "W1(14)->gate(suite+qa_smoke+digest)->W2(11 verify)->commit",
+            "dispatch_order": [
+              "14 W1",
+              "11 W2"
+            ]
+          },
+          "pm_agent_prompts": {
+            "14": "[Agent 14 SoundDirector] Split game/audio/audio_system.py (513 LOC) into a game/audio/ package using the pure-move pattern (function takes the AudioSystem as `audio`, self.->audio., original method becomes a 1-line delegating wrapper) per plan .cursor/plans/wk79_round_c_audio_split.plan.md sections 1-2. Create: game/audio/contract.py (move AUDIO_EVENT_MAP ~line 23 + SOUND_COOLDOWNS_MS ~55 verbatim; re-import into audio_system via `from game.audio.contract import AUDIO_EVENT_MAP, SOUND_COOLDOWNS_MS`); game/audio/mixer_volume.py (the 6 volume methods set/get master/music/sfx + _apply_ambient_volume if co-located); game/audio/ambient.py (set_ambient/stop_ambient/start_interior_ambient/stop_interior_ambient/update_enemy_ambient); game/audio/sfx_cache.py (_load_sfx/_assets_dir[staticmethod->plain fn]/play_sfx). AudioSystem KEEPS __init__/on_event/_emit_single_event/set_listener_view/_is_audible_world_event + a 1-line delegating wrapper for every moved method (same names+signatures so engine.py call sites are unchanged). Wrapper example: set_master_volume(self,v) -> from game.audio import mixer_volume; return mixer_volume.set_master_volume(self,v). RULES: new modules import AudioSystem only under TYPE_CHECKING (from __future__ import annotations); copy each method's leaf imports (pygame, os, config volume defaults); NO import cycle; move VERBATIM. Do NOT touch game/audio/enemy_sounds.py. VERIFY: python -m pytest tests/test_wk67_ai_boundary.py -q (digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), python -m pytest -q (739 passed), determinism_guard, qa_smoke --quick (emits audio events through on_event/play_sfx -- KEY guard), import check, and a quick check that contract.AUDIO_EVENT_MAP == the original (move was verbatim). Report: package modules, wrappers, audio_system.py new LOC (was 513), digest, suite totals, qa_smoke, no-cycle. DO NOT COMMIT; update agent_14 log (round wk79_w1).",
+            "11": "[Agent 11] W2 (after 14): create tests/test_wk79_audio_split.py: assert game.audio.{contract,mixer_volume,ambient,sfx_cache} import; contract has AUDIO_EVENT_MAP + SOUND_COOLDOWNS_MS (non-empty dicts) and audio_system re-imports the SAME objects (identity or equality); each moved method on AudioSystem delegates to its module fn (spy+monkeypatch on a constructed AudioSystem(enabled=False) so no real mixer needed); AST guard that the new modules do not import audio_system at runtime (TYPE_CHECKING only). Full DoD: pytest (all pass), determinism_guard, digest (== b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded), qa_smoke --quick. NO screenshots (audio). Report PASS/FAIL + DoD A-F. Only your test; no prod edits; DO NOT COMMIT; update agent_11 log (round wk79_w2).",
+            "03": "[Agent 03 CONSULT] available if the package import structure cycles. No code unless assigned."
+          },
+          "pm_send_list_minimal": [
+            "14",
+            "11",
+            "03(consult)"
+          ],
+          "pm_universal_prompt": "Onboard via .cursor/rules for your agent #; read your PM round (sprints['wk79_round_c_audio_split'].rounds['wk79_kickoff']) + plan .cursor/plans/wk79_round_c_audio_split.plan.md; claude-opus-4-8; PURE MOVE behavior-preserving, keep wrapper names, TYPE_CHECKING-only import; qa_smoke + digest b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded must stay green; NO screenshots; update your own log; DO NOT COMMIT; no iterate after status=done.",
           "pm_commits": "NOT COMMITTED -- PM commits+pushes after DoD."
         }
       }

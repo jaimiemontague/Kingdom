@@ -3710,6 +3710,56 @@
           "notes": "Pure-move seam verification only; no production edits, did not commit. The lifecycle facade is the third/final core slice of Round B-2 engine.py split (after WK75 actions+console and WK76 selection). The four methods are central frame-step orchestration; both behavioral guards that exercise them at runtime (qa_smoke --quick runs the sim tick path; the base_overview sanity screenshot runs the full update/tick/render pipeline) are green, alongside the 739-test suite, clean determinism guard, and the byte-identical WK67 AI-decision digest. No regressions found."
         }
       }
+    },
+    "wk79_round_c_audio_split": {
+      "sprint_meta": {
+        "sprint_id": "wk79_round_c_audio_split",
+        "created_utc": "2026-05-30T00:00:00Z",
+        "goal": "QA W2: verify the WK79 split of game/audio/audio_system.py (513->264 LOC) into a focused game/audio/ package (contract.py: AUDIO_EVENT_MAP+SOUND_COOLDOWNS_MS; sfx_cache.py: _assets_dir/_load_sfx/play_sfx; mixer_volume.py: 6 volume getters/setters + _apply_ambient_volume; ambient.py: set_ambient/stop_ambient/start_interior_ambient/stop_interior_ambient/update_enemy_ambient + _INTERIOR_AMBIENT_MAP) is behavior-preserving and structurally sound behind a thin AudioSystem facade: lock the module/wrapper/contract seam with tests and run the full DoD gate. NO screenshots (audio sprint)."
+      },
+      "rounds": {
+        "wk79_w2": {
+          "sprint_id": "wk79_round_c_audio_split",
+          "round_id": "wk79_w2",
+          "status": "done",
+          "round_meta": {
+            "wave": "W2 (seam test + DoD gate; NO screenshots - audio)",
+            "role": "Agent 11 QA_TestEngineering_Lead",
+            "model": "claude-opus-4-8[1m]",
+            "behavior_preserving": true,
+            "production_code_edited": false,
+            "created_utc": "2026-05-30T00:00:00Z",
+            "depends_on": "wk79 W1 (Agent 14 extracted the game/audio/ package: contract/sfx_cache/mixer_volume/ambient; audio_system.py 513->264 LOC; AudioSystem keeps __init__/on_event/_emit_single_event/set_listener_view/_is_audible_world_event + 15 delegating wrappers; verified digest unchanged + 739 passed + qa_smoke PASS)."
+          },
+          "prompt_summary": "WK79 W2: create tests/test_wk79_audio_split.py asserting game.audio.{contract,sfx_cache,mixer_volume,ambient} import; contract.AUDIO_EVENT_MAP + contract.SOUND_COOLDOWNS_MS are non-empty dicts re-imported into audio_system by identity (single source); each moved method on AudioSystem delegates to its module fn (spy+monkeypatch on a constructed AudioSystem(enabled=False) so no real mixer; asserts AudioSystem passed as first positional arg + args forwarded + result returned) for a representative set (set_master_volume/get_master_volume/_apply_ambient_volume/play_sfx/_load_sfx/set_ambient/update_enemy_ambient); AST guard that the new modules (sfx_cache/mixer_volume/ambient) do NOT import game.audio.audio_system at runtime (TYPE_CHECKING-only). Run the full DoD gate (suite, determinism_guard, WK67 AI digest pin, qa_smoke --quick). Only the test file; no production edits. DO NOT COMMIT. NO screenshots (audio).",
+          "what_i_changed": {
+            "summary": "Created tests/test_wk79_audio_split.py (19 headless seam tests, AudioSystem(enabled=False) so no mixer device needed) locking the WK79 extraction structure: (1) all four new package modules import (contract/sfx_cache/mixer_volume/ambient); (2) the contract dicts are single-source - non-empty in contract.py and re-imported into audio_system BY IDENTITY (audio_system.AUDIO_EVENT_MAP is contract.AUDIO_EVENT_MAP; same for SOUND_COOLDOWNS_MS); (3) each of 7 representative moved methods on AudioSystem delegates to its module function (spy + monkeypatch, asserts the live AudioSystem is passed as the first positional arg, args forwarded - including wrapper-supplied positional defaults for play_sfx volume=1.0 and set_ambient volume=0.4 - and the module result returned); (4) an AST no-import-cycle guard proving sfx_cache/mixer_volume/ambient do NOT import game.audio.audio_system at module load time (TYPE_CHECKING-only) plus a sanity check that the TYPE_CHECKING AudioSystem import IS present. No production code touched. No screenshots (audio sprint).",
+            "files_created": [
+              "tests/test_wk79_audio_split.py"
+            ],
+            "files_modified": []
+          },
+          "new_tests": [
+            "test_package_modules_import (parametrized x4: contract/sfx_cache/mixer_volume/ambient)",
+            "test_contract_dicts_non_empty",
+            "test_audio_system_reimports_contract_by_identity",
+            "test_wrapper_delegates_to_module_function (parametrized x7: set_master_volume/get_master_volume/_apply_ambient_volume/play_sfx/_load_sfx/set_ambient/update_enemy_ambient)",
+            "test_no_module_level_audio_system_import (parametrized x3: sfx_cache/mixer_volume/ambient)",
+            "test_type_checking_import_present (parametrized x3: sfx_cache/mixer_volume/ambient)"
+          ],
+          "screenshot": "N/A - audio sprint (no on-screen change). Behavioral verification via full suite + qa_smoke audio-event dispatch.",
+          "dod_gate": {
+            "A_full_suite": "758 passed, 4 skipped, 0 failed in 144.10s (baseline 739+4; +19 = new WK79 seam tests). PASS",
+            "B_determinism_guard": "PASS: no violations found (exit 0)",
+            "C_ai_decision_digest": "b73961340cd681e5c5d04d2735fe7e302fc23167433d7f566905597d8d148ded BYTE-IDENTICAL to golden (constant pinned in tests/test_wk67_ai_boundary.py line 181; audio does not touch the sim, so unaffected as expected). tests/test_wk67_ai_boundary.py = 10 passed. PASS",
+            "D_qa_smoke_quick": "DONE: PASS (exit 0) - its scenarios emit audio events through on_event/_emit_single_event/play_sfx across speed-scaling 0.25x/0.5x/1.0x, interior_view, quest_panel, conversation, direct_prompt_integration profiles, exercising the moved sfx_cache/contract dispatch code without crash",
+            "E_package_and_loc": "game/audio/{contract,sfx_cache,mixer_volume,ambient}.py all exist (63/89/92/143 LOC); AUDIO_EVENT_MAP + SOUND_COOLDOWNS_MS defined once in contract.py and re-imported by audio_system (identity-verified by seam test); the moved method names remain on AudioSystem as 1-line delegating wrappers (15 wrappers); audio_system.py = 264 LOC (down from 513, -249); no import cycle (AST guard green, TYPE_CHECKING-only AudioSystem import in all three moved-method modules). PASS",
+            "F_logs_and_close": "this log entry written; PM hub close handed to Agent 01. PASS",
+            "verdict": "PASS"
+          },
+          "notes": "Pure-move seam verification only; no production edits, did not commit; no screenshots (audio has no on-screen change). The contract single-source guarantee is verified by object identity (audio_system re-imports the SAME dict objects from contract.py, not copies), so AUDIO_EVENT_MAP/SOUND_COOLDOWNS_MS cannot drift. Audio is fully isolated from sim/render/AI, so structural soundness (imports OK + delegation verified + full suite + qa_smoke audio-event dispatch green) is a reliable correctness proof; the WK67 AI-decision digest is byte-identical as expected since audio never touches the sim. Note: the set_ambient/play_sfx wrappers normalise their optional params to defaults and forward them positionally (volume=0.4 / 1.0) - the delegation test asserts the actual forwarded tail, which is correct behavior. No regressions found."
+        }
+      }
     }
   }
 }

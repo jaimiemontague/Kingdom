@@ -6,79 +6,27 @@ Never affects simulation state; safe to disable or fail.
 
 WK6 Mid-Sprint: Visibility-gated audio - only plays SFX if event is on-screen and in explored area.
 WK61: Enemy-type-specific sounds (attack, death, ambient) via EnemySoundManager.
+WK79: God-file split into the game/audio/ package (contract / sfx_cache / ambient /
+mixer_volume). AudioSystem is now a thin facade: it keeps the event-dispatch core
+(__init__, on_event, _emit_single_event, set_listener_view, _is_audible_world_event)
+and a 1-line delegating wrapper for every moved method so call sites are unchanged.
 """
 from __future__ import annotations
 
-import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import pygame
 
-from game.paths import ASSETS_DIR
-
-# WK6: Canonical event name → sound key mapping (flat contract)
-# WK6 Mid-Sprint: Expanded to cover more real-world actions
-# This is the contract that Agent 14 and Agent 12 must align with.
-# Uses flat keys: building_place, building_destroy, bounty_place, bow_release, ui_click, etc.
-# Files are located at: assets/audio/sfx/{sound_key}.wav or .ogg
-AUDIO_EVENT_MAP = {
-    # Building events
-    "building_placed": "building_place",
-    "building_destroyed": "building_destroy",
-    
-    # Combat events
-    "hero_attack": "melee_hit",
-    "ranged_projectile": "bow_release",
-    "enemy_killed": "enemy_death",
-    "lair_cleared": "lair_cleared",
-    
-    # Bounty events
-    "bounty_placed": "bounty_place",
-    "bounty_claimed": "bounty_claimed",
-    
-    # Economy/Shop events
-    "hero_hired": "hero_hired",
-    "purchase_made": "purchase",
-    
-    # POI discovery event (WK55)
-    "poi_discovered": "poi_discovered",
-
-    # UI events (optional, not visibility-gated)
-    "ui_click": "ui_click",
-    "ui_confirm": "ui_confirm",
-    "ui_error": "ui_error",
-    # wk14: interior building under attack (while player is in interior view)
-    "interior_building_under_attack": "building_under_attack_rumble",
-}
-
-# Sound cooldowns (milliseconds) to prevent spam
-# Agent 14 will provide final values; these are Build A defaults
-SOUND_COOLDOWNS_MS = {
-    "building_place": 200,
-    "building_destroy": 500,
-    "bounty_place": 200,
-    "bounty_claimed": 300,
-    "bow_release": 150,
-    "melee_hit": 100,
-    "enemy_death": 200,
-    "lair_cleared": 500,
-    "hero_hired": 300,
-    "purchase": 150,
-    "ui_click": 100,
-    "ui_confirm": 150,
-    "ui_error": 200,
-    "building_under_attack_rumble": 3000,  # wk14: throttle so not every frame
-    "poi_discovered": 1000,  # WK55: brief cooldown for discovery chime
-}
+from game.audio.contract import AUDIO_EVENT_MAP, SOUND_COOLDOWNS_MS
 
 
 class AudioSystem:
     """
     Lightweight, non-authoritative audio system.
-    
+
     Consumes events and plays sounds. Never affects simulation state.
     Safe to disable or fail gracefully.
     """
-    
+
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
         self._sfx_cache: Dict[str, Optional[pygame.mixer.Sound]] = {}
@@ -86,14 +34,14 @@ class AudioSystem:
         self._ambient_channel: Optional[pygame.mixer.Channel] = None
         self._ambient_sound: Optional[pygame.mixer.Sound] = None
         self._ambient_base_volume: float = 0.4  # Base ambient volume (before master/music scaling)
-        
+
         # WK7/V1.3: Volume controls (UI-only, non-authoritative)
         # Range: 0.0 to 1.0 (0.0 = mute, 1.0 = full volume)
         # Default: 0.8 (80% per PM decision)
         self._master_volume: float = 0.8
         self._music_volume: float = 0.0  # Ambient/music slider (multiplies master)
         self._sfx_volume: float = 1.0    # SFX slider (multiplies master)
-        
+
         # WK6 Mid-Sprint: Viewport and world context for visibility gating
         self._camera_x: float = 0.0
         self._camera_y: float = 0.0
@@ -101,10 +49,10 @@ class AudioSystem:
         self._window_width: int = 1920
         self._window_height: int = 1080
         self._world: Optional[object] = None  # World instance for visibility checks
-        
+
         if not self.enabled:
             return
-        
+
         # Initialize pygame.mixer safely
         try:
             if not pygame.mixer.get_init():
@@ -113,7 +61,7 @@ class AudioSystem:
             # Mixer init failed; disable audio
             self.enabled = False
             return
-        
+
         # Preload SFX from assets/audio/sfx/
         self._load_sfx()
 
@@ -125,53 +73,27 @@ class AudioSystem:
         except Exception:
             pass  # Graceful degradation if enemy sounds module fails
 
+    # --- SFX cache / loader / playback (game/audio/sfx_cache.py) ---------------
+
     def _load_sfx(self):
-        """Preload all SFX files from assets/audio/sfx/ (flat structure, supports .wav and .ogg).
+        from game.audio import sfx_cache
+        return sfx_cache._load_sfx(self)
 
-        TODO (Audio Agent): Add assets/audio/sfx/poi_discovered.ogg — a brief discovery chime
-        (short rising arpeggio or crystal chime, ~0.5s, for POI discovery notifications).
-        """
-        if not self.enabled:
-            return
-        
-        sfx_dir = self._assets_dir() / "sfx"
-        if not sfx_dir.exists():
-            # No audio assets yet; continue with no-op behavior
-            return
-        
-        # Load sounds from flat paths (sfx/building_place.wav or .ogg, etc.)
-        # Include extra SFX keys not triggered by events (e.g. wk14 building_under_attack_rumble)
-        all_keys = set(AUDIO_EVENT_MAP.values())
-        for sound_key in all_keys:
-            # Try .wav first, then .ogg
-            wav_file = sfx_dir / f"{sound_key}.wav"
-            ogg_file = sfx_dir / f"{sound_key}.ogg"
-
-            sound_file = None
-            if wav_file.exists():
-                sound_file = wav_file
-            elif ogg_file.exists():
-                sound_file = ogg_file
-
-            if sound_file:
-                try:
-                    self._sfx_cache[sound_key] = pygame.mixer.Sound(str(sound_file))
-                except Exception:
-                    self._sfx_cache[sound_key] = None
-            else:
-                self._sfx_cache[sound_key] = None
-    
     @staticmethod
     def _assets_dir():
-        """Get assets directory path."""
-        return ASSETS_DIR / "audio"
-    
+        from game.audio import sfx_cache
+        return sfx_cache._assets_dir()
+
+    def play_sfx(self, sound_key: str, volume: float = 1.0):
+        from game.audio import sfx_cache
+        return sfx_cache.play_sfx(self, sound_key, volume)
+
     def set_listener_view(self, camera_x: float, camera_y: float, zoom: float, window_width: int, window_height: int, world: Optional[object] = None):
         """
         Update viewport context for visibility gating.
-        
+
         Called each frame from engine to provide camera and world state.
-        
+
         Args:
             camera_x: Camera world X position
             camera_y: Camera world Y position
@@ -186,7 +108,7 @@ class AudioSystem:
         self._window_width = int(window_width)
         self._window_height = int(window_height)
         self._world = world
-    
+
     def _is_audible_world_event(self, event: dict) -> bool:
         """
         Check if a world event should be audible based on fog-of-war exploration state.
@@ -247,22 +169,22 @@ class AudioSystem:
         event_type = event.get("type")
         if not event_type:
             return
-        
+
         # Map event type to sound key (flat contract)
         sound_key = AUDIO_EVENT_MAP.get(event_type)
         if not sound_key:
             return
-        
+
         # WK6 Mid-Sprint: Check visibility gating (viewport + fog-of-war)
         if not self._is_audible_world_event(event):
             return  # Event is off-screen or not visible - skip sound
-        
+
         # Check cooldown
         cooldown_ms = SOUND_COOLDOWNS_MS.get(sound_key, 0)
         last_play = self._cooldowns.get(sound_key, 0.0)
         if (now_ms - last_play) < cooldown_ms:
             return  # Still on cooldown
-        
+
         # Play sound
         self.play_sfx(sound_key, volume=1.0)
         self._cooldowns[sound_key] = now_ms
@@ -288,226 +210,55 @@ class AudioSystem:
                         )
             except Exception:
                 pass  # Never crash sim for audio
-    
-    def play_sfx(self, sound_key: str, volume: float = 1.0):
-        """
-        Play a one-shot sound effect.
-        
-        WK7: Master volume is applied automatically (master_volume * volume).
-        Volume changes are post-processing and do not affect simulation state.
-        
-        Args:
-            sound_key: Sound key (e.g., "building_place", "bow_release")
-            volume: Per-sound volume 0.0 to 1.0 (will be multiplied by master volume)
-        """
-        if not self.enabled:
-            return
-        
-        sound = self._sfx_cache.get(sound_key)
-        if sound is None:
-            # Sound not loaded or missing; no-op
-            return
-        
-        try:
-            # WK7: Apply master volume (multiplies per-sound volume)
-            final_volume = float(volume) * self._master_volume * self._sfx_volume
-            sound.set_volume(max(0.0, min(1.0, final_volume)))  # Clamp to 0.0-1.0
-            sound.play()
-        except Exception:
-            # Playback failed; no-op (audio should never crash sim)
-            pass
-    
+
+    # --- Ambient playback (game/audio/ambient.py) -----------------------------
+
     def set_ambient(self, track_name: str = "ambient_loop", volume: float = 0.4):
-        """
-        Play/loop an ambient track.
-        
-        WK7: Master volume is applied automatically (master_volume * volume).
-        Volume changes are post-processing and do not affect simulation state.
-        
-        Args:
-            track_name: Track filename (without extension), default "ambient_loop" for Build A
-            volume: Per-track volume 0.0 to 1.0, default 0.4 for Build A (will be multiplied by master volume)
-        """
-        if not self.enabled:
-            return
-        
-        # Stop current ambient if playing
-        self.stop_ambient()
-        
-        ambient_dir = self._assets_dir() / "ambient"
-        # Try .ogg first, then .wav
-        track_file = ambient_dir / f"{track_name}.ogg"
-        if not track_file.exists():
-            track_file = ambient_dir / f"{track_name}.wav"
-        
-        if not track_file.exists():
-            return
-        
-        try:
-            self._ambient_sound = pygame.mixer.Sound(str(track_file))
-            # Store base ambient volume (before master/music scaling)
-            self._ambient_base_volume = float(volume)
-            # Loop ambient (loops=-1 means infinite loop)
-            self._ambient_channel = self._ambient_sound.play(loops=-1)
-            # Apply master/music scaling after channel is created
-            self._apply_ambient_volume()
-        except Exception:
-            # Failed to load/play; no-op
-            self._ambient_sound = None
-            self._ambient_channel = None
-            self._ambient_base_volume = 0.4  # Reset to default
-    
+        from game.audio import ambient
+        return ambient.set_ambient(self, track_name, volume)
+
     def stop_ambient(self):
-        """Stop ambient playback."""
-        if not self.enabled:
-            return
-
-        if self._ambient_channel:
-            try:
-                self._ambient_channel.stop()
-            except Exception:
-                pass
-        self._ambient_channel = None
-        self._ambient_sound = None
-
-    # wk14: Interior ambient (per-building-type loops when player is in interior view)
-    _INTERIOR_AMBIENT_MAP = {
-        "inn": "ambient_inn",
-        "marketplace": "ambient_marketplace",
-        "warrior_guild": "ambient_warrior_guild",
-        "ranger_guild": "ambient_interior_default",
-        "rogue_guild": "ambient_interior_default",
-        "wizard_guild": "ambient_interior_default",
-        "blacksmith": "ambient_blacksmith",
-        "temple_agrela": "ambient_temple",
-        "temple_dauros": "ambient_temple",
-        "temple_fervus": "ambient_temple",
-        "temple_krypta": "ambient_temple",
-        "temple_krolm": "ambient_temple",
-        "temple_helia": "ambient_temple",
-        "temple_lunord": "ambient_temple",
-    }
+        from game.audio import ambient
+        return ambient.stop_ambient(self)
 
     def start_interior_ambient(self, building_type: str) -> None:
-        """
-        Start interior ambient loop for the given building type (wk14).
-        If the track file does not exist, fails silently (non-authoritative).
-        """
-        if not self.enabled:
-            return
-        bt = (building_type or "").lower().strip()
-        track_name = self._INTERIOR_AMBIENT_MAP.get(bt, "ambient_interior_default")
-        self.set_ambient(track_name, volume=0.35)
+        from game.audio import ambient
+        return ambient.start_interior_ambient(self, building_type)
 
     def stop_interior_ambient(self) -> None:
-        """
-        Restore outdoor ambient loop after exiting interior view (wk14).
-        """
-        if not self.enabled:
-            return
-        self.set_ambient("ambient_loop", volume=0.4)
-
-    def _apply_ambient_volume(self):
-        """Apply master/music volume to ambient if playing."""
-        if self._ambient_sound is None or self._ambient_channel is None:
-            return
-        try:
-            final_volume = self._ambient_base_volume * self._master_volume * self._music_volume
-            self._ambient_sound.set_volume(max(0.0, min(1.0, final_volume)))
-        except Exception:
-            # Failed to update; no-op (audio should never crash sim)
-            pass
-
-    # WK7/V1.3: Volume control API (UI-only, non-authoritative)
-    
-    def set_master_volume(self, volume_0_to_1: float):
-        """
-        Set master volume (affects all SFX and ambient).
-        
-        WK7: This is the API surface for ESC menu → Audio page.
-        Volume is UI-only state and never affects simulation.
-        
-        Args:
-            volume_0_to_1: Master volume from 0.0 (mute) to 1.0 (full volume)
-                           UI should convert 0-100% slider to 0.0-1.0 range
-        """
-        # Clamp to valid range
-        self._master_volume = max(0.0, min(1.0, float(volume_0_to_1)))
-        
-        # Update ambient volume if playing
-        self._apply_ambient_volume()
-    
-    def get_master_volume(self) -> float:
-        """
-        Get current master volume.
-        
-        WK7: This is the API surface for ESC menu → Audio page.
-        
-        Returns:
-            Master volume from 0.0 (mute) to 1.0 (full volume)
-            UI should convert to 0-100% for display
-        """
-        return self._master_volume
-
-    def set_music_volume(self, volume_0_to_1: float):
-        """
-        Set music/ambient volume (affects ambient only).
-
-        Args:
-            volume_0_to_1: Music volume from 0.0 (mute) to 1.0 (full volume)
-                           UI should convert 0-100% slider to 0.0-1.0 range
-        """
-        self._music_volume = max(0.0, min(1.0, float(volume_0_to_1)))
-        self._apply_ambient_volume()
-
-    def get_music_volume(self) -> float:
-        """Get current music/ambient volume."""
-        return self._music_volume
-
-    def set_sfx_volume(self, volume_0_to_1: float):
-        """
-        Set SFX volume (affects SFX only).
-
-        Args:
-            volume_0_to_1: SFX volume from 0.0 (mute) to 1.0 (full volume)
-                           UI should convert 0-100% slider to 0.0-1.0 range
-        """
-        self._sfx_volume = max(0.0, min(1.0, float(volume_0_to_1)))
-
-    def get_sfx_volume(self) -> float:
-        """Get current SFX volume."""
-        return self._sfx_volume
-
-    # WK61: Enemy ambient sound tick ------------------------------------------
+        from game.audio import ambient
+        return ambient.stop_interior_ambient(self)
 
     def update_enemy_ambient(self, enemies: List) -> None:
-        """
-        Tick ambient sounds for living enemies. Called once per frame.
+        from game.audio import ambient
+        return ambient.update_enemy_ambient(self, enemies)
 
-        Each enemy type plays a distinct ambient sound on a random cooldown
-        (5-15s per enemy) to avoid cacophony. Distance-based volume
-        attenuation and a simultaneous sound cap (4) are applied.
+    # --- Mixer / volume control (game/audio/mixer_volume.py) -------------------
 
-        Non-authoritative: safe to skip or call with an empty list.
+    def _apply_ambient_volume(self):
+        from game.audio import mixer_volume
+        return mixer_volume._apply_ambient_volume(self)
 
-        Args:
-            enemies: list of enemy objects (with .x, .y, .enemy_type, .is_alive attrs)
-        """
-        if not self.enabled or self._enemy_sounds is None:
-            return
-        if not enemies:
-            return
+    def set_master_volume(self, volume_0_to_1: float):
+        from game.audio import mixer_volume
+        return mixer_volume.set_master_volume(self, volume_0_to_1)
 
-        try:
-            from game.sim.timebase import now_ms as sim_now_ms
-            now = float(sim_now_ms())
-            self._enemy_sounds.update_ambient(
-                enemies, now,
-                self._camera_x, self._camera_y,
-            )
-            # Periodically clean up cooldowns for dead/despawned enemies
-            alive_ids = {id(e) for e in enemies if getattr(e, "is_alive", True)}
-            self._enemy_sounds.cleanup_dead_cooldowns(alive_ids)
-        except Exception:
-            pass  # Non-authoritative: never crash sim
+    def get_master_volume(self) -> float:
+        from game.audio import mixer_volume
+        return mixer_volume.get_master_volume(self)
 
+    def set_music_volume(self, volume_0_to_1: float):
+        from game.audio import mixer_volume
+        return mixer_volume.set_music_volume(self, volume_0_to_1)
+
+    def get_music_volume(self) -> float:
+        from game.audio import mixer_volume
+        return mixer_volume.get_music_volume(self)
+
+    def set_sfx_volume(self, volume_0_to_1: float):
+        from game.audio import mixer_volume
+        return mixer_volume.set_sfx_volume(self, volume_0_to_1)
+
+    def get_sfx_volume(self) -> float:
+        from game.audio import mixer_volume
+        return mixer_volume.get_sfx_volume(self)
