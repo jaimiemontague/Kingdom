@@ -332,110 +332,8 @@ class GameEngine:
 
     def process_command(self, text: str) -> None:
         """Handle a typed command or chat message from the universal input."""
-        text = text.strip()
-        if not text:
-            return
-
-        parts = text.split(None, 1)
-        cmd = parts[0].lower()
-        arg = parts[1].strip() if len(parts) > 1 else ""
-        hud = self.hud if hasattr(self, 'hud') else None
-
-        if cmd in ('/revealmap', '/nowar', '/reveal'):
-            world = getattr(self, 'world', None)
-            if world is None and hasattr(self, 'sim'):
-                world = getattr(self.sim, 'world', None)
-            if world:
-                world.fog_disabled = True
-                for ty in range(world.height):
-                    for tx in range(world.width):
-                        world.visibility[ty][tx] = Visibility.VISIBLE
-                world._currently_visible = []
-                sim = getattr(self, 'sim', self)
-                sim._fog_revealers_snapshot = None
-                self._fog_revision = getattr(self, '_fog_revision', 0) + 100
-                poi_count = 0
-                for poi in getattr(sim, 'pois', []):
-                    if not getattr(poi, 'is_discovered', False):
-                        poi.is_discovered = True
-                        poi_count += 1
-                msg = "Fog of war disabled — all entities visible!"
-                if poi_count:
-                    msg += f" ({poi_count} POI{'s' if poi_count != 1 else ''} revealed)"
-                if hud:
-                    hud.add_message(msg, (100, 255, 100))
-
-        elif cmd == '/gold':
-            amount = 500
-            if arg:
-                try:
-                    amount = int(arg)
-                except ValueError:
-                    if hud:
-                        hud.add_message("Usage: /gold <amount>", (255, 200, 100))
-                    return
-            self.economy.player_gold += amount
-            if hud:
-                hud.add_message(f"Added {amount} gold (total: {self.economy.player_gold})", (255, 215, 0))
-
-        elif cmd == '/speed':
-            if not arg:
-                if hud:
-                    from game.sim.timebase import get_time_multiplier
-                    hud.add_message(f"Speed: {get_time_multiplier():.1f}x. Usage: /speed <0.5-5>", (200, 200, 255))
-                return
-            try:
-                val = float(arg)
-                val = max(0.0, min(5.0, val))
-                from game.sim.timebase import set_time_multiplier
-                set_time_multiplier(val)
-                if hud:
-                    hud.add_message(f"Speed set to {val:.1f}x", (200, 200, 255))
-            except ValueError:
-                if hud:
-                    hud.add_message("Usage: /speed <0.5-5>", (255, 200, 100))
-
-        elif cmd == '/heal':
-            healed = 0
-            for hero in self.heroes:
-                if getattr(hero, 'is_alive', False) and getattr(hero, 'hp', 0) < getattr(hero, 'max_hp', 1):
-                    hero.hp = hero.max_hp
-                    healed += 1
-            if hud:
-                if healed:
-                    hud.add_message(f"Healed {healed} hero{'es' if healed != 1 else ''}!", (100, 255, 100))
-                else:
-                    hud.add_message("No heroes need healing.", (200, 200, 200))
-
-        elif cmd == '/kill':
-            killed = 0
-            for enemy in list(self.enemies):
-                if getattr(enemy, 'is_alive', False):
-                    enemy.hp = 0
-                    enemy.is_alive = False
-                    killed += 1
-            if hud:
-                hud.add_message(f"Killed {killed} enem{'ies' if killed != 1 else 'y'}!", (255, 100, 100))
-
-        elif cmd == '/spawn':
-            self.try_hire_hero()
-
-        elif cmd == '/pause':
-            self.paused = not self.paused
-            if hud:
-                hud.add_message("Paused" if self.paused else "Unpaused", (200, 200, 255))
-
-        elif cmd == '/help':
-            if hud:
-                hud.add_message("/gold [n] /speed [x] /heal /kill /spawn /reveal /pause", (180, 220, 255))
-
-        elif cmd.startswith('/'):
-            if hud:
-                hud.add_message(f"Unknown command: {cmd}. Type /help", (255, 100, 100))
-
-        else:
-            if hud:
-                hud.add_message(f"> {text}", (200, 200, 200))
+        from game import console
+        return console.process_command(self, text)
 
     # ---------------------------------------------------------------------
     # Stage 2: backward-compat property forwarding (engine.<x> -> sim.<x>)
@@ -959,150 +857,18 @@ class GameEngine:
 
     def try_hire_hero(self):
         """Try to hire a hero from the selected guild building or auto-locate one."""
-        allowed = frozenset({"warrior_guild", "ranger_guild", "rogue_guild", "wizard_guild", "temple"})
+        from game.engine_facades import actions
+        return actions.try_hire_hero(self)
 
-        def _is_hirable_guild(b) -> bool:
-            bt = getattr(b, "building_type", "")
-            if bt not in allowed:
-                return False
-            # Match building_panel / navigation: missing is_constructed → treat as built (see Building base).
-            return getattr(b, "is_constructed", True) is True
-
-        guild = None
-        sel = self.selected_building
-        if sel is not None and _is_hirable_guild(sel):
-            guild = sel
-
-        if guild is None:
-            for b in self.buildings:
-                if _is_hirable_guild(b):
-                    guild = b
-                    break
-
-        if guild is None:
-            self.hud.add_message("Requires a constructed guild (Warrior/Ranger/Rogue/Wizard) or Temple!", (255, 100, 100))
-            if self.audio_system is not None:
-                self.audio_system.play_sfx("ui_error")
-            return
-
-        # WK60 Feature 3: check guild hero cap before hiring
-        if hasattr(guild, "can_hire") and not guild.can_hire():
-            self.hud.add_message("Guild is full!", (255, 100, 100))
-            if self.audio_system is not None:
-                self.audio_system.play_sfx("ui_error")
-            return
-
-        if not self.economy.can_afford_hero():
-            self.hud.add_message("Not enough gold to hire!", (255, 100, 100))
-            if self.audio_system is not None:
-                self.audio_system.play_sfx("ui_error")
-            return
-
-        # Hire the hero
-        self.economy.hire_hero()
-        guild.hire_hero()
-        
-        # Spawn hero near guild
-        class_by_guild = {
-            "warrior_guild": HeroClass.WARRIOR.value,
-            "ranger_guild": HeroClass.RANGER.value,
-            "rogue_guild": HeroClass.ROGUE.value,
-            "wizard_guild": HeroClass.WIZARD.value,
-            "temple": HeroClass.CLERIC.value,
-        }
-        hero_class = class_by_guild.get(guild.building_type, HeroClass.WARRIOR.value)
-        hero = Hero(
-            guild.center_x + TILE_SIZE,
-            guild.center_y,
-            hero_class=hero_class
-        )
-        # Set the hero's home building to this guild
-        hero.home_building = guild
-        
-        self.heroes.append(hero)
-        if hasattr(hero, "set_event_bus"):
-            hero.set_event_bus(self.event_bus)
-        self.hud.add_message(f"{hero.name} the {hero_class.title()} joins your kingdom!", (100, 255, 100))
-        self.event_bus.emit({
-            "type": "hero_hired",
-            "x": float(hero.x),
-            "y": float(hero.y),
-        })
-    
     def place_building(self, grid_x: int, grid_y: int):
         """Place the selected building."""
-        building_type = self.building_menu.selected_building
-        
-        if not self.economy.buy_building(building_type):
-            self.hud.add_message("Not enough gold!", (255, 100, 100))
-            if self.audio_system is not None:
-                self.audio_system.play_sfx("ui_error")
-            return
-        
-        # Create the building
-        building = self.building_factory.create(building_type, grid_x, grid_y)
-        
-        if building is None:
-            return
+        from game.engine_facades import actions
+        return actions.place_building(self, grid_x, grid_y)
 
-        # WK45: If the player builds over a sapling, remove it (and clear the tile) so it
-        # doesn't persist as an invisible blocking TREE tile.
-        try:
-            w, h = getattr(building, "size", (1, 1))
-            self.sim.remove_trees_in_footprint(int(grid_x), int(grid_y), int(w), int(h))
-        except Exception:
-            pass
-
-        # Newly placed buildings start unconstructed (1 HP, non-targetable) until a peasant begins building.
-        if hasattr(building, "mark_unconstructed"):
-            building.mark_unconstructed()
-        
-        self.buildings.append(building)
-        if hasattr(building, "set_event_bus"):
-            building.set_event_bus(self.event_bus)
-        self.building_menu.cancel_selection()
-        self.hud.add_message(f"Placed: {building_type.replace('_', ' ').title()} (awaiting construction)", (100, 255, 100))
-        
-        # Queue building placement event for EventBus subscribers (Audio/VFX).
-        self.event_bus.emit({
-            "type": GameEventType.BUILDING_PLACED.value,
-            "x": float(grid_x * TILE_SIZE),
-            "y": float(grid_y * TILE_SIZE),
-        })
-    
     def place_bounty(self):
         """Place a bounty at the current mouse position."""
-        mouse_pos = self.input_manager.get_mouse_pos() if getattr(self, "input_manager", None) else pygame.mouse.get_pos()
-        world_x, world_y = self.pointer_world_xy((mouse_pos[0], mouse_pos[1]))
-        
-        # Bounty reward tiers (player-paid; cost == reward).
-        mods = self.input_manager.get_key_mods() if getattr(self, "input_manager", None) else {'shift': False, 'ctrl': False, 'alt': False}
-        if not getattr(self, "input_manager", None): # Fallback
-            pg_mods = pygame.key.get_mods()
-            mods = {'ctrl': bool(pg_mods & pygame.KMOD_CTRL), 'shift': bool(pg_mods & pygame.KMOD_SHIFT)}
-            
-        if mods.get('ctrl'):
-            reward = int(BOUNTY_REWARD_HIGH)
-        elif mods.get('shift'):
-            reward = int(BOUNTY_REWARD_MED)
-        else:
-            reward = int(BOUNTY_REWARD_LOW)
-        
-        if not self.economy.add_bounty(reward):
-            self.hud.add_message("Not enough gold for bounty!", (255, 100, 100))
-            if self.audio_system is not None:
-                self.audio_system.play_sfx("ui_error")
-            return
-        
-        self.bounty_system.place_bounty(world_x, world_y, reward, BountyType.EXPLORE.value)
-        self.hud.add_message(f"Bounty placed (${reward}). Heroes will respond.", (255, 215, 0))
-        
-        # Queue bounty placement event for EventBus subscribers (Audio/VFX).
-        self.event_bus.emit({
-            "type": GameEventType.BOUNTY_PLACED.value,
-            "x": float(world_x),
-            "y": float(world_y),
-        })
+        from game.engine_facades import actions
+        return actions.place_bounty(self)
 
     def update(self, dt: float):
         """Update game state."""
@@ -1363,87 +1129,8 @@ class GameEngine:
 
     def apply_hud_pin_action(self, action: str) -> None:
         """WK51: Pin / unpin / recall (UI state + camera + selection only)."""
-        from game.sim.timebase import now_ms as sim_now_ms
-
-        hud = getattr(self, "hud", None)
-        if hud is None:
-            return
-        pin_slot = getattr(hud, "_pin_slot", None)
-        if pin_slot is None:
-            return
-        now_ms = int(sim_now_ms())
-        if action == "open_memorial":
-            self.paused = True
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "close_memorial_unpause":
-            self.paused = False
-            mc = getattr(hud, "memorial_card", None)
-            if mc is not None:
-                mc.hide()
-            if hasattr(hud, "_pending_memorial"):
-                hud._pending_memorial = None
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "open_building_interior":
-            self.paused = True
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "close_building_interior_unpause":
-            self.paused = False
-            bio = getattr(hud, "building_interior_overlay", None)
-            if bio is not None:
-                bio.hide()
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "confirm_demolish":
-            dco = getattr(hud, "demolish_confirm_overlay", None)
-            if dco is not None and dco.visible:
-                building = dco.building
-                dco.hide()
-                if building and building in self.buildings and building.building_type != "castle":
-                    building.hp = 0
-                    self._cleanup_destroyed_buildings(emit_messages=False)
-                    building_name = building.building_type.replace("_", " ").title()
-                    hud.add_message(f"Demolished: {building_name}", (255, 255, 255))
-                    self.building_panel.deselect()
-                    self.selected_building = None
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "expand_watch_card":
-            if hasattr(hud, "_watch_card_expanded"):
-                hud._watch_card_expanded = True
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "pin_hero":
-            sel = getattr(self, "selected_hero", None)
-            if sel is None:
-                return
-            hid = str(getattr(sel, "hero_id", "") or "").strip()
-            if not hid:
-                return
-            pin_slot.pin(hid, now_ms)
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "unpin_hero":
-            pin_slot.unpin()
-            setattr(self, "_ursina_hud_force_upload", True)
-            return
-        if action == "recall_pinned_hero":
-            if pin_slot.is_fallen() or pin_slot.hero_id is None:
-                return
-            target = self._find_hero_by_id(pin_slot.hero_id)
-            if target is None:
-                return
-            self.selected_hero = target
-            self.center_camera_on_world_pos(float(target.x), float(target.y))
-            if hasattr(self, "hud"):
-                try:
-                    if pin_slot.hero_id is not None and not getattr(self.hud, "_watch_card_expanded", True):
-                        self.hud._watch_card_expanded = True
-                except Exception:
-                    pass
-            return
+        from game.engine_facades import actions
+        return actions.apply_hud_pin_action(self, action)
 
     def capture_screenshot(self):
         """Capture a screenshot to docs/screenshots/manual/ with timestamp filename."""
